@@ -1,0 +1,154 @@
+[
+  {
+    "RootNode": {
+      "DevotedAcreage": [
+        [
+          "CORN", 
+          80.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          250.0
+        ], 
+        [
+          "WHEAT", 
+          170.0
+        ]
+      ]
+    }
+  }, 
+  {
+    "AboveAverageNode": {
+      "QuantityPurchased": [
+        [
+          "CORN", 
+          0.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          0.0
+        ], 
+        [
+          "WHEAT", 
+          0.0
+        ]
+      ], 
+      "QuantitySubQuotaSold": [
+        [
+          "CORN", 
+          48.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          6000.0
+        ], 
+        [
+          "WHEAT", 
+          310.0
+        ]
+      ], 
+      "QuantitySuperQuotaSold": [
+        [
+          "CORN", 
+          0.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          0.0
+        ], 
+        [
+          "WHEAT", 
+          0.0
+        ]
+      ]
+    }, 
+    "AverageNode": {
+      "QuantityPurchased": [
+        [
+          "CORN", 
+          0.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          0.0
+        ], 
+        [
+          "WHEAT", 
+          0.0
+        ]
+      ], 
+      "QuantitySubQuotaSold": [
+        [
+          "CORN", 
+          0.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          5000.0
+        ], 
+        [
+          "WHEAT", 
+          225.0
+        ]
+      ], 
+      "QuantitySuperQuotaSold": [
+        [
+          "CORN", 
+          0.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          0.0
+        ], 
+        [
+          "WHEAT", 
+          0.0
+        ]
+      ]
+    }, 
+    "BelowAverageNode": {
+      "QuantityPurchased": [
+        [
+          "CORN", 
+          48.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          0.0
+        ], 
+        [
+          "WHEAT", 
+          0.0
+        ]
+      ], 
+      "QuantitySubQuotaSold": [
+        [
+          "CORN", 
+          0.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          4000.0
+        ], 
+        [
+          "WHEAT", 
+          140.0
+        ]
+      ], 
+      "QuantitySuperQuotaSold": [
+        [
+          "CORN", 
+          0.0
+        ], 
+        [
+          "SUGAR_BEETS", 
+          0.0
+        ], 
+        [
+          "WHEAT", 
+          0.0
+        ]
+      ]
+    }
+  }
+]

@@ -1,0 +1,296 @@
+[
+  {
+    "RootNode": {
+      "AmountInvested": [
+        [
+          [
+            "BONDS", 
+            1
+          ], 
+          13520.7277065314
+        ], 
+        [
+          [
+            "STOCKS", 
+            1
+          ], 
+          41479.272293468595
+        ]
+      ]
+    }
+  }, 
+  {
+    "BondNode": {
+      "AmountInvested": [
+        [
+          [
+            "BONDS", 
+            2
+          ], 
+          22368.0286310767
+        ], 
+        [
+          [
+            "STOCKS", 
+            2
+          ], 
+          36743.2150313152
+        ]
+      ]
+    }, 
+    "StockNode": {
+      "AmountInvested": [
+        [
+          [
+            "BONDS", 
+            2
+          ], 
+          2168.1379858829323
+        ], 
+        [
+          [
+            "STOCKS", 
+            2
+          ], 
+          65094.5819663986
+        ]
+      ]
+    }
+  }, 
+  {
+    "BondBondNode": {
+      "AmountInvested": [
+        [
+          [
+            "BONDS", 
+            3
+          ], 
+          0.0
+        ], 
+        [
+          [
+            "STOCKS", 
+            3
+          ], 
+          64000.0
+        ]
+      ]
+    }, 
+    "BondStockNode": {
+      "AmountInvested": [
+        [
+          [
+            "BONDS", 
+            3
+          ], 
+          71428.5714285714
+        ], 
+        [
+          [
+            "STOCKS", 
+            3
+          ], 
+          0.0
+        ]
+      ]
+    }, 
+    "StockBondNode": {
+      "AmountInvested": [
+        [
+          [
+            "BONDS", 
+            3
+          ], 
+          71428.5714285714
+        ], 
+        [
+          [
+            "STOCKS", 
+            3
+          ], 
+          0.0
+        ]
+      ]
+    }, 
+    "StockStockNode": {
+      "AmountInvested": [
+        [
+          [
+            "BONDS", 
+            3
+          ], 
+          0.0
+        ], 
+        [
+          [
+            "STOCKS", 
+            3
+          ], 
+          83839.9047619048
+        ]
+      ]
+    }
+  }, 
+  {
+    "BondBondBondNode": {
+      "FinalWealth": [
+        [
+          null, 
+          -48640.0
+        ]
+      ], 
+      "TargetDeficit": [
+        [
+          null, 
+          12160.0
+        ]
+      ], 
+      "TargetSurplus": [
+        [
+          null, 
+          0.0
+        ]
+      ]
+    }, 
+    "BondBondStockNode": {
+      "FinalWealth": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetDeficit": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetSurplus": [
+        [
+          null, 
+          0.0
+        ]
+      ]
+    }, 
+    "BondStockBondNode": {
+      "FinalWealth": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetDeficit": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetSurplus": [
+        [
+          null, 
+          0.0
+        ]
+      ]
+    }, 
+    "BondStockStockNode": {
+      "FinalWealth": [
+        [
+          null, 
+          1428.57142857141
+        ]
+      ], 
+      "TargetDeficit": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetSurplus": [
+        [
+          null, 
+          1428.57142857141
+        ]
+      ]
+    }, 
+    "StockBondBondNode": {
+      "FinalWealth": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetDeficit": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetSurplus": [
+        [
+          null, 
+          0.0
+        ]
+      ]
+    }, 
+    "StockBondStockNode": {
+      "FinalWealth": [
+        [
+          null, 
+          1428.57142857141
+        ]
+      ], 
+      "TargetDeficit": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetSurplus": [
+        [
+          null, 
+          1428.57142857141
+        ]
+      ]
+    }, 
+    "StockStockBondNode": {
+      "FinalWealth": [
+        [
+          null, 
+          8870.2990476191
+        ]
+      ], 
+      "TargetDeficit": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetSurplus": [
+        [
+          null, 
+          8870.2990476191
+        ]
+      ]
+    }, 
+    "StockStockStockNode": {
+      "FinalWealth": [
+        [
+          null, 
+          24799.880952381
+        ]
+      ], 
+      "TargetDeficit": [
+        [
+          null, 
+          0.0
+        ]
+      ], 
+      "TargetSurplus": [
+        [
+          null, 
+          24799.880952381
+        ]
+      ]
+    }
+  }
+]
