@@ -43,6 +43,17 @@ _run_verbose = True
 _json_exact_comparison = True
 _diff_tolerance = 1e-4
 
+testing_solvers = {}
+testing_solvers['cplex','lp'] = False
+def setUpModule():
+    global testing_solvers
+    import pyomo.environ
+    from pyomo.solvers.tests.io.writer_test_cases import testCases
+    for test_case in testCases:
+        if ((test_case.name,test_case.io) in testing_solvers) and \
+           (test_case.available):
+            testing_solvers[(test_case.name,test_case.io)] = True
+    print testing_solvers
 class _EvalXHATTesterBase(object):
 
     basename = None
@@ -87,6 +98,8 @@ class _EvalXHATTesterBase(object):
         return cmd
 
     def test_scenarios(self):
+        if not testing_solvers['cplex','lp']:
+            self.skip("cplex is not available")
         self._setup(self.options)
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
@@ -173,6 +186,8 @@ class _EvalXHATPyroTesterBase(_EvalXHATTesterBase):
             options['--pyro-required-scenariotreeservers'] = servers
 
     def test_scenarios_1server(self):
+        if not testing_solvers['cplex','lp']:
+            self.skip("cplex is not available")
         self._setup(self.options, servers=1)
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
