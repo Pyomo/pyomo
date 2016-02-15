@@ -104,6 +104,7 @@ Initializing ScenarioTreeManagerClientSerial with options:
  *                   solution_writer: ('pyomo.pysp.plugins.csvsolutionwriter',)
  *                       output_file: /Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_farmer_with_solve_cplex_with_csv_writer.lp
  *                             solve: True
+ -             output_scenario_costs: None
  - output_instance_construction_time: False
  -        compile_scenario_instances: False
  -                      output_times: False

@@ -103,6 +103,7 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -                   solution_writer: ()
  -                       output_file: efout
  *                             solve: True
+ -             output_scenario_costs: None
  - output_instance_construction_time: False
  -        compile_scenario_instances: False
  -                      output_times: False

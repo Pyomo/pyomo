@@ -107,6 +107,7 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -                   solution_writer: ()
  *                       output_file: /Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
  -                             solve: False
+ -             output_scenario_costs: None
  - output_instance_construction_time: False
  -        compile_scenario_instances: False
  -                      output_times: False
