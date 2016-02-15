@@ -1,4 +1,4 @@
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/forestry/models-nb-yr/ReferenceModel.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/forestry/models-nb-yr/ReferenceModel.py
 Module successfully loaded
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile1' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile10' will not be used. ***
@@ -18,16 +18,16 @@ Module successfully loaded
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile7' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile8' will not be used. ***
 *** Active Objective 'Production_Profit_Objective' on scenario instance 'ForestChile9' will not be used. ***
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/forestry/config/rhosetter.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/forestry/config/rhosetter.py
 Module successfully loaded
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/forestry/config/boundsetter.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/forestry/config/boundsetter.py
 Module successfully loaded
 Initializing PH
 
 Executing user rho setter callback function
 Executing user bound setter callback function
-WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/forestry/config/wwph.cfg
-WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/forestry/config/wwph-nb.suffixes
+WW PH Extension: Loading user-specified configuration from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/forestry/config/wwph.cfg
+WW PH Extension: Loading variable suffixes from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/forestry/config/wwph-nb.suffixes
 WW PH Extension: Setting mipgap to 0.0210000, as specified in the configuration file
 Starting PH
 
@@ -36,7 +36,7 @@ Number of discrete variables fixed=0 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1580695.1394 Max-Min=419626.64
 Converger=Normalized term diff value is         0.1176 - threshold reached=False
-Cumulative run-time=9.20 seconds
+Cumulative run-time=6.58 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.0200000, as specified in the configuration file
@@ -45,7 +45,7 @@ Number of discrete variables fixed=14 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1415185.6412 Max-Min=383710.94
 Converger=Normalized term diff value is         0.0835 - threshold reached=False
-Cumulative run-time=26.18 seconds
+Cumulative run-time=18.85 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0188410, based on current value of the convergence metric
@@ -54,7 +54,7 @@ Number of discrete variables fixed=25 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377689.6278 Max-Min=119209.64
 Converger=Normalized term diff value is         0.0402 - threshold reached=False
-Cumulative run-time=44.01 seconds
+Cumulative run-time=32.49 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0173640, based on current value of the convergence metric
@@ -63,7 +63,7 @@ Number of discrete variables fixed=34 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1374952.0911 Max-Min= 9968.80
 Converger=Normalized term diff value is         0.0273 - threshold reached=False
-Cumulative run-time=55.41 seconds
+Cumulative run-time=39.93 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Setting mipgap to 0.0169245, based on current value of the convergence metric
@@ -72,7 +72,7 @@ Number of discrete variables fixed=87 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1374952.0911 Max-Min= 9968.80
 Converger=Normalized term diff value is         0.0233 - threshold reached=False
-Cumulative run-time=66.02 seconds
+Cumulative run-time=46.30 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Setting mipgap to 0.0167904, based on current value of the convergence metric
@@ -81,7 +81,7 @@ Number of discrete variables fixed=102 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1374952.0911 Max-Min= 9968.80
 Converger=Normalized term diff value is         0.0234 - threshold reached=False
-Cumulative run-time=76.06 seconds
+Cumulative run-time=51.95 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Setting mipgap to 0.0167924, based on current value of the convergence metric
@@ -90,7 +90,7 @@ Number of discrete variables fixed=337 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1376613.5578 Max-Min= 9968.80
 Converger=Normalized term diff value is         0.0127 - threshold reached=False
-Cumulative run-time=86.11 seconds
+Cumulative run-time=57.85 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Setting mipgap to 0.0164289, based on current value of the convergence metric
@@ -99,7 +99,7 @@ Number of discrete variables fixed=358 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0084 - threshold reached=False
-Cumulative run-time=93.83 seconds
+Cumulative run-time=62.85 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Setting mipgap to 0.0162823, based on current value of the convergence metric
@@ -108,7 +108,7 @@ Number of discrete variables fixed=393 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0103 - threshold reached=False
-Cumulative run-time=103.11 seconds
+Cumulative run-time=67.24 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Setting mipgap to 0.0163485, based on current value of the convergence metric
@@ -117,7 +117,7 @@ Number of discrete variables fixed=402 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0099 - threshold reached=False
-Cumulative run-time=111.62 seconds
+Cumulative run-time=72.17 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Setting mipgap to 0.0163322, based on current value of the convergence metric
@@ -126,7 +126,7 @@ Number of discrete variables fixed=416 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0067 - threshold reached=False
-Cumulative run-time=120.38 seconds
+Cumulative run-time=76.60 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=416 (total=507)
@@ -1346,7 +1346,7 @@ Scenarios:
 
 ***WARNING***: PH exiting with fixed or freed variables in the scenario tree queue whose statuses have not been pushed to the scenario instances. This is because these requests were placed in the queue after the most recent solve. If these statuses are pushed to the scenario instances, a new solution should be obtained in order to reflect accurate solution data within the scenario tree. This warning can be safely ignored in most cases.
 
-Total PH execution time=127.80 seconds
+Total PH execution time=80.93 seconds
 
 Pushing fixed variable statuses to scenario instances
 Number of discrete variables fixed prior to ef creation=418 (total=507)
@@ -1355,7 +1355,7 @@ Creating extensive form for remainder problem
 Solving extensive form
 
 ***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=4422763.99882<<<
+>>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=4422726.37263<<<
 ***********************************************************************************************
 
 Extensive form solution:
@@ -1453,7 +1453,7 @@ Tree Nodes:
 	Stage=Ano4Stage
 	Parent=StageThreeLowHigh
 	Variables: 
-		delta[U2,Ano4]=1.0
+		delta[U1,Ano4]=1.0
 		delta[U20,Ano4]=1.0
 		delta[U3,Ano4]=1.0
 		delta[U7,Ano4]=1.0
@@ -1471,18 +1471,18 @@ Tree Nodes:
 	Stage=Ano4Stage
 	Parent=StageThreeLowHigh
 	Variables: 
-		delta[U2,Ano4]=1.0
-		delta[U20,Ano4]=1.00000000001
+		delta[U1,Ano4]=1.0
+		delta[U20,Ano4]=1.0
 		delta[U3,Ano4]=1.0
-		delta[U7,Ano4]=0.999999999994
-		f[C01,C09,Ano4]=3656.20000002
-		f[C02,C03,Ano4]=6484.19999996
-		f[C03,E1,Ano4]=6484.19999996
-		f[C08,I2,Ano4]=4170.40000003
-		f[C09,E1,Ano4]=7312.40000002
-		f[I2,I3,Ano4]=4170.40000003
-		f[I3,E1,Ano4]=4170.40000003
-		gamma[C01,C09,Ano4]=1.0
+		delta[U7,Ano4]=1.0
+		f[C01,C09,Ano4]=3656.2
+		f[C02,C03,Ano4]=6484.2
+		f[C03,E1,Ano4]=6484.2
+		f[C08,I2,Ano4]=4170.4
+		f[C09,E1,Ano4]=7312.4
+		f[I2,I3,Ano4]=4170.4
+		f[I3,E1,Ano4]=4170.4
+		gamma[C01,C09,Ano4]=0.999999999999
 	Derived Variables: 
 
 	Name=Leaf15
@@ -1732,25 +1732,19 @@ Tree Nodes:
 	Stage=Ano4Stage
 	Parent=StageThreeMediumMedium
 	Variables: 
+		delta[U14,Ano4]=1.0
 		delta[U19,Ano4]=1.0
-		delta[U2,Ano4]=1.0
-		delta[U20,Ano4]=1.0
-		delta[U21,Ano4]=1.0
-		delta[U25,Ano4]=1.0
+		delta[U24,Ano4]=1.0
 		delta[U3,Ano4]=1.0
-		delta[U7,Ano4]=1.0
+		delta[U4,Ano4]=1.0
 		delta[U8,Ano4]=1.0
-		f[C01,C09,Ano4]=3656.2
-		f[C02,C03,Ano4]=6484.2
-		f[C03,E1,Ano4]=6484.2
+		f[C01,C09,Ano4]=8602.8
+		f[C05,I1,Ano4]=15592.5
 		f[C06,I3,Ano4]=4330.8
-		f[C07,C08,Ano4]=3767.3
-		f[C08,I2,Ano4]=14054.9
-		f[C09,E1,Ano4]=11077.2
-		f[I2,I3,Ano4]=14054.9
-		f[I3,E1,Ano4]=18385.7
-		gamma[C07,C08,Ano4]=1.0
-		gamma[C08,I2,Ano4]=1.0
+		f[C09,E1,Ano4]=16023.8
+		f[I1,I2,Ano4]=15592.5
+		f[I2,I3,Ano4]=15592.5
+		f[I3,E1,Ano4]=19923.3
 	Derived Variables: 
 
 	Name=RootNode
@@ -2157,7 +2151,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		ForestChile9
-	Expected cost of (sub)tree rooted at node=1179216.4105
+	Expected cost of (sub)tree rooted at node=1178525.3877
 
 	Name=RootNode
 	Stage=Ano1Stage
@@ -2186,7 +2180,7 @@ Tree Nodes:
 		ForestChile7
 		ForestChile8
 		ForestChile9
-	Expected cost of (sub)tree rooted at node=4422763.9988
+	Expected cost of (sub)tree rooted at node=4422726.3726
 
 	Name=StageThreeHighHigh
 	Stage=Ano3Stage
@@ -2294,7 +2288,7 @@ Tree Nodes:
 	Scenarios:
 		ForestChile10
 		ForestChile9
-	Expected cost of (sub)tree rooted at node=1994933.5497
+	Expected cost of (sub)tree rooted at node=1994588.0383
 
 	Name=StageTwoHigh
 	Stage=Ano2Stage
@@ -2345,7 +2339,7 @@ Tree Nodes:
 		ForestChile7
 		ForestChile8
 		ForestChile9
-	Expected cost of (sub)tree rooted at node=2583892.4449
+	Expected cost of (sub)tree rooted at node=2583778.4261
 
 ----------------------------------------------------
 Scenarios:
@@ -2599,9 +2593,9 @@ Scenarios:
 	Stage=           Ano1Stage     Cost=1691184.5800
 	Stage=           Ano2Stage     Cost=568645.4160
 	Stage=           Ano3Stage     Cost=999870.6420
-	Stage=           Ano4Stage     Cost=1179216.4105
-	Total scenario cost=4438917.0485
+	Stage=           Ano4Stage     Cost=1178525.3877
+	Total scenario cost=4438226.0257
 
 ----------------------------------------------------
 
-Total execution time=136.11 seconds
+Total execution time=90.14 seconds
