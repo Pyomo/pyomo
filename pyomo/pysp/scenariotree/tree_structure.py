@@ -943,6 +943,7 @@ class Scenario(object):
                     (variable_id,
                      scenariotree_sm_bySymbol[variable_id](exception=False)) \
                     for variable_id in tree_node._variable_ids)
+
                 scenario_fixed = self._fixed[tree_node.name]
                 scenario_stale = self._stale[tree_node.name]
                 scenario_fixed.clear()
@@ -1919,8 +1920,7 @@ class ScenarioTree(object):
         compressed_tree_root = None
         for scenario_name in scenario_bundle_list:
             full_tree_scenario = self.get_scenario(scenario_name)
-            # ensure the scenario tree has not been linked with
-            # pyomo models
+
             compressed_tree_scenario = Scenario()
             compressed_tree_scenario._name = full_tree_scenario._name
             compressed_tree_scenario._probability = full_tree_scenario._probability
@@ -1934,12 +1934,6 @@ class ScenarioTree(object):
                 full_tree_node._conditional_probability,
                 compressed_tree._stage_map[full_tree_node._stage._name])
             compressed_tree_scenario._node_list.append(compressed_tree_node)
-            compressed_tree_scenario._stage_costs[compressed_tree_node._stage._name] = None
-            compressed_tree_scenario._x[compressed_tree_node._name] = {}
-            compressed_tree_scenario._w[compressed_tree_node._name] = {}
-            compressed_tree_scenario._rho[compressed_tree_node._name] = {}
-            compressed_tree_scenario._fixed[compressed_tree_node._name] = set()
-            compressed_tree_scenario._stale[compressed_tree_node._name] = set()
 
             compressed_tree_scenario._leaf_node = compressed_tree_node
             compressed_tree_node._scenarios.append(compressed_tree_scenario)
@@ -1958,13 +1952,6 @@ class ScenarioTree(object):
                     compressed_tree._stage_map[full_tree_node._stage._name])
                 compressed_tree_node._probability = full_tree_node._probability
                 compressed_tree_scenario._node_list.append(compressed_tree_node)
-                compressed_tree_scenario._stage_costs[compressed_tree_node._stage._name] = None
-                compressed_tree_scenario._x[compressed_tree_node._name] = {}
-                compressed_tree_scenario._w[compressed_tree_node._name] = {}
-                compressed_tree_scenario._rho[compressed_tree_node._name] = {}
-                compressed_tree_scenario._fixed[compressed_tree_node._name] = set()
-                compressed_tree_scenario._stale[compressed_tree_node._name] = set()
-
                 compressed_tree_node._scenarios.append(compressed_tree_scenario)
                 compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
                 compressed_tree._tree_nodes.append(compressed_tree_node)
@@ -1987,13 +1974,6 @@ class ScenarioTree(object):
                 previous_compressed_tree_node._parent = compressed_tree_node
                 compressed_tree_node._scenarios.append(compressed_tree_scenario)
                 compressed_tree_scenario._node_list.append(compressed_tree_node)
-                compressed_tree_scenario._stage_costs[compressed_tree_node._stage._name] = None
-                compressed_tree_scenario._x[compressed_tree_node._name] = {}
-                compressed_tree_scenario._w[compressed_tree_node._name] = {}
-                compressed_tree_scenario._rho[compressed_tree_node._name] = {}
-                compressed_tree_scenario._fixed[compressed_tree_node._name] = set()
-                compressed_tree_scenario._stale[compressed_tree_node._name] = set()
-
                 compressed_tree_node._children.append(previous_compressed_tree_node)
                 compressed_tree_node = compressed_tree_node._parent
                 while compressed_tree_node is not None:
@@ -2007,6 +1987,15 @@ class ScenarioTree(object):
                 compressed_tree_scenario._leaf_node
             assert compressed_tree_scenario._node_list[0] is \
                 compressed_tree_root
+
+            # initialize solution related dictionaries
+            for compressed_tree_node in compressed_tree_scenario._node_list:
+                compressed_tree_scenario._stage_costs[compressed_tree_node._stage._name] = None
+                compressed_tree_scenario._x[compressed_tree_node._name] = {}
+                compressed_tree_scenario._w[compressed_tree_node._name] = {}
+                compressed_tree_scenario._rho[compressed_tree_node._name] = {}
+                compressed_tree_scenario._fixed[compressed_tree_node._name] = set()
+                compressed_tree_scenario._stale[compressed_tree_node._name] = set()
 
         compressed_tree._scenario_map = \
             dict((scenario._name, scenario) for scenario in compressed_tree._scenarios)
