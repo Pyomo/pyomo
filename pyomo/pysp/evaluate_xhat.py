@@ -216,7 +216,7 @@ def run_evaluate_xhat(options,
                 for scenario in manager.scenario_tree.scenarios:
                     result[str(scenario.name)] = scenario._cost
                 with open(options.output_scenario_costs, 'w') as f:
-                    json.dump(result, f)
+                    json.dump(result, f, indent=2, sort_keys=True)
             elif options.output_scenario_costs.endswith('.yaml'):
                 import yaml
                 result = {}

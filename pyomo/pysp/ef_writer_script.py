@@ -705,6 +705,19 @@ def runef_register_options(options=None):
             ),
             doc=None,
             visibility=0))
+    safe_register_unique_option(
+        options,
+        "output_scenario_costs",
+        PySPConfigValue(
+            None,
+            domain=_domain_must_be_str,
+            description=(
+                "A file name where individual scenario costs from the solution "
+                "will be stored. The format is determined from the extension used "
+                "in the filename. Recognized extensions: [.csv, .json, .yaml]"
+            ),
+            doc=None,
+            visibility=0))
     ScenarioTreeManagerClientSerial.register_options(options)
     ExtensiveFormAlgorithm.register_options(options)
 
@@ -816,6 +829,10 @@ def runef(options,
 
             if not options.solve:
 
+                if options.output_scenario_costs is not None:
+                    print("WARNING: output_scenario_costs option "
+                          "will be ignored because the extensive form "
+                          "has not been solved.")
                 if len(solution_savers):
                     print("WARNING: Solution saver extensions will "
                           "not be called because the extensive form "
@@ -848,6 +865,30 @@ def runef(options,
                 if options.output_scenario_tree_solution:
                     print("Final solution (scenario tree format):")
                     manager.scenario_tree.pprintSolution()
+
+                if options.output_scenario_costs is not None:
+                    if options.output_scenario_costs.endswith('.json'):
+                        import json
+                        result = {}
+                        for scenario in manager.scenario_tree.scenarios:
+                            result[str(scenario.name)] = scenario._cost
+                        with open(options.output_scenario_costs, 'w') as f:
+                            json.dump(result, f, indent=2, sort_keys=True)
+                    elif options.output_scenario_costs.endswith('.yaml'):
+                        import yaml
+                        result = {}
+                        for scenario in manager.scenario_tree.scenarios:
+                            result[str(scenario.name)] = scenario._cost
+                        with open(options.output_scenario_costs, 'w') as f:
+                            yaml.dump(result, f)
+                    else:
+                        if not options.output_scenario_costs.endswith('.csv'):
+                            print("Unrecognized file extension. Using CSV format "
+                                  "to store scenario costs")
+                        with open(options.output_scenario_costs, 'w') as f:
+                            for scenario in manager.scenario_tree.scenarios:
+                                f.write("%s,%r\n" % (scenario.name,scenario._cost))
+
 
                 for plugin in solution_savers:
                     if not plugin.save(manager):
