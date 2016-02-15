@@ -132,7 +132,7 @@ def external_collect_variable_bounds(ph,
 class wwphextension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.implements(phextension.IPHExtension)
-    
+
     # the below is a hack to get this extension into the
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
@@ -190,7 +190,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         self._suffix_filename = None
         self._annotation_filename = None
 
-        # we track various actions performed by this extension following a 
+        # we track various actions performed by this extension following a
         # PH iteration - useful for reporting purposes, and for other plugins
         # to react to.
         self.variables_with_detected_cycles = []
@@ -402,7 +402,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         pass
 
     def post_ph_initialization(self, ph):
-        
+
         # Be verbose (even if ph is not)
         self.Verbose = False
 
@@ -436,7 +436,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         # the comparison tolerance for two hashed weight values.
         # by default, 1e-5 should suffice. however, depending on
         # solution structure and mipgap, non-default values may
-        # be necessary. 
+        # be necessary.
         # IMPT (and new): this value is interpreted as a percentage,
         # i.e., a value of 1 indicates a 1% difference in hash values
         # is sufficient to trigger a cycle detection claim.
@@ -444,7 +444,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
 
         # it is occasionally useful to see the W hash histories
         # when a cycle is detected, to examine patterns in support
-        # of identifying an appropriate comparison tolerance. 
+        # of identifying an appropriate comparison tolerance.
         # defaults to False.
         self.ReportCycleWHashDetail = False
 
@@ -454,9 +454,9 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         # metric value following iteration 1. the latter arguably
         # makes more sense, as it accounts for weights and such, i.e.,
         # some sub-prolem interactions.
-        self.StartMipGapFromIter0Metric = True 
+        self.StartMipGapFromIter0Metric = True
 
-        # when cylcing is detected for a variable, the 
+        # when cylcing is detected for a variable, the
         # rho will be multiplied by this factor.
         # NOTE: 1 is a no-op
         self.RhoReductionFactor = 1.0
@@ -464,7 +464,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         # when cycling is detected for a variable, the
         # rho on a per scenario basis will be perturbed
         # by the following factor (uniformly sampled,
-        # plus/minus this factor). 
+        # plus/minus this factor).
         # NOTE: 0 is a no-op
         self.ScenarioRhoPerturbation = 0.0
 
@@ -490,17 +490,17 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         # zero means "slam at will"
         self.PH_Iters_Between_Cycle_Slams = 1
         # this is a simple heuristic - and probably a bad one!
-        self.SlamAfterIter = len(ph._scenario_tree._stages[-1]._tree_nodes) 
+        self.SlamAfterIter = len(ph._scenario_tree._stages[-1]._tree_nodes)
         # slam only if the convergence metric is not improving. defaults to
         # false. in general, if the convergence metric is improving, then
-        # we would like PH to enforce non-antipicativity on its own. that 
+        # we would like PH to enforce non-antipicativity on its own. that
         # said, there are counter-examples - particularly when we have
         # continuous variables.
         self.SlamOnlyIfNotConverging = False
 
         # default params associated with fixing due to weight vector oscillation.
         self.CheckWeightOscillationAfterIter = 0
-        self.FixIfWeightOscillationCycleLessThan = 10        
+        self.FixIfWeightOscillationCycleLessThan = 10
 
         # flags enabling various rho computation schemes.
         self.ComputeRhosWithpreSEP = False
@@ -600,7 +600,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                   "the configuration file" % self.Iteration0MipGap)
             ph._mipgap = self.Iteration0MipGap
 
-        # search for the presence of the normalized-term-diff converger 
+        # search for the presence of the normalized-term-diff converger
         # (first priority) or the standard term-diff converger (second priority).
         self.converger_to_use = None
         for converger in ph._convergers:
@@ -629,12 +629,13 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
               scenario_tree_node_variables_generator_noinstances(
                   ph._scenario_tree,
                   includeDerivedVariables=False,
-                  includeLastStage=False):
+                  includeLastStage=False,
+                  sort=True):
 
             if (is_stale is False):
                 """ preSEP is not a good idea; E[W] will not be 0
                 if (self.ComputeRhosWithpreSEP) and (variable_id in CostForRho):
-                    # Watson and Woodruff Comp. Mgt. Sci. 
+                    # Watson and Woodruff Comp. Mgt. Sci.
                     # right before the SEP expressions: a per-scenario rho
 
                     node_average = tree_node._averages[variable_id]
@@ -643,7 +644,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                         # dlw: not sure that max(.,1) is the right thing...
                         rhoval = CostForRho[variable_id] * self.RhosSEPMult / max(math.fabs(var_value - node_average), 1)
                         if self.Verbose or ph._verbose:
-                            print ("wwphextension is setting rho to %f for scenario=%s, variable id=%s" % (rhoval, str(scenario) , str(variable_id))) 
+                            print ("wwphextension is setting rho to %f for scenario=%s, variable id=%s" % (rhoval, str(scenario) , str(variable_id)))
                     ph.setRhoOneScenario(
                         tree_node,
                         scenario,
@@ -680,12 +681,12 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                     # CostForRho are the costs to be used as the
                     # numerator in the rho computation below.
                     if self.Verbose or ph._verbose:
-                        print ("wwphextension is setting rho to %f for variable id=%s" % (CostForRho[variable_id] * self.RhosSEPMult / denominator , str(variable_id))) 
+                        print ("wwphextension is setting rho to %f for variable id=%s" % (CostForRho[variable_id] * self.RhosSEPMult / denominator , str(variable_id)))
                     ph.setRhoAllScenarios(
                         tree_node,
                         variable_id,
                         CostForRho[variable_id] * self.RhosSEPMult / denominator)
-                
+
                 if is_fixed is False:
 
                     if tree_node.is_variable_discrete(variable_id):
@@ -704,7 +705,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                                                        variable_id,
                                                        node_min,
                                                        node_max)
-                                    
+
                         lb = self.Iter0FixIfConvergedAtLB
                         if variable_id in Iter0FixIfConvergedAtLB:
                             lb = Iter0FixIfConvergedAtLB[variable_id]
@@ -816,7 +817,8 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
               scenario_tree_node_variables_generator_noinstances(
                   ph._scenario_tree,
                   includeDerivedVariables=False,
-                  includeLastStage=False):
+                  includeLastStage=False,
+                  sort=True):
 
             (lbval, ubval) = tree_node._variable_bounds[variable_id]
             # if the variable is stale, don't waste time fixing and
@@ -860,9 +862,9 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                                                              lb,
                                                              ub,
                                                              nb):
-                            
+
                         self._fix_var(ph, tree_node, variable_id, node_min)
-                        
+
                     else:
 
                         # check to see if a cycle exists for this variable,
@@ -882,7 +884,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                                 if (computed_cycle_length >= self.CycleLengthSlamThreshold) or \
                                         self.ReportPotentialCycles:
                                     self.variables_with_detected_cycles.append(
-                                        (variable_id, full_variable_name, 
+                                        (variable_id, full_variable_name,
                                          computed_cycle_length, msg, tree_node))
 
                 else:
@@ -916,7 +918,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
         # while cycles could be broken by variable fixing, the
         # notions of cycle breaking and variable fixing are really
         # independent. in particular, cycles is indicative of bad
-        # rhos and/or xbar estimates, indicating the weights 
+        # rhos and/or xbar estimates, indicating the weights
         # probably need to be adjusted in any case.
         if len(self.variables_with_detected_cycles) > 0:
             print ("WW PH Extension: Cycles were detected - initiating cycle analysis and remediation")
@@ -942,7 +944,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                               "threshold="
                               +str(self.CycleLengthSlamThreshold)+
                               "; choosing a variable to slam")
-                        
+
                         self._pick_one_and_slam_it(ph)
                         self._reset_w_reduce_rho(ph,
                                                  tree_node,
@@ -990,7 +992,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                 self._pick_one_and_slam_it(ph)
                 self._just_slammed_ = True
             else:
-                self._just_slammed_ = False                
+                self._just_slammed_ = False
         else:
             self._just_slammed_ = False
 
@@ -999,7 +1001,8 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
               scenario_tree_node_variables_generator_noinstances(
                   ph._scenario_tree,
                   includeDerivedVariables=False,
-                  includeLastStage=False):
+                  includeLastStage=False,
+                  sort=True):
 
             last_flip_iter = tree_node._w_last_sign_flip_iter[variable_id]
             flip_duration = ph._current_iteration - last_flip_iter
@@ -1011,8 +1014,8 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                     pass
                 else:
                     if self._slam(ph, tree_node, variable_id) is True:
-                        tree_node._w_last_sign_flip_iter[variable_id] = 0 
-                        return            
+                        tree_node._w_last_sign_flip_iter[variable_id] = 0
+                        return
 
 #==================================================
     def post_iteration_k(self, ph):
@@ -1043,7 +1046,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                                   variable_id,
                                   node_min,
                                   node_max):
-        
+
         # keep track of cumulative iters of convergence to the same int
         if (node_min == node_max) and (type(node_min) is int):
             if node_min == tree_node._last_converged_val[variable_id]:
@@ -1135,7 +1138,7 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
             for i in xrange(max(ph._current_iteration-self.W_hash_history_len-1,1),
                             ph._current_iteration - 1, 1):
                 this_hash_value = tree_node._w_hash[variable_id,i]
-                if current_hash_value == 0.0: 
+                if current_hash_value == 0.0:
                     relative_diff = float("inf")
                 else:
                     relative_diff = math.fabs(this_hash_value - current_hash_value) / math.fabs(current_hash_value) * 100.0
@@ -1378,13 +1381,13 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
                 print("- new average (across all scenarios) rho value="+str(average_rho_value)),
 
         if self.ScenarioRhoPerturbation != 0.0:
-            if self.Verbose or ph._verbose:            
+            if self.Verbose or ph._verbose:
                 print("; perturbing rho per-scenario")
             lb = 1.0 - self.ScenarioRhoPerturbation
             ub = 1.0 + self.ScenarioRhoPerturbation
-            for scenario in tree_node._scenarios:        
+            for scenario in tree_node._scenarios:
                 scenario._rho[tree_node._name][variable_id] *= random.uniform(lb,ub)
-        
+
         if self.Verbose or ph._verbose:
             print("")
 

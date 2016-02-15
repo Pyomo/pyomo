@@ -33,7 +33,8 @@ from six import iteritems
 
 def scenario_tree_node_variables_generator(scenario_tree,
                                            includeDerivedVariables=True,
-                                           includeLastStage=True):
+                                           includeLastStage=True,
+                                           sort=False):
 
     if includeLastStage is False:
         stages_to_iterate = scenario_tree._stages[:-1]
@@ -42,9 +43,17 @@ def scenario_tree_node_variables_generator(scenario_tree,
 
     for stage in stages_to_iterate:
 
-        for tree_node in stage._tree_nodes:
-            
-            for variable_id, variable_datas in iteritems(tree_node._variable_datas):
+        tree_nodes = stage._tree_nodes
+        if sort:
+            tree_nodes = sorted(tree_nodes, key=lambda n: n.name)
+
+        for tree_node in tree_nodes:
+
+            variter = iteritems(tree_node._variable_datas)
+            if sort:
+                variter = sorted(variter, key=lambda x: x[0])
+
+            for variable_id, variable_datas in variter:
 
                 if (not includeDerivedVariables) and \
                    (variable_id in tree_node._derived_variable_ids):
@@ -54,7 +63,7 @@ def scenario_tree_node_variables_generator(scenario_tree,
                 # fixed / stale in one scenario, it is fixed / stale
                 # in all scenarios
                 is_stale = False
-                is_fixed = False 
+                is_fixed = False
 
                 instance_fixed_count = 0
 
@@ -74,7 +83,7 @@ def scenario_tree_node_variables_generator(scenario_tree,
                                        "fixed in "+str(instance_fixed_count)+" "
                                        "scenarios, which is less than the number "
                                        "of scenarios at tree node="+tree_node._name)
-                    
+
                 yield (stage,
                        tree_node,
                        variable_id,
@@ -84,7 +93,8 @@ def scenario_tree_node_variables_generator(scenario_tree,
 
 def scenario_tree_node_variables_generator_noinstances(scenario_tree,
                                                        includeDerivedVariables=True,
-                                                       includeLastStage=True):
+                                                       includeLastStage=True,
+                                                       sort=False):
 
     if includeLastStage is False:
         stages_to_iterate = scenario_tree._stages[:-1]
@@ -93,9 +103,17 @@ def scenario_tree_node_variables_generator_noinstances(scenario_tree,
 
     for stage in stages_to_iterate:
 
-        for tree_node in stage._tree_nodes:
+        tree_nodes = stage._tree_nodes
+        if sort:
+            tree_nodes = sorted(tree_nodes, key=lambda n: n.name)
 
-            for variable_id in tree_node._variable_ids:
+        for tree_node in tree_nodes:
+
+            variter = tree_node._variable_ids
+            if sort:
+                variter = sorted(variter)
+
+            for variable_id in variter:
 
                 if (not includeDerivedVariables) and \
                    (variable_id in tree_node._derived_variable_ids):
