@@ -231,11 +231,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex.out",this_test_file_directory+"farmer_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_cplex.out",
+            this_test_file_directory+"farmer_quadratic_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_nonnormalized_termdiff_cplex(self):
         if solver['cplex'] is None:
@@ -246,11 +251,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --enable-termdiff-convergence --termdiff-threshold=0.01"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out",
+            this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_cplex_direct(self):
         if solver['_cplex_direct'] is None:
@@ -261,11 +271,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=cplex --solver-io=python --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_cplex_direct.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_cplex_direct.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_direct.out",this_test_file_directory+"farmer_quadratic_cplex_direct.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_cplex_direct.out",
+            this_test_file_directory+"farmer_quadratic_cplex_direct.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_gurobi_direct(self):
         if solver['_gurobi_direct'] is None:
@@ -276,11 +291,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-io=python --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_gurobi_direct.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_gurobi_direct.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_direct.out",this_test_file_directory+"farmer_quadratic_gurobi_direct.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_gurobi_direct.out",
+            this_test_file_directory+"farmer_quadratic_gurobi_direct.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_gurobi(self):
         if solver['gurobi'] is None:
@@ -292,11 +312,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi.out",this_test_file_directory+"farmer_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_gurobi.out",
+            this_test_file_directory+"farmer_quadratic_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_nonnormalized_termdiff_gurobi(self):
         if solver['gurobi'] is None:
@@ -307,11 +332,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --enable-termdiff-convergence --termdiff-threshold=0.01"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out",this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out",
+            this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_ipopt(self):
         if solver['asl:ipopt'] is None:
@@ -322,11 +352,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=ipopt --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_ipopt.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_ipopt.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt.out",this_test_file_directory+"farmer_quadratic_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_ipopt.out",
+            this_test_file_directory+"farmer_quadratic_ipopt.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-4)
 
     def test_farmer_maximize_quadratic_gurobi(self):
         if solver['gurobi'] is None:
@@ -337,11 +372,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --verbose --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_quadratic_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_quadratic_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_quadratic_gurobi.out",this_test_file_directory+"farmer_maximize_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_quadratic_gurobi.out",
+            this_test_file_directory+"farmer_maximize_quadratic_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_with_integers_quadratic_cplex(self):
         if solver['cplex'] is None:
@@ -352,11 +392,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --default-rho=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_integers_quadratic_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_with_integers_quadratic_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_with_integers_quadratic_cplex.out",
+            this_test_file_directory+"farmer_with_integers_quadratic_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_with_integers_quadratic_gurobi(self):
         if solver['gurobi'] is None:
@@ -367,14 +412,23 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --default-rho=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-           self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out",this_test_file_directory+"farmer_with_integers_quadratic_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out",
+               this_test_file_directory+"farmer_with_integers_quadratic_gurobi_darwin.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=1e-5)
         else:
-           self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out",this_test_file_directory+"farmer_with_integers_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out",
+               this_test_file_directory+"farmer_with_integers_quadratic_gurobi.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=1e-5)
 
     def test_farmer_quadratic_verbose_cplex(self):
         if solver['cplex'] is None:
@@ -385,11 +439,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_verbose_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_verbose_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_verbose_cplex.out",this_test_file_directory+"farmer_quadratic_verbose_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_verbose_cplex.out",
+            this_test_file_directory+"farmer_quadratic_verbose_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_verbose_gurobi(self):
         if solver['gurobi'] is None:
@@ -400,11 +459,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_verbose_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_verbose_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_verbose_gurobi.out",this_test_file_directory+"farmer_quadratic_verbose_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_verbose_gurobi.out",
+            this_test_file_directory+"farmer_quadratic_verbose_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_trivial_bundling_cplex(self):
         if solver['cplex'] is None:
@@ -415,11 +479,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out",
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_trivial_bundling_gurobi(self):
         if solver['gurobi'] is None:
@@ -430,11 +499,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out",
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_trivial_bundling_ipopt(self):
         if solver['asl:ipopt'] is None:
@@ -445,11 +519,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=ipopt --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out",
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-4)
 
     def test_farmer_quadratic_basic_bundling_cplex(self):
         if solver['cplex'] is None:
@@ -460,11 +539,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out",this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out",
+            this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_quadratic_basic_bundling_gurobi(self):
         if solver['gurobi'] is None:
@@ -475,11 +559,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --verbose --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out",this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out",
+            this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_with_rent_quadratic_cplex(self):
         if solver['cplex'] is None:
@@ -490,11 +579,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_rent_quadratic_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_with_rent_quadratic_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_rent_quadratic_cplex.out",this_test_file_directory+"farmer_with_rent_quadratic_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_with_rent_quadratic_cplex.out",
+            this_test_file_directory+"farmer_with_rent_quadratic_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_with_rent_quadratic_gurobi(self):
         if solver['gurobi'] is None:
@@ -505,11 +599,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out",this_test_file_directory+"farmer_with_rent_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out",
+            this_test_file_directory+"farmer_with_rent_quadratic_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_linearized_farmer_cplex(self):
         if solver['cplex'] is None:
@@ -521,11 +620,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_linearized_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_cplex.out",this_test_file_directory+"farmer_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_cplex.out",
+            this_test_file_directory+"farmer_linearized_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_linearized_farmer_cbc(self):
         if solver['cbc'] is None:
@@ -537,11 +641,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_cbc.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_linearized_cbc.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_cbc.out",this_test_file_directory+"farmer_linearized_cbc.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_cbc.out",
+            this_test_file_directory+"farmer_linearized_cbc.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_linearized_farmer_maximize_cplex(self):
         if solver['cplex'] is None:
@@ -553,11 +662,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_linearized_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_linearized_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_linearized_cplex.out",this_test_file_directory+"farmer_maximize_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_linearized_cplex.out",
+            this_test_file_directory+"farmer_maximize_linearized_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_linearized_farmer_gurobi(self):
         if solver['gurobi'] is None:
@@ -569,11 +683,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_linearized_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi.out",this_test_file_directory+"farmer_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_gurobi.out",
+            this_test_file_directory+"farmer_linearized_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_linearized_farmer_maximize_gurobi(self):
         if solver['gurobi'] is None:
@@ -585,11 +704,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" -o max --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_linearized_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_linearized_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_linearized_gurobi.out",this_test_file_directory+"farmer_maximize_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_linearized_gurobi.out",
+            this_test_file_directory+"farmer_maximize_linearized_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_linearized_farmer_nodedata_cplex(self):
         if solver['cplex'] is None:
@@ -601,11 +725,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_nodedata_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_linearized_nodedata_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_nodedata_cplex.out",this_test_file_directory+"farmer_linearized_nodedata_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_nodedata_cplex.out",
+            this_test_file_directory+"farmer_linearized_nodedata_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_linearized_farmer_nodedata_gurobi(self):
         if solver['gurobi'] is None:
@@ -617,11 +746,16 @@ class TestPH(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver="+solver_string+" --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+" --linearize-nonbinary-penalty-terms=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_linearized_nodedata_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_linearized_nodedata_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_nodedata_gurobi.out",this_test_file_directory+"farmer_linearized_nodedata_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_nodedata_gurobi.out",
+            this_test_file_directory+"farmer_linearized_nodedata_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_quadratic_sizes3_cplex(self):
         if (solver['cplex'] is None) or (not has_yaml):
@@ -639,12 +773,21 @@ class TestPH(unittest.TestCase):
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_quadratic_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_quadratic_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex.out", this_test_file_directory+"sizes3_quadratic_cplex.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex.out", this_test_file_directory+"sizes3_quadratic_cplex.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"sizes3_quadratic_cplex.out",
+            this_test_file_directory+"sizes3_quadratic_cplex.baseline-a",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"sizes3_quadratic_cplex.out",
+            this_test_file_directory+"sizes3_quadratic_cplex.baseline-b",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
         if (flag_a) and (flag_b):
             print(diffs_a)
             print(diffs_b)
@@ -666,12 +809,21 @@ class TestPH(unittest.TestCase):
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_quadratic_cplex_direct.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_quadratic_cplex_direct.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex_direct.out", this_test_file_directory+"sizes3_quadratic_cplex_direct.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex_direct.out", this_test_file_directory+"sizes3_quadratic_cplex_direct.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"sizes3_quadratic_cplex_direct.out",
+            this_test_file_directory+"sizes3_quadratic_cplex_direct.baseline-a",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"sizes3_quadratic_cplex_direct.out",
+            this_test_file_directory+"sizes3_quadratic_cplex_direct.baseline-b",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
         if (flag_a) and (flag_b):
             print(diffs_a)
             print(diffs_b)
@@ -694,21 +846,38 @@ class TestPH(unittest.TestCase):
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_quadratic_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_quadratic_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi.out", this_test_file_directory+"sizes3_quadratic_gurobi_darwin.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi.out", this_test_file_directory+"sizes3_quadratic_gurobi_darwin.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_gurobi.out",
+                this_test_file_directory+"sizes3_quadratic_gurobi_darwin.baseline-a",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_gurobi.out",
+                this_test_file_directory+"sizes3_quadratic_gurobi_darwin.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
         else:
 
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi.out", this_test_file_directory+"sizes3_quadratic_gurobi.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi.out", this_test_file_directory+"sizes3_quadratic_gurobi.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_gurobi.out",
+                this_test_file_directory+"sizes3_quadratic_gurobi.baseline-a",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_gurobi.out",
+                this_test_file_directory+"sizes3_quadratic_gurobi.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
@@ -724,12 +893,19 @@ class TestPH(unittest.TestCase):
                     " --max-iterations=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-a", filter=filter_time_and_data_dirs)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-b", filter=filter_time_and_data_dirs)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",
+            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-a",
+            filter=filter_time_and_data_dirs)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",
+            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-b",
+            filter=filter_time_and_data_dirs)
         if (flag_a) and (flag_b):
             print(diffs_a)
             print(diffs_b)
@@ -745,14 +921,23 @@ class TestPH(unittest.TestCase):
                     " --max-iterations=10"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",this_test_file_directory+"sizes10_quadratic_twobundles_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",
+                this_test_file_directory+"sizes10_quadratic_twobundles_gurobi_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
         else:
-            self.assertFileEqualsBaseline(this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",
+                this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
 
     def test_quadratic_networkflow1ef10_cplex(self):
         if solver['cplex'] is None:
@@ -767,15 +952,28 @@ class TestPH(unittest.TestCase):
                     " --ww-extension-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"wwph-immediatefixing.cfg"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_quadratic_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"networkflow1ef10_quadratic_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",this_test_file_directory+"networkflow1ef10_quadratic_cplex_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
+                this_test_file_directory+"networkflow1ef10_quadratic_cplex_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
         else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_quadratic_cplex.out", this_test_file_directory+"networkflow1ef10_quadratic_cplex.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_quadratic_cplex.out", this_test_file_directory+"networkflow1ef10_quadratic_cplex.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
+                this_test_file_directory+"networkflow1ef10_quadratic_cplex.baseline-a",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
+                this_test_file_directory+"networkflow1ef10_quadratic_cplex.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
@@ -794,14 +992,23 @@ class TestPH(unittest.TestCase):
                     " --ww-extension-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"wwph-immediatefixing.cfg"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",this_test_file_directory+"networkflow1ef10_quadratic_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",
+                this_test_file_directory+"networkflow1ef10_quadratic_gurobi_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
         else:
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",this_test_file_directory+"networkflow1ef10_quadratic_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",
+                this_test_file_directory+"networkflow1ef10_quadratic_gurobi.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
 
     def test_linearized_networkflow1ef10_cplex(self):
         if solver['cplex'] is None:
@@ -817,14 +1024,23 @@ class TestPH(unittest.TestCase):
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_linearized_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"networkflow1ef10_linearized_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_cplex.out",this_test_file_directory+"networkflow1ef10_linearized_cplex_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_linearized_cplex.out",
+                this_test_file_directory+"networkflow1ef10_linearized_cplex_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
         else:
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_cplex.out",this_test_file_directory+"networkflow1ef10_linearized_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_linearized_cplex.out",
+                this_test_file_directory+"networkflow1ef10_linearized_cplex.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
 
     def test_linearized_networkflow1ef10_gurobi(self):
         if solver['gurobi'] is None:
@@ -840,16 +1056,29 @@ class TestPH(unittest.TestCase):
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"networkflow1ef10_linearized_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
         else:
 
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline-a",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
 
             if (flag_a) and (flag_b):
                 print(diffs_a)
@@ -874,15 +1103,28 @@ class TestPH(unittest.TestCase):
                     " --solve-ef"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"forestry_linearized_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"forestry_linearized_cplex.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"forestry_linearized_cplex.out",this_test_file_directory+"forestry_linearized_cplex_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"forestry_linearized_cplex.out",
+                this_test_file_directory+"forestry_linearized_cplex_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
         else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"forestry_linearized_cplex.out", this_test_file_directory+"forestry_linearized_cplex.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"forestry_linearized_cplex.out", this_test_file_directory+"forestry_linearized_cplex.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"forestry_linearized_cplex.out",
+                this_test_file_directory+"forestry_linearized_cplex.baseline-a",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"forestry_linearized_cplex.out",
+                this_test_file_directory+"forestry_linearized_cplex.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
@@ -906,14 +1148,23 @@ class TestPH(unittest.TestCase):
                     " --solve-ef"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"forestry_linearized_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"forestry_linearized_gurobi.out")
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"forestry_linearized_gurobi.out",this_test_file_directory+"forestry_linearized_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"forestry_linearized_gurobi.out",
+                this_test_file_directory+"forestry_linearized_gurobi_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
         else:
-            self.assertFileEqualsBaseline(this_test_file_directory+"forestry_linearized_gurobi.out",this_test_file_directory+"forestry_linearized_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"forestry_linearized_gurobi.out",
+                this_test_file_directory+"forestry_linearized_gurobi.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
 
     def test_farmer_ef(self):
         farmer_examples_dir = pysp_examples_dir + "farmer"
@@ -923,12 +1174,19 @@ class TestPH(unittest.TestCase):
         argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef.out",this_test_file_directory+"farmer_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_ef.baseline.lp")
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef.out",
+            this_test_file_directory+"farmer_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            this_test_file_directory+"farmer_ef.baseline.lp")
 
     def test_farmer_maximize_ef(self):
         farmer_examples_dir = pysp_examples_dir + "farmer"
@@ -938,12 +1196,19 @@ class TestPH(unittest.TestCase):
         argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_ef.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_ef.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef.out",this_test_file_directory+"farmer_maximize_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_maximize_ef.baseline.lp")
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_ef.out",
+            this_test_file_directory+"farmer_maximize_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            this_test_file_directory+"farmer_maximize_ef.baseline.lp")
 
     def test_farmer_piecewise_ef(self):
         farmer_examples_dir = pysp_examples_dir + "farmerWpiecewise"
@@ -953,12 +1218,19 @@ class TestPH(unittest.TestCase):
         argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_piecewise_ef.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_piecewise_ef.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_piecewise_ef.out",this_test_file_directory+"farmer_piecewise_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_piecewise_ef.baseline.lp")
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_piecewise_ef.out",
+            this_test_file_directory+"farmer_piecewise_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            this_test_file_directory+"farmer_piecewise_ef.baseline.lp")
 
     def test_farmer_ef_with_solve_cplex(self):
         if solver['cplex'] is None:
@@ -969,11 +1241,16 @@ class TestPH(unittest.TestCase):
         ef_output_file = this_test_file_directory+"test_farmer_with_solve_cplex.lp"
         argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve"
         print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_solve_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_with_solve_cplex.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex.out",this_test_file_directory+"farmer_ef_with_solve_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_with_solve_cplex.out",
+            this_test_file_directory+"farmer_ef_with_solve_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_ef_with_solve_cplex_with_csv_writer(self):
         if solver['cplex'] is None:
@@ -984,15 +1261,24 @@ class TestPH(unittest.TestCase):
         ef_output_file = this_test_file_directory+"test_farmer_with_solve_cplex_with_csv_writer.lp"
         argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve --solution-writer=pyomo.pysp.plugins.csvsolutionwriter"
         print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out",this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out",
+            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
         # the following comparison is a bit weird, in that "ef.csv" is written to the current directory.
         # at present, we can't specify a directory for this file in pysp. so, we'll look for it here,
         # and if the test passes, clean up after ourselves if the test passes.
-        self.assertFileEqualsBaseline("ef.csv", this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.csv", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            "ef.csv",
+            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.csv",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_maximize_ef_with_solve_cplex(self):
         if solver['cplex'] is None:
@@ -1003,11 +1289,16 @@ class TestPH(unittest.TestCase):
         ef_output_file = this_test_file_directory+"test_farmer_maximize_with_solve_cplex.lp"
         argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file+" --solver=cplex --solve"
         print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out",this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out",
+            this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_ef_with_solve_gurobi(self):
         if solver['gurobi'] is None:
@@ -1019,11 +1310,16 @@ class TestPH(unittest.TestCase):
         argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=gurobi --solve"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_solve_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_with_solve_gurobi.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_gurobi.out",this_test_file_directory+"farmer_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_with_solve_gurobi.out",
+            this_test_file_directory+"farmer_ef_with_solve_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_maximize_ef_with_solve_gurobi(self):
         if solver['gurobi'] is None:
@@ -1034,11 +1330,16 @@ class TestPH(unittest.TestCase):
         ef_output_file = this_test_file_directory+"test_farmer_maximize_with_solve_gurobi.lp"
         argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file+" --solver=gurobi --solve"
         print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out",this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out",
+            this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_farmer_ef_with_solve_ipopt(self):
         if solver['asl:ipopt'] is None:
@@ -1049,14 +1350,23 @@ class TestPH(unittest.TestCase):
         ef_output_file = this_test_file_directory+"test_farmer_with_solve_ipopt.nl"
         argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=ipopt --solve"
         print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_with_solve_ipopt.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_with_solve_ipopt.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-           self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_ipopt.out",this_test_file_directory+"farmer_ef_with_solve_ipopt_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
+               this_test_file_directory+"farmer_ef_with_solve_ipopt_darwin.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=1e-4)
         else:
-           self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_ipopt.out",this_test_file_directory+"farmer_ef_with_solve_ipopt.baseline", filter=filter_time_and_data_dirs, tolerance=1e-4)
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
+               this_test_file_directory+"farmer_ef_with_solve_ipopt.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=1e-4)
 
     def test_hydro_ef(self):
         hydro_examples_dir = pysp_examples_dir + "hydro"
@@ -1066,12 +1376,19 @@ class TestPH(unittest.TestCase):
         argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"hydro_ef.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"hydro_ef.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"hydro_ef.out",this_test_file_directory+"hydro_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"hydro_ef.baseline.lp")
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"hydro_ef.out",
+            this_test_file_directory+"hydro_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            this_test_file_directory+"hydro_ef.baseline.lp")
 
     def test_sizes3_ef(self):
         sizes3_examples_dir = pysp_examples_dir + "sizes"
@@ -1081,12 +1398,19 @@ class TestPH(unittest.TestCase):
         argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_ef.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_ef.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef.out",this_test_file_directory+"sizes3_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"sizes3_ef.baseline.lp.gz")
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"sizes3_ef.out",
+            this_test_file_directory+"sizes3_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            this_test_file_directory+"sizes3_ef.baseline.lp.gz")
 
     def test_sizes3_ef_with_solve_cplex(self):
         if solver['cplex'] is None:
@@ -1098,15 +1422,26 @@ class TestPH(unittest.TestCase):
         argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_ef_with_solve_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_ef_with_solve_cplex.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef_with_solve_cplex.out",this_test_file_directory+"sizes3_ef_with_solve_cplex_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
+                this_test_file_directory+"sizes3_ef_with_solve_cplex_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=1e-5)
         else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_ef_with_solve_cplex.out",this_test_file_directory+"sizes3_ef_with_solve_cplex.baseline-a", filter=filter_time_and_data_dirs)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_ef_with_solve_cplex.out",this_test_file_directory+"sizes3_ef_with_solve_cplex.baseline-b", filter=filter_time_and_data_dirs)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
+                this_test_file_directory+"sizes3_ef_with_solve_cplex.baseline-a",
+                filter=filter_time_and_data_dirs)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
+                this_test_file_directory+"sizes3_ef_with_solve_cplex.baseline-b",
+                filter=filter_time_and_data_dirs)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
@@ -1122,14 +1457,23 @@ class TestPH(unittest.TestCase):
         argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=gurobi --solve"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"sizes3_ef_with_solve_gurobi.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_ef_with_solve_gurobi.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
-           self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",this_test_file_directory+"sizes3_ef_with_solve_gurobi_darwin.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",
+               this_test_file_directory+"sizes3_ef_with_solve_gurobi_darwin.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=1e-5)
         else:
-           self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",this_test_file_directory+"sizes3_ef_with_solve_gurobi.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",
+               this_test_file_directory+"sizes3_ef_with_solve_gurobi.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=1e-5)
 
     def test_forestry_ef(self):
         forestry_examples_dir = pysp_examples_dir + "forestry"
@@ -1139,12 +1483,20 @@ class TestPH(unittest.TestCase):
         argstring = "runef -o max --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"forestry_ef.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"forestry_ef.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"forestry_ef.out",this_test_file_directory+"forestry_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"forestry_ef.baseline.lp.gz", tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"forestry_ef.out",
+            this_test_file_directory+"forestry_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            this_test_file_directory+"forestry_ef.baseline.lp.gz",
+            tolerance=1e-5)
 
     def test_networkflow1ef10_ef(self):
         networkflow1ef10_examples_dir = pysp_examples_dir + "networkflow"
@@ -1154,12 +1506,19 @@ class TestPH(unittest.TestCase):
         argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"networkflow1ef10_ef.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"networkflow1ef10_ef.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_ef.out",this_test_file_directory+"networkflow1ef10_ef.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"networkflow1ef10_ef.baseline.lp.gz")
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"networkflow1ef10_ef.out",
+            this_test_file_directory+"networkflow1ef10_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            this_test_file_directory+"networkflow1ef10_ef.baseline.lp.gz")
 
     def test_farmer_ef_cvar(self):
         farmer_examples_dir = pysp_examples_dir + "farmer"
@@ -1169,12 +1528,19 @@ class TestPH(unittest.TestCase):
         argstring = "runef --symbolic-solver-labels --verbose --generate-weighted-cvar --risk-alpha=0.90 --cvar-weight=0.0 -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"farmer_ef_cvar.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_cvar.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_cvar.out",this_test_file_directory+"farmer_ef_cvar.baseline.out", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        self.assertFileEqualsBaseline(ef_output_file,this_test_file_directory+"farmer_ef_cvar.baseline.lp")
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_cvar.out",
+            this_test_file_directory+"farmer_ef_cvar.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            this_test_file_directory+"farmer_ef_cvar.baseline.lp")
 
     def test_computeconf_networkflow1ef10_cplex(self):
         if solver['cplex'] is None:
@@ -1193,12 +1559,21 @@ class TestPH(unittest.TestCase):
                     " --random-seed=125"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out")
         args = argstring.split()
         pyomo.pysp.computeconf.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-a", filter=filter_time_and_data_dirs, tolerance=1e-5)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-b", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-a",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-b",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
         if (flag_a) and (flag_b):
             print(diffs_a)
             print(diffs_b)
@@ -1217,12 +1592,19 @@ class TestPH(unittest.TestCase):
                     " --solve"
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out")
         args = argstring.split()
         pyomo.pysp.ef_writer_script.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-a", filter=filter_time_and_data_dirs)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-b", filter=filter_time_and_data_dirs)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
+            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-a",
+            filter=filter_time_and_data_dirs)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
+            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-b",
+            filter=filter_time_and_data_dirs)
         if (flag_a) and (flag_b):
             print(diffs_a)
             print(diffs_b)
@@ -1240,11 +1622,16 @@ class TestPH(unittest.TestCase):
                     " --ef-solver-options=\"mipgap=0.001\""
         print("Testing command: " + argstring)
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out")
         args = argstring.split()
         pyomo.pysp.drive_lagrangian_cc.run(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.baseline", filter=filter_time_and_data_dirs, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out",
+            this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=1e-5)
 
     def test_lagrangian_param_1cc_networkflow1ef3_cplex(self):
         if solver['cplex'] is None:
@@ -1256,12 +1643,17 @@ class TestPH(unittest.TestCase):
         print("Testing command: " + argstring)
         args = argstring.split()
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out")
 
         import pyomo.pysp.lagrangeParam
         pyomo.pysp.lagrangeParam.run(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out",
+            this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline",
+            filter=filter_lagrange,
+            tolerance=1e-5)
 
     def test_lagrangian_morepr_1cc_networkflow1ef3_cplex(self):
         if solver['cplex'] is None:
@@ -1273,12 +1665,17 @@ class TestPH(unittest.TestCase):
         print("Testing command: " + argstring)
         args = argstring.split()
 
-        pyutilib.misc.setup_redirect(this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out")
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out")
 
         import pyomo.pysp.lagrangeMorePR
         pyomo.pysp.lagrangeMorePR.run(args=args[1:])
         pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline", filter=filter_lagrange, tolerance=1e-5)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",
+            this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline",
+            filter=filter_lagrange,
+            tolerance=1e-5)
 
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
@@ -1335,7 +1732,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_pyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out",
+            this_test_file_directory+"farmer_quadratic_cplex_with_pyro.baseline",
+            filter=filter_pyro)
 
     def test_farmer_quadratic_cplex_with_phpyro(self):
         if (solver['cplex'] is None):
@@ -1349,7 +1749,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out",this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out",
+            this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.baseline",
+            filter=filter_pyro)
 
     def test_farmer_quadratic_with_bundles_cplex_with_pyro(self):
         if (solver['cplex'] is None):
@@ -1363,7 +1766,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out",this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out",
+            this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.baseline",
+            filter=filter_pyro)
 
     def test_farmer_quadratic_gurobi_with_phpyro(self):
         if (solver['gurobi'] is None):
@@ -1377,7 +1783,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out",this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out",
+            this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.baseline",
+            filter=filter_pyro)
 
     def test_farmer_linearized_gurobi_with_phpyro(self):
         if (solver['gurobi'] is None):
@@ -1391,7 +1800,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out",this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out",
+            this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.baseline",
+            filter=filter_pyro)
 
     def test_farmer_quadratic_ipopt_with_pyro(self):
         if (solver['asl:ipopt'] is None):
@@ -1405,7 +1817,11 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",
+            this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.baseline",
+            filter=filter_pyro,
+            tolerance=1e-4)
 
     def test_farmer_quadratic_ipopt_with_phpyro(self):
         if (solver['asl:ipopt'] is None):
@@ -1419,7 +1835,11 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",
+            this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.baseline",
+            filter=filter_pyro,
+            tolerance=1e-4)
 
     def test_farmer_linearized_ipopt_with_phpyro(self):
         if (solver['asl:ipopt'] is None):
@@ -1433,7 +1853,11 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",
+            this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.baseline",
+            filter=filter_pyro,
+            tolerance=1e-4)
 
     def test_farmer_quadratic_trivial_bundling_ipopt_with_phpyro(self):
         if (solver['asl:ipopt'] is None):
@@ -1447,7 +1871,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out",
+            this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline",
+            filter=filter_pyro)
 
     def test_farmer_quadratic_bundling_ipopt_with_phpyro(self):
         if (solver['asl:ipopt'] is None):
@@ -1461,7 +1888,11 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",
+            this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline",
+            filter=filter_pyro,
+            tolerance=1e-4)
 
     def test_quadratic_sizes3_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not has_yaml):
@@ -1484,10 +1915,19 @@ class TestPHParallel(unittest.TestCase):
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
+                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro_darwin.baseline",
+                filter=filter_pyro)
         else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out", this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.baseline-a", filter=filter_pyro)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out", this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.baseline-b", filter=filter_pyro)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
+                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.baseline-a",
+                filter=filter_pyro)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
+                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.baseline-b",
+                filter=filter_pyro)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
@@ -1505,7 +1945,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out",this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out",
+            this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.baseline",
+            filter=filter_pyro)
 
     def test_linearized_sizes3_cplex_with_phpyro(self):
         if (solver['cplex'] is None) or (not has_yaml):
@@ -1529,10 +1972,19 @@ class TestPHParallel(unittest.TestCase):
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",this_test_file_directory+"sizes3_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
+                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro_darwin.baseline",
+                filter=filter_pyro)
         else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out", this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.baseline-a", filter=filter_pyro)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out", this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.baseline-b", filter=filter_pyro)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
+                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.baseline-a",
+                filter=filter_pyro)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
+                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.baseline-b",
+                filter=filter_pyro)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
@@ -1559,13 +2011,25 @@ class TestPHParallel(unittest.TestCase):
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out", this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro_darwin.baseline-a", filter=filter_pyro, tolerance=1e-5)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
+                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro_darwin.baseline-a",
+                filter=filter_pyro,
+                tolerance=1e-5)
             if (flag_a):
                 print(diffs_a)
                 self.fail("Differences identified relative to all baseline output file alternatives")
         else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out", this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.baseline-a", filter=filter_pyro, tolerance=1e-5)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out", this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.baseline-b", filter=filter_pyro, tolerance=1e-5)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
+                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.baseline-a",
+                filter=filter_pyro,
+                tolerance=1e-5)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
+                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.baseline-b",
+                filter=filter_pyro,
+                tolerance=1e-5)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
@@ -1583,7 +2047,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out",this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out",
+            this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.baseline",
+            filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_quadratic_async_ipopt_with_pyro(self):
@@ -1598,7 +2065,11 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",
+            this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.baseline",
+            filter=filter_pyro,
+            tolerance=1e-4)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_quadratic_async_gurobi_with_pyro(self):
@@ -1613,7 +2084,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out",
+            this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.baseline",
+            filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_linearized_async_gurobi_with_pyro(self):
@@ -1628,7 +2102,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out",this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out",
+            this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.baseline",
+            filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
     def test_farmer_linearized_async_ipopt_with_pyro(self):
@@ -1643,7 +2120,11 @@ class TestPHParallel(unittest.TestCase):
 
         print("Testing command: " + argstring)
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",
+            this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.baseline",
+            filter=filter_pyro,
+            tolerance=1e-4)
 
     def test_farmer_with_integers_linearized_cplex_with_phpyro(self):
         if (solver['cplex'] is None):
@@ -1657,7 +2138,11 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out",this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.baseline", filter=filter_pyro, tolerance=1e-4)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out",
+            this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.baseline",
+            filter=filter_pyro,
+            tolerance=1e-4)
 
     # the primary objective of this test is to validate the bare minimum level of functionality on the PH solver server
     # end (solves and rho setting) - obviously should yield the same results as serial PH.
@@ -1676,7 +2161,10 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.baseline",
+            filter=filter_pyro)
 
     # builds on the above test, to validate warm-start capabilities; by imposing a migap,
     # executions with and without warm-starts will arrive at different solutions.
@@ -1698,9 +2186,15 @@ class TestPHParallel(unittest.TestCase):
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",
+                this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro_darwin.baseline",
+                filter=filter_pyro)
         else:
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.baseline", filter=filter_pyro)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",
+                this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.baseline",
+                filter=filter_pyro)
 
     def test_linearized_networkflow1ef10_gurobi_with_phpyro(self):
         if (solver['gurobi'] is None) or (not has_yaml):
@@ -1726,11 +2220,23 @@ class TestPHParallel(unittest.TestCase):
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro_darwin.baseline", filter=filter_pyro)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro_darwin.baseline",
+                filter=filter_pyro)
         else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-a", filter=filter_pyro)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-b", filter=filter_pyro)
-            [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-c", filter=filter_pyro)
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-a",
+                filter=filter_pyro)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-b",
+                filter=filter_pyro)
+            [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
+                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-c",
+                filter=filter_pyro)
             if (flag_a) and (flag_b) and (flag_c):
                 print(diffs_a)
                 print(diffs_b)
@@ -1756,9 +2262,15 @@ class TestPHParallel(unittest.TestCase):
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro_darwin.baseline", filter=filter_pyro)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",
+                this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro_darwin.baseline",
+                filter=filter_pyro)
         else:
-            self.assertFileEqualsBaseline(this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.baseline", filter=filter_pyro)
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",
+                this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.baseline",
+                filter=filter_pyro)
 
     def test_simple_linearized_networkflow1ef10_cplex_with_phpyro(self):
         if (solver['cplex'] is None):
@@ -1778,9 +2290,18 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-a", filter=filter_pyro)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-b", filter=filter_pyro)
-        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-c", filter=filter_pyro)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-a",
+            filter=filter_pyro)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-b",
+            filter=filter_pyro)
+        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-c",
+            filter=filter_pyro)
         if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
             print(diffs_b)
@@ -1811,9 +2332,18 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-a", filter=filter_pyro)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-b", filter=filter_pyro)
-        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out", this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-c", filter=filter_pyro)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-a",
+            filter=filter_pyro)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-b",
+            filter=filter_pyro)
+        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-c",
+            filter=filter_pyro)
         if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
             print(diffs_b)
@@ -1845,9 +2375,18 @@ class TestPHParallel(unittest.TestCase):
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-a", filter=filter_pyro)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-b", filter=filter_pyro)
-        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out", this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-c", filter=filter_pyro)
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-a",
+            filter=filter_pyro)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-b",
+            filter=filter_pyro)
+        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",
+            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-c",
+            filter=filter_pyro)
         if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
             print(diffs_b)
