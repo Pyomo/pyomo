@@ -142,6 +142,8 @@ def extract_node_solution(tree_node):
                   "id %s (%s)"
                   % (tree_node.name, variable_id, full_name))
             return None
+    for varname in list(solution.keys()):
+        solution[varname] = sorted(solution[varname], key=lambda x: x[0])
     return solution
 
 class JSONSolutionSaverExtension(PySPConfiguredExtension,
@@ -197,7 +199,7 @@ class JSONSolutionSaverExtension(PySPConfiguredExtension,
                         stage_solutions.append(node_solutions)
                     else:
                         break
-                json.dump(stage_solutions, f, indent=2)
+                json.dump(stage_solutions, f, indent=2, sort_keys=True)
             print("Saved scenario tree solution for %s time stages "
                   "to file %s" % (cntr, self.get_option('output_name')))
             return True
