@@ -1,4 +1,4 @@
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python3.4_snotra_expensive/src/pyomo/examples/pysp/networkflow/models/ReferenceModel.py
+Importing module=/home/gahacke/Repos/pyomo/src/pyomo/examples/pysp/networkflow/models/ReferenceModel.py
 Module successfully loaded
 Loading reference model and scenario tree
 Starting confidence interval calculation...
@@ -33,4 +33,8 @@ Solving the xstar extensive form.
 Sample extensive form objective value=151550.7254670225
 Solving the extensive form given the xhat solution.
 RUN-TIME ERROR:
-Extensive form was infeasible!
+EF solve failed optimality check:
+Solver Status: ok
+Termination Condition: infeasible
+Solution Status: <undefined>
+
