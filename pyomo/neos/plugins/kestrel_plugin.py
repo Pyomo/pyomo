@@ -29,7 +29,6 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         """
         AsynchronousSolverManager.clear(self)
         self.kestrel = pyomo.neos.kestrel.kestrelAMPL()
-        self._opt = None
         self._ah = {} # maps NEOS job numbers to their corresponding action handle.
         self._args = {}
         self._opt_data = {}
@@ -41,7 +40,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         #      we're still trying to get the basics down.
         # store pairs of NEOS message offset and NEOS message string.
         # index into the map is the NEOS job number
-        self._neos_log = {} 
+        self._neos_log = {}
         self._solvers = {}
 
     def _perform_queue(self, ah, *args, **kwds):
@@ -68,8 +67,8 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         ephemeral_solver_options.update(
             OptSolver._options_string_to_dict(kwds.pop('options_string', '')))
 
-        self._opt = SolverFactory('_neos')
-        self._opt._presolve(*args, **kwds)
+        opt = SolverFactory('_neos')
+        opt._presolve(*args, **kwds)
         #
         # Map NEOS name, using lowercase convention in Pyomo
         #
@@ -84,14 +83,14 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         #
         os.environ['kestrel_options'] = 'solver=%s' % self._solvers[solver]
         solver_options = {}
-        for key in self._opt.options:
-            solver_options[key]=self._opt.options[key]
+        for key in opt.options:
+            solver_options[key]=opt.options[key]
         solver_options.update(ephemeral_solver_options)
 
-        options = self._opt._get_options_string(solver_options)
+        options = opt._get_options_string(solver_options)
         if not options == "":
-            os.environ[self._solvers[solver].lower()+'_options'] = self._opt._get_options_string()
-        xml = self.kestrel.formXML(self._opt._problem_files[0])
+            os.environ[self._solvers[solver].lower()+'_options'] = opt._get_options_string()
+        xml = self.kestrel.formXML(opt._problem_files[0])
         (jobNumber, password) = self.kestrel.submit(xml)
         ah.job = jobNumber
         ah.password = password
@@ -100,7 +99,11 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         #
         self._ah[jobNumber] = ah
         self._neos_log[jobNumber] = (0, "")
-        self._opt_data[jobNumber] = self._opt._smap_id
+        self._opt_data[jobNumber] = (opt,
+                                     opt._smap_id,
+                                     opt._load_solutions,
+                                     opt._select_index,
+                                     opt._default_variable_value)
         self._args[jobNumber] = args
         return ah
 
@@ -120,11 +123,15 @@ class SolverManager_NEOS(AsynchronousSolverManager):
             if not status in ("Running", "Waiting"):
 
                 # the job is done.
-                ah = self._ah[jobNumber]                
+                ah = self._ah[jobNumber]
                 del self._ah[jobNumber]
                 ah.status = ActionStatus.done
-                
-                smap_id = self._opt_data[jobNumber]
+
+                (opt,
+                 smap_id,
+                 load_solutions,
+                 select_index,
+                 default_variable_value) = self._opt_data[jobNumber]
                 del self._opt_data[jobNumber]
 
                 args = self._args[jobNumber]
@@ -134,10 +141,11 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 results = self.kestrel.neos.getFinalResults(jobNumber, ah.password)
 
                 (current_offset, current_message) = self._neos_log[jobNumber]
-                OUTPUT=open(self._opt._log_file, 'w')
+                OUTPUT=open(opt._log_file, 'w')
                 six.print_(current_message, file=OUTPUT)
                 OUTPUT.close()
-                OUTPUT=open(self._opt._soln_file, 'w')
+                OUTPUT=open(opt._soln_file, 'w')
+                print(results.data)
                 if six.PY2:
                     six.print_(results.data, file=OUTPUT)
                 else:
@@ -145,16 +153,23 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 OUTPUT.close()
 
                 rc = None
-                solver_results = self._opt.process_output(rc)
-                #solver_results._symbol_map = self._opt._symbol_map
+                solver_results = opt.process_output(rc)
                 solver_results._smap_id = smap_id
                 self.results[ah.id] = solver_results
+                opt.deactivate()
 
                 if isinstance(args[0], Block):
                     _model = args[0]
-                    _model.solutions.load_from(solver_results)
-                    solver_results._smap_id = None
-                    solver_results.solution.clear()
+                    if load_solutions:
+                        _model.solutions.load_from(
+                            solver_results,
+                            select=select_index,
+                            default_variable_value=default_variable_value)
+                        solver_results._smap_id = None
+                        solver_results.solution.clear()
+                    else:
+                        solver_results._smap = _model.solutions.symbol_map[smap_id]
+                        _model.solutions.delete_symbol_map(smap_id)
 
                 return ah
             else:
