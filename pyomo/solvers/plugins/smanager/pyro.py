@@ -21,7 +21,7 @@ import pyutilib.pyro
 from pyutilib.pyro import using_pyro4, TaskProcessingError
 import pyutilib.misc
 import pyomo.util.plugin
-from pyomo.opt.base import OptSolver
+from pyomo.opt.base import OptSolver, SolverFactory
 from pyomo.opt.parallel.manager import ActionManagerError, ActionStatus
 from pyomo.opt.parallel.async_solver import (AsynchronousSolverManager,
                                              SolverManagerFactory)
@@ -67,6 +67,10 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
             raise ActionManagerError(
                 "No solver passed to %s, use keyword option 'solver'"
                 % (type(self).__name__) )
+        deactivate_opt = False
+        if isinstance(opt, six.string_types):
+            deactivate_opt = True
+            opt = SolverFactory(opt, solver_io=kwds.pop('solver_io', None))
 
         #
         # The following block of code is taken from the OptSolver.solve()
@@ -156,6 +160,8 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
                                  opt._load_solutions,
                                  opt._select_index,
                                  opt._default_variable_value)
+        if deactivate_opt:
+            opt.deactivate()
 
         return data
 
