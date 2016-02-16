@@ -451,7 +451,7 @@ safe_declare_unique_option(
         (),
         domain=_domain_tuple_of_str,
         description=(
-            "File containing containing a 'pysp_postinit_callback' "
+            "File that contains  a 'pysp_postinit_callback' "
             "function, which is executed on each scenario at the end "
             "of scenario tree manager initialization. If the scenario tree "
             "is distributed, then this callback will be transmitted to the "
@@ -476,7 +476,7 @@ safe_declare_unique_option(
         (),
         domain=_domain_tuple_of_str,
         description=(
-            "File containing containing a "
+            "File that contains a "
             "'pysp_aggregategetter_callback' function, which is executed "
             "in a sequential call chain on each scenario at the end of "
             "scenario tree manager initialization. Most useful in cases where "
