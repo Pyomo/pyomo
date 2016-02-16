@@ -84,7 +84,7 @@ elif config == "core":
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
-    hudson.driver.perform_build('pyomo', coverage=True, omit=pyutilib)
+    hudson.driver.perform_tests('pyomo', coverage=True, omit=pyutilib)
 
 elif config == "nonpysp":
     os.environ['TEST_PACKAGES'] = '-e pysp'
@@ -110,7 +110,7 @@ elif config == "booktests":
     # Test
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
-    hudson.driver.perform_build('pyomo', cat='book')
+    hudson.driver.perform_tests('pyomo', cat='book')
 
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
