@@ -73,7 +73,8 @@ class ResultsReader_sol(results.AbstractResultsReader):
                 z += [float(line)]
         else:
             IN.close()
-            msg = "Error reading \"" + filename + "\": no Options line found.\nSOL File Output:\n"
+            msg = ("Error reading \"" + filename +
+                   "\": no Options line found.\nSOL File Output:\n")
             IN = open(filename, 'r')
             for line in IN:
                 msg += line
@@ -97,10 +98,12 @@ class ResultsReader_sol(results.AbstractResultsReader):
         line = IN.readline()
         if line:                    # WEH - when is this true?
             if line[:5] != "objno":         #pragma:nocover
-                raise ValueError("Error reading \"" + filename + "\": expected \"objno\", found", line)
+                raise ValueError("Error reading \"" + filename +
+                                 "\": expected \"objno\", found", line)
             t = line.split()
             if len(t) != 3:
-                raise ValueError("Error reading \"" + filename + "\": expected two numbers in objno line, but found", line)
+                raise ValueError("Error reading \"" + filename +
+                                 "\": expected two numbers in objno line, but found", line)
             objno = [int(t[1]), int(t[2])]
         res.solver.message = msg.strip()
         res.solver.message = res.solver.message.replace("\n","; ")
@@ -130,12 +133,14 @@ class ResultsReader_sol(results.AbstractResultsReader):
             res.solver.status = SolverStatus.warning
             soln_status = SolutionStatus.unbounded
         elif (objno[1] >= 400) and (objno[1] <= 499):
-            objno_message = "EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver was stopped by a limit that you set!"
+            objno_message = ("EXCEEDED MAXIMUM NUMBER OF ITERATIONS: the solver "
+                             "was stopped by a limit that you set!")
             res.solver.termination_condition = TerminationCondition.maxIterations
             res.solver.status = SolverStatus.warning
             soln_status = SolutionStatus.stoppedByLimit
         elif (objno[1] >= 500) and (objno[1] <= 599):
-            objno_message = "FAILURE: the solver stopped by an error condition in the solver routines!"
+            objno_message = ("FAILURE: the solver stopped by an error condition "
+                             "in the solver routines!")
             res.solver.termination_condition = TerminationCondition.internalSolverError
             res.solver.status = SolverStatus.error
             soln_status = SolutionStatus.error
@@ -170,10 +175,19 @@ class ResultsReader_sol(results.AbstractResultsReader):
 
             ### Read suffixes ###
             line = IN.readline()
-            line = line.strip()
-            while (line and len(line) > 0):
-                line = line.split()
-                assert line[0] == 'suffix'
+            while line:
+                line = line.strip().split()
+                if line[0] != 'suffix':
+                    # We assume this is the start of a
+                    # section like kestrel_option, which
+                    # comes after all suffixes.
+                    remaining = ""
+                    line = IN.readline()
+                    while line:
+                        remaining += line.strip()+"; "
+                        line = IN.readline()
+                    res.solver.message += remaining
+                    break
                 unmasked_kind = int(line[1])
                 kind = unmasked_kind & 3 # 0-var, 1-con, 2-obj, 3-prob
                 convert_function = int
@@ -192,7 +206,8 @@ class ResultsReader_sol(results.AbstractResultsReader):
                     if kind == 0: # Var
                         for cnt in xrange(nvalues):
                             suf_line = IN.readline().split()
-                            soln_variable["v"+suf_line[0]][suffix_name] = convert_function(suf_line[1])
+                            soln_variable["v"+suf_line[0]][suffix_name] = \
+                                convert_function(suf_line[1])
                     elif kind == 1: # Con
                         for cnt in xrange(nvalues):
                             suf_line = IN.readline().split()
@@ -203,11 +218,13 @@ class ResultsReader_sol(results.AbstractResultsReader):
                             # mainly for pretty-print / output purposes. these are lower-cased
                             # when loaded into real suffixes, so it is largely redundant.
                             translated_suffix_name = suffix_name[0].upper() + suffix_name[1:]
-                            soln_constraint[key][translated_suffix_name] = convert_function(suf_line[1])
+                            soln_constraint[key][translated_suffix_name] = \
+                                convert_function(suf_line[1])
                     elif kind == 2: # Obj
                         for cnt in xrange(nvalues):
                             suf_line = IN.readline().split()
-                            soln.objective.setdefault("o"+suf_line[0],{})[suffix_name] = convert_function(suf_line[1])
+                            soln.objective.setdefault("o"+suf_line[0],{})[suffix_name] = \
+                                convert_function(suf_line[1])
                     elif kind == 3: # Prob
                         # Skip problem kind suffixes for now. Not sure the
                         # best place to put them in the results object
@@ -219,7 +236,6 @@ class ResultsReader_sol(results.AbstractResultsReader):
                     for cnt in xrange(nvalues):
                         IN.readline()
                 line = IN.readline()
-                line = line.strip()
         ###
         IN.close()
         #
