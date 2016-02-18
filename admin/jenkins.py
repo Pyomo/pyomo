@@ -107,7 +107,7 @@ elif config == "booktests":
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
     print("Running 'pyomo install-extras' ...")
-    output = _run_cmd("python/bin/pyomo install-extras", shell=True)
+    output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py", shell=True)
     print(output.decode('ascii'))
     # Test
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
