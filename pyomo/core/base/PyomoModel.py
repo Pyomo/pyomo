@@ -947,7 +947,6 @@ class ConcreteModel(Model):
     """
 
     def __init__(self, *args, **kwds):
-        kwds['_error'] = False
         kwds['concrete'] = True
         Model.__init__(self, *args, **kwds)
 
@@ -959,7 +958,6 @@ class AbstractModel(Model):
     """
 
     def __init__(self, *args, **kwds):
-        kwds['_error'] = False
         Model.__init__(self, *args, **kwds)
 
 
