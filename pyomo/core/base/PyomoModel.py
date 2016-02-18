@@ -541,13 +541,17 @@ class Model(SimpleBlock):
 
     preprocessor_ep = ExtensionPoint(IPyomoPresolver)
 
-    def __init__(self, name='unknown', _error=True, **kwargs):
+    def __new__(cls, *args, **kwds):
+        if cls != Model:
+            return super(Model, cls).__new__(cls)
+
+        logger.warning(
+"""DEPRECATION WARNING: Using the 'Model' class is deprecated.  Please
+use the AbstractModel or ConcreteModel class instead.""")
+        return AbstractModel.__new__(AbstractModel)
+
+    def __init__(self, name='unknown', **kwargs):
         """Constructor"""
-        if _error:
-            raise ValueError(
-                "Using the 'Model' class is deprecated. "
-                "Please use the AbstractModel or ConcreteModel "
-                "class instead.")
         #
         # NOTE: The 'ctype' keyword argument is not defined here.  Thus,
         # a model is treated as a 'Block' class type.  This simplifies
