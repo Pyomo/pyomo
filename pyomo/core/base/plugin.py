@@ -314,6 +314,18 @@ class Transformation(Plugin):
         kwds["name"] = kwds.get("name", "transformation")
         super(Transformation, self).__init__(**kwds)
 
+    def apply(self, model, **kwds):
+        logger.warning(
+"""DEPRECATION WARNING: Transformation.apply() has been deprecated.
+Please use either Transformation.apply_to() for in-place transformations
+or Transformation.create_using() for transformations that create a new,
+independent transformed model instance.""")
+        inplace = kwds.pop('inplace', True)
+        if inplace:
+            self.apply_to(model, **kwds)
+        else:
+            return self.create_using(model, **kwds)
+
     def apply_to(self, model, **kwds):
         """
         Apply the transformation to the given model.
