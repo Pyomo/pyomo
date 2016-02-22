@@ -466,7 +466,6 @@ def _convert_explicit_setup_without_cleanup(worker,
     #
     # Check for model annotations
     #
-
     constraint_stage_annotation = locate_annotations(
         reference_model,
         PySP_ConstraintStageAnnotation,
@@ -485,27 +484,30 @@ def _convert_explicit_setup_without_cleanup(worker,
                 constraint_stage_annotation,
                 check_value=None))
 
-    stochastic_rhs = locate_annotations(reference_model,
-                                        PySP_StochasticRHSAnnotation,
-                                        max_allowed=1)
+    stochastic_rhs = locate_annotations(
+        reference_model,
+        PySP_StochasticRHSAnnotation,
+        max_allowed=1)
     if len(stochastic_rhs) == 0:
         stochastic_rhs = None
     else:
         assert len(stochastic_rhs) == 1
         stochastic_rhs = stochastic_rhs[0][1]
 
-    stochastic_matrix = locate_annotations(reference_model,
-                                           PySP_StochasticMatrixAnnotation,
-                                           max_allowed=1)
+    stochastic_matrix = locate_annotations(
+        reference_model,
+        PySP_StochasticMatrixAnnotation,
+        max_allowed=1)
     if len(stochastic_matrix) == 0:
         stochastic_matrix = None
     else:
         assert len(stochastic_matrix) == 1
         stochastic_matrix = stochastic_matrix[0][1]
 
-    stochastic_objective = locate_annotations(reference_model,
-                                              PySP_StochasticObjectiveAnnotation,
-                                              max_allowed=1)
+    stochastic_objective = locate_annotations(
+        reference_model,
+        PySP_StochasticObjectiveAnnotation,
+        max_allowed=1)
     if len(stochastic_objective) == 0:
         stochastic_objective = None
     else:
@@ -515,21 +517,23 @@ def _convert_explicit_setup_without_cleanup(worker,
     if (stochastic_rhs is None) and \
        (stochastic_matrix is None) and \
        (stochastic_objective is None):
-        raise RuntimeError("(Scenario=%s): No stochastic annotations found. SMPS "
-                           "conversion requires at least one of the following "
-                           "annotation types:\n - %s\n - %s\n - %s"
-                           % (scenario.name,
-                              PySP_StochasticRHSAnnotation.__name__,
-                              PySP_StochasticMatrixAnnotation.__name__,
-                              PySP_StochasticObjectiveAnnotation.__name__))
+        raise RuntimeError(
+            "(Scenario=%s): No stochastic annotations found. SMPS "
+            "conversion requires at least one of the following "
+            "annotation types:\n - %s\n - %s\n - %s"
+            % (scenario.name,
+               PySP_StochasticRHSAnnotation.__name__,
+               PySP_StochasticMatrixAnnotation.__name__,
+               PySP_StochasticObjectiveAnnotation.__name__))
 
     #
     # Write the LP/MPS file once to obtain the symbol map
     #
     assert not hasattr(reference_model, "_canonical_repn")
     with WriterFactory(file_format) as writer:
-        output_filename = os.path.join(output_directory,
-                                   basename+".setup."+file_format+"."+scenario.name)
+        output_filename = \
+            os.path.join(output_directory,
+                         basename+".setup."+file_format+"."+scenario.name)
         assert 'column_order' not in io_options
         assert 'row_order' not in io_options
         output_fname, symbol_map = writer(reference_model,
@@ -545,10 +549,11 @@ def _convert_explicit_setup_without_cleanup(worker,
                             symbol_map)
 
     StageToConstraintMap = \
-        map_constraint_stages(scenario,
-                              scenario_tree,
-                              symbol_map,
-                              constraint_stage_assignments=constraint_stage_assignments)
+        map_constraint_stages(
+            scenario,
+            scenario_tree,
+            symbol_map,
+            constraint_stage_assignments=constraint_stage_assignments)
 
     assert len(scenario_tree.stages) == 2
     firststage = scenario_tree.stages[0]
@@ -822,7 +827,7 @@ def _convert_explicit_setup_without_cleanup(worker,
     with open(os.path.join(output_directory,
                            basename+".sto.struct."+scenario.name),'w') as f_coords:
         with open(os.path.join(output_directory,
-                           basename+".sto."+scenario.name),'w') as f_sto:
+                               basename+".sto."+scenario.name),'w') as f_sto:
             constraint_name_buffer = {}
             objective_name_buffer = {}
             variable_name_buffer = {}
@@ -892,7 +897,8 @@ def _convert_explicit_setup_without_cleanup(worker,
                                    PySP_StochasticRHSAnnotation.__name__,
                                    PySP_ConstraintStageAnnotation.__name__))
 
-                    constraint_repn = canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
+                    constraint_repn = \
+                        canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
                         raise RuntimeError("(Scenario=%s): Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
@@ -924,10 +930,12 @@ def _convert_explicit_setup_without_cleanup(worker,
                             # We are going to rewrite the core problem file
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
-                            modified_constraint_lb[constraint_data] = constraint_data.lower
+                            modified_constraint_lb[constraint_data] = \
+                                constraint_data.lower
                             constraint_data._lower = 0
                             if con_label.startswith('c_e_'):
-                                modified_constraint_ub[constraint_data] = constraint_data.upper
+                                modified_constraint_ub[constraint_data] = \
+                                    constraint_data.upper
                                 constraint_data._upper = 0
                         elif con_label.startswith('r_l_') :
                             if (include_bound is True) or \
@@ -942,7 +950,8 @@ def _convert_explicit_setup_without_cleanup(worker,
                                 # We are going to rewrite the core problem file
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
-                                modified_constraint_lb[constraint_data] = constraint_data.lower
+                                modified_constraint_lb[constraint_data] = \
+                                    constraint_data.lower
                                 constraint_data._lower = 0
                         elif con_label.startswith('c_u_'):
                             assert (include_bound is True) or \
@@ -957,7 +966,8 @@ def _convert_explicit_setup_without_cleanup(worker,
                             # We are going to rewrite the core problem file
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
-                            modified_constraint_ub[constraint_data] = constraint_data.upper
+                            modified_constraint_ub[constraint_data] = \
+                                constraint_data.upper
                             constraint_data._upper = 0
                         elif con_label.startswith('r_u_'):
                             if (include_bound is True) or \
@@ -972,7 +982,8 @@ def _convert_explicit_setup_without_cleanup(worker,
                                 # We are going to rewrite the core problem file
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
-                                modified_constraint_ub[constraint_data] = constraint_data.upper
+                                modified_constraint_ub[constraint_data] = \
+                                    constraint_data.upper
                                 constraint_data._upper = 0
                         else:
                             assert False
@@ -1022,7 +1033,8 @@ def _convert_explicit_setup_without_cleanup(worker,
                                    constraint_data.cname(True),
                                    PySP_StochasticMatrixAnnotation.__name__,
                                    PySP_ConstraintStageAnnotation.__name__))
-                    constraint_repn = canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
+                    constraint_repn = \
+                        canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
                         raise RuntimeError("(Scenario=%s): Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
@@ -1178,8 +1190,9 @@ def _convert_explicit_setup_without_cleanup(worker,
     #
     reference_model_name = reference_model.name
     reference_model.name = "ZeroStochasticData"
-    det_output_filename = os.path.join(output_directory,
-                                       basename+"."+file_format+".det."+scenario.name)
+    det_output_filename = \
+        os.path.join(output_directory,
+                     basename+"."+file_format+".det."+scenario.name)
     with WriterFactory(file_format) as writer:
         output_fname, symbol_map = writer(reference_model,
                                           det_output_filename,
