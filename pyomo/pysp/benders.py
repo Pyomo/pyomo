@@ -1159,9 +1159,14 @@ class BendersAlgorithm(PySPConfiguredObject):
                 raise RuntimeError("Solve failed for master; no solutions generated")
             if results_master.solver.termination_condition != \
                TerminationCondition.optimal:
-                #raise RuntimeError(
                 logger.warning(
-                    "Master solve did not generate an optimal solution")
+                    "Master solve did not generate an optimal solution:\n"
+                    "Solver Status: %s\n"
+                    "Solver Termination Condition: %s\n"
+                    "Solution Status: %s\n"
+                    % (str(results_master.solver.status),
+                       str(results_master.solver.termination_condition),
+                       str(results_master.solution(0).status)))
             master.solutions.load_from(results_master)
             stop_time_master = time.time()
 
