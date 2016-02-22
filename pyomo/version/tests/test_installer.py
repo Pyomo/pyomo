@@ -24,7 +24,7 @@ test_zipfile = os.environ.get("PYOMO_INSTALLER_ZIPFILE", None)
 def call_subprocess(cmd, stdout=False, exception=False):
     env = os.environ.copy()
     cwd = os.getcwd()
-    print("Running command: "+' '.join(cmd))
+    print("Testing with subcommand: "+' '.join(cmd))
     try:
         proc = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdin=None, stdout=subprocess.PIPE, cwd=cwd, env=env)
     except Exception:
@@ -90,6 +90,7 @@ class Tests(unittest.TestCase):
         os.environ['PYTHONUSERBASE'] = testdir
         os.environ['PYTHON_EGG_CACHE'] = testdir
         if zipfile and not test_zipfile:
+            shutil.rmtree(testdir)
             self.skipTest("Cannot test zipfile installation: zipfile not specified through the PYOMO_INSTALLER_ZIPFILE environment variable")
         #
         try:
@@ -99,8 +100,8 @@ class Tests(unittest.TestCase):
                     if name_ in os.environ:
                         proxy[name_] = os.environ[name_]
                     else:
-                        os.environ[name_] = 'http://www.bad.proxy.org:80'
                         proxy[name_] = '_del_'
+                    os.environ[name_] = 'http://www.bad.proxy.org:80'
             if venv:
                 cmd = [pyomo_install, '--venv='+name, '-p', sys.executable]
                 if zipfile:
@@ -149,12 +150,12 @@ class Tests(unittest.TestCase):
     def test_2a_fromZip_toSystem_offline(self):
         self.run_installer('2a', zipfile=True, system=True, offline=True)
 
-    # Install to User
+    # Install to User - OBSOLETE
 
-    def test_1b_fromPyPI_toUser(self):
+    def Xtest_1b_fromPyPI_toUser(self):
         self.run_installer('1b', pypi=True, user=True)
 
-    def test_2b_fromZip_toUser_offline(self):
+    def Xtest_2b_fromZip_toUser_offline(self):
         self.run_installer('2b', zipfile=True, user=True, offline=True)
 
     # Install to Venv
@@ -165,27 +166,31 @@ class Tests(unittest.TestCase):
     def test_2c_fromZip_toVEnv_offline(self):
         self.run_installer('2c', zipfile=True, venv=True, offline=True)
 
-    def test_3c_fromTrunk_toVEnv(self):
-        self.run_installer('3c', trunk=True, venv=True)
+    # TODO
+    def Xtest_3c_fromSrc_toVEnv_offline(self):
+        self.run_installer('3c', srcdir=True, venv=True, offline=True)
+
+    def test_4c_fromTrunk_toVEnv(self):
+        self.run_installer('4c', trunk=True, venv=True)
 
 
     # ERROR TESTS
 
     # System
 
-    def test_3a_fromTrunk_toSystem_expectError(self):
-        self.run_installer('3a', trunk=True, system=True, error=True)
-
     def test_1a_fromPyPI_toSystem_offline_expectError(self):
         self.run_installer('1a_offline', pypi=True, system=True, offline=True, error=True)
 
-    # User
+    def test_3a_fromTrunk_toSystem_expectError(self):
+        self.run_installer('3a', trunk=True, system=True, error=True)
 
-    def test_3b_fromTrunk_toUser_expectError(self):
-        self.run_installer('3b', trunk=True, user=True, error=True)
+    # User - OBSOLETE
 
-    def test_1b_fromPyPI_toUser_offline_expectError(self):
+    def Xtest_1b_fromPyPI_toUser_offline_expectError(self):
         self.run_installer('1b_offline', pypi=True, user=True, offline=True, error=True)
+
+    def Xtest_3b_fromTrunk_toUser_expectError(self):
+        self.run_installer('3b', trunk=True, user=True, error=True)
 
     # Venv
 
