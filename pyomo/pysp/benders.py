@@ -23,6 +23,7 @@
 # - feasibility cuts
 
 import os
+import logging
 import time
 import itertools
 import math
@@ -68,6 +69,8 @@ from six.moves import xrange
 
 thisfile = os.path.abspath(__file__)
 thisfile.replace(".pyc","").replace(".py","")
+
+logger = logging.getLogger('pyomo.pysp')
 
 _benders_group_label = "Benders Options"
 
@@ -1156,8 +1159,9 @@ class BendersAlgorithm(PySPConfiguredObject):
                 raise RuntimeError("Solve failed for master; no solutions generated")
             if results_master.solver.termination_condition != \
                TerminationCondition.optimal:
-                raise RuntimeError(
-                    "Master solve failed to generate an optimal solution")
+                #raise RuntimeError(
+                logger.warning(
+                    "Master solve did not generate an optimal solution")
             master.solutions.load_from(results_master)
             stop_time_master = time.time()
 
