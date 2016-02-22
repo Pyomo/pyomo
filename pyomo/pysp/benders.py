@@ -256,7 +256,7 @@ def EXTERNAL_initialize_for_benders(manager,
     assert not hasattr(instance, "PYSP_BENDERS_CACHED_DOMAINS")
     cached_domains = instance.PYSP_BENDERS_CACHED_DOMAINS = []
     # GH: Question: Is it possible that there are "derived"
-    #               variables that are are only "derived"
+    #               variables that are only "derived"
     #               when additional integrality conditions
     #               are placed on them? If so, they would
     #               need to be classified as "standard" in
@@ -265,24 +265,19 @@ def EXTERNAL_initialize_for_benders(manager,
     #               benders cuts and fixing constraints by
     #               default. For now, we do not.
     for variable_id in rootnode._variable_ids:
-        # It's not possible to determine whether bounds come
-        # from the domain for the variable or direct
-        # attributes that tighten the domain bounds, so we
-        # just ask for the bounds and change the domain to
-        # be a RealInterval that uses those tight bounds.
-        # This allows us to return the variable to its
-        # original state later on.
         vardata = scenario_bySymbol[variable_id]
-        tight_bounds = vardata.bounds
-        domain = vardata.domain
-        vardata.domain = Reals
-        # Collect the var bounds after setting the domain
-        # to Reals. We do this so we know if the Var bounds
-        # are set by the user or come from the domain
-        varbounds = vardata.bounds
-        cached_domains.append((variable_id, domain, varbounds))
-        vardata.setlb(tight_bounds[0])
-        vardata.setub(tight_bounds[1])
+        # derived variables might be Expression objects
+        if not vardata.is_expression():
+            tight_bounds = vardata.bounds
+            domain = vardata.domain
+            vardata.domain = Reals
+            # Collect the var bounds after setting the domain
+            # to Reals. We do this so we know if the Var bounds
+            # are set by the user or come from the domain
+            varbounds = vardata.bounds
+            cached_domains.append((variable_id, domain, varbounds))
+            vardata.setlb(tight_bounds[0])
+            vardata.setub(tight_bounds[1])
 
     # create index sets for fixing components
     nodal_index_set_name = "PYSP_BENDERS_FIX_XHAT_INDEX"
