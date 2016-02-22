@@ -10,8 +10,14 @@
 # A script to optionally install packages that Pyomo could leverage.
 #
 
+import sys
+
 package_list = ['sympy', 'xlrd', 'openpyxl', 'suds-jurko', 'PyYAML', 'pypyodbc', 'pymysql', 'openopt', 'FuncDesigner', 'DerApproximator', 'ipython[notebook]', 'pyro', 'pyro4']
-packages = {'xlrd':None, 'openpyxl':None, 'suds-jurko':'suds', 'PyYAML':'yaml', 'pypyodbc':None, 'pymysql':None, 'openopt':None, 'FuncDesigner':None, 'DerApproximator':None, 'sympy':None, 'ipython[notebook]':'IPython', 'pyro':'Pyro', 'pyro4':'Pyro4'}
+packages = {'xlrd':None, 'openpyxl':None, 'suds-jurko':'suds', 'PyYAML':'yaml', 'pypyodbc':None, 'pymysql':None, 'openopt':None, 'FuncDesigner':None, 'DerApproximator':None, 'sympy':None, 'ipython[notebook]':'IPython'}
+if sys.version_info[0] < 3:
+    packages['pyro'] = 'Pyro'
+else:
+    packages['pyro4'] = 'Pyro4'
 
 def main():
     #
