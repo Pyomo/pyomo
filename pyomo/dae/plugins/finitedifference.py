@@ -95,7 +95,7 @@ class Finite_Difference_Transformation(Transformation):
     DAE, ODE, or PDE models. 
     
     """
-    alias('dae.finite_difference_discretization', doc="TODO")
+    alias('dae.finite_difference', doc="TODO")
 
     def __init__(self):
         super(Finite_Difference_Transformation, self).__init__()
@@ -111,7 +111,7 @@ class Finite_Difference_Transformation(Transformation):
         instance.construct()
         return instance
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         """
         Applies the transformation to a modeling instance
 
@@ -125,24 +125,9 @@ class Finite_Difference_Transformation(Transformation):
         scheme        Indicates which finite difference method to apply. 
                       Options are BACKWARD, CENTRAL, or FORWARD. The default
                       scheme is the backward difference method
-        inplace       Indicates whether the transformation should be applied to
-                      a copy of the model or the model itself.
         """
 
         options = kwds.pop('options', {})
-
-        inplace = kwds.pop('inplace', None)
-        if 'inplace' in options:
-            if bool(options['inplace']) != inplace and inplace is not None:
-                raise RuntimeError(
-                    "conflicting inplace options: apply(inplace=%s) with "
-                    "options['inplace']==%s" % (inplace, options['inplace']) )
-            inplace = options['inplace']
-        elif inplace is None:
-            inplace = True
-
-        if not inplace:
-            instance = instance.clone()
 
         tmpnfe = kwds.pop('nfe',10)
         tmpds = kwds.pop('wrt',None)

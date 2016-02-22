@@ -214,7 +214,7 @@ def calc_afinal(cp):
 
 class Collocation_Discretization_Transformation(Transformation):
 
-    alias('dae.collocation_discretization', doc="TODO")
+    alias('dae.collocation', doc="TODO")
 
     def __init__(self):
         super(Collocation_Discretization_Transformation, self).__init__()
@@ -298,7 +298,7 @@ class Collocation_Discretization_Transformation(Transformation):
         # TODO: finish this
         raise DAE_Error("Not Implemented")
 
-    def apply(self, instance, **kwds):
+    def _apply_to(self, instance, **kwds):
         """
         Applies specified collocation transformation to a modeling instance
 
@@ -315,25 +315,9 @@ class Collocation_Discretization_Transformation(Transformation):
                       Options are LAGRANGE-RADAU, LAGRANGE-LEGENDRE, or 
                       HERMITE-CUBIC. The default scheme is Lagrange polynomials
                       with Radau roots.
-        inplace       Indicates whether the transformation should be applied to
-                      a copy of the model or the model itself.
-
         """
 
         options = kwds.pop('options', {})
-
-        inplace = kwds.pop('inplace', None)
-        if 'inplace' in options:
-            if bool(options['inplace']) != inplace and inplace is not None:
-                raise RuntimeError(
-                    "conflicting inplace options: apply(inplace=%s) with "
-                    "options['inplace']==%s" % (inplace, options['inplace']) )
-            inplace = options['inplace']
-        elif inplace is None:
-            inplace = True
-
-        if not inplace:
-            instance = instance.clone()
 
         tmpnfe = kwds.pop('nfe',10)
         tmpncp = kwds.pop('ncp',3)        
