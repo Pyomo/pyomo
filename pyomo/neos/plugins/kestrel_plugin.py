@@ -145,7 +145,6 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 six.print_(current_message, file=OUTPUT)
                 OUTPUT.close()
                 OUTPUT=open(opt._soln_file, 'w')
-                print(results.data)
                 if six.PY2:
                     six.print_(results.data, file=OUTPUT)
                 else:

@@ -68,7 +68,7 @@ class kestrelAMPL:
 
     def tempfile(self):
         return os.path.join(tempfile.gettempdir(),'at%s.jobs' % os.getenv('ampl_id'))
-  
+
     def kill(self,jobnumber,password):
         response = self.neos.killJob(jobNumber,password)
         sys.stdout.write(response+"\n")
@@ -119,7 +119,7 @@ class kestrelAMPL:
             if m:
                 password = m.groups()[0]
         return (jobNumber,password)
-        
+
     def getSolverName(self):
         """
         Read in the kestrel_options to pick out the solver name.
@@ -211,7 +211,7 @@ class kestrelAMPL:
             nl_string = base64.encodestring(zipped_nl_file.getvalue())
         else:
             nl_string = (base64.encodestring(zipped_nl_file.getvalue())).decode('utf-8')
-        xml = """ 
+        xml = """
               <document>
               <category>kestrel</category>
               <solver>%s</solver>
@@ -239,7 +239,7 @@ if __name__=="__main__":            #pragma:nocover
   if len(sys.argv) < 2:
     sys.stdout.write("kestrel should be called from inside AMPL.\n")
     sys.exit(1)
-    
+
   kestrel = kestrelAMPL()
 
   if sys.argv[1] == "solvers":
@@ -256,7 +256,6 @@ if __name__=="__main__":            #pragma:nocover
     jobfile = open(kestrel.tempfile(),'a')
     jobfile.write("%d %s\n" % (jobNumber,password))
     jobfile.close()
-    
 
   elif sys.argv[1] == "retrieve":
     # Pop job,pass from the stack
@@ -267,7 +266,7 @@ if __name__=="__main__":            #pragma:nocover
       sys.stdout.write("Error, could not open file %s.\n")
       sys.stdout.write("Did you use kestrelsub?\n")
       sys.exit(1)
-      
+
     m = re.match(r'(\d+) ([a-zA-Z]+)',jobfile.readline())
     if m:
       jobNumber = int(m.groups()[0])
@@ -284,7 +283,6 @@ if __name__=="__main__":            #pragma:nocover
       jobfile.close()
     else:
       os.unlink(kestrel.tempfile())
-    
 
   elif sys.argv[1] == "kill":
     (jobNumber,password) = kestrel.getJobAndPassword()
@@ -293,11 +291,6 @@ if __name__=="__main__":            #pragma:nocover
     else:
       sys.stdout.write("To kill a NEOS job, first set kestrel_options variable:\n")
       sys.stdout.write('\tampl: option kestrel_options "job=#### password=xxxx";\n')
-      
-                       
-      
-
-
   else:
     try:
       stub = sys.argv[1]
@@ -344,4 +337,3 @@ To retrieve results:\n\
 \tampl: solve;\n''' % (jobNumber,password,jobNumber,password)
       sys.stdout.write(msg)
       sys.exit(1)
-                       
