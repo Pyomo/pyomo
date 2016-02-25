@@ -103,6 +103,11 @@ class TestSimpleObj(unittest.TestCase):
         self.assertEqual(a(), None)
         self.assertEqual(a.expr, None)
         self.assertEqual(a.sense, minimize)
+        a.sense = maximize
+        self.assertEqual(len(a), 1)
+        self.assertEqual(a(), None)
+        self.assertEqual(a.expr, None)
+        self.assertEqual(a.sense, maximize)
 
     def test_numeric_expr(self):
         """Test expr option with a single numeric constant"""
@@ -290,6 +295,19 @@ class TestArrayObj(unittest.TestCase):
         self.assertEqual(model.o[1].expr(), 2)
         model.o[1].expr += 2
         self.assertEqual(model.o[1].expr(), 4)
+
+    def test_objdata_get_set_sense(self):
+        model = ConcreteModel()
+        model.o = Objective([1],
+                            rule=lambda m,i: 1,
+                            sense=maximize)
+        self.assertEqual(len(model.o), 1)
+        self.assertEqual(model.o[1].expr, 1)
+        self.assertEqual(model.o[1].sense, maximize)
+        model.o[1].set_sense(minimize)
+        self.assertEqual(model.o[1].sense, minimize)
+        model.o[1].sense = maximize
+        self.assertEqual(model.o[1].sense, maximize)
 
     def test_rule_option1(self):
         """Test rule option"""

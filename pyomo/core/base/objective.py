@@ -168,11 +168,11 @@ class _ObjectiveData(ActiveComponentData):
         raise NotImplementedError
 
     def set_value(self, expr):
-        """Set the expression on this objective."""
+        """Set the expression of this objective."""
         raise NotImplementedError
 
     def set_sense(self, sense):
-        """Set the sense (direction) on this objective."""
+        """Set the sense (direction) of this objective."""
         raise NotImplementedError
 
 class _GeneralObjectiveData(_ObjectiveData):
@@ -243,6 +243,7 @@ class _GeneralObjectiveData(_ObjectiveData):
         return self._expr
     @expr.setter
     def expr(self, expr):
+        """Set the expression of this objective."""
         self.set_value(expr)
 
     # for backwards compatibility reasons
@@ -256,20 +257,24 @@ class _GeneralObjectiveData(_ObjectiveData):
     def value(self, expr):
         logger.warning("DEPRECATED: The .value property setter on "
                        "_GeneralObjectiveData is deprecated. Use "
-                       "the set_value(expr) method instead")
+                       "the set_value(expr) or method instead")
         self.set_value(expr)
 
     @property
     def sense(self):
         """Access sense (direction) of this objective."""
         return self._sense
+    @sense.setter
+    def sense(self, sense):
+        """Set the sense (direction) of this objective."""
+        self.set_sense(sense)
 
     def set_value(self, expr):
-        """Set the expression on this objective."""
+        """Set the expression of this objective."""
         self._expr = as_numeric(expr) if (expr is not None) else None
 
     def set_sense(self, sense):
-        """Set the sense (direction) on this objective."""
+        """Set the sense (direction) of this objective."""
         if (sense == minimize) or \
            (sense == maximize):
             self._sense = sense
@@ -560,7 +565,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
             % (self.cname(True)))
     @expr.setter
     def expr(self, expr):
-        """Set the expression on this objective."""
+        """Set the expression of this objective."""
         self.set_value(expr)
 
     # for backwards compatibility reasons
@@ -593,6 +598,10 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
             "before the Objective has been constructed (there "
             "is currently no value to return)."
             % (self.cname(True)))
+    @sense.setter
+    def sense(self, sense):
+        """Set the sense (direction) of this objective."""
+        self.set_sense(sense)
 
     #
     # Singleton objectives are strange in that we want them to be
@@ -606,7 +615,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
     #
 
     def set_value(self, expr):
-        """Set the expression on this objective."""
+        """Set the expression of this objective."""
         if self._constructed:
             if len(self._data) == 0:
                 self._data[None] = self
@@ -618,7 +627,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
             % (self.cname(True)))
 
     def set_sense(self, sense):
-        """Set the expression on this objective."""
+        """Set the sense (direction) of this objective."""
         if self._constructed:
             if len(self._data) == 0:
                 self._data[None] = self
