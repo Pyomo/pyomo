@@ -438,12 +438,12 @@ class Var(IndexedComponent):
         #
         # Default keyword values
         #
-        initialize = kwd.pop('initialize', None )
-        initialize = kwd.pop('rule', initialize )
-        domain = kwd.pop('within', Reals )
-        domain = kwd.pop('domain', domain )
-        bounds = kwd.pop('bounds', None )
-        self._dense = kwd.pop('dense', True )
+        initialize = kwd.pop('initialize', None)
+        initialize = kwd.pop('rule', initialize)
+        domain = kwd.pop('within', Reals)
+        domain = kwd.pop('domain', domain)
+        bounds = kwd.pop('bounds', None)
+        self._dense = kwd.pop('dense', True)
 
         #
         # Initialize the base class
@@ -662,8 +662,10 @@ class Var(IndexedComponent):
             if self.is_indexed():
                 for key in init_set:
                     vardata = self._data[key]
-                    (lb, ub) = apply_indexed_rule( self, self._bounds_init_rule,
-                                                   self._parent(), key )
+                    (lb, ub) = apply_indexed_rule(self,
+                                                  self._bounds_init_rule,
+                                                  self._parent(),
+                                                  key)
                     vardata.setlb(lb)
                     vardata.setub(ub)
             else:
