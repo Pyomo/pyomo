@@ -453,7 +453,9 @@ class Var(IndexedComponent):
         #
         # Determine if the domain argument is a functor or other object
         #
-        self._domain_init_value = None
+        # Note: See the optimization in _initialize_members
+        #       for why this attribute is given a default value
+        self._domain_init_value = Reals
         self._domain_init_rule = None
         if is_functor(domain):
             self._domain_init_rule = domain
@@ -565,7 +567,8 @@ class Var(IndexedComponent):
             # 30% slower
             self_weakref = weakref_ref(self)
             for ndx in self._index:
-                cdata = _GeneralVarData(Reals, component=None)
+                cdata = _GeneralVarData(domain=self._domain_init_value,
+                                        component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
             self._initialize_members(self._index)
@@ -582,7 +585,8 @@ class Var(IndexedComponent):
     #
     def _default(self, idx):
         """Returns the default component data value."""
-        vardata = self._data[idx] = _GeneralVarData(Reals, component=self)
+        vardata = self._data[idx] = _GeneralVarData(self._domain_init_value,
+                                                    component=self)
         self._initialize_members([idx])
         return vardata
 
@@ -597,35 +601,58 @@ class Var(IndexedComponent):
             #
             if self.is_indexed():
                 for ndx in init_set:
-                    self._data[ndx].domain = apply_indexed_rule(self,
-                                                                self._domain_init_rule,
-                                                                self._parent(),
-                                                                ndx)
+                    self._data[ndx].domain = \
+                        apply_indexed_rule(self,
+                                           self._domain_init_rule,
+                                           self._parent(),
+                                           ndx)
             else:
                 self.domain = self._domain_init_rule(self._parent())
         else:
-            #
-            # Initialize domains with a value
-            #
             if self.is_indexed():
-                for ndx in init_set:
-                    self._data[ndx].domain = self._domain_init_value
+                # Optimization: It is assumed self._domain_init_value
+                #               is used when the _GeneralVarData objects
+                #               are created. This avoids an unnecessary
+                #               loop over init_set, which can significantly
+                #               speed up construction of variables with large
+                #               index sets.
+                pass
             else:
+                # the above optimization does not apply for
+                # singleton objects (trying to do so breaks
+                # some of the pickle tests)
                 self.domain = self._domain_init_value
 
         #
         # Initialize values
         #
-        if self._value_init_value is not None:
+        if self._value_init_rule is not None:
+            #
+            # Initialize values with a rule
+            #
+            if self.is_indexed():
+                for key in init_set:
+                    vardata = self._data[key]
+                    val = apply_indexed_rule(self,
+                                             self._value_init_rule,
+                                             self._parent(),
+                                             key)
+                    val = value(val)
+                    vardata.set_value(val)
+            else:
+                val = self._value_init_rule(self._parent())
+                val = value(val)
+                self.set_value(val)
+        elif self._value_init_value is not None:
             #
             # Initialize values with a value
             #
             if self._value_init_value.__class__ is dict:
                 for key in init_set:
-                    #
-                    # Skip indices that are not in the dictionary.  This arises when
-                    # initializing VarList objects with a dictionary.
-                    #
+                    # Skip indices that are not in the
+                    # dictionary. This arises when
+                    # initializing VarList objects with a
+                    # dictionary.
                     if not key in self._value_init_value:
                         continue
                     val = self._value_init_value[key]
@@ -637,21 +664,6 @@ class Var(IndexedComponent):
                     vardata = self._data[key]
                     vardata.set_value(val)
 
-        elif self._value_init_rule is not None:
-            #
-            # Initialize values with a rule
-            #
-            if self.is_indexed():
-                for key in init_set:
-                    vardata = self._data[key]
-                    val = apply_indexed_rule( self, self._value_init_rule,
-                                              self._parent(), key )
-                    val = value(val)
-                    vardata.set_value(val)
-            else:
-                val = self._value_init_rule(self._parent())
-                val = value(val)
-                self.set_value(val)
         #
         # Initialize bounds
         #
@@ -705,7 +717,9 @@ class SimpleVar(_GeneralVarData, Var):
     """"A single variable."""
 
     def __init__(self, *args, **kwd):
-        _GeneralVarData.__init__(self, Reals, component=self)
+        _GeneralVarData.__init__(self,
+                                 domain=Reals,
+                                 component=self)
         Var.__init__(self, *args, **kwd)
 
     #
@@ -908,7 +922,9 @@ class VarList(IndexedVar):
         """Add a variable to this list."""
         self._nvars += 1
         self._index.add(self._nvars)
-        vardata = self._data[self._nvars] = _GeneralVarData(Reals, component=self)
+        vardata = self._data[self._nvars] = \
+            _GeneralVarData(domain=self._domain_init_value,
+                            component=self)
         self._initialize_members([self._nvars])
         return vardata
 
