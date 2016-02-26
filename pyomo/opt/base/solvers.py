@@ -308,6 +308,7 @@ class OptSolver(Plugin):
             self.type = kwds["type"]
         else:                           #pragma:nocover
             raise PluginError("Expected option 'type' for OptSolver constructor")
+
         #
         # The 'name' is either the class type of the solver instance, or a
         # assigned name.

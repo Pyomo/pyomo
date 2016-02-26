@@ -83,11 +83,11 @@ class SystemCallSolver(OptSolver):
             if os.path.isabs(name):
                 exe = pyutilib.misc.search_file(name,
                                                 executable=True,
-                                                search_path='')
+                                                search_path=[''])
             elif os.path.basename(name) != name:
                 exe = pyutilib.misc.search_file(os.path.relpath(name),
                                                 executable=True,
-                                                search_path=os.path.curdir)
+                                                search_path=[os.path.curdir])
             else:
                 # Only search directories in the PATH if
                 # name is not in the form of an absolute or
@@ -114,7 +114,7 @@ class SystemCallSolver(OptSolver):
             return True
         if not OptSolver.available(self,exception_flag):
             return False
-        ans=self.executable()
+        ans = self.executable()
         if ans is None:
             if exception_flag:
                 msg = "No executable found for solver '%s'"
