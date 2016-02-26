@@ -37,6 +37,8 @@ isexe_relpath = (os.path.curdir + os.path.sep + \
                  exedirname + os.path.sep +
                  isexe_nopath)
 
+is_windows = os.name == 'nt'
+
 class Test(unittest.TestCase):
 
     @classmethod
@@ -119,7 +121,10 @@ class Test(unittest.TestCase):
             self.assertEqual(opt._user_executable, notexe_nopath)
             self.assertEqual(opt.executable(), notexe_nopath)
 
+
+    @unittest.skipIf(is_windows, "Skipping test because it requires testing if a file is executable on Windows")
     def test_set_executable_notexe_relpath(self):
+        print(is_windows)
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
             with self.assertRaises(ValueError):
@@ -129,6 +134,7 @@ class Test(unittest.TestCase):
             self.assertEqual(opt._user_executable, notexe_relpath)
             self.assertEqual(opt.executable(), notexe_relpath)
 
+    @unittest.skipIf(is_windows, "Skipping test because it requires testing if a file is executable on Windows")
     def test_set_executable_notexe_abspath(self):
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
@@ -139,6 +145,7 @@ class Test(unittest.TestCase):
             self.assertEqual(opt._user_executable, notexe_abspath)
             self.assertEqual(opt.executable(), notexe_abspath)
 
+    @unittest.skipIf(is_windows, "Skipping test because it requires testing if a file is executable on Windows")
     def test_set_executable_notexe_abspath_user(self):
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
