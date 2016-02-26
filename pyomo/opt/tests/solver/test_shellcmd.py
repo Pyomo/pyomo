@@ -124,7 +124,6 @@ class Test(unittest.TestCase):
 
     @unittest.skipIf(is_windows, "Skipping test because it requires testing if a file is executable on Windows")
     def test_set_executable_notexe_relpath(self):
-        print(is_windows)
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
             with self.assertRaises(ValueError):
