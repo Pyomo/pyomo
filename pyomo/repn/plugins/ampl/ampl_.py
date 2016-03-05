@@ -273,14 +273,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
             n = len(exp)
             if n > 2:
                 # sum
-                OUTPUT.write( "o54\n%d\n"%(n) )
+                OUTPUT.write("o54\n%d\n"%(n))
                 for i in xrange(0,n):
                     assert(exp[i].__class__ is tuple)
                     coef = exp[i][0]
                     child_exp = exp[i][1]
                     if coef != 1.0:
                         # *
-                        OUTPUT.write( "o2\nn{0!r}\n".format(coef) )
+                        OUTPUT.write("o2\nn{0!r}\n".format(coef))
                     self._print_nonlinear_terms_NL(child_exp)
             else:
                 for i in xrange(0,n):
@@ -290,39 +290,39 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if i != n-1:
                         # need the + op if it is not the last entry in the list
                         # +
-                        OUTPUT.write( "o0\n" )
+                        OUTPUT.write("o0\n")
                     if coef != 1.0:
                         # *
-                        OUTPUT.write( "o2\nn{0!r}\n".format(coef) )
+                        OUTPUT.write("o2\nn{0!r}\n".format(coef))
                     self._print_nonlinear_terms_NL(child_exp)
         elif exp.is_expression():
             if exp_type is expr._SumExpression:
                 n = len(exp._args)
                 if n > 2:
                     # sum
-                    OUTPUT.write( "o54\n%d\n"%(n) )
+                    OUTPUT.write("o54\n%d\n"%(n))
                     if exp._const != 0.0:
                         # +
-                        OUTPUT.write( "o0\nn{0!r}\n".format(exp._const) )
+                        OUTPUT.write("o0\nn{0!r}\n".format(exp._const))
                     for i in xrange(0,n):
                         if exp._coef[i] != 1:
                             # *
-                            OUTPUT.write( "o2\nn{0!r}\n".format(exp._coef[i]) )
+                            OUTPUT.write("o2\nn{0!r}\n".format(exp._coef[i]))
                         self._print_nonlinear_terms_NL(exp._args[i])
                 else:
                     if exp._const != 0.0:
                         # +
-                        OUTPUT.write( "o0\nn{0!r}\n".format(exp._const) )
+                        OUTPUT.write("o0\nn{0!r}\n".format(exp._const))
                     for i in xrange(0,n-1):
                         # +
-                        OUTPUT.write( "o0\n" )
+                        OUTPUT.write("o0\n")
                         if exp._coef[i] != 1.0:
                             # *
-                            OUTPUT.write( "o2\nn{0!r}\n".format(exp._coef[i]) )
+                            OUTPUT.write("o2\nn{0!r}\n".format(exp._coef[i]))
                         self._print_nonlinear_terms_NL(exp._args[i])
                     if exp._coef[n-1] != 1.0:
                         # *
-                        OUTPUT.write( "o2\nn{0!r}\n".format(exp._coef[n-1]) )
+                        OUTPUT.write("o2\nn{0!r}\n".format(exp._coef[n-1]))
                     self._print_nonlinear_terms_NL(exp._args[n-1])
     
             elif exp_type is expr._ProductExpression:
@@ -331,20 +331,20 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     pass
                 else:
                     # /
-                    OUTPUT.write( "o3\n" )
+                    OUTPUT.write("o3\n")
                     denom_exists = True
                 if exp._coef != 1.0:
                     # *
-                    OUTPUT.write( "o2\nn{0!r}\n".format(exp._coef) )
+                    OUTPUT.write("o2\nn{0!r}\n".format(exp._coef))
                 if len(exp._numerator) == 0:
-                    OUTPUT.write( "n1\n" )
+                    OUTPUT.write("n1\n")
                 # print out the numerator
                 child_counter = 0
                 max_count = len(exp._numerator)-1
                 for child_exp in exp._numerator:
                     if child_counter < max_count:
                         # *
-                        OUTPUT.write( "o2\n" )
+                        OUTPUT.write("o2\n")
                     self._print_nonlinear_terms_NL(child_exp)
                     child_counter += 1
                 if denom_exists:
@@ -354,14 +354,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     for child_exp in exp._denominator:
                         if child_counter < max_count:
                             # *
-                            OUTPUT.write( "o2\n" )
+                            OUTPUT.write("o2\n")
                         self._print_nonlinear_terms_NL(child_exp)
                         child_counter += 1
 
             elif exp_type is external._ExternalFunctionExpression:
                 OUTPUT.write("f%d %d\n" % (
-                        self.external_byFcn[exp._fcn._function][1],
-                        len(exp._args) ) )
+                    self.external_byFcn[exp._fcn._function][1],
+                    len(exp._args)))
                 for arg in exp._args:
                     if isinstance(arg, basestring):
                         OUTPUT.write("h%d:%s\n" % (len(arg), arg))
@@ -370,7 +370,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             elif isinstance(exp, expr._IntrinsicFunctionExpression):
                 intr_expr = intrinsic_function_operators.get(exp.cname(),None)
                 if intr_expr is not None:
-                    OUTPUT.write( intr_expr+"\n" )
+                    OUTPUT.write(intr_expr+"\n")
                 else:
                     logger.error("Unsupported intrinsic function ({0})", exp.cname(True))
                     raise TypeError("ASL writer does not support '{0}' expressions"
@@ -415,11 +415,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 raise ValueError("Unsupported expression type (%s) in _print_nonlinear_terms_NL" % exp_type)
 
         elif isinstance(exp,var._VarData) and not exp.is_fixed():
-            OUTPUT.write( "v{0}\n".format(self.ampl_var_id[self._varID_map[id(exp)]]) )
+            OUTPUT.write("v{0}\n".format(self.ampl_var_id[self._varID_map[id(exp)]]))
         elif isinstance(exp,param._ParamData):
-            OUTPUT.write( "n{0!r}\n".format(value(exp)) )
+            OUTPUT.write("n{0!r}\n".format(value(exp)))
         elif isinstance(exp,NumericConstant) or exp.is_fixed():
-            OUTPUT.write( "n{0!r}\n".format(value(exp)) )
+            OUTPUT.write("n{0!r}\n".format(value(exp)))
         else:
             raise ValueError("Unsupported expression type (%s) in _print_nonlinear_terms_NL" % exp_type)
 
@@ -491,11 +491,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "with two different libraries (%s through %s, and %s "
                     "through %s).  The ASL solver will fail to link "
                     "correctly." %
-                    ( fcn._function,
-                      self.external_byFcn[fcn._function]._library,
-                      self.external_byFcn[fcn._function]._library.cname(True),
-                      fcn._library,
-                      fcn.cname(True) ) )
+                    (fcn._function,
+                     self.external_byFcn[fcn._function]._library,
+                     self.external_byFcn[fcn._function]._library.cname(True),
+                     fcn._library,
+                     fcn.cname(True)))
             self.external_byFcn[fcn._function] = (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
@@ -715,7 +715,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if (level == 1 and not sos1) or (level == 2 and not sos2):
                     raise Exception(
                         "Solver does not support SOS level %s constraints"
-                        % (level,) )
+                        % (level,))
                 LinearVars.update(self_varID_map[id(vardata)]
                                   for vardata in soscondata.get_variables())
 
@@ -847,20 +847,20 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if num_lqm_vars > 0:
                 lqm_output_name = OUTPUT.name.split('.')[0]+".lqm"
                 LQM_OUTPUT = open(lqm_output_name,'w')
-                LQM_OUTPUT.write( "Matrix Li\n" )
-                LQM_OUTPUT.write( "%d\n"%(len(full_var_list)) )
-                LQM_OUTPUT.write( "%d\n"%(num_lqm_vars) )
-                LQM_OUTPUT.write( "%d\n"%(num_lqm_vars) )
+                LQM_OUTPUT.write("Matrix Li\n")
+                LQM_OUTPUT.write("%d\n"%(len(full_var_list)))
+                LQM_OUTPUT.write("%d\n"%(num_lqm_vars))
+                LQM_OUTPUT.write("%d\n"%(num_lqm_vars))
                 # The matrix uses one based indexing
                 for row_id, col_id in enumerate(lqm_var_column_ids,1):
-                    LQM_OUTPUT.write( "%d %d 1\n" % (row_id, col_id) )
-                LQM_OUTPUT.write( "Matrix Qi\n" )
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars) )
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars) )
-                LQM_OUTPUT.write("%d\n" % (num_lqm_vars) )
+                    LQM_OUTPUT.write("%d %d 1\n" % (row_id, col_id))
+                LQM_OUTPUT.write("Matrix Qi\n")
+                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
+                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
+                LQM_OUTPUT.write("%d\n" % (num_lqm_vars))
                 # one based indexing
                 for counter in xrange(1,num_lqm_vars+1):
-                    LQM_OUTPUT.write("%d %d -1\n" % (counter, counter) )
+                    LQM_OUTPUT.write("%d %d -1\n" % (counter, counter))
                 LQM_OUTPUT.close()
 
         ##################################################
@@ -890,51 +890,64 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # LINE 1
         #
-        OUTPUT.write("g3 1 1 0\t# problem {0}\n".format(model.cname()) )
+        OUTPUT.write("g3 1 1 0\t# problem {0}\n".format(model.cname()))
         #
         # LINE 2
         #
-        OUTPUT.write( " {0} {1} {2} {3} {4} \t# vars, constraints, objectives, ranges, eqns\n" \
-                          .format(len(full_var_list), n_single_sided_ineq+n_ranges+n_equals+n_unbounded, n_objs, n_ranges, n_equals) )
+        OUTPUT.write(" {0} {1} {2} {3} {4} \t# vars, constraints, objectives, ranges, eqns\n" .format(
+            len(full_var_list),
+            n_single_sided_ineq+n_ranges+n_equals+n_unbounded,
+            n_objs,
+            n_ranges,
+            n_equals))
         #
         # LINE 3
         #
-        OUTPUT.write( " {0} {1} {2} {3} {4} {5}\t# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb\n".format(n_nonlinear_constraints, n_nonlinear_objs, ccons_lin, ccons_nonlin, ccons_nd, ccons_nzlb) )
+        OUTPUT.write(" {0} {1} {2} {3} {4} {5}\t# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb\n".format(
+            n_nonlinear_constraints,
+            n_nonlinear_objs,
+            ccons_lin,
+            ccons_nonlin,
+            ccons_nd,
+            ccons_nzlb))
         #
         # LINE 4
         #
-        OUTPUT.write( " 0 0\t# network constraints: nonlinear, linear\n" )
+        OUTPUT.write(" 0 0\t# network constraints: nonlinear, linear\n")
         #
         # LINE 5
         #
-        OUTPUT.write( " {0} {1} {2} \t# nonlinear vars in constraints, objectives, both\n" \
-                          .format(idx_nl_con, idx_nl_obj, idx_nl_both) )
+        OUTPUT.write(" {0} {1} {2} \t# nonlinear vars in constraints, objectives, both\n".format(idx_nl_con, idx_nl_obj, idx_nl_both))
 
         #
         # LINE 6
         #
-        OUTPUT.write( " 0 {0} 0 1\t# linear network variables; functions; arith, flags\n".format(len(self.external_byFcn)) )
+        OUTPUT.write(" 0 {0} 0 1\t# linear network variables; functions; arith, flags\n".format(len(self.external_byFcn)))
         #
         # LINE 7
         #
         n_int_nonlinear_b = len(Discrete_Nonlinear_Vars_in_Objs_and_Constraints)
         n_int_nonlinear_c = len(ConNonlinearVarsInt)
         n_int_nonlinear_o = len(ObjNonlinearVarsInt)
-        OUTPUT.write( " {0} {1} {2} {3} {4} \t# discrete variables: binary, integer, nonlinear (b,c,o)\n" \
-           .format(len(LinearVarsBool), len(LinearVarsInt), n_int_nonlinear_b, n_int_nonlinear_c, n_int_nonlinear_o) )
+        OUTPUT.write(" {0} {1} {2} {3} {4} \t# discrete variables: binary, integer, nonlinear (b,c,o)\n".format(
+            len(LinearVarsBool),
+            len(LinearVarsInt),
+            n_int_nonlinear_b,
+            n_int_nonlinear_c,
+            n_int_nonlinear_o))
         #
         # LINE 8
         #
         # objective info computed above
-        OUTPUT.write( " {0} {1} \t# nonzeros in Jacobian, obj. gradient\n".format(nnz_grad_constraints, len(ObjVars)) )
+        OUTPUT.write(" {0} {1} \t# nonzeros in Jacobian, obj. gradient\n".format(nnz_grad_constraints, len(ObjVars)))
         #
         # LINE 9
         #
-        OUTPUT.write( " 0 0\t# max name lengths: constraints, variables\n" )
+        OUTPUT.write(" 0 0\t# max name lengths: constraints, variables\n")
         #
         # LINE 10
         #
-        OUTPUT.write( " 0 0 0 0 0\t# common exprs: b,c,o,c1,o1\n" )
+        OUTPUT.write(" 0 0 0 0 0\t# common exprs: b,c,o,c1,o1\n")
 
 #        end_time = time.clock()
 #        print (end_time - start_time)
@@ -946,8 +959,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "F" lines
         #
-        for fcn, fid in sorted(itervalues(self.external_byFcn), key=operator.itemgetter(1)):
-            OUTPUT.write( "F%d 1 -1 %s\n" % ( fid, fcn._function ))
+        for fcn, fid in sorted(itervalues(self.external_byFcn),
+                               key=operator.itemgetter(1)):
+            OUTPUT.write("F%d 1 -1 %s\n" % (fid, fcn._function))
 
         #
         # "S" lines
@@ -1132,9 +1146,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for con_ID in nonlin_con_order_list:
             con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
-            OUTPUT.write( "C%d\n"%(row_id) )
+            OUTPUT.write("C%d\n"%(row_id))
             if symbolic_solver_labels is True:
-                rowf.write( name_labeler(con_data)+"\n" )
+                rowf.write(name_labeler(con_data)+"\n")
             self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
 
             for var_ID in set(wrapped_ampl_repn._linear_vars).union(wrapped_ampl_repn._nonlinear_vars):
@@ -1146,10 +1160,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
             con_vars = set(wrapped_ampl_repn._linear_vars)
             for var_ID in con_vars:
                 cu[self_ampl_var_id[var_ID]] += 1
-            OUTPUT.write( "C%d\n"%(row_id) )
+            OUTPUT.write("C%d\n"%(row_id))
             if symbolic_solver_labels is True:
-                rowf.write( name_labeler(con_data)+"\n" )
-            OUTPUT.write( "n0\n" )
+                rowf.write(name_labeler(con_data)+"\n")
+            OUTPUT.write("n0\n")
 
         if show_section_timing:
             subsection_timer.report("Write NL header and suffix lines")
@@ -1164,16 +1178,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if not obj.is_minimizing():
                 k = 1
 
-            OUTPUT.write( "O%d %d\n"%(self_ampl_obj_id[obj_ID], k) )
+            OUTPUT.write("O%d %d\n"%(self_ampl_obj_id[obj_ID], k))
             if symbolic_solver_labels is True:
                 rowf.write(name_labeler(obj)+"\n")
 
             if wrapped_ampl_repn.repn.is_linear():
-                OUTPUT.write( "n{0!r}\n".format(wrapped_ampl_repn.repn._constant) )
+                OUTPUT.write("n{0!r}\n".format(wrapped_ampl_repn.repn._constant))
             else:
                 if wrapped_ampl_repn.repn._constant != 0.0:
                     # +
-                    OUTPUT.write( "o0\nn{0!r}\n".format(wrapped_ampl_repn.repn._constant) )
+                    OUTPUT.write("o0\nn{0!r}\n".format(wrapped_ampl_repn.repn._constant))
                 self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
 
         if symbolic_solver_labels is True:
@@ -1254,7 +1268,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 var_bound_list.append("3\n")
 
 
-        OUTPUT.write( "x%d\n"%(len(x_init_list)) )
+        OUTPUT.write("x%d\n"%(len(x_init_list)))
         OUTPUT.writelines(x_init_list)
         del x_init_list
 
@@ -1265,7 +1279,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "r" lines
         #
-        OUTPUT.write( "r\n" )
+        OUTPUT.write("r\n")
         # *NOTE: This iteration follows the assignment of the ampl_con_id
         OUTPUT.writelines(constraint_bounds_dict[con_ID] for con_ID in itertools.chain(nonlin_con_order_list, lin_con_order_list))
 
@@ -1276,7 +1290,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "b" lines
         #
-        OUTPUT.write( "b\n" )
+        OUTPUT.write("b\n")
         OUTPUT.writelines(var_bound_list)
         del var_bound_list
 
@@ -1289,11 +1303,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         ktot = 0
         n1 = len(full_var_list) - 1
-        OUTPUT.write( "k%d\n"%(n1) )
+        OUTPUT.write("k%d\n"%(n1))
         ktot = 0
         for i in xrange(n1):
             ktot += cu[i]
-            OUTPUT.write( "%d\n"%(ktot) )
+            OUTPUT.write("%d\n"%(ktot))
         del cu
 
         if show_section_timing:
@@ -1310,20 +1324,37 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if num_nonlinear_vars == 0:
                 if num_linear_vars > 0:
                     linear_dict = dict((var_ID, coef) for var_ID, coef in zip(wrapped_ampl_repn._linear_vars, wrapped_ampl_repn.repn._linear_terms_coef))
-                    OUTPUT.write( "J%d %d\n"%(nc, num_linear_vars) )
-                    OUTPUT.writelines( "{0} {1!r}\n".format(self_ampl_var_id[con_var], linear_dict[con_var]) for con_var in sorted(linear_dict.keys()) )
+                    OUTPUT.write("J%d %d\n"%(nc, num_linear_vars))
+                    OUTPUT.writelines(
+                        "{0} {1!r}\n".format(
+                            self_ampl_var_id[con_var],
+                            linear_dict[con_var])
+                        for con_var in sorted(linear_dict.keys()))
             elif num_linear_vars == 0:
-                nl_con_vars = sorted(wrapped_ampl_repn._nonlinear_vars)
-                OUTPUT.write( "J%d %d\n"%(nc, num_nonlinear_vars) )
-                OUTPUT.writelines( "%d 0\n"%(self_ampl_var_id[con_var]) for con_var in nl_con_vars )
+                nl_con_vars = \
+                    sorted(wrapped_ampl_repn._nonlinear_vars)
+                OUTPUT.write("J%d %d\n"%(nc, num_nonlinear_vars))
+                OUTPUT.writelines(
+                    "%d 0\n"%(self_ampl_var_id[con_var])
+                    for con_var in nl_con_vars)
             else:
                 con_vars = set(wrapped_ampl_repn._nonlinear_vars)
-                nl_con_vars = sorted(con_vars.difference(wrapped_ampl_repn._linear_vars))
+                nl_con_vars = sorted(
+                    con_vars.difference(
+                        wrapped_ampl_repn._linear_vars))
                 con_vars.update(wrapped_ampl_repn._linear_vars)
-                linear_dict = dict((var_ID, coef) for var_ID, coef in zip(wrapped_ampl_repn._linear_vars, wrapped_ampl_repn.repn._linear_terms_coef))
-                OUTPUT.write( "J%d %d\n"%(nc, len(con_vars)) )
-                OUTPUT.writelines( "{0} {1!r}\n".format(self_ampl_var_id[con_var], linear_dict[con_var]) for con_var in sorted(linear_dict.keys()) )
-                OUTPUT.writelines( "%d 0\n"%(self_ampl_var_id[con_var]) for con_var in nl_con_vars )
+                linear_dict = dict(
+                    (var_ID, coef) for var_ID, coef in
+                    zip(wrapped_ampl_repn._linear_vars,
+                        wrapped_ampl_repn.repn._linear_terms_coef))
+                OUTPUT.write("J%d %d\n"%(nc, len(con_vars)))
+                OUTPUT.writelines(
+                    "{0} {1!r}\n".format(self_ampl_var_id[con_var],
+                                         linear_dict[con_var])
+                    for con_var in sorted(linear_dict.keys()))
+                OUTPUT.writelines(
+                    "%d 0\n"%(self_ampl_var_id[con_var])
+                    for con_var in nl_con_vars)
 
 
         if show_section_timing:
@@ -1333,19 +1364,25 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "G" lines
         #
-        for obj_ID, (obj, wrapped_ampl_repn) in iteritems(Objectives_dict):
+        for obj_ID, (obj, wrapped_ampl_repn) in \
+               iteritems(Objectives_dict):
 
             grad_entries = {}
-            for idx, obj_var in enumerate(wrapped_ampl_repn._linear_vars):
-                grad_entries[self_ampl_var_id[obj_var]] = wrapped_ampl_repn.repn._linear_terms_coef[idx]
+            for idx, obj_var in enumerate(
+                    wrapped_ampl_repn._linear_vars):
+                grad_entries[self_ampl_var_id[obj_var]] = \
+                    wrapped_ampl_repn.repn._linear_terms_coef[idx]
             for obj_var in wrapped_ampl_repn._nonlinear_vars:
                 if obj_var not in wrapped_ampl_repn._linear_vars:
                     grad_entries[self_ampl_var_id[obj_var]] = 0
             len_ge = len(grad_entries)
             if len_ge > 0:
-                OUTPUT.write( "G%d %d\n"%(self_ampl_obj_id[obj_ID], len_ge) )
+                OUTPUT.write("G%d %d\n" % (self_ampl_obj_id[obj_ID],
+                                           len_ge))
                 for var_ID in sorted(grad_entries.keys()):
-                    OUTPUT.write( "{0} {1!r}\n".format(var_ID, grad_entries[var_ID]) )
+                    OUTPUT.write("{0} {1!r}\n".format(
+                        var_ID,
+                        grad_entries[var_ID]))
 
         if show_section_timing:
             subsection_timer.report("Write G lines")
