@@ -37,7 +37,7 @@ class AmplRepn(object):
     def __getstate__(self):
         """
         This method is required because this class uses slots.
-        """ 
+        """
         return  (self._constant,
                  self._linear_terms_coef,
                  self._linear_vars,
@@ -53,7 +53,7 @@ class AmplRepn(object):
         self._linear_vars, \
         self._nonlinear_expr, \
         self._nonlinear_vars = state
-        
+
     def __init__(self):
         self._constant = 0
         self._linear_vars = {}
@@ -61,22 +61,28 @@ class AmplRepn(object):
         self._nonlinear_expr = None
         self._nonlinear_vars = {}
 
-    # 
-    # Although it is convenient to have the dictionaries hashed by some
-    # variable id when generating the ampl representation, we can 
-    # compress these to lists after generation is complete
+    #
+    # Although it is convenient to have the dictionaries
+    # hashed by some variable id when generating the ampl
+    # representation, we can compress these to lists after
+    # generation is complete
     #
     def compress(self):
         if  self._linear_vars.__class__ is dict:
             linear_keys = self._linear_vars.keys()
-            self._linear_vars = tuple(self._linear_vars[key] for key in linear_keys)
-            self._linear_terms_coef = tuple(self._linear_terms_coef[key] for key in linear_keys)
+            self._linear_vars = tuple(self._linear_vars[key]
+                                      for key in linear_keys)
+            self._linear_terms_coef = tuple(self._linear_terms_coef[key]
+                                            for key in linear_keys)
         if self._nonlinear_vars.__class__ is dict:
             self._nonlinear_vars = tuple(itervalues(self._nonlinear_vars))
 
-    # GAH: I'm not sure why this funciton is here and I think it is misleading. Calling clone on 
-    #      a model will deepcopy the AmplRepn (e.g. new expressions and variables). Calling clone
-    #      directly on the AmplRepn (as defined below) does nothing close to that.
+    # GAH: I'm not sure why this funciton is here and I
+    #      think it is misleading. Calling clone on a model
+    #      will deepcopy the AmplRepn (e.g. new expressions
+    #      and variables). Calling clone directly on the
+    #      AmplRepn (as defined below) does nothing close to
+    #      that.
     def Xclone(self):
         clone = AmplRepn()
         clone._constant = self._constant
@@ -108,7 +114,7 @@ class AmplRepn(object):
         # Can only be equal to other AmplRepn instances
         if not isinstance(other, AmplRepn):
             return False
-        
+
         # Immediately check constants
         if self._constant != other._constant:
             return False
@@ -122,14 +128,18 @@ class AmplRepn(object):
             self_linear_terms = self._linear_terms_coef
         else:
             self_linear_vars = self._linear_vars
-            self_linear_terms = dict((id(var),coef) for var,coef in zip(self._linear_vars,self._linear_terms_coef))
+            self_linear_terms = dict((id(var),coef)
+                                     for var,coef in zip(self._linear_vars,
+                                                         self._linear_terms_coef))
 
         if other._linear_vars.__class__ is dict:
             other_linear_vars = list(itervalues(other._linear_vars))
             other_linear_terms = other._linear_terms_coef
         else:
             other_linear_vars = other._linear_vars
-            other_linear_terms = dict((id(var),coef) for var,coef in zip(other._linear_vars,other._linear_terms_coef))
+            other_linear_terms = dict((id(var),coef)
+                                      for var,coef in zip(other._linear_vars,
+                                                          other._linear_terms_coef))
 
         # Establish a mapping between self's linear terms and other's
         found_match = []
@@ -140,7 +150,7 @@ class AmplRepn(object):
                     match = True
                     break
             found_match.append(match)
-                    
+
         # We have to have found all our own vars
         if not all(found_match):
             return False
@@ -195,7 +205,6 @@ class AmplRepn(object):
             return False
         return True
 
-
 def _generate_ampl_repn(exp):
     ampl_repn = AmplRepn()
 
@@ -220,18 +229,22 @@ def _generate_ampl_repn(exp):
                 # adjust the linear terms
                 for var_ID in child_repn._linear_vars:
                     if var_ID in ampl_repn._linear_terms_coef:
-                        ampl_repn._linear_terms_coef[var_ID] += exp_coef*child_repn._linear_terms_coef[var_ID]
+                        ampl_repn._linear_terms_coef[var_ID] += \
+                            exp_coef * child_repn._linear_terms_coef[var_ID]
                     else:
-                        ampl_repn._linear_terms_coef[var_ID] = exp_coef*child_repn._linear_terms_coef[var_ID]
+                        ampl_repn._linear_terms_coef[var_ID] = \
+                            exp_coef * child_repn._linear_terms_coef[var_ID]
                 # adjust the linear vars
                 ampl_repn._linear_vars.update(child_repn._linear_vars)
 
                 # adjust the nonlinear terms
                 if not child_repn._nonlinear_expr is None:
                     if ampl_repn._nonlinear_expr is None:
-                        ampl_repn._nonlinear_expr = [(exp_coef, child_repn._nonlinear_expr)]
+                        ampl_repn._nonlinear_expr = \
+                            [(exp_coef, child_repn._nonlinear_expr)]
                     else:
-                        ampl_repn._nonlinear_expr.append((exp_coef, child_repn._nonlinear_expr))
+                        ampl_repn._nonlinear_expr.append(
+                            (exp_coef, child_repn._nonlinear_expr))
                 # adjust the nonlinear vars
                 ampl_repn._nonlinear_vars.update(child_repn._nonlinear_vars)
             return ampl_repn
@@ -241,8 +254,9 @@ def _generate_ampl_repn(exp):
         #
         elif exp_type is Expr._ProductExpression:
             #
-            # Iterate through the denominator.  If they aren't all constants, then
-            # simply return this expresion.
+            # Iterate through the denominator.  If they
+            # aren't all constants, then simply return this
+            # expresion.
             #
             denom=1.0
             for e in exp._denominator:
@@ -273,7 +287,6 @@ def _generate_ampl_repn(exp):
             # OK, the denominator is a constant.
             #
             # build up the ampl_repns for the numerator
-            
             n_linear_args = 0
             n_nonlinear_args = 0
             arg_repns = list()
@@ -287,10 +300,12 @@ def _generate_ampl_repn(exp):
                 # Check whether the expression is constant or else it is linear
                 elif len(e_repn._linear_vars) > 0:
                     n_linear_args += 1
-                # At this point we do not have a nonlinear expression and there are
-                # no linear terms. If the expression constant is zero, then we
-                # have a zero term in the product expression, so the entire product 
-                # expression becomes trivial. 
+                # At this point we do not have a nonlinear
+                # expression and there are no linear
+                # terms. If the expression constant is zero,
+                # then we have a zero term in the product
+                # expression, so the entire product
+                # expression becomes trivial.
                 elif e_repn._constant == 0.0:
                     ampl_repn = e_repn
                     return ampl_repn
@@ -322,16 +337,22 @@ def _generate_ampl_repn(exp):
                     # const_e * L_c
                     if e_repn._constant != 0.0:
                         for (var_ID, var) in iteritems(current_repn._linear_vars):
-                            ampl_repn._linear_terms_coef[var_ID] = current_repn._linear_terms_coef[var_ID] * e_repn._constant
+                            ampl_repn._linear_terms_coef[var_ID] = \
+                                current_repn._linear_terms_coef[var_ID] * \
+                                e_repn._constant
                         ampl_repn._linear_vars.update(current_repn._linear_vars)
 
                     # const_c * L_e
                     if current_repn._constant != 0.0:
                         for (e_var_ID,e_var) in iteritems(e_repn._linear_vars):
                             if e_var_ID in ampl_repn._linear_vars:
-                                ampl_repn._linear_terms_coef[e_var_ID] += current_repn._constant * e_repn._linear_terms_coef[e_var_ID]
+                                ampl_repn._linear_terms_coef[e_var_ID] += \
+                                    current_repn._constant * \
+                                    e_repn._linear_terms_coef[e_var_ID]
                             else:
-                                ampl_repn._linear_terms_coef[e_var_ID] = current_repn._constant * e_repn._linear_terms_coef[e_var_ID]
+                                ampl_repn._linear_terms_coef[e_var_ID] = \
+                                    current_repn._constant * \
+                                    e_repn._linear_terms_coef[e_var_ID]
                         ampl_repn._linear_vars.update(e_repn._linear_vars)
                     current_repn = ampl_repn
 
@@ -368,6 +389,7 @@ def _generate_ampl_repn(exp):
                 ampl_repn._nonlinear_vars.update(base_repn._linear_vars)
                 ampl_repn._nonlinear_vars.update(exponent_repn._linear_vars)
             return ampl_repn
+
         #
         # External Functions
         #
@@ -386,6 +408,7 @@ def _generate_ampl_repn(exp):
                 ampl_repn._nonlinear_vars.update(child_repn._nonlinear_vars)
                 ampl_repn._nonlinear_vars.update(child_repn._linear_vars)
             return ampl_repn
+
         #
         # Intrinsic Functions
         #
@@ -393,7 +416,7 @@ def _generate_ampl_repn(exp):
             # Checking isinstance above accounts for the fact that _AbsExpression
             # is a subclass of _IntrinsicFunctionExpression
             assert(len(exp._args) == 1)
-            
+
             # the argument is fixed, we can simply evaluate this expression
             if exp._args[0].is_fixed():
                 ampl_repn._constant = value(exp)
@@ -406,6 +429,7 @@ def _generate_ampl_repn(exp):
             ampl_repn._nonlinear_vars = child_repn._nonlinear_vars
             ampl_repn._nonlinear_vars.update(child_repn._linear_vars)
             return ampl_repn
+
         #
         # AMPL-style If-Then-Else expression
         #
@@ -427,7 +451,8 @@ def _generate_ampl_repn(exp):
                 ampl_repn._nonlinear_vars.update(then_repn._linear_vars)
                 ampl_repn._nonlinear_vars.update(else_repn._linear_vars)
             return ampl_repn
-        elif (exp_type is Expr._InequalityExpression) or (exp_type is Expr._EqualityExpression):
+        elif (exp_type is Expr._InequalityExpression) or \
+             (exp_type is Expr._EqualityExpression):
             for arg in exp._args:
                 arg_repn = _generate_ampl_repn(arg)
                 ampl_repn._nonlinear_vars.update(arg_repn._nonlinear_vars)
@@ -437,27 +462,31 @@ def _generate_ampl_repn(exp):
         elif exp.is_fixed():
             ampl_repn._constant = value(exp)
             return ampl_repn
+
         #
         # Expression (the component)
         #
         elif isinstance(exp, _ExpressionData):
             ampl_repn = _generate_ampl_repn(exp.expr)
             return ampl_repn
+
         #
         # ERROR
         #
         else:
             raise ValueError("Unsupported expression type: "+str(exp))
+
     #
     # Constant
     #
     elif exp.is_fixed():
         ### GAH: Why were we even checking this
         #if not exp.value.__class__ in native_numeric_types:
-        #    ampl_repn = _generate_ampl_repn(exp.value) 
+        #    ampl_repn = _generate_ampl_repn(exp.value)
         #    return ampl_repn
         ampl_repn._constant = value(exp)
         return ampl_repn
+
     #
     # Variable
     #
@@ -501,12 +530,16 @@ def generate_ampl_repn(exp, idMap=None):
             val = coef.pop(None)
             if val:
                 repn._constant = val
-        # the six module is inefficient in terms of wrapping iterkeys and itervalues,
-        # in the context of Python 2.7. use the native dictionary methods where possible.
+        # the six module is inefficient in terms of wrapping
+        # iterkeys and itervalues, in the context of Python
+        # 2.7. use the native dictionary methods where
+        # possible.
         if using_py3 is False:
             repn._linear_terms_coef = tuple(val for val in coef.itervalues() if val)
-            repn._linear_vars = tuple((varmap[var_hash] for var_hash,val in coef.iteritems() if val))
+            repn._linear_vars = tuple((varmap[var_hash]
+                                       for var_hash,val in coef.iteritems() if val))
         else:
             repn._linear_terms_coef = tuple(val for val in coef.values() if val)
-            repn._linear_vars = tuple((varmap[var_hash] for var_hash,val in coef.items() if val))
+            repn._linear_vars = tuple((varmap[var_hash]
+                                       for var_hash,val in coef.items() if val))
     return repn
