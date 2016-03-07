@@ -893,33 +893,48 @@ use the AbstractModel or ConcreteModel class instead.""")
             print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
 
 
-    def write(self, filename=None, format=ProblemFormat.cpxlp, solver_capability=None, io_options={}):
+    def write(self,
+              filename=None,
+              format=None,
+              solver_capability=None,
+              io_options={}):
         """
         Write the model to a file, with a given format.
         """
         #
         # Guess the format if none is specified
         #
-        if format is None and not filename is None:
+        if (filename is None) and (format is None):
+            # Preserving backwards compatibility here.
+            # The function used to be defined with format='lp' by
+            # default, but this led to confusing behavior when a
+            # user did something like 'model.write("f.nl")' and
+            # expected guess_format to create an NL file.
+            format = ProblemFormat.cpxlp
+        if (filename is not None) and (format is None):
             format = guess_format(filename)
         problem_writer = pyomo.opt.WriterFactory(format)
         if problem_writer is None:
-            raise ValueError(\
-                    "Cannot write model in format '%s': no model writer " \
-                    "registered for that format" \
-                    % str(format))
+            raise ValueError(
+                "Cannot write model in format '%s': no model "
+                "writer registered for that format"
+                % str(format))
 
         if solver_capability is None:
             solver_capability = lambda x: True
-        (filename, smap) = problem_writer(self, filename, solver_capability, io_options)
+        (filename, smap) = problem_writer(self,
+                                          filename,
+                                          solver_capability,
+                                          io_options)
         smap_id = id(smap)
         self.solutions.add_symbol_map(smap)
 
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Writing model '%s' to file '%s' with format %s",
-                         self.name,
-                         str(filename),
-                         str(format))
+            logger.debug(
+                "Writing model '%s' to file '%s' with format %s",
+                self.name,
+                str(filename),
+                str(format))
         return filename, smap_id
 
     def create(self, filename=None, **kwargs):
