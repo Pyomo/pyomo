@@ -225,7 +225,7 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         if options.verbose:
             print("\n************* Creating a virtual environment in %s *******************" % options.venv)
         venv_cmd = [sys.executable, virtualenv, options.venv]
-        if options.venv_sitepkgs or options.venv_sitepkgs_:
+        if options.venv_sitepkgs:
             venv_cmd.append('--system-site-packages')
         call_subprocess(venv_cmd, options)
         #
@@ -241,7 +241,7 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         if not os.path.exists(venv):
             venv += '-%d.%d' % sys.version_info[:2]
         venv_cmd = [venv, options.venv]
-        if options.venv_sitepkgs or options.venv_sitepkgs_:
+        if options.venv_sitepkgs:
             venv_cmd.append('--system-site-packages')
         if options.verbose:
             print("\n************* Creating a virtual environment in %s *******************" % options.venv)
@@ -294,7 +294,7 @@ def install_from_trunk(pip, options):
         else:
             cmd.append('--config=%s' % ('https://software.sandia.gov/svn/public/pyomo/vpy/'+options.config))
     cmd.append( options.venv )
-    if options.venv_sitepkgs or options.venv_sitepkgs_:
+    if options.venv_sitepkgs:
         cmd.append('--system-site-packages')
     if options.verbose:
         print("\n************* Installing Pyomo with vpy_install *******************")
@@ -521,14 +521,15 @@ virtual python environment is created in the 'pyomo' directory.
         help='Install Pyomo in a virtual environment that is created in the VENV directory')
     parser.add_option(
         '--venv-site-packages',
-        dest='venv_sitepkgs_',
+        dest='venv_sitepkgs',
         default=False,
         action='store_true',
-        help='DEPRECATED.  Used --venv-site-packages.')
+        help='DEPRECATED.  Use --system-site-packages.')
     parser.add_option(
         '--system-site-packages',
         dest='venv_sitepkgs',
         default=False,
+        action='store_true',
         help='Give the virtual environment access to the system Python site-packages (by default, the virtual environment is completely isolated from packages installed in the system Python)')
     parser.add_option(
         '--venv-only',
