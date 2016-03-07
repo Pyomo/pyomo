@@ -204,7 +204,7 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
             if not os.path.exists(virtualenv):
                 venv_src = glob.glob(os.path.join(pip_src,'virtualenv*'))
                 if venv_src:
-                    cmd = [pip, 'install', '-v']
+                    cmd = [pip, 'install', '-v'] + options.pip_options
                     if offline:
                         cmd.append('--no-index')
                     call_subprocess(cmd + ['--target', pyomo_install_tempdir, venv_src[0]], options)
@@ -217,7 +217,7 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
             #
             # ... from PyPI, using pip
             #
-            call_subprocess([pip, 'install', '-v', '--target', pyomo_install_tempdir, 'virtualenv'], options)
+            call_subprocess([pip, 'install', '-v', '--target', pyomo_install_tempdir, 'virtualenv'] + options.pip_options, options)
             virtualenv = os.path.join(pyomo_install_tempdir, 'virtualenv.py')
         #
         # 2. Run virtualenv
@@ -277,7 +277,7 @@ def install_from_trunk(pip, options):
     #
     if options.verbose:
         print("\n************* Installing pyutilib.virtualenv *******************")
-    retcode = call_subprocess([pip, 'install', '-v', '--target=%s' % pyomo_install_tempdir,'pyutilib.virtualenv'], options)
+    retcode = call_subprocess([pip, 'install', '-v', '--target=%s' % pyomo_install_tempdir,'pyutilib.virtualenv'] + options.pip_options, options)
     if retcode != 0:
         logger.fatal("ERROR: Unexpected return code from 'pip' when installing pyutilib.virtualenv")
         sys.exit(retcode)
@@ -392,8 +392,7 @@ def install_from_pypi(pip, python_dir, options):
     # Now install Pyomo
     #
     baseCmd = [pip, 'install']
-    if options.pypi_mirror:
-        baseCmd.extend(['--index-url', options.pypi_mirror])
+    baseCmd.extend(options.pip_options)
     if options.user:
         baseCmd.append('--user')
     call_subprocess(baseCmd + ['--upgrade', 'Pyomo'], options)
@@ -584,10 +583,12 @@ virtual python environment is created in the 'pyomo' directory.
         default=[],
         help='Additional packages that are installed after installing Pyomo')
     parser.add_option(
-        '-i', '--index-url',
-        dest='pypi_mirror',
-        default=None,
-        help='Base URL of the Python Package Index for PyPI installs')
+        '--pip-option',
+        dest='pip_options',
+        action='append',
+        default=[],
+        help='Additional option to add to PIP command line '
+             '(e.g., to specify PyPI mirrors); can be specified multiple times')
     #
     # Apply parser
     #
