@@ -930,7 +930,7 @@ class Expr_if(_ExpressionBase):
 
     def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
         ostream.write("%s=( " % ('if','then','else')[_idx], )
-        _args[_idx].to_string(ostream=ostream, verbose=verbose)
+        self._args[_idx].to_string(ostream=ostream, verbose=verbose)
         ostream.write(" )")
 
     def _to_string_prefix(self, ostream, verbose):
