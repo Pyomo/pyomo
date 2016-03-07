@@ -15,8 +15,14 @@ import logging
 from pyomo.core.base import expr as Expr
 from pyomo.core.base import _ExpressionData, Expression
 from pyomo.core.base.var import _VarData, value
+from pyomo.core.base.param import _ParamData
+from pyomo.core.base.numvalue import (NumericConstant,
+                                      native_numeric_types,
+                                      is_fixed)
 from pyomo.core.base import external
-from pyomo.repn.canonical_repn import collect_linear_canonical_repn
+from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
+                                       generate_canonical_repn)
+import pyomo.core.base.expr_common
 
 import six
 from six import itervalues, iteritems, StringIO
@@ -25,6 +31,11 @@ from six.moves import xrange, zip
 logger = logging.getLogger('pyomo.core')
 
 using_py3 = six.PY3
+
+_using_pyomo4_trees = False
+if pyomo.core.base.expr_common.mode == \
+   pyomo.core.base.expr_common.Mode.pyomo4_trees:
+    _using_pyomo4_trees = True
 
 class AmplRepn(object):
 
@@ -208,32 +219,69 @@ class AmplRepn(object):
 def _generate_ampl_repn(exp):
     ampl_repn = AmplRepn()
 
+    exp_type = type(exp)
+    if exp_type in native_numeric_types:
+        ampl_repn._constant = value(exp)
+        return ampl_repn
+
     #
     # Expression
     #
-    if exp.is_expression():
-        exp_type = type(exp)
+    elif exp.is_expression():
 
         #
         # Sum
         #
-        if exp_type is Expr._SumExpression:
-            ampl_repn._constant = exp._const #float(exp._const)
+        if _using_pyomo4_trees and (exp_type is Expr._LinearExpression):
+            ampl_repn._constant = value(exp._const)
             ampl_repn._nonlinear_expr = None
-            for i in xrange(len(exp._args)):
-                exp_coef = exp._coef[i]
-                child_repn = _generate_ampl_repn(exp._args[i])
+            for child_exp in exp._args:
+                exp_coef = value(exp._coef[id(child_exp)])
+                if exp_coef != 0:
+                    child_repn = _generate_ampl_repn(child_exp)
+                    # adjust the constant
+                    ampl_repn._constant += exp_coef * child_repn._constant
+
+                    # adjust the linear terms
+                    for var_ID in child_repn._linear_vars:
+                        if var_ID in ampl_repn._linear_terms_coef:
+                            ampl_repn._linear_terms_coef[var_ID] += \
+                                exp_coef * child_repn._linear_terms_coef[var_ID]
+                        else:
+                            ampl_repn._linear_terms_coef[var_ID] = \
+                                exp_coef * child_repn._linear_terms_coef[var_ID]
+                    # adjust the linear vars
+                    ampl_repn._linear_vars.update(child_repn._linear_vars)
+
+                    # adjust the nonlinear terms
+                    if not child_repn._nonlinear_expr is None:
+                        if ampl_repn._nonlinear_expr is None:
+                            ampl_repn._nonlinear_expr = \
+                                [(exp_coef, child_repn._nonlinear_expr)]
+                        else:
+                            ampl_repn._nonlinear_expr.append(
+                                (exp_coef, child_repn._nonlinear_expr))
+                    # adjust the nonlinear vars
+                    ampl_repn._nonlinear_vars.update(child_repn._nonlinear_vars)
+
+            return ampl_repn
+
+        elif _using_pyomo4_trees and (exp_type is Expr._SumExpression):
+            ampl_repn._constant = 0.0
+            ampl_repn._nonlinear_expr = None
+            for child_exp in exp._args:
+                child_repn = _generate_ampl_repn(child_exp)
                 # adjust the constant
-                ampl_repn._constant += exp_coef*child_repn._constant
+                ampl_repn._constant += child_repn._constant
 
                 # adjust the linear terms
                 for var_ID in child_repn._linear_vars:
                     if var_ID in ampl_repn._linear_terms_coef:
                         ampl_repn._linear_terms_coef[var_ID] += \
-                            exp_coef * child_repn._linear_terms_coef[var_ID]
+                            child_repn._linear_terms_coef[var_ID]
                     else:
                         ampl_repn._linear_terms_coef[var_ID] = \
-                            exp_coef * child_repn._linear_terms_coef[var_ID]
+                            child_repn._linear_terms_coef[var_ID]
                 # adjust the linear vars
                 ampl_repn._linear_vars.update(child_repn._linear_vars)
 
@@ -241,24 +289,60 @@ def _generate_ampl_repn(exp):
                 if not child_repn._nonlinear_expr is None:
                     if ampl_repn._nonlinear_expr is None:
                         ampl_repn._nonlinear_expr = \
-                            [(exp_coef, child_repn._nonlinear_expr)]
+                            [(1, child_repn._nonlinear_expr)]
                     else:
                         ampl_repn._nonlinear_expr.append(
-                            (exp_coef, child_repn._nonlinear_expr))
+                            (1, child_repn._nonlinear_expr))
                 # adjust the nonlinear vars
                 ampl_repn._nonlinear_vars.update(child_repn._nonlinear_vars)
+            return ampl_repn
+
+        elif exp_type is Expr._SumExpression:
+            assert not _using_pyomo4_trees
+            ampl_repn._constant = exp._const
+            ampl_repn._nonlinear_expr = None
+            for i in xrange(len(exp._args)):
+                exp_coef = exp._coef[i]
+                if exp_coef != 0:
+                    child_exp = exp._args[i]
+                    child_repn = _generate_ampl_repn(child_exp)
+                    # adjust the constant
+                    ampl_repn._constant += exp_coef * child_repn._constant
+
+                    # adjust the linear terms
+                    for var_ID in child_repn._linear_vars:
+                        if var_ID in ampl_repn._linear_terms_coef:
+                            ampl_repn._linear_terms_coef[var_ID] += \
+                                exp_coef * child_repn._linear_terms_coef[var_ID]
+                        else:
+                            ampl_repn._linear_terms_coef[var_ID] = \
+                                exp_coef * child_repn._linear_terms_coef[var_ID]
+                    # adjust the linear vars
+                    ampl_repn._linear_vars.update(child_repn._linear_vars)
+
+                    # adjust the nonlinear terms
+                    if not child_repn._nonlinear_expr is None:
+                        if ampl_repn._nonlinear_expr is None:
+                            ampl_repn._nonlinear_expr = \
+                                [(exp_coef, child_repn._nonlinear_expr)]
+                        else:
+                            ampl_repn._nonlinear_expr.append(
+                                (exp_coef, child_repn._nonlinear_expr))
+                    # adjust the nonlinear vars
+                    ampl_repn._nonlinear_vars.update(child_repn._nonlinear_vars)
             return ampl_repn
 
         #
         # Product
         #
-        elif exp_type is Expr._ProductExpression:
+        elif (not _using_pyomo4_trees) and \
+             (exp_type is Expr._ProductExpression):
             #
             # Iterate through the denominator.  If they
             # aren't all constants, then simply return this
-            # expresion.
+            # expression.
             #
-            denom=1.0
+            denom = 1.0
             for e in exp._denominator:
                 if e.is_fixed():
                     denom *= value(e)
@@ -266,11 +350,10 @@ def _generate_ampl_repn(exp):
                     ampl_repn._nonlinear_expr = exp
                     break
                 if denom == 0.0:
-                    print("Divide-by-zero error - offending sub-expression:")
-                    e.pprint()
-                    raise ZeroDivisionError
+                    raise ZeroDivisionError(
+                        "Divide-by-zero error - offending sub-expression: "+str(e))
 
-            if not ampl_repn._nonlinear_expr is None:
+            if ampl_repn._nonlinear_expr is not None:
                 # we have a nonlinear expression ... build up all the vars
                 for e in exp._denominator:
                     arg_repn = _generate_ampl_repn(e)
@@ -290,8 +373,7 @@ def _generate_ampl_repn(exp):
             n_linear_args = 0
             n_nonlinear_args = 0
             arg_repns = list()
-            for i in xrange(len(exp._numerator)):
-                e = exp._numerator[i]
+            for e in exp._numerator:
                 e_repn = _generate_ampl_repn(e)
                 arg_repns.append(e_repn)
                 # check if the expression is not nonlinear else it is nonlinear
@@ -314,8 +396,7 @@ def _generate_ampl_repn(exp):
             if n_linear_args > 1 or n_nonlinear_args > 0:
                 is_nonlinear = True
 
-
-            if is_nonlinear is True:
+            if is_nonlinear:
                 # do like AMPL and simply return the expression
                 # without extracting the potentially linear part
                 ampl_repn = AmplRepn()
@@ -361,6 +442,148 @@ def _generate_ampl_repn(exp):
             ampl_repn._constant *= exp._coef/denom
             for var_ID in ampl_repn._linear_terms_coef:
                 ampl_repn._linear_terms_coef[var_ID] *= exp._coef/denom
+
+            return ampl_repn
+
+        elif _using_pyomo4_trees and (exp_type is Expr._ProductExpression):
+            # It is assumed this is a binary operator
+            # (x=args[0], y=args[1])
+            assert len(exp._args) == 2
+
+            n_linear_args = 0
+            n_nonlinear_args = 0
+            arg_repns = list()
+            for e in exp._args:
+                e_repn = _generate_ampl_repn(e)
+                arg_repns.append(e_repn)
+                # check if the expression is not nonlinear else it is nonlinear
+                if e_repn._nonlinear_expr is not None:
+                    n_nonlinear_args += 1
+                # Check whether the expression is constant or else it is linear
+                elif len(e_repn._linear_vars) > 0:
+                    n_linear_args += 1
+                # At this point we do not have a nonlinear
+                # expression and there are no linear
+                # terms. If the expression constant is zero,
+                # then we have a zero term in the product
+                # expression, so the entire product
+                # expression becomes trivial.
+                elif e_repn._constant == 0.0:
+                    ampl_repn = e_repn
+                    return ampl_repn
+
+            is_nonlinear = False
+            if n_linear_args > 1 or n_nonlinear_args > 0:
+                is_nonlinear = True
+
+            if is_nonlinear:
+                # do like AMPL and simply return the expression
+                # without extracting the potentially linear part
+                ampl_repn = AmplRepn()
+                ampl_repn._nonlinear_expr = exp
+                for repn in arg_repns:
+                    ampl_repn._nonlinear_vars.update(repn._linear_vars)
+                    ampl_repn._nonlinear_vars.update(repn._nonlinear_vars)
+                return ampl_repn
+
+            # is linear or constant
+            ampl_repn = current_repn = arg_repns[0]
+            for i in xrange(1,len(arg_repns)):
+                e_repn = arg_repns[i]
+                ampl_repn = AmplRepn()
+
+                # const_c * const_e
+                ampl_repn._constant = current_repn._constant * e_repn._constant
+
+                # const_e * L_c
+                if e_repn._constant != 0.0:
+                    for (var_ID, var) in iteritems(current_repn._linear_vars):
+                        ampl_repn._linear_terms_coef[var_ID] = \
+                            current_repn._linear_terms_coef[var_ID] * \
+                            e_repn._constant
+                    ampl_repn._linear_vars.update(current_repn._linear_vars)
+
+                # const_c * L_e
+                if current_repn._constant != 0.0:
+                    for (e_var_ID,e_var) in iteritems(e_repn._linear_vars):
+                        if e_var_ID in ampl_repn._linear_vars:
+                            ampl_repn._linear_terms_coef[e_var_ID] += \
+                                current_repn._constant * \
+                                e_repn._linear_terms_coef[e_var_ID]
+                        else:
+                            ampl_repn._linear_terms_coef[e_var_ID] = \
+                                current_repn._constant * \
+                                e_repn._linear_terms_coef[e_var_ID]
+                    ampl_repn._linear_vars.update(e_repn._linear_vars)
+                current_repn = ampl_repn
+
+            return ampl_repn
+
+        elif _using_pyomo4_trees and (exp_type is Expr._DivisionExpression):
+            # It is assumed this is a binary operator
+            # (numerator=args[0], denominator=args[1])
+            assert len(exp._args) == 2
+
+            #
+            # Check the denominator, if it is not constant,
+            # then simply return this expression.
+            #
+            numerator, denominator = exp._args
+            if not is_fixed(denominator):
+                ampl_repn._nonlinear_expr = exp
+                # we have a nonlinear expression, so build up all the vars
+                for e in exp._args:
+                    arg_repn = _generate_ampl_repn(e)
+                    ampl_repn._nonlinear_vars.update(arg_repn._linear_vars)
+                    ampl_repn._nonlinear_vars.update(arg_repn._nonlinear_vars)
+                return ampl_repn
+
+            denominator = value(denominator)
+            if denominator == 0:
+                raise ZeroDivisionError(
+                    "Divide-by-zero error - offending sub-expression: "+str(exp._args[1]))
+
+            #
+            # OK, the denominator is a constant.
+            #
+
+            # build up the ampl_repn for the numerator
+            ampl_repn = _generate_ampl_repn(numerator)
+            # check if the expression is not nonlinear else it is nonlinear
+            if ampl_repn._nonlinear_expr is not None:
+                # do like AMPL and simply return the expression
+                # without extracting the potentially linear part
+                # (be sure to set this to the original expression,
+                # not just the numerators)
+                ampl_repn._nonlinear_expr = exp
+                return ampl_repn
+
+            #
+            # OK, we have a linear numerator with a constant denominator
+            #
+
+            # update any constants and coefficients by dividing
+            # by the fixed denominator
+            ampl_repn._constant /= denominator
+            for var_ID in ampl_repn._linear_terms_coef:
+                ampl_repn._linear_terms_coef[var_ID] /= denominator
+
+            return ampl_repn
+
+        elif _using_pyomo4_trees and (exp_type is Expr._NegationExpression):
+            assert len(exp._args) == 1
+            ampl_repn = _generate_ampl_repn(exp._args[0])
+            if ampl_repn._nonlinear_expr is not None:
+                # do like AMPL and simply return the expression
+                # without extracting the potentially linear part
+                ampl_repn._nonlinear_expr = exp
+                return ampl_repn
+
+            # this subexpression is linear, so update any
+            # constants and coefficients by negating them
+            ampl_repn._constant *= -1
+            for var_ID in ampl_repn._linear_terms_coef:
+                ampl_repn._linear_terms_coef[var_ID] *= -1
 
             return ampl_repn
 
@@ -474,7 +697,7 @@ def _generate_ampl_repn(exp):
         # ERROR
         #
         else:
-            raise ValueError("Unsupported expression type: "+str(exp))
+            raise ValueError("Unsupported expression type: "+str(type(exp))+" ("+str(exp)+")")
 
     #
     # Constant
@@ -521,25 +744,33 @@ def generate_ampl_repn(exp, idMap=None):
         repn._nonlinear_vars = tuple()
     else: # degree == 1
         repn = AmplRepn()
-        # compress
-        repn._linear_vars = tuple()
-        repn._linear_terms_coef = tuple()
-        repn._nonlinear_vars = tuple()
-        coef, varmap = collect_linear_canonical_repn(exp, idMap=idMap)
-        if None in coef:
-            val = coef.pop(None)
-            if val:
-                repn._constant = val
-        # the six module is inefficient in terms of wrapping
-        # iterkeys and itervalues, in the context of Python
-        # 2.7. use the native dictionary methods where
-        # possible.
-        if using_py3 is False:
-            repn._linear_terms_coef = tuple(val for val in coef.itervalues() if val)
-            repn._linear_vars = tuple((varmap[var_hash]
-                                       for var_hash,val in coef.iteritems() if val))
+        if _using_pyomo4_trees:
+            canonical_repn = generate_canonical_repn(exp, idMap=idMap)
+            # compress
+            repn._nonlinear_vars = tuple()
+            repn._constant = value(canonical_repn.constant)
+            repn._linear_vars = tuple(canonical_repn.variables)
+            repn._linear_terms_coef = tuple(value(_v) for _v in canonical_repn.linear)
         else:
-            repn._linear_terms_coef = tuple(val for val in coef.values() if val)
-            repn._linear_vars = tuple((varmap[var_hash]
-                                       for var_hash,val in coef.items() if val))
+            # compress
+            repn._linear_vars = tuple()
+            repn._linear_terms_coef = tuple()
+            repn._nonlinear_vars = tuple()
+            coef, varmap = collect_linear_canonical_repn(exp, idMap=idMap)
+            if None in coef:
+                val = coef.pop(None)
+                if val:
+                    repn._constant = val
+            # the six module is inefficient in terms of wrapping
+            # iterkeys and itervalues, in the context of Python
+            # 2.7. use the native dictionary methods where
+            # possible.
+            if using_py3 is False:
+                repn._linear_terms_coef = tuple(val for val in coef.itervalues() if val)
+                repn._linear_vars = tuple((varmap[var_hash]
+                                           for var_hash,val in coef.iteritems() if val))
+            else:
+                repn._linear_terms_coef = tuple(val for val in coef.values() if val)
+                repn._linear_vars = tuple((varmap[var_hash]
+                                           for var_hash,val in coef.items() if val))
     return repn
