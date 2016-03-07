@@ -27,9 +27,10 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import *
 from pyomo.core.base import *
 from pyomo.core.base import expr, external, SymbolMap, Block
+import pyomo.core.base.expr_common
 from pyomo.core.base.var import Var
 from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base.numvalue import NumericConstant
+from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
 from pyomo.core.base import var
 from pyomo.core.base import param
 from pyomo.core.base.suffix import active_export_suffix_generator
@@ -38,27 +39,100 @@ from pyomo.repn.ampl_repn import generate_ampl_repn
 from six import itervalues, iteritems
 from six.moves import xrange, zip
 
+_using_pyomo4_trees = False
+if pyomo.core.base.expr_common.mode == \
+   pyomo.core.base.expr_common.Mode.pyomo4_trees:
+    _using_pyomo4_trees = True
+
 logger = logging.getLogger('pyomo.core')
 
-_intrinsic_function_operators = {\
-'log':    'o43',\
-'log10':  'o42',\
-'sin':    'o41',\
-'cos':    'o46',
-'tan':    'o38',\
-'sinh':   'o40',\
-'cosh':   'o45',\
-'tanh':   'o37',\
-'asin':   'o51',\
-'acos':   'o53',\
-'atan':   'o49',\
-'exp':    'o44',\
-'sqrt':   'o39',\
-'asinh':  'o50',\
-'acosh':  'o52',\
-'atanh':  'o47',\
-'pow':    'o5',\
-'abs':    'o15'}
+_intrinsic_function_operators = {
+    'log':    'o43',
+    'log10':  'o42',
+    'sin':    'o41',
+    'cos':    'o46',
+    'tan':    'o38',
+    'sinh':   'o40',
+    'cosh':   'o45',
+    'tanh':   'o37',
+    'asin':   'o51',
+    'acos':   'o53',
+    'atan':   'o49',
+    'exp':    'o44',
+    'sqrt':   'o39',
+    'asinh':  'o50',
+    'acosh':  'o52',
+    'atanh':  'o47',
+    'pow':    'o5',
+    'abs':    'o15'}
+
+# build string templates
+
+_op_template = {}
+_op_comment = {}
+
+prod_template = "o2{C}\n"
+prod_comment = "\t#*"
+div_template = "o3{C}\n"
+div_comment = "\t#/"
+if _using_pyomo4_trees:
+    _op_template[expr._ProductExpression] = prod_template
+    _op_comment[expr._ProductExpression] = prod_comment
+    _op_template[expr._DivisionExpression] = div_template
+    _op_comment[expr._DivisionExpression] = div_comment
+else:
+    _op_template[expr._ProductExpression] = (prod_template,
+                                             div_template)
+    _op_comment[expr._ProductExpression] = (prod_comment,
+                                            div_comment)
+del prod_template
+del prod_comment
+del div_template
+del div_comment
+
+_op_template[external._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
+                                                      "h%d:%s{C}\n") #string arg
+_op_comment[external._ExternalFunctionExpression] = ("\t#%s", #function
+                                                     "")      #string arg
+
+for opname in _intrinsic_function_operators:
+    _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
+    _op_comment[opname] = "\t#"+opname
+
+_op_template[expr.Expr_if] = "o35{C}\n"
+_op_comment[expr.Expr_if] = "\t#if"
+
+_op_template[expr._InequalityExpression] = ("o21{C}\n", # and
+                                            "o22{C}\n", # <
+                                            "o23{C}\n") # <=
+_op_comment[expr._InequalityExpression] = ("\t#and", # and
+                                           "\t#lt",  # <
+                                           "\t#le")  # <=
+
+_op_template[expr._EqualityExpression] = "o24{C}\n"
+_op_comment[expr._EqualityExpression] = "\t#eq"
+
+_op_template[var._VarData] = "v%d{C}\n"
+_op_comment[var._VarData] = "\t#%s"
+
+_op_template[param._ParamData] = "n%r{C}\n"
+_op_comment[param._ParamData] = ""
+
+_op_template[NumericConstant] = "n%r{C}\n"
+_op_comment[NumericConstant] = ""
+
+_op_template[expr._SumExpression] = ("o54{C}\n%d\n", # nary +
+                                     "o0{C}\n",      # +
+                                     "o2\n" + _op_template[NumericConstant]) # * coef
+_op_comment[expr._SumExpression] = ("\t#sumlist", # nary +
+                                    "\t#+",       # +
+                                    _op_comment[NumericConstant]) # * coef
+if _using_pyomo4_trees:
+    _op_template[expr._LinearExpression] = _op_template[expr._SumExpression]
+    _op_comment[expr._LinearExpression] = _op_comment[expr._SumExpression]
+
+    _op_template[expr._NegationExpression] = "o16{C}\n"
+    _op_comment[expr._NegationExpression] = "\t#-"
 
 class StopWatch(object):
 
@@ -234,6 +308,36 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if filename is None:
             filename = model.cname() + ".nl"
 
+        # Generate the operator strings templates. The value of
+        # symbolic_solver_labels determines whether or not to
+        # include "nl comments" (the equivalent AMPL functionality
+        # is "option nl_comments 1").
+        self._op_string = {}
+        for optype in _op_template:
+            template_str = _op_template[optype]
+            comment_str = _op_comment[optype]
+            if type(template_str) is tuple:
+                op_strings = []
+                for i in xrange(len(template_str)):
+                    if symbolic_solver_labels:
+                        op_strings.append(template_str[i].format(C=comment_str[i]))
+                    else:
+                        op_strings.append(template_str[i].format(C=""))
+                self._op_string[optype] = tuple(op_strings)
+            else:
+                if symbolic_solver_labels:
+                    self._op_string[optype] = template_str.format(C=comment_str)
+                else:
+                    self._op_string[optype] = template_str.format(C="")
+
+        # making these attributes so they do not need to be
+        # passed into _print_nonlinear_terms_NL
+        self._symbolic_solver_labels = symbolic_solver_labels
+        self._output_fixed_variable_bounds = output_fixed_variable_bounds
+        # Speeds up calling cname on every component when
+        # writing .row and .col files (when symbolic_solver_labels is True)
+        self._name_labeler = NameLabeler()
+
         # Pause the GC for the duration of this method
         with PauseGC() as pgc:
             with open(filename,"w") as f:
@@ -241,15 +345,18 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 symbol_map = self._print_model_NL(
                     model,
                     solver_capability,
-                    symbolic_solver_labels,
                     show_section_timing=show_section_timing,
                     skip_trivial_constraints=skip_trivial_constraints,
                     file_determinism=file_determinism,
-                    output_fixed_variable_bounds=output_fixed_variable_bounds,
                     include_all_variable_bounds=include_all_variable_bounds)
+
+        self._symbolic_solver_labels = False
+        self._output_fixed_variable_bounds = False
+        self._name_labeler = None
 
         self._OUTPUT = None
         self._varID_map = None
+        self._op_string = None
         return filename, symbol_map
 
     def _get_bound(self, exp):
@@ -269,16 +376,17 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # create a new sum expression for efficiency) this should
             # be a list of tuples where [0] is the coeff and [1] is
             # the expr to write
+            nary_sum_str, binary_sum_str, coef_term_str = \
+                self._op_string[expr._SumExpression]
             n = len(exp)
             if n > 2:
-                OUTPUT.write("o54\n%d\n" % (n))
+                OUTPUT.write(nary_sum_str % (n))
                 for i in xrange(0,n):
                     assert(exp[i].__class__ is tuple)
                     coef = exp[i][0]
                     child_exp = exp[i][1]
-                    if coef != 1.0:
-                        # *
-                        OUTPUT.write("o2\nn{0!r}\n".format(coef))
+                    if coef != 1:
+                        OUTPUT.write(coef_term_str % (coef))
                     self._print_nonlinear_terms_NL(child_exp)
             else:
                 for i in xrange(0,n):
@@ -287,53 +395,105 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     child_exp = exp[i][1]
                     if i != n-1:
                         # need the + op if it is not the last entry in the list
-                        # +
-                        OUTPUT.write("o0\n")
-                    if coef != 1.0:
-                        # *
-                        OUTPUT.write("o2\nn{0!r}\n".format(coef))
+                        OUTPUT.write(binary_sum_str)
+                    if coef != 1:
+                        OUTPUT.write(coef_term_str % (coef))
                     self._print_nonlinear_terms_NL(child_exp)
+        elif exp_type in native_numeric_types:
+            OUTPUT.write(self._op_string[NumericConstant]
+                         % (exp))
+
         elif exp.is_expression():
-            if exp_type is expr._SumExpression:
+            if _using_pyomo4_trees and (exp_type is expr._LinearExpression):
+                nary_sum_str, binary_sum_str, coef_term_str = \
+                    self._op_string[expr._LinearExpression]
                 n = len(exp._args)
                 if n > 2:
-                    # sum
-                    OUTPUT.write("o54\n%d\n"%(n))
-                    if exp._const != 0.0:
-                        # +
-                        OUTPUT.write("o0\nn{0!r}\n".format(exp._const))
-                    for i in xrange(0,n):
-                        if exp._coef[i] != 1:
-                            # *
-                            OUTPUT.write("o2\nn{0!r}\n".format(exp._coef[i]))
-                        self._print_nonlinear_terms_NL(exp._args[i])
+                    OUTPUT.write(nary_sum_str % (n))
+                    if exp._const != 0:
+                        OUTPUT.write(binary_sum_str)
+                        OUTPUT.write(self._op_string[NumericConstant]
+                                     % (exp._const))
+                    for child_exp in exp._args:
+                        child_coef = exp._coef[id(child_exp)]
+                        if child_coef != 1:
+                            OUTPUT.write(coef_term_str % (value(child_coef)))
+                        self._print_nonlinear_terms_NL(child_exp)
                 else:
-                    if exp._const != 0.0:
-                        # +
-                        OUTPUT.write("o0\nn{0!r}\n".format(exp._const))
+                    assert n > 0
+                    if exp._const != 0:
+                        OUTPUT.write(binary_sum_str)
+                        OUTPUT.write(self._op_string[NumericConstant]
+                                     % (exp._const))
+                    for i in xrange(n-1):
+                        OUTPUT.write(binary_sum_str)
+                        child_exp = exp._args[i]
+                        child_coef = exp._coef[id(child_exp)]
+                        if child_coef != 1:
+                            OUTPUT.write(coef_term_str % (value(child_coef)))
+                        self._print_nonlinear_terms_NL(child_exp)
+                    child_exp = exp._args[n-1]
+                    child_coef = exp._coef[id(child_exp)]
+                    if child_coef != 1:
+                        OUTPUT.write(coef_term_str % (value(child_coef)))
+                    self._print_nonlinear_terms_NL(child_exp)
+
+            elif _using_pyomo4_trees and (exp_type is expr._SumExpression):
+                nary_sum_str, binary_sum_str, coef_term_str = \
+                    self._op_string[expr._SumExpression]
+                n = len(exp._args)
+                if n > 2:
+                    OUTPUT.write(nary_sum_str % (n))
+                    for child_exp in exp._args:
+                        self._print_nonlinear_terms_NL(child_exp)
+                else:
                     for i in xrange(0,n-1):
-                        # +
-                        OUTPUT.write("o0\n")
-                        if exp._coef[i] != 1.0:
-                            # *
-                            OUTPUT.write("o2\nn{0!r}\n".format(exp._coef[i]))
+                        OUTPUT.write(binary_sum_str)
                         self._print_nonlinear_terms_NL(exp._args[i])
-                    if exp._coef[n-1] != 1.0:
-                        # *
-                        OUTPUT.write("o2\nn{0!r}\n".format(exp._coef[n-1]))
                     self._print_nonlinear_terms_NL(exp._args[n-1])
 
-            elif exp_type is expr._ProductExpression:
+            elif exp_type is expr._SumExpression:
+                assert not _using_pyomo4_trees
+                nary_sum_str, binary_sum_str, coef_term_str = \
+                    self._op_string[expr._SumExpression]
+                n = len(exp._args)
+                if n > 2:
+                    OUTPUT.write(nary_sum_str % (n))
+                    if exp._const != 0:
+                        OUTPUT.write(binary_sum_str)
+                        OUTPUT.write(self._op_string[NumericConstant]
+                                     % (exp._const))
+                    for i in xrange(0,n):
+                        if exp._coef[i] != 1:
+                            OUTPUT.write(coef_term_str % (exp._coef[i]))
+                        self._print_nonlinear_terms_NL(exp._args[i])
+                else:
+                    if exp._const != 0:
+                        OUTPUT.write(binary_sum_str)
+                        OUTPUT.write(self._op_string[NumericConstant]
+                                     % (exp._const))
+                    for i in xrange(0,n-1):
+                        OUTPUT.write(binary_sum_str)
+                        if exp._coef[i] != 1:
+                            OUTPUT.write(coef_term_str % (exp._coef[i]))
+                        self._print_nonlinear_terms_NL(exp._args[i])
+                    if exp._coef[n-1] != 1:
+                        OUTPUT.write(coef_term_str % (exp._coef[n-1]))
+                    self._print_nonlinear_terms_NL(exp._args[n-1])
+
+            elif (not _using_pyomo4_trees) and \
+                 (exp_type is expr._ProductExpression):
                 denom_exists = False
+                prod_str, div_str = self._op_string[expr._ProductExpression]
                 if len(exp._denominator) == 0:
                     pass
                 else:
-                    # /
-                    OUTPUT.write("o3\n")
+                    OUTPUT.write(div_str)
                     denom_exists = True
-                if exp._coef != 1.0:
-                    # *
-                    OUTPUT.write("o2\nn{0!r}\n".format(exp._coef))
+                if exp._coef != 1:
+                    OUTPUT.write(prod_str)
+                    OUTPUT.write(self._op_string[NumericConstant]
+                                 % (exp._coef))
                 if len(exp._numerator) == 0:
                     OUTPUT.write("n1\n")
                 # print out the numerator
@@ -341,8 +501,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 max_count = len(exp._numerator)-1
                 for child_exp in exp._numerator:
                     if child_counter < max_count:
-                        # *
-                        OUTPUT.write("o2\n")
+                        OUTPUT.write(prod_str)
                     self._print_nonlinear_terms_NL(child_exp)
                     child_counter += 1
                 if denom_exists:
@@ -351,38 +510,73 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     max_count = len(exp._denominator)-1
                     for child_exp in exp._denominator:
                         if child_counter < max_count:
-                            # *
-                            OUTPUT.write("o2\n")
+                            OUTPUT.write(prod_str)
                         self._print_nonlinear_terms_NL(child_exp)
                         child_counter += 1
 
+            elif _using_pyomo4_trees and (exp_type is expr._ProductExpression):
+                prod_str = self._op_string[expr._ProductExpression]
+                child_counter = 0
+                max_count = len(exp._args)-1
+                for child_exp in exp._args:
+                    if child_counter < max_count:
+                        OUTPUT.write(prod_str)
+                    self._print_nonlinear_terms_NL(child_exp)
+                    child_counter += 1
+
+            elif _using_pyomo4_trees and (exp_type is expr._DivisionExpression):
+                div_str = self._op_string[expr._DivisionExpression]
+                child_counter = 0
+                max_count = len(exp._args)-1
+                for child_exp in exp._args:
+                    if child_counter < max_count:
+                        OUTPUT.write(div_str)
+                    self._print_nonlinear_terms_NL(child_exp)
+                    child_counter += 1
+
+            elif _using_pyomo4_trees and (exp_type is expr._NegationExpression):
+                assert len(exp._args) == 1
+                OUTPUT.write(self._op_string[expr._NegationExpression])
+                self._print_nonlinear_terms_NL(exp._args[0])
+
             elif exp_type is external._ExternalFunctionExpression:
-                OUTPUT.write("f%d %d\n" % (
-                    self.external_byFcn[exp._fcn._function][1],
-                    len(exp._args)))
+                fun_str, string_arg_str = \
+                    self._op_string[external._ExternalFunctionExpression]
+                if not self._symbolic_solver_labels:
+                    OUTPUT.write(fun_str
+                                 % (self.external_byFcn[exp._fcn._function][1],
+                                    len(exp._args)))
+                else:
+                    OUTPUT.write(fun_str
+                                 % (self.external_byFcn[exp._fcn._function][1],
+                                    len(exp._args),
+                                    exp.cname(True)))
                 for arg in exp._args:
                     if isinstance(arg, basestring):
-                        OUTPUT.write("h%d:%s\n" % (len(arg), arg))
+                        OUTPUT.write(string_arg_str % (len(arg), arg))
                     else:
                         self._print_nonlinear_terms_NL(arg)
-            elif isinstance(exp, expr._IntrinsicFunctionExpression):
-                intr_expr = _intrinsic_function_operators.get(exp.cname(),None)
-                if intr_expr is not None:
-                    OUTPUT.write(intr_expr+"\n")
+            elif (exp_type is expr._PowExpression) or \
+                 isinstance(exp, expr._IntrinsicFunctionExpression):
+                intr_expr_str = self._op_string.get(exp.cname())
+                if intr_expr_str is not None:
+                    OUTPUT.write(intr_expr_str)
                 else:
                     logger.error("Unsupported intrinsic function ({0})",
                                  exp.cname(True))
-                    raise TypeError("ASL writer does not support '{0}' expressions"
-                                   .format(exp.cname(True)))
+                    raise TypeError("ASL writer does not support '%s' expressions"
+                                    % (exp.cname(True)))
 
                 for child_exp in exp._args:
                     self._print_nonlinear_terms_NL(child_exp)
             elif exp_type is expr.Expr_if:
-                OUTPUT.write("o35\n")
+                OUTPUT.write(self._op_string[expr.Expr_if])
                 self._print_nonlinear_terms_NL(exp._if)
                 self._print_nonlinear_terms_NL(exp._then)
                 self._print_nonlinear_terms_NL(exp._else)
             elif exp_type is expr._InequalityExpression:
+                and_str, lt_str, le_str = \
+                    self._op_string[expr._InequalityExpression]
                 len_args = len(exp._args)
                 assert len_args in [2,3]
                 left = exp._args[0]
@@ -390,22 +584,22 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 right = None
                 if len_args == 3:
                     right = exp._args[2]
-                    OUTPUT.write("o21\n") # and
+                    OUTPUT.write(and_str)
                 if exp._strict[0]:
-                    OUTPUT.write("o22\n")
+                    OUTPUT.write(lt_str)
                 else:
-                    OUTPUT.write("o23\n")
+                    OUTPUT.write(le_str)
                 self._print_nonlinear_terms_NL(left)
                 self._print_nonlinear_terms_NL(middle)
                 if not right is None:
                     if exp._strict[1]:
-                        OUTPUT.write("o22\n")
+                        OUTPUT.write(lt_str)
                     else:
-                        OUTPUT.write("o23\n")
+                        OUTPUT.write(le_str)
                     self._print_nonlinear_terms_NL(middle)
                     self._print_nonlinear_terms_NL(right)
             elif exp_type is expr._EqualityExpression:
-                OUTPUT.write("o24\n")
+                OUTPUT.write(self._op_string[expr._EqualityExpression])
                 self._print_nonlinear_terms_NL(exp._args[0])
                 self._print_nonlinear_terms_NL(exp._args[1])
             elif isinstance(exp, _ExpressionData):
@@ -415,12 +609,21 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
                     % (exp_type))
 
-        elif isinstance(exp,var._VarData) and not exp.is_fixed():
-            OUTPUT.write("v{0}\n".format(self.ampl_var_id[self._varID_map[id(exp)]]))
+        elif isinstance(exp,var._VarData) and \
+             (self._output_fixed_variable_bounds or (not exp.is_fixed())):
+            if not self._symbolic_solver_labels:
+                OUTPUT.write(self._op_string[var._VarData]
+                             % (self.ampl_var_id[self._varID_map[id(exp)]]))
+            else:
+                OUTPUT.write(self._op_string[var._VarData]
+                             % (self.ampl_var_id[self._varID_map[id(exp)]],
+                                self._name_labeler(exp)))
         elif isinstance(exp,param._ParamData):
-            OUTPUT.write("n{0!r}\n".format(value(exp)))
+            OUTPUT.write(self._op_string[param._ParamData]
+                         % (value(exp)))
         elif isinstance(exp,NumericConstant) or exp.is_fixed():
-            OUTPUT.write("n{0!r}\n".format(value(exp)))
+            OUTPUT.write(self._op_string[NumericConstant]
+                         % (value(exp)))
         else:
             raise ValueError(
                 "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
@@ -428,12 +631,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
     def _print_model_NL(self, model,
                         solver_capability,
-                        symbolic_solver_labels,
                         show_section_timing=False,
                         skip_trivial_constraints=False,
                         file_determinism=1,
-                        output_fixed_variable_bounds=False,
                         include_all_variable_bounds=False):
+
+        output_fixed_variable_bounds = self._output_fixed_variable_bounds
+        symbolic_solver_labels = self._symbolic_solver_labels
 
         sorter = SortComponents.unsorted
         if file_determinism >= 1:
@@ -455,9 +659,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # create the symbol_map
         symbol_map = SymbolMap()
 
-        # Speeds up calling cname on every component when
-        # writing .row and .col files (when symbolic_solver_labels is True)
-        name_labeler = NameLabeler()
+        name_labeler = self._name_labeler
 
         #
         # Collect statistics
@@ -671,7 +873,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     U = self._get_bound(constraint_data.upper)
 
                 offset = ampl_repn._constant
-                #if constraint_data.equality is True:
+                #if constraint_data.equality:
                 #    assert L == U
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
@@ -697,13 +899,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             n_unbounded += 1
                         else:
                             constraint_bounds_dict[con_ID] = \
-                                "4 {0!r}\n".format(L-offset)
+                                "4 %r\n" % (L-offset)
                             n_equals += 1
                     elif L is None:
-                        constraint_bounds_dict[con_ID] = "1 {0!r}\n".format(U-offset)
+                        constraint_bounds_dict[con_ID] = "1 %r\n" % (U-offset)
                         n_single_sided_ineq += 1
                     elif U is None:
-                        constraint_bounds_dict[con_ID] = "2 {0!r}\n".format(L-offset)
+                        constraint_bounds_dict[con_ID] = "2 %r\n" % (L-offset)
                         n_single_sided_ineq += 1
                     elif (L > U):
                         msg = 'Constraint {0}: lower bound greater than upper' \
@@ -711,7 +913,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         raise ValueError(msg.format(con_ID, str(L), str(U)))
                     else:
                         constraint_bounds_dict[con_ID] = \
-                            "0 {0!r} {1!r}\n".format(L-offset, U-offset)
+                            "0 %r %r\n" % (L-offset, U-offset)
                         # double sided inequality
                         # both are not none and they are valid
                         n_ranges += 1
@@ -857,7 +1059,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         lqm_suffix = model.component("lqm")
         if (lqm_suffix is None) or \
            (not (lqm_suffix.type() is Suffix)) or \
-           (not (lqm_suffix.active is True)) or \
+           (not lqm_suffix.active) or \
            (not (lqm_suffix.getDirection() is Suffix.LOCAL)):
             lqm_suffix = None
         if lqm_suffix is not None:
@@ -900,7 +1102,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             colfilename = OUTPUT.name.replace('.nl','.col')
         else:
             colfilename = OUTPUT.name+'.col'
-        if symbolic_solver_labels is True:
+        if symbolic_solver_labels:
             colf = open(colfilename,'w')
             for var_ID in full_var_list:
                 colf.write(name_labeler(Vars_dict[var_ID])+'\n')
@@ -1174,16 +1376,19 @@ class ProblemWriter_nl(AbstractProblemWriter):
             rowfilename = OUTPUT.name.replace('.nl','.row')
         else:
             rowfilename = OUTPUT.name+'.row'
-        if symbolic_solver_labels is True:
+        if symbolic_solver_labels:
             rowf = open(rowfilename,'w')
 
         cu = [0 for i in xrange(len(full_var_list))]
         for con_ID in nonlin_con_order_list:
             con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
-            OUTPUT.write("C%d\n"%(row_id))
-            if symbolic_solver_labels is True:
-                rowf.write(name_labeler(con_data)+"\n")
+            OUTPUT.write("C%d" % (row_id))
+            if symbolic_solver_labels:
+                lbl = name_labeler(con_data)
+                OUTPUT.write("\t#%s" % (lbl))
+                rowf.write(lbl+"\n")
+            OUTPUT.write("\n")
             self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
 
             for var_ID in set(wrapped_ampl_repn._linear_vars).union(
@@ -1196,9 +1401,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
             con_vars = set(wrapped_ampl_repn._linear_vars)
             for var_ID in con_vars:
                 cu[self_ampl_var_id[var_ID]] += 1
-            OUTPUT.write("C%d\n"%(row_id))
-            if symbolic_solver_labels is True:
-                rowf.write(name_labeler(con_data)+"\n")
+            OUTPUT.write("C%d" % (row_id))
+            if symbolic_solver_labels:
+                lbl = name_labeler(con_data)
+                OUTPUT.write("\t#%s" % (lbl))
+                rowf.write(lbl+"\n")
+            OUTPUT.write("\n")
             OUTPUT.write("n0\n")
 
         if show_section_timing:
@@ -1214,20 +1422,25 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if not obj.is_minimizing():
                 k = 1
 
-            OUTPUT.write("O%d %d\n"%(self_ampl_obj_id[obj_ID], k))
-            if symbolic_solver_labels is True:
-                rowf.write(name_labeler(obj)+"\n")
+            OUTPUT.write("O%d %d" % (self_ampl_obj_id[obj_ID], k))
+            if symbolic_solver_labels:
+                lbl = name_labeler(obj)
+                OUTPUT.write("\t#%s" % (lbl))
+                rowf.write(lbl+"\n")
+            OUTPUT.write("\n")
 
             if wrapped_ampl_repn.repn.is_linear():
-                OUTPUT.write("n{0!r}\n".format(wrapped_ampl_repn.repn._constant))
+                OUTPUT.write(self._op_string[NumericConstant]
+                             % (wrapped_ampl_repn.repn._constant))
             else:
-                if wrapped_ampl_repn.repn._constant != 0.0:
-                    # +
-                    OUTPUT.write(
-                        "o0\nn{0!r}\n".format(wrapped_ampl_repn.repn._constant))
+                if wrapped_ampl_repn.repn._constant != 0:
+                    _, binary_sum_str, _ = self._op_string[expr._SumExpression]
+                    OUTPUT.write(binary_sum_str)
+                    OUTPUT.write(self._op_string[NumericConstant]
+                                 % (wrapped_ampl_repn.repn._constant))
                 self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
 
-        if symbolic_solver_labels is True:
+        if symbolic_solver_labels:
             rowf.close()
         del name_labeler
 
@@ -1256,7 +1469,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         pass
 
             if len(s_lines) > 0:
-                OUTPUT.write("d%d\n"%(len(s_lines)))
+                OUTPUT.write("d%d" % (len(s_lines)))
+                if symbolic_solver_labels:
+                    OUTPUT.write("\t# dual initial guess")
+                OUTPUT.write("\n")
                 OUTPUT.writelines(suffix_line.format(*_l)
                                   for _l in sorted(s_lines,
                                                    key=operator.itemgetter(0)))
@@ -1270,7 +1486,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for ampl_var_id, var_ID in enumerate(full_var_list):
             var = Vars_dict[var_ID]
             if var.value is not None:
-                x_init_list.append("{0} {1!r}\n".format(ampl_var_id,var.value))
+                x_init_list.append("%d %r\n" % (ampl_var_id, var.value))
             if var.fixed:
                 if not output_fixed_variable_bounds:
                     raise ValueError(
@@ -1296,18 +1512,20 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if U is not None:
                     Uv = value(U)
                     if Lv == Uv:
-                        var_bound_list.append("4 {0!r}\n".format(Lv))
+                        var_bound_list.append("4 %r\n" % (Lv))
                     else:
-                        var_bound_list.append("0 {0!r} {1!r}\n".format(Lv, Uv))
+                        var_bound_list.append("0 %r %r\n" % (Lv, Uv))
                 else:
-                    var_bound_list.append("2 {0!r}\n".format(Lv))
+                    var_bound_list.append("2 %r\n" % (Lv))
             elif U is not None:
-                var_bound_list.append("1 {0!r}\n".format(value(U)))
+                var_bound_list.append("1 %r\n" % (value(U)))
             else:
                 var_bound_list.append("3\n")
 
-
-        OUTPUT.write("x%d\n"%(len(x_init_list)))
+        OUTPUT.write("x%d" % (len(x_init_list)))
+        if symbolic_solver_labels:
+            OUTPUT.write("\t# initial guess")
+        OUTPUT.write("\n")
         OUTPUT.writelines(x_init_list)
         del x_init_list
 
@@ -1318,7 +1536,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "r" lines
         #
-        OUTPUT.write("r\n")
+        OUTPUT.write("r")
+        if symbolic_solver_labels:
+            OUTPUT.write("\t#%d ranges (rhs's)"
+                         % (len(nonlin_con_order_list) + len(lin_con_order_list)))
+        OUTPUT.write("\n")
         # *NOTE: This iteration follows the assignment of the ampl_con_id
         OUTPUT.writelines(constraint_bounds_dict[con_ID]
                           for con_ID in itertools.chain(nonlin_con_order_list,
@@ -1331,7 +1553,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "b" lines
         #
-        OUTPUT.write("b\n")
+        OUTPUT.write("b")
+        if symbolic_solver_labels:
+            OUTPUT.write("\t#%d bounds (on variables)"
+                         % (len(var_bound_list)))
+        OUTPUT.write("\n")
         OUTPUT.writelines(var_bound_list)
         del var_bound_list
 
@@ -1344,7 +1570,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         ktot = 0
         n1 = len(full_var_list) - 1
-        OUTPUT.write("k%d\n"%(n1))
+        OUTPUT.write("k%d" % (n1))
+        if symbolic_solver_labels:
+            OUTPUT.write("\t#intermediate Jacobian column lengths")
+        OUTPUT.write("\n")
         ktot = 0
         for i in xrange(n1):
             ktot += cu[i]
@@ -1371,9 +1600,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                            wrapped_ampl_repn.repn._linear_terms_coef))
                     OUTPUT.write("J%d %d\n"%(nc, num_linear_vars))
                     OUTPUT.writelines(
-                        "{0} {1!r}\n".format(
-                            self_ampl_var_id[con_var],
-                            linear_dict[con_var])
+                        "%d %r\n" % (self_ampl_var_id[con_var],
+                                     linear_dict[con_var])
                         for con_var in sorted(linear_dict.keys()))
             elif num_linear_vars == 0:
                 nl_con_vars = \
@@ -1394,8 +1622,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         wrapped_ampl_repn.repn._linear_terms_coef))
                 OUTPUT.write("J%d %d\n"%(nc, len(con_vars)))
                 OUTPUT.writelines(
-                    "{0} {1!r}\n".format(self_ampl_var_id[con_var],
-                                         linear_dict[con_var])
+                    "%d %r\n" % (self_ampl_var_id[con_var],
+                                 linear_dict[con_var])
                     for con_var in sorted(linear_dict.keys()))
                 OUTPUT.writelines(
                     "%d 0\n"%(self_ampl_var_id[con_var])
@@ -1425,9 +1653,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write("G%d %d\n" % (self_ampl_obj_id[obj_ID],
                                            len_ge))
                 for var_ID in sorted(grad_entries.keys()):
-                    OUTPUT.write("{0} {1!r}\n".format(
-                        var_ID,
-                        grad_entries[var_ID]))
+                    OUTPUT.write("%d %r\n" % (var_ID,
+                                              grad_entries[var_ID]))
 
         if show_section_timing:
             subsection_timer.report("Write G lines")
