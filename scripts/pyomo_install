@@ -392,6 +392,8 @@ def install_from_pypi(pip, python_dir, options):
     # Now install Pyomo
     #
     baseCmd = [pip, 'install']
+    if options.pypi_mirror:
+        baseCmd.extend(['--index-url', options.pypi_mirror])
     if options.user:
         baseCmd.append('--user')
     call_subprocess(baseCmd + ['--upgrade', 'Pyomo'], options)
@@ -581,6 +583,11 @@ virtual python environment is created in the 'pyomo' directory.
         action='append',
         default=[],
         help='Additional packages that are installed after installing Pyomo')
+    parser.add_option(
+        '-i', '--index-url',
+        dest='pypi_mirror',
+        default=None,
+        help='Base URL of the Python Package Index for PyPI installs')
     #
     # Apply parser
     #
