@@ -22,6 +22,8 @@ from pyomo.core.base.misc import (apply_indexed_rule,
 from pyomo.core.base.numvalue import (NumericValue,
                                       as_numeric)
 import pyomo.core.base.expr
+from pyomo.core.base.expr_common import \
+    ensure_independent_trees as safe_mode
 from pyomo.core.base.util import is_functor
 
 from six import iteritems
@@ -145,7 +147,9 @@ class _GeneralExpressionData(_ExpressionData):
         expr       The expression owned by this data.
     """
 
-    __slots__ = ('_expr',)
+    __pickle_slots__ = ('_expr',)
+    # Note that _ComponentData already has a __weakref__ slot
+    __slots__ = __pickle_slots__ + (('_parent_expr',) if safe_mode else ())
 
     def __init__(self, expr, component=None):
         #
@@ -158,16 +162,26 @@ class _GeneralExpressionData(_ExpressionData):
                           else None
 
         self._expr = as_numeric(expr) if (expr is not None) else None
+        if safe_mode:
+            self._parent_expr = None
 
     def __getstate__(self):
         state = super(_GeneralExpressionData, self).__getstate__()
-        for i in _GeneralExpressionData.__slots__:
+        for i in _GeneralExpressionData.__pickle_slots__:
             state[i] = getattr(self, i)
+        if safe_mode:
+            state['_parent_expr'] = None
+            if self._parent_expr is not None:
+                _parent_expr = self._parent_expr()
+                if _parent_expr is not None:
+                    state['_parent_expr'] = _parent_expr
         return state
 
-    # Note: None of the slots on this class need to be edited, so we
-    # don't need to implement a specialized __setstate__ method, and
-    # can quietly rely on the super() class's implementation.
+    def __setstate__(self, state):
+        super(_GeneralExpressionData, self).__setstate__(state)
+        if safe_mode:
+            if self._parent_expr is not None:
+                self._parent_expr = weakref_ref(self._parent_expr)
 
     #
     # Abstract Interface

@@ -122,12 +122,11 @@ def identify_variables(expr, include_fixed=True, allow_duplicates=False):
                     yield _sub
 
 
-
 class _ExpressionBase(NumericValue):
     """An object that defines a mathematical expression that can be evaluated"""
 
-    __slots__ = ( '__weakref__', '_args' ) + \
-                ( ('_parent_expr',) if safe_mode else () )
+    __pickle_slots__ = ('_args',)
+    __slots__ =  __pickle_slots__ + (('__weakref__', '_parent_expr') if safe_mode else ())
     PRECEDENCE = 0
 
     def __init__(self, args):
@@ -142,9 +141,21 @@ class _ExpressionBase(NumericValue):
 
     def __getstate__(self):
         state = super(_ExpressionBase, self).__getstate__()
-        for i in _ExpressionBase.__slots__:
+        for i in _ExpressionBase.__pickle_slots__:
            state[i] = getattr(self,i)
+        if safe_mode:
+            state['_parent_expr'] = None
+            if self._parent_expr is not None:
+                _parent_expr = self._parent_expr()
+                if _parent_expr is not None:
+                    state['_parent_expr'] = _parent_expr
         return state
+
+    def __setstate__(self, state):
+        super(_ExpressionBase, self).__setstate__(state)
+        if safe_mode:
+            if self._parent_expr is not None:
+                self._parent_expr = ref(self._parent_expr)
 
     def __nonzero__(self):
         return bool(self())
