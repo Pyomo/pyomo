@@ -1019,15 +1019,14 @@ class _LinearExpression(_ExpressionBase):
            state[i] = getattr(self,i)
         # ID's do not persist from instance to instance (they are pointers!)
         # ...so we will convert them to a (temporary, but portable) index
-        state['linear'] = dict( (i, self._coef[id(v)]) 
-                                for i, v in enumerate(self._args) )
+        state['_coef'] = tuple(self._coef[id(v)] for v in self._args)
         return state
 
     def __setstate__(self, state):
         super(_LinearExpression, self).__setstate__(state)
         # ID's do not persist from instance to instance (they are pointers!)
-        self._coef = dict( (id(v), self._coef[i])
-                            for i, v in enumerate(self._args) )
+        self._coef = dict((id(v), self._coef[i])
+                          for i, v in enumerate(self._args))
 
     def _precedence(self):
         if len(self._args) > 1:
