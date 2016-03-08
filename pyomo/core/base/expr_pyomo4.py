@@ -1031,25 +1031,26 @@ class _LinearExpression(_ExpressionBase):
     def _precedence(self):
         if len(self._args) > 1:
             return _SumExpression.PRECEDENCE
-        elif len(self._args) and self._const is not 0:
+        elif len(self._args) and not (
+                self._const.__class__ in native_numeric_types
+                and self._const == 0 ):
             return _SumExpression.PRECEDENCE
         else:
             return _ProductExpression.PRECEDENCE
 
     def _arguments(self):
-        if self._const is not 0:
+        if self._const.__class__ in native_numeric_types and self._const == 0:
+            return self._args
+        else:
             ans = [ self._const ]
             ans.extend(self._args)
             return ans
-        else:
-            return self._args
 
     def cname(self):
         return 'linear'
 
     def is_constant(self):
-        if self._const is not 0 \
-           and self._const.__class__ not in native_numeric_types \
+        if self._const.__class__ not in native_numeric_types \
            and not self._const.is_constant():
             return False
         return super(_LinearExpression, self).is_constant()
@@ -1084,13 +1085,14 @@ class _LinearExpression(_ExpressionBase):
         if verbose:
             ostream.write(" , ")
         else:
-            hasConst = self._const is not 0
+            hasConst = not ( self._const.__class__ in native_numeric_types
+                             and self._const == 0 )
             if hasConst:
                 idx -= 1
             _l = self._coef[id(self._args[idx])]
             _lt = _l.__class__
             if _lt is _NegationExpression or ( 
-                    _lt in native_numeric_types  and _l < 0 ):
+                    _lt in native_numeric_types and _l < 0 ):
                 ostream.write(' - ')
             else:
                 ostream.write(' + ')
