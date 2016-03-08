@@ -1202,7 +1202,7 @@ class _LinearExpression(_ExpressionBase):
                 other._coef = {}
                 _LinearExpression_Pool.append(other)
             else:
-                return super(_LinearExpression, self).__iadd__(other)
+                return super(_LinearExpression, self).__isub__(other)
         elif isinstance(other, _VarData):
             _id = id(other)
             if _id in self._coef:
