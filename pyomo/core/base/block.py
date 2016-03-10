@@ -1489,9 +1489,12 @@ class Block(ActiveIndexedComponent):
         self._options = kwargs.pop('options', None )
         _concrete = kwargs.pop('concrete',False)
         kwargs.setdefault('ctype', Block)
-        IndexedComponent.__init__(self, *args, **kwargs)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
         if _concrete:
-            self._constructed = True
+            # Call self.construct() as opposed to just setting the _constructed
+            # flag so that the base class construction procedure fires (this
+            # picks up any construction rule that the user may provide)
+            self.construct()
 
     def _default(self, idx):
         return self._data.setdefault(idx, _BlockData(self))
@@ -1543,6 +1546,10 @@ class Block(ActiveIndexedComponent):
                     obj.construct(_data)
 
         if self._rule is None:
+            # Ensure the _data dirctionary is populated for singleton
+            # blocks
+            if not self.is_indexed():
+                self[None]
             return
         # If we have a rule, fire the rule for all indices.
         # Notes:

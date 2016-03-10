@@ -245,13 +245,13 @@ You can silence this warning by one of three ways:
         try:
             if ndx in self._data:
                 # Return the data from the dictionary
-                if ndx is None:
+                if ndx is None and not self.is_indexed():
                     return self
                 else:
                     return self._data[ndx]
             elif not self._constructed:
                 # Generate an error because the component is not constructed
-                if ndx is None:
+                if not self.is_indexed():
                     idx_str = ''
                 elif ndx.__class__ is tuple:
                     idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
@@ -260,16 +260,27 @@ You can silence this warning by one of three ways:
                 raise ValueError(
                     "Error retrieving component %s%s: The component has "
                     "not been constructed." % ( self.cname(True), idx_str,) )
+            elif ndx is None and not self.is_indexed():
+                self._data[ndx] = self  # FIXME: should this be a weakref?!?
+                return self
             elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-                # Return the default value if the global flag dictates that
+                # Return the default value if the global flag dictates
+                # that we should bypass all index checking and domain
+                # validation
                 return self._default(ndx)
             elif ndx in self._index:
-                # After checking that the index is value, return the default value
-                # This check is expensive!
+                # After checking that the index is valid, return the
+                # default value.
+                # Note: This check is potentially expensive (e.g., when
+                # the indexing set is a complex set operation)!
                 return self._default(ndx)
             elif normalize_index.flatten:
                 # Now we normalize the index and check again.  Usually,
-                # indices will be normalized, so this operation is deferred.
+                # indices will be already be normalized, so we defer the
+                # "automatic" call to normalize_index until now for the
+                # sake of efficiency.  Also note that we cannot get here
+                # unless the component *is* indexed, so we do not need
+                # any special traps for None or is_indexed().
                 ndx = normalize_index(ndx)
                 if ndx in self._data:
                     # Note that ndx != None at this point
@@ -302,8 +313,9 @@ You can silence this warning by one of three ways:
             if len(sliced) > 0:
                 def f_(self):
                     #
-                    # Iterate through the component index and yield the component data
-                    # values that match the slice template.
+                    # Iterate through the component index and yield the
+                    # component data values that match the slice
+                    # template.
                     #
                     for index in self.__iter__():
                         flag = True
@@ -315,11 +327,12 @@ You can silence this warning by one of three ways:
                            yield self._data[index]
                 return f_(self)
             else:
-                # The index isn't sliced, so simply re-raise the TypeError that occurred
-                # in the previous 'try' block.
+                # The index isn't sliced, so simply re-raise the
+                # TypeError that occurred in the previous 'try' block.
                 raise
         except Exception:
-            # Re-raise the other exceptions that occurred in the previous 'try' block.
+            # Re-raise the other exceptions that occurred in the
+            # previous 'try' block.
             raise
         #
         # Generate different errors, depending on the state of the index.

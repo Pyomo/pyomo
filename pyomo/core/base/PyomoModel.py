@@ -643,6 +643,11 @@ use the AbstractModel or ConcreteModel class instead.""")
         if not self._constructed:
             instance = self.clone()
 
+            # If someone passed a rule for creating the instance, fire the
+            # rule before constructing the components.
+            if self._rule is not None:
+                self._rule(instance)
+
             if namespaces is None or len(namespaces) == 0:
                 instance.load(data, namespaces=[None], profile_memory=profile_memory, report_timing=report_timing)
             else:

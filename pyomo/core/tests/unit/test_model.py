@@ -23,6 +23,7 @@ import pyomo.opt
 from pyomo.opt import SolutionStatus
 from pyomo.opt.parallel.local import SolverManager_Serial
 from pyomo.environ import *
+from pyomo.core.base.expr import identify_variables
 
 solver = pyomo.opt.load_solvers('glpk')
 
@@ -625,6 +626,48 @@ class Test(unittest.TestCase):
         results.write(filename=currdir+'solve_with_store8.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store8.out", currdir+"solve_with_store4.txt")
 
+
+    def test_create_concrete_from_rule(self):
+        def make(m):
+            m.I = RangeSet(3)
+            m.x = Var(m.I)
+            m.c = Constraint( expr=sum(m.x[i] for i in m.I) >= 0 )
+        model = ConcreteModel(rule=make)
+        self.assertEqual( [x.cname() for x in model.component_objects()],
+                          ['I','x','c'] )
+        self.assertEqual( len(list(identify_variables(model.c.body))), 3 )
+
+
+    def test_create_abstract_from_rule(self):
+        def make_invalid(m):
+            m.I = RangeSet(3)
+            m.x = Var(m.I)
+            m.c = Constraint( expr=sum(m.x[i] for i in m.I) >= 0 )
+
+        def make(m):
+            m.I = RangeSet(3)
+            m.x = Var(m.I)
+            def c(b):
+                return sum(m.x[i] for i in m.I) >= 0
+            m.c = Constraint( rule=c )
+
+        model = AbstractModel(rule=make_invalid)
+        self.assertRaises(RuntimeError, model.create_instance)
+
+        model = AbstractModel(rule=make)
+        instance = model.create_instance()
+        self.assertEqual( [x.cname() for x in model.component_objects()],
+                          [] )
+        self.assertEqual( [x.cname() for x in instance.component_objects()],
+                          ['I','x','c'] )
+        self.assertEqual( len(list(identify_variables(instance.c.body))), 3 )
+
+        model = AbstractModel(rule=make)
+        model.y = Var()
+        instance = model.create_instance()
+        self.assertEqual( [x.cname() for x in instance.component_objects()],
+                          ['y','I','x','c'] )
+        self.assertEqual( len(list(identify_variables(instance.c.body))), 3 )
 
 if __name__ == "__main__":
     unittest.main()
