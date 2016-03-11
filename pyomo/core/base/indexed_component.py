@@ -11,7 +11,7 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
 import pyutilib.misc
 
-from pyomo.core.base.component import Component
+from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 
 from six import PY3, itervalues, iteritems
@@ -390,7 +390,7 @@ if PY3:
     IndexedComponent.values = IndexedComponent.itervalues
     IndexedComponent.items  = IndexedComponent.iteritems
 
-class ActiveIndexedComponent(IndexedComponent):
+class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
     """
     This is the base class for all indexed modeling components
     whose data members are subclasses of ActiveComponentData, e.g.,
@@ -402,16 +402,22 @@ class ActiveIndexedComponent(IndexedComponent):
 
     def __init__(self, *args, **kwds):
         IndexedComponent.__init__(self, *args, **kwds)
+        # Replicate the ActiveComponent.__init__() here.  We don't want
+        # to use super, because that will run afoul of certain
+        # assumptions for derived SimpleComponents' __init__()
+        #
+        # FIXME: eliminate multiple inheritance of SimpleComponents
+        self._active = True
 
     def activate(self):
         """Set the active attribute to True"""
-        Component.activate(self)
+        ActiveComponent.activate(self)
         for component_data in itervalues(self):
             component_data._active = True
 
     def deactivate(self):
         """Set the active attribute to False"""
-        Component.deactivate(self)
+        ActiveComponent.deactivate(self)
         for component_data in itervalues(self):
             component_data._active = False
 

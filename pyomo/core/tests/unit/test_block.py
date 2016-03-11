@@ -863,14 +863,14 @@ class TestBlock(unittest.TestCase):
 
     def test_pseudomap_len(self):
         m = Block()
-        m.a = Var()
-        m.b = Var() # active=False
-        m.c = Var()
-        m.z = Param() # active=False
-        m.x = Param()
-        m.v = Param()
-        m.y = Param()
-        m.w = Param() # active=False
+        m.a = Constraint()
+        m.b = Constraint() # active=False
+        m.c = Constraint()
+        m.z = Objective() # active=False
+        m.x = Objective()
+        m.v = Objective()
+        m.y = Objective()
+        m.w = Objective() # active=False
         
         m.b.deactivate()
         m.z.deactivate()
@@ -880,23 +880,23 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(len(m.component_map(active=True)), 5)
         self.assertEqual(len(m.component_map(active=False)), 3)
 
-        self.assertEqual(len(m.component_map(Var)), 3)
-        self.assertEqual(len(m.component_map(Var, active=True)), 2)
-        self.assertEqual(len(m.component_map(Var, active=False)), 1)
+        self.assertEqual(len(m.component_map(Constraint)), 3)
+        self.assertEqual(len(m.component_map(Constraint, active=True)), 2)
+        self.assertEqual(len(m.component_map(Constraint, active=False)), 1)
 
-        self.assertEqual(len(m.component_map(Param)), 5)
-        self.assertEqual(len(m.component_map(Param, active=True)), 3)
-        self.assertEqual(len(m.component_map(Param, active=False)), 2)
+        self.assertEqual(len(m.component_map(Objective)), 5)
+        self.assertEqual(len(m.component_map(Objective, active=True)), 3)
+        self.assertEqual(len(m.component_map(Objective, active=False)), 2)
 
     def test_pseudomap_contains(self):
         m = Block()
-        m.a = Var()
-        m.b = Var() # active=False
-        m.c = Var()
+        m.a = Constraint()
+        m.b = Constraint() # active=False
+        m.c = Constraint()
         m.s = Set()
         m.t = Suffix()
-        m.z = Param() # active=False
-        m.x = Param()
+        m.z = Objective() # active=False
+        m.x = Objective()
         m.b.deactivate()
         m.z.deactivate()
 
@@ -931,7 +931,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('z' in pm)
 
 
-        pm = m.component_map(Var)
+        pm = m.component_map(Constraint)
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -939,7 +939,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' not in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.component_map(Var, active=True)
+        pm = m.component_map(Constraint, active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -947,7 +947,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' not in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.component_map(Var, active=False)
+        pm = m.component_map(Constraint, active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -956,7 +956,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('z' not in pm)
 
 
-        pm = m.component_map([Var,Param])
+        pm = m.component_map([Constraint,Objective])
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -966,7 +966,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' in pm)
 
-        pm = m.component_map([Var,Param], active=True)
+        pm = m.component_map([Constraint,Objective], active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -976,7 +976,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.component_map([Var,Param], active=False)
+        pm = m.component_map([Constraint,Objective], active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -988,7 +988,7 @@ class TestBlock(unittest.TestCase):
 
 
         # You should be able to pass in a set as well as a list
-        pm = m.component_map(set([Var,Param]))
+        pm = m.component_map(set([Constraint,Objective]))
         self.assertTrue('a' in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' in pm)
@@ -998,7 +998,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' in pm)
 
-        pm = m.component_map(set([Var,Param]), active=True)
+        pm = m.component_map(set([Constraint,Objective]), active=True)
         self.assertTrue('a' in pm)
         self.assertTrue('b' not in pm)
         self.assertTrue('c' in pm)
@@ -1008,7 +1008,7 @@ class TestBlock(unittest.TestCase):
         self.assertTrue('x' in pm)
         self.assertTrue('z' not in pm)
 
-        pm = m.component_map(set([Var,Param]), active=False)
+        pm = m.component_map(set([Constraint,Objective]), active=False)
         self.assertTrue('a' not in pm)
         self.assertTrue('b' in pm)
         self.assertTrue('c' not in pm)
@@ -1021,13 +1021,13 @@ class TestBlock(unittest.TestCase):
 
     def test_pseudomap_getitem(self):
         m = Block()
-        m.a = a = Var()
-        m.b = b = Var() # active=False
-        m.c = c = Var()
+        m.a = a = Constraint()
+        m.b = b = Constraint() # active=False
+        m.c = c = Constraint()
         m.s = s = Set()
         m.t = t = Suffix()
-        m.z = z = Param() # active=False
-        m.x = x = Param()
+        m.z = z = Objective() # active=False
+        m.x = x = Objective()
         m.b.deactivate()
         m.z.deactivate()
 
@@ -1069,7 +1069,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, z, pm)
 
 
-        pm = m.component_map(Var)
+        pm = m.component_map(Constraint)
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1079,7 +1079,7 @@ class TestBlock(unittest.TestCase):
         assertFails(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.component_map(Var, active=True)
+        pm = m.component_map(Constraint, active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1089,7 +1089,7 @@ class TestBlock(unittest.TestCase):
         assertFails(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.component_map(Var, active=False)
+        pm = m.component_map(Constraint, active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1100,7 +1100,7 @@ class TestBlock(unittest.TestCase):
         assertFails(self, z, pm)
 
 
-        pm = m.component_map([Var,Param])
+        pm = m.component_map([Constraint,Objective])
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1110,7 +1110,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertWorks(self, z, pm)
 
-        pm = m.component_map([Var,Param], active=True)
+        pm = m.component_map([Constraint,Objective], active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1120,7 +1120,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.component_map([Var,Param], active=False)
+        pm = m.component_map([Constraint,Objective], active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1131,7 +1131,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, z, pm)
 
 
-        pm = m.component_map(set([Var,Param]))
+        pm = m.component_map(set([Constraint,Objective]))
         assertWorks(self, a, pm)
         assertWorks(self, b, pm)
         assertWorks(self, c, pm)
@@ -1141,7 +1141,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertWorks(self, z, pm)
 
-        pm = m.component_map(set([Var,Param]), active=True)
+        pm = m.component_map(set([Constraint,Objective]), active=True)
         assertWorks(self, a, pm)
         assertFails(self, b, pm)
         assertWorks(self, c, pm)
@@ -1151,7 +1151,7 @@ class TestBlock(unittest.TestCase):
         assertWorks(self, x, pm)
         assertFails(self, z, pm)
 
-        pm = m.component_map(set([Var,Param]), active=False)
+        pm = m.component_map(set([Constraint,Objective]), active=False)
         assertFails(self, a, pm)
         assertWorks(self, b, pm)
         assertFails(self, c, pm)
@@ -1205,16 +1205,16 @@ class TestBlock(unittest.TestCase):
 
     def test_pseudomap_iteration(self):
         m = Block()
-        m.a = Var()
-        m.z = Param() # active=False
-        m.x = Param()
-        m.v = Param()
-        m.b = Var() # active=False
-        m.t = Set()
-        m.s = Set()
-        m.c = Var()
-        m.y = Param()
-        m.w = Param() # active=False
+        m.a = Constraint()
+        m.z = Objective() # active=False
+        m.x = Objective()
+        m.v = Objective()
+        m.b = Constraint() # active=False
+        m.t = Block() # active=False
+        m.s = Block()
+        m.c = Constraint()
+        m.y = Objective()
+        m.w = Objective() # active=False
         
         m.b.deactivate()
         m.z.deactivate()
@@ -1225,122 +1225,122 @@ class TestBlock(unittest.TestCase):
                           list(m.component_map()) )
 
         self.assertEqual( ['a','z','x','v','b','c','y','w'], 
-                          list(m.component_map( set([Var,Param]) )) )
+                          list(m.component_map( set([Constraint,Objective]) )) )
 
         # test that the order of ctypes in the argument does not affect
         # the order in the resulting list
         self.assertEqual( ['a','z','x','v','b','c','y','w'], 
-                          list(m.component_map( [Var,Param] )) )
+                          list(m.component_map( [Constraint,Objective] )) )
 
         self.assertEqual( ['a','z','x','v','b','c','y','w'], 
-                          list(m.component_map( [Param,Var] )) )
+                          list(m.component_map( [Objective,Constraint] )) )
 
         self.assertEqual( ['a','b','c'], 
-                          list(m.component_map( Var )) )
+                          list(m.component_map( Constraint )) )
 
         self.assertEqual( ['z','x','v','y','w'], 
-                          list(m.component_map( set([Param]) )) )
+                          list(m.component_map( set([Objective]) )) )
         
         self.assertEqual( ['a','x','v','s','c','y'], 
                           list(m.component_map( active=True )) )
 
         self.assertEqual( ['a','x','v','c','y'], 
-                          list(m.component_map( set([Var,Param]), active=True )) )
+                          list(m.component_map( set([Constraint,Objective]), active=True )) )
 
         self.assertEqual( ['a','x','v','c','y'], 
-                          list(m.component_map( [Var,Param], active=True )) )
+                          list(m.component_map( [Constraint,Objective], active=True )) )
 
         self.assertEqual( ['a','x','v','c','y'], 
-                          list(m.component_map( [Param,Var], active=True )) )
+                          list(m.component_map( [Objective,Constraint], active=True )) )
 
         self.assertEqual( ['a','c'], 
-                          list(m.component_map( Var, active=True )) )
+                          list(m.component_map( Constraint, active=True )) )
 
         self.assertEqual( ['x','v','y'], 
-                          list(m.component_map( set([Param]), active=True )) )
+                          list(m.component_map( set([Objective]), active=True )) )
         
         self.assertEqual( ['z','b','t','w'], 
                           list(m.component_map( active=False )) )
 
         self.assertEqual( ['z','b','w'], 
-                          list(m.component_map( set([Var,Param]), active=False )) )
+                          list(m.component_map( set([Constraint,Objective]), active=False )) )
 
         self.assertEqual( ['z','b','w'], 
-                          list(m.component_map( [Var,Param], active=False )) )
+                          list(m.component_map( [Constraint,Objective], active=False )) )
 
         self.assertEqual( ['z','b','w'], 
-                          list(m.component_map( [Param,Var], active=False )) )
+                          list(m.component_map( [Objective,Constraint], active=False )) )
 
         self.assertEqual( ['b'], 
-                          list(m.component_map( Var, active=False )) )
+                          list(m.component_map( Constraint, active=False )) )
 
         self.assertEqual( ['z','w'], 
-                          list(m.component_map( set([Param]), active=False )) )
+                          list(m.component_map( set([Objective]), active=False )) )
         
 
         self.assertEqual( ['a','b','c','s','t','v','w','x','y','z'], 
                           list(m.component_map( sort=True )) )
 
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
-                          list(m.component_map( set([Var,Param]),sort=True )) )
+                          list(m.component_map( set([Constraint,Objective]),sort=True )) )
 
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
-                          list(m.component_map( [Var,Param],sort=True )) )
+                          list(m.component_map( [Constraint,Objective],sort=True )) )
 
         self.assertEqual( ['a','b','c','v','w','x','y','z'], 
-                          list(m.component_map( [Param,Var],sort=True )) )
+                          list(m.component_map( [Objective,Constraint],sort=True )) )
 
         self.assertEqual( ['a','b','c'], 
-                          list(m.component_map( Var,sort=True )) )
+                          list(m.component_map( Constraint,sort=True )) )
 
         self.assertEqual( ['v','w','x','y','z'], 
-                          list(m.component_map( set([Param]),sort=True )) )
+                          list(m.component_map( set([Objective]),sort=True )) )
         
         self.assertEqual( ['a','c','s','v','x','y'], 
                           list(m.component_map( active=True,sort=True )) )
 
         self.assertEqual( ['a','c','v','x','y'], 
-                          list(m.component_map( set([Var,Param]), active=True,
+                          list(m.component_map( set([Constraint,Objective]), active=True,
                                                 sort=True )) )
 
         self.assertEqual( ['a','c','v','x','y'], 
-                          list(m.component_map( [Var,Param], active=True,
+                          list(m.component_map( [Constraint,Objective], active=True,
                                                 sort=True )) )
 
         self.assertEqual( ['a','c','v','x','y'], 
-                          list(m.component_map( [Param,Var], active=True,
+                          list(m.component_map( [Objective,Constraint], active=True,
                                                 sort=True )) )
 
         self.assertEqual( ['a','c'], 
-                          list(m.component_map( Var, active=True, sort=True )) )
+                          list(m.component_map( Constraint, active=True, sort=True )) )
 
         self.assertEqual( ['v','x','y'], 
-                          list(m.component_map( set([Param]), active=True,
+                          list(m.component_map( set([Objective]), active=True,
                                                 sort=True )) )
         
         self.assertEqual( ['b','t','w','z'], 
                           list(m.component_map( active=False, sort=True )) )
 
         self.assertEqual( ['b','w','z'], 
-                          list(m.component_map( set([Var,Param]), active=False,
+                          list(m.component_map( set([Constraint,Objective]), active=False,
                                                 sort=True )) )
 
         self.assertEqual( ['b','w','z'], 
-                          list(m.component_map( [Var,Param], active=False,
+                          list(m.component_map( [Constraint,Objective], active=False,
                                                 sort=True )) )
 
         self.assertEqual( ['b','w','z'], 
-                          list(m.component_map( [Param,Var], active=False,
+                          list(m.component_map( [Objective,Constraint], active=False,
                                                 sort=True )) )
 
         self.assertEqual( ['b'], 
-                          list(m.component_map( Var, active=False, 
+                          list(m.component_map( Constraint, active=False, 
                                                 sort=True )) )
 
         self.assertEqual( ['w','z'], 
-                          list(m.component_map( set([Param]), active=False, 
+                          list(m.component_map( set([Objective]), active=False, 
                                                 sort=True )) )
-        
+
 
 
     def Xtest_display(self):

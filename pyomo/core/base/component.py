@@ -71,8 +71,6 @@ class Component(object):
         name            A name for this component
 
     Private class attributes:
-        _active         A boolean that is true if this component will be
-                            used in model operations
         _constructed    A boolean that is true if this component has been
                             constructed
         _parent         A weakref to the parent block that owns this component
@@ -96,27 +94,19 @@ class Component(object):
         if self._type is None:
             raise pyomo.util.DeveloperError("Must specify a class for the component type!")
         #
-        self._active        = True
         self._constructed   = False
         self._parent        = None    # Must be a weakref
 
     @property
     def active(self):
         """Return the active attribute"""
-        return self._active
+        # Normal components cannot be deactivated
+        return True
 
     @active.setter
     def active(self, value):
         """Set the active attribute to the given value"""
-        raise AttributeError("Assignment not allowed. Use the (de)activate method")
-
-    def activate(self):
-        """Set the active attribute to True"""
-        self._active=True
-
-    def deactivate(self):
-        """Set the active attribute to False"""
-        self._active=False
+        raise AttributeError("Assignment not allowed.")
 
     def __getstate__(self):
         """
@@ -335,6 +325,39 @@ class Component(object):
                     return suffix_.get(self, default)
         else:
             return suffix_or_name.get(self, default)
+
+
+class ActiveComponent(Component):
+    """A Component that makes semantic sense to activate or deactivate
+    in a model.
+
+    Private class attributes:
+        _active         A boolean that is true if this component will be
+                            used in model operations
+    """
+
+    def __init__(self, **kwds):
+        self._active = True
+        ActiveComponent.__init__(self, **kwds)
+
+    @property
+    def active(self):
+        """Return the active attribute"""
+        return self._active
+
+    @active.setter
+    def active(self, value):
+        """Set the active attribute to the given value"""
+        raise AttributeError(
+            "Assignment not allowed. Use the (de)activate methods." )
+
+    def activate(self):
+        """Set the active attribute to True"""
+        self._active=True
+
+    def deactivate(self):
+        """Set the active attribute to False"""
+        self._active=False
 
 
 class ComponentData(object):
