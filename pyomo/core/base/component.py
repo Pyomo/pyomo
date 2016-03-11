@@ -543,7 +543,7 @@ class ComponentData(object):
         if self_component is None:
             return None
         for idx, component_data in self_component.iteritems():
-            if id(component_data) == id(self):
+            if component_data is self:
                 return idx
         return None
 
