@@ -170,14 +170,12 @@ class ScenarioTreeInstanceFactory(object):
                         scenario_instance = \
                             self._model_object.create_instance(
                                 filename=scenario_data_filename,
-                                preprocess=False,
                                 profile_memory=profile_memory,
                                 report_timing=output_instance_construction_time)
                     else:
                         scenario_instance = \
                             self._model_object.create_instance(
                                 data,
-                                preprocess=False,
                                 profile_memory=profile_memory,
                                 report_timing=output_instance_construction_time)
                 else:
@@ -203,7 +201,6 @@ class ScenarioTreeInstanceFactory(object):
 
                     scenario_instance = self._model_object.create_instance(
                         scenario_data,
-                        preprocess=False,
                         profile_memory=profile_memory,
                         report_timing=output_instance_construction_time)
             else:
