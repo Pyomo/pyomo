@@ -599,69 +599,102 @@ use the AbstractModel or ConcreteModel class instead.""")
         """This method allows the pyomo.opt convert function to work with a Model object."""
         return [ProblemFormat.pyomo]
 
-    def create_instance(self, filename=None,
-                data=None, name=None, namespace=None, namespaces=None,
-                preprocess=False, profile_memory=0, report_timing=False, clone=None):
+    def create_instance( self, filename=None, data=None, name=None,
+                         namespace=None, namespaces=None,
+                         profile_memory=0, report_timing=False,
+                         **kwds ):
         """
         Create a concrete instance of an abstract model, possibly using data
         read in from a file.
 
         Optional:
-            filename:           The name of a Pyomo Data File that will be used to load
-                                    data into the model.
-            data:               A dictionary containing initialization data for the model
-                                    to be used if there is no filename
+            filename:           The name of a Pyomo Data File that will be used
+                                    to load data into the model.
+            data:               A dictionary containing initialization data for
+                                    the model to be used if there is no filename
             name:               The name given to the model.
             namespace:          A namespace used to select data.
             namespaces:         A list of namespaces used to select data.
-            preprocess:         If True, then preprocess the constructed model.
             profile_memory:     A number that indicates the profiling level.
             report_timing:      Report timing statistics during construction.
-            clone:              Force a clone of the model if this is True.
         """
-        if self._constructed:
-            logger.warning("DEPRECATION WARNING: Cannot call Model.create_instance() on a concrete model.")
-            return self
+        #
+        # Generate a warning if this is a concrete model but the
+        # filename is specified.  A concrete model is already
+        # constructed, so passing in a data file is a waste of time.
+        #
+        if self.is_constructed() and isinstance(filename, six.string_types):
+            msg = "The filename=%s will not be loaded - supplied as an " \
+                  "argument to the create_instance() method of a "\
+                  "concrete instance with name=%s." % (filename, name)
+            logger.warning(msg)
+
+        if 'clone' in kwds:
+            kwds.pop('clone')
+            logger.warning(
+"""DEPRECATION WARNING: Model.create_instance() no longer accepts the
+'clone' argument: the base abstract model is always cloned.""")
+        if 'preprocess' in kwds:
+            kwds.pop('preprocess')
+            logger.warning(
+"""DEPRECATION WARNING: Model.create_instance() no longer accepts the
+'preprocess' argument: preprocessing is always deferred to when the
+model is sent to the solver""")
+        if kwds:
+            msg = \
+"""Model.create_instance() passed the following unrecognized keyword
+arguments (which have been ignored):"""
+            for k in kwds:
+                msg = msg + "\n    '%s'" % (k,)
+            logger.error(msg)
+
+        if self.is_constructed():
+            logger.warning("DEPRECATION WARNING: Cannot call "
+                           "Model.create_instance() on a concrete model.")
+            return self.clone()
+
 
         if name is None:
             name = self.name
-        if not filename is None:
+        if filename is not None:
+            if data is not None:
+                logger.warning("Model.create_instance() passed both 'filename' "
+                               "and 'data' keyword arguments.  Ignoring the "
+                               "'data' argument")
             data = filename
         if data is None:
             data = {}
-        #
-        # Generate a warning if this is a concrete model but the filename is specified.
-        # A concrete model is already constructed, so passing in a data file is a waste
-        # of time.
-        #
-        if self.is_constructed() and isinstance(filename, basestring):
-            msg = "The filename=%s will not be loaded - supplied as an argument to the create_instance() method of a ConcreteModel instance with name=%s." % (filename, name)
-            logger.warning(msg)
-        #
-        # If construction is deferred, then clone the model and
-        #
-        if not self._constructed:
-            instance = self.clone()
 
-            # If someone passed a rule for creating the instance, fire the
-            # rule before constructing the components.
-            if self._rule is not None:
-                self._rule(instance)
+        #
+        # Clone the model and load the data
+        #
+        instance = self.clone()
 
-            if namespaces is None or len(namespaces) == 0:
-                instance.load(data, namespaces=[None], profile_memory=profile_memory, report_timing=report_timing)
-            else:
-                instance.load(data, namespaces=list(namespaces)+[None], profile_memory=profile_memory, report_timing=report_timing)
+        if name is not None:
+            instance.name = name
+
+        # If someone passed a rule for creating the instance, fire the
+        # rule before constructing the components.
+        if instance._rule is not None:
+            instance._rule(instance)
+
+        if namespaces:
+            _namespaces = list(namespaces)
         else:
-            if clone:
-                instance = self.clone()
-            else:
-                instance = self
+            _namespaces = []
+        if namespace is not None:
+            _namespaces.append(namespace)
+        if None not in _namespaces:
+            _namespaces.append(None)
+
+        instance.load( data,
+                       namespaces=_namespaces,
+                       profile_memory=profile_memory,
+                       report_timing=report_timing )
+
         #
         # Preprocess the new model
         #
-        if preprocess is True:
-            print("      Model preprocessing during construction has been deprecated.")
 
         if False and preprocess is True:
 
@@ -685,8 +718,6 @@ use the AbstractModel or ConcreteModel class instead.""")
                 post_preprocessing_summary = summary.summarize(muppy.get_objects())
                 summary.print_(post_preprocessing_summary, limit=100)
 
-        if not name is None:
-            instance.name=name
         #
         # Indicate that the model is concrete/constructed
         #
@@ -947,17 +978,29 @@ use the AbstractModel or ConcreteModel class instead.""")
         Create a concrete instance of this Model, possibly using data
         read in from a file.
         """
-        logger.warning("DEPRECATION WARNING: the Model.create() method is deprecated.  Call Model.create_instance() if to create a concrete model from an abstract model.  You do not need to call Model.create() for a concrete model.")
+        logger.warning(
+"""DEPRECATION WARNING: the Model.create() method is deprecated.  Call
+Model.create_instance() if to create a concrete model from an abstract
+model.  You do not need to call Model.create() for a concrete model.""")
         return self.create_instance(filename=filename, **kwargs)
 
     def transform(self, name=None, **kwds):
-        logger.warning("DEPRECATION WARNING: This method has been removed.  Use the TransformationFactory to construct a transformation object.")
         if name is None:
+            logger.warning(
+"""DEPRECATION WARNING: Model.transform() has been removed.  Use
+TransformationFactory().services() method to get the list of known
+transformations.""")
             return TransformationFactory.services()
+
+        logger.warning(
+"""DEPRECATION WARNING: Model.transform() has been removed.  Use
+TransformationFactory('%s') to construct a transformation
+object.""" % (name,) )
+
         xfrm = TransformationFactory(name)
         if xfrm is None:
-            raise ValueError("Bad model transformation '%s'" % name)
-        return xfrm(self, **kwds)
+            raise ValueError("Unknown model transformation '%s'" % name)
+        return xfrm.apply_to(self, **kwds)
 
 
 class ConcreteModel(Model):
