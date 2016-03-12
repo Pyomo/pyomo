@@ -153,7 +153,7 @@ def value(obj, exception=True):
             "evaluating object as numeric value: %s\n    (object: %s)\n%s"
             % (obj, type(obj), sys.exc_info()[1]))
         raise
-    
+
     if exception and (tmp is None):
         raise ValueError("No value for uninitialized NumericValue object %s"
                          % (obj.cname(),))
@@ -234,7 +234,7 @@ def as_numeric(obj):
         return obj.as_numeric()
     except AttributeError:
         pass
-    try: 
+    try:
         if obj.__class__ is (obj + 0).__class__:
             # obj may (or may not) be hashable, so we need this try
             # block so that things proceed normally for non-hashable
@@ -245,7 +245,7 @@ def as_numeric(obj):
                 else:
                     tmp = NumericConstant(obj)
                     KnownConstants[obj] = tmp
-                    
+
                     # If we get here, this is a reasonably well-behaving
                     # numeric type: add it to the native numeric types
                     # so that future lookups will be faster.
@@ -259,7 +259,7 @@ def as_numeric(obj):
     except:
         pass
     raise TypeError(
-        "Cannot convert object of type '%s' (value = %s) to a numeric value." 
+        "Cannot convert object of type '%s' (value = %s) to a numeric value."
         % (type(obj).__name__, obj, ))
 
 
@@ -323,7 +323,6 @@ class NumericValue(object):
                 # set the attribute using object.__setattr__() instead
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
-            
 
     def cname(self, fully_qualified=False, name_buffer=None):
         """Return the name if this is a component, and else the value in a string"""
@@ -572,17 +571,17 @@ class NumericConstant(NumericValue):
         value           The initial value.
     """
 
-    __slots__ = ('value',) 
+    __slots__ = ('value',)
 
     def __init__(self, value):
         self.value = value
- 
+
     def __getstate__(self):
         state = super(NumericConstant, self).__getstate__()
         for i in NumericConstant.__slots__:
             state[i] = getattr(self,i)
         return state
- 
+
     def is_constant(self):
         return True
 
