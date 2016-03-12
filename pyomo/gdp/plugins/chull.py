@@ -12,7 +12,7 @@ import logging
 
 from pyomo.util.plugin import alias
 from pyomo.core import *
-from pyomo.core.base import expr, Transformation
+from pyomo.core.base import expr as EXPR, Transformation
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
@@ -287,15 +287,15 @@ class ConvexHull_Transformation(Transformation):
                 h_0 = value( self._eval_at_origin(
                     NL, c.body.clone(), disjunct.indicator_var, varMap ) )
 
-            exp = self._var_subst(NL, c.body, disjunct.indicator_var, varMap)
+            expr = self._var_subst(NL, c.body, disjunct.indicator_var, varMap)
             if NL:
                 y = disjunct.indicator_var
                 if self._mode == NL_Mode_GrossmannLee:
-                    exp = exp * y
+                    expr = expr * y
                 elif self._mode == NL_Mode_LeeGrossmann:
-                    exp = (y + EPS) * exp
+                    expr = (y + EPS) * expr
                 elif self._mode == NL_Mode_Sawaya:
-                    exp = ((1-EPS)*y + EPS)*exp - EPS*h_0*(1-y)
+                    expr = ((1-EPS)*y + EPS)*expr - EPS*h_0*(1-y)
                 else:
                     raise RuntimeError("Unknown NL CHull mode")
             else:
@@ -313,9 +313,9 @@ class ConvexHull_Transformation(Transformation):
                 bound = c.lower() - constant
                 if bound != 0:
                     newC = Constraint( expr = bound*disjunct.indicator_var \
-                                       <= exp - constant )
+                                       <= expr - constant )
                 else:
-                    newC = Constraint( expr = bound <= exp - constant )
+                    newC = Constraint( expr = bound <= expr - constant )
                 block.add_component( name+"_lo", newC )
                 newC.construct()
             if c.upper is not None:
@@ -324,14 +324,14 @@ class ConvexHull_Transformation(Transformation):
                                  "'%s' as '%s_hi'", name, name)
                 bound = c.upper() - constant
                 if bound != 0:
-                    newC = Constraint( expr = exp - constant <= \
+                    newC = Constraint( expr = expr - constant <= \
                                        bound*disjunct.indicator_var )
                 else:
-                    newC = Constraint( expr = exp - constant <= bound )
+                    newC = Constraint( expr = expr - constant <= bound )
                 block.add_component( name+"_hi", newC )
                 newC.construct()
 
-    def _var_subst(self, NL, exp, y, varMap):
+    def _var_subst(self, NL, expr, y, varMap):
         # Recursively traverse the S-expression and substitute all model
         # variables with disaggregated local disjunct variables (logic
         # stolen from collect_cannonical_repn())
@@ -339,66 +339,66 @@ class ConvexHull_Transformation(Transformation):
         #
         # Expression
         #
-        if isinstance(exp,expr._ExpressionBase):
-            if isinstance(exp,expr._ProductExpression):
-                exp._numerator = [self._var_subst(NL, e, y, varMap) for e in exp._numerator]
-                exp._denominator = [self._var_subst(NL, e, y, varMap) for e in exp._denominator]
-            elif isinstance(exp, _ExpressionData) or \
-                     isinstance(exp,expr._SumExpression) or \
-                     isinstance(exp,expr._AbsExpression) or \
-                     isinstance(exp,expr._IntrinsicFunctionExpression) or \
-                     isinstance(exp,expr._PowExpression):
-                exp._args = [self._var_subst(NL, e, y, varMap) for e in exp._args]
+        if isinstance(expr,EXPR._ExpressionBase):
+            if isinstance(expr,EXPR._ProductExpression):
+                expr._numerator = [self._var_subst(NL, e, y, varMap) for e in expr._numerator]
+                expr._denominator = [self._var_subst(NL, e, y, varMap) for e in expr._denominator]
+            elif isinstance(expr, _ExpressionData) or \
+                     isinstance(expr,EXPR._SumExpression) or \
+                     isinstance(expr,EXPR._AbsExpression) or \
+                     isinstance(expr,EXPR._IntrinsicFunctionExpression) or \
+                     isinstance(expr,EXPR._PowExpression):
+                expr._args = [self._var_subst(NL, e, y, varMap) for e in expr._args]
             else:
-                raise ValueError("Unsupported expression type: "+str(exp))
+                raise ValueError("Unsupported expression type: "+str(expr))
         #
         # Constant
         #
-        elif exp.is_fixed():
+        elif expr.is_fixed():
             pass
         #
         # Variable
         #
-        elif isinstance(exp, _VarData):
+        elif isinstance(expr, _VarData):
             # Do not transform fixed variables
-            if exp.fixed:
-                return exp
+            if expr.fixed:
+                return expr
             # Check if this disjunct has used this variable before...
-            if id(exp) not in varMap:
+            if id(expr) not in varMap:
                 # create a new variable
-                if exp.lb is None or exp.ub is None:
+                if expr.lb is None or expr.ub is None:
                     raise GDP_Error(
                         "Disjunct constraint referenced unbounded model "
                         "variable.\nAll variables must be bounded to use "
                         "the Convex Hull transformation.\n\t"
-                        "Variable: %s" % (exp.cname(True),) )
-                v = Var(domain=exp.domain,
-                        bounds=(min(0,value(exp.lb)),
-                                max(0,value(exp.ub))))
-                varMap[id(exp)] = (exp, y, v)
+                        "Variable: %s" % (expr.cname(True),) )
+                v = Var( domain=expr.domain,
+                         bounds=(min(0,value(expr.lb)),
+                                 max(0,value(expr.ub))))
+                varMap[id(expr)] = (expr, y, v)
             if NL:
                 if self._mode == NL_Mode_GrossmannLee:
-                    return varMap[id(exp)][2] / y
+                    return varMap[id(expr)][2] / y
                 elif self._mode == NL_Mode_LeeGrossmann:
-                    return varMap[id(exp)][2] / (y+EPS)
+                    return varMap[id(expr)][2] / (y+EPS)
                 elif self._mode == NL_Mode_Sawaya:
-                    return varMap[id(exp)][2] / ( (1-EPS)*y + EPS )
+                    return varMap[id(expr)][2] / ( (1-EPS)*y + EPS )
                 else:
                     raise RuntimeError("Unknown NL CHull mode")
             else:
-                return varMap[id(exp)][2]
-        elif exp.type() is Var:
-            raise GDP_Error("Unexpected Var encoundered in expression")
+                return varMap[id(expr)][2]
+        elif expr.type() is Var:
+            raise GDP_Error("Unexprected Var encoundered in expression")
         #
         # ERROR
         #
         else:
-            raise ValueError("Unexpected expression type: "+str(exp))
+            raise ValueError("Unexpected expression type: "+str(expr))
 
-        return exp
+        return expr
 
 
-    def _eval_at_origin(self, NL, exp, y, varMap):
+    def _eval_at_origin(self, NL, expr, y, varMap):
         # Recursively traverse the S-expression and substitute all free
         # model variables with 0.  This is a "poor-man's" approach to
         # evaluating the expression at the origin.
@@ -412,35 +412,35 @@ class ConvexHull_Transformation(Transformation):
         #
         # Expression
         #
-        if isinstance(exp,expr._ExpressionBase):
-            if isinstance(exp,expr._ProductExpression):
-                exp._numerator = [ self._eval_at_origin(NL, e, y, varMap) 
-                                   for e in exp._numerator ]
-                exp._denominator = [ self._eval_at_origin(NL, e, y, varMap) 
-                                     for e in exp._denominator ]
-            elif isinstance(exp, _ExpressionData) or \
-                     isinstance(exp,expr._SumExpression) or \
-                     isinstance(exp,expr._AbsExpression) or \
-                     isinstance(exp,expr._IntrinsicFunctionExpression) or \
-                     isinstance(exp,expr._PowExpression):
-                exp._args = [ self._eval_at_origin(NL, e, y, varMap) 
-                              for e in exp._args ]
+        if isinstance(expr,EXPR._ExpressionBase):
+            if isinstance(expr,EXPR._ProductExpression):
+                expr._numerator = [ self._eval_at_origin(NL, e, y, varMap) 
+                                   for e in expr._numerator ]
+                expr._denominator = [ self._eval_at_origin(NL, e, y, varMap) 
+                                     for e in expr._denominator ]
+            elif isinstance(expr, _ExpressionData) or \
+                     isinstance(expr,EXPR._SumExpression) or \
+                     isinstance(expr,EXPR._AbsExpression) or \
+                     isinstance(expr,EXPR._IntrinsicFunctionExpression) or \
+                     isinstance(expr,EXPR._PowExpression):
+                expr._args = [ self._eval_at_origin(NL, e, y, varMap) 
+                              for e in expr._args ]
             else:
-                raise ValueError("Unsupported expression type: "+str(exp))
+                raise ValueError("Unsupported expression type: "+str(expr))
         #
         # Constant
         #
-        elif exp.is_fixed():
+        elif expr.is_fixed():
             pass
         #
         # Variable
         #
-        elif isinstance(exp, _VarData):
+        elif isinstance(expr, _VarData):
             # Do not substitute fixed variables
-            if not exp.fixed:
+            if not expr.fixed:
                 return 0
         else:
-            raise ValueError("Unexpected expression type: "+str(exp))
+            raise ValueError("Unexpected expression type: "+str(expr))
 
-        return exp
+        return expr
 
