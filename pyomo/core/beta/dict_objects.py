@@ -26,7 +26,7 @@ from pyomo.core.base.expression import (IndexedExpression,
 logger = logging.getLogger('pyomo.core')
 
 #
-# In the future I think ComponentDict and ComponentList should inheret
+# In the future I think ComponentDict and ComponentList should inherit
 # directly from (Active)IndexedComponent, and that class should be
 # stripped down to a minimal interface. The abstract interface should
 # be implemented on top of these classes.
@@ -98,7 +98,8 @@ class ComponentDict(collections.MutableMapping):
         if isinstance(val, self._interface_datatype):
             if val._component is None:
                 val._component = weakref_ref(self)
-                self._active |= getattr(val, '_active', True)
+                if hasattr(self, "_active"):
+                    self._active |= getattr(val, '_active', True)
                 if key in self._data:
                     # release the current component
                     # * see __delitem__ for explanation

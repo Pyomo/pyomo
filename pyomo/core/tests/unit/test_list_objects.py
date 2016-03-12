@@ -229,6 +229,51 @@ class _TestComponentListBase(object):
         for i in index:
             self.assertNotEqual(id(inst.c[i]), id(model.c[i]))
 
+    def test_cname(self):
+        model = self.model
+        index = range(5)
+        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        prefix = "c"
+        for i in index:
+            cdata = model.c[i]
+            self.assertEqual(cdata.cname(False),
+                             cdata.cname(True))
+            cname = prefix + "["+str(i)+"]"
+            self.assertEqual(cdata.cname(False),
+                             cname)
+
+class _TestActiveComponentListBase(_TestComponentListBase):
+
+    def test_activate(self):
+        model = self.model
+        index = list(range(4))
+        model.c = self._ctype(self._cdatatype(self._arg)
+                              for i in index)
+        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(model.c.active, True)
+        model.c._active = False
+        for i in index:
+            model.c[i]._active = False
+        self.assertEqual(model.c.active, False)
+        for i in index:
+            self.assertEqual(model.c[i].active, False)
+        model.c.activate()
+        self.assertEqual(model.c.active, True)
+
+    def test_activate(self):
+        model = self.model
+        index = list(range(4))
+        model.c = self._ctype(self._cdatatype(self._arg)
+                              for i in index)
+        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(model.c.active, True)
+        for i in index:
+            self.assertEqual(model.c[i].active, True)
+        model.c.deactivate()
+        self.assertEqual(model.c.active, False)
+        for i in index:
+            self.assertEqual(model.c[i].active, False)
+
     # Befault, assigning a new component to a dict container makes it
     # active (unless the default active state for the container
     # datatype is False, which is not the case for any currently
@@ -247,19 +292,6 @@ class _TestComponentListBase(object):
         model.c.insert(0, self._cdatatype(self._arg))
         self.assertEqual(model.c.active, True)
 
-    def test_cname(self):
-        model = self.model
-        index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
-        prefix = "c"
-        for i in index:
-            cdata = model.c[i]
-            self.assertEqual(cdata.cname(False),
-                             cdata.cname(True))
-            cname = prefix + "["+str(i)+"]"
-            self.assertEqual(cdata.cname(False),
-                             cname)
-
 class TestVarList(_TestComponentListBase,
                   unittest.TestCase):
     _ctype = XVarList
@@ -268,22 +300,6 @@ class TestVarList(_TestComponentListBase,
         _TestComponentListBase.setUp(self)
         self._arg = Reals
 
-class TestConstraintList(_TestComponentListBase,
-                         unittest.TestCase):
-    _ctype = XConstraintList
-    _cdatatype = _GeneralConstraintData
-    def setUp(self):
-        _TestComponentListBase.setUp(self)
-        self._arg = self.model.x >= 1
-
-class TestObjectiveList(_TestComponentListBase,
-                        unittest.TestCase):
-    _ctype = XObjectiveList
-    _cdatatype = _GeneralObjectiveData
-    def setUp(self):
-        _TestComponentListBase.setUp(self)
-        self._arg = self.model.x**2
-
 class TestExpressionList(_TestComponentListBase,
                          unittest.TestCase):
     _ctype = XExpressionList
@@ -291,6 +307,27 @@ class TestExpressionList(_TestComponentListBase,
     def setUp(self):
         _TestComponentListBase.setUp(self)
         self._arg = self.model.x**3
+
+#
+# Test components that include activate/deactivate
+# functionality.
+#
+
+class TestConstraintList(_TestActiveComponentListBase,
+                         unittest.TestCase):
+    _ctype = XConstraintList
+    _cdatatype = _GeneralConstraintData
+    def setUp(self):
+        _TestComponentListBase.setUp(self)
+        self._arg = self.model.x >= 1
+
+class TestObjectiveList(_TestActiveComponentListBase,
+                        unittest.TestCase):
+    _ctype = XObjectiveList
+    _cdatatype = _GeneralObjectiveData
+    def setUp(self):
+        _TestComponentListBase.setUp(self)
+        self._arg = self.model.x**2
 
 if __name__ == "__main__":
     unittest.main()

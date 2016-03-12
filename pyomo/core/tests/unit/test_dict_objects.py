@@ -199,19 +199,6 @@ class _TestComponentDictBase(object):
         self.assertEqual(sorted(list(raw_constraint_dict.keys()), key=str),
                          sorted(list(model.c.keys()), key=str))
 
-    # Befault, assigning a new component to a dict container makes it
-    # active (unless the default active state for the container
-    # datatype is False, which is not the case for any currently
-    # existing implementations).
-    def test_active(self):
-        model = self.model
-        model.c = self._ctype()
-        self.assertEqual(model.c.active, True)
-        model.c.deactivate()
-        self.assertEqual(model.c.active, False)
-        model.c[1] = self._cdatatype(self._arg)
-        self.assertEqual(model.c.active, True)
-
     def test_cname(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
@@ -232,6 +219,51 @@ class _TestComponentDictBase(object):
             self.assertEqual(cdata.cname(False),
                              cname)
 
+class _TestActiveComponentDictBase(_TestComponentDictBase):
+
+    def test_activate(self):
+        model = self.model
+        index = ['a', 1, None, (1,), (1,2)]
+        model.c = self._ctype((i, self._cdatatype(self._arg))
+                              for i in index)
+        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(model.c.active, True)
+        model.c._active = False
+        for i in index:
+            model.c[i]._active = False
+        self.assertEqual(model.c.active, False)
+        for i in index:
+            self.assertEqual(model.c[i].active, False)
+        model.c.activate()
+        self.assertEqual(model.c.active, True)
+
+    def test_activate(self):
+        model = self.model
+        index = ['a', 1, None, (1,), (1,2)]
+        model.c = self._ctype((i, self._cdatatype(self._arg))
+                              for i in index)
+        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(model.c.active, True)
+        for i in index:
+            self.assertEqual(model.c[i].active, True)
+        model.c.deactivate()
+        self.assertEqual(model.c.active, False)
+        for i in index:
+            self.assertEqual(model.c[i].active, False)
+
+    # Befault, assigning a new component to a dict container makes it
+    # active (unless the default active state for the container
+    # datatype is False, which is not the case for any currently
+    # existing implementations).
+    def test_active(self):
+        model = self.model
+        model.c = self._ctype()
+        self.assertEqual(model.c.active, True)
+        model.c.deactivate()
+        self.assertEqual(model.c.active, False)
+        model.c[1] = self._cdatatype(self._arg)
+        self.assertEqual(model.c.active, True)
+
 class TestVarDict(_TestComponentDictBase,
                   unittest.TestCase):
     _ctype = VarDict
@@ -240,22 +272,6 @@ class TestVarDict(_TestComponentDictBase,
         _TestComponentDictBase.setUp(self)
         self._arg = Reals
 
-class TestConstraintDict(_TestComponentDictBase,
-                         unittest.TestCase):
-    _ctype = ConstraintDict
-    _cdatatype = _GeneralConstraintData
-    def setUp(self):
-        _TestComponentDictBase.setUp(self)
-        self._arg = self.model.x >= 1
-
-class TestObjectiveDict(_TestComponentDictBase,
-                        unittest.TestCase):
-    _ctype = ObjectiveDict
-    _cdatatype = _GeneralObjectiveData
-    def setUp(self):
-        _TestComponentDictBase.setUp(self)
-        self._arg = self.model.x**2
-
 class TestExpressionDict(_TestComponentDictBase,
                          unittest.TestCase):
     _ctype = ExpressionDict
@@ -263,6 +279,27 @@ class TestExpressionDict(_TestComponentDictBase,
     def setUp(self):
         _TestComponentDictBase.setUp(self)
         self._arg = self.model.x**3
+
+#
+# Test components that include activate/deactivate
+# functionality.
+#
+
+class TestConstraintDict(_TestActiveComponentDictBase,
+                         unittest.TestCase):
+    _ctype = ConstraintDict
+    _cdatatype = _GeneralConstraintData
+    def setUp(self):
+        _TestComponentDictBase.setUp(self)
+        self._arg = self.model.x >= 1
+
+class TestObjectiveDict(_TestActiveComponentDictBase,
+                        unittest.TestCase):
+    _ctype = ObjectiveDict
+    _cdatatype = _GeneralObjectiveData
+    def setUp(self):
+        _TestComponentDictBase.setUp(self)
+        self._arg = self.model.x**2
 
 if __name__ == "__main__":
     unittest.main()
