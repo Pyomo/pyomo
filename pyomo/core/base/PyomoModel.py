@@ -649,8 +649,9 @@ arguments (which have been ignored):"""
             logger.error(msg)
 
         if self.is_constructed():
-            logger.warning("DEPRECATION WARNING: Cannot call "
-                           "Model.create_instance() on a concrete model.")
+            logger.warning(
+"""DEPRECATION WARNING: Cannot call Model.create_instance() on a
+constructed model; returning a clone of the current model instance.""")
             return self.clone()
 
 
@@ -749,10 +750,17 @@ arguments (which have been ignored):"""
         elif type(arg) is dict:
             dp = DataPortal(data_dict=arg, model=self)
         elif isinstance(arg, SolverResults):
-            logger.warning("DEPRECATION WARNING: the Model.load() method "
-                           "should not be used to load solver results. "
-                           "Call Model.solutions.load_from().")
-            self.solutions.load_from(arg)
+            if len(arg.solution):
+                logger.warning(
+"""DEPRECATION WARNING: the Model.load() method is deprecated for
+loading solutions stored in SolverResults objects.  Call
+Model.solutions.load_from().""")
+                self.solutions.load_from(arg)
+            else:
+                logger.warning(
+"""DEPRECATION WARNING: the Model.load() method is deprecated for
+loading solutions stored in SolverResults objects.  By default, results
+from solvers are immediately loaded into the original model instance.""")
             return
         else:
             msg = "Cannot load model model data from with object of type '%s'"
@@ -980,22 +988,23 @@ arguments (which have been ignored):"""
         """
         logger.warning(
 """DEPRECATION WARNING: the Model.create() method is deprecated.  Call
-Model.create_instance() if to create a concrete model from an abstract
+Model.create_instance() to create a concrete instance from an abstract
 model.  You do not need to call Model.create() for a concrete model.""")
         return self.create_instance(filename=filename, **kwargs)
 
     def transform(self, name=None, **kwds):
         if name is None:
             logger.warning(
-"""DEPRECATION WARNING: Model.transform() has been removed.  Use
+"""DEPRECATION WARNING: Model.transform() is deprecated.  Use
 TransformationFactory().services() method to get the list of known
 transformations.""")
             return TransformationFactory.services()
 
         logger.warning(
-"""DEPRECATION WARNING: Model.transform() has been removed.  Use
-TransformationFactory('%s') to construct a transformation
-object.""" % (name,) )
+"""DEPRECATION WARNING: Model.transform() is deprecated.  Use
+TransformationFactory('%s') to construct a transformation object, or
+TransformationFactory('%s').apply_to(model) to directly apply the
+transformation to the model instance.""" % (name,name,) )
 
         xfrm = TransformationFactory(name)
         if xfrm is None:
