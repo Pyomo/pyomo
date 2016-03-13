@@ -7,10 +7,10 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-# This PySP example is setup to run as an indepedent python script
+# This PySP example is setup to run as an independent python script
 # that does the following:
 #  (1) Constructs scenario instances over a distributed
-#      Pyro-based scenario tree. A distrubuted scenario tree consists
+#      Pyro-based scenario tree. A distributed scenario tree consists
 #      of the following objects:
 #        - A scenario tree manager (launched from this file)
 #        - One or more scenario tree servers (launched using the

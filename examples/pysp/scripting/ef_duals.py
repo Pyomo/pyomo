@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-# This PySP example is setup to run as an indepedent python script
+# This PySP example is setup to run as an independent python script
 # that does the following:
 #  (1) Constructs scenario instances for the farmer problem using the
 #      serial scenario tree manager (non-distributed).

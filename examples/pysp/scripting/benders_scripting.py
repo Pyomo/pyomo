@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-# This PySP example is setup to run as an indepedent python script
+# This PySP example is setup to run as an independent python script
 # that does the following:
 #  (1) Registers options for the ScenarioTreeManagerSolver and
 #      BendersAlgorithm classes
