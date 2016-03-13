@@ -41,5 +41,7 @@ class TestInstanceFactory(unittest.TestCase):
         self.assertTrue("ReferenceModel" in sys.modules)
         del sys.modules["ReferenceModel"]
 
+TestInstanceFactory = unittest.category('smoke','nightly','expensive')(TestInstanceFactory)
+
 if __name__ == "__main__":
     unittest.main()

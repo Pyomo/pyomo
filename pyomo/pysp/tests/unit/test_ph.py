@@ -29,6 +29,8 @@ pysp_examples_dir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))
 
 pyomo_bin_dir = dirname(dirname(dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))))+os.sep+"bin"+os.sep
 
+baseline_dir = this_test_file_directory+"baselines"+os.sep
+
 #
 # Import the testing packages
 #
@@ -220,7 +222,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_cplex.out",
-            this_test_file_directory+"farmer_quadratic_cplex.baseline",
+            baseline_dir+"farmer_quadratic_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -240,7 +242,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.out",
-            this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_cplex.baseline",
+            baseline_dir+"farmer_quadratic_nonnormalized_termdiff_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -260,7 +262,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_cplex_direct.out",
-            this_test_file_directory+"farmer_quadratic_cplex_direct.baseline",
+            baseline_dir+"farmer_quadratic_cplex_direct.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -280,7 +282,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_gurobi_direct.out",
-            this_test_file_directory+"farmer_quadratic_gurobi_direct.baseline",
+            baseline_dir+"farmer_quadratic_gurobi_direct.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -301,7 +303,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_gurobi.out",
-            this_test_file_directory+"farmer_quadratic_gurobi.baseline",
+            baseline_dir+"farmer_quadratic_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -321,7 +323,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.out",
-            this_test_file_directory+"farmer_quadratic_nonnormalized_termdiff_gurobi.baseline",
+            baseline_dir+"farmer_quadratic_nonnormalized_termdiff_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -341,7 +343,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_ipopt.out",
-            this_test_file_directory+"farmer_quadratic_ipopt.baseline",
+            baseline_dir+"farmer_quadratic_ipopt.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance_relaxed)
 
@@ -361,7 +363,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_maximize_quadratic_gurobi.out",
-            this_test_file_directory+"farmer_maximize_quadratic_gurobi.baseline",
+            baseline_dir+"farmer_maximize_quadratic_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -381,7 +383,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_with_integers_quadratic_cplex.out",
-            this_test_file_directory+"farmer_with_integers_quadratic_cplex.baseline",
+            baseline_dir+"farmer_with_integers_quadratic_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -402,13 +404,13 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
            self.assertFileEqualsBaseline(
                this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out",
-               this_test_file_directory+"farmer_with_integers_quadratic_gurobi_darwin.baseline",
+               baseline_dir+"farmer_with_integers_quadratic_gurobi_darwin.baseline",
                filter=filter_time_and_data_dirs,
                tolerance=_diff_tolerance)
         else:
            self.assertFileEqualsBaseline(
                this_test_file_directory+"farmer_with_integers_quadratic_gurobi.out",
-               this_test_file_directory+"farmer_with_integers_quadratic_gurobi.baseline",
+               baseline_dir+"farmer_with_integers_quadratic_gurobi.baseline",
                filter=filter_time_and_data_dirs,
                tolerance=_diff_tolerance)
 
@@ -428,7 +430,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_verbose_cplex.out",
-            this_test_file_directory+"farmer_quadratic_verbose_cplex.baseline",
+            baseline_dir+"farmer_quadratic_verbose_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -448,7 +450,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_verbose_gurobi.out",
-            this_test_file_directory+"farmer_quadratic_verbose_gurobi.baseline",
+            baseline_dir+"farmer_quadratic_verbose_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -468,7 +470,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.out",
-            this_test_file_directory+"farmer_quadratic_trivial_bundling_cplex.baseline",
+            baseline_dir+"farmer_quadratic_trivial_bundling_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -488,7 +490,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.out",
-            this_test_file_directory+"farmer_quadratic_trivial_bundling_gurobi.baseline",
+            baseline_dir+"farmer_quadratic_trivial_bundling_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -508,7 +510,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.out",
-            this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt.baseline",
+            baseline_dir+"farmer_quadratic_trivial_bundling_ipopt.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance_relaxed)
 
@@ -528,7 +530,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.out",
-            this_test_file_directory+"farmer_quadratic_basic_bundling_cplex.baseline",
+            baseline_dir+"farmer_quadratic_basic_bundling_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -548,7 +550,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.out",
-            this_test_file_directory+"farmer_quadratic_basic_bundling_gurobi.baseline",
+            baseline_dir+"farmer_quadratic_basic_bundling_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -568,7 +570,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_with_rent_quadratic_cplex.out",
-            this_test_file_directory+"farmer_with_rent_quadratic_cplex.baseline",
+            baseline_dir+"farmer_with_rent_quadratic_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -588,7 +590,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_with_rent_quadratic_gurobi.out",
-            this_test_file_directory+"farmer_with_rent_quadratic_gurobi.baseline",
+            baseline_dir+"farmer_with_rent_quadratic_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -609,7 +611,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_cplex.out",
-            this_test_file_directory+"farmer_linearized_cplex.baseline",
+            baseline_dir+"farmer_linearized_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -630,7 +632,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_cbc.out",
-            this_test_file_directory+"farmer_linearized_cbc.baseline",
+            baseline_dir+"farmer_linearized_cbc.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -651,7 +653,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_maximize_linearized_cplex.out",
-            this_test_file_directory+"farmer_maximize_linearized_cplex.baseline",
+            baseline_dir+"farmer_maximize_linearized_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -672,7 +674,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_gurobi.out",
-            this_test_file_directory+"farmer_linearized_gurobi.baseline",
+            baseline_dir+"farmer_linearized_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -693,7 +695,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_maximize_linearized_gurobi.out",
-            this_test_file_directory+"farmer_maximize_linearized_gurobi.baseline",
+            baseline_dir+"farmer_maximize_linearized_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -714,7 +716,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_nodedata_cplex.out",
-            this_test_file_directory+"farmer_linearized_nodedata_cplex.baseline",
+            baseline_dir+"farmer_linearized_nodedata_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -735,7 +737,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_nodedata_gurobi.out",
-            this_test_file_directory+"farmer_linearized_nodedata_gurobi.baseline",
+            baseline_dir+"farmer_linearized_nodedata_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -762,12 +764,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"sizes3_quadratic_cplex.out",
-            this_test_file_directory+"sizes3_quadratic_cplex.baseline-a",
+            baseline_dir+"sizes3_quadratic_cplex.baseline-a",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"sizes3_quadratic_cplex.out",
-            this_test_file_directory+"sizes3_quadratic_cplex.baseline-b",
+            baseline_dir+"sizes3_quadratic_cplex.baseline-b",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         if (flag_a) and (flag_b):
@@ -798,12 +800,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"sizes3_quadratic_cplex_direct.out",
-            this_test_file_directory+"sizes3_quadratic_cplex_direct.baseline-a",
+            baseline_dir+"sizes3_quadratic_cplex_direct.baseline-a",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"sizes3_quadratic_cplex_direct.out",
-            this_test_file_directory+"sizes3_quadratic_cplex_direct.baseline-b",
+            baseline_dir+"sizes3_quadratic_cplex_direct.baseline-b",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         if (flag_a) and (flag_b):
@@ -836,12 +838,12 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_gurobi.out",
-                this_test_file_directory+"sizes3_quadratic_gurobi_darwin.baseline-a",
+                baseline_dir+"sizes3_quadratic_gurobi_darwin.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_gurobi.out",
-                this_test_file_directory+"sizes3_quadratic_gurobi_darwin.baseline-b",
+                baseline_dir+"sizes3_quadratic_gurobi_darwin.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             if (flag_a) and (flag_b):
@@ -852,12 +854,12 @@ class TestPH(unittest.TestCase):
 
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_gurobi.out",
-                this_test_file_directory+"sizes3_quadratic_gurobi.baseline-a",
+                baseline_dir+"sizes3_quadratic_gurobi.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_gurobi.out",
-                this_test_file_directory+"sizes3_quadratic_gurobi.baseline-b",
+                baseline_dir+"sizes3_quadratic_gurobi.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             if (flag_a) and (flag_b):
@@ -882,11 +884,11 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",
-            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-a",
+            baseline_dir+"sizes10_quadratic_twobundles_cplex.baseline-a",
             filter=filter_time_and_data_dirs)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",
-            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.baseline-b",
+            baseline_dir+"sizes10_quadratic_twobundles_cplex.baseline-b",
             filter=filter_time_and_data_dirs)
         if (flag_a) and (flag_b):
             print(diffs_a)
@@ -911,13 +913,13 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",
-                this_test_file_directory+"sizes10_quadratic_twobundles_gurobi_darwin.baseline",
+                baseline_dir+"sizes10_quadratic_twobundles_gurobi_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",
-                this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.baseline",
+                baseline_dir+"sizes10_quadratic_twobundles_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
 
@@ -942,18 +944,18 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
-                this_test_file_directory+"networkflow1ef10_quadratic_cplex_darwin.baseline",
+                baseline_dir+"networkflow1ef10_quadratic_cplex_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
-                this_test_file_directory+"networkflow1ef10_quadratic_cplex.baseline-a",
+                baseline_dir+"networkflow1ef10_quadratic_cplex.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
-                this_test_file_directory+"networkflow1ef10_quadratic_cplex.baseline-b",
+                baseline_dir+"networkflow1ef10_quadratic_cplex.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             if (flag_a) and (flag_b):
@@ -982,13 +984,13 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",
-                this_test_file_directory+"networkflow1ef10_quadratic_gurobi_darwin.baseline",
+                baseline_dir+"networkflow1ef10_quadratic_gurobi_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",
-                this_test_file_directory+"networkflow1ef10_quadratic_gurobi.baseline",
+                baseline_dir+"networkflow1ef10_quadratic_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
 
@@ -1014,13 +1016,13 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_linearized_cplex.out",
-                this_test_file_directory+"networkflow1ef10_linearized_cplex_darwin.baseline",
+                baseline_dir+"networkflow1ef10_linearized_cplex_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_linearized_cplex.out",
-                this_test_file_directory+"networkflow1ef10_linearized_cplex.baseline",
+                baseline_dir+"networkflow1ef10_linearized_cplex.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
 
@@ -1046,19 +1048,19 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_darwin.baseline",
+                baseline_dir+"networkflow1ef10_linearized_gurobi_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
 
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline-a",
+                baseline_dir+"networkflow1ef10_linearized_gurobi.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi.baseline-b",
+                baseline_dir+"networkflow1ef10_linearized_gurobi.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
 
@@ -1093,18 +1095,18 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"forestry_linearized_cplex.out",
-                this_test_file_directory+"forestry_linearized_cplex_darwin.baseline",
+                baseline_dir+"forestry_linearized_cplex_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"forestry_linearized_cplex.out",
-                this_test_file_directory+"forestry_linearized_cplex.baseline-a",
+                baseline_dir+"forestry_linearized_cplex.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"forestry_linearized_cplex.out",
-                this_test_file_directory+"forestry_linearized_cplex.baseline-b",
+                baseline_dir+"forestry_linearized_cplex.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             if (flag_a) and (flag_b):
@@ -1138,13 +1140,13 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"forestry_linearized_gurobi.out",
-                this_test_file_directory+"forestry_linearized_gurobi_darwin.baseline",
+                baseline_dir+"forestry_linearized_gurobi_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"forestry_linearized_gurobi.out",
-                this_test_file_directory+"forestry_linearized_gurobi.baseline",
+                baseline_dir+"forestry_linearized_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
 
@@ -1163,12 +1165,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef.out",
-            this_test_file_directory+"farmer_ef.baseline.out",
+            baseline_dir+"farmer_ef.baseline.out",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
             ef_output_file,
-            this_test_file_directory+"farmer_ef.baseline.lp")
+            baseline_dir+"farmer_ef.baseline.lp")
 
     def test_farmer_maximize_ef(self):
         farmer_examples_dir = pysp_examples_dir + "farmer"
@@ -1185,12 +1187,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_maximize_ef.out",
-            this_test_file_directory+"farmer_maximize_ef.baseline.out",
+            baseline_dir+"farmer_maximize_ef.baseline.out",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
             ef_output_file,
-            this_test_file_directory+"farmer_maximize_ef.baseline.lp")
+            baseline_dir+"farmer_maximize_ef.baseline.lp")
 
     def test_farmer_piecewise_ef(self):
         farmer_examples_dir = pysp_examples_dir + "farmerWpiecewise"
@@ -1207,12 +1209,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_piecewise_ef.out",
-            this_test_file_directory+"farmer_piecewise_ef.baseline.out",
+            baseline_dir+"farmer_piecewise_ef.baseline.out",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
             ef_output_file,
-            this_test_file_directory+"farmer_piecewise_ef.baseline.lp")
+            baseline_dir+"farmer_piecewise_ef.baseline.lp")
 
     def test_farmer_ef_with_solve_cplex(self):
         if solver['cplex'] is None:
@@ -1230,7 +1232,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef_with_solve_cplex.out",
-            this_test_file_directory+"farmer_ef_with_solve_cplex.baseline",
+            baseline_dir+"farmer_ef_with_solve_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -1250,7 +1252,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out",
-            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.baseline",
+            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         # the following comparison is a bit weird, in that "ef.csv" is written to the current directory.
@@ -1258,7 +1260,7 @@ class TestPH(unittest.TestCase):
         # and if the test passes, clean up after ourselves if the test passes.
         self.assertFileEqualsBaseline(
             "ef.csv",
-            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.csv",
+            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer.csv",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -1278,7 +1280,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out",
-            this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.baseline",
+            baseline_dir+"farmer_maximize_ef_with_solve_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -1299,7 +1301,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef_with_solve_gurobi.out",
-            this_test_file_directory+"farmer_ef_with_solve_gurobi.baseline",
+            baseline_dir+"farmer_ef_with_solve_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -1319,7 +1321,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out",
-            this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.baseline",
+            baseline_dir+"farmer_maximize_ef_with_solve_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -1340,13 +1342,13 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
            self.assertFileEqualsBaseline(
                this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
-               this_test_file_directory+"farmer_ef_with_solve_ipopt_darwin.baseline",
+               baseline_dir+"farmer_ef_with_solve_ipopt_darwin.baseline",
                filter=filter_time_and_data_dirs,
                tolerance=_diff_tolerance_relaxed)
         else:
            self.assertFileEqualsBaseline(
                this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
-               this_test_file_directory+"farmer_ef_with_solve_ipopt.baseline",
+               baseline_dir+"farmer_ef_with_solve_ipopt.baseline",
                filter=filter_time_and_data_dirs,
                tolerance=_diff_tolerance_relaxed)
 
@@ -1365,12 +1367,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"hydro_ef.out",
-            this_test_file_directory+"hydro_ef.baseline.out",
+            baseline_dir+"hydro_ef.baseline.out",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
             ef_output_file,
-            this_test_file_directory+"hydro_ef.baseline.lp")
+            baseline_dir+"hydro_ef.baseline.lp")
 
     def test_sizes3_ef(self):
         sizes3_examples_dir = pysp_examples_dir + "sizes"
@@ -1387,12 +1389,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"sizes3_ef.out",
-            this_test_file_directory+"sizes3_ef.baseline.out",
+            baseline_dir+"sizes3_ef.baseline.out",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
             ef_output_file,
-            this_test_file_directory+"sizes3_ef.baseline.lp.gz")
+            baseline_dir+"sizes3_ef.baseline.lp.gz")
 
     def test_sizes3_ef_with_solve_cplex(self):
         if solver['cplex'] is None:
@@ -1412,18 +1414,18 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
-                this_test_file_directory+"sizes3_ef_with_solve_cplex_darwin.baseline",
+                baseline_dir+"sizes3_ef_with_solve_cplex_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
-                this_test_file_directory+"sizes3_ef_with_solve_cplex.baseline-a",
+                baseline_dir+"sizes3_ef_with_solve_cplex.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
-                this_test_file_directory+"sizes3_ef_with_solve_cplex.baseline-b",
+                baseline_dir+"sizes3_ef_with_solve_cplex.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             if (flag_a) and (flag_b):
@@ -1449,13 +1451,13 @@ class TestPH(unittest.TestCase):
         if os.sys.platform == "darwin":
            self.assertFileEqualsBaseline(
                this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",
-               this_test_file_directory+"sizes3_ef_with_solve_gurobi_darwin.baseline",
+               baseline_dir+"sizes3_ef_with_solve_gurobi_darwin.baseline",
                filter=filter_time_and_data_dirs,
                tolerance=_diff_tolerance)
         else:
            self.assertFileEqualsBaseline(
                this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",
-               this_test_file_directory+"sizes3_ef_with_solve_gurobi.baseline",
+               baseline_dir+"sizes3_ef_with_solve_gurobi.baseline",
                filter=filter_time_and_data_dirs,
                tolerance=_diff_tolerance)
 
@@ -1474,12 +1476,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"forestry_ef.out",
-            this_test_file_directory+"forestry_ef.baseline.out",
+            baseline_dir+"forestry_ef.baseline.out",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
             ef_output_file,
-            this_test_file_directory+"forestry_ef.baseline.lp.gz",
+            baseline_dir+"forestry_ef.baseline.lp.gz",
             tolerance=_diff_tolerance)
 
     def test_networkflow1ef10_ef(self):
@@ -1497,12 +1499,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"networkflow1ef10_ef.out",
-            this_test_file_directory+"networkflow1ef10_ef.baseline.out",
+            baseline_dir+"networkflow1ef10_ef.baseline.out",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
             ef_output_file,
-            this_test_file_directory+"networkflow1ef10_ef.baseline.lp.gz")
+            baseline_dir+"networkflow1ef10_ef.baseline.lp.gz")
 
     def test_farmer_ef_cvar(self):
         farmer_examples_dir = pysp_examples_dir + "farmer"
@@ -1519,12 +1521,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef_cvar.out",
-            this_test_file_directory+"farmer_ef_cvar.baseline.out",
+            baseline_dir+"farmer_ef_cvar.baseline.out",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         self.assertFileEqualsBaseline(
             ef_output_file,
-            this_test_file_directory+"farmer_ef_cvar.baseline.lp")
+            baseline_dir+"farmer_ef_cvar.baseline.lp")
 
     def test_computeconf_networkflow1ef10_cplex(self):
         if solver['cplex'] is None:
@@ -1550,12 +1552,12 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-a",
+            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-a",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.baseline-b",
+            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-b",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         if (flag_a) and (flag_b):
@@ -1583,11 +1585,11 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
-            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-a",
+            baseline_dir+"cc_ef_networkflow1ef3_cplex.baseline-a",
             filter=filter_time_and_data_dirs)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
-            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.baseline-b",
+            baseline_dir+"cc_ef_networkflow1ef3_cplex.baseline-b",
             filter=filter_time_and_data_dirs)
         if (flag_a) and (flag_b):
             print(diffs_a)
@@ -1613,7 +1615,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out",
-            this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.baseline",
+            baseline_dir+"lagrangian_cc_networkflow1ef3_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
@@ -1635,7 +1637,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out",
-            this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline",
+            baseline_dir+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline",
             filter=filter_lagrange,
             tolerance=_diff_tolerance)
 
@@ -1645,7 +1647,7 @@ class TestPH(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models-cc"
         instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
-        argstring = "lagrangeMorePR.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+" --csvPrefix="+this_test_file_directory+"lagrange_pr_test"
+        argstring = "lagrangeMorePR.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+" --csvPrefix="+baseline_dir+"lagrange_pr_test"
         print("Testing command: " + argstring)
         args = argstring.split()
 
@@ -1657,7 +1659,7 @@ class TestPH(unittest.TestCase):
         pyutilib.misc.reset_redirect()
         self.assertFileEqualsBaseline(
             this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",
-            this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline",
+            baseline_dir+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline",
             filter=filter_lagrange,
             tolerance=_diff_tolerance)
 
@@ -1718,7 +1720,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_cplex_with_pyro.out",
-            this_test_file_directory+"farmer_quadratic_cplex_with_pyro.baseline",
+            baseline_dir+"farmer_quadratic_cplex_with_pyro.baseline",
             filter=filter_pyro)
 
     def test_farmer_quadratic_cplex_with_phpyro(self):
@@ -1735,7 +1737,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.out",
-            this_test_file_directory+"farmer_quadratic_cplex_with_phpyro.baseline",
+            baseline_dir+"farmer_quadratic_cplex_with_phpyro.baseline",
             filter=filter_pyro)
 
     def test_farmer_quadratic_with_bundles_cplex_with_pyro(self):
@@ -1752,7 +1754,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.out",
-            this_test_file_directory+"farmer_quadratic_with_bundles_cplex_with_pyro.baseline",
+            baseline_dir+"farmer_quadratic_with_bundles_cplex_with_pyro.baseline",
             filter=filter_pyro)
 
     def test_farmer_quadratic_gurobi_with_phpyro(self):
@@ -1769,7 +1771,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.out",
-            this_test_file_directory+"farmer_quadratic_gurobi_with_phpyro.baseline",
+            baseline_dir+"farmer_quadratic_gurobi_with_phpyro.baseline",
             filter=filter_pyro)
 
     def test_farmer_linearized_gurobi_with_phpyro(self):
@@ -1786,7 +1788,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.out",
-            this_test_file_directory+"farmer_linearized_gurobi_with_phpyro.baseline",
+            baseline_dir+"farmer_linearized_gurobi_with_phpyro.baseline",
             filter=filter_pyro)
 
     def test_farmer_quadratic_ipopt_with_pyro(self):
@@ -1803,7 +1805,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.out",
-            this_test_file_directory+"farmer_quadratic_ipopt_with_pyro.baseline",
+            baseline_dir+"farmer_quadratic_ipopt_with_pyro.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
@@ -1821,7 +1823,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.out",
-            this_test_file_directory+"farmer_quadratic_ipopt_with_phpyro.baseline",
+            baseline_dir+"farmer_quadratic_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
@@ -1839,7 +1841,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.out",
-            this_test_file_directory+"farmer_linearized_ipopt_with_phpyro.baseline",
+            baseline_dir+"farmer_linearized_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
@@ -1857,7 +1859,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.out",
-            this_test_file_directory+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline",
+            baseline_dir+"farmer_quadratic_trivial_bundling_ipopt_with_phpyro.baseline",
             filter=filter_pyro)
 
     def test_farmer_quadratic_bundling_ipopt_with_phpyro(self):
@@ -1874,7 +1876,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.out",
-            this_test_file_directory+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline",
+            baseline_dir+"farmer_quadratic_bundling_ipopt_with_phpyro.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
@@ -1901,16 +1903,16 @@ class TestPHParallel(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
-                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro_darwin.baseline",
+                baseline_dir+"sizes3_quadratic_cplex_with_phpyro_darwin.baseline",
                 filter=filter_pyro)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
-                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.baseline-a",
+                baseline_dir+"sizes3_quadratic_cplex_with_phpyro.baseline-a",
                 filter=filter_pyro)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
-                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.baseline-b",
+                baseline_dir+"sizes3_quadratic_cplex_with_phpyro.baseline-b",
                 filter=filter_pyro)
             if (flag_a) and (flag_b):
                 print(diffs_a)
@@ -1931,7 +1933,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.out",
-            this_test_file_directory+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.baseline",
+            baseline_dir+"farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance)
 
@@ -1959,16 +1961,16 @@ class TestPHParallel(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
-                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro_darwin.baseline",
+                baseline_dir+"sizes3_linearized_cplex_with_phpyro_darwin.baseline",
                 filter=filter_pyro)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
-                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.baseline-a",
+                baseline_dir+"sizes3_linearized_cplex_with_phpyro.baseline-a",
                 filter=filter_pyro)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
-                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.baseline-b",
+                baseline_dir+"sizes3_linearized_cplex_with_phpyro.baseline-b",
                 filter=filter_pyro)
             if (flag_a) and (flag_b):
                 print(diffs_a)
@@ -1998,7 +2000,7 @@ class TestPHParallel(unittest.TestCase):
         if os.sys.platform == "darwin":
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
-                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro_darwin.baseline-a",
+                baseline_dir+"sizes3_quadratic_gurobi_with_phpyro_darwin.baseline-a",
                 filter=filter_pyro,
                 tolerance=_diff_tolerance)
             if (flag_a):
@@ -2007,12 +2009,12 @@ class TestPHParallel(unittest.TestCase):
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
-                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.baseline-a",
+                baseline_dir+"sizes3_quadratic_gurobi_with_phpyro.baseline-a",
                 filter=filter_pyro,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
-                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.baseline-b",
+                baseline_dir+"sizes3_quadratic_gurobi_with_phpyro.baseline-b",
                 filter=filter_pyro,
                 tolerance=_diff_tolerance)
             if (flag_a) and (flag_b):
@@ -2034,7 +2036,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.out",
-            this_test_file_directory+"farmer_ef_with_solve_cplex_with_pyro.baseline",
+            baseline_dir+"farmer_ef_with_solve_cplex_with_pyro.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance)
 
@@ -2053,7 +2055,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.out",
-            this_test_file_directory+"farmer_quadratic_async_ipopt_with_pyro.baseline",
+            baseline_dir+"farmer_quadratic_async_ipopt_with_pyro.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
@@ -2072,7 +2074,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.out",
-            this_test_file_directory+"farmer_quadratic_async_gurobi_with_pyro.baseline",
+            baseline_dir+"farmer_quadratic_async_gurobi_with_pyro.baseline",
             filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
@@ -2090,7 +2092,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.out",
-            this_test_file_directory+"farmer_linearized_async_gurobi_with_pyro.baseline",
+            baseline_dir+"farmer_linearized_async_gurobi_with_pyro.baseline",
             filter=filter_pyro)
 
     # async PH with one pyro solver server should yield the same behavior as serial PH.
@@ -2108,7 +2110,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.out",
-            this_test_file_directory+"farmer_linearized_async_ipopt_with_pyro.baseline",
+            baseline_dir+"farmer_linearized_async_ipopt_with_pyro.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
@@ -2126,7 +2128,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.out",
-            this_test_file_directory+"farmer_with_integers_linearized_cplex_with_phpyro.baseline",
+            baseline_dir+"farmer_with_integers_linearized_cplex_with_phpyro.baseline",
             filter=filter_pyro,
             tolerance=_diff_tolerance_relaxed)
 
@@ -2149,7 +2151,7 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         self.assertFileEqualsBaseline(
             this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.baseline",
+            baseline_dir+"networkflow1ef10_simple_quadratic_cplex_with_phpyro.baseline",
             filter=filter_pyro)
 
     # builds on the above test, to validate warm-start capabilities; by imposing a migap,
@@ -2174,12 +2176,12 @@ class TestPHParallel(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",
-                this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro_darwin.baseline",
+                baseline_dir+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro_darwin.baseline",
                 filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.out",
-                this_test_file_directory+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.baseline",
+                baseline_dir+"networkflow1ef10_advanced_quadratic_cplex_with_phpyro.baseline",
                 filter=filter_pyro)
 
     def test_linearized_networkflow1ef10_gurobi_with_phpyro(self):
@@ -2208,20 +2210,20 @@ class TestPHParallel(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro_darwin.baseline",
+                baseline_dir+"networkflow1ef10_linearized_gurobi_with_phpyro_darwin.baseline",
                 filter=filter_pyro)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-a",
+                baseline_dir+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-a",
                 filter=filter_pyro)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-b",
+                baseline_dir+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-b",
                 filter=filter_pyro)
             [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
                 this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-c",
+                baseline_dir+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-c",
                 filter=filter_pyro)
             if (flag_a) and (flag_b) and (flag_c):
                 print(diffs_a)
@@ -2250,12 +2252,12 @@ class TestPHParallel(unittest.TestCase):
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",
-                this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro_darwin.baseline",
+                baseline_dir+"networkflow1ef3_simple_linearized_cplex_with_phpyro_darwin.baseline",
                 filter=filter_pyro)
         else:
             self.assertFileEqualsBaseline(
                 this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.out",
-                this_test_file_directory+"networkflow1ef3_simple_linearized_cplex_with_phpyro.baseline",
+                baseline_dir+"networkflow1ef3_simple_linearized_cplex_with_phpyro.baseline",
                 filter=filter_pyro)
 
     def test_simple_linearized_networkflow1ef10_cplex_with_phpyro(self):
@@ -2278,15 +2280,15 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-a",
+            baseline_dir+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-a",
             filter=filter_pyro)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-b",
+            baseline_dir+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-b",
             filter=filter_pyro)
         [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-c",
+            baseline_dir+"networkflow1ef10_simple_linearized_cplex_with_phpyro.baseline-c",
             filter=filter_pyro)
         if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
@@ -2320,15 +2322,15 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-a",
+            baseline_dir+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-a",
             filter=filter_pyro)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-b",
+            baseline_dir+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-b",
             filter=filter_pyro)
         [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-c",
+            baseline_dir+"networkflow1ef10_advanced_linearized_cplex_with_phpyro.baseline-c",
             filter=filter_pyro)
         if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
@@ -2363,15 +2365,15 @@ class TestPHParallel(unittest.TestCase):
         _run_cmd(argstring, shell=True)
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-a",
+            baseline_dir+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-a",
             filter=filter_pyro)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-b",
+            baseline_dir+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-b",
             filter=filter_pyro)
         [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
             this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out",
-            this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-c",
+            baseline_dir+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.baseline-c",
             filter=filter_pyro)
         if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
@@ -2380,7 +2382,6 @@ class TestPHParallel(unittest.TestCase):
             self.fail("Differences identified relative to all baseline output file alternatives")
         _remove(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out")
 
-TestInstanceFactory = unittest.category('smoke','nightly','expensive')(TestInstanceFactory)
 TestPH = unittest.category('nightly','expensive','performance')(TestPH)
 TestPHParallel = unittest.category('parallel','performance')(TestPHParallel)
 
