@@ -13,7 +13,7 @@ import logging
 from collections import MutableMapping
 import pprint
 
-from pyomo.core.base.component import Component, register_component
+from pyomo.core.base.component import ActiveComponent, register_component
 
 from six import iteritems, itervalues
 
@@ -258,8 +258,8 @@ class ComponentMap(MutableMapping):
 
 
 # Note: The order of inheritance here is important so that
-#       __setstate__ works correctly on the Component base class.
-class Suffix(ComponentMap, Component):
+#       __setstate__ works correctly on the ActiveComponent base class.
+class Suffix(ComponentMap, ActiveComponent):
     """A model suffix, representing extranious model data"""
 
     """
@@ -320,7 +320,7 @@ class Suffix(ComponentMap, Component):
 
         # Initialize base classes
         kwds.setdefault('ctype', Suffix)
-        Component.__init__(self, **kwds)
+        ActiveComponent.__init__(self, **kwds)
         ComponentMap.__init__(self)
 
         if self._rule is None:
@@ -331,7 +331,7 @@ class Suffix(ComponentMap, Component):
         This method must be defined for deepcopy/pickling because this
         class relies on component ids.
         """
-        Component.__setstate__(self,state)
+        ActiveComponent.__setstate__(self,state)
         ComponentMap.__setstate__(self,state)
 
     def construct(self, data=None):
@@ -559,16 +559,16 @@ class Suffix(ComponentMap, Component):
         return list(self.items())
 
     #
-    # Override a few methods to make sure the Component versions are
+    # Override a few methods to make sure the ActiveComponent versions are
     # called. We can't just switch the inheritance order due to
     # complications with __setstate__
     #
 
     def pprint(self, *args, **kwds):
-        return Component.pprint(self, *args, **kwds)
+        return ActiveComponent.pprint(self, *args, **kwds)
 
     def __str__(self):
-        return Component.__str__(self)
+        return ActiveComponent.__str__(self)
 
     #
     # Override NotImplementedError messages on ComponentMap base class
