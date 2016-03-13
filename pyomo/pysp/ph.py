@@ -4575,199 +4575,219 @@ class ProgressiveHedging(_PHBase):
             raise RuntimeError("PH is not initialized - cannot invoke "
                                "pprint() method")
 
+        def _print_node_var(variable_name, tree_node):
+
+            num_outputs_this_variable = 0
+
+            if not output_only_statistics:
+                sys.stdout.write("          (Scenarios: ")
+                for scenario in tree_node._scenarios:
+                    sys.stdout.write(str(scenario.name)+"  ")
+                    if scenario == tree_node._scenarios[-1]:
+                        sys.stdout.write(")\n")
+
+            variable_indices = tree_node._variable_indices[variable_name]
+
+            # this is moderately redundant, but shouldn't show
+            # up in profiles - printing takes more time than
+            # computation. determine the maximimal index
+            # string length, so we can output readable column
+            # formats.
+            max_index_string_length = 0
+            for index in variable_indices:
+                if index != None:
+                    this_index_length = len(indexToString(index))
+                    if this_index_length > max_index_string_length:
+                        max_index_string_length = this_index_length
+
+            for index in sorted(variable_indices):
+
+                # track, so we don't output the variable index
+                # more than once.
+                num_outputs_this_index = 0
+
+                # determine if the variable/index pair is used
+                # across the set of scenarios (technically, it
+                # should be good enough to check one
+                # scenario). ditto for "fixed" status. fixed
+                # does imply unused (see note below), but we
+                # care about the fixed status when outputting
+                # final solutions.
+
+                # should be consistent across scenarios, so
+                # one "unused" flags as invalid.
+                variable_id = \
+                    tree_node._name_index_to_id[variable_name,index]
+                is_fixed = tree_node.is_variable_fixed(variable_id)
+
+                is_not_stale = \
+                    all((not scenario.is_variable_stale(tree_node,
+                                                        variable_id)) \
+                        for scenario in tree_node._scenarios)
+
+                # IMPT: this is far from obvious, but
+                #       variables that are fixed will -
+                #       because presolve will identify them as
+                #       constants and eliminate them from all
+                #       expressions - be flagged as "unused"
+                #       and therefore not output.
+
+                if ((output_fixed) and (is_fixed)) or \
+                   ((is_not_stale) and (not is_fixed)):
+
+                    minimum_value = tree_node._minimums[variable_id]
+                    average_value = tree_node._averages[variable_id]
+                    maximum_value = tree_node._maximums[variable_id]
+
+                    # there really isn't a default need to
+                    # output variables whose values are equal
+                    # to 0 across-the-board. and there is good
+                    # reason not to, i.e., the volume of
+                    # output.
+                    if ((fabs(minimum_value) > self._integer_tolerance) or \
+                        (fabs(maximum_value) > self._integer_tolerance)) or\
+                       (self._report_for_zero_variable_values is True):
+
+                        if (fabs(maximum_value - minimum_value) <= \
+                            self._integer_tolerance) and \
+                           (output_only_nonconverged == True):
+                            pass
+                        else:
+                            num_outputs_this_variable += 1
+                            num_outputs_this_index += 1
+
+                            if num_outputs_this_variable == 1:
+                                sys.stdout.write("      Variable: "
+                                                 + variable_name+'\n')
+
+                            if num_outputs_this_index == 1:
+                                if index is not None:
+                                    format_string = \
+                                        ("         Index: %"
+                                         +str(max_index_string_length)+"s")
+                                    sys.stdout.write(format_string
+                                                     % indexToString(index))
+
+                            if len(stage._tree_nodes) > 1:
+                                sys.stdout.write("\n")
+                                sys.stdout.write("         Tree Node: %s"
+                                                 % (tree_node.name))
+
+                            if output_values:
+                                if output_only_statistics is False:
+                                    sys.stdout.write("\tValues:  ")
+                                last_scenario = tree_node._scenarios[-1]
+                                for scenario in tree_node._scenarios:
+                                    scenario_probability = \
+                                        scenario._probability
+                                    this_value = \
+                                        scenario._x[tree_node.name]\
+                                                   [variable_id]
+                                    # this helps eliminate -0.0 from
+                                    # showing up in output, which makes
+                                    # baseline testing very difficult in
+                                    # Python 3
+                                    if this_value == 0:
+                                        this_value = 0
+                                    if not output_only_statistics:
+                                        valstr = ("%12.4f" % this_value)
+                                        if float(valstr) == 0:
+                                            valstr = ("%12.4f" % (0))
+                                        sys.stdout.write(valstr)
+                                    if scenario is last_scenario:
+                                        if output_only_statistics:
+                                            # there technically is not
+                                            # any good reason not to
+                                            # always report the min
+                                            # and max; the only reason
+                                            # we're not doing this
+                                            # currently is to avoid
+                                            # updating our regression
+                                            # test baseline output.
+                                            sys.stdout.write(
+                                                "    Min:  %12.4f"
+                                                % (minimum_value))
+                                            sys.stdout.write(
+                                                "    Avg:  %12.4f"
+                                                % (average_value))
+                                            sys.stdout.write(
+                                                "    Max:  %12.4f"
+                                                % (maximum_value))
+                                            if output_no_statistics:
+                                                raise RuntimeError(
+                                                    "output_only_statistics "
+                                                    "and output_no_statistics "
+                                                    "are both set in pprint")
+                                        else:
+                                            if not output_no_statistics:
+                                                sys.stdout.write(
+                                                    "    Max-Min:  %12.4f"
+                                                    % (maximum_value - \
+                                                       minimum_value))
+                                                sys.stdout.write(
+                                                    "    Avg:  %12.4f"
+                                                    % (average_value))
+                                        sys.stdout.write("\n")
+                            if output_weights:
+                                sys.stdout.write("         Weights:  ")
+                                for scenario in tree_node._scenarios:
+                                    sys.stdout.write(
+                                        "%12.4f"
+                                        % scenario._w[tree_node.name]\
+                                                     [variable_id])
+                            if output_rhos:
+                                sys.stdout.write("         Rhos:  ")
+                                for scenario in tree_node._scenarios:
+                                    sys.stdout.write(
+                                        "%12.4f"
+                                        % scenario._rho[tree_node.name]\
+                                                       [variable_id])
+
+                            if output_averages:
+                                sys.stdout.write("   Average:  %12.4f"
+                                                 % (average_value))
+                            if output_weights or output_rhos or output_values:
+                                sys.stdout.write("\n")
+
+            return num_outputs_this_variable
+
+        def _print_stage_var(variable_name, stage=None, node=None):
+            assert (stage is None)^(node is None)
+
+            # track, so we don't output the variable names unless
+            # there is an entry to report.
+            num_outputs_this_variable = 0
+
+            for tree_node in stage._tree_nodes:
+
+                num_outputs_this_variable += \
+                    _print_node_var(variable_name, tree_node)
+
+            return num_outputs_this_variable
+
         # print tree nodes and associated variable/xbar/ph information
         # in stage-order we don't blend in the last stage, so we don't
         # current care about printing the associated information.
         for stage in self._scenario_tree._stages[:-1]:
 
-            print("   Stage: %s" % (stage._name))
+            print("   Stage: %s" % (stage.name))
 
             # tracks the number of outputs on a per-index basis.
             num_outputs_this_stage = 0
 
-            for variable_name, index_template in sorted(iteritems(stage._variables), key=itemgetter(0)):
+            for variable_name in sorted(stage._variables):
+                num_outputs_this_stage += _print_stage_var(variable_name,
+                                                           stage)
+            for tree_node in sorted(stage._tree_nodes, key=lambda x: x.name):
+                if len(tree_node._variable_templates) > 0:
+                    print("     Node: %s" % (tree_node.name))
+                    for variable_name in sorted(tree_node._variable_templates):
+                        num_outputs_this_node = _print_node_var(variable_name,
+                                                                tree_node)
+                    if num_outputs_this_node == 0:
+                        print("\t\tNo non-converged variables in node")
+                    num_outputs_this_stage += num_outputs_this_node
 
-                # track, so we don't output the variable names unless
-                # there is an entry to report.
-                num_outputs_this_variable = 0
-
-                for tree_node in stage._tree_nodes:
-
-                    if not output_only_statistics:
-                        sys.stdout.write("          (Scenarios: ")
-                        for scenario in tree_node._scenarios:
-                            sys.stdout.write(str(scenario._name)+"  ")
-                            if scenario == tree_node._scenarios[-1]:
-                                sys.stdout.write(")\n")
-
-                    variable_indices = tree_node._variable_indices[variable_name]
-
-                    # this is moderately redundant, but shouldn't show
-                    # up in profiles - printing takes more time than
-                    # computation. determine the maximimal index
-                    # string length, so we can output readable column
-                    # formats.
-                    max_index_string_length = 0
-                    for index in variable_indices:
-                        if index != None:
-                            this_index_length = len(indexToString(index))
-                            if this_index_length > max_index_string_length:
-                                max_index_string_length = this_index_length
-
-                    for index in sorted(variable_indices):
-
-                        # track, so we don't output the variable index
-                        # more than once.
-                        num_outputs_this_index = 0
-
-                        # determine if the variable/index pair is used
-                        # across the set of scenarios (technically, it
-                        # should be good enough to check one
-                        # scenario). ditto for "fixed" status. fixed
-                        # does imply unused (see note below), but we
-                        # care about the fixed status when outputting
-                        # final solutions.
-
-                        # should be consistent across scenarios, so
-                        # one "unused" flags as invalid.
-                        variable_id = \
-                            tree_node._name_index_to_id[variable_name,index]
-                        is_fixed = tree_node.is_variable_fixed(variable_id)
-
-                        is_not_stale = \
-                            all((not scenario.is_variable_stale(tree_node,
-                                                                variable_id)) \
-                                for scenario in tree_node._scenarios)
-
-                        # IMPT: this is far from obvious, but
-                        #       variables that are fixed will -
-                        #       because presolve will identify them as
-                        #       constants and eliminate them from all
-                        #       expressions - be flagged as "unused"
-                        #       and therefore not output.
-
-                        if ((output_fixed) and (is_fixed)) or \
-                           ((is_not_stale) and (not is_fixed)):
-
-                            minimum_value = tree_node._minimums[variable_id]
-                            average_value = tree_node._averages[variable_id]
-                            maximum_value = tree_node._maximums[variable_id]
-
-                            # there really isn't a default need to
-                            # output variables whose values are equal
-                            # to 0 across-the-board. and there is good
-                            # reason not to, i.e., the volume of
-                            # output.
-                            if ((fabs(minimum_value) > self._integer_tolerance) or \
-                                (fabs(maximum_value) > self._integer_tolerance)) or\
-                               (self._report_for_zero_variable_values is True):
-
-                                if (fabs(maximum_value - minimum_value) <= \
-                                    self._integer_tolerance) and \
-                                   (output_only_nonconverged == True):
-                                    pass
-                                else:
-                                    num_outputs_this_stage = \
-                                        num_outputs_this_stage + 1
-                                    num_outputs_this_variable = \
-                                        num_outputs_this_variable + 1
-                                    num_outputs_this_index = \
-                                        num_outputs_this_index + 1
-
-                                    if num_outputs_this_variable == 1:
-                                        sys.stdout.write("      Variable: "
-                                                         + variable_name+'\n')
-
-                                    if num_outputs_this_index == 1:
-                                        if index is not None:
-                                            format_string = \
-                                                ("         Index: %"
-                                                 +str(max_index_string_length)+"s")
-                                            sys.stdout.write(format_string
-                                                             % indexToString(index))
-
-                                    if len(stage._tree_nodes) > 1:
-                                        sys.stdout.write("\n")
-                                        sys.stdout.write("         Tree Node: %s"
-                                                         % (tree_node._name))
-
-                                    if output_values:
-                                        if output_only_statistics is False:
-                                            sys.stdout.write("\tValues:  ")
-                                        last_scenario = tree_node._scenarios[-1]
-                                        for scenario in tree_node._scenarios:
-                                            scenario_probability = \
-                                                scenario._probability
-                                            this_value = \
-                                                scenario._x[tree_node._name]\
-                                                           [variable_id]
-                                            # this helps eliminate -0.0 from
-                                            # showing up in output, which makes
-                                            # baseline testing very difficult in
-                                            # Python 3
-                                            if this_value == 0:
-                                                this_value = 0
-                                            if not output_only_statistics:
-                                                valstr = ("%12.4f" % this_value)
-                                                if float(valstr) == 0:
-                                                    valstr = ("%12.4f" % (0))
-                                                sys.stdout.write(valstr)
-                                            if scenario is last_scenario:
-                                                if output_only_statistics:
-                                                    # there
-                                                    # technically
-                                                    # isn't any good
-                                                    # reason not to
-                                                    # always report
-                                                    # the min and max;
-                                                    # the only reason
-                                                    # we're not doing
-                                                    # this currently
-                                                    # is to avoid
-                                                    # updating our
-                                                    # regression test
-                                                    # baseline output.
-                                                    sys.stdout.write(
-                                                        "    Min:  %12.4f"
-                                                        % (minimum_value))
-                                                    sys.stdout.write(
-                                                        "    Avg:  %12.4f"
-                                                        % (average_value))
-                                                    sys.stdout.write(
-                                                        "    Max:  %12.4f"
-                                                        % (maximum_value))
-                                                    if output_no_statistics:
-                                                        raise RuntimeError("output_only_statistics and output_no_statistics are both set in pprint")
-                                                else:
-                                                    if not output_no_statistics:
-                                                        sys.stdout.write(
-                                                            "    Max-Min:  %12.4f"
-                                                            % (maximum_value - \
-                                                               minimum_value))
-                                                        sys.stdout.write(
-                                                            "    Avg:  %12.4f"
-                                                            % (average_value))
-                                                sys.stdout.write("\n")
-                                    if output_weights:
-                                        sys.stdout.write("         Weights:  ")
-                                        for scenario in tree_node._scenarios:
-                                            sys.stdout.write(
-                                                "%12.4f"
-                                                % scenario._w[tree_node._name]\
-                                                             [variable_id])
-                                    if output_rhos:
-                                        sys.stdout.write("         Rhos:  ")
-                                        for scenario in tree_node._scenarios:
-                                            sys.stdout.write(
-                                                "%12.4f"
-                                                % scenario._rho[tree_node._name]\
-                                                               [variable_id])
-
-                                    if output_averages:
-                                        sys.stdout.write("   Average:  %12.4f"
-                                                         % (average_value))
-                                    if output_weights or output_rhos or output_values:
-                                        sys.stdout.write("\n")
             if num_outputs_this_stage == 0:
                 print("\t\tNo non-converged variables in stage")
 
@@ -4783,11 +4803,11 @@ class ProgressiveHedging(_PHBase):
                   +cost_variable_name+indexToString(cost_variable_index))
             for tree_node in stage._tree_nodes:
                 sys.stdout.write("         Tree Node: %s"
-                                 % (tree_node._name))
+                                 % (tree_node.name))
                 if output_only_statistics is False:
                     sys.stdout.write("      (Scenarios:  ")
                     for scenario in tree_node._scenarios:
-                        sys.stdout.write(str(scenario._name)+" ")
+                        sys.stdout.write(str(scenario.name)+" ")
                         if scenario == tree_node._scenarios[-1]:
                             sys.stdout.write(")\n")
                 maximum_value = 0.0
@@ -4801,7 +4821,7 @@ class ProgressiveHedging(_PHBase):
                 else:
                     sys.stdout.write("         ")
                 for scenario in tree_node._scenarios:
-                    this_value = scenario._stage_costs[stage._name]
+                    this_value = scenario._stage_costs[stage.name]
                     # this helps eliminate -0.0 from
                     # showing up in output, which makes
                     # baseline testing very difficult in

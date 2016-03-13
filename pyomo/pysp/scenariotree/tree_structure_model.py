@@ -46,6 +46,10 @@ def CreateAbstractScenarioTreeModel():
                                initialize=[],
                                ordered=True)
 
+    model.NodeVariables = Set(model.Nodes,
+                              initialize=[],
+                              ordered=True)
+
     model.StageCost = Param(model.Stages,
                             mutable=True)
     # DEPRECATED
@@ -58,11 +62,12 @@ def CreateAbstractScenarioTreeModel():
     # as it is unnecessary to post non-anticipativity constraints for these variables.
     # further, attempting to force non-anticipativity - either implicitly or explicitly -
     # on these variables can cause issues with decomposition algorithms.
-    # NOTE: derived variables must appear in the set of StageVariables, i.e.,
-    #       StageDerivedVariables must be a subset (possibly empty) of StageVariables.
     model.StageDerivedVariables = Set(model.Stages,
                                       initialize=[],
                                       ordered=True)
+    model.NodeDerivedVariables = Set(model.Nodes,
+                                     initialize=[],
+                                     ordered=True)
 
     # scenario data can be populated in one of two ways. the first is "scenario-based",
     # in which a single .dat file contains all of the data for each scenario. the .dat

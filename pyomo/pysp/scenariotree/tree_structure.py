@@ -73,6 +73,15 @@ class ScenarioTreeNode(object):
         # cached for efficiency.
         self._probability = 0.0
 
+        # a map between a variable name and a list of original index
+        # match templates, specified as strings.  we want to maintain
+        # these for a variety of reasons, perhaps the most important
+        # being that for output purposes. specific indices that match
+        # belong to the tree node, as that may be specific to a tree
+        # node.
+        self._variable_templates = {}
+        self._derived_variable_templates = {}
+
         #
         # information relating to all variables blended at this node, whether
         # of the standard or derived varieties.
@@ -403,11 +412,25 @@ class ScenarioTreeNode(object):
                                                 derived=False,
                                                 id_labeler=id_labeler,
                                                 name_index_to_id_map=name_index_to_id_map)
+        node_variables = self._variable_templates
+        for variable_name in sorted(iterkeys(node_variables)):
+            self.updateVariableIndicesAndValues(variable_name,
+                                                node_variables[variable_name],
+                                                derived=False,
+                                                id_labeler=id_labeler,
+                                                name_index_to_id_map=name_index_to_id_map)
 
         stage_derived_variables = self._stage._derived_variables
         for variable_name in sorted(iterkeys(stage_derived_variables)):
             self.updateVariableIndicesAndValues(variable_name,
                                                 stage_derived_variables[variable_name],
+                                                derived=True,
+                                                id_labeler=id_labeler,
+                                                name_index_to_id_map=name_index_to_id_map)
+        node_derived_variables = self._derived_variable_templates
+        for variable_name in sorted(iterkeys(node_derived_variables)):
+            self.updateVariableIndicesAndValues(variable_name,
+                                                node_derived_variables[variable_name],
                                                 derived=True,
                                                 id_labeler=id_labeler,
                                                 name_index_to_id_map=name_index_to_id_map)
@@ -614,7 +637,7 @@ class ScenarioTreeNode(object):
                       for scenario in self._scenarios)
         my_cost /= sum(scenario._probability for scenario in self._scenarios)
         """
-        # This version implicitely assumes convergence (which can be garbage for ph)
+        # This version implicitly assumes convergence (which can be garbage for ph)
 
         children_cost = 0.0
         for child in self._children:
@@ -1350,6 +1373,7 @@ class ScenarioTree(object):
         node_probability_map = scenariotreeinstance.ConditionalProbability
         stage_ids = scenariotreeinstance.Stages
         stage_variable_ids = scenariotreeinstance.StageVariables
+        node_variable_ids = scenariotreeinstance.NodeVariables
         stage_cost_variable_ids = scenariotreeinstance.StageCost
         if len(scenariotreeinstance.StageCostVariable):
             logger.warning("DEPRECATED: The 'StageCostVariable' scenario tree "
@@ -1362,6 +1386,7 @@ class ScenarioTree(object):
             else:
                 stage_cost_variable_ids = scenariotreeinstance.StageCostVariable
         stage_derived_variable_ids = scenariotreeinstance.StageDerivedVariables
+        node_derived_variable_ids = scenariotreeinstance.NodeDerivedVariables
         scenario_ids = scenariotreeinstance.Scenarios
         scenario_leaf_ids = scenariotreeinstance.ScenarioLeafNode
         scenario_based_data = scenariotreeinstance.ScenarioBasedData
@@ -1376,17 +1401,20 @@ class ScenarioTree(object):
                 "An ordered set of stage IDs must be supplied in "
                 "the ScenarioTree constructor")
 
-        empty_nonleaf_stages = [stage for stage in stage_ids \
-                                    if len(stage_variable_ids[stage])==0 \
-                                    and stage != stage_ids.last()]
-        if len(empty_nonleaf_stages) > 0:
-            raise ValueError("A ScenarioTree has been declared with one"
-                             " or more empty (non-leaf) stages. This must"
-                             " be corrected by defining non-empty sets "
-                             "for the following entries in "
-                             "ScenarioStructure.dat: \n- %s" % \
-                              ('\n- '.join('StageVariables[%s]'%(stage) \
-                              for stage in empty_nonleaf_stages)))
+        for node_id in node_ids:
+            node_stage_id = node_stage_ids[node_id].value
+            if node_stage_id != stage_ids.last():
+                if (len(stage_variable_ids[node_stage_id].value) == 0) and \
+                   (len(node_variable_ids[node_id].value) == 0):
+                    raise ValueError(
+                        "Scenario tree node %s, belonging to stage %s, "
+                        "has not been declared with any variables. "
+                        "To fix this error, make sure that one of "
+                        "the sets StageVariables[%s] or NodeVariables[%s] "
+                        "is declared with at least one variable string "
+                        "template (e.g., x, x[*]) on the scenario tree "
+                        "or in ScenarioStructure.dat."
+                        % (node_id, node_stage_id, node_stage_id, node_id))
 
         #
         # construct the actual tree objects
@@ -1417,6 +1445,30 @@ class ScenarioTree(object):
                 tree_node_name,
                 value(node_probability_map[tree_node_name]),
                 self._stage_map[stage_name])
+
+            # extract the node variable match templates
+            for variable_string in node_variable_ids[tree_node_name]:
+                if isVariableNameIndexed(variable_string):
+                    variable_name, match_template = \
+                        extractVariableNameAndIndex(variable_string)
+                else:
+                    variable_name = variable_string
+                    match_template = ""
+                if variable_name not in new_tree_node._variable_templates:
+                    new_tree_node._variable_templates[variable_name] = []
+                new_tree_node._variable_templates[variable_name].append(match_template)
+
+            # extract the node derived variable match templates
+            for variable_string in node_derived_variable_ids[tree_node_name]:
+                if isVariableNameIndexed(variable_string):
+                    variable_name, match_template = \
+                        extractVariableNameAndIndex(variable_string)
+                else:
+                    variable_name = variable_string
+                    match_template = ""
+                if variable_name not in new_tree_node._derived_variable_templates:
+                    new_tree_node._derived_variable_templates[variable_name] = []
+                new_tree_node._derived_variable_templates[variable_name].append(match_template)
 
             self._tree_nodes.append(new_tree_node)
             self._tree_node_map[tree_node_name] = new_tree_node
@@ -1936,6 +1988,10 @@ class ScenarioTree(object):
             compressed_tree_scenario._node_list.append(compressed_tree_node)
 
             compressed_tree_scenario._leaf_node = compressed_tree_node
+            compressed_tree_node._variable_templates = \
+                copy.deepcopy(full_tree_node._variable_templates)
+            compressed_tree_node._derived_variable_templates = \
+                copy.deepcopy(full_tree_node._derived_variable_templates)
             compressed_tree_node._scenarios.append(compressed_tree_scenario)
             compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
             compressed_tree_node._probability = full_tree_node._probability
@@ -2298,6 +2354,22 @@ class ScenarioTree(object):
             else:
                 for scenario in sorted(tree_node._scenarios, key=lambda x: x._name):
                     print("\t\t%s" % (scenario._name))
+            if len(tree_node._variable_templates) > 0:
+                print("\tVariables: ")
+                for variable_name in sorted(iterkeys(tree_node._variable_templates)):
+                    match_templates = tree_node._variable_templates[variable_name]
+                    sys.stdout.write("\t\t "+variable_name+" : ")
+                    for match_template in match_templates:
+                       sys.stdout.write(indexToString(match_template)+' ')
+                    print("")
+            if len(tree_node._derived_variable_templates) > 0:
+                print("\tDerived Variables: ")
+                for variable_name in sorted(iterkeys(tree_node._derived_variable_templates)):
+                    match_templates = tree_node._derived_variable_templates[variable_name]
+                    sys.stdout.write("\t\t "+variable_name+" : ")
+                    for match_template in match_templates:
+                       sys.stdout.write(indexToString(match_template)+' ')
+                    print("")
             print("")
         print("----------------------------------------------------")
         print("Stages:")
@@ -2377,32 +2449,40 @@ class ScenarioTree(object):
                 print("\tParent=%s" % (tree_node._parent._name))
             else:
                 print("\tParent=" + "None")
-            if len(tree_node._stage._variables) > 0:
+
+            if (len(tree_node._stage._variables) > 0) or \
+               (len(tree_node._variable_templates) > 0):
                 print("\tVariables: ")
-                for variable_name in sorted(iterkeys(tree_node._stage._variables)):
+                variable_names = set(tree_node._stage._variables).union(
+                    tree_node._variable_templates)
+                for variable_name in sorted(variable_names):
                     indices = sorted(tree_node._variable_indices[variable_name])
                     for index in indices:
-                        id = tree_node._name_index_to_id[variable_name,index]
-                        if id in tree_node._standard_variable_ids:
+                        id_ = tree_node._name_index_to_id[variable_name,index]
+                        if id_ in tree_node._standard_variable_ids:
                             # if a solution has not yet been stored /
                             # snapshotted, then the value won't be in the solution map
                             try:
-                                value = tree_node._solution[id]
-                            except:
+                                value = tree_node._solution[id_]
+                            except KeyError:
                                 value = None
                             if (value is not None) and (math.fabs(value) > epsilon):
                                 print("\t\t"+variable_name+indexToString(index)+"="+str(value))
-            if len(tree_node._stage._derived_variables) > 0:
+
+            if (len(tree_node._stage._derived_variables) > 0) or \
+               (len(tree_node._derived_variable_templates) > 0):
                 print("\tDerived Variables: ")
-                for variable_name in sorted(iterkeys(tree_node._stage._derived_variables)):
+                variable_names = set(tree_node._stage._derived_variables).union(
+                    tree_node._derived_variable_templates)
+                for variable_name in sorted(variable_names):
                     indices = sorted(tree_node._variable_indices[variable_name])
                     for index in indices:
-                        id = tree_node._name_index_to_id[variable_name,index]
-                        if id in tree_node._derived_variable_ids:
+                        id_ = tree_node._name_index_to_id[variable_name,index]
+                        if id_ in tree_node._derived_variable_ids:
                             # if a solution has not yet been stored /
                             # snapshotted, then the value won't be in the solution map
                             try:
-                                val = tree_node._solution[tree_node._name_index_to_id[variable_name,index]]
+                                val = tree_node._solution[id_]
                             except:
                                 val = None
                             if (val is not None) and (math.fabs(value) > epsilon):
@@ -2432,7 +2512,8 @@ class ScenarioTree(object):
             else:
                 print("\tParent=" + "None")
             if tree_node._conditional_probability is not None:
-                print("\tConditional probability=%4.4f" % tree_node._conditional_probability)
+                print("\tConditional probability=%4.4f"
+                      % tree_node._conditional_probability)
             else:
                 print("\tConditional probability=" + "***Undefined***")
             print("\tChildren:")
@@ -2447,7 +2528,8 @@ class ScenarioTree(object):
             else:
                 for scenario in sorted(tree_node._scenarios, key=lambda x: x._name):
                     print("\t\t%s" % (scenario._name))
-            print("\tExpected cost of (sub)tree rooted at node=%10.4f" % tree_node.computeExpectedNodeCost())
+            print("\tExpected cost of (sub)tree rooted at node=%10.4f"
+                  % tree_node.computeExpectedNodeCost())
             print("")
 
         print("----------------------------------------------------")
@@ -2501,24 +2583,30 @@ class ScenarioTree(object):
     def save_to_dot(self, filename):
 
         def _visit_node(node):
-            f.write("%s [label=\"%s\"];\n"
-                    % (node._name,
-                       str(node._name)+"\n("+str(node._probability)+")"))
+            f.write("%s%s [label=\"%s\"];\n"
+                    % (node.name,
+                       id(node),
+                       str(node.name)+("\n(%.6g)" % (node._probability))))
             for child_node in node._children:
                 _visit_node(child_node)
-                f.write("%s -> %s [label=\"%s\"];\n"
-                        % (node._name,
-                           child_node._name,
+                f.write("%s%s -> %s%s [label=\"%.6g\"];\n"
+                        % (node.name,
+                           id(node),
+                           child_node.name,
+                           id(child_node),
                            child_node._conditional_probability))
             if len(node._children) == 0:
                 assert len(node._scenarios) == 1
                 scenario = node._scenarios[0]
-                f.write("%s [label=\"%s\"];\n"
-                        % (scenario._name,
-                           str(scenario._name)+"\n("+str(scenario._probability)+")"))
-                f.write("%s -> %s [style=dashed];\n"
-                        % (node._name,
-                           scenario._name))
+                f.write("%s%s [label=\"%s\"];\n"
+                        % (scenario.name,
+                           id(scenario),
+                           "scenario\n"+str(scenario.name)))
+                f.write("%s%s -> %s%s [style=dashed];\n"
+                        % (node.name,
+                           id(node),
+                           scenario.name,
+                           id(scenario)))
 
         with open(filename, 'w') as f:
 
