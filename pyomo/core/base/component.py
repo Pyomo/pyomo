@@ -338,7 +338,7 @@ class ActiveComponent(Component):
 
     def __init__(self, **kwds):
         self._active = True
-        ActiveComponent.__init__(self, **kwds)
+        super(ActiveComponent, self).__init__(**kwds)
 
     @property
     def active(self):
