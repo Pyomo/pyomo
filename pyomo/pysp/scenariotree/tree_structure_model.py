@@ -126,7 +126,7 @@ def ScenarioTreeModelFromNetworkX(
         node_name_attribute=None,
         edge_probability_attribute='probability',
         stage_names=None,
-        scenario_names=None):
+        scenario_name_attribute=None):
     """
     Create a scenario tree model from a networkx tree.  The
     height of the tree must be at least 1 (meaning at least
@@ -134,26 +134,29 @@ def ScenarioTreeModelFromNetworkX(
 
     Optional Arguments:
       - node_name_attribute:
-           By default node names are the same as the node
+           By default, node names are the same as the node
            hash in the networkx tree. This keyword can be
-           set to the name of some property to use for node
-           names.
+           set to the name of some property of nodes in the
+           graph that will be used for their name in the
+           PySP scenario tree.
       - edge_probability_attribute:
            Can be set to the name of some property of edges
-           that defines the conditional probability of that
-           branch (default: 'probability').  If this keyword
-           is set to None, then all branches leaving a node
-           are assigned equal conditional probabilities.
+           in the graph that defines the conditional
+           probability of that branch (default: 'probability').
+           If this keyword is set to None, then all branches
+           leaving a node are assigned equal conditional
+           probabilities.
       - stage_names:
            Can define a list of stage names to use (assumed
            in time order). The length of this list much
            match the number of stages in the tree.
-      - scenario_names:
-           Can be assigned a dictionary that maps the node
-           hashes of each leaf node to a name for the
-           scenario represented by the path from the root to
-           that node. By default, scenario names are defined
-           as Scenario_u<leaf-node-name>.
+      - scenario_name_attribute:
+           By default, scenario names are the same as the
+           leaf-node hash in the networkx tree. This keyword
+           can be set to the name of some property of
+           leaf-nodes in the graph that will be used for
+           their corresponding scenario in the PySP scenario
+           tree.
 
     Examples:
 
@@ -239,13 +242,12 @@ def ScenarioTreeModelFromNetworkX(
                 _setup(v, succ)
         else:
             # a leaf node
-            if scenario_names is not None:
-                scenario_name = scenario_names[u]
+            if scenario_name_attribute is not None:
+                if scenario_name_attribute not in tree.node[u]:
+                    raise KeyError()
+                scenario_name = tree.node[u][scenario_name_attribute]
             else:
-                try:
-                    scenario_name = "Scenario_u"+node_name
-                except TypeError:
-                    scenario_name = "Scenario_u"+str(node_name)
+                scenario_name = u
             node_to_scenario[u] = scenario_name
             m.Scenarios.add(scenario_name)
 
