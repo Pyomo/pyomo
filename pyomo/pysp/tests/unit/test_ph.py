@@ -45,7 +45,6 @@ import pyomo.opt
 import pyomo.pysp
 import pyomo.pysp.phinit
 import pyomo.pysp.ef_writer_script
-from pyomo.pysp.scenariotree.instance_factory import ScenarioTreeInstanceFactory
 
 _diff_tolerance = 1e-5
 _diff_tolerance_relaxed = 1e-4
@@ -186,26 +185,6 @@ def tearDownModule():
 #
 # Define a testing class, using the unittest.TestCase class.
 #
-
-class TestInstanceFactory(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        import pyomo.environ
-
-    def test_random_bundles(self):
-        self.assertTrue("ReferenceModel" not in sys.modules)
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        scenario_tree_dir = farmer_examples_dir + os.sep + "scenariodata"
-        scenario_instance_factory = \
-            ScenarioTreeInstanceFactory(model_dir, scenario_tree_dir)
-        scenario_tree = \
-            scenario_instance_factory.generate_scenario_tree(random_bundles=2)
-        self.assertEqual(scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(scenario_tree._scenario_bundles), 2)
-        self.assertTrue("ReferenceModel" in sys.modules)
-        del sys.modules["ReferenceModel"]
 
 solver = None
 class TestPH(unittest.TestCase):
