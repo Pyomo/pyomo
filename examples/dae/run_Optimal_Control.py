@@ -9,42 +9,33 @@
 
 from pyomo.environ import *
 from pyomo.dae import *
-from pyomo.opt import SolverFactory
-from pyomo.dae.plugins.finitedifference import Finite_Difference_Transformation
-from pyomo.dae.plugins.colloc import Collocation_Discretization_Transformation
 from Optimal_Control import m
 
-instance = m.create()
-
 # Discretize model using Backward Finite Difference method
-#discretize = Finite_Difference_Transformation()
-#disc_instance = discretize.apply(instance,nfe=20,scheme='BACKWARD')
+# discretizer = TransformationFactory('dae.finite_difference')
+# discretizer.apply_to(m,nfe=20,scheme='BACKWARD')
 
 # Discretize model using Orthogonal Collocation
-discretize = Collocation_Discretization_Transformation()
-disc_instance = discretize.apply(instance,nfe=7,ncp=6,scheme='LAGRANGE-RADAU')
-# Will reimplement this method in future release of pyomo.dae
-# disc_instance = discretize.reduce_collocation_points(var=instance.u,
-# 	ncp=2, diffset=instance.t)
+discretizer = TransformationFactory('dae.collocation')
+discretizer.apply_to(m,nfe=20,ncp=3,scheme='LAGRANGE-RADAU')
+discretizer.reduce_collocation_points(m,var=m.u,ncp=1,contset=m.t)
 
-solver='ipopt'
-opt=SolverFactory(solver)
+solver=SolverFactory('ipopt')
 
-results = opt.solve(disc_instance,tee=True)
-disc_instance.load(results)
+results = solver.solve(m,tee=True)
 
 x1 = []
 x2 = []
 u = []
 t=[]
 
-print(sorted(disc_instance.t))
+print(sorted(m.t))
 
-for i in sorted(disc_instance.t):
+for i in sorted(m.t):
     t.append(i)
-    x1.append(value(disc_instance.x1[i]))
-    x2.append(value(disc_instance.x2[i]))
-    u.append(value(disc_instance.u[i]))
+    x1.append(value(m.x1[i]))
+    x2.append(value(m.x2[i]))
+    u.append(value(m.u[i]))
 
 import matplotlib.pyplot as plt
 

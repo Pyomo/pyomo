@@ -40,7 +40,6 @@ def _init(m):
     yield m.x1[0] == 0
     yield m.x2[0] == -1
     yield m.x3[0] == 0
-    yield ConstraintList.End
 m.init_conditions = ConstraintList(rule=_init)
 
 def _x1dot(m, t):

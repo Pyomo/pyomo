@@ -1,0 +1,86 @@
+param TF := 24 ;
+param TDEC := 9.5 ; 
+param S:= 1 ;     
+param cvar_lambda:=0.0;
+
+# read link data
+set LINK := 
+l1 
+l2 
+l3 
+l4 
+l5 
+l6 
+l7 
+l8 
+l9 
+l10
+l11
+l12
+;
+
+param : lstartloc lendloc ldiam  llength ltype :=
+ l1	n1	n2     920.0  300.0      p
+ l2 	n2 	n3     920.0  100.0      a
+ l3 	n3 	n4     920.0  100.0      a
+ l4 	n4 	n5     920.0  100.0      a
+ l5 	n5 	n6     920.0  100.0      a
+ l6 	n6 	n7     920.0  100.0      a
+ l7 	n7 	n8     920.0  100.0      a
+ l8 	n8 	n9     920.0  100.0      a
+ l9 	n9 	n10    920.0  100.0      a
+ l10 	n10 	n11    920.0  100.0      a
+ l11 	n11 	n12    920.0  100.0      a
+ l12 	n12 	n13    920.0  300.0      p
+;
+
+# read node data
+set NODE := 
+n1       
+n2       
+n3       
+n4       
+n5       
+n6       
+n7       
+n8       
+n9       
+n10      
+n11      
+n12      
+n13      
+;
+
+param : pmin  pmax := 
+n1       57.0   70.0
+n2       34.0   70.0
+n3       34.0   70.0
+n4       34.0   70.0
+n5       34.0   70.0
+n6       34.0   70.0
+n7       34.0   70.0
+n8       34.0   70.0
+n9       34.0   70.0
+n10      34.0   70.0
+n11      34.0   70.0
+n12      34.0   70.0
+n13      39.0   41.0
+;
+
+# read supply data
+set SUP := 
+1 
+;
+
+param : sloc       smin     smax := 
+1    n1       0.000     30     
+;
+
+# read demand data
+set DEM := 
+1 
+;
+
+param : dloc  d :=
+1    n13      10
+;

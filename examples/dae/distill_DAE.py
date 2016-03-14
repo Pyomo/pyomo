@@ -27,7 +27,7 @@ model.x0 = Param(model.S_TRAYS)
 
 model.t = ContinuousSet(initialize=range(1,52))
 # Alternatively you could simply specify bounds on the
-# diffset and let the finite element points be generated
+# ContinuousSet and let the finite element points be generated
 # automatically.
 # model.t = ContinuousSet(bounds=(1,51))
 

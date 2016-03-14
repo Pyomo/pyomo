@@ -9,8 +9,6 @@
 
 from pyomo.environ import *
 from pyomo.dae import *
-from pyomo.opt import SolverFactory
-from pyomo.dae.plugins.finitedifference import Finite_Difference_Transformation
 
 m = ConcreteModel()
 m.x = ContinuousSet(bounds=(0,1))
@@ -57,15 +55,13 @@ def _dummy(m):
     return 1.0
 m.obj = Objective(rule=_dummy)
 
-discretize = Finite_Difference_Transformation()
-disc = discretize.apply(m,nfe=20,wrt=m.y,scheme='FORWARD')
-disc = discretize.apply(disc,nfe=20,wrt=m.x,scheme='CENTRAL',clonemodel=False)
+discretizer = TransformationFactory('dae.finite_difference')
+discretizer.apply_to(m,nfe=20,wrt=m.y,scheme='FORWARD')
+discretizer.apply_to(m,nfe=20,wrt=m.x,scheme='CENTRAL')
 
-solver='ipopt'
-opt=SolverFactory(solver)
+solver=SolverFactory('ipopt')
 
-results = opt.solve(disc,tee=True)
-disc.load(results)
+results = solver.solve(m,tee=True)
 
 #disc.u.pprint()
 
@@ -73,14 +69,14 @@ x = []
 y = []
 u = []
 
-for i in sorted(disc.x):
+for i in sorted(m.x):
     temp=[]
     tempx = []
-    for j in sorted(disc.y):
+    for j in sorted(m.y):
         tempx.append(i)
-        temp.append(value(disc.u[i,j]))
+        temp.append(value(m.u[i,j]))
     x.append(tempx)
-    y.append(sorted(disc.y))
+    y.append(sorted(m.y))
     u.append(temp)
 
 
