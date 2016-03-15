@@ -4575,9 +4575,9 @@ class ProgressiveHedging(_PHBase):
             raise RuntimeError("PH is not initialized - cannot invoke "
                                "pprint() method")
 
-        def _print_node_var(variable_name, tree_node):
-
-            num_outputs_this_variable = 0
+        def _print_node_var(variable_name,
+                            tree_node,
+                            num_outputs_this_variable=0):
 
             if not output_only_statistics:
                 sys.stdout.write("          (Scenarios: ")
@@ -4761,7 +4761,10 @@ class ProgressiveHedging(_PHBase):
             for tree_node in stage._tree_nodes:
 
                 num_outputs_this_variable += \
-                    _print_node_var(variable_name, tree_node)
+                    _print_node_var(
+                        variable_name,
+                        tree_node,
+                        num_outputs_this_variable=num_outputs_this_variable)
 
             return num_outputs_this_variable
 
