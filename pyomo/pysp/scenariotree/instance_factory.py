@@ -62,6 +62,7 @@ class ScenarioTreeInstanceFactory(object):
         self._model_object = None
         self._model_callback = None
         self._scenario_tree_instance = None
+        self._data_directory = None
         # Define the above by inspecting self._model_filename
         try:
             self._import_model_and_scenario_tree()
@@ -135,10 +136,11 @@ class ScenarioTreeInstanceFactory(object):
 
             elif self._model_object is not None:
 
+                assert self._data_directory is not None
                 if scenario_tree._scenario_based_data:
 
                     scenario_data_filename = \
-                        os.path.join(self._scenario_tree_directory,
+                        os.path.join(self._data_directory,
                                      str(scenario_name))
                     # JPW: The following is a hack to support
                     #      initialization of block instances, which
@@ -161,8 +163,10 @@ class ScenarioTreeInstanceFactory(object):
                         yaml_input_file.close()
                     else:
                         raise RuntimeError(
-                            "Cannot find the scenario data for "
-                            + scenario_data_filename)
+                            "Cannot find a data file for scenario '%s' "
+                            "in directory: %s\nRecognized formats: .dat, .yaml"
+                            % (scenario_name,
+                               self._data_directory))
                     if self._verbose:
                         print("Data for scenario=%s loads from file=%s"
                               % (scenario_name, scenario_data_filename))
@@ -183,12 +187,14 @@ class ScenarioTreeInstanceFactory(object):
                     data_files = []
                     for node_name in node_name_list:
                         node_data_filename = \
-                            os.path.join(self._scenario_tree_directory,
+                            os.path.join(self._data_directory,
                                          str(node_name)+".dat")
                         if not os.path.exists(node_data_filename):
                             raise RuntimeError(
-                                "Node data file="+node_data_filename+
-                                " does not exist or cannot be accessed")
+                                "Cannot find a data file for scenario tree node '%s' "
+                                "in directory: %s\nRecognized formats: .dat"
+                                % (node_name,
+                                   self._data_directory))
                         data_files.append(node_data_filename)
 
                     scenario_data = DataPortal(model=self._model_object)
@@ -433,7 +439,9 @@ class ScenarioTreeInstanceFactory(object):
 
     def _import_model_and_scenario_tree(self):
 
-        model_import, module_name = load_external_module(self._model_filename, clear_cache=True)
+        model_import, module_name = \
+            load_external_module(self._model_filename,
+                                 clear_cache=True)
         self._model_module = model_import
         dir_model_import = dir(model_import)
         self._model_object = None
@@ -462,6 +470,9 @@ class ScenarioTreeInstanceFactory(object):
 
         if self._scenario_tree_filename is None:
             assert self._scenario_tree_location is None
+            assert self._scenario_tree_directory is None
+            if self._model_object is not None:
+                self._data_directory = self._model_directory
             if "pysp_scenario_tree_model_callback" in dir_model_import:
                 callback = model_import.pysp_scenario_tree_model_callback
                 if not hasattr(callback,"__call__"):
@@ -481,8 +492,9 @@ class ScenarioTreeInstanceFactory(object):
                 raise ValueError(
                     "No scenario tree file was given but no function "
                     "named 'pysp_scenario_tree_model_callback' was "
-                    "found in the model file.")
+                    "found in the reference model file.")
         else:
+            self._data_directory = self._scenario_tree_directory
             self._scenario_tree_instance = \
                 CreateAbstractScenarioTreeModel().\
                 create_instance(filename=self._scenario_tree_filename)

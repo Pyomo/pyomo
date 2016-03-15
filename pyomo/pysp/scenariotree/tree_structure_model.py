@@ -249,7 +249,9 @@ def ScenarioTreeModelFromNetworkX(
             # a leaf node
             if scenario_name_attribute is not None:
                 if scenario_name_attribute not in tree.node[u]:
-                    raise KeyError()
+                    raise KeyError(
+                        "node '%s' missing attribute: '%s'"
+                        % (u, node_name_attribute))
                 scenario_name = tree.node[u][scenario_name_attribute]
             else:
                 scenario_name = u

@@ -17,6 +17,7 @@ __all__ = ()
 import sys
 import copy
 import logging
+import textwrap
 
 import pyutilib.misc.config
 from pyutilib.misc.config import (ConfigValue,
@@ -81,7 +82,48 @@ class PySPConfigValue(ConfigValue):
     __repr__ = __str__
 
 class PySPConfigBlock(ConfigBlock):
-    pass
+
+    def about(self, name):
+        """Return a summary string for an option
+        registered on this block."""
+        configval = self.get(name)
+        outstr = ("PySPConfigValue: %s\n"
+                  % (configval._name))
+        outstr += ("  -    type: %s\n"
+                   "  - default: %s\n"
+                   % ((configval._domain.doc if \
+                       hasattr(configval._domain, 'doc') else \
+                       configval._domain),
+                      configval._default))
+        lines = textwrap.wrap(configval._description,
+                              width=58)
+        while lines[-1].strip() == "":
+            lines.pop()
+        for i, line in enumerate(lines):
+            if i == 0:
+                tmp = "  -    doc: %s"
+            else:
+                tmp = "            %s"
+            if i != len(lines) - 1:
+                tmp += "\n"
+            tmp %= line
+            outstr += tmp
+
+        return outstr
+
+    # Overriding the behavior of ConfigBlock.display
+    # so that it prints by default. I think it is
+    # confusing that a method on that class named
+    # 'display' returns a string
+    def display(self, ostream=None, **kwds):
+        """Displays the list of options registered to this
+        block. The optional keyword 'ostream' can be a file
+        like object to write to."""
+        outstr = super(PySPConfigBlock, self).display(**kwds)
+        if ostream is None:
+            print(outstr)
+        else:
+            ostream.write(outstr)
 
 def check_options_match(opt1,
                         opt2,
@@ -287,6 +329,8 @@ def _domain_unit_interval(val):
             "Value %s is not in the interval [0,1]."
             % (val))
     return val
+_domain_unit_interval.doc = \
+    "<domain: value in the interval [0,1]"
 
 def _domain_percent(val):
     val = float(val)
@@ -294,6 +338,8 @@ def _domain_percent(val):
         raise ValueError(
             "Value %s is not between 0 and 100")
     return val
+_domain_percent.doc = \
+    "<domain: value in the interval [0,100]"
 
 def _domain_nonnegative_integer(val):
     val = int(val)
@@ -302,6 +348,8 @@ def _domain_nonnegative_integer(val):
             "Value %s is not a non-negative integer."
             % (val))
     return val
+_domain_nonnegative_integer.doc = \
+    "<domain: non-negative integer>"
 
 def _domain_positive_integer(val):
     val = int(val)
@@ -310,14 +358,18 @@ def _domain_positive_integer(val):
             "Value %s is not a positive integer."
             % (val))
     return val
+_domain_positive_integer.doc = \
+    "<domain: positive integer>"
 
 def _domain_nonnegative(val):
     val = float(val)
     if val < 0:
         raise ValueError(
-            "Value %s is not a nonnegative."
+            "Value %s is not a non-negative."
             % (val))
     return val
+_domain_nonnegative.doc = \
+    "<domain: non-negative value>"
 
 def _domain_must_be_str(val):
     if not isinstance(val, six.string_types):
@@ -325,6 +377,8 @@ def _domain_must_be_str(val):
             "Value must be a built-in "
             "string type, not '%s'" % (type(val)))
     return val
+_domain_must_be_str.doc = \
+    "<domain: string>"
 
 def _domain_tuple_of_str(val):
     if isinstance(val, six.string_types):
@@ -340,6 +394,8 @@ def _domain_tuple_of_str(val):
                     "Value must be a built-in "
                     "string type, not '%s'" % (type(_v)))
         return tuple(_v for _v in val)
+_domain_tuple_of_str.doc = \
+    "<domain: list of strings>"
 
 def _domain_tuple_of_str_or_dict(val):
     if isinstance(val, six.string_types):
@@ -362,6 +418,8 @@ def _domain_tuple_of_str_or_dict(val):
         raise TypeError(
             "Value must be a built-in list or "
             "tuple of string types, or a dict, not '%s'" % (type(val)))
+_domain_tuple_of_str_or_dict.doc = \
+    "<domain: dict or list of strings>"
 
 #
 # Common 'Input Options'
@@ -377,8 +435,13 @@ safe_declare_unique_option(
         description=(
             "The directory or filename where the reference model is "
             "found. If a directory is given, the reference model is "
-            "assumed to reside in a file named 'ReferenceModel.py' in "
-            "that directory.  Default is '.'. "
+            "assumed to reside in a file named 'ReferenceModel.py' under "
+            "that directory. If the reference model file contains a "
+            "function named 'pysp_instance_creation_callback', it will "
+            "be called to construct each scenario model (not necessarily "
+            "by the same running process). Otherwise, the reference "
+            "model file must contain an AbstractModel object named "
+            "'model'. Default is '.'. "
         ),
         doc=None,
         visibility=0),
@@ -394,14 +457,15 @@ safe_declare_unique_option(
         domain=_domain_must_be_str,
         description=(
             "The directory or filename where the scenario tree "
-            "structure is defined. If a directory is given, the "
-            "scenario tree structure is assumed to reside in a file "
-            "named 'ScenarioStructure.dat' in that directory. All "
-            "scenario data files are assumed to reside in the same "
-            "directory. If unspecified, it is assumed that reference "
-            "model is of type ConcreteModel and the reference model "
-            "file contains a callback named "
-            "'pysp_instance_creation_callback'."
+            "structure .dat file is found. If a directory is "
+            "given, the scenario tree structure is assumed to "
+            "reside in a file named 'ScenarioStructure.dat' under "
+            "that directory. The location of any required scenario "
+            "data files will also be inferred from the value of "
+            "this option. If unspecified, the reference model file "
+            "must define a function named "
+            "'pysp_scenario_tree_model_callback' and must be in the "
+            "same location as any required scenario data files."
         ),
         doc=None,
         visibility=0),

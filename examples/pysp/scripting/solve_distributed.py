@@ -115,6 +115,13 @@ if __name__ == "__main__":
     # generate a list of options we can configure
     options = ScenarioTreeManagerClientPyro.register_options()
 
+    # To see detailed information about options
+    #for name in options.keys():
+    #    print(options.about(name))
+
+    # To see a more compact display of options
+    #options.display()
+
     #
     # Set a few options
     #

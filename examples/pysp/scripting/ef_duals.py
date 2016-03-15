@@ -30,6 +30,13 @@ farmer_example_dir = os.path.join(os.path.dirname(thisdir), 'farmer')
 
 options = ScenarioTreeManagerClientSerial.register_options()
 
+# To see detailed information about options
+#for name in options.keys():
+#    print(options.about(name))
+
+# To see a more compact display of options
+#options.display()
+
 options.model_location = \
     os.path.join(farmer_example_dir, 'models')
 options.scenario_tree_location = \

@@ -46,10 +46,14 @@ if using_pyro:
 else:
     manager_type = ScenarioTreeManagerSolverClientSerial
 options = manager_type.register_options()
-options = BendersAlgorithm.register_options(options)
+BendersAlgorithm.register_options(options)
 
-# To see the list of available options
-#print(options.display())
+# To see detailed information about options
+#for name in options.keys():
+#    print(options.about(name))
+
+# To see a more compact display of options
+#options.display()
 
 #
 # General options for the scenario tree manager
