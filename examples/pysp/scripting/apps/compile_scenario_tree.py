@@ -256,11 +256,11 @@ def main(args=None):
             compile_scenario_tree_register_options,
             prog='compile_scenario_tree',
             description=(
-"""Compresses linear constraints on all scenarios into sparse matrix
-form and pickles resulting scenario models to enable faster startup
-time with reduced memory usage. This script will automatically
-activate the 'compile_scenario_instances' scenario tree manager
-flag."""
+"""Compresses linear constraints on all scenarios into
+sparse matrix form and then pickles the resulting scenario
+models. This should enable faster startup time with reduced
+memory usage. This script will automatically activate the
+'compile_scenario_instances' scenario tree manager flag."""
             ))
 
     except SystemExit as _exc:
