@@ -1242,8 +1242,7 @@ class TestPH(unittest.TestCase):
         farmer_examples_dir = pysp_examples_dir + "farmer"
         model_dir = farmer_examples_dir + os.sep + "models"
         instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_with_solve_cplex_with_csv_writer.lp"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve --solution-writer=pyomo.pysp.plugins.csvsolutionwriter"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --solver=cplex --solve --solution-writer=pyomo.pysp.plugins.csvsolutionwriter"
         print("Testing command: " + argstring)
         pyutilib.misc.setup_redirect(
             this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out")
@@ -1263,6 +1262,12 @@ class TestPH(unittest.TestCase):
             baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer.csv",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            "ef_StageCostDetail.csv",
+            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer_StageCostDetail.csv",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+
 
     def test_farmer_maximize_ef_with_solve_cplex(self):
         if solver['cplex'] is None:

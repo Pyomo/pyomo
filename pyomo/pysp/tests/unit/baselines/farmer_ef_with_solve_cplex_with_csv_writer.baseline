@@ -164,9 +164,6 @@ Initializing extensive form algorithm for stochastic programming problems.
 Creating extensive form instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
-Starting to write extensive form
-Extensive form written to file=/Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_farmer_with_solve_cplex_with_csv_writer.lp
-Time to write output file=0.00 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
@@ -298,7 +295,7 @@ Scenarios:
 
 ----------------------------------------------------
 Scenario tree solution written to file=ef.csv
-CostVarDetail.csv written for modeling checking.
+Scenario stage costs written to file=ef_StageCostDetail.csv
 Closing ScenarioTreeManagerClientSerial
 
 Total EF execution time=0.25 seconds
