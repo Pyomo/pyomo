@@ -1,0 +1,6 @@
+FirstStage, RootNode, AboveAverageScenario, FirstStageCost, None, 108900.0
+FirstStage, RootNode, AverageScenario, FirstStageCost, None, 108900.0
+FirstStage, RootNode, BelowAverageScenario, FirstStageCost, None, 108900.0
+SecondStage, AboveAverageNode, AboveAverageScenario, SecondStageCost, None, -275900.0
+SecondStage, AverageNode, AverageScenario, SecondStageCost, None, -218250.0
+SecondStage, BelowAverageNode, BelowAverageScenario, SecondStageCost, None, -157720.0
