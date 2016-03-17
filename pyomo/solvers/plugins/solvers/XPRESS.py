@@ -46,8 +46,15 @@ class XPRESS(OptSolver):
             opt = SolverFactory('_xpress_shell', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
             return opt
+        elif mode == 'nl':
+            opt = SolverFactory('asl', **kwds)
         else:
-            raise RuntimeError("No python bindings are available for the Xpress solver")
+            logging.getLogger('pyomo.solvers').error(
+                'Unknown IO type for solver xpress: %s'
+                % (mode))
+            return
+        opt.set_options('solver=amplxpress')
+        return opt
 
 class XPRESS_shell(ILMLicensedSystemCallSolver):
     """Shell interface to the XPRESS LP/MIP solver

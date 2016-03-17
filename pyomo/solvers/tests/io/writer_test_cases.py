@@ -247,6 +247,10 @@ testCases.append(SolverTestCase(name='xpress',
                                 io='mps',
                                 capabilities=xpress_capabilities,
                                 import_suffixes=['rc','dual','slack']))
+testCases.append(SolverTestCase(name='xpress',
+                                io='nl',
+                                capabilities=xpress_capabilities,
+                                import_suffixes=['dual']))
 
 #
 #    ADD IPOPT TEST CASES

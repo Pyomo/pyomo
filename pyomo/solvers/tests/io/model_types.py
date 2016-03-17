@@ -29,7 +29,7 @@ class _ModelClassBase(object):
         self.model = None
         self.results_file = None
         self.disable_suffix_tests = False
-        self.diff_tol = 1e-5
+        self.diff_tol = 1e-4
 
     def generateModel():
         raise NotImplementedError
