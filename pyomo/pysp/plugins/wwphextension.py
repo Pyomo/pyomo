@@ -140,6 +140,10 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
 
     def __init__(self, *args, **kwds):
 
+        # attempt to handle cases where scripting people
+        # skip ph iteration 0
+        self._iteration_0_called = False
+
         # TBD - migrate all of the self attributes defined on-the-fly
         #       in the post-post-initialization routine here!
         self._valid_suffix_names = [\
@@ -616,6 +620,8 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
 #==================================================
     def post_iteration_0_solves(self, ph):
 
+        self._iteration_0_called = True
+
         self._collect_variable_bounds(ph)
 
         # Collect suffix dictionaries that we will check inside the
@@ -754,6 +760,13 @@ class wwphextension(pyomo.util.plugin.SingletonPlugin):
 #==================================================
 
     def pre_iteration_k_solves(self, ph):
+
+        if (ph._current_iteration == 1) and \
+           (not self._iteration_0_called):
+            print("WW PH extension detected iteration 0 solves were skipped. "
+                  "Executing post_iteration_0_solves plugin code.")
+            self.post_iteration_0_solves(ph)
+            self._iteration_0_called = True
 
         # NOTE: iteration 0 mipgaps are handled during extension
         # initialization, following PH initialization.
