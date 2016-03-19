@@ -535,7 +535,7 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
         if self.get_option("verbose"):
             print("Waiting for extensive form solve")
         results = self._solver_manager.wait_for(action_handle)
-
+        
         if self.get_option("verbose"):
             print("Done with extensive form solve - loading results")
 
@@ -603,11 +603,19 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             self.solution_status = undefined
 
         failure = False
+
         if check_status:
-            if ((self.solution_status !=
-                 SolutionStatus.optimal) or \
-                (self.termination_condition != \
-                 TerminationCondition.optimal)):
+            if (self.solution_status == SolutionStatus.optimal) or \
+               (self.solution_status == SolutionStatus.feasible):
+
+                print("EF solve completed and solve status is %s" % self.solution_status)
+                print("EF solve termination condition is %s" % self.termination_condition)
+
+                print("EF objective: %12.5f" % self.objective)
+                print("EF gap:       %12.5f" % self.gap)
+
+            else:
+
                 failure = True
                 if self.get_option("verbose") or \
                    exception_on_failure:
@@ -622,10 +630,6 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
                         print(msg)
                     if exception_on_failure:
                         raise RuntimeError(msg)
-            else:
-                if self.get_option("verbose"):
-                    print("EF solve completed and solve status "
-                          "is optimal")
         else:
             if self.get_option("verbose"):
                 print("EF solve completed. Skipping status check.")
