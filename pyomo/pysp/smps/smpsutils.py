@@ -430,21 +430,10 @@ def _convert_explicit_setup(worker, scenario, *args, **kwds):
             del block._canonical_repn
         cached_attrs.append((block, block_cached_attrs))
 
-    # temporarily reactivate the original
-    # user objective object
-    if scenario._instance_original_objective_object is not None:
-        assert not scenario._instance_original_objective_object.active
-        scenario._instance_original_objective_object.activate()
-        assert scenario._instance_objective.active
-        scenario._instance_objective.deactivate()
-
     try:
         return _convert_explicit_setup_without_cleanup(
             worker, scenario, *args, **kwds)
     finally:
-        if scenario._instance_original_objective_object is not None:
-            scenario._instance_original_objective_object.deactivate()
-            scenario._instance_objective.activate()
         for block, block_cached_attrs in cached_attrs:
             for name in block_cached_attrs:
                 setattr(block, name, block_cached_attrs[name])
@@ -579,13 +568,7 @@ def _convert_explicit_setup_without_cleanup(worker,
     # second-stage variable.
     # ** Just do NOT preprocess again until we call the writer **
     #
-    objective_data = None
-    if scenario._instance_original_objective_object is not None:
-        assert scenario._instance_original_objective_object.active
-        assert not scenario._instance_objective.active
-        objective_data = scenario._instance_original_objective_object
-    else:
-        objective_data = scenario._instance_objective
+    objective_data = scenario._instance_objective
     assert objective_data is not None
     objective_block = objective_data.parent_block()
     objective_repn = canonical_repn_cache[id(objective_block)][objective_data]

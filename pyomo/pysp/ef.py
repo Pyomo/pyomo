@@ -16,7 +16,7 @@ from pyomo.opt import (ProblemFormat,
                        SolutionStatus)
 from pyomo.pysp.phutils import (isVariableNameIndexed,
                                 extractVariableNameAndIndex,
-                                extractVariableIndices)
+                                extractComponentIndices)
 
 #
 # a routine to create the extensive form, given an input scenario tree and instances.
@@ -252,7 +252,7 @@ def create_ef_instance(scenario_tree,
                 raise RuntimeError("Unknown variable="+variable_name+" referenced as the CC indicator variable.")
 
             # extract all "real", i.e., fully specified, indices matching the index template.
-            match_indices = extractVariableIndices(variable, index_template)
+            match_indices = extractComponentIndices(variable, index_template)
 
             # there is a possibility that no indices match the input template.
             # if so, let the user know about it.

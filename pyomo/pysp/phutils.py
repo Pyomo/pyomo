@@ -314,8 +314,10 @@ def tupleizeIndexString(index_string):
 
 def extractVariableNameAndIndex(variable_name):
 
-    if isVariableNameIndexed(variable_name) is False:
-        raise ValueError("Non-indexed variable name passed to function extractVariableNameAndIndex()")
+    if not isVariableNameIndexed(variable_name):
+        raise ValueError(
+            "Non-indexed variable name passed to "
+            "function extractVariableNameAndIndex()")
 
     pieces = variable_name.split('[')
     name = pieces[0].strip()
@@ -386,10 +388,10 @@ def indexMatchesTemplate(index, index_template):
     return True
 
 #
-# given a variable (the real object, not the name) and an index,
-# "shotgun" the index and see which variable indices match the
-# input index. the cardinality could be > 1 if slices are
-# specified, e.g., [*,1].
+# given a component (the real object, not the name) and an
+# index template, "shotgun" the index and see which variable
+# indices match the template. the cardinality could be >
+# 1 if slices are specified, e.g., [*,1].
 #
 # NOTE: This logic can be expensive for scenario trees with many
 #       nodes, and for variables with many indices. thus, the
@@ -397,45 +399,55 @@ def indexMatchesTemplate(index, index_template):
 #       is in-lined in an efficient way here.
 #
 
-def extractVariableIndices(variable, index_template):
+def extractComponentIndices(component, index_template):
 
-    variable_index_dimension = variable.dim()
+    component_index_dimension = component.dim()
 
-    # do special handling for the case where the variable is
-    # not indexed, i.e., of dimension 0. for scalar variables,
+    # do special handling for the case where the component is
+    # not indexed, i.e., of dimension 0. for scalar components,
     # the match template can be the empty string, or - more
     # commonly, given that the empty string is hard to specify
     # in the scenario tree input data - a single wildcard character.
-    if variable_index_dimension == 0:
+    if component_index_dimension == 0:
        if (index_template != '') and (index_template != "*"):
-          raise RuntimeError("Index template="+index_template+" specified for scalar variable="+variable.cname(True))
-
+          raise RuntimeError(
+              "Index template=%r specified for scalar object=%s"
+              % (index_template, component.cname(True)))
        return [None]
 
-    # from this point on, we're dealing with indexed variables.
+    # from this point on, we're dealing with an indexed component.
+    if index_template == "":
+        return [ndx for ndx in component]
 
     # if the input index template is not a tuple, make it one.
     # one-dimensional indices in pyomo are not tuples, but
     # everything else is.
     if type(index_template) != tuple:
-       index_template = (index_template,)
+        index_template = (index_template,)
 
-    if variable_index_dimension != len(index_template):
-        raise RuntimeError("Dimension="+str(len(index_template))+" of index template="+str(index_template)+" does match the dimension="+str(variable_index_dimension)+" of variable="+variable.cname(True))
+    if component_index_dimension != len(index_template):
+        raise RuntimeError(
+            "The dimension of index template=%s (%s) does match "
+            "the dimension of component=%s (%s)"
+            % (index_template,
+               len(index_template),
+               component.cname(True),
+               component_index_dimension))
 
     # cache for efficiency
-    iterator_range = [i for i,match_str in enumerate(index_template) if match_str != '*']
+    iterator_range = [i for i,match_str in enumerate(index_template)
+                      if match_str != '*']
 
     if len(iterator_range) == 0:
-        return list(variable)
+        return list(component)
 
     result = []
 
-    for index in variable:
+    for index in component:
 
         # if the input index is not a tuple, make it one for processing
         # purposes. however, return the original index always.
-        if variable_index_dimension == 1:
+        if component_index_dimension == 1:
            modified_index = (index,)
         else:
            modified_index = index

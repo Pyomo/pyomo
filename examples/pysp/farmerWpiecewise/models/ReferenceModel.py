@@ -83,12 +83,19 @@ def create_profit_curve_points_rule(m):
 
 model.CreateProfitCurvePoints = BuildAction(rule=create_profit_curve_points_rule)
 
-# a function for use in piecewise linearization of the profit function. 
+# a function for use in piecewise linearization of the profit function.
 def profit_function(m, c, x):
     return value(m.SalePriceA0[c]) + value(m.SalePriceA1[c])*x + value(m.SalePriceA2[c])*x*x
 
-# compute the per-crop profit - the "UB" is used because this is profit, which is a negative term in the (cost-oriented) objective.
-model.ComputeProfits = Piecewise(model.CROPS, model.Profit, model.QuantitySold, pw_pts=model.ProfitCurvePoints, f_rule=profit_function, pw_constr_type='UB')
+# compute the per-crop profit - the "UB" is used because
+# this is profit, which is a negative term in the
+# (cost-oriented) objective.
+model.ComputeProfits = Piecewise(model.CROPS,
+                                 model.Profit,
+                                 model.QuantitySold,
+                                 pw_pts=model.ProfitCurvePoints,
+                                 f_rule=profit_function,
+                                 pw_constr_type='EQ')
 
 #
 # Constraints

@@ -10,14 +10,352 @@ import os
 
 import pyutilib.th as unittest
 from pyomo.pysp.scenariotree.tree_structure_model import \
-    ScenarioTreeModelFromNetworkX
+    (ScenarioTreeModelFromNetworkX,
+     CreateConcreteTwoStageScenarioTreeModel)
 from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
+from pyomo.core import (ConcreteModel,
+                        Set,
+                        Var,
+                        Expression,
+                        Objective,
+                        Block)
 
 try:
     import networkx
     has_networkx = True
 except:
     has_networkx = False
+
+class TestScenarioTree(unittest.TestCase):
+
+    def _get_block_model(self):
+        model = ConcreteModel()
+        model.s = Set(initialize=[1,2])
+        b = Block(concrete=True)
+        b.s = Set(initialize=[1,2])
+        b.x = Var()
+        b.X = Var(model.s)
+        model.b1 = b.clone()
+        model.b2 = b.clone()
+        model.b3 = b.clone()
+        model.b4 = b.clone()
+        model.B1 = Block(model.s, rule=lambda _,i: b.clone())
+        model.B2 = Block(model.s, rule=lambda _,i: b.clone())
+        model.B3 = Block(model.s, rule=lambda _,i: b.clone())
+        model.B4 = Block(model.s, rule=lambda _,i: b.clone())
+        model.FirstStageCost = Expression(expr=0.0)
+        model.SecondStageCost = Expression(expr=0.0)
+        model.obj = Objective(expr=0.0)
+        return model
+
+    def test_indexedblock_noindextemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("B1")
+        st_model.StageDerivedVariables['Stage1'].add("B2")
+        st_model.NodeVariables['RootNode'].add("B3")
+        st_model.NodeDerivedVariables['RootNode'].add("B4")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = self._get_block_model()
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 24)
+        self.assertEqual(len(root._standard_variable_ids), 12)
+        self.assertEqual(len(root._derived_variable_ids), 12)
+        for name in ("B1[1].x", "B1[2].x",
+                     "B2[1].x", "B2[2].x",
+                     "B3[1].x", "B3[2].x",
+                     "B4[1].x", "B4[2].x"):
+            for index in [None]:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+        for name in ("B1[1].X", "B1[2].X",
+                     "B2[1].X", "B2[2].X",
+                     "B3[1].X", "B3[2].X",
+                     "B4[1].X", "B4[2].X"):
+            for index in model.s:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+
+    def test_indexedblock_wildcardtemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("B1[*]")
+        st_model.StageDerivedVariables['Stage1'].add("B2[*]")
+        st_model.NodeVariables['RootNode'].add("B3[*]")
+        st_model.NodeDerivedVariables['RootNode'].add("B4[*]")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = self._get_block_model()
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 24)
+        self.assertEqual(len(root._standard_variable_ids), 12)
+        self.assertEqual(len(root._derived_variable_ids), 12)
+        for name in ("B1[1].x", "B1[2].x",
+                     "B2[1].x", "B2[2].x",
+                     "B3[1].x", "B3[2].x",
+                     "B4[1].x", "B4[2].x"):
+            for index in [None]:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+        for name in ("B1[1].X", "B1[2].X",
+                     "B2[1].X", "B2[2].X",
+                     "B3[1].X", "B3[2].X",
+                     "B4[1].X", "B4[2].X"):
+            for index in model.s:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+
+    def test_singletonblock_wildcardtemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("b1[*]")
+        st_model.StageDerivedVariables['Stage1'].add("b2[*]")
+        st_model.NodeVariables['RootNode'].add("b3[*]")
+        st_model.NodeDerivedVariables['RootNode'].add("b4[*]")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = self._get_block_model()
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 12)
+        self.assertEqual(len(root._standard_variable_ids), 6)
+        self.assertEqual(len(root._derived_variable_ids), 6)
+        for name in ("b1.x", "b2.x", "b3.x", "b4.x"):
+            for index in [None]:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+        for name in ("b1.X", "b2.X", "b3.X", "b4.X"):
+            for index in model.s:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+
+    def test_singletonblock_noindextemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("b1")
+        st_model.StageDerivedVariables['Stage1'].add("b2")
+        st_model.NodeVariables['RootNode'].add("b3")
+        st_model.NodeDerivedVariables['RootNode'].add("b4")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = self._get_block_model()
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 12)
+        self.assertEqual(len(root._standard_variable_ids), 6)
+        self.assertEqual(len(root._derived_variable_ids), 6)
+        for name in ("b1.x", "b2.x", "b3.x", "b4.x"):
+            for index in [None]:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+        for name in ("b1.X", "b2.X", "b3.X", "b4.X"):
+            for index in model.s:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+
+    def test_singletonvar_noindextemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("x")
+        st_model.StageDerivedVariables['Stage1'].add("y")
+        st_model.NodeVariables['RootNode'].add("z")
+        st_model.NodeDerivedVariables['RootNode'].add("q")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = ConcreteModel()
+        model.x = Var()
+        model.y = Var()
+        model.z = Var()
+        model.q = Var()
+        model.FirstStageCost = Expression(expr=0.0)
+        model.SecondStageCost = Expression(expr=0.0)
+        model.obj = Objective(expr=0.0)
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 4)
+        self.assertEqual(len(root._standard_variable_ids), 2)
+        self.assertEqual(len(root._derived_variable_ids), 2)
+        for name in ("x", "y", "z", "q"):
+            for index in [None]:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+
+    def test_singletonvar_wildcardtemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("x[*]")
+        st_model.StageDerivedVariables['Stage1'].add("y[*]")
+        st_model.NodeVariables['RootNode'].add("z[*]")
+        st_model.NodeDerivedVariables['RootNode'].add("q[*]")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = ConcreteModel()
+        model.x = Var()
+        model.y = Var()
+        model.z = Var()
+        model.q = Var()
+        model.FirstStageCost = Expression(expr=0.0)
+        model.SecondStageCost = Expression(expr=0.0)
+        model.obj = Objective(expr=0.0)
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 4)
+        self.assertEqual(len(root._standard_variable_ids), 2)
+        self.assertEqual(len(root._derived_variable_ids), 2)
+        for name in ("x", "y", "z", "q"):
+            for index in [None]:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+
+    def test_multiindexedvar_singlewildcardtemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("x[*,* ]")
+        st_model.StageDerivedVariables['Stage1'].add("y[ *,*]")
+        st_model.NodeVariables['RootNode'].add("z[*,*]")
+        st_model.NodeDerivedVariables['RootNode'].add("q[ * , * ]")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = ConcreteModel()
+        model.s = Set(initialize=[(1,'a'),(2,'b'),(3,'c')])
+        model.x = Var(model.s)
+        model.y = Var(model.s)
+        model.z = Var(model.s)
+        model.q = Var(model.s)
+        model.FirstStageCost = Expression(expr=0.0)
+        model.SecondStageCost = Expression(expr=0.0)
+        model.obj = Objective(expr=0.0)
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 12)
+        self.assertEqual(len(root._standard_variable_ids), 6)
+        self.assertEqual(len(root._derived_variable_ids), 6)
+        for name in ("x", "y", "z", "q"):
+            for index in model.s:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+
+    def test_indexedvar_indextemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("x[*]")
+        st_model.StageDerivedVariables['Stage1'].add("y[*]")
+        st_model.NodeVariables['RootNode'].add("z[*]")
+        st_model.NodeDerivedVariables['RootNode'].add("q[*]")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = ConcreteModel()
+        model.s = Set(initialize=[1,2,3])
+        model.x = Var(model.s)
+        model.y = Var(model.s)
+        model.z = Var(model.s)
+        model.q = Var(model.s)
+        model.FirstStageCost = Expression(expr=0.0)
+        model.SecondStageCost = Expression(expr=0.0)
+        model.obj = Objective(expr=0.0)
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 12)
+        self.assertEqual(len(root._standard_variable_ids), 6)
+        self.assertEqual(len(root._derived_variable_ids), 6)
+        for name in ("x", "y", "z", "q"):
+            for index in model.s:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
+
+    def test_indexedvar_noindextemplate(self):
+        st_model = CreateConcreteTwoStageScenarioTreeModel(1)
+        st_model.StageVariables['Stage1'].add("x")
+        st_model.StageDerivedVariables['Stage1'].add("y")
+        st_model.NodeVariables['RootNode'].add("z")
+        st_model.NodeDerivedVariables['RootNode'].add("q")
+        st_model.StageCost['Stage1'] = "FirstStageCost"
+        st_model.StageCost['Stage2'] = "SecondStageCost"
+
+        scenario_tree = ScenarioTree(scenariotreeinstance=st_model)
+        self.assertEqual(len(scenario_tree.stages), 2)
+        self.assertEqual(len(scenario_tree.nodes), 2)
+        self.assertEqual(len(scenario_tree.scenarios), 1)
+
+        model = ConcreteModel()
+        model.s = Set(initialize=[1,2,3])
+        model.x = Var(model.s)
+        model.y = Var(model.s)
+        model.z = Var(model.s)
+        model.q = Var(model.s)
+        model.FirstStageCost = Expression(expr=0.0)
+        model.SecondStageCost = Expression(expr=0.0)
+        model.obj = Objective(expr=0.0)
+
+        scenario_tree.linkInInstances({'Scenario1': model})
+
+        root = scenario_tree.findRootNode()
+        self.assertEqual(len(root._variable_ids), 12)
+        self.assertEqual(len(root._standard_variable_ids), 6)
+        self.assertEqual(len(root._derived_variable_ids), 6)
+        for name in ("x", "y", "z", "q"):
+            for index in model.s:
+                self.assertEqual(
+                    (name,index) in root._name_index_to_id, True)
 
 @unittest.skipIf(not has_networkx, "Requires networkx module")
 class TestScenarioTreeFromNetworkX(unittest.TestCase):

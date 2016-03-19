@@ -32,7 +32,8 @@ param ScenarioLeafNode := BelowAverageScenario BelowAverageNode
 set StageVariables[FirstStage] :=  DevotedAcreage[*] ;
 set StageVariables[SecondStage] := QuantitySold[*]
                                    QuantityPurchased[*] 
-				   Profit[*] ;
+				   Profit[*]
+                                   ComputeProfits[*] ;
 
 param StageCost := FirstStage  FirstStageCost
                    SecondStage SecondStageCost ;

@@ -4778,7 +4778,7 @@ class ProgressiveHedging(_PHBase):
             # tracks the number of outputs on a per-index basis.
             num_outputs_this_stage = 0
 
-            for variable_name in sorted(stage._variables):
+            for variable_name in sorted(stage._variable_templates):
                 num_outputs_this_stage += _print_stage_var(variable_name,
                                                            stage)
             for tree_node in sorted(stage._tree_nodes, key=lambda x: x.name):

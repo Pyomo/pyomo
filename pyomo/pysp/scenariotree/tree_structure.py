@@ -31,7 +31,7 @@ from pyomo.pysp.phutils import (BasicSymbolMap,
                                 indexToString,
                                 isVariableNameIndexed,
                                 extractVariableNameAndIndex,
-                                extractVariableIndices,
+                                extractComponentIndices,
                                 find_active_objective)
 
 import six
@@ -214,13 +214,17 @@ class ScenarioTreeNode(object):
     # input match templates.
     #
 
-    def updateVariableIndicesAndValues(self, variable_name, match_templates,
-                                       derived=False, id_labeler=None, name_index_to_id_map=None):
+    def updateVariableIndicesAndValues(self,
+                                       component_name,
+                                       match_templates,
+                                       derived=False,
+                                       id_labeler=None,
+                                       name_index_to_id_map=None):
 
         # ensure that the variable exists on each scenario instance,
         # and that there is at least one index match per template.
 
-        # To avoid calling extractVariableIndices more than necessary
+        # To avoid calling extractComponentIndices more than necessary
         # we take the last scenario in the next loop as our
         # "representative" scenario from which we use the
         # new_match_indices list
@@ -236,67 +240,96 @@ class ScenarioTreeNode(object):
             if scenario_instance is None:
                 continue
 
-            instance_variable = scenario_instance.find_component(variable_name)
-            if instance_variable is None:
-                raise RuntimeError("The component=%s associated with stage=%s "
-                                   "is not present in instance=%s"
-                                   % (variable_name,
-                                      self._stage._name,
-                                      scenario_instance.name))
-            isVar = (instance_variable.type() is Var)
+            component_object = \
+                scenario_instance.find_component(component_name)
+            if component_object is None:
+                raise RuntimeError(
+                    "The component=%s associated with stage=%s "
+                    "is not present in instance=%s"
+                    % (component_name,
+                       self._stage._name,
+                       scenario_instance.name))
 
-            if derived is False:
-                if not isVar:
-                    raise RuntimeError("The component=%s "
-                                       "associated with stage=%s "
-                                       "is present in instance=%s "
-                                       "but is not a variable - type=%s"
-                                       % (variable_name,
-                                          self._stage._name,
-                                          scenario_instance.name,
-                                          type(instance_variable)))
+            if component_object.type() is not Block:
+                isVar = (component_object.type() is Var)
+                if not derived:
+                    if not isVar:
+                        raise RuntimeError("The component=%s "
+                                           "associated with stage=%s "
+                                           "is present in instance=%s "
+                                           "but is not a variable - type=%s"
+                                           % (component_name,
+                                              self._stage._name,
+                                              scenario_instance.name,
+                                              type(component_object)))
+                else:
+                    if (not isVar) and \
+                       (component_object.type() is not Expression) and \
+                       (component_object.type() is not Objective):
+                        raise RuntimeError("The derived component=%s "
+                                           "associated with stage=%s "
+                                           "is present in instance=%s "
+                                           "but is not a Var or Expression "
+                                           "- type=%s"
+                                           % (component_name,
+                                              self._stage._name,
+                                              scenario_instance.name,
+                                              type(component_object)))
             else:
-                if not (isVar or (instance_variable.type() is Expression)):
-                    raise RuntimeError("The derived component=%s "
-                                       "associated with stage=%s "
-                                       "is present in instance=%s "
-                                       "but is not a Var or Expression "
-                                       "- type=%s"
-                                       % (variable_name,
-                                          self._stage._name,
-                                          scenario_instance.name,
-                                          type(instance_variable)))
+                tmp_match_template = ("",)
+                for match_template in match_templates:
+                    for index in extractComponentIndices(component_object,
+                                                         match_template):
+                        # extract all variables from this block
+                        if component_object[index].active:
+                            for variable in component_object[index].\
+                                   component_objects(Var,
+                                                     descend_into=True):
+                                self.updateVariableIndicesAndValues(
+                                    variable.cname(True),
+                                    tmp_match_template,
+                                    derived=derived,
+                                    id_labeler=id_labeler,
+                                    name_index_to_id_map=name_index_to_id_map)
+                return
 
             new_match_indices = []
 
             for match_template in match_templates:
 
-                indices = extractVariableIndices(instance_variable, match_template)
+                indices = extractComponentIndices(component_object,
+                                                 match_template)
 
                 # validate that at least one of the indices in the
                 # variable matches to the template - otherwise, the
                 # template is bogus.  with one exception: if the
                 # variable is empty (the index set is empty), then
                 # don't warn - the instance was designed this way.
-                if (len(indices) == 0) and (len(instance_variable) > 0):
+                if (len(indices) == 0) and (len(component_object) > 0):
                     raise ValueError("No indices match template=%s "
                                      "for variable=%s in scenario=%s"
                                      % (match_template,
-                                        variable_name,
-                                        scenario._name))
+                                        component_name,
+                                        scenario.name))
 
                 new_match_indices.extend(indices)
 
-            var_component[scenario._name] = scenario_instance.find_component(variable_name)
+            var_component[scenario._name] = \
+                scenario_instance.find_component(component_name)
 
-            if (id_labeler is not None) or (name_index_to_id_map is not None):
+            if (id_labeler is not None) or \
+               (name_index_to_id_map is not None):
                 # Tag each instance with a ScenarioTreeSymbolMap. This
                 # will allow us to identify common blended variables
                 # within a node across scenario instances without
                 # having to do an expensive name lookup each time.
-                this_symbolmap = getattr(scenario_instance,"_ScenarioTreeSymbolMap", None)
+                this_symbolmap = getattr(scenario_instance,
+                                         "_ScenarioTreeSymbolMap",
+                                         None)
                 if this_symbolmap is None:
-                    this_symbolmap = scenario_instance._ScenarioTreeSymbolMap = BasicSymbolMap()
+                    this_symbolmap = \
+                        scenario_instance._ScenarioTreeSymbolMap = \
+                            BasicSymbolMap()
                 symbolmap[scenario._name] = this_symbolmap
 
         # find a representative scenario instance belonging to (or
@@ -306,10 +339,12 @@ class ScenarioTreeNode(object):
         #       across all scenarios at a node actually match for each
         #       variable.
 
-        self._variable_indices.setdefault(variable_name, []).extend(new_match_indices)
+        self._variable_indices.setdefault(
+            component_name, []).extend(new_match_indices)
 
-        # cache some stuff up-front - we're accessing these attributes a lot in the loops below.
-        if derived == False:
+        # cache some stuff up-front - we're accessing these
+        # attributes a lot in the loops below.
+        if not derived:
             variable_ids_to_update = self._standard_variable_ids
         else:
             variable_ids_to_update = self._derived_variable_ids
@@ -317,7 +352,8 @@ class ScenarioTreeNode(object):
         self_variable_ids = self._variable_ids
         self_variable_datas = self._variable_datas
 
-        if (id_labeler is not None) or (name_index_to_id_map is not None):
+        if (id_labeler is not None) or \
+           (name_index_to_id_map is not None):
 
             for index in sorted(new_match_indices):
 
@@ -328,17 +364,21 @@ class ScenarioTreeNode(object):
                 if id_labeler != None:
                     scenario_tree_id = id_labeler()
                 elif name_index_to_id_map != None:
-                    scenario_tree_id = name_index_to_id_map[variable_name, index]
+                    scenario_tree_id = \
+                        name_index_to_id_map[component_name, index]
 
                 variable_ids_to_update.add(scenario_tree_id)
 
-                self_variable_ids[scenario_tree_id] = (variable_name,index)
-                self._name_index_to_id[(variable_name,index)] = scenario_tree_id
+                self_variable_ids[scenario_tree_id] = (component_name,index)
+                self._name_index_to_id[(component_name,index)] = \
+                    scenario_tree_id
                 self_variable_datas[scenario_tree_id] = []
                 for scenario in self._scenarios:
                     vardata = var_component[scenario._name][index]
-                    symbolmap[scenario._name].addSymbol(vardata,scenario_tree_id)
-                    self_variable_datas[scenario_tree_id].append((vardata, scenario._probability))
+                    symbolmap[scenario._name].addSymbol(vardata,
+                                                        scenario_tree_id)
+                    self_variable_datas[scenario_tree_id].append(
+                        (vardata, scenario._probability))
                 # We are trusting that each instance variable has the same
                 # domain (as we always do)
                 if isVar:
@@ -355,14 +395,17 @@ class ScenarioTreeNode(object):
     # same as the above, but specialized to cost variables.
     #
 
-    def updateCostVariableIndexAndValue(self, cost_variable_name, cost_variable_index):
+    def updateCostVariableIndexAndValue(self,
+                                        cost_variable_name,
+                                        cost_variable_index):
 
         # ensure that the cost variable exists on each scenario
         # instance, and that the index is valid.  if so, add it to the
         # list of _VarDatas for scenarios at this tree node.
         for scenario in self._scenarios:
             scenario_instance = scenario._instance
-            cost_variable = scenario_instance.find_component(cost_variable_name)
+            cost_variable = \
+                scenario_instance.find_component(cost_variable_name)
 
             if cost_variable is None:
                 raise ValueError("Cost variable=%s associated with "
@@ -371,7 +414,7 @@ class ScenarioTreeNode(object):
                                  % (cost_variable_name,
                                     self._stage._name,
                                     scenario_instance.name))
-            if not cost_variable.type() in [Var,Expression]:
+            if not cost_variable.type() in [Var,Expression,Objective]:
                 raise RuntimeError("The component=%s associated with stage=%s "
                                    "is present in model=%s but is not a "
                                    "variable or expression - type=%s"
@@ -385,8 +428,9 @@ class ScenarioTreeNode(object):
                                    % (cost_variable_index,
                                       cost_variable_name,
                                       scenario_instance.name))
-            self._cost_variable_datas.append((cost_variable[cost_variable_index],
-                                              scenario._probability))
+            self._cost_variable_datas.append(
+                (cost_variable[cost_variable_index],
+                 scenario._probability))
 
     #
     # given a set of scenario instances, compute the set of indices
@@ -405,35 +449,39 @@ class ScenarioTreeNode(object):
         self._standard_variable_ids = set()
         self._derived_variable_ids = set()
 
-        stage_variables = self._stage._variables
-        for variable_name in sorted(iterkeys(stage_variables)):
-            self.updateVariableIndicesAndValues(variable_name,
-                                                stage_variables[variable_name],
-                                                derived=False,
-                                                id_labeler=id_labeler,
-                                                name_index_to_id_map=name_index_to_id_map)
+        stage_variables = self._stage._variable_templates
+        for component_name in sorted(iterkeys(stage_variables)):
+            self.updateVariableIndicesAndValues(
+                component_name,
+                stage_variables[component_name],
+                derived=False,
+                id_labeler=id_labeler,
+                name_index_to_id_map=name_index_to_id_map)
         node_variables = self._variable_templates
-        for variable_name in sorted(iterkeys(node_variables)):
-            self.updateVariableIndicesAndValues(variable_name,
-                                                node_variables[variable_name],
-                                                derived=False,
-                                                id_labeler=id_labeler,
-                                                name_index_to_id_map=name_index_to_id_map)
+        for component_name in sorted(iterkeys(node_variables)):
+            self.updateVariableIndicesAndValues(
+                component_name,
+                node_variables[component_name],
+                derived=False,
+                id_labeler=id_labeler,
+                name_index_to_id_map=name_index_to_id_map)
 
-        stage_derived_variables = self._stage._derived_variables
-        for variable_name in sorted(iterkeys(stage_derived_variables)):
-            self.updateVariableIndicesAndValues(variable_name,
-                                                stage_derived_variables[variable_name],
-                                                derived=True,
-                                                id_labeler=id_labeler,
-                                                name_index_to_id_map=name_index_to_id_map)
+        stage_derived_variables = self._stage._derived_variable_templates
+        for component_name in sorted(iterkeys(stage_derived_variables)):
+            self.updateVariableIndicesAndValues(
+                component_name,
+                stage_derived_variables[component_name],
+                derived=True,
+                id_labeler=id_labeler,
+                name_index_to_id_map=name_index_to_id_map)
         node_derived_variables = self._derived_variable_templates
-        for variable_name in sorted(iterkeys(node_derived_variables)):
-            self.updateVariableIndicesAndValues(variable_name,
-                                                node_derived_variables[variable_name],
-                                                derived=True,
-                                                id_labeler=id_labeler,
-                                                name_index_to_id_map=name_index_to_id_map)
+        for component_name in sorted(iterkeys(node_derived_variables)):
+            self.updateVariableIndicesAndValues(
+                component_name,
+                node_derived_variables[component_name],
+                derived=True,
+                id_labeler=id_labeler,
+                name_index_to_id_map=name_index_to_id_map)
 
         self.updateCostVariableIndexAndValue(self._stage._cost_variable[0],
                                              self._stage._cost_variable[1])
@@ -790,10 +838,10 @@ class ScenarioTreeStage(object):
         # being that for output purposes. specific indices that match
         # belong to the tree node, as that may be specific to a tree
         # node.
-        self._variables = {}
+        self._variable_templates = {}
 
         # same as above, but for derived stage variables.
-        self._derived_variables = {}
+        self._derived_variable_templates = {}
 
         # a tuple consisting of (1) the name of the variable that
         # stores the stage-specific cost in all scenarios and (2) the
@@ -817,17 +865,21 @@ class ScenarioTreeStage(object):
     # add a new variable to the stage, which will include updating the
     # solution maps for each associated ScenarioTreeNode.
     #
-    def add_variable(self, variable_name, new_match_template, create_variable_ids=True):
+    def add_variable(self,
+                     variable_name,
+                     new_match_template,
+                     create_variable_ids=True):
 
         labeler = None
         if create_variable_ids is True:
             labeler = self._scenario_tree._id_labeler
 
-        existing_match_templates = self._variables.setdefault(variable_name, [])
+        existing_match_templates = self._variable_templates.setdefault(variable_name, [])
         existing_match_templates.append(new_match_template)
 
         for tree_node in self._tree_nodes:
-            tree_node.updateVariableIndicesAndValues(variable_name, new_match_template,
+            tree_node.updateVariableIndicesAndValues(variable_name,
+                                                     new_match_template,
                                                      derived=False,
                                                      id_labeler=labeler)
 
@@ -1241,11 +1293,14 @@ class ScenarioTree(object):
 
             scenario_list = []
             bundle_probability = 0.0
-            for scenario_name in scenario_tree_instance.BundleScenarios[bundle_name]:
+            for scenario_name in scenario_tree_instance.\
+                   BundleScenarios[bundle_name]:
                 scenario_list.append(scenario_name)
-                bundle_probability += self._scenario_map[scenario_name]._probability
+                bundle_probability += \
+                    self._scenario_map[scenario_name]._probability
 
-            scenario_tree_instance.Bundling[None] = False # to stop recursion!
+            # to stop recursion!
+            scenario_tree_instance.Bundling[None] = False
 
             scenario_tree_for_bundle = ScenarioTree(
                 scenariotreeinstance=scenario_tree_instance,
@@ -1253,8 +1308,8 @@ class ScenarioTree(object):
 
             scenario_tree_instance.Bundling[None] = True
 
-            if scenario_tree_for_bundle.validate() is False:
-                raise RuntimeError("***ERROR: Bundled scenario tree is invalid!!!")
+            if not scenario_tree_for_bundle.validate():
+                raise RuntimeError("Bundled scenario tree is invalid")
 
             new_bundle = ScenarioTreeBundle()
             new_bundle._name = bundle_name
@@ -1292,9 +1347,9 @@ class ScenarioTree(object):
                 else:
                     variable_name = variable_string
                     match_template = ""
-                if variable_name not in new_stage._variables:
-                    new_stage._variables[variable_name] = []
-                new_stage._variables[variable_name].append(match_template)
+                if variable_name not in new_stage._variable_templates:
+                    new_stage._variable_templates[variable_name] = []
+                new_stage._variable_templates[variable_name].append(match_template)
 
             # not all stages have derived variables defined
             if stage_name in stage_derived_variable_names:
@@ -1305,9 +1360,9 @@ class ScenarioTree(object):
                     else:
                         variable_name = variable_string
                         match_template = ""
-                    if variable_name not in new_stage._derived_variables:
-                        new_stage._derived_variables[variable_name] = []
-                    new_stage._derived_variables[variable_name].append(match_template)
+                    if variable_name not in new_stage._derived_variable_templates:
+                        new_stage._derived_variable_templates[variable_name] = []
+                    new_stage._derived_variable_templates[variable_name].append(match_template)
 
             # de-reference is required to access the parameter value
             cost_variable_string = value(stage_cost_variable_names[stage_name])
@@ -1672,20 +1727,17 @@ class ScenarioTree(object):
                     scenario_instance.add_component(cost_expr_name,cost_expr)
                     scenario._instance_cost_expression = cost_expr
 
-                    user_objective_sense = minimize if \
-                                           (user_objective.is_minimizing()) \
-                                           else maximize
-                    cost_obj_name = "_PySP_UserCostObjective"
-                    cost_obj = Objective(name=cost_obj_name,
-                                         expr=cost_expr,
-                                         sense=user_objective_sense)
-                    scenario_instance.add_component(cost_obj_name,cost_obj)
-                    scenario._instance_objective = cost_obj
-                    scenario._instance_original_objective_object = user_objective
-                    scenario._objective_sense = user_objective_sense
+                    # We have wrapped the original objective expression
+                    # in an Expression object so that other code can
+                    # augment the objective with other terms without
+                    # modifying the original objective expression. This
+                    # also allows us to easily reset the objective to its
+                    # original form
+                    user_objective.expr = cost_expr
+                    scenario._instance_objective = user_objective
+                    scenario._objective_sense = user_objective.sense
                     scenario._objective_name = \
-                        scenario._instance_objective.cname()
-                    user_objective.deactivate()
+                        scenario._instance_objective.cname(True)
 
                 else:
 
@@ -1714,10 +1766,11 @@ class ScenarioTree(object):
                                          sense=objective_sense)
                     scenario_instance.add_component(cost_obj_name,cost_obj)
                     scenario._instance_objective = cost_obj
-                    scenario._instance_original_objective_object = user_objective
+                    scenario._instance_original_objective_object = \
+                        user_objective
                     scenario._objective_sense = objective_sense
                     scenario._objective_name = \
-                        scenario._instance_objective.cname()
+                        scenario._instance_objective.cname(True)
 
     #
     # compute the set of variable indices being blended at each
@@ -1733,12 +1786,12 @@ class ScenarioTree(object):
         if (create_variable_ids == True) and \
            (master_scenario_tree != None):
             raise RuntimeError(
-                "The populateVariableIndicesAndValues method of ScenarioTree "
-                "objects cannot be invoked with both create_variable_ids=True "
-                "and master_scenario_tree!=None")
+                "The populateVariableIndicesAndValues method of "
+                "ScenarioTree objects cannot be invoked with both "
+                "create_variable_ids=True and master_scenario_tree!=None")
 
         labeler = None
-        if create_variable_ids is True:
+        if create_variable_ids:
             labeler = self._id_labeler
 
         for stage in self._stages:
@@ -1747,7 +1800,8 @@ class ScenarioTree(object):
                 name_index_to_id_map = None
                 if master_scenario_tree is not None:
                     name_index_to_id_map = master_scenario_tree.\
-                                           get_node(tree_node._name)._name_index_to_id
+                                           get_node(tree_node._name).\
+                                           _name_index_to_id
                 tree_node.populateVariableIndicesAndValues(
                     id_labeler=labeler,
                     name_index_to_id_map=name_index_to_id_map,
@@ -1955,9 +2009,9 @@ class ScenarioTree(object):
             # and the reference to the scenario tree
             compressed_tree_stage = ScenarioTreeStage()
             compressed_tree_stage._name = stage._name
-            compressed_tree_stage._variables = copy.deepcopy(stage._variables)
-            compressed_tree_stage._derived_variables = \
-                copy.deepcopy(stage._derived_variables)
+            compressed_tree_stage._variable_templates = copy.deepcopy(stage._variable_templates)
+            compressed_tree_stage._derived_variable_templates = \
+                copy.deepcopy(stage._derived_variable_templates)
             compressed_tree_stage._cost_variable = copy.deepcopy(stage._cost_variable)
             # add the stage object to the compressed tree
             compressed_tree._stages.append(compressed_tree_stage)
@@ -2379,18 +2433,18 @@ class ScenarioTree(object):
             print("\tTree Nodes: ")
             for tree_node in sorted(stage._tree_nodes, key=lambda x: x._name):
                 print("\t\t%s" % (tree_node._name))
-            if len(stage._variables) > 0:
+            if len(stage._variable_templates) > 0:
                 print("\tVariables: ")
-                for variable_name in sorted(iterkeys(stage._variables)):
-                    match_templates = stage._variables[variable_name]
+                for variable_name in sorted(iterkeys(stage._variable_templates)):
+                    match_templates = stage._variable_templates[variable_name]
                     sys.stdout.write("\t\t "+variable_name+" : ")
                     for match_template in match_templates:
                        sys.stdout.write(indexToString(match_template)+' ')
                     print("")
-            if len(stage._derived_variables) > 0:
+            if len(stage._derived_variable_templates) > 0:
                 print("\tDerived Variables: ")
-                for variable_name in sorted(iterkeys(stage._derived_variables)):
-                    match_templates = stage._derived_variables[variable_name]
+                for variable_name in sorted(iterkeys(stage._derived_variable_templates)):
+                    match_templates = stage._derived_variable_templates[variable_name]
                     sys.stdout.write("\t\t "+variable_name+" : ")
                     for match_template in match_templates:
                        sys.stdout.write(indexToString(match_template)+' ')
@@ -2450,10 +2504,10 @@ class ScenarioTree(object):
             else:
                 print("\tParent=" + "None")
 
-            if (len(tree_node._stage._variables) > 0) or \
+            if (len(tree_node._stage._variable_templates) > 0) or \
                (len(tree_node._variable_templates) > 0):
                 print("\tVariables: ")
-                variable_names = set(tree_node._stage._variables).union(
+                variable_names = set(tree_node._stage._variable_templates).union(
                     tree_node._variable_templates)
                 for variable_name in sorted(variable_names):
                     indices = sorted(tree_node._variable_indices[variable_name])
@@ -2469,10 +2523,10 @@ class ScenarioTree(object):
                             if (value is not None) and (math.fabs(value) > epsilon):
                                 print("\t\t"+variable_name+indexToString(index)+"="+str(value))
 
-            if (len(tree_node._stage._derived_variables) > 0) or \
+            if (len(tree_node._stage._derived_variable_templates) > 0) or \
                (len(tree_node._derived_variable_templates) > 0):
                 print("\tDerived Variables: ")
-                variable_names = set(tree_node._stage._derived_variables).union(
+                variable_names = set(tree_node._stage._derived_variable_templates).union(
                     tree_node._derived_variable_templates)
                 for variable_name in sorted(variable_names):
                     indices = sorted(tree_node._variable_indices[variable_name])

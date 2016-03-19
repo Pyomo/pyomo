@@ -36,7 +36,7 @@ def fix_ef_first_stage_variables(ph, scenario_tree, expected_value_instance):
 
     stage = ph._scenario_tree._stages[0]
     root_node = stage._tree_nodes[0] # there should be only one root node!
-    for variable_name, index_template in stage._variables.iteritems():
+    for variable_name, index_template in stage._variable_templates.iteritems():
 
         variable_indices = root_node._variable_indices[variable_name]
         for index in variable_indices:
