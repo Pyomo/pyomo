@@ -280,7 +280,9 @@ class simple_LP(_ModelClassBase):
         model.dummy_expr1 = Expression(initialize=model.a1*model.a2[1])
         model.dummy_expr2 = Expression(initialize=model.y/model.a3*model.a4[1])
 
-        model.obj = Objective(expr=model.x + 3.0*model.y + 1.0 + model.z1 - model.z2)
+        model.inactive_obj = Objective(expr=model.x + 3.0*model.y + 1.0 + model.z1 - model.z2)
+        model.inactive_obj.deactivate()
+        model.obj = Objective(expr=model.inactive_obj)
         model.c1 = Constraint(expr=model.dummy_expr1 <= model.dummy_expr2)
         model.c2 = Constraint(expr=2.0 <= model.x/model.a3 - model.y <= 10)
         model.c3 = Constraint(expr=0 <= model.z1 + 1 <= 10)
@@ -867,7 +869,9 @@ class simple_QP(_ModelClassBase):
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=NonNegativeReals)
 
-        model.obj = Objective(expr=model.x**2 + 3.0*model.y**2 + 1.0)
+        model.inactive_obj = Objective(expr=model.y)
+        model.inactive_obj.deactivate()
+        model.obj = Objective(expr=model.x**2 + 3.0*model.inactive_obj**2 + 1.0)
         model.c1 = Constraint(expr=model.a <= model.y)
         model.c2 = Constraint(expr=2.0 <= model.x/model.a - model.y <= 10)
 

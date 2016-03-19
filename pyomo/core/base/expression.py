@@ -31,27 +31,15 @@ from six import iteritems
 logger = logging.getLogger('pyomo.core')
 
 
-class _ExpressionData(ComponentData, NumericValue):
+class _ExpressionData(NumericValue):
     """
     An object that defines an expression that is never cloned
-
-    Constructor Arguments
-        owner       The Expression that owns this data.
 
     Public Class Attributes
         expr       The expression owned by this data.
     """
 
     __slots__ = ()
-
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ComponentData
-        #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
 
     #
     # Interface
@@ -135,39 +123,34 @@ class _ExpressionData(ComponentData, NumericValue):
         """A boolean indicating whether this expression is fixed."""
         raise NotImplementedError
 
-
-class _GeneralExpressionData(_ExpressionData):
+class _GeneralExpressionDataImpl(_ExpressionData):
     """
     An object that defines an expression that is never cloned
 
     Constructor Arguments
-        owner       The Expression that owns this data.
+        expr        The Pyomo expression stored in this expression.
+        component   The Expression object that owns this data.
 
     Public Class Attributes
         expr       The expression owned by this data.
     """
 
     __pickle_slots__ = ('_expr',)
-    # Note that _ComponentData already has a __weakref__ slot
-    __slots__ = __pickle_slots__ + (('_parent_expr',) if safe_mode else ())
 
-    def __init__(self, expr, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - _ExpressionData
-        #   - ComponentData
-        #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
+    # any derived classes need to declare these as their slots,
+    # but ignore them in their __getstate__ implementation
+    __expression_slots__ = __pickle_slots__ + (('_parent_expr',) if safe_mode else ())
 
+    __slots__ = ()
+
+    def __init__(self, expr):
         self._expr = as_numeric(expr) if (expr is not None) else None
         if safe_mode:
             self._parent_expr = None
 
     def __getstate__(self):
-        state = super(_GeneralExpressionData, self).__getstate__()
-        for i in _GeneralExpressionData.__pickle_slots__:
+        state = super(_GeneralExpressionDataImpl, self).__getstate__()
+        for i in _GeneralExpressionDataImpl.__expression_slots__:
             state[i] = getattr(self, i)
         if safe_mode:
             state['_parent_expr'] = None
@@ -178,7 +161,7 @@ class _GeneralExpressionData(_ExpressionData):
         return state
 
     def __setstate__(self, state):
-        super(_GeneralExpressionData, self).__setstate__(state)
+        super(_GeneralExpressionDataImpl, self).__setstate__(state)
         if safe_mode:
             if self._parent_expr is not None:
                 self._parent_expr = weakref_ref(self._parent_expr)
@@ -199,13 +182,13 @@ class _GeneralExpressionData(_ExpressionData):
     @property
     def value(self):
         logger.warning("DEPRECATED: The .value property getter on "
-                       "_GeneralExpressionData is deprecated. Use "
+                       "_GeneralExpressionDataImpl is deprecated. Use "
                        "the .expr property getter instead")
         return self._expr
     @value.setter
     def value(self, expr):
         logger.warning("DEPRECATED: The .value property setter on "
-                       "_GeneralExpressionData is deprecated. Use "
+                       "_GeneralExpressionDataImpl is deprecated. Use "
                        "the set_value(expr) method instead")
         self.set_value(expr)
 
@@ -223,6 +206,29 @@ class _GeneralExpressionData(_ExpressionData):
         """A boolean indicating whether this expression is fixed."""
         return self._expr.is_fixed()
 
+class _GeneralExpressionData(_GeneralExpressionDataImpl,
+                             ComponentData):
+    """
+    An object that defines an expression that is never cloned
+
+    Constructor Arguments
+        expr        The Pyomo expression stored in this expression.
+        component   The Expression object that owns this data.
+
+    Public Class Attributes
+        expr        The expression owned by this data.
+
+    Private class attributes:
+        _component  The expression component.
+    """
+
+    __slots__ = _GeneralExpressionDataImpl.__expression_slots__
+
+    def __init__(self, expr, component=None):
+        _GeneralExpressionDataImpl.__init__(self, expr)
+        # Inlining ComponentData.__init__
+        self._component = weakref_ref(component) if (component is not None) \
+                          else None
 
 class Expression(IndexedComponent):
     """

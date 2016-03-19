@@ -7,16 +7,26 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['Objective', 'simple_objective_rule', '_ObjectiveData', 'minimize', 'maximize', 'simple_objectivelist_rule', 'ObjectiveList']
+__all__ = ('Objective',
+           'simple_objective_rule',
+           '_ObjectiveData',
+           'minimize',
+           'maximize',
+           'simple_objectivelist_rule',
+           'ObjectiveList')
 
 import sys
 import logging
 from weakref import ref as weakref_ref
 import inspect
 
-from pyomo.core.base.numvalue import NumericValue, as_numeric, value
-from pyomo.core.base.component import ActiveComponentData, register_component
-from pyomo.core.base.indexed_component import ActiveIndexedComponent, UnindexedComponent_set
+from pyomo.core.base.numvalue import as_numeric, value
+from pyomo.core.base.component import (ActiveComponentData,
+                                       register_component)
+from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
+                                               UnindexedComponent_set)
+from pyomo.core.base.expression import (_ExpressionData,
+                                        _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
 
@@ -28,7 +38,7 @@ logger = logging.getLogger('pyomo.core')
 minimize=1
 maximize=-1
 
-def simple_objective_rule( fn ):
+def simple_objective_rule(fn):
     """
     This is a decorator that translates None into Objective.Skip.
     This supports a simpler syntax in objective rules, though these
@@ -43,7 +53,7 @@ def simple_objective_rule( fn ):
     model.o = Objective(rule=simple_objective_rule(...))
     """
 
-    def wrapper_function ( *args, **kwargs ):
+    def wrapper_function (*args, **kwargs):
         #
         # If the function is None, then skip this objective.
         #
@@ -53,13 +63,13 @@ def simple_objective_rule( fn ):
         # Otherwise, the argument is a functor, so call it to generate
         # the objective expression.
         #
-        value = fn( *args, **kwargs )
+        value = fn(*args, **kwargs)
         if value is None:
             return Objective.Skip
         return value
     return wrapper_function
 
-def simple_objectivelist_rule( fn ):
+def simple_objectivelist_rule(fn):
     """
 
     This is a decorator that translates None into ObjectiveList.End.
@@ -74,7 +84,7 @@ def simple_objectivelist_rule( fn ):
 
     model.o = ObjectiveList(expr=simple_objectivelist_rule(...))
     """
-    def wrapper_function ( *args, **kwargs ):
+    def wrapper_function (*args, **kwargs):
         #
         # If the function is None, then the list is finished.
         #
@@ -84,7 +94,7 @@ def simple_objectivelist_rule( fn ):
         # Otherwise, the argument is a functor, so call it to generate
         # the objective expression.
         #
-        value = fn( *args, **kwargs )
+        value = fn(*args, **kwargs)
         if value is None:
             return ObjectiveList.End
         return value
@@ -94,60 +104,20 @@ def simple_objectivelist_rule( fn ):
 # This class is a pure interface
 #
 
-class _ObjectiveData(ActiveComponentData):
+class _ObjectiveData(_ExpressionData):
     """
     This class defines the data for a single objective.
 
-    Note that this is a subclass of NumericValue to allow
-    objectives to be used as part of expressions.
-
-    Constructor arguments:
-        component       The Objective object that owns this data.
-
     Public class attributes:
-        active          A boolean that is true if this objective is active
-                            in the model.
         expr            The Pyomo expression for this objective
         sense           The direction for this objective.
-
-    Private class attributes:
-        _component      The objective component.
-        _active         A boolean that indicates whether this data is active
     """
 
     __slots__ = ()
 
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ActiveComponentData
-        #   - ComponentData
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
-        self._active = True
-
-    #
-    # Hack to so that that value(objective) redirects to
-    # the __call__ method
-    #
-    # Note: _ObjectiveData used to be derived from NumericValue
-    #       which implements as_numeric, but Objectives were never
-    #       able to be used inside other expressions so the
-    #       NumericValue base class has been removed.
-    #
-    def as_numeric(self):
-        return self
-
     #
     # Interface
     #
-
-    def __call__(self, exception=True):
-        """Compute the value of this objective."""
-        if self.expr is None:
-            return None
-        return self.expr(exception=exception)
 
     def is_minimizing(self):
         """Return True if this is a minimization objective."""
@@ -158,24 +128,17 @@ class _ObjectiveData(ActiveComponentData):
     #
 
     @property
-    def expr(self):
-        """Access the expression of this objective."""
-        raise NotImplementedError
-
-    @property
     def sense(self):
         """Access sense (direction) of this objective."""
-        raise NotImplementedError
-
-    def set_value(self, expr):
-        """Set the expression of this objective."""
         raise NotImplementedError
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
         raise NotImplementedError
 
-class _GeneralObjectiveData(_ObjectiveData):
+class _GeneralObjectiveData(_GeneralExpressionDataImpl,
+                            _ObjectiveData,
+                            ActiveComponentData):
     """
     This class defines the data for a single objective.
 
@@ -184,12 +147,13 @@ class _GeneralObjectiveData(_ObjectiveData):
 
     Constructor arguments:
         expr            The Pyomo expression stored in this objective.
+        sense           The direction for this objective.
         component       The Objective object that owns this data.
 
     Public class attributes:
+        expr            The Pyomo expression for this objective
         active          A boolean that is true if this objective is active
                             in the model.
-        expr            The Pyomo expression for this objective
         sense           The direction for this objective.
 
     Private class attributes:
@@ -197,23 +161,18 @@ class _GeneralObjectiveData(_ObjectiveData):
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ('_expr', '_sense',)
+    __pickle_slots__ = ("_sense",)
+    __slots__ = __pickle_slots__ + \
+                _GeneralExpressionDataImpl.__expression_slots__
 
     def __init__(self, expr, sense=minimize, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - _ObjectiveData,
-        #   - ActiveComponentData
-        #   - ComponentData
+        _GeneralExpressionDataImpl.__init__(self, expr)
+        # Inlining ActiveComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._active = True
-
-        # don't call set_value or set_sense here (it causes issues with
-        # SimpleObjective initialization)
-        self._expr = as_numeric(expr) if (expr is not None) else None
         self._sense = sense
+
         if (self._sense != minimize) and \
            (self._sense != maximize):
             raise ValueError("Objective sense must be set to one of "
@@ -224,8 +183,8 @@ class _GeneralObjectiveData(_ObjectiveData):
         """
         This method must be defined because this class uses slots.
         """
-        state = super(_GeneralObjectiveData, self).__getstate__()
-        for i in _GeneralObjectiveData.__slots__:
+        state = _GeneralExpressionDataImpl.__getstate__(self)
+        for i in _GeneralObjectiveData.__pickle_slots__:
             state[i] = getattr(self,i)
         return state
 
@@ -238,29 +197,6 @@ class _GeneralObjectiveData(_ObjectiveData):
     #
 
     @property
-    def expr(self):
-        """Access the expression of this objective."""
-        return self._expr
-    @expr.setter
-    def expr(self, expr):
-        """Set the expression of this objective."""
-        self.set_value(expr)
-
-    # for backwards compatibility reasons
-    @property
-    def value(self):
-        logger.warning("DEPRECATED: The .value property getter on "
-                       "_GeneralObjectiveData is deprecated. Use "
-                       "the .expr property getter instead")
-        return self._expr
-    @value.setter
-    def value(self, expr):
-        logger.warning("DEPRECATED: The .value property setter on "
-                       "_GeneralObjectiveData is deprecated. Use "
-                       "the set_value(expr) or method instead")
-        self.set_value(expr)
-
-    @property
     def sense(self):
         """Access sense (direction) of this objective."""
         return self._sense
@@ -268,10 +204,6 @@ class _GeneralObjectiveData(_ObjectiveData):
     def sense(self, sense):
         """Set the sense (direction) of this objective."""
         self.set_sense(sense)
-
-    def set_value(self, expr):
-        """Set the expression of this objective."""
-        self._expr = as_numeric(expr) if (expr is not None) else None
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""

@@ -19,6 +19,9 @@
     "slack": -10.0, 
     "value": 0.0
   }, 
+  "inactive_obj": {
+    "value": 7.0
+  }, 
   "obj": {
     "value": 7.0
   }, 
