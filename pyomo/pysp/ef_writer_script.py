@@ -334,6 +334,7 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
         self._manager = None
         self.objective = undefined
+        self.objective_sense = pyomo.core.base.minimize
         self.gap = undefined
         self.termination_condition = undefined
         self.solver_status = undefined
@@ -521,6 +522,12 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
         if io_options is not None:
             solve_kwds.update(io_options)
 
+        objectives = list(self.instance.component_objects(pyomo.core.base.Objective, active=True))
+        if len(objectives) > 1:
+            raise RuntimeError("Multiple objectives are active in the extensive form - total number=%d" % len(objectives))
+        the_objective = objectives[0]
+        self.objective_sense = the_objective.sense
+
         if (not self.get_option("disable_warmstart")) and \
            (self._solver.warm_start_capable()):
             action_handle = self._solver_manager.queue(self.instance,
@@ -613,6 +620,11 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
                 print("EF objective: %12.5f" % self.objective)
                 print("EF gap:       %12.5f" % self.gap)
+                if self.objective_sense == pyomo.core.base.minimize:
+                    bound = self.objective - self.gap
+                else:
+                    bound = self.objective + self.gap
+                print("EF bound:     %12.5f" % bound)
 
             else:
 
