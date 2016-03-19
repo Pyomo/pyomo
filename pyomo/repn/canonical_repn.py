@@ -9,8 +9,8 @@
 
 from __future__ import division
 
-__all__ = ['generate_canonical_repn', 'as_expr', 'canonical_is_constant', 
-           'canonical_is_linear', 'canonical_is_quadratic', 'canonical_is_nonlinear', 
+__all__ = ['generate_canonical_repn', 'as_expr', 'canonical_is_constant',
+           'canonical_is_linear', 'canonical_is_quadratic', 'canonical_is_nonlinear',
            'canonical_degree', 'LinearCanonicalRepn', 'GeneralCanonicalRepn']
 
 import logging
@@ -339,7 +339,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
             if exp.polynomial_degree() is None:
                 raise TypeError("Unsupported general power expression: "
                                 +str(exp._args))
-                
+
             # If this is of the form EXPR**1, we can just get the
             # representation of EXPR
             if exp._args[1] == 1:
@@ -451,10 +451,10 @@ class coopr3_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
     def __init__(self, **kwds):
 
         # a single scalar (int or float)
-        self.constant = None 
+        self.constant = None
 
         # a tuple of coefficents - one-for-one with self.variables
-        self.linear = None    
+        self.linear = None
 
         # a tuple of _VarValues
         self.variables = None
@@ -475,7 +475,7 @@ class coopr3_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
     def __str__(self):
         ordered_vars = None
         if self.variables is not None:
-            ordered_vars = sorted( 
+            ordered_vars = sorted(
                 (v.cname(True), i) for i,v in enumerate(self.variables) )
         tmp_str = str(self.constant) if (self.constant) else ("")
         tmp_str += (" + ") if (self.constant and self.variables) else ("")
@@ -620,7 +620,7 @@ class pyomo4_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
 def _collect_linear_sum(exp, idMap, multiplier, coef, varmap, compute_values):
 
     coef[None] += multiplier * exp._const  # None is the constant term in the coefficient map.
-    
+
     arg_coef_iterator = exp._coef.__iter__()
     for arg in exp._args:
         # an arg can be anything - a product, a variable, whatever.
@@ -649,7 +649,7 @@ def _collect_linear_prod(exp, idMap, multiplier, coef, varmap, compute_values):
     multiplier *= exp._coef
     _coef = { None : 0 }
     _varmap = {}
-    
+
     for subexp in exp._denominator:
         if compute_values:
             x = value(subexp) # only have constants/fixed terms in the denominator.
@@ -684,7 +684,6 @@ def _collect_linear_prod(exp, idMap, multiplier, coef, varmap, compute_values):
     else:
         # constant expression; i.e. 1/x
         coef[None] += multiplier
-        
 
 def _collect_linear_pow(exp, idMap, multiplier, coef, varmap, compute_values):
 
