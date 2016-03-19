@@ -608,7 +608,7 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             if (self.solution_status == SolutionStatus.optimal) or \
                (self.solution_status == SolutionStatus.feasible):
 
-                print("EF solve completed and solve status is %s" % self.solution_status)
+                print("EF solve completed and solution status is %s" % self.solution_status)
                 print("EF solve termination condition is %s" % self.termination_condition)
 
                 print("EF objective: %12.5f" % self.objective)
