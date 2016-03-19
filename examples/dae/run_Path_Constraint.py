@@ -24,26 +24,17 @@ solver=SolverFactory('ipopt')
 
 results = solver.solve(m, tee=True)
 
-x1 = []
-x2 = []
-u = []
-t=[]
-
-for i in sorted(m.t):
-    t.append(i)
-    x1.append(value(m.x1[i]))
-    x2.append(value(m.x2[i]))
-    u.append(value(m.u[i]))
+def plotter(subplot, x, *y, **kwds):
+    plt.subplot(subplot)
+    for i,_y in enumerate(y):
+        plt.plot(x, [value(_y[t]) for t in x], 'brgcmk'[i%6])
+        if kwds.get('points', False):
+            plt.plot(x, [value(_y[t]) for t in x], 'o')
+    plt.title(kwds.get('title',''))
+    plt.legend(tuple(_y.cname() for _y in y))
+    plt.xlabel(x.cname())
 
 import matplotlib.pyplot as plt
-plt.subplot(121)
-plt.plot(t,x1)
-plt.plot(t,x2,'r')
-plt.legend(('x1','x2'))
-plt.xlabel('t')
-plt.subplot(122)
-plt.plot(t,u)
-plt.plot(t,u,'o')
-plt.xlabel('t')
-plt.ylabel('u')
+plotter(121, m.t, m.x1, m.x2, title='Differential Variables')
+plotter(122, m.t, m.u, title='Control Variables', points=True)
 plt.show()
