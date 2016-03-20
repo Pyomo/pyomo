@@ -78,7 +78,7 @@ if sys.version_info[:2] == (2,6):
 #
 # Create the argparse parser for Pyomo
 #
-doc="The 'pyomo' command is the top-level command for the Pyomo optimization software."
+doc="This is the main driver for the Pyomo optimization software."
 epilog="""
 -------------------------------------------------------------------------
 Pyomo supports a variety of modeling and optimization capabilities,
@@ -92,9 +92,11 @@ print details for a subcommand.  For example, type
 
 to print information about the `solve` subcommand.
 """
-_pyomo_parser = argparse.ArgumentParser(description=doc, epilog=epilog, formatter_class=CustomHelpFormatter)
+_pyomo_parser = argparse.ArgumentParser(
+    description=doc, epilog=epilog, formatter_class=CustomHelpFormatter )
 _pyomo_parser.add_argument("--version", action="version", version=get_version())
-_pyomo_subparsers = _pyomo_parser.add_subparsers(dest='subparser_name', title='subcommands')
+_pyomo_subparsers = _pyomo_parser.add_subparsers(
+    dest='subparser_name', title='subcommands' )
 
 subparsers = []
 
@@ -103,13 +105,10 @@ def add_subparser(name, **args):
     Add a subparser to the 'pyomo' command.
     """
     global subparsers
-    func = None
-    if 'func' in args:
-        func = args['func']
-        del args['func']
+    func = args.pop('func', None)
     parser = _pyomo_subparsers.add_parser(name, **args)
     subparsers.append(name)
-    if not func is None:
+    if func is not None:
         parser.set_defaults(func=func)
     return parser
 
