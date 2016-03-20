@@ -37,6 +37,7 @@ def read(*rnames):
 
 requires=[
             'PyUtilib>=5.2.3601',
+            'appdirs',
             'ply',
             'nose',
             'six>=1.4',

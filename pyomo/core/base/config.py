@@ -1,3 +1,12 @@
+import appdirs
+import os
+import json
+try:
+    import yaml
+    yaml_available = True
+except ImportError:
+    yaml_available = False
+
 from pyutilib.misc.config import ConfigBase, ConfigBlock, ConfigValue
 
 USER_OPTION = 0
@@ -9,6 +18,23 @@ class PyomoOptions_(object):
 
     def __init__(self):
         self._options_stack = [ default_pyomo_config() ]
+
+        # Load the user's configuration
+        sources = [(json.load, 'json')]
+        if yaml_available:
+            sources.append( (yaml.load, 'yml') )
+            sources.append( (yaml.load, 'yaml') )
+        for parser, suffix in sources:
+            cfg_file = os.path.join( appdirs.user_data_dir('pyomo'),
+                                     'config.'+suffix)
+            if os.path.exists(cfg_file):
+                fp = open(cfg_file)
+                try:
+                    data = parser(fp)
+                except:
+                    logger.error("Error parsing the user's default "
+                                 "configuration file\n\t%s." % (cfg_file,))
+                self._options_stack[0].set_value(data)
 
     def active_config(self):
         return self._options_stack[-1]
