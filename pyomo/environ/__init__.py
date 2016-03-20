@@ -10,70 +10,62 @@
 #
 # Expose the symbols from pyomo.core
 #
-import pyomo.core
-__all__ = [d for d in dir(pyomo.core) if not d.startswith('_')]
 from pyomo.core import *
-__all__.append('UnknownSolver')
-__all__.append('SolverFactory')
-__all__.append('SolverManagerFactory')
 from pyomo.opt import SolverFactory, SolverManagerFactory, UnknownSolver
+from pyomo.util.plugin import PluginGlobals as _PG
 
-
-import sys
-if sys.version_info > (3,0):
+import sys as _sys
+if _sys.version_info[0] >= 3:
     import importlib
-from pyomo.util.plugin import PluginGlobals
 
+    def _do_import(pkg_name):
+        importlib.import_module(pkg_name)
+else:
+    def _do_import(pkg_name):
+        __import__(pkg_name, globals(), locals(), [], -1)
 
 #
 # These packages contain plugins that need to be loaded
 #
-packages = [ 'pyomo.opt', 'pyomo.core', 'pyomo.checker', 'pyomo.repn', 
+_packages = ['pyomo.opt', 'pyomo.core', 'pyomo.checker', 'pyomo.repn',
              'pyomo.pysp', 'pyomo.neos',
-             'pyomo.openopt', 'pyomo.solvers', 'pyomo.gdp', 'pyomo.mpec', 
+             'pyomo.openopt', 'pyomo.solvers', 'pyomo.gdp', 'pyomo.mpec',
              'pyomo.dae', 'pyomo.bilevel', 'pyomo.scripting']
-# 
-# These packages are under development, or they may be omitted in a Pyomo installation
 #
-optional_packages = set([])
+# These packages are under development, or they may be omitted in a
+# Pyomo installation; silently ignore any import errors.
+#
+_optional_packages = set([])
 
 
-def do_import(pname):
-    if sys.version_info > (3,0):
-        importlib.import_module(pname)
-    else:
-        __import__(pname, globals(), locals(), [], -1)
-
-
-def import_packages():
-    for name in packages:
+def _import_packages():
+    for name in _packages:
         pname = name+'.plugins'
-        imported = False
-        if name in optional_packages:
-            try:
-                do_import(pname)
-                imported = True
-            except ImportError:
-                pass
-        else:
-            try:
-                do_import(pname)
-            except ImportError:
-                exctype, err, tb = sys.exc_info()[0:3] # BUG?
+        try:
+            _do_import(pname)
+        except ImportError:
+            if name in _optional_packages:
+                # Note: Continue to avoid the package load().
+                #
+                # TODO: Should this generate a warning if the package exists
+                # on the file system?
+                continue
+            else:
+                exctype, err, tb = _sys.exc_info()  # BUG?
                 import traceback
-                msg = "pyomo.environ failed to import %s:\nOriginal %s: %s\nTraceback:\n%s" \
-                    % ( pname, type(err).__name__, err, 
-                        #''.join(traceback.format_stack(f=tb.tb_frame.f_back)),
-                        ''.join(traceback.format_tb(tb)), )
+                msg = "pyomo.environ failed to import %s:\nOriginal %s: %s\n"\
+                      "Traceback:\n%s" \
+                      % (pname, exctype.__name__, err,
+                         ''.join(traceback.format_tb(tb)),)
                 # clear local variables to remove circular references
                 exctype = err = tb = None
+                # TODO: Should this just log an error and re-raise the
+                # original exception?
                 raise ImportError(msg)
-            imported = True
-        if imported:
-            pkg = sys.modules[pname]
-            pkg.load()
 
-PluginGlobals.add_env("pyomo")
-import_packages()
-PluginGlobals.pop_env()
+        pkg = _sys.modules[pname]
+        pkg.load()
 
+_PG.add_env("pyomo")
+_import_packages()
+_PG.pop_env()
