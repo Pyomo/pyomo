@@ -36,7 +36,7 @@ class BILEVEL_Solver3(pyomo.opt.OptSolver):
         xfrm = TransformationFactory('bilevel.linear_mpec')
         xfrm.apply_to(self._instance)
         xfrm = TransformationFactory('mpec.simple_nonlinear')
-        xfrm.apply_to(self._instance, mpec_bound=1e-7)
+        xfrm.apply_to(self._instance, mpec_bound=self.options.get('mpec_bound',1e-7))
         #
         # Solve with a specified solver
         #
