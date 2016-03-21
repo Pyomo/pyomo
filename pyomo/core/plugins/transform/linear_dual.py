@@ -107,6 +107,15 @@ class LinearDual_PyomoTransformation(Transformation):
                 setattr(dual, cname+'_upper_', Var())
         dual.construct()
         #
+        # Add variables
+        #
+        # TODO: revisit this hack.  We shouldn't be calling _default()
+        #
+        for name, ndx in b_coef:
+            v = getattr(dual, name)
+            if not ndx in v:
+                v._default(ndx)    
+        #
         # Construct the objective
         #
         if d_sense == minimize:
