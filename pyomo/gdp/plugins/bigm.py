@@ -257,7 +257,7 @@ class BigM_Transformation(Transformation):
                     if M[i] is not None:
                         M[i] += repn.constant
 
-            for i in range(0,len(repn.linear)):
+            for i, coef in enumerate(repn.linear or []):
                 var = repn.variables[i]
                 coef = repn.linear[i]
                 bounds = (value(var.lb), value(var.ub))
