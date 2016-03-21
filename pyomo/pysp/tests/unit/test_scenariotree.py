@@ -642,5 +642,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         model.StageVariables["Stage2"].add("x")
         ScenarioTree(scenariotreeinstance=model)
 
+TestScenarioTree = unittest.category('smoke','nightly','expensive')(TestScenarioTree)
+
 if __name__ == "__main__":
     unittest.main()
