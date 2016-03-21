@@ -36,13 +36,24 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         xfrm = TransformationFactory('bilevel.linear_dual')
         xfrm.apply_to(self._instance)
         #
+        # Verify whether the objective is linear
+        #
+        nonlinear=False
+        for odata in self._instance.component_objects(Objective, active=True):
+            odata.pprint()
+            nonlinear = odata.expr.polynomial_degree() != 1
+            # Stop after the first objective
+            break
+        #
         # Apply an additional transformation to remap bilinear terms
         #
-        if self.options.transform is None:
-            xfrm = None
-        else:
-            xfrm = TransformationFactory(self.options.transform)
-            xfrm.apply_to(self._instance)
+        print "NONLINEAR", nonlinear
+        self._instance.pprint()
+        if nonlinear:
+            gdp_xfrm = TransformationFactory("gdp.bilinear")
+            gdp_xfrm.apply_to(self._instance)
+            mip_xfrm = TransformationFactory("gdp.bigm")
+            mip_xfrm.apply_to(self._instance, default_bigM=self.options.get('bigM',100000))
         #
         # Solve with a specified solver
         #
