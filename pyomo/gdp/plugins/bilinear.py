@@ -16,6 +16,7 @@ from pyomo.core.base.expr import _ProductExpression
 from pyomo.core.base.set_types import BooleanSet
 from pyomo.core.base.var import _VarData
 from pyomo.gdp import *
+from pyomo.repn import generate_canonical_repn
 
 logger = logging.getLogger('pyomo.core')
 
@@ -43,8 +44,8 @@ class Bilinear_Transformation(Transformation):
     def _transformBlock(self, block, instance):
         for component in block.component_objects(Objective, active=True, descend_into=False):
             component.expr = self._transformExpression(component.expr, instance)
-        for component in block.component_objects(Constraint, active=True, descend_into=False):
-            component.body = self._transformExpression(component.body, instance)
+        for component in block.component_data_objects(Constraint, active=True, descend_into=False):
+            component._body = self._transformExpression(component.body, instance)
 
     def _transformExpression(self, expr, instance):
         if expr.polynomial_degree() > 2:
@@ -82,14 +83,14 @@ class Bilinear_Transformation(Transformation):
                 id = len(instance.bilinear_vars_)
                 instance.disjunction_index_.add(id)
                 # First disjunct
-                d0 = instance.bilinear_disjunct_[id,0]
+                d0 = instance.disjuncts_[id,0]
                 d0.c1 = Constraint(expr=v == 1)
                 d0.c2 = Constraint(expr=v == e+coef*vars[1])
                 # Second disjunct
-                d1 = instance.bilinear_disjunct_[id,1]
+                d1 = instance.disjuncts_[id,1]
                 d0.c1 = Constraint(expr=v == 0)
                 # Disjunction
-                instance.bilinear_disjunction_[id]._disjuncts[id] = [instance.bilinear_disjunct_[id,0], instance.bilinear_disjunct_[id,1]]
+                instance.disjunction_._disjuncts[id] = [instance.disjuncts_[id,0], instance.disjuncts_[id,1]]
                 # The disjunctive variable is the expression
                 return v
             #
@@ -98,14 +99,14 @@ class Bilinear_Transformation(Transformation):
                 id = len(instance.bilinear_vars_)
                 instance.disjunction_index_.add(id)
                 # First disjunct
-                d0 = instance.bilinear_disjunct_[id,0]
+                d0 = instance.disjuncts_[id,0]
                 d0.c1 = Constraint(expr=v == 1)
                 d0.c2 = Constraint(expr=v == e+coef*vars[0])
                 # Second disjunct
-                d1 = instance.bilinear_disjunct_[id,1]
+                d1 = instance.disjuncts_[id,1]
                 d0.c1 = Constraint(expr=v == 0)
                 # Disjunction
-                instance.bilinear_disjunction_[id]._disjuncts[id] = [instance.bilinear_disjunct_[id,0], instance.bilinear_disjunct_[id,1]]
+                instance.disjunction_._disjuncts[id] = [instance.disjuncts_[id,0], instance.disjuncts_[id,1]]
                 # The disjunctive variable is the expression
                 return v
             else:
