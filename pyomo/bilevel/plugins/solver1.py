@@ -47,7 +47,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         #
         # Apply an additional transformation to remap bilinear terms
         #
-        print "NONLINEAR", nonlinear
+        print("NONLINEAR %s" % (nonlinear,))
         self._instance.pprint()
         if nonlinear:
             gdp_xfrm = TransformationFactory("gdp.bilinear")
