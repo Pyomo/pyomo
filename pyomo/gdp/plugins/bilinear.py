@@ -29,11 +29,16 @@ class Bilinear_Transformation(Transformation):
 
     def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
-        if getattr(instance, 'bilinear_vars_', None) is None:
-            instance.bilinear_vars_ = VarList()
-            instance.disjunction_index_ = Set()
-            instance.disjuncts_   = Disjunct(instance.disjunction_index_*[0,1])
-            instance.disjunction_ = Disjunction(instance.disjunction_index_)
+        # TODO: This data should be stored differently.  We cannot nest this transformation with itself
+        if getattr(instance, 'bilinear_data_', None) is None:
+            instance.bilinear_data_ = Block()
+            instance.bilinear_data_.vlist = VarList()
+            instance.bilinear_data_.vlist_boolean = []
+            instance.bilinear_data_.index = Set()
+            instance.bilinear_data_.disjuncts_   = Disjunct(instance.bilinear_data_.index*[0,1])
+            instance.bilinear_data_.disjunction_ = Disjunction(instance.bilinear_data_.index)
+            instance.bilinear_data_.o_expr = {}
+            instance.bilinear_data_.c_body = {}
         #
         # Iterate over all blocks
         #
@@ -43,9 +48,13 @@ class Bilinear_Transformation(Transformation):
 
     def _transformBlock(self, block, instance):
         for component in block.component_objects(Objective, active=True, descend_into=False):
-            component.expr = self._transformExpression(component.expr, instance)
+            expr = self._transformExpression(component.expr, instance)
+            instance.bilinear_data_.o_expr[ id(component) ] = component.expr
+            component.expr = expr
         for component in block.component_data_objects(Constraint, active=True, descend_into=False):
-            component._body = self._transformExpression(component.body, instance)
+            expr = self._transformExpression(component.body, instance)
+            instance.bilinear_data_.c_body[ id(component) ] = component.body
+            component._body = expr
 
     def _transformExpression(self, expr, instance):
         if expr.polynomial_degree() > 2:
@@ -79,55 +88,49 @@ class Bilinear_Transformation(Transformation):
                     vars.append(idMap[v])
             #
             if isinstance(vars[0].domain, BooleanSet):
-                v = instance.bilinear_vars_.add()
-                id = len(instance.bilinear_vars_)
-                instance.disjunction_index_.add(id)
+                instance.bilinear_data_.vlist_boolean.append(vars[0])
+                v = instance.bilinear_data_.vlist.add()
+                v.setlb(0)
+                v.setub(None)
+                print(type(instance.bilinear_data_.vlist))
+                print(type(v))
+                id = len(instance.bilinear_data_.vlist)
+                instance.bilinear_data_.index.add(id)
                 # First disjunct
-                d0 = instance.disjuncts_[id,0]
-                d0.c1 = Constraint(expr=v == 1)
+                d0 = instance.bilinear_data_.disjuncts_[id,0]
+                d0.c1 = Constraint(expr=vars[0] == 1)
                 d0.c2 = Constraint(expr=v == e+coef*vars[1])
                 # Second disjunct
-                d1 = instance.disjuncts_[id,1]
-                d0.c1 = Constraint(expr=v == 0)
+                d1 = instance.bilinear_data_.disjuncts_[id,1]
+                d1.c1 = Constraint(expr=vars[1] == 0)
+                d1.c2 = Constraint(expr=v == 0)
                 # Disjunction
-                instance.disjunction_._disjuncts[id] = [instance.disjuncts_[id,0], instance.disjuncts_[id,1]]
+                instance.bilinear_data_.disjunction_._disjuncts[id] = [instance.bilinear_data_.disjuncts_[id,0], instance.bilinear_data_.disjuncts_[id,1]]
                 # The disjunctive variable is the expression
-                return v
+                e += coef * v
             #
             elif isinstance(vars[1].domain, BooleanSet):
-                v = instance.bilinear_vars_.add()
-                id = len(instance.bilinear_vars_)
-                instance.disjunction_index_.add(id)
+                instance.bilinear_data_.vlist_boolean.append(vars[1])
+                v = instance.bilinear_data_.vlist.add()
+                v.setlb(0)
+                v.setub(None)
+                id = len(instance.bilinear_data_.vlist)
+                instance.bilinear_data_.index.add(id)
                 # First disjunct
-                d0 = instance.disjuncts_[id,0]
-                d0.c1 = Constraint(expr=v == 1)
+                d0 = instance.bilinear_data_.disjuncts_[id,0]
+                d0.c1 = Constraint(expr=vars[1] == 1)
                 d0.c2 = Constraint(expr=v == e+coef*vars[0])
                 # Second disjunct
-                d1 = instance.disjuncts_[id,1]
-                d0.c1 = Constraint(expr=v == 0)
+                d1 = instance.bilinear_data_.disjuncts_[id,1]
+                d1.c1 = Constraint(expr=vars[1] == 0)
+                d1.c2 = Constraint(expr=v == 0)
                 # Disjunction
-                instance.disjunction_._disjuncts[id] = [instance.disjuncts_[id,0], instance.disjuncts_[id,1]]
+                instance.bilinear_data_.disjunction_._disjuncts[id] = [instance.bilinear_data_.disjuncts_[id,0], instance.bilinear_data_.disjuncts_[id,1]]
                 # The disjunctive variable is the expression
-                return v
+                e += coef * v
             else:
+                # If neither variable is boolean, just reinsert the original bilinear term
                 e += coef*vars[0]*vars[1]
-                return e
+        #
+        return e
             
-                
-
-    def X_replace_bilinear(self, expr, instance):
-        if not expr.is_expression():
-            return expr
-        if type(expr) is _ProductExpression:
-            if len(expr._numerator) != 2:
-                expr._numerator = [self._replace_bilinear(e, instance) for e in expr._numerator]
-                return expr
-            if not isinstance(expr._numerator[0], _VarData) or \
-                    not isinstance(expr._numerator[1], _VarData):
-                raise RuntimeError("Cannot yet handle complex subexpressions")
-            return expr
-        # Else ...
-        expr._args = [self._replace_bilinear(e, instance) for e in expr._args]
-        return expr
-             
-
