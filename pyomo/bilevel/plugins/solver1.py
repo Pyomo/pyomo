@@ -77,6 +77,26 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             self.results.append(opt.solve(self._instance,
                                           tee=self._tee,
                                           timelimit=self._timelimit))
+            print("POST-SOLVE")
+            self._instance.write("tmp.lp", io_options={"symbolic_solver_labels":True})
+            self._instance.pprint()
+            #self._instance.display()
+            #
+            # If the problem was bilinear, then reactivate the original data
+            #
+            if nonlinear:
+                i = 0
+                for v in self._instance.bilinear_data_.vlist.itervalues():
+                    print(v)
+                    print(v.cname())
+                    print(type(v))
+                    if abs(v.value) <= 1e-7:
+                        self._instance.bilinear_data_.vlist_boolean[i] = 0
+                    else:
+                        self._instance.bilinear_data_.vlist_boolean[i] = 1
+                    i = i + 1
+                #
+                self._instance.bilinear_data_.deactivate()
             #
             # Transform the result back into the original model
             #
