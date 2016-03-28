@@ -40,15 +40,12 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         #
         nonlinear=False
         for odata in self._instance.component_objects(Objective, active=True):
-            odata.pprint()
             nonlinear = odata.expr.polynomial_degree() != 1
             # Stop after the first objective
             break
         #
         # Apply an additional transformation to remap bilinear terms
         #
-        print("NONLINEAR %s" % (nonlinear,))
-        self._instance.pprint()
         if nonlinear:
             gdp_xfrm = TransformationFactory("gdp.bilinear")
             gdp_xfrm.apply_to(self._instance)
@@ -77,19 +74,21 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             self.results.append(opt.solve(self._instance,
                                           tee=self._tee,
                                           timelimit=self._timelimit))
-            print("POST-SOLVE")
-            self._instance.write("tmp.lp", io_options={"symbolic_solver_labels":True})
-            self._instance.pprint()
+            #print("POST-SOLVE - BEGIN")
+            #self._instance.write("tmp.lp", io_options={"symbolic_solver_labels":True})
+            #self._instance.pprint()
             #self._instance.display()
+            #print("POST-SOLVE - END")
             #
             # If the problem was bilinear, then reactivate the original data
             #
             if nonlinear:
                 i = 0
                 for v in self._instance.bilinear_data_.vlist.itervalues():
-                    print(v)
-                    print(v.cname())
-                    print(type(v))
+                    #print(v)
+                    #print(v.cname())
+                    #print(type(v))
+                    #print(v.value)
                     if abs(v.value) <= 1e-7:
                         self._instance.bilinear_data_.vlist_boolean[i] = 0
                     else:
@@ -129,22 +128,28 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
                     #         io_options are getting relayed to the subsolver
                     #         here).
                     #
-                    self.results.append(opt_inner.solve(self._instance,
-                                                        tee=self._tee,
-                                                        timelimit=self._timelimit,
-                                                        select=None))
-                    self._instance.solutions.select(0, ignore_fixed_vars=True)
-                    data_.parent_component().parent_block().reclassify_component_type(name_, SubModel)
+                    results = opt_inner.solve(self._instance, tee=self._tee, timelimit=self._timelimit)
+                                                        #select=None)
             # Unfix variables
             for vuid in tdata.fixed:
                 for index_, data_ in vuid.find_component_on(self._instance).iteritems():
                     if ComponentUID(data_) in unfixed_cuids:
                         data_.fixed = False
+            #
+            self._instance.solutions.select(0, ignore_fixed_vars=True)
+            self.results.append(results)
+            #
             stop_time = time.time()
             self.wall_time = stop_time - start_time
+            self.results_obj = self._setup_results_obj()
+            #
             # Reactivate top level objective
+            # and reclassify the submodel
+            #
             for oname, odata in self._instance.component_map(Objective).items():
                 odata.activate()
+            # TODO: rework the Block logic to allow for searching SubModel objects for variables, etc.
+            #data_.parent_component().parent_block().reclassify_component_type(name_, SubModel)
             #
             # Return the sub-solver return condition value and log
             #
@@ -152,6 +157,16 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
                                        log=getattr(opt,'_log',None))
 
     def _postsolve(self):
+        #
+        # Uncache the instance
+        #
+        self._instance = None
+        #
+        # Return the results object
+        #
+        return self.results_obj
+
+    def _setup_results_obj(self):
         #
         # Create a results object
         #
@@ -185,18 +200,8 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         prob.number_of_continuous_variables = self._instance.statistics.number_of_continuous_variables
         prob.number_of_objectives = self._instance.statistics.number_of_objectives
         #
-        from pyomo.core import maximize
-        ##if self._instance.sense == maximize:
-            ##prob.sense = pyomo.opt.ProblemSense.maximize
-        ##else:
-            ##prob.sense = pyomo.opt.ProblemSense.minimize
-        #
         # SOLUTION(S)
         #
         self._instance.solutions.store_to(results)
-        #
-        # Uncache the instance
-        #
-        self._instance = None
         return results
 

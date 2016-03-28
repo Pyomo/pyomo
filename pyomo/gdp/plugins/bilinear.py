@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import logging
+from six import iteritems
 
 from pyomo.util.plugin import alias
 from pyomo.core import *
@@ -36,7 +37,7 @@ class Bilinear_Transformation(Transformation):
             instance.bilinear_data_.vlist_boolean = []
             instance.bilinear_data_.index = Set()
             instance.bilinear_data_.disjuncts_   = Disjunct(instance.bilinear_data_.index*[0,1])
-            instance.bilinear_data_.disjunction_ = Disjunction(instance.bilinear_data_.index)
+            instance.bilinear_data_.disjunction_data = {}
             instance.bilinear_data_.o_expr = {}
             instance.bilinear_data_.c_body = {}
         #
@@ -45,6 +46,12 @@ class Bilinear_Transformation(Transformation):
         for block in instance.block_data_objects(
                 active=True, sort=SortComponents.deterministic ):
             self._transformBlock(block, instance)
+        #
+        # WEH: I wish I had a DisjunctList and DisjunctionList object...
+        #
+        def rule(block, i):
+            return instance.bilinear_data_.disjunction_data[i]
+        instance.bilinear_data_.disjunction_ = Disjunction(instance.bilinear_data_.index, rule=rule)
 
     def _transformBlock(self, block, instance):
         for component in block.component_objects(Objective, active=True, descend_into=False):
@@ -75,62 +82,61 @@ class Bilinear_Transformation(Transformation):
             e = 0
         # Linear terms
         if 1 in terms:
-            #print("HERE %s" % str(terms[1]))
-            #print("HERE %s %s" % (str(type(idMap)), str(idMap)))
             for key in terms[1]:
                 e += terms[1][key] * idMap[key]
         # Quadratic terms
         if 2 in terms:
-            coef = terms[2].values()[0]
-            vars = []
             for key in terms[2]:
+                vars = []
                 for v in key:
                     vars.append(idMap[v])
-            #
-            if isinstance(vars[0].domain, BooleanSet):
-                instance.bilinear_data_.vlist_boolean.append(vars[0])
-                v = instance.bilinear_data_.vlist.add()
-                v.setlb(0)
-                v.setub(None)
-                print(type(instance.bilinear_data_.vlist))
-                print(type(v))
-                id = len(instance.bilinear_data_.vlist)
-                instance.bilinear_data_.index.add(id)
-                # First disjunct
-                d0 = instance.bilinear_data_.disjuncts_[id,0]
-                d0.c1 = Constraint(expr=vars[0] == 1)
-                d0.c2 = Constraint(expr=v == e+coef*vars[1])
-                # Second disjunct
-                d1 = instance.bilinear_data_.disjuncts_[id,1]
-                d1.c1 = Constraint(expr=vars[1] == 0)
-                d1.c2 = Constraint(expr=v == 0)
-                # Disjunction
-                instance.bilinear_data_.disjunction_._disjuncts[id] = [instance.bilinear_data_.disjuncts_[id,0], instance.bilinear_data_.disjuncts_[id,1]]
-                # The disjunctive variable is the expression
-                e += coef * v
-            #
-            elif isinstance(vars[1].domain, BooleanSet):
-                instance.bilinear_data_.vlist_boolean.append(vars[1])
-                v = instance.bilinear_data_.vlist.add()
-                v.setlb(0)
-                v.setub(None)
-                id = len(instance.bilinear_data_.vlist)
-                instance.bilinear_data_.index.add(id)
-                # First disjunct
-                d0 = instance.bilinear_data_.disjuncts_[id,0]
-                d0.c1 = Constraint(expr=vars[1] == 1)
-                d0.c2 = Constraint(expr=v == e+coef*vars[0])
-                # Second disjunct
-                d1 = instance.bilinear_data_.disjuncts_[id,1]
-                d1.c1 = Constraint(expr=vars[1] == 0)
-                d1.c2 = Constraint(expr=v == 0)
-                # Disjunction
-                instance.bilinear_data_.disjunction_._disjuncts[id] = [instance.bilinear_data_.disjuncts_[id,0], instance.bilinear_data_.disjuncts_[id,1]]
-                # The disjunctive variable is the expression
-                e += coef * v
-            else:
-                # If neither variable is boolean, just reinsert the original bilinear term
-                e += coef*vars[0]*vars[1]
+                coef = terms[2][key]
+                #
+                if isinstance(vars[0].domain, BooleanSet):
+                    instance.bilinear_data_.vlist_boolean.append(vars[0])
+                    v = instance.bilinear_data_.vlist.add()
+                    bounds = vars[1].bounds
+                    v.setlb(bounds[0])
+                    v.setub(bounds[1])
+                    id = len(instance.bilinear_data_.vlist)
+                    instance.bilinear_data_.index.add(id)
+                    # First disjunct
+                    d0 = instance.bilinear_data_.disjuncts_[id,0]
+                    d0.c1 = Constraint(expr=vars[0] == 1)
+                    d0.c2 = Constraint(expr=v == coef*vars[1])
+                    # Second disjunct
+                    d1 = instance.bilinear_data_.disjuncts_[id,1]
+                    d1.c1 = Constraint(expr=vars[0] == 0)
+                    d1.c2 = Constraint(expr=v == 0)
+                    # Disjunction
+                    instance.bilinear_data_.disjunction_data[id] = [instance.bilinear_data_.disjuncts_[id,0], instance.bilinear_data_.disjuncts_[id,1]]
+                    instance.bilinear_data_.disjunction_data[id] = [instance.bilinear_data_.disjuncts_[id,0], instance.bilinear_data_.disjuncts_[id,1]]
+                    # The disjunctive variable is the expression
+                    e += v
+                #
+                elif isinstance(vars[1].domain, BooleanSet):
+                    instance.bilinear_data_.vlist_boolean.append(vars[1])
+                    v = instance.bilinear_data_.vlist.add()
+                    bounds = vars[0].bounds
+                    v.setlb(bounds[0])
+                    v.setub(bounds[1])
+                    id = len(instance.bilinear_data_.vlist)
+                    instance.bilinear_data_.index.add(id)
+                    # First disjunct
+                    d0 = instance.bilinear_data_.disjuncts_[id,0]
+                    d0.c1 = Constraint(expr=vars[1] == 1)
+                    d0.c2 = Constraint(expr=v == coef*vars[0])
+                    # Second disjunct
+                    d1 = instance.bilinear_data_.disjuncts_[id,1]
+                    d1.c1 = Constraint(expr=vars[1] == 0)
+                    d1.c2 = Constraint(expr=v == 0)
+                    # Disjunction
+                    instance.bilinear_data_.disjunction_data[id] = [instance.bilinear_data_.disjuncts_[id,0], instance.bilinear_data_.disjuncts_[id,1]]
+                    # The disjunctive variable is the expression
+                    e += v
+                else:
+                    # If neither variable is boolean, just reinsert the original bilinear term
+                    e += coef*vars[0]*vars[1]
         #
         return e
             
