@@ -128,7 +128,7 @@ def as_expr(rep, vars=None, model=None, ignore_other=False):
                     else:
                         e *= vars[id[1]+id_offset]**v[id]
             exp += e
-    # Stick general nonlineat at the end
+    # Stick general nonlinear at the end
     if None in rep and not ignore_other:
         exp += rep[None]
     return exp
