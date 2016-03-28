@@ -147,7 +147,7 @@ class Solution(MapContainer):
                             entries_to_print = True
 
                 if entries_to_print:
-                    for entry_id in sorted(iterkeys(id_dict_map)):
+                    for entry_id in sorted(iterkeys(id_dict_map), key=lambda id:id_name_map[id]):
                         if id_nonzeros_map[entry_id]:
                             if first:
                                 ostream.write("\n")
