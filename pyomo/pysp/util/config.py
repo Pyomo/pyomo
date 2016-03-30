@@ -247,13 +247,13 @@ def safe_declare_option(configblock,
 # throwing an error if the name is not new
 #
 def safe_declare_unique_option(configblock,
-                                name,
-                                configvalue,
-                                ap_group=None,
-                                declare_for_argparse=False,
-                                ap_args=None,
-                                ap_kwds=None,
-                                check_for_deprecated=False):
+                               name,
+                               configvalue,
+                               ap_group=None,
+                               declare_for_argparse=False,
+                               ap_args=None,
+                               ap_kwds=None,
+                               check_for_deprecated=False):
     assert isinstance(configblock, PySPConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False
@@ -307,18 +307,18 @@ def safe_declare_unique_option(configblock,
 # it has been declared for argparse
 #
 def safe_register_unique_option(configblock,
-                               name,
-                               configvalue,
-                               ap_group=None,
-                               ap_args=None,
-                               ap_kwds=None):
-    safe_declare_unique_option(configblock,
                                 name,
                                 configvalue,
-                                ap_group=ap_group,
-                                ap_args=ap_args,
-                                ap_kwds=ap_kwds,
-                                declare_for_argparse=True)
+                                ap_group=None,
+                                ap_args=None,
+                                ap_kwds=None):
+    safe_declare_unique_option(configblock,
+                               name,
+                               configvalue,
+                               ap_group=ap_group,
+                               ap_args=ap_args,
+                               ap_kwds=ap_kwds,
+                               declare_for_argparse=True)
 
 common_block = PySPConfigBlock("A collection of common PySP options")
 
@@ -2494,8 +2494,8 @@ def safe_declare_common_option(configblock,
 # Register a common option and make sure it is declared for argparse
 #
 def safe_register_common_option(configblock,
-                               name,
-                               prefix=None):
+                                name,
+                                prefix=None):
 
     assert isinstance(configblock, PySPConfigBlock)
     assert name not in _deprecated_block
