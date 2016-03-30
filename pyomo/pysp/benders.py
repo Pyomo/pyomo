@@ -1267,11 +1267,8 @@ def runbenders_register_options(options=None):
     safe_register_common_option(options,
                                "traceback")
     safe_register_common_option(options,
-                               "scenario_tree_manager")
-    safe_register_common_option(options,
                                "output_scenario_tree_solution")
-    ScenarioTreeManagerSolverClientSerial.register_options(options)
-    ScenarioTreeManagerSolverClientPyro.register_options(options)
+    ScenarioTreeManagerFactory.register_options(options)
     BendersAlgorithm.register_options(options)
 
     return options
@@ -1286,13 +1283,7 @@ def runbenders(options):
 
     start_time = time.time()
 
-    manager_class = None
-    if options.scenario_tree_manager == 'serial':
-        manager_class = ScenarioTreeManagerSolverClientSerial
-    elif options.scenario_tree_manager == 'pyro':
-        manager_class = ScenarioTreeManagerSolverClientPyro
-
-    with manager_class(options) \
+    with ScenarioTreeManagerFactory(options) \
          as manager:
         manager.initialize()
 
