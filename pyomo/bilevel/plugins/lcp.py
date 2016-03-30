@@ -10,7 +10,7 @@
 import six
 import logging
 
-from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID
+from pyomo.core.base import Block, VarList, ConstraintList, Objective, Var, Constraint, maximize, ComponentUID, Set
 from pyomo.repn import generate_canonical_repn
 from pyomo.repn.collect import collect_linear_terms
 from pyomo.util.plugin import alias
@@ -45,10 +45,14 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         #-------------------------------------------------------------------------------
         #
         # Disable the original submodel and
-        # execute the preprocessor
         #
-        instance.reclassify_component_type(submodel, SubModel)
-        submodel.deactivate()
+        #instance.reclassify_component_type(submodel, SubModel)
+        #submodel.deactivate()
+        # TODO: Cache the list of components that were deactivated
+        for (name, data) in submodel.component_map(active=True).items():
+            if not isinstance(data,Var) and not isinstance(data,Set):
+                data.deactivate()
+
 
     def _add_optimality_conditions(self, instance, submodel):
         """

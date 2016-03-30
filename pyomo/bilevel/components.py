@@ -24,8 +24,7 @@ class SubModel(SimpleBlock):
         #
         _rule = kwargs.pop('rule', None )
         _fixed = kwargs.pop('fixed', None )
-        _var = kwargs.pop('var', None )
-        _map = kwargs.pop('map', None )
+        _var = kwargs.pop('var', None )     # Not documented
         #
         # Initialize the SimpleBlock
         #
@@ -43,6 +42,5 @@ class SubModel(SimpleBlock):
             self._var = [_var]
         else:
             self._var = _var
-        self._map = _map
 
 register_component(SubModel, "A submodel in a bilevel program")

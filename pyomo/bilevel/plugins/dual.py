@@ -11,6 +11,7 @@ from pyomo.util.plugin import alias
 from pyomo.core.base import Constraint, Objective, Block
 from pyomo.repn import generate_canonical_repn
 from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base import Var, Set
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
 
 import logging
@@ -48,7 +49,12 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
         #
         # Disable the original submodel
         #
-        getattr(instance,self._submodel).deactivate()
+        sub = getattr(instance,self._submodel)
+        # TODO: Cache the list of components that were deactivated
+        for (name, data) in sub.component_map(active=True).items():
+            if not isinstance(data,Var) and not isinstance(data, Set):
+                data.deactivate()
+
 
     def _dualize(self, submodel, unfixed):
         """

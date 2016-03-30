@@ -49,6 +49,7 @@ class Base_BilevelTransformation(Transformation):
                 if not v in fixed:
                     unfixed.append((v,getattr(submodel._parent(),v).is_indexed()))
         elif submodel._var:
+            # NOTE: This argument is undocumented
             _var = set(submodel._var)
             unfixed = [(v,getattr(submodel._parent(),v).is_indexed()) for v in _var]
             fixed = []
@@ -56,7 +57,15 @@ class Base_BilevelTransformation(Transformation):
                 if not v in _var:
                     fixed.append(v)
         else:
-            raise RuntimeError("Must specify either 'fixed' or 'var' option for SubModel")
+            #
+            # By default, we assume that variables are fixed if they are not part of the 
+            # local model.
+            #
+            fixed = [v for v in var]
+            unfixed = []
+            for (name, data) in submodel.component_map(active=True).items():
+                if isinstance(data,Var):
+                    unfixed.append((data.cname(), data.is_indexed()))
         #
         self._submodel           = sub
         self._upper_vars         = var

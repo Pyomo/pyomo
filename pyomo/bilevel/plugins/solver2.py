@@ -11,7 +11,7 @@ import time
 import pyutilib.misc
 import pyomo.opt
 import pyomo.util
-from pyomo.core import TransformationFactory
+from pyomo.core import TransformationFactory, Var, Set
 
 
 class BILEVEL_Solver2(pyomo.opt.OptSolver):
@@ -68,7 +68,11 @@ class BILEVEL_Solver2(pyomo.opt.OptSolver):
         # Deactivate the block that contains the optimality conditions,
         # and reactivate SubModel
         #
-        self._instance._transformation_data['bilevel.linear_mpec'].submodel_cuid.find_component(self._instance).activate()
+        submodel = self._instance._transformation_data['bilevel.linear_mpec'].submodel_cuid.                 find_component(self._instance)
+        for (name, data) in submodel.component_map(active=False).items():
+            if not isinstance(data,Var) and not isinstance(data,Set):
+                data.activate()
+        # TODO: delete this subblock
         self._instance._transformation_data['bilevel.linear_mpec'].block_cuid.find_component(self._instance).deactivate()
         #
         # Return the sub-solver return condition value and log

@@ -9,7 +9,7 @@
 
 import time
 import pyutilib.misc
-from pyomo.core import TransformationFactory, Var, ComponentUID, Block, Objective
+from pyomo.core import TransformationFactory, Var, ComponentUID, Block, Objective, Set
 import pyomo.opt
 from pyomo.bilevel.components import SubModel
 import pyomo.util
@@ -112,6 +112,9 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
             for name_ in tdata.submodel:
                 submodel = getattr(self._instance, name_)
                 submodel.activate()
+                for (name, data) in submodel.component_map(active=False).items():
+                    if not isinstance(data,Var) and not isinstance(data,Set):
+                        data.activate()
                 dual_submodel = getattr(self._instance, name_+'_dual')
                 dual_submodel.deactivate()
                 pyomo.util.PyomoAPIFactory('pyomo.repn.compute_canonical_repn')({}, model=submodel)
