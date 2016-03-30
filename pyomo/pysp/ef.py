@@ -50,8 +50,15 @@ def create_ef_instance(scenario_tree,
 
     # scenario tree must be "linked" with a set of instances
     # to used this function
-    scenario_instances = dict((scenario._name,scenario._instance) \
-                              for scenario in scenario_tree._scenarios)
+    scenario_instances = {}
+    for scenario in scenario_tree.scenarios:
+        if scenario._instance is None:
+            raise ValueError(
+                "Cannot construct extensive form instance. "
+                "The scenario tree does not appear to be linked "
+                "to any Pyomo models. Missing model for scenario "
+                "with name: %s" % (scenario.name))
+        scenario_instances[scenario.name] = scenario._instance
 
     binding_instance = ConcreteModel()
     binding_instance.name = ef_instance_name
