@@ -54,6 +54,7 @@ from pyomo.pysp.util.config import (PySPConfigValue,
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command,
                                   sort_extensions_by_precedence)
+from pyomo.pysp.phutils import find_active_objective
 from pyomo.pysp.scenariotree.manager_solver import \
     (ScenarioTreeManager,
      ScenarioTreeManagerClientSerial)
@@ -334,7 +335,7 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
 
         self._manager = None
         self.objective = undefined
-        self.objective_sense = pyomo.core.base.minimize
+        self.objective_sense = undefined
         self.gap = undefined
         self.termination_condition = undefined
         self.solver_status = undefined
@@ -522,11 +523,8 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
         if io_options is not None:
             solve_kwds.update(io_options)
 
-        objectives = list(self.instance.component_objects(pyomo.core.base.Objective, active=True))
-        if len(objectives) > 1:
-            raise RuntimeError("Multiple objectives are active in the extensive form - total number=%d" % len(objectives))
-        the_objective = objectives[0]
-        self.objective_sense = the_objective.sense
+        self.objective_sense = \
+            find_active_objective(self.instance).sense
 
         if (not self.get_option("disable_warmstart")) and \
            (self._solver.warm_start_capable()):
@@ -602,36 +600,28 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             self.objective = self._manager.scenario_tree.\
                              findRootNode().\
                              computeExpectedNodeCost()
+            if self.gap is not undefined:
+                if self.objective_sense == pyomo.core.base.minimize:
+                    self.bound = self.objective - self.gap
+                else:
+                    self.bound = self.objective + self.gap
 
         else:
 
             self.objective = undefined
             self.gap = undefined
+            self.bound = undefined
             self.solution_status = undefined
 
         failure = False
 
         if check_status:
-            if (self.solution_status == SolutionStatus.optimal) or \
-               (self.solution_status == SolutionStatus.feasible):
-
-                print("EF solve completed and solution status is %s" % self.solution_status)
-                print("EF solve termination condition is %s" % self.termination_condition)
-
-                print("EF objective: %12.5f" % self.objective)
-                print("EF gap:       %12.5f" % self.gap)
-                if self.objective_sense == pyomo.core.base.minimize:
-                    bound = self.objective - self.gap
-                else:
-                    bound = self.objective + self.gap
-                print("EF bound:     %12.5f" % bound)
-
-            else:
-
+            if not ((self.solution_status == SolutionStatus.optimal) or \
+                    (self.solution_status == SolutionStatus.feasible)):
                 failure = True
                 if self.get_option("verbose") or \
                    exception_on_failure:
-                    msg = ("EF solve failed optimality check:\n"
+                    msg = ("EF solve failed solution status check:\n"
                            "Solver Status: %s\n"
                            "Termination Condition: %s\n"
                            "Solution Status: %s\n"
@@ -861,14 +851,13 @@ def runef(options,
             else:
                 ef.solve()
 
-                print("")
-                print("***********************************************"
-                      "************************************************")
-                print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
-                      +str(manager.scenario_tree.findRootNode().\
-                           computeExpectedNodeCost())+"<<<")
-                print("***********************************************"
-                      "************************************************")
+                print("EF solve completed and solution status is %s"
+                      % ef.solution_status)
+                print("EF solve termination condition is %s"
+                      % ef.termination_condition)
+                print("EF objective: %12.5f" % ef.objective)
+                print("EF gap:       %12.5f" % ef.gap)
+                print("EF bound:     %12.5f" % ef.bound)
 
                 # handle output of solution from the scenario tree.
                 print("")
