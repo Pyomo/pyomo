@@ -498,9 +498,10 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             print("Queuing extensive form solve")
 
         self.objective = undefined
+        self.gap = undefined
+        self.bound = undefined
         self.pyomo_solve_time = undefined
         self.solve_time = undefined
-        self.gap = undefined
         self.termination_condition = undefined
         self.solver_status = undefined
         self.solution_status = undefined
@@ -540,7 +541,7 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
         if self.get_option("verbose"):
             print("Waiting for extensive form solve")
         results = self._solver_manager.wait_for(action_handle)
-        
+
         if self.get_option("verbose"):
             print("Done with extensive form solve - loading results")
 
@@ -856,8 +857,13 @@ def runef(options,
                 print("EF solve termination condition is %s"
                       % ef.termination_condition)
                 print("EF objective: %12.5f" % ef.objective)
-                print("EF gap:       %12.5f" % ef.gap)
-                print("EF bound:     %12.5f" % ef.bound)
+                if ef.gap is not undefined:
+                    print("EF gap:       %12.5f" % ef.gap)
+                    print("EF bound:     %12.5f" % ef.bound)
+                else:
+                    assert ef.bound is undefined
+                    print("EF gap:       <unknown>")
+                    print("EF bound:     <unknown>")
 
                 # handle output of solution from the scenario tree.
                 print("")
