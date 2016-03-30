@@ -8,7 +8,8 @@
 #  _________________________________________________________________________
 
 __all__ = ("ScenarioTreeManagerSolverClientSerial",
-           "ScenarioTreeManagerSolverClientPyro")
+           "ScenarioTreeManagerSolverClientPyro",
+           "ScenarioTreeManagerFactory")
 
 # TODO: handle pyro as the solver manager when even when the
 #       pyro scenario tree manager is used
@@ -26,7 +27,8 @@ from pyomo.opt.base.solvers import OptSolver
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
-                                    safe_declare_common_option)
+                                    safe_declare_common_option,
+                                    safe_register_common_option)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.scenariotree.preprocessor import ScenarioTreePreprocessor
 from pyomo.pysp.scenariotree.manager import \
@@ -1273,8 +1275,8 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
         assert all(_s._objective_sense == self._objective_sense
                    for _s in self._scenario_tree._scenarios)
 
-        assert all(have_node_data)
-        assert all(have_scenario_data)
+        assert all(itervalues(have_node_data))
+        assert all(itervalues(have_scenario_data))
 
         if self._options.verbose:
             print("Scenario tree instance data successfully "
@@ -1525,3 +1527,39 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                 self.unpause_transmit()
 
         return node_count
+
+def ScenarioTreeManagerFactory(options):
+    if options.scenario_tree_manager == "serial":
+        manager = ScenarioTreeManagerSolverClientSerial(options)
+    elif options.scenario_tree_manager == "pyro":
+        manager = ScenarioTreeManagerSolverClientPyro(options)
+    else:
+        raise ValueError("Unrecognized value for option '%s': %s"
+                         % ("scenario_tree_manager",
+                            options.scenario_tree_manager))
+    return manager
+
+def _register_scenario_tree_manager_options(*args, **kwds):
+    if len(args) == 0:
+        options = PySPConfigBlock()
+    else:
+        if len(args) != 1:
+            raise TypeError(
+                "register_options(...) takes at most 1 argument (%s given)"
+                % (len(args)))
+        options = args[0]
+        if not isinstance(options, PySPConfigBlock):
+            raise TypeError(
+                "register_options(...) argument must be of type PySPConfigBlock, "
+                "not %s" % (type(options).__name__))
+    safe_register_common_option(options,
+                                "scenario_tree_manager",
+                                **kwds)
+    ScenarioTreeManagerSolverClientSerial.register_options(options,
+                                                           **kwds)
+    ScenarioTreeManagerSolverClientPyro.register_options(options,
+                                                         **kwds)
+    return options
+
+ScenarioTreeManagerFactory.register_options = \
+    _register_scenario_tree_manager_options
