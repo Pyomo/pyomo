@@ -33,7 +33,7 @@ Solving the xstar extensive form.
 Sample extensive form objective value=151550.7254670225
 Solving the extensive form given the xhat solution.
 RUN-TIME ERROR:
-EF solve failed optimality check:
+EF solve failed solution status check:
 Solver Status: ok
 Termination Condition: infeasible
 Solution Status: <undefined>

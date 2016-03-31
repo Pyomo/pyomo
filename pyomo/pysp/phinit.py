@@ -35,7 +35,7 @@ from pyomo.util.plugin import ExtensionPoint
 from pyomo.core.base import maximize, minimize, Var, Suffix
 from pyomo.opt.base import SolverFactory
 from pyomo.opt.parallel import SolverManagerFactory
-
+from pyomo.opt import undefined
 from pyomo.pysp.phextension import IPHExtension
 from pyomo.pysp.ef_writer_script import ExtensiveFormAlgorithm
 from pyomo.pysp.ph import ProgressiveHedging
@@ -1139,7 +1139,7 @@ def run_ph(options, ph):
         failed = ef.solve(exception_on_failure=False)
 
         if failed:
-            print("EF solve failed optimality check:\n"
+            print("EF solve failed solution status check:\n"
                   "Solver Status: %s\n"
                   "Termination Condition: %s\n"
                   "Solution Status: %s\n"
@@ -1147,14 +1147,20 @@ def run_ph(options, ph):
                      ef.termination_condition,
                      ef.solution_status))
         else:
-            print("")
-            print("***********************************************"
-                  "************************************************")
-            print(">>>THE EXPECTED SUM OF THE STAGE COST VARIABLES="
-                  +str(ph.scenario_tree.findRootNode().\
-                       computeExpectedNodeCost())+"<<<")
-            print("***********************************************"
-                  "************************************************")
+
+            print("EF solve completed and solution status is %s"
+                  % ef.solution_status)
+            print("EF solve termination condition is %s"
+                  % ef.termination_condition)
+            print("EF objective: %12.5f" % ef.objective)
+            if ef.gap is not undefined:
+                print("EF gap:       %12.5f" % ef.gap)
+                print("EF bound:     %12.5f" % ef.bound)
+            else:
+                assert ef.bound is undefined
+                print("EF gap:       <unknown>")
+                print("EF bound:     <unknown>")
+
             ph.update_variable_statistics()
 
             # handle output of solution from the scenario tree.

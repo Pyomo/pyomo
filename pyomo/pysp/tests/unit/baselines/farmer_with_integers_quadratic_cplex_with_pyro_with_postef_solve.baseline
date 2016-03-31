@@ -1,8 +1,8 @@
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/farmerWintegers/models/ReferenceModel.py
+Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmerWintegers/models/ReferenceModel.py
 Module successfully loaded
 Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:35852/86fdc201bde32195ca4b8c8933b43481ec
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 1194@snotra.sandia.gov
+Dispatcher Object URI: PYRO://10.249.254.199:55746/0af9fec7a9aa21faa7e72dc7d9dfd6355f
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 43439@10-249-254-199.wireless.oregonstate.edu
 Initializing PH
 
 Starting PH
@@ -12,14 +12,14 @@ Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 113503.3333 Max-Min=10390.00
 Converger=Normalized term diff value is         0.2539 - threshold reached=False
-Cumulative run-time=0.04 seconds
+Cumulative run-time=0.06 seconds
 
 Initiating PH iteration=1
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 113126.6667 Max-Min= 7020.00
 Converger=Normalized term diff value is         0.1268 - threshold reached=False
-Cumulative run-time=0.08 seconds
+Cumulative run-time=0.09 seconds
 
 Initiating PH iteration=2
 Number of discrete variables fixed=0 (total=3)
@@ -33,56 +33,56 @@ Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112946.6667 Max-Min= 2220.00
 Converger=Normalized term diff value is         0.0820 - threshold reached=False
-Cumulative run-time=0.16 seconds
+Cumulative run-time=0.15 seconds
 
 Initiating PH iteration=4
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112920.0000 Max-Min= 3180.00
 Converger=Normalized term diff value is         0.0788 - threshold reached=False
-Cumulative run-time=0.20 seconds
+Cumulative run-time=0.18 seconds
 
 Initiating PH iteration=5
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112920.0000 Max-Min= 3180.00
 Converger=Normalized term diff value is         0.0788 - threshold reached=False
-Cumulative run-time=0.24 seconds
+Cumulative run-time=0.21 seconds
 
 Initiating PH iteration=6
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 112516.6667 Max-Min= 1970.00
 Converger=Normalized term diff value is         0.0689 - threshold reached=False
-Cumulative run-time=0.28 seconds
+Cumulative run-time=0.24 seconds
 
 Initiating PH iteration=7
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 111486.6667 Max-Min= 1380.00
 Converger=Normalized term diff value is         0.0547 - threshold reached=False
-Cumulative run-time=0.32 seconds
+Cumulative run-time=0.26 seconds
 
 Initiating PH iteration=8
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 110280.0000 Max-Min=  590.00
 Converger=Normalized term diff value is         0.0330 - threshold reached=False
-Cumulative run-time=0.36 seconds
+Cumulative run-time=0.29 seconds
 
 Initiating PH iteration=9
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 109316.6667 Max-Min=  420.00
 Converger=Normalized term diff value is         0.0251 - threshold reached=False
-Cumulative run-time=0.40 seconds
+Cumulative run-time=0.32 seconds
 
 Initiating PH iteration=10
 Number of discrete variables fixed=0 (total=3)
 Number of continuous variables fixed=0 (total=0)
 First stage cost avg= 108750.0000 Max-Min= 1250.00
 Converger=Normalized term diff value is         0.0279 - threshold reached=False
-Cumulative run-time=0.45 seconds
+Cumulative run-time=0.35 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=0 (total=3)
@@ -213,17 +213,18 @@ Scenarios:
 ----------------------------------------------------
 
 
-Total PH execution time=0.49 seconds
+Total PH execution time=0.38 seconds
 
 Pushing fixed variable statuses to scenario instances
 Number of discrete variables fixed prior to ef creation=0 (total=3)
 Number of continuous variables fixed prior to ef creation=0 (total=0)
 Creating extensive form for remainder problem
 Solving extensive form
-
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108390.00001<<<
-***********************************************************************************************
+EF solve completed and solution status is optimal
+EF solve termination condition is optimal
+EF objective: -108390.00001
+EF gap:            0.00000
+EF bound:     -108390.00001
 
 Extensive form solution:
 ----------------------------------------------------
@@ -345,4 +346,4 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total execution time=0.58 seconds
+Total execution time=0.45 seconds

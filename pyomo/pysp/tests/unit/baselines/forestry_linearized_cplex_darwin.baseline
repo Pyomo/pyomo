@@ -36,7 +36,7 @@ Number of discrete variables fixed=0 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1642302.2606 Max-Min=186491.00
 Converger=Normalized term diff value is         0.1007 - threshold reached=False
-Cumulative run-time=2.13 seconds
+Cumulative run-time=2.12 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.0200000, as specified in the configuration file
@@ -45,7 +45,7 @@ Number of discrete variables fixed=18 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1416596.5107 Max-Min=383710.94
 Converger=Normalized term diff value is         0.0655 - threshold reached=False
-Cumulative run-time=5.33 seconds
+Cumulative run-time=5.27 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0186018, based on current value of the convergence metric
@@ -54,7 +54,7 @@ Number of discrete variables fixed=28 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1375803.7300 Max-Min=59484.70
 Converger=Normalized term diff value is         0.0338 - threshold reached=False
-Cumulative run-time=8.62 seconds
+Cumulative run-time=8.60 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0173412, based on current value of the convergence metric
@@ -63,7 +63,7 @@ Number of discrete variables fixed=34 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0181 - threshold reached=False
-Cumulative run-time=10.91 seconds
+Cumulative run-time=11.08 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Setting mipgap to 0.0167174, based on current value of the convergence metric
@@ -72,7 +72,7 @@ Number of discrete variables fixed=97 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0151 - threshold reached=False
-Cumulative run-time=12.68 seconds
+Cumulative run-time=12.91 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Setting mipgap to 0.0165960, based on current value of the convergence metric
@@ -81,7 +81,7 @@ Number of discrete variables fixed=109 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0168 - threshold reached=False
-Cumulative run-time=14.31 seconds
+Cumulative run-time=14.57 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Setting mipgap to 0.0166627, based on current value of the convergence metric
@@ -90,7 +90,7 @@ Number of discrete variables fixed=357 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0140 - threshold reached=False
-Cumulative run-time=15.87 seconds
+Cumulative run-time=16.08 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Setting mipgap to 0.0165523, based on current value of the convergence metric
@@ -99,7 +99,7 @@ Number of discrete variables fixed=381 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0104 - threshold reached=False
-Cumulative run-time=17.31 seconds
+Cumulative run-time=17.45 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Setting mipgap to 0.0164104, based on current value of the convergence metric
@@ -108,7 +108,7 @@ Number of discrete variables fixed=405 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0134 - threshold reached=False
-Cumulative run-time=18.84 seconds
+Cumulative run-time=18.90 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Setting mipgap to 0.0165268, based on current value of the convergence metric
@@ -117,7 +117,7 @@ Number of discrete variables fixed=417 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0122 - threshold reached=False
-Cumulative run-time=20.25 seconds
+Cumulative run-time=20.29 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Setting mipgap to 0.0164828, based on current value of the convergence metric
@@ -126,7 +126,7 @@ Number of discrete variables fixed=425 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0105 - threshold reached=False
-Cumulative run-time=21.65 seconds
+Cumulative run-time=21.78 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=425 (total=507)
@@ -1379,17 +1379,18 @@ Scenarios:
 
 ***WARNING***: PH exiting with fixed or freed variables in the scenario tree queue whose statuses have not been pushed to the scenario instances. This is because these requests were placed in the queue after the most recent solve. If these statuses are pushed to the scenario instances, a new solution should be obtained in order to reflect accurate solution data within the scenario tree. This warning can be safely ignored in most cases.
 
-Total PH execution time=22.57 seconds
+Total PH execution time=22.72 seconds
 
 Pushing fixed variable statuses to scenario instances
 Number of discrete variables fixed prior to ef creation=427 (total=507)
 Number of continuous variables fixed prior to ef creation=0 (total=260)
 Creating extensive form for remainder problem
 Solving extensive form
-
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=4408118.6705512<<<
-***********************************************************************************************
+EF solve completed and solution status is optimal
+EF solve termination condition is optimal
+EF objective: 4408118.67055
+EF gap:          438.71000
+EF bound:     4408557.38055
 
 Extensive form solution:
 ----------------------------------------------------
@@ -1433,9 +1434,9 @@ Tree Nodes:
 		delta[U8,Ano4]=1.0
 		f[C05,I1,Ano4]=6463.8
 		f[C06,I3,Ano4]=4330.8
-		f[C07,C08,Ano4]=3767.2999999999997
+		f[C07,C08,Ano4]=3767.3
 		f[C08,I2,Ano4]=7937.7
-		f[C09,E1,Ano4]=11149.599999999999
+		f[C09,E1,Ano4]=11149.6
 		f[I1,I2,Ano4]=6463.8
 		f[I2,I3,Ano4]=14401.5
 		f[I3,E1,Ano4]=18732.3
@@ -1480,7 +1481,7 @@ Tree Nodes:
 		f[C09,E1,Ano4]=11149.6
 		f[I1,I2,Ano4]=8391.6
 		f[I2,I3,Ano4]=8391.6
-		f[I3,E1,Ano4]=12722.399999999998
+		f[I3,E1,Ano4]=12722.4
 		gamma[C01,C09,Ano4]=1.0
 		gamma[C09,E1,Ano4]=1.0
 	Derived Variables: 
@@ -1523,9 +1524,9 @@ Tree Nodes:
 		delta[U5,Ano4]=1.0
 		delta[U8,Ano4]=1.0
 		f[C06,I3,Ano4]=4330.8
-		f[C08,I2,Ano4]=6117.200000000001
+		f[C08,I2,Ano4]=6117.2
 		f[C09,E1,Ano4]=7493.4
-		f[I2,I3,Ano4]=6117.200000000001
+		f[I2,I3,Ano4]=6117.2
 		f[I3,E1,Ano4]=10448.0
 		gamma[C08,I2,Ano4]=1.0
 	Derived Variables: 
@@ -1540,8 +1541,8 @@ Tree Nodes:
 		f[C02,C03,Ano4]=6548.4
 		f[C03,E1,Ano4]=6548.4
 		f[C06,I3,Ano4]=4330.8
-		f[C08,I2,Ano4]=6117.200000000001
-		f[I2,I3,Ano4]=6117.200000000001
+		f[C08,I2,Ano4]=6117.2
+		f[I2,I3,Ano4]=6117.2
 		f[I3,E1,Ano4]=10448.0
 		gamma[C08,I2,Ano4]=1.0
 	Derived Variables: 
@@ -1618,7 +1619,7 @@ Tree Nodes:
 		delta[U8,Ano4]=1.0
 		f[C01,C09,Ano4]=8602.8
 		f[C05,I1,Ano4]=13664.7
-		f[C07,C08,Ano4]=3767.2999999999997
+		f[C07,C08,Ano4]=3767.3
 		f[C08,I2,Ano4]=14054.9
 		f[C09,E1,Ano4]=19752.4
 		f[I1,I2,Ano4]=13664.7
@@ -1643,7 +1644,7 @@ Tree Nodes:
 		delta[U8,Ano4]=1.0
 		f[C01,C09,Ano4]=8602.8
 		f[C05,I1,Ano4]=13664.7
-		f[C07,C08,Ano4]=3767.2999999999997
+		f[C07,C08,Ano4]=3767.3
 		f[C08,I2,Ano4]=14054.9
 		f[C09,E1,Ano4]=19752.4
 		f[I1,I2,Ano4]=13664.7
@@ -1691,7 +1692,7 @@ Tree Nodes:
 		delta[U4,Ano4]=1.0
 		delta[U5,Ano4]=1.0
 		delta[U8,Ano4]=1.0
-		f[C01,C09,Ano4]=8602.80000000001
+		f[C01,C09,Ano4]=8602.8
 		f[C05,I1,Ano4]=8391.6
 		f[C07,C08,Ano4]=7497.3
 		f[C08,I2,Ano4]=11667.7
@@ -1718,20 +1719,20 @@ Tree Nodes:
 		delta[U3,Ano4]=1.0
 		delta[U5,Ano4]=1.0
 		delta[U8,Ano4]=1.0
-		f[C01,C09,Ano4]=7312.40000000098
+		f[C01,C09,Ano4]=7312.4
 		f[C05,I1,Ano4]=13664.7
 		f[C07,C08,Ano4]=7497.3
-		f[C08,I2,Ano4]=17784.899999999
-		f[C09,E1,Ano4]=18462.000000001
+		f[C08,I2,Ano4]=17784.9
+		f[C09,E1,Ano4]=18462.0
 		f[I1,I2,Ano4]=13664.7
-		f[I2,I3,Ano4]=31449.599999999
-		f[I3,E1,Ano4]=31449.599999999
+		f[I2,I3,Ano4]=31449.6
+		f[I3,E1,Ano4]=31449.6
 		gamma[C01,C09,Ano4]=1.0
 		gamma[C07,C08,Ano4]=1.0
 		gamma[C08,I2,Ano4]=1.0
 		gamma[C09,E1,Ano4]=1.0
 	Derived Variables: 
-		z[E1,Ano4]=49911.600000000006
+		z[E1,Ano4]=49911.6
 
 	Name=Leaf8
 	Stage=Ano4Stage
@@ -1749,7 +1750,7 @@ Tree Nodes:
 		f[C01,C09,Ano4]=7312.4
 		f[C05,I1,Ano4]=13664.7
 		f[C07,C08,Ano4]=3730.0
-		f[C08,I2,Ano4]=9847.199999999983
+		f[C08,I2,Ano4]=9847.2
 		f[C09,E1,Ano4]=18462.0
 		f[I1,I2,Ano4]=13664.7
 		f[I2,I3,Ano4]=23511.9
@@ -1776,11 +1777,11 @@ Tree Nodes:
 		f[C03,E1,Ano4]=8217.6
 		f[C05,I1,Ano4]=8391.6
 		f[C06,I3,Ano4]=4330.8
-		f[C07,C08,Ano4]=3767.2999999999997
-		f[C08,I2,Ano4]=3767.2999999999997
-		f[C09,E1,Ano4]=11149.599999999999
+		f[C07,C08,Ano4]=3767.3
+		f[C08,I2,Ano4]=3767.3
+		f[C09,E1,Ano4]=11149.6
 		f[I1,I2,Ano4]=8391.6
-		f[I2,I3,Ano4]=12158.900000000001
+		f[I2,I3,Ano4]=12158.9
 		f[I3,E1,Ano4]=16489.7
 		gamma[C07,C08,Ano4]=1.0
 	Derived Variables: 
@@ -1789,17 +1790,17 @@ Tree Nodes:
 	Stage=Ano1Stage
 	Parent=None
 	Variables: 
-		delta[U12,Ano1]=1.0000000000000002
-		delta[U13,Ano1]=1.0000000000000002
-		delta[U15,Ano1]=1.0000000000000002
-		delta[U17,Ano1]=1.0000000000000002
-		delta[U18,Ano1]=1.0000000000000002
+		delta[U12,Ano1]=1.0
+		delta[U13,Ano1]=1.0
+		delta[U15,Ano1]=1.0
+		delta[U17,Ano1]=1.0
+		delta[U18,Ano1]=1.0
 		f[C03,E1,Ano1]=21287.0
-		f[C04,C03,Ano1]=7559.999999999999
+		f[C04,C03,Ano1]=7560.0
 		f[C06,I3,Ano1]=10954.4
 		f[I3,E1,Ano1]=10954.4
-		gamma[C04,C03,Ano1]=1.0000000000000002
-		gamma[C06,I3,Ano1]=1.0000000000000002
+		gamma[C04,C03,Ano1]=1.0
+		gamma[C06,I3,Ano1]=1.0
 	Derived Variables: 
 
 	Name=StageThreeHighHigh
@@ -1833,7 +1834,7 @@ Tree Nodes:
 		delta[U23,Ano3]=1.0
 		f[C05,I1,Ano3]=13664.7
 		f[C06,I3,Ano3]=4330.8
-		f[C08,I2,Ano3]=6117.200000000001
+		f[C08,I2,Ano3]=6117.2
 		f[I1,I2,Ano3]=13664.7
 		f[I2,I3,Ano3]=19781.9
 		f[I3,E1,Ano3]=24112.7
@@ -1856,7 +1857,7 @@ Tree Nodes:
 		f[C06,I3,Ano3]=4330.8
 		f[C09,E1,Ano3]=7312.4
 		f[I1,I2,Ano3]=8391.6
-		f[I2,I3,Ano3]=8391.60000000001
+		f[I2,I3,Ano3]=8391.6
 		f[I3,E1,Ano3]=12722.4
 		gamma[C01,C09,Ano3]=1.0
 	Derived Variables: 
@@ -1873,7 +1874,7 @@ Tree Nodes:
 		f[C02,C03,Ano3]=25487.4
 		f[C03,E1,Ano3]=25487.4
 		f[C05,I1,Ano3]=8391.6
-		f[C08,I2,Ano3]=6117.200000000001
+		f[C08,I2,Ano3]=6117.2
 		f[I1,I2,Ano3]=8391.6
 		f[I2,I3,Ano3]=14508.8
 		f[I3,E1,Ano3]=14508.8
@@ -1932,8 +1933,8 @@ Tree Nodes:
 		f[C03,E1,Ano3]=14701.8
 		f[C05,I1,Ano3]=7200.9
 		f[I1,I2,Ano3]=7200.9
-		f[I2,I3,Ano3]=7200.90000000001
-		f[I3,E1,Ano3]=7200.90000000001
+		f[I2,I3,Ano3]=7200.9
+		f[I3,E1,Ano3]=7200.9
 	Derived Variables: 
 
 	Name=StageThreeMediumMedium
@@ -1970,12 +1971,12 @@ Tree Nodes:
 		delta[U6,Ano2]=1.0
 		delta[U9,Ano2]=1.0
 		f[C02,C03,Ano2]=25487.4
-		f[C03,E1,Ano2]=40367.40000000001
-		f[C04,C03,Ano2]=14880.000000000002
+		f[C03,E1,Ano2]=40367.4
+		f[C04,C03,Ano2]=14880.0
 		gamma[C09,C02,Ano2]=1.0
 		gamma[C09,E1,Ano2]=1.0
 	Derived Variables: 
-		z[E1,Ano2]=40367.40000000001
+		z[E1,Ano2]=40367.4
 
 	Name=StageTwoLow
 	Stage=Ano2Stage
@@ -1983,12 +1984,12 @@ Tree Nodes:
 	Variables: 
 		delta[U11,Ano2]=1.0
 		delta[U16,Ano2]=1.0
-		f[C03,E1,Ano2]=14880.000000000002
-		f[C04,C03,Ano2]=14880.000000000002
+		f[C03,E1,Ano2]=14880.0
+		f[C04,C03,Ano2]=14880.0
 		gamma[C09,C02,Ano2]=1.0
 		gamma[C09,E1,Ano2]=1.0
 	Derived Variables: 
-		z[E1,Ano2]=14880.000000000002
+		z[E1,Ano2]=14880.0
 
 	Name=StageTwoMedium
 	Stage=Ano2Stage
@@ -1997,9 +1998,9 @@ Tree Nodes:
 		delta[U11,Ano2]=1.0
 		delta[U16,Ano2]=1.0
 		delta[U6,Ano2]=1.0
-		f[C02,C03,Ano2]=6548.400000000001
+		f[C02,C03,Ano2]=6548.4
 		f[C03,E1,Ano2]=21428.4
-		f[C04,C03,Ano2]=14880.000000000002
+		f[C04,C03,Ano2]=14880.0
 	Derived Variables: 
 
 
@@ -2633,4 +2634,4 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total execution time=25.54 seconds
+Total execution time=25.73 seconds

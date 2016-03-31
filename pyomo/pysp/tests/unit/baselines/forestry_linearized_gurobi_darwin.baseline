@@ -1362,7 +1362,7 @@ Number of discrete variables fixed prior to ef creation=424 (total=507)
 Number of continuous variables fixed prior to ef creation=0 (total=260)
 Creating extensive form for remainder problem
 Solving extensive form
-EF solve failed optimality check:
+EF solve failed solution status check:
 Solver Status: ok
 Termination Condition: infeasible
 Solution Status: <undefined>
