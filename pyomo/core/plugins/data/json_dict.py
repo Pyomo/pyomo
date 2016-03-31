@@ -46,7 +46,7 @@ def detuplize(d, sort=False):
             else:
                 ans.append( {'index':k, 'value':v} )
         if sort:
-            return sorted(ans)
+            return sorted(ans, key=lambda x:x['value'])
         return ans
 
 def tuplize(d):
