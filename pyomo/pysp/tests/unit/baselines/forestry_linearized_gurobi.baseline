@@ -36,7 +36,7 @@ Number of discrete variables fixed=0 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1580695.1394 Max-Min=419626.64
 Converger=Normalized term diff value is         0.1176 - threshold reached=False
-Cumulative run-time=6.58 seconds
+Cumulative run-time=9.50 seconds
 
 Initiating PH iteration=1
 WW PH Extension: Setting mipgap to 0.0200000, as specified in the configuration file
@@ -45,7 +45,7 @@ Number of discrete variables fixed=14 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1415185.6412 Max-Min=383710.94
 Converger=Normalized term diff value is         0.0835 - threshold reached=False
-Cumulative run-time=18.85 seconds
+Cumulative run-time=26.99 seconds
 
 Initiating PH iteration=2
 WW PH Extension: Setting mipgap to 0.0188410, based on current value of the convergence metric
@@ -54,7 +54,7 @@ Number of discrete variables fixed=25 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377689.6278 Max-Min=119209.64
 Converger=Normalized term diff value is         0.0402 - threshold reached=False
-Cumulative run-time=32.49 seconds
+Cumulative run-time=46.87 seconds
 
 Initiating PH iteration=3
 WW PH Extension: Setting mipgap to 0.0173640, based on current value of the convergence metric
@@ -63,7 +63,7 @@ Number of discrete variables fixed=34 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1374952.0911 Max-Min= 9968.80
 Converger=Normalized term diff value is         0.0273 - threshold reached=False
-Cumulative run-time=39.93 seconds
+Cumulative run-time=56.56 seconds
 
 Initiating PH iteration=4
 WW PH Extension: Setting mipgap to 0.0169245, based on current value of the convergence metric
@@ -72,7 +72,7 @@ Number of discrete variables fixed=87 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1374952.0911 Max-Min= 9968.80
 Converger=Normalized term diff value is         0.0233 - threshold reached=False
-Cumulative run-time=46.30 seconds
+Cumulative run-time=66.09 seconds
 
 Initiating PH iteration=5
 WW PH Extension: Setting mipgap to 0.0167904, based on current value of the convergence metric
@@ -81,7 +81,7 @@ Number of discrete variables fixed=102 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1374952.0911 Max-Min= 9968.80
 Converger=Normalized term diff value is         0.0234 - threshold reached=False
-Cumulative run-time=51.95 seconds
+Cumulative run-time=73.62 seconds
 
 Initiating PH iteration=6
 WW PH Extension: Setting mipgap to 0.0167924, based on current value of the convergence metric
@@ -90,7 +90,7 @@ Number of discrete variables fixed=337 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1376613.5578 Max-Min= 9968.80
 Converger=Normalized term diff value is         0.0127 - threshold reached=False
-Cumulative run-time=57.85 seconds
+Cumulative run-time=80.21 seconds
 
 Initiating PH iteration=7
 WW PH Extension: Setting mipgap to 0.0164289, based on current value of the convergence metric
@@ -99,7 +99,7 @@ Number of discrete variables fixed=358 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0084 - threshold reached=False
-Cumulative run-time=62.85 seconds
+Cumulative run-time=86.15 seconds
 
 Initiating PH iteration=8
 WW PH Extension: Setting mipgap to 0.0162823, based on current value of the convergence metric
@@ -108,7 +108,7 @@ Number of discrete variables fixed=393 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0103 - threshold reached=False
-Cumulative run-time=67.24 seconds
+Cumulative run-time=91.50 seconds
 
 Initiating PH iteration=9
 WW PH Extension: Setting mipgap to 0.0163485, based on current value of the convergence metric
@@ -117,7 +117,7 @@ Number of discrete variables fixed=402 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0099 - threshold reached=False
-Cumulative run-time=72.17 seconds
+Cumulative run-time=97.58 seconds
 
 Initiating PH iteration=10
 WW PH Extension: Setting mipgap to 0.0163322, based on current value of the convergence metric
@@ -126,7 +126,7 @@ Number of discrete variables fixed=416 (total=507)
 Number of continuous variables fixed=0 (total=260)
 First stage cost avg=1377167.3800 Max-Min=    0.00
 Converger=Normalized term diff value is         0.0067 - threshold reached=False
-Cumulative run-time=76.60 seconds
+Cumulative run-time=102.71 seconds
 Halting PH - reached maximal iteration count=10
 
 Number of discrete variables fixed before final plugin calls=416 (total=507)
@@ -1346,17 +1346,18 @@ Scenarios:
 
 ***WARNING***: PH exiting with fixed or freed variables in the scenario tree queue whose statuses have not been pushed to the scenario instances. This is because these requests were placed in the queue after the most recent solve. If these statuses are pushed to the scenario instances, a new solution should be obtained in order to reflect accurate solution data within the scenario tree. This warning can be safely ignored in most cases.
 
-Total PH execution time=80.93 seconds
+Total PH execution time=106.61 seconds
 
 Pushing fixed variable statuses to scenario instances
 Number of discrete variables fixed prior to ef creation=418 (total=507)
 Number of continuous variables fixed prior to ef creation=0 (total=260)
 Creating extensive form for remainder problem
 Solving extensive form
-
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=4422726.37263<<<
-***********************************************************************************************
+EF solve completed and solution status is optimal
+EF solve termination condition is optimal
+EF objective: 4422726.37263
+EF gap:          338.82300
+EF bound:     4423065.19563
 
 Extensive form solution:
 ----------------------------------------------------
@@ -2598,4 +2599,4 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total execution time=90.14 seconds
+Total execution time=123.46 seconds
