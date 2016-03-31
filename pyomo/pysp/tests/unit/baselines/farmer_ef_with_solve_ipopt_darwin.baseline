@@ -1,7 +1,7 @@
 Importing model and scenario tree files
 Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
 Module successfully loaded
-Time to import model and scenario tree structure files=0.01 seconds
+Time to import model and scenario tree structure files=0.02 seconds
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -52,7 +52,7 @@ Stages:
 	Tree Nodes: 
 		RootNode
 	Variables: 
-		DevotedAcreage : [*] 
+		 DevotedAcreage : [*] 
 	Cost Variable: 
 		FirstStageCost
 
@@ -62,9 +62,9 @@ Stages:
 		AverageNode
 		BelowAverageNode
 	Variables: 
-		QuantityPurchased : [*] 
-		QuantitySubQuotaSold : [*] 
-		QuantitySuperQuotaSold : [*] 
+		 QuantityPurchased : [*] 
+		 QuantitySubQuotaSold : [*] 
+		 QuantitySuperQuotaSold : [*] 
 	Cost Variable: 
 		SecondStageCost
 
@@ -149,12 +149,12 @@ Initializing ScenarioTreeManagerClientSerial with options:
 Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/Users/jwatson/sp/pyomo/src/pyomo.pysp/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
-Time to construct scenario instances=0.05 seconds
+Data for scenario=AboveAverageScenario loads from file=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Time to construct scenario instances=0.01 seconds
 Linking instances into scenario tree
 Time link scenario tree with instances=0.00 seconds
 ScenarioTreeManagerClientSerial is successfully initialized
@@ -163,7 +163,7 @@ Overall initialization time=0.01 seconds
 Initializing extensive form algorithm for stochastic programming problems.
 Creating extensive form instance
 Creating variables for master binding instance
-Time to construct extensive form instance=0.01 seconds
+Time to construct extensive form instance=0.00 seconds
 Starting to write extensive form
 Extensive form written to file=/Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_farmer_with_solve_ipopt.nl
 Time to write output file=0.00 seconds
@@ -171,12 +171,12 @@ Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
 Storing solution in scenario tree
-EF solve completed and solve status is optimal
 Time to solve and load results for the extensive form=0.07 seconds
-
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108390.002577<<<
-***********************************************************************************************
+EF solve completed and solution status is optimal
+EF solve termination condition is optimal
+EF objective: -108390.00258
+EF gap:       <unknown>
+EF bound:     <unknown>
 
 Extensive form solution:
 ----------------------------------------------------
@@ -186,32 +186,32 @@ Tree Nodes:
 	Stage=SecondStage
 	Parent=RootNode
 	Variables: 
-		QuantitySubQuotaSold[CORN]=47.9999995105
-		QuantitySubQuotaSold[SUGAR_BEETS]=6000.00006
-		QuantitySubQuotaSold[WHEAT]=310.000011909
+		QuantitySubQuotaSold[CORN]=48.0000003526
+		QuantitySubQuotaSold[SUGAR_BEETS]=6000.00005989
+		QuantitySubQuotaSold[WHEAT]=310.000011051
 
 	Name=AverageNode
 	Stage=SecondStage
 	Parent=RootNode
 	Variables: 
-		QuantitySubQuotaSold[SUGAR_BEETS]=5000.00005
-		QuantitySubQuotaSold[WHEAT]=225.000010257
+		QuantitySubQuotaSold[SUGAR_BEETS]=5000.00005073
+		QuantitySubQuotaSold[WHEAT]=225.000009543
 
 	Name=BelowAverageNode
 	Stage=SecondStage
 	Parent=RootNode
-	Variables:
-                QuantityPurchased[CORN]=47.9999995066
-		QuantitySubQuotaSold[SUGAR_BEETS]=4000.00004
-		QuantitySubQuotaSold[WHEAT]=140.000008606
+	Variables: 
+		QuantityPurchased[CORN]=47.9999990578
+		QuantitySubQuotaSold[SUGAR_BEETS]=4000.00004054
+		QuantitySubQuotaSold[WHEAT]=140.000008036
 
 	Name=RootNode
 	Stage=FirstStage
 	Parent=None
 	Variables: 
-		DevotedAcreage[CORN]=79.9999991974
-		DevotedAcreage[SUGAR_BEETS]=250.0000025
-		DevotedAcreage[WHEAT]=170.000003303
+		DevotedAcreage[CORN]=79.999999429
+		DevotedAcreage[SUGAR_BEETS]=250.000002547
+		DevotedAcreage[WHEAT]=170.000003014
 
 
 Extensive form costs:
@@ -299,5 +299,5 @@ Scenarios:
 ----------------------------------------------------
 Closing ScenarioTreeManagerClientSerial
 
-Total EF execution time=0.10 seconds
+Total EF execution time=0.11 seconds
 

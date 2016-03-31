@@ -1,6 +1,7 @@
 Importing model and scenario tree files
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/models/ReferenceModel.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/models/ReferenceModel.py
 Module successfully loaded
+Time to import model and scenario tree structure files=0.01 seconds
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -61,6 +62,7 @@ Stages:
 		AverageNode
 		BelowAverageNode
 	Variables: 
+		 ComputeProfits : [*] 
 		 Profit : [*] 
 		 QuantityPurchased : [*] 
 		 QuantitySold : [*] 
@@ -101,15 +103,15 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -          solution_saver_extension: ()
  -         solution_loader_extension: ()
  -                   solution_writer: ()
- *                       output_file: /Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
+ *                       output_file: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
  -                             solve: False
  -             output_scenario_costs: None
  - output_instance_construction_time: False
  -        compile_scenario_instances: False
  -                      output_times: False
- *                    model_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmerWpiecewise/models
+ *                    model_location: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/models
  -                   model_directory: None
- *            scenario_tree_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmerWpiecewise/nodedata
+ *            scenario_tree_location: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata
  -                instance_directory: None
  -       objective_sense_stage_based: None
  -        postinit_callback_location: ()
@@ -148,27 +150,28 @@ Initializing ScenarioTreeManagerClientSerial with options:
 Constructing scenario tree instances
 Node-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Node data for scenario=BelowAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=BelowAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
+Node data for scenario=BelowAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=BelowAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/BelowAverageNode.dat
 Creating instance for scenario=AverageScenario
-Node data for scenario=AverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=AverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
+Node data for scenario=AverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=AverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/AverageNode.dat
 Creating instance for scenario=AboveAverageScenario
-Node data for scenario=AboveAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
-Node data for scenario=AboveAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
-Time to construct scenario instances=0.03 seconds
+Node data for scenario=AboveAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/RootNode.dat
+Node data for scenario=AboveAverageScenario partially loading from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/farmerWpiecewise/nodedata/AboveAverageNode.dat
+Time to construct scenario instances=0.04 seconds
 Linking instances into scenario tree
+Time link scenario tree with instances=0.00 seconds
 ScenarioTreeManagerClientSerial is successfully initialized
-Overall initialization time=0.02 seconds
+Overall initialization time=0.04 seconds
 
 Initializing extensive form algorithm for stochastic programming problems.
 Creating extensive form instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
 Starting to write extensive form
-Extensive form written to file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7/src/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
+Extensive form written to file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/pyomo/pysp/tests/unit/test_farmer_piecewise_ef.lp
 Time to write output file=0.01 seconds
 Closing ScenarioTreeManagerClientSerial
 
-Total EF execution time=0.05 seconds
+Total EF execution time=0.07 seconds
 

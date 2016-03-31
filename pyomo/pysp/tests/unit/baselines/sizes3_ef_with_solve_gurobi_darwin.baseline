@@ -158,7 +158,7 @@ Creating instance for scenario=Scenario2
 Data for scenario=Scenario2 loads from file=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
 Creating instance for scenario=Scenario3
 Data for scenario=Scenario3 loads from file=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
-Time to construct scenario instances=0.02 seconds
+Time to construct scenario instances=0.03 seconds
 Linking instances into scenario tree
 Time link scenario tree with instances=0.00 seconds
 ScenarioTreeManagerClientSerial is successfully initialized
@@ -170,17 +170,17 @@ Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
 Starting to write extensive form
 Extensive form written to file=/Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
-Time to write output file=0.03 seconds
+Time to write output file=0.02 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
 Storing solution in scenario tree
-EF solve completed and solve status is optimal
-Time to solve and load results for the extensive form=0.18 seconds
-
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=224275.333367<<<
-***********************************************************************************************
+Time to solve and load results for the extensive form=0.20 seconds
+EF solve completed and solution status is optimal
+EF solve termination condition is optimal
+EF objective: 224275.33337
+EF gap:            0.00000
+EF bound:     224275.33337
 
 Extensive form solution:
 ----------------------------------------------------
@@ -398,5 +398,5 @@ Scenarios:
 ----------------------------------------------------
 Closing ScenarioTreeManagerClientSerial
 
-Total EF execution time=0.26 seconds
+Total EF execution time=0.27 seconds
 

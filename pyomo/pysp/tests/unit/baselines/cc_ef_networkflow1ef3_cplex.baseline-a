@@ -1,11 +1,12 @@
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/networkflow/models-cc/ReferenceModel.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/networkflow/models-cc/ReferenceModel.py
 Module successfully loaded
 
 Initializing extensive form algorithm for stochastic programming problems.
-
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=111983.43<<<
-***********************************************************************************************
+EF solve completed and solution status is optimal
+EF solve termination condition is optimal
+EF objective: 111983.43000
+EF gap:            0.00000
+EF bound:     111983.43000
 
 Extensive form solution:
 ----------------------------------------------------
@@ -999,5 +1000,5 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total EF execution time=6.26 seconds
+Total EF execution time=4.64 seconds
 

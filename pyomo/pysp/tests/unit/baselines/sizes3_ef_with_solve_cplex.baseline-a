@@ -1,6 +1,7 @@
 Importing model and scenario tree files
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
+Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
 Module successfully loaded
+Time to import model and scenario tree structure files=0.01 seconds
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -105,15 +106,15 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -          solution_saver_extension: ()
  -         solution_loader_extension: ()
  -                   solution_writer: ()
- *                       output_file: /Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
+ *                       output_file: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
  *                             solve: True
  -             output_scenario_costs: None
  - output_instance_construction_time: False
  -        compile_scenario_instances: False
  -                      output_times: False
- *                    model_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/models
+ *                    model_location: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/models
  -                   model_directory: None
- *            scenario_tree_location: /Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/sizes/SIZES3
+ *            scenario_tree_location: /home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/SIZES3
  -                instance_directory: None
  -       objective_sense_stage_based: None
  -        postinit_callback_location: ()
@@ -152,34 +153,34 @@ Initializing ScenarioTreeManagerClientSerial with options:
 Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario1
-Data for scenario=Scenario1 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
+Data for scenario=Scenario1 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
 Creating instance for scenario=Scenario2
-Data for scenario=Scenario2 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
+Data for scenario=Scenario2 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
 Creating instance for scenario=Scenario3
-Data for scenario=Scenario3 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_expensive/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
-Time to construct scenario instances=0.08 seconds
+Data for scenario=Scenario3 loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
+Time to construct scenario instances=0.05 seconds
 Linking instances into scenario tree
-Time link scenario tree with instances=0.00 seconds
+Time link scenario tree with instances=0.01 seconds
 ScenarioTreeManagerClientSerial is successfully initialized
-Overall initialization time=0.02 seconds
+Overall initialization time=0.06 seconds
 
 Initializing extensive form algorithm for stochastic programming problems.
 Creating extensive form instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.01 seconds
 Starting to write extensive form
-Extensive form written to file=/Users/ghackebeil/Projects/pyomo/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
-Time to write output file=0.02 seconds
+Extensive form written to file=/home/hudson/slave/workspace/Pyomo_trunk_python2.6/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
+Time to write output file=0.05 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
 Storing solution in scenario tree
-EF solve completed and solve status is optimal
-Time to solve and load results for the extensive form=1.24 seconds
-
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=224276.6667<<<
-***********************************************************************************************
+Time to solve and load results for the extensive form=1.02 seconds
+EF solve completed and solution status is optimal
+EF solve termination condition is optimal
+EF objective: 224276.66670
+EF gap:           21.01230
+EF bound:     224255.65440
 
 Extensive form solution:
 ----------------------------------------------------
@@ -396,5 +397,5 @@ Scenarios:
 ----------------------------------------------------
 Closing ScenarioTreeManagerClientSerial
 
-Total EF execution time=1.35 seconds
+Total EF execution time=1.16 seconds
 
