@@ -1591,11 +1591,13 @@ class TestPH(unittest.TestCase):
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
             this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
             baseline_dir+"cc_ef_networkflow1ef3_cplex.baseline-a",
-            filter=filter_time_and_data_dirs)
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
             this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
             baseline_dir+"cc_ef_networkflow1ef3_cplex.baseline-b",
-            filter=filter_time_and_data_dirs)
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
         if (flag_a) and (flag_b):
             print(diffs_a)
             print(diffs_b)
