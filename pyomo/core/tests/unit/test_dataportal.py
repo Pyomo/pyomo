@@ -725,7 +725,7 @@ class TestTextPortal(unittest.TestCase):
         return {'filename':os.path.abspath(tutorial_dir+os.sep+'tab'+os.sep+name+self.suffix)}
 
     def create_write_options(self, name):
-        return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix)}
+        return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix), 'sorted':True}
 
     def test_tableA(self):
         # Importing an unordered set of arbitrary data

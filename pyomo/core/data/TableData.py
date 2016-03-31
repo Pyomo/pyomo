@@ -204,11 +204,18 @@ class TableData(Plugin):
                     cols.append(self.options.set.name+str(i))
                 tmp.append(cols)
             # Get rows
-            for data in self.options.set:
-                if self.options.set.dimen > 1:
-                    tmp.append( list(data) )
-                else:
-                    tmp.append( [data] )
+            if not self.options.sort is None:
+                for data in self.options.set:
+                    if self.options.set.dimen > 1:
+                        tmp.append( list(data) )
+                    else:
+                        tmp.append( [data] )
+            else:
+                for data in sorted(self.options.set):
+                    if self.options.set.dimen > 1:
+                        tmp.append( list(data) )
+                    else:
+                        tmp.append( [data] )
         elif not self.options.param is None:
             if type(self.options.param) in (list,tuple):
                 _param = self.options.param
