@@ -1577,7 +1577,7 @@ class Block(ActiveIndexedComponent):
                     obj.del_component(c)
                     _block.add_component(c.cname(), c)
                 # transfer over any other attributes that are not components
-                for name,val in obj.__dict__.iteritems():
+                for name, val in iteritems(obj.__dict__):
                     if not hasattr(_block, name) and not hasattr(self, name):
                         super(_BlockData, _block).__setattr__(name, val)
 
