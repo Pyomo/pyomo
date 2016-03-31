@@ -31,10 +31,12 @@ Solution:
 - Status: optimal
   Objective: 
     o: 
-      Value: -2.0000002224466567
+      Value: -2.0
+    sub.o:
+      Value: 1.0
   Variable: 
     x:
-      Value: 2.0000000414915577
+      Value: 2.0
     y:
-      Value: 1.0000000659845536
+      Value: 1.0
   Constraint: No nonzero values

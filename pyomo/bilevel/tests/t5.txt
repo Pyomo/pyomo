@@ -32,18 +32,16 @@ Solution:
   number of solutions displayed: 1
 - Gap: 0.0
   Status: feasible
-  Objective: 
-    o: 
-      Id: 0
-      Value: 77.3022049286641
-  Variable: 
-    c3:
-      Id: 0
-      Value: -0.680933852140078
-    c4:
-      Id: 1
-      Value: -0.0920881971465629
+  Objective:
+    o:
+      Value: 77.3022049287
+    sub.obj:
+      Value: 77.3022049287
+  Variable:
+    x1:
+      Value: 20.3631647211
+    x2:
+      Value: 6.4850843061
     z:
-      Id: 4
       Value: 1
   Constraint: No nonzero values

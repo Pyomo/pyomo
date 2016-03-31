@@ -32,9 +32,12 @@ Solution:
   number of solutions displayed: 1
 - Gap: 0.0
   Status: feasible
-  Objective: 
-    o: 
-      Id: 0
-      Value: 0.0
-  Variable: No nonzero values
+  Objective:
+    o:
+      Value: 0
+    sub.o:
+      Value: 0
+  Variable:
+    x2:
+      Value: 4
   Constraint: No nonzero values
