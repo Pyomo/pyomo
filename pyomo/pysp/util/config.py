@@ -1897,10 +1897,10 @@ if pyutilib.misc.config.argparse_is_available:
             super(_DeprecatedInstanceDirectory, self).\
                 __init__(option_strings, dest, **kwargs)
         def __call__(self, parser, namespace, values, option_string=None):
-            logger.warning(
-                "DEPRECATED: The '--instance-directory' ('-i') command-line "
-                "option has been deprecated and will be removed "
-                "in the future. Please use '--scenario-tree-location' ('-s') instead.")
+#            logger.warning(
+#                "DEPRECATED: The '--instance-directory' ('-i') command-line "
+#                "option has been deprecated and will be removed "
+#                "in the future. Please use '--scenario-tree-location' ('-s') instead.")
             setattr(namespace, 'CONFIGBLOCK.scenario_tree_location', values)
 
     def _warn_instance_directory(val):
