@@ -95,7 +95,7 @@ model.ComputeProfits = Piecewise(model.CROPS,
                                  model.QuantitySold,
                                  pw_pts=model.ProfitCurvePoints,
                                  f_rule=profit_function,
-                                 pw_constr_type='EQ')
+                                 pw_constr_type='UB')
 
 #
 # Constraints
