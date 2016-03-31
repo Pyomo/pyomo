@@ -205,13 +205,13 @@ class TableData(Plugin):
                 tmp.append(cols)
             # Get rows
             if not self.options.sort is None:
-                for data in self.options.set:
+                for data in sorted(self.options.set):
                     if self.options.set.dimen > 1:
                         tmp.append( list(data) )
                     else:
                         tmp.append( [data] )
             else:
-                for data in sorted(self.options.set):
+                for data in self.options.set:
                     if self.options.set.dimen > 1:
                         tmp.append( list(data) )
                     else:

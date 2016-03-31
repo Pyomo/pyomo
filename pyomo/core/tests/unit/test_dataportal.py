@@ -471,7 +471,7 @@ class TestOnlyTextPortal(unittest.TestCase):
         return {'filename':os.path.abspath(tutorial_dir+os.sep+'tab'+os.sep+name+self.suffix)}
 
     def create_write_options(self, name):
-        return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix)}
+        return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix), 'sort':True}
 
     def test_empty(self):
         # Importing an empty file
@@ -650,6 +650,8 @@ class TestOnlyJsonPortal(TestOnlyTextPortal):
         data.store(data=model.A, **self.create_write_options('set2'))
         if self.suffix == '.json':
             self.assertMatchesJsonBaseline(currdir+'set2'+self.suffix, currdir+'set2.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'set2'+self.suffix, currdir+'set2.baseline'+self.suffix)
         else:
             self.assertFileEqualsBaseline(currdir+'set2'+self.suffix, currdir+'set2.baseline'+self.suffix)
 
@@ -725,7 +727,7 @@ class TestTextPortal(unittest.TestCase):
         return {'filename':os.path.abspath(tutorial_dir+os.sep+'tab'+os.sep+name+self.suffix)}
 
     def create_write_options(self, name):
-        return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix), 'sorted':True}
+        return {'filename':os.path.abspath(currdir+os.sep+name+self.suffix), 'sort':True}
 
     def test_tableA(self):
         # Importing an unordered set of arbitrary data
@@ -916,7 +918,12 @@ class TestTextPortal(unittest.TestCase):
         model.A = Set(initialize=set([(1,2),(3,4),(5,6)]), dimen=2)
         data = DataPortal()
         data.store(set=model.A, **self.create_write_options('set2'))
-        self.assertFileEqualsBaseline(currdir+'set2'+self.suffix, currdir+'set2.baseline'+self.suffix)
+        if self.suffix == '.json':
+            self.assertMatchesJsonBaseline(currdir+'set2'+self.suffix, currdir+'set2.baseline'+self.suffix)
+        elif self.suffix == '.yaml':
+            self.assertMatchesYamlBaseline(currdir+'set2'+self.suffix, currdir+'set2.baseline'+self.suffix)
+        else:
+            self.assertFileEqualsBaseline(currdir+'set2'+self.suffix, currdir+'set2.baseline'+self.suffix)
 
     def test_store_param1(self):
         # Write scalar param

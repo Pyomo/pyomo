@@ -21,7 +21,7 @@ from pyomo.util.plugin import alias, Plugin, implements
 from pyomo.core.base.plugin import IDataManager
 
 
-def detuplize(d):
+def detuplize(d, sort=False):
     #print("detuplize %s" % str(d))
     if type(d) in (list,set):
         ans = []
@@ -30,6 +30,8 @@ def detuplize(d):
                 ans.append(list(item))
             else:
                 ans.append(item)
+        if sort:
+            return sorted(ans)
         return ans
     elif None in d:
         return d[None]
@@ -43,6 +45,8 @@ def detuplize(d):
                 ans.append( {'index':list(k), 'value':v} )
             else:
                 ans.append( {'index':k, 'value':v} )
+        if sort:
+            return sorted(ans)
         return ans
 
 def tuplize(d):
@@ -142,7 +146,7 @@ class JSONDictionary(Plugin):
                     jdata[k] = detuplize(v)
             elif type(self.options.data) in (list, tuple):
                 for k in self.options.data:
-                    jdata[k] = detuplize(data[k])
+                    jdata[k] = detuplize(data[k], sort=self.options.sort)
             else:
                 k = self.options.data
                 jdata[k] = detuplize(data[k])
@@ -236,7 +240,7 @@ class YamlDictionary(Plugin):
                     jdata[k] = detuplize(v)
             elif type(self.options.data) in (list, tuple):
                 for k in self.options.data:
-                    jdata[k] = detuplize(data[k])
+                    jdata[k] = detuplize(data[k], sort=self.options.sort)
             else:
                 k = self.options.data
                 jdata[k] = detuplize(data[k])
