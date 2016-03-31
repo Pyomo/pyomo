@@ -1,6 +1,7 @@
 Importing model and scenario tree files
-Importing module=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
+Importing module=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/models/ReferenceModel.py
 Module successfully loaded
+Time to import model and scenario tree structure files=0.02 seconds
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -134,7 +135,7 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -                    solver_options: ()
  -                 disable_warmstart: False
  *                         pyro_host: 127.0.0.1
- *                         pyro_port: 51820
+ *                         pyro_port: 58638
  -                     pyro_shutdown: False
  *             pyro_shutdown_workers: True
  -            symbolic_solver_labels: False
@@ -148,12 +149,12 @@ Initializing ScenarioTreeManagerClientSerial with options:
 Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=BelowAverageScenario
-Data for scenario=BelowAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
+Data for scenario=BelowAverageScenario loads from file=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/BelowAverageScenario.dat
 Creating instance for scenario=AverageScenario
-Data for scenario=AverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
+Data for scenario=AverageScenario loads from file=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AverageScenario.dat
 Creating instance for scenario=AboveAverageScenario
-Data for scenario=AboveAverageScenario loads from file=/home/hudson/slave/workspace/Pyomo_trunk_python2.7_snotra_parallel/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
-Time to construct scenario instances=0.02 seconds
+Data for scenario=AboveAverageScenario loads from file=/Users/ghackebeil/Projects/pyomo/src/pyomo/examples/pysp/farmer/scenariodata/AboveAverageScenario.dat
+Time to construct scenario instances=0.01 seconds
 Linking instances into scenario tree
 Time link scenario tree with instances=0.00 seconds
 ScenarioTreeManagerClientSerial is successfully initialized
@@ -161,8 +162,8 @@ Overall initialization time=0.01 seconds
 
 Initializing extensive form algorithm for stochastic programming problems.
 Client attempting to find Pyro dispatcher object...
-Dispatcher Object URI: PYRO://134.253.194.1:35852/86fdc201bde32195ca4b8c8933b43481ec
-Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 23255@snotra.sandia.gov
+Dispatcher Object URI: PYRO::PyUtilibServer.dispatcher.a6e20907-8f15-4efa-ae84-0d25e42dc9a1@localhost:58639
+Connection to dispatch server established after 1 attempts and  0.00 seconds - this is client: 81436@10-249-254-199.wireless.oregonstate.edu
 Creating extensive form instance
 Creating variables for master binding instance
 Time to construct extensive form instance=0.00 seconds
@@ -170,12 +171,12 @@ Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
 Storing solution in scenario tree
-EF solve completed and solve status is optimal
-Time to solve and load results for the extensive form=0.03 seconds
-
-***********************************************************************************************
->>>THE EXPECTED SUM OF THE STAGE COST VARIABLES=-108390.00001<<<
-***********************************************************************************************
+Time to solve and load results for the extensive form=0.09 seconds
+EF solve completed and solution status is optimal
+EF solve termination condition is optimal
+EF objective: -108390.00001
+EF gap:            0.00000
+EF bound:     -108390.00001
 
 Extensive form solution:
 ----------------------------------------------------
@@ -298,4 +299,5 @@ Scenarios:
 ----------------------------------------------------
 Closing ScenarioTreeManagerClientSerial
 
-Total EF execution time=0.09 seconds
+Total EF execution time=0.13 seconds
+
