@@ -37,7 +37,7 @@ def main():
         print("You must have 'pip' installed to run this script.")
         raise SystemExit
 
-    cmd = ['install','--upgrade']
+    cmd = ['--disable-pip-version-check', 'install','--upgrade']
     # Disable the PIP download cache
     if pip_version[0] >= 6:
         cmd.append('--no-cache-dir')
