@@ -78,13 +78,21 @@ if config == "default":
 elif config == "core":
     import hudson.driver
     # Install
+    print("-" * 60)
+    print("Installing Pyomo")
+    print("-" * 60)
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
+    print("-" * 60)
     print("Running 'pyomo install-extras' ...")
+    print("-" * 60)
     output = _run_cmd("python/bin/pyomo install-extras", shell=True)
     print(output.decode('ascii'))
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
+    print("-" * 60)
+    print("Performing tests")
+    print("-" * 60)
     hudson.driver.perform_tests('pyomo', coverage=True, omit=pyutilib)
 
 elif config == "nonpysp":
