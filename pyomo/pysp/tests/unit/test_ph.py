@@ -49,7 +49,7 @@ import pyomo.pysp.phinit
 import pyomo.pysp.ef_writer_script
 
 _diff_tolerance = 1e-5
-_diff_tolerance_relaxed = 1e-4
+_diff_tolerance_relaxed = 1e-3
 
 has_yaml = False
 try:
@@ -264,7 +264,7 @@ class TestPH(unittest.TestCase):
             this_test_file_directory+"farmer_quadratic_cplex_direct.out",
             baseline_dir+"farmer_quadratic_cplex_direct.baseline",
             filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
+            tolerance=_diff_tolerance_relaxed)
 
     def test_farmer_quadratic_gurobi_direct(self):
         if solver['_gurobi_direct'] is None:
