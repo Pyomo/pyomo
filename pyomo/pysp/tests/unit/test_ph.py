@@ -741,6 +741,543 @@ class TestPH(unittest.TestCase):
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
 
+    def test_farmer_ef(self):
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "models"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"test_farmer_ef.lp"
+        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef.out",
+            baseline_dir+"farmer_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            baseline_dir+"farmer_ef.baseline.lp")
+
+    def test_farmer_maximize_ef(self):
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "maxmodels"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"farmer_maximize_ef.lp"
+        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_ef.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_ef.out",
+            baseline_dir+"farmer_maximize_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            baseline_dir+"farmer_maximize_ef.baseline.lp")
+
+    def test_farmer_piecewise_ef(self):
+        farmer_examples_dir = pysp_examples_dir + "farmerWpiecewise"
+        model_dir = farmer_examples_dir + os.sep + "models"
+        instance_dir = farmer_examples_dir + os.sep + "nodedata"
+        ef_output_file = this_test_file_directory+"test_farmer_piecewise_ef.lp"
+        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_piecewise_ef.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_piecewise_ef.out",
+            baseline_dir+"farmer_piecewise_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            baseline_dir+"farmer_piecewise_ef.baseline.lp")
+
+    def test_farmer_ef_with_solve_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "models"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"test_farmer_with_solve_cplex.lp"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve"
+        print("Testing command: " + argstring)
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_with_solve_cplex.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_with_solve_cplex.out",
+            baseline_dir+"farmer_ef_with_solve_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+
+    def test_farmer_ef_with_solve_cplex_with_csv_writer(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "models"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --solver=cplex --solve --solution-writer=pyomo.pysp.plugins.csvsolutionwriter"
+        print("Testing command: " + argstring)
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out",
+            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        # the following comparison is a bit weird, in that "ef.csv" is written to the current directory.
+        # at present, we can't specify a directory for this file in pysp. so, we'll look for it here,
+        # and if the test passes, clean up after ourselves if the test passes.
+        self.assertFileEqualsBaseline(
+            "ef.csv",
+            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer.csv",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            "ef_StageCostDetail.csv",
+            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer_StageCostDetail.csv",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+
+
+    def test_farmer_maximize_ef_with_solve_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "maxmodels"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"test_farmer_maximize_with_solve_cplex.lp"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file+" --solver=cplex --solve"
+        print("Testing command: " + argstring)
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out",
+            baseline_dir+"farmer_maximize_ef_with_solve_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+
+    def test_farmer_ef_with_solve_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "models"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"test_farmer_with_solve_gurobi.lp"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=gurobi --solve"
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_with_solve_gurobi.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_with_solve_gurobi.out",
+            baseline_dir+"farmer_ef_with_solve_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+
+    def test_farmer_maximize_ef_with_solve_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "maxmodels"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"test_farmer_maximize_with_solve_gurobi.lp"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file+" --solver=gurobi --solve"
+        print("Testing command: " + argstring)
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out",
+            baseline_dir+"farmer_maximize_ef_with_solve_gurobi.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+
+    def test_farmer_ef_with_solve_ipopt(self):
+        if solver['asl:ipopt'] is None:
+            self.skipTest("The 'ipopt' executable is not available")
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "models"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"test_farmer_with_solve_ipopt.nl"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=ipopt --solve"
+        print("Testing command: " + argstring)
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_with_solve_ipopt.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        if os.sys.platform == "darwin":
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
+               baseline_dir+"farmer_ef_with_solve_ipopt_darwin.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=_diff_tolerance_relaxed)
+        else:
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
+               baseline_dir+"farmer_ef_with_solve_ipopt.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=_diff_tolerance_relaxed)
+
+    def test_hydro_ef(self):
+        hydro_examples_dir = pysp_examples_dir + "hydro"
+        model_dir = hydro_examples_dir + os.sep + "models"
+        instance_dir = hydro_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"test_hydro_ef.lp"
+        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"hydro_ef.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"hydro_ef.out",
+            baseline_dir+"hydro_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            baseline_dir+"hydro_ef.baseline.lp")
+
+    def test_sizes3_ef(self):
+        sizes3_examples_dir = pysp_examples_dir + "sizes"
+        model_dir = sizes3_examples_dir + os.sep + "models"
+        instance_dir = sizes3_examples_dir + os.sep + "SIZES3"
+        ef_output_file = this_test_file_directory+"test_sizes3_ef.lp"
+        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_ef.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"sizes3_ef.out",
+            baseline_dir+"sizes3_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            baseline_dir+"sizes3_ef.baseline.lp.gz")
+
+    def test_sizes3_ef_with_solve_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        sizes3_examples_dir = pysp_examples_dir + "sizes"
+        model_dir = sizes3_examples_dir + os.sep + "models"
+        instance_dir = sizes3_examples_dir + os.sep + "SIZES3"
+        ef_output_file = this_test_file_directory+"test_sizes3_ef.lp"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve"
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_ef_with_solve_cplex.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        if os.sys.platform == "darwin":
+            self.assertFileEqualsBaseline(
+                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
+                baseline_dir+"sizes3_ef_with_solve_cplex_darwin.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+        else:
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
+                baseline_dir+"sizes3_ef_with_solve_cplex.baseline-a",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
+                baseline_dir+"sizes3_ef_with_solve_cplex.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            if (flag_a) and (flag_b):
+                print(diffs_a)
+                print(diffs_b)
+                self.fail("Differences identified relative to all baseline output file alternatives")
+
+    def test_sizes3_ef_with_solve_gurobi(self):
+        if solver['gurobi'] is None:
+            self.skipTest("The 'gurobi' executable is not available")
+        sizes3_examples_dir = pysp_examples_dir + "sizes"
+        model_dir = sizes3_examples_dir + os.sep + "models"
+        instance_dir = sizes3_examples_dir + os.sep + "SIZES3"
+        ef_output_file = this_test_file_directory+"test_sizes3_ef.lp"
+        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=gurobi --solve"
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"sizes3_ef_with_solve_gurobi.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        if os.sys.platform == "darwin":
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",
+               baseline_dir+"sizes3_ef_with_solve_gurobi_darwin.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=_diff_tolerance)
+        else:
+           self.assertFileEqualsBaseline(
+               this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",
+               baseline_dir+"sizes3_ef_with_solve_gurobi.baseline",
+               filter=filter_time_and_data_dirs,
+               tolerance=_diff_tolerance)
+
+    def test_forestry_ef(self):
+        forestry_examples_dir = pysp_examples_dir + "forestry"
+        model_dir = forestry_examples_dir + os.sep + "models-nb-yr"
+        instance_dir = forestry_examples_dir + os.sep + "18scenarios"
+        ef_output_file = this_test_file_directory+"test_forestry_ef.lp"
+        argstring = "runef -o max --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"forestry_ef.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"forestry_ef.out",
+            baseline_dir+"forestry_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            baseline_dir+"forestry_ef.baseline.lp.gz",
+            tolerance=_diff_tolerance)
+
+    def test_networkflow1ef10_ef(self):
+        networkflow1ef10_examples_dir = pysp_examples_dir + "networkflow"
+        model_dir = networkflow1ef10_examples_dir + os.sep + "models"
+        instance_dir = networkflow1ef10_examples_dir + os.sep + "1ef10"
+        ef_output_file = this_test_file_directory+"test_networkflow1ef10_ef.lp"
+        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"networkflow1ef10_ef.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"networkflow1ef10_ef.out",
+            baseline_dir+"networkflow1ef10_ef.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            baseline_dir+"networkflow1ef10_ef.baseline.lp.gz")
+
+    def test_farmer_ef_cvar(self):
+        farmer_examples_dir = pysp_examples_dir + "farmer"
+        model_dir = farmer_examples_dir + os.sep + "models"
+        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
+        ef_output_file = this_test_file_directory+"test_farmer_ef_cvar.lp"
+        argstring = "runef --symbolic-solver-labels --verbose --generate-weighted-cvar --risk-alpha=0.90 --cvar-weight=0.0 -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"farmer_ef_cvar.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"farmer_ef_cvar.out",
+            baseline_dir+"farmer_ef_cvar.baseline.out",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        self.assertFileEqualsBaseline(
+            ef_output_file,
+            baseline_dir+"farmer_ef_cvar.baseline.lp")
+
+    def test_cc_ef_networkflow1ef3_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        networkflow_example_dir = pysp_examples_dir + "networkflow"
+        model_dir = networkflow_example_dir + os.sep + "models-cc"
+        instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
+        argstring = "runef --solver=cplex -m "+model_dir+" -s "+instance_dir+ \
+                    " --cc-alpha=0.5" + \
+                    " --cc-indicator-var=delta" + \
+                    " --solver-options=\"mipgap=0.001\"" + \
+                    " --solve"
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out")
+        args = argstring.split()
+        pyomo.pysp.ef_writer_script.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
+            baseline_dir+"cc_ef_networkflow1ef3_cplex.baseline-a",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
+            baseline_dir+"cc_ef_networkflow1ef3_cplex.baseline-b",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        if (flag_a) and (flag_b):
+            print(diffs_a)
+            print(diffs_b)
+            self.fail("Differences identified relative to all baseline output file alternatives")
+
+    def test_lagrangian_cc_networkflow1ef3_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        networkflow_example_dir = pysp_examples_dir + "networkflow"
+        model_dir = networkflow_example_dir + os.sep + "models-cc"
+        instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
+        argstring = "drive_lagrangian_cc.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+                    " --alpha-min=0.5" + \
+                    " --alpha-max=0.5" + \
+                    " --ef-solver-options=\"mipgap=0.001\""
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out")
+        args = argstring.split()
+        pyomo.pysp.drive_lagrangian_cc.run(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out",
+            baseline_dir+"lagrangian_cc_networkflow1ef3_cplex.baseline",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+
+    def test_lagrangian_param_1cc_networkflow1ef3_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        networkflow_example_dir = pysp_examples_dir + "networkflow"
+        model_dir = networkflow_example_dir + os.sep + "models-cc"
+        instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
+        argstring = "lagrangeParam.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir
+        print("Testing command: " + argstring)
+        args = argstring.split()
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out")
+
+        import pyomo.pysp.lagrangeParam
+        pyomo.pysp.lagrangeParam.run(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out",
+            baseline_dir+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline",
+            filter=filter_lagrange,
+            tolerance=_diff_tolerance)
+
+    def test_lagrangian_morepr_1cc_networkflow1ef3_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        networkflow_example_dir = pysp_examples_dir + "networkflow"
+        model_dir = networkflow_example_dir + os.sep + "models-cc"
+        instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
+        argstring = "lagrangeMorePR.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+" --csvPrefix="+baseline_dir+"lagrange_pr_test"
+        print("Testing command: " + argstring)
+        args = argstring.split()
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out")
+
+        import pyomo.pysp.lagrangeMorePR
+        pyomo.pysp.lagrangeMorePR.run(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        self.assertFileEqualsBaseline(
+            this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",
+            baseline_dir+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline",
+            filter=filter_lagrange,
+            tolerance=_diff_tolerance)
+
+class TestPHExpensive(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        global solver
+        import pyomo.environ
+        solver = pyomo.opt.load_solvers('cplex', '_cplex_direct', 'gurobi', '_gurobi_direct', 'cbc', 'asl:ipopt')
+
+    def tearDown(self):
+
+        # IMPT: This step is key, as Python keys off the name of the module, not the location.
+        #       So, different reference models in different directories won't be detected.
+        #       If you don't do this, the symptom is a model that doesn't have the attributes
+        #       that the data file expects.
+        if "ReferenceModel" in sys.modules:
+            del sys.modules["ReferenceModel"]
+
+    def test_computeconf_networkflow1ef10_cplex(self):
+        if solver['cplex'] is None:
+            self.skipTest("The 'cplex' executable is not available")
+        # IMPORTANT - the following code is quite sensitive to the choice of random seed. the particular
+        #             seed below yields feasible sub-problem solves when computing the cost of x^ fixed
+        #             relative to a new sample size. without this property, you can't compute confidence
+        #             intervals (it means you need a bigger sample size).
+        networkflow_example_dir = pysp_examples_dir + "networkflow"
+        model_dir = networkflow_example_dir + os.sep + "models"
+        instance_dir = networkflow_example_dir + os.sep + "1ef10"
+        # the random seed is critical for reproducability - computeconf randomly partitions the scenarios into different groups
+        argstring = "computeconf --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
+                    " --fraction-scenarios-for-solve=0.2"+ \
+                    " --number-samples-for-confidence-interval=4"+ \
+                    " --random-seed=125"
+        print("Testing command: " + argstring)
+
+        pyutilib.misc.setup_redirect(
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out")
+        args = argstring.split()
+        pyomo.pysp.computeconf.main(args=args[1:])
+        pyutilib.misc.reset_redirect()
+        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
+            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-a",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
+            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-b",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        if (flag_a) and (flag_b):
+            print(diffs_a)
+            print(diffs_b)
+            self.fail("Differences identified relative to all baseline output file alternatives")
+
     def test_quadratic_sizes3_cplex(self):
         if (solver['cplex'] is None) or (not has_yaml):
             self.skipTest("Either the 'cplex' executable is not "
@@ -1149,527 +1686,6 @@ class TestPH(unittest.TestCase):
                 baseline_dir+"forestry_linearized_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
-
-    def test_farmer_ef(self):
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_ef.lp"
-        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_ef.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_ef.out",
-            baseline_dir+"farmer_ef.baseline.out",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            ef_output_file,
-            baseline_dir+"farmer_ef.baseline.lp")
-
-    def test_farmer_maximize_ef(self):
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "maxmodels"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"farmer_maximize_ef.lp"
-        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_maximize_ef.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_maximize_ef.out",
-            baseline_dir+"farmer_maximize_ef.baseline.out",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            ef_output_file,
-            baseline_dir+"farmer_maximize_ef.baseline.lp")
-
-    def test_farmer_piecewise_ef(self):
-        farmer_examples_dir = pysp_examples_dir + "farmerWpiecewise"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "nodedata"
-        ef_output_file = this_test_file_directory+"test_farmer_piecewise_ef.lp"
-        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_piecewise_ef.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_piecewise_ef.out",
-            baseline_dir+"farmer_piecewise_ef.baseline.out",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            ef_output_file,
-            baseline_dir+"farmer_piecewise_ef.baseline.lp")
-
-    def test_farmer_ef_with_solve_cplex(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_with_solve_cplex.lp"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve"
-        print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_ef_with_solve_cplex.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_ef_with_solve_cplex.out",
-            baseline_dir+"farmer_ef_with_solve_cplex.baseline",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-
-    def test_farmer_ef_with_solve_cplex_with_csv_writer(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --solver=cplex --solve --solution-writer=pyomo.pysp.plugins.csvsolutionwriter"
-        print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_ef_with_solve_cplex_with_csv_writer.out",
-            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer.baseline",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        # the following comparison is a bit weird, in that "ef.csv" is written to the current directory.
-        # at present, we can't specify a directory for this file in pysp. so, we'll look for it here,
-        # and if the test passes, clean up after ourselves if the test passes.
-        self.assertFileEqualsBaseline(
-            "ef.csv",
-            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer.csv",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            "ef_StageCostDetail.csv",
-            baseline_dir+"farmer_ef_with_solve_cplex_with_csv_writer_StageCostDetail.csv",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-
-
-    def test_farmer_maximize_ef_with_solve_cplex(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "maxmodels"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_maximize_with_solve_cplex.lp"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file+" --solver=cplex --solve"
-        print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_maximize_ef_with_solve_cplex.out",
-            baseline_dir+"farmer_maximize_ef_with_solve_cplex.baseline",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-
-    def test_farmer_ef_with_solve_gurobi(self):
-        if solver['gurobi'] is None:
-            self.skipTest("The 'gurobi' executable is not available")
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_with_solve_gurobi.lp"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=gurobi --solve"
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_ef_with_solve_gurobi.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_ef_with_solve_gurobi.out",
-            baseline_dir+"farmer_ef_with_solve_gurobi.baseline",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-
-    def test_farmer_maximize_ef_with_solve_gurobi(self):
-        if solver['gurobi'] is None:
-            self.skipTest("The 'gurobi' executable is not available")
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "maxmodels"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_maximize_with_solve_gurobi.lp"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" -o max --output-file="+ef_output_file+" --solver=gurobi --solve"
-        print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_maximize_ef_with_solve_gurobi.out",
-            baseline_dir+"farmer_maximize_ef_with_solve_gurobi.baseline",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-
-    def test_farmer_ef_with_solve_ipopt(self):
-        if solver['asl:ipopt'] is None:
-            self.skipTest("The 'ipopt' executable is not available")
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_with_solve_ipopt.nl"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=ipopt --solve"
-        print("Testing command: " + argstring)
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_ef_with_solve_ipopt.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        if os.sys.platform == "darwin":
-           self.assertFileEqualsBaseline(
-               this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
-               baseline_dir+"farmer_ef_with_solve_ipopt_darwin.baseline",
-               filter=filter_time_and_data_dirs,
-               tolerance=_diff_tolerance_relaxed)
-        else:
-           self.assertFileEqualsBaseline(
-               this_test_file_directory+"farmer_ef_with_solve_ipopt.out",
-               baseline_dir+"farmer_ef_with_solve_ipopt.baseline",
-               filter=filter_time_and_data_dirs,
-               tolerance=_diff_tolerance_relaxed)
-
-    def test_hydro_ef(self):
-        hydro_examples_dir = pysp_examples_dir + "hydro"
-        model_dir = hydro_examples_dir + os.sep + "models"
-        instance_dir = hydro_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_hydro_ef.lp"
-        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"hydro_ef.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"hydro_ef.out",
-            baseline_dir+"hydro_ef.baseline.out",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            ef_output_file,
-            baseline_dir+"hydro_ef.baseline.lp")
-
-    def test_sizes3_ef(self):
-        sizes3_examples_dir = pysp_examples_dir + "sizes"
-        model_dir = sizes3_examples_dir + os.sep + "models"
-        instance_dir = sizes3_examples_dir + os.sep + "SIZES3"
-        ef_output_file = this_test_file_directory+"test_sizes3_ef.lp"
-        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"sizes3_ef.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"sizes3_ef.out",
-            baseline_dir+"sizes3_ef.baseline.out",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            ef_output_file,
-            baseline_dir+"sizes3_ef.baseline.lp.gz")
-
-    def test_sizes3_ef_with_solve_cplex(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        sizes3_examples_dir = pysp_examples_dir + "sizes"
-        model_dir = sizes3_examples_dir + os.sep + "models"
-        instance_dir = sizes3_examples_dir + os.sep + "SIZES3"
-        ef_output_file = this_test_file_directory+"test_sizes3_ef.lp"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=cplex --solve"
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"sizes3_ef_with_solve_cplex.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        if os.sys.platform == "darwin":
-            self.assertFileEqualsBaseline(
-                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
-                baseline_dir+"sizes3_ef_with_solve_cplex_darwin.baseline",
-                filter=filter_time_and_data_dirs,
-                tolerance=_diff_tolerance)
-        else:
-            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
-                baseline_dir+"sizes3_ef_with_solve_cplex.baseline-a",
-                filter=filter_time_and_data_dirs,
-                tolerance=_diff_tolerance)
-            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_ef_with_solve_cplex.out",
-                baseline_dir+"sizes3_ef_with_solve_cplex.baseline-b",
-                filter=filter_time_and_data_dirs,
-                tolerance=_diff_tolerance)
-            if (flag_a) and (flag_b):
-                print(diffs_a)
-                print(diffs_b)
-                self.fail("Differences identified relative to all baseline output file alternatives")
-
-    def test_sizes3_ef_with_solve_gurobi(self):
-        if solver['gurobi'] is None:
-            self.skipTest("The 'gurobi' executable is not available")
-        sizes3_examples_dir = pysp_examples_dir + "sizes"
-        model_dir = sizes3_examples_dir + os.sep + "models"
-        instance_dir = sizes3_examples_dir + os.sep + "SIZES3"
-        ef_output_file = this_test_file_directory+"test_sizes3_ef.lp"
-        argstring = "runef --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file+" --solver=gurobi --solve"
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"sizes3_ef_with_solve_gurobi.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        if os.sys.platform == "darwin":
-           self.assertFileEqualsBaseline(
-               this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",
-               baseline_dir+"sizes3_ef_with_solve_gurobi_darwin.baseline",
-               filter=filter_time_and_data_dirs,
-               tolerance=_diff_tolerance)
-        else:
-           self.assertFileEqualsBaseline(
-               this_test_file_directory+"sizes3_ef_with_solve_gurobi.out",
-               baseline_dir+"sizes3_ef_with_solve_gurobi.baseline",
-               filter=filter_time_and_data_dirs,
-               tolerance=_diff_tolerance)
-
-    def test_forestry_ef(self):
-        forestry_examples_dir = pysp_examples_dir + "forestry"
-        model_dir = forestry_examples_dir + os.sep + "models-nb-yr"
-        instance_dir = forestry_examples_dir + os.sep + "18scenarios"
-        ef_output_file = this_test_file_directory+"test_forestry_ef.lp"
-        argstring = "runef -o max --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"forestry_ef.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"forestry_ef.out",
-            baseline_dir+"forestry_ef.baseline.out",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            ef_output_file,
-            baseline_dir+"forestry_ef.baseline.lp.gz",
-            tolerance=_diff_tolerance)
-
-    def test_networkflow1ef10_ef(self):
-        networkflow1ef10_examples_dir = pysp_examples_dir + "networkflow"
-        model_dir = networkflow1ef10_examples_dir + os.sep + "models"
-        instance_dir = networkflow1ef10_examples_dir + os.sep + "1ef10"
-        ef_output_file = this_test_file_directory+"test_networkflow1ef10_ef.lp"
-        argstring = "runef --symbolic-solver-labels --verbose -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"networkflow1ef10_ef.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"networkflow1ef10_ef.out",
-            baseline_dir+"networkflow1ef10_ef.baseline.out",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            ef_output_file,
-            baseline_dir+"networkflow1ef10_ef.baseline.lp.gz")
-
-    def test_farmer_ef_cvar(self):
-        farmer_examples_dir = pysp_examples_dir + "farmer"
-        model_dir = farmer_examples_dir + os.sep + "models"
-        instance_dir = farmer_examples_dir + os.sep + "scenariodata"
-        ef_output_file = this_test_file_directory+"test_farmer_ef_cvar.lp"
-        argstring = "runef --symbolic-solver-labels --verbose --generate-weighted-cvar --risk-alpha=0.90 --cvar-weight=0.0 -m "+model_dir+" -s "+instance_dir+" --output-file="+ef_output_file
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"farmer_ef_cvar.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"farmer_ef_cvar.out",
-            baseline_dir+"farmer_ef_cvar.baseline.out",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        self.assertFileEqualsBaseline(
-            ef_output_file,
-            baseline_dir+"farmer_ef_cvar.baseline.lp")
-
-    def test_computeconf_networkflow1ef10_cplex(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        # IMPORTANT - the following code is quite sensitive to the choice of random seed. the particular
-        #             seed below yields feasible sub-problem solves when computing the cost of x^ fixed
-        #             relative to a new sample size. without this property, you can't compute confidence
-        #             intervals (it means you need a bigger sample size).
-        networkflow_example_dir = pysp_examples_dir + "networkflow"
-        model_dir = networkflow_example_dir + os.sep + "models"
-        instance_dir = networkflow_example_dir + os.sep + "1ef10"
-        # the random seed is critical for reproducability - computeconf randomly partitions the scenarios into different groups
-        argstring = "computeconf --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
-                    " --fraction-scenarios-for-solve=0.2"+ \
-                    " --number-samples-for-confidence-interval=4"+ \
-                    " --random-seed=125"
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out")
-        args = argstring.split()
-        pyomo.pysp.computeconf.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
-            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-a",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
-            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-b",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        if (flag_a) and (flag_b):
-            print(diffs_a)
-            print(diffs_b)
-            self.fail("Differences identified relative to all baseline output file alternatives")
-
-    def test_cc_ef_networkflow1ef3_cplex(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        networkflow_example_dir = pysp_examples_dir + "networkflow"
-        model_dir = networkflow_example_dir + os.sep + "models-cc"
-        instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
-        argstring = "runef --solver=cplex -m "+model_dir+" -s "+instance_dir+ \
-                    " --cc-alpha=0.5" + \
-                    " --cc-indicator-var=delta" + \
-                    " --solver-options=\"mipgap=0.001\"" + \
-                    " --solve"
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out")
-        args = argstring.split()
-        pyomo.pysp.ef_writer_script.main(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
-            baseline_dir+"cc_ef_networkflow1ef3_cplex.baseline-a",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-            this_test_file_directory+"cc_ef_networkflow1ef3_cplex.out",
-            baseline_dir+"cc_ef_networkflow1ef3_cplex.baseline-b",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        if (flag_a) and (flag_b):
-            print(diffs_a)
-            print(diffs_b)
-            self.fail("Differences identified relative to all baseline output file alternatives")
-
-    def test_lagrangian_cc_networkflow1ef3_cplex(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        networkflow_example_dir = pysp_examples_dir + "networkflow"
-        model_dir = networkflow_example_dir + os.sep + "models-cc"
-        instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
-        argstring = "drive_lagrangian_cc.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
-                    " --alpha-min=0.5" + \
-                    " --alpha-max=0.5" + \
-                    " --ef-solver-options=\"mipgap=0.001\""
-        print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out")
-        args = argstring.split()
-        pyomo.pysp.drive_lagrangian_cc.run(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"lagrangian_cc_networkflow1ef3_cplex.out",
-            baseline_dir+"lagrangian_cc_networkflow1ef3_cplex.baseline",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-
-    def test_lagrangian_param_1cc_networkflow1ef3_cplex(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        networkflow_example_dir = pysp_examples_dir + "networkflow"
-        model_dir = networkflow_example_dir + os.sep + "models-cc"
-        instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
-        argstring = "lagrangeParam.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir
-        print("Testing command: " + argstring)
-        args = argstring.split()
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out")
-
-        import pyomo.pysp.lagrangeParam
-        pyomo.pysp.lagrangeParam.run(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"lagrangian_param_1cc_networkflow1ef3_cplex.out",
-            baseline_dir+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline",
-            filter=filter_lagrange,
-            tolerance=_diff_tolerance)
-
-    def test_lagrangian_morepr_1cc_networkflow1ef3_cplex(self):
-        if solver['cplex'] is None:
-            self.skipTest("The 'cplex' executable is not available")
-        networkflow_example_dir = pysp_examples_dir + "networkflow"
-        model_dir = networkflow_example_dir + os.sep + "models-cc"
-        instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
-        argstring = "lagrangeMorePR.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+" --csvPrefix="+baseline_dir+"lagrange_pr_test"
-        print("Testing command: " + argstring)
-        args = argstring.split()
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out")
-
-        import pyomo.pysp.lagrangeMorePR
-        pyomo.pysp.lagrangeMorePR.run(args=args[1:])
-        pyutilib.misc.reset_redirect()
-        self.assertFileEqualsBaseline(
-            this_test_file_directory+"lagrangian_morepr_1cc_networkflow1ef3_cplex.out",
-            baseline_dir+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline",
-            filter=filter_lagrange,
-            tolerance=_diff_tolerance)
-
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 class TestPHParallel(unittest.TestCase):
@@ -2390,6 +2406,7 @@ class TestPHParallel(unittest.TestCase):
         _remove(this_test_file_directory+"networkflow1ef10_linearized_cplex_with_bundles_with_phpyro.out")
 
 TestPH = unittest.category('nightly','expensive','performance')(TestPH)
+TestPHExpensive = unittest.category('expensive','performance')(TestPHExpensive)
 TestPHParallel = unittest.category('parallel','performance')(TestPHParallel)
 
 if __name__ == "__main__":
