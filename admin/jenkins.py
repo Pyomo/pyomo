@@ -110,7 +110,7 @@ elif config == "expensive":
         cat='all', coverage=True, omit=pyutilib,
         virtualenv_args=sys.argv[1:])
 
-elif config == "booktests":
+elif config == "booktests" or config == "book":
     import hudson.driver
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
