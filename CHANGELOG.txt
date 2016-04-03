@@ -31,11 +31,9 @@ Pyomo 4.3 (4.3.TODO)
   - Changes to allow sorted output using DataPortal objects
   - Bug fix in linear dualization transformation
   - Adding a mechanism to load default configuration information from a
-standard location.
-  - Changes to allow objectives to be used inside expressions, and to allow not 
+    standard location.
+  - Changes to allow objectives to be used inside expressions, and to
     allow objectives to be sent through the solver plugins
-  - Making _ObjectiveData a subclass of _ExpressionData, which 
-  - Cleaning up Model.create_instance()
   - Updating blocks so that models can be created and populated using rule options
   - Added a domain property method to IndexedVar so it cannot be treated as having 
     a single domain

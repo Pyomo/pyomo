@@ -1,21 +1,22 @@
-We are pleased to announce the release of Pyomo 4.2 (4.2.10784). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 4.3 (4.2.TODO). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
 The following are highlights of this release:
 
 - Modeling
-   * Added support for slicing when indexing a component.
-   * Objective components now store sense for each objective
+   * Major revision to pyomo.bilevel to support dualization of quadratic BLPs
+   * Added an MPS writer
+   * Use Sparse representations for Expression and SOSConstraint components
 
 - Solvers
-   * Adding support for solver operations that override the default
+   * Added support
+   * Significant speed-up of CPLEX solver interfaces
    * Bug fixes for running solvers on NEOS
-   * Resolved various issues with python direct interfaces (cplex and gurobi)
-   * Major performance enhancements for Pyro-based solver managers
+   * Many fixes to the 'sol' file reader
 
 - Other
-   * Added utility for converting PySP models into SMPS input files
-   * Updated the get-pyomo-extras.py script to install conditional dependencies
-   * Added the 'pyomo info' subcommand to describe Pyomo installation
+   * Many updates to the pyomo_install script
+   * Consolidated help information in the 'pyomo help' subcommand
+   * Added 'pyomo install-extras' to install optional Python packages
 
 See http://pyomo.org for installation options and documentation for getting started with Pyomo.
 
