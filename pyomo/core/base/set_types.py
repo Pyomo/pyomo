@@ -27,19 +27,13 @@ from pyomo.core.base.plugin import *
 _virtual_sets = []
 
 
-class _VirtualSet(SimpleSet, pyomo.util.plugin.Plugin):
+class _VirtualSet(SimpleSet):
     """
     A set that does not contain elements, but instead overrides the
        __contains__ method to define set membership.
     """
 
-    pyomo.util.plugin.implements(IPyomoSet)
-
     def __init__(self,*args,**kwds):
-        if "name" in kwds:
-            pyomo.util.plugin.Plugin.__init__(self,name=kwds["name"])
-        else:
-            pyomo.util.plugin.Plugin.__init__(self)
         self._class_override=False
         SimpleSet.__init__(self, *args, **kwds)
         self.virtual=True
@@ -143,8 +137,7 @@ class BooleanSet(_VirtualSet):
 #            variable domains (for instance via the
 #            relax_integrality transformation). Should we
 #            consider reimplementing them as more
-#            lightweight objects? Why are they
-#            Plugins (POTENTIAL MEMORY LEAK)?
+#            lightweight objects?
 class _validate_interval(object):
     __slots__ = ("_obj",)
     def __init__(self, obj): self._obj = weakref_ref(obj)

@@ -9,7 +9,7 @@
 
 __all__ = ['pyomo_callback',
         'IPyomoExpression', 'ExpressionFactory', 'ExpressionRegistration',
-        'IPyomoSet', 'IModelComponent',
+        'IModelComponent',
         'ModelComponentFactory',
         'register_component',
         'IPyomoPresolver', 'IPyomoPresolveAction',
@@ -173,11 +173,6 @@ def ExpressionFactory(name=None, args=[]):
         return map(lambda x:x.name, ep())
     return ep.service(name).create(args)
 ExpressionFactory.ep = ExtensionPoint(IPyomoExpression)
-
-
-
-class IPyomoSet(Interface):
-    pass
 
 
 class IModelComponent(Interface):
