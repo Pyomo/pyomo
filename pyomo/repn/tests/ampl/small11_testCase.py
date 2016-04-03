@@ -26,9 +26,9 @@ n=3
 
 model.x = Var([(k,i) for k in range(1,n+1) for i in range(k,n+1)])
 
-def f_rule(model):
+def obj_rule(model):
 	return model.x[n,n]
-model.f = Objective(rule=f_rule)
+model.obj = Objective(rule=obj_rule)
 
 def var_bnd_rule(model,i):
 	return -1.0 <= model.x[1,i] <= 1.0
