@@ -1208,6 +1208,7 @@ class TestPH(unittest.TestCase):
         networkflow_example_dir = pysp_examples_dir + "networkflow"
         model_dir = networkflow_example_dir + os.sep + "models-cc"
         instance_dir = networkflow_example_dir + os.sep + "1ef3-cc"
+        _remove(baseline_dir+"lagrange_pr_testPRmore.csv")
         argstring = "lagrangeMorePR.py -r 1.0 --solver=cplex --model-directory="+model_dir+" --instance-directory="+instance_dir+" --csvPrefix="+baseline_dir+"lagrange_pr_test"
         print("Testing command: " + argstring)
         args = argstring.split()
@@ -1223,6 +1224,7 @@ class TestPH(unittest.TestCase):
             baseline_dir+"lagrangian_morepr_1cc_networkflow1ef3_cplex.baseline",
             filter=filter_lagrange,
             tolerance=_diff_tolerance)
+        _remove(baseline_dir+"lagrange_pr_testPRmore.csv")
 
 class TestPHExpensive(unittest.TestCase):
 
