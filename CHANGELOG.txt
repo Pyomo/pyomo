@@ -3,11 +3,72 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 4.3
+Pyomo 4.3 (4.3.TODO)
 -------------------------------------------------------------------------------
 
-- Next release
-
+- Scripts
+  - pyomo_install
+    - Added --pip-options to specify options for PIP option
+    - Added --index-url to specify the PyPI mirror
+    - Restructured this script to make it more modular
+    - Deprecated the --with-extras option
+    - Added "--venv-only" option for setting up a local python virtual
+      environment with no additional packages (apart from pip, setuptools, and
+      potentially wheel). 
+    - Fixes when installing from zip files offline.
+  - get-pyomo-extras.py
+    - Misc fixes and updates
+  - pyomo
+    - Consolidated help information within the 'pyomo help' subcommand
+    - Added 'pyomo install-extras' to install third-party dependencies
+- pyomo.bilevel
+  - Major changes to get the bilevel_ld solver working
+  - Extended the logic in SubModel to allow for implicit declarations of
+    upper-level variables.
+- pyomo.check
+  - More complete scoping checks
+- pyomo.core
+  - Changes to allow sorted output using DataPortal objects
+  - Bug fix in linear dualization transformation
+  - Adding a mechanism to load default configuration information from a
+standard location.
+  - Changes to allow objectives to be used inside expressions, and to allow not 
+    allow objectives to be sent through the solver plugins
+  - Making _ObjectiveData a subclass of _ExpressionData, which 
+  - Cleaning up Model.create_instance()
+  - Updating blocks so that models can be created and populated using rule options
+  - Added a domain property method to IndexedVar so it cannot be treated as having 
+    a single domain
+  - Added the Var() 'dense' option.  This defaults to True, which defines variables
+    densely.  But sparse variables are defined when dense==False.
+  - Change to define a SOS constraint over the declared index set for a variable 
+    unless an explicit index set is provided.
+  - Changes to ensure that most components do not define their data densely.
+- pyomo.gdp
+  - Many fixes to bilinear transformation
+  - Fixed the Big-M estimation routine to work with constant expressions
+- pyomo.neos
+  - Added support for ephemeral solver options, which over-ride the
+    options dictionary
+  - Fixes to enable loading of solutions from NEOS solvers
+- pyomo.opt
+  - Sort variable names when printing results
+  - Many fixes to sol reader.
+- pyomo.pysp
+  - TODO
+- pyomo.repn
+  - Updates to the NL writer to handle new expression types.
+  - Added an MPS writer
+- pyomo.scripting
+  - Updated the Pyro mip server to improve its efficiency
+- pyomo.solvers
+  - Updates to xpress plugin to use the ASL interface to xpress.
+  - Fixed a major issue with the gap computation in the CPLEX direct/persistent 
+    solver plugins
+  - Significant speed-up of the the CPLEX persistent plugin.
+  - Added the 'mps' mode for various solvers.
+  - Changes to the Pyro solver manager to allow out-of-order results collection
+ 
 -------------------------------------------------------------------------------
 Pyomo 4.2 (4.2.10784)
 -------------------------------------------------------------------------------
