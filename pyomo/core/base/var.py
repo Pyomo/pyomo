@@ -287,7 +287,7 @@ class _GeneralVarData(_VarData):
         # the SimplVar constructor will fail
         if hasattr(domain, 'bounds'):
             self._domain = domain
-        else:
+        elif not domain is None:
             raise ValueError(
                 "%s is not a valid domain. Variable domains must be an "
                 "instance of one of %s an object that declares a method "
@@ -455,7 +455,7 @@ class Var(IndexedComponent):
         #
         # Note: See the optimization in _initialize_members
         #       for why this attribute is given a default value
-        self._domain_init_value = Reals
+        self._domain_init_value = None
         self._domain_init_rule = None
         if is_functor(domain):
             self._domain_init_rule = domain
