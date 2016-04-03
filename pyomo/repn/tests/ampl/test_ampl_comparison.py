@@ -21,9 +21,10 @@ import pyutilib.subprocess
 
 import pyomo.scripting.pyomo_main as main
 
-has_asl_test = False
-if os.system('asl_test -v') == 0:
-    has_asl_test = True
+# https://github.com/ghackebeil/gjh_asl_json
+has_gjh_asl_json = False
+if os.system('gjh_asl_json -v') == 0:
+    has_gjh_asl_json = True
 
 class Tests(unittest.TestCase):
 
@@ -62,15 +63,16 @@ class ASLTests(Tests):
 ASLTests = unittest.category('smoke','nightly','expensive')(ASLTests)
 
 #
-# The following test calls the asl_test executable to generate JSON
-# files corresponding to both the AMPL-generated nl file and the
-# Pyomo-generated nl file. The JSON files are then diffed using
-# the pyutilib.th test class method assertMatchesJsonBaseline()
+# The following test calls the gjh_asl_json executable to
+# generate JSON files corresponding to both the
+# AMPL-generated nl file and the Pyomo-generated nl
+# file. The JSON files are then diffed using the pyutilib.th
+# test class method assertMatchesJsonBaseline()
 #
 @unittest.nottest
 def nlwriter_asl_test(self, name):
-    if has_asl_test is False:
-        self.skipTest('asl_test executable not available')
+    if not has_gjh_asl_json:
+        self.skipTest("'gjh_asl_json' executable not available")
         return
     if os.path.exists(currdir+name+'.dat'):
         self.pyomo(['--output='+currdir+name+'.test.nl',
@@ -86,23 +88,32 @@ def nlwriter_asl_test(self, name):
 
     # compare AMPL and Pyomo nl file structure
     try:
-        os.remove(currdir+'stub.json')
+        os.remove(currdir+name+'.ampl.json')
     except Exception:
         pass
     try:
-        os.remove(currdir+'stub.test.json')
+        os.remove(currdir+name+'.test.json')
     except Exception:
         pass
 
     # obtain the nl file summary information for comparison with ampl
-    p = pyutilib.subprocess.run('asl_test '+currdir+name+'.test.nl rows='+currdir+name+'.test.row cols='+currdir+name+'.test.col')
+    p = pyutilib.subprocess.run(
+        'gjh_asl_json '+currdir+name+'.test.nl rows='
+        +currdir+name+'.test.row cols='+currdir+name+'.test.col')
     self.assertTrue(p[0] == 0, msg=p[1])
-    os.rename(currdir+'stub.json',currdir+'stub.test.json')
+
     # obtain the nl file summary information for comparison with pyomo
-    p = pyutilib.subprocess.run('asl_test '+currdir+name+'.ampl.nl rows='+currdir+name+'.ampl.row cols='+currdir+name+'.ampl.col')
+    p = pyutilib.subprocess.run(
+        'gjh_asl_json '+currdir+name+'.ampl.nl rows='
+        +currdir+name+'.ampl.row cols='+currdir+name+'.ampl.col')
     self.assertTrue(p[0] == 0, msg=p[1])
-    self.assertMatchesJsonBaseline(currdir+'stub.test.json', currdir+'stub.json', tolerance=1e-8)
-    os.remove(currdir+'stub.json')
+
+    self.assertMatchesJsonBaseline(
+        currdir+name+'.test.json',
+        currdir+name+'.ampl.json',
+        tolerance=1e-8)
+
+    os.remove(currdir+name+'.ampl.json')
 
     # delete temporary test files
     os.remove(currdir+name+'.test.col')
