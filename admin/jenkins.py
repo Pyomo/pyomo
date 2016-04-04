@@ -107,7 +107,7 @@ elif config == "expensive":
 
     from hudson.driver import perform_build
     perform_build('pyomo',
-        cat='all', coverage=True, omit=pyutilib,
+        cat='expensive', coverage=True, omit=pyutilib,
         virtualenv_args=sys.argv[1:])
 
 elif config == "booktests" or config == "book":
