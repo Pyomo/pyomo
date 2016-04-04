@@ -560,7 +560,7 @@ def create_ph_parameters(instance, scenario_tree, default_rho, linearizing_penal
             Param(nodal_index_set,
                   name=new_rho_parameter_name,
                   initialize=scenario._rho[tree_node._name],
-                  domain=AnyWithNone,
+                  domain=Any,
                   mutable=True)
         if linearizing_penalty_terms > 0:
             new_penalty_term_variable = \

@@ -1619,10 +1619,8 @@ class AnySetTests(RealSetTests):
         self.assertEqual( '2' in self.instance.A, True)
 
     def test_None1(self):
-        self.assertEqual( None in Any, False)
+        self.assertEqual( None in Any, True)
 
-    def test_None2(self):
-        self.assertEqual( None in AnyWithNone, True)
 
 class SetArgs1(PyomoModel):
 

@@ -545,12 +545,8 @@ class TestBlock(unittest.TestCase):
         self.block.x = 6
         self.assertEqual(value(self.block.x), 6)
         self.assertEqual(value(p), 6)
-        try:
-            self.block.x = None
-            self.fail("Expected exception assigning None to domain Any")
-        except ValueError:
-            pass
-
+        self.block.x = None
+        self.assertEqual(self.block.x.value, None)
 
     def test_iterate_hierarchy_defaults(self):
         self.assertIs( TraversalStrategy.BFS, 

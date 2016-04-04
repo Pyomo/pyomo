@@ -174,11 +174,8 @@ class Test(unittest.TestCase):
         self.assertEqual(value(model.x), 5)
         model.x = 6
         self.assertEqual(value(model.x), 6)
-        try:
-            model.x = None
-            self.fail("Expected exception assigning None to domain Any")
-        except ValueError:
-            pass
+        model.x = None
+        self.assertEqual(model.x.value, None)
 
     def test_write(self):
         model = ConcreteModel()

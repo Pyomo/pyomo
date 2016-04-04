@@ -24,6 +24,9 @@ from pyomo.core.base.numvalue import (native_numeric_types,
                                       native_boolean_types)
 from pyomo.core.base.plugin import *
 
+import logging
+logger = logging.getLogger('pyomo.core')
+
 _virtual_sets = []
 
 
@@ -54,8 +57,6 @@ class _AnySet(_VirtualSet):
         _VirtualSet.__init__(self,*args,**kwds)
 
     def __contains__(self, element):
-        if element is None:
-            return False
         return True
 
 
@@ -74,6 +75,7 @@ class _AnySetWithNone(_AnySet):
     """A virtual set that allows any value (including None)"""
 
     def __contains__(self, element):
+        logger.warning("DEPRECATION WARNING: Use the Any set instead of AnyWithNone")
         return True
 
 
