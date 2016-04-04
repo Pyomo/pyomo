@@ -212,15 +212,18 @@ NonNegativeReals = RealSet(
   doc="A set of non-negative real values",
   bounds=(0, None)
 )
-
 PercentFraction = RealSet(
   name="PercentFraction",
   validate=validate_PercentFraction,
   doc="A set of real values in the interval [0,1]",
   bounds=(0.0,1.0)
 )
-
-UnitInterval = PercentFraction
+UnitInterval = RealSet(
+  name="UnitInterval",
+  validate=validate_PercentFraction,
+  doc="A set of real values in the interval [0,1]",
+  bounds=(0.0,1.0)
+)
 
 Integers            = IntegerSet(
   name="Integers",
