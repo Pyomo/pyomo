@@ -1135,6 +1135,91 @@ class MiscVarTests(unittest.TestCase):
             self.assertEqual(value(model.x[i]),0)
         self.assertEqual(len(model.x),4)
 
+    def test_simple_default_domain(self):
+        model = ConcreteModel()
+        model.x = Var()
+        self.assertIs(model.x.domain, Reals)
+
+    def test_simple_nondefault_domain_value(self):
+        model = ConcreteModel()
+        model.x = Var(domain=Integers)
+        self.assertIs(model.x.domain, Integers)
+
+    def test_simple_bad_nondefault_domain_value(self):
+        model = ConcreteModel()
+        with self.assertRaises(ValueError):
+            model.x = Var(domain=25)
+
+    def test_simple_nondefault_domain_rule(self):
+        model = ConcreteModel()
+        model.x = Var(domain=lambda m: Integers)
+        self.assertIs(model.x.domain, Integers)
+
+    def test_simple_bad_nondefault_domain_rule(self):
+        model = ConcreteModel()
+        with self.assertRaises(ValueError):
+            model.x = Var(domain=lambda m: 25)
+
+    def test_indexed_default_domain(self):
+        model = ConcreteModel()
+        model.s = Set(initialize=[1])
+        model.x = Var(model.s)
+        self.assertIs(model.x[1].domain, Reals)
+
+    def test_indexed_nondefault_domain_value(self):
+        model = ConcreteModel()
+        model.s = Set(initialize=[1])
+        model.x = Var(model.s, domain=Integers)
+        self.assertIs(model.x[1].domain, Integers)
+
+    def test_indexed_bad_nondefault_domain_value(self):
+        model = ConcreteModel()
+        model.s = Set(initialize=[1])
+        with self.assertRaises(ValueError):
+            model.x = Var(model.s, domain=25)
+
+    def test_indexed_nondefault_domain_rule(self):
+        model = ConcreteModel()
+        model.s = Set(initialize=[1])
+        model.x = Var(model.s, domain=lambda m, i: Integers)
+        self.assertIs(model.x[1].domain, Integers)
+
+    def test_indexed_bad_nondefault_domain_rule(self):
+        model = ConcreteModel()
+        model.s = Set(initialize=[1])
+        with self.assertRaises(ValueError):
+            model.x = Var(model.s, domain=lambda m, i: 25)
+
+    def test_list_default_domain(self):
+        model = ConcreteModel()
+        model.x = VarList()
+        model.x.add()
+        self.assertIs(model.x[1].domain, Reals)
+
+    def test_list_nondefault_domain_value(self):
+        model = ConcreteModel()
+        model.x = VarList(domain=Integers)
+        model.x.add()
+        self.assertIs(model.x[1].domain, Integers)
+
+    def test_list_bad_nondefault_domain_value(self):
+        model = ConcreteModel()
+        model.x = VarList(domain=25)
+        with self.assertRaises(ValueError):
+            model.x.add()
+
+    def test_list_nondefault_domain_rule(self):
+        model = ConcreteModel()
+        model.x = VarList(domain=lambda m, i: Integers)
+        model.x.add()
+        self.assertIs(model.x[1].domain, Integers)
+
+    def test_list_bad_nondefault_domain_rule(self):
+        model = ConcreteModel()
+        model.x = VarList(domain=lambda m, i: 25)
+        with self.assertRaises(ValueError):
+            model.x.add()
+
     def test_setdata_index(self):
 
         model = ConcreteModel()

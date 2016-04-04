@@ -287,10 +287,10 @@ class _GeneralVarData(_VarData):
         # the SimplVar constructor will fail
         if hasattr(domain, 'bounds'):
             self._domain = domain
-        elif not domain is None:
+        elif domain is not None:
             raise ValueError(
                 "%s is not a valid domain. Variable domains must be an "
-                "instance of one of %s an object that declares a method "
+                "instance of one of %s, or an object that declares a method "
                 "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
                 "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
 
@@ -331,7 +331,7 @@ class _GeneralVarData(_VarData):
         else:
             raise ValueError(
                 "%s is not a valid domain. Variable domains must be an "
-                "instance of one of %s an object that declares a method "
+                "instance of one of %s, or an object that declares a method "
                 "for bounds (like a Pyomo Set). Examples: NonNegativeReals, "
                 "Integers, Binary" % (domain, (RealSet, IntegerSet, BooleanSet)))
 
@@ -453,8 +453,6 @@ class Var(IndexedComponent):
         #
         # Determine if the domain argument is a functor or other object
         #
-        # Note: See the optimization in _initialize_members
-        #       for why this attribute is given a default value
         self._domain_init_value = None
         self._domain_init_rule = None
         if is_functor(domain):
