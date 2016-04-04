@@ -32,7 +32,7 @@ d = {}
 d['Scenario1'] = 0
 d['Scenario2'] = 1
 d['Scenario3'] = 2
-def pysp_instance_creation_callback(scenario_name, node_names):
+def create_instance(scenario_name):
     cnt = d[scenario_name]
 
     model = ConcreteModel()
@@ -79,6 +79,11 @@ def pysp_instance_creation_callback(scenario_name, node_names):
                                      pw_repn='INC',
                                      f_rule=[0.,0.,-1.,2.+cnt,1.],
                                      force_pw=True)
+    return model
+
+def pysp_instance_creation_callback(scenario_name, node_names):
+
+    model = create_instance(scenario_name)
 
     #
     # SMPS Related Annotations
@@ -104,10 +109,10 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     model.stoch_rhs.declare(model.p_second_stage)
     model.stoch_rhs.declare(model.r_second_stage)
     model.stoch_matrix = PySP_StochasticMatrixAnnotation()
-    model.stoch_objective = PySP_StochasticObjectiveAnnotation()
     # exercise more of the code by testing this with an
     # indexed block and a single block
     model.stoch_matrix.declare(model.c_second_stage, variables=[model.r])
     model.stoch_matrix.declare(model.p_second_stage[1])
+    model.stoch_objective = PySP_StochasticObjectiveAnnotation()
 
     return model

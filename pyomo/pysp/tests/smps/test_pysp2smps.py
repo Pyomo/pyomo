@@ -196,16 +196,40 @@ class TestSMPSSimple(unittest.TestCase):
                               ignore_errors=True)
                 raise
 
+    def test_too_many_declarations(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_too_many_declarations.py"),
+            options={'--core-format': 'lp'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                _run_cmd(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
+    def test_bad_component_type(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisDir, "model_bad_component_type.py"),
+            options={'--core-format': 'lp'})
+        with self.assertRaises(subprocess.CalledProcessError):
+            try:
+                _run_cmd(cmd, shell=True)
+            except:
+                shutil.rmtree(output_dir,
+                              ignore_errors=True)
+                raise
+
 class _SMPSTesterBase(object):
 
-    basename = None
+    baseline_basename = None
     model_location = None
     scenario_tree_location = None
 
     def _setup(self, options):
-        assert self.basename is not None
+        assert self.baseline_basename is not None
         assert self.model_location is not None
-        options['--basename'] = self.basename
+        options['--basename'] = self.baseline_basename
         options['--model-location'] = self.model_location
         if self.scenario_tree_location is not None:
             options['--scenario-tree-location'] = self.scenario_tree_location
@@ -267,7 +291,7 @@ class _SMPSTesterBase(object):
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.basename+'_LP_baseline'),
+        self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_baseline'),
                    self.options['--output-directory'])
 
     def test_scenarios_MPS(self):
@@ -275,7 +299,7 @@ class _SMPSTesterBase(object):
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.basename+'_MPS_baseline'),
+        self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_baseline'),
                    self.options['--output-directory'])
 
     def test_scenarios_LP_symbolic_names(self):
@@ -284,7 +308,7 @@ class _SMPSTesterBase(object):
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.basename+'_LP_symbolic_names_baseline'),
+        self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
     def test_scenarios_MPS_symbolic_names(self):
@@ -293,7 +317,7 @@ class _SMPSTesterBase(object):
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.basename+'_MPS_symbolic_names_baseline'),
+        self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
 _pyomo_ns_host = '127.0.0.1'
@@ -370,7 +394,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.basename+'_LP_baseline'),
+        self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_baseline'),
                    self.options['--output-directory'])
 
     def test_scenarios_MPS_1server(self):
@@ -378,7 +402,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.basename+'_MPS_baseline'),
+        self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_baseline'),
                    self.options['--output-directory'])
 
     def test_scenarios_LP_symbolic_names_1server(self):
@@ -387,7 +411,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.basename+'_LP_symbolic_names_baseline'),
+        self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
     def test_scenarios_MPS_symbolic_names_1server(self):
@@ -396,19 +420,21 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.basename+'_MPS_symbolic_names_baseline'),
+        self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
 @unittest.nottest
-def create_test_classes(basename,
+def create_test_classes(test_class_suffix,
+                        baseline_basename,
                         model_location,
                         scenario_tree_location,
                         categories):
-    assert basename is not None
+    assert test_class_suffix is not None
+    assert baseline_basename is not None
 
     class _base(object):
         pass
-    _base.basename = basename
+    _base.baseline_basename = baseline_basename
     _base.model_location = model_location
     _base.scenario_tree_location = scenario_tree_location
 
@@ -420,7 +446,7 @@ def create_test_classes(basename,
         def setUp(self):
             self.options = {}
             self.options['--scenario-tree-manager'] = 'serial'
-    class_names.append(TestPySP2SMPS_Serial.__name__ + "_"+basename)
+    class_names.append(TestPySP2SMPS_Serial.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestPySP2SMPS_Serial, unittest.TestCase), {})
 
@@ -434,7 +460,7 @@ def create_test_classes(basename,
             _SMPSPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
-    class_names.append(TestPySP2SMPS_Pyro.__name__ + "_"+basename)
+    class_names.append(TestPySP2SMPS_Pyro.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestPySP2SMPS_Pyro, unittest.TestCase), {})
 
@@ -449,7 +475,7 @@ def create_test_classes(basename,
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-multiple-scenariotreeserver-workers'] = ''
-    class_names.append(TestPySP2SMPS_Pyro_MultipleWorkers.__name__ + "_"+basename)
+    class_names.append(TestPySP2SMPS_Pyro_MultipleWorkers.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestPySP2SMPS_Pyro_MultipleWorkers, unittest.TestCase), {})
 
@@ -464,7 +490,7 @@ def create_test_classes(basename,
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-handshake-at-startup'] = ''
-    class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup.__name__ + "_"+basename)
+    class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestPySP2SMPS_Pyro_HandshakeAtStartup, unittest.TestCase), {})
 
@@ -480,7 +506,7 @@ def create_test_classes(basename,
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-handshake-at-startup'] = ''
             options['--pyro-multiple-scenariotreeserver-workers'] = ''
-    class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+basename)
+    class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1],
         (TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
@@ -497,12 +523,23 @@ farmer_model_dir = join(farmer_examples_dir, "smps_model")
 farmer_data_dir = join(farmer_examples_dir, "scenariodata")
 
 create_test_classes('farmer',
+                    'farmer',
                     farmer_model_dir,
                     farmer_data_dir,
                     ('nightly','expensive'))
 
 piecewise_model_dir = join(thisDir, "piecewise_model.py")
 create_test_classes('piecewise',
+                    'piecewise',
+                    piecewise_model_dir,
+                    None,
+                    ('nightly','expensive'))
+
+# uses the same baselines as 'piecewise',
+# except annotations are declared differently
+piecewise_model_dir = join(thisDir, "piecewise_model_alt.py")
+create_test_classes('piecewise_alt',
+                    'piecewise',
                     piecewise_model_dir,
                     None,
                     ('nightly','expensive'))

@@ -1,5 +1,6 @@
 #
-# a model with stochastic variable bounds
+# a model that is missing a declaration of
+# a stochastic objective variable
 #
 from pyomo.pysp.tests.smps.utils import *
 

@@ -41,13 +41,6 @@ from pyomo.pysp.annotations import (locate_annotations,
 
 from six import iteritems, itervalues
 
-# TODO:
-#  - Implicit output
-#  - Report max variable/constraint name length
-#  - A better way to handle piecewise blocks would be to
-#    allow users to declare stage variables on the scenario
-#    tree by block name (see ticket)
-
 # LONG TERM TODO:
 #  - Multi-stage?
 #  - Quadratic constraints and objectives?
@@ -83,8 +76,8 @@ def _expand_annotation_entries(scenario,
                 "be stored (such as a Block and an indexed Constraint) are not "
                 "simultaneously set in this annotation." % (scenario.name,
                                                             component.cname(True),
-                                                            annotation.__name__))
-        component_ids.add(component)
+                                                            annotation.__class__.__name__))
+        component_ids.add(id(component))
 
     for component in annotation_data:
         component_annotation_value = annotation_data[component]
@@ -116,7 +109,7 @@ def _expand_annotation_entries(scenario,
             raise TypeError(
                 "(Scenario=%s): Declarations in annotation type %s must be of type "
                 "%s or Block. Invalid type: %s" % (scenario.name,
-                                                   annotation.__name__,
+                                                   annotation.__class__.__name__,
                                                    ctype.__name__,
                                                    type(component)))
         if check_value is not None:
