@@ -42,6 +42,9 @@ Pyomo 4.3 (4.3.TODO)
   - Change to define a SOS constraint over the declared index set for a variable 
     unless an explicit index set is provided.
   - Changes to ensure that most components do not define their data densely.
+- pyomo.dae
+  - Updates to support Python3 and current Pyomo Transformation API
+  - Fixed the collocation extension to reduce the degrees of freedom for certain variables
 - pyomo.gdp
   - Many fixes to bilinear transformation
   - Fixed the Big-M estimation routine to work with constant expressions
