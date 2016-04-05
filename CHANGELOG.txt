@@ -53,7 +53,33 @@ Pyomo 4.3 (4.3.TODO)
   - Sort variable names when printing results
   - Many fixes to sol reader.
 - pyomo.pysp
-  - TODO
+  - Updates to ScenarioStructure.dat to handle a larger
+    class of models that can have non-uniform variable sets
+    in later time stages. Also updating parsing rules to
+    allow for more convenient variable declarations
+      - NodeVariables / NodeDerivedVariables can be used in
+        place of StageVariables / StageDerivedVariables to
+        declare variables on a per-node basis
+      - Indexed variables can be declared without bracket
+        notation (e.g., x[*,*] -> x)
+      - Single or indexed block names can be used to
+        conveniently declare all variables found on that
+        block within a node or stage
+  - Re-write of runef and runbenders based off of new PySP
+    scripting tools
+  - Adding option to runbenders for including one or more
+    scenarios in the master benders problem
+  - Fixes to csvsolutionwriter so that it works with
+    distributed PH
+  - Added new script (evaluate_xhat) that allows users to
+    evaluate SP solutions on alternate scenario trees.
+  - Added more extensive checking to PySP->SMPS conversion
+    utility (pysp2smps) to alert users when conversion fails
+    due to non-uniform problem structure or missing
+    stochastic annotations
+  - Added helper routine to convert a networkx directed
+    graph into a PySP scenario tree model
+  - Fixes to PH for better handling of user warmstarts
 - pyomo.repn
   - Updates to the NL writer to handle new expression types.
   - Added an MPS writer
