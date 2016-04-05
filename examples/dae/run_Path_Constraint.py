@@ -27,9 +27,9 @@ results = solver.solve(m, tee=True)
 def plotter(subplot, x, *y, **kwds):
     plt.subplot(subplot)
     for i,_y in enumerate(y):
-        plt.plot(x, [value(_y[t]) for t in x], 'brgcmk'[i%6])
+        plt.plot(list(x), [value(_y[t]) for t in x], 'brgcmk'[i%6])
         if kwds.get('points', False):
-            plt.plot(x, [value(_y[t]) for t in x], 'o')
+            plt.plot(list(x), [value(_y[t]) for t in x], 'o')
     plt.title(kwds.get('title',''))
     plt.legend(tuple(_y.cname() for _y in y))
     plt.xlabel(x.cname())

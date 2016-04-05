@@ -43,14 +43,22 @@ def _init(m):
 m.init_conditions = ConstraintList(rule=_init)
 
 def _x1dot(m, t):
+    if t == 0:
+        return Constraint.Skip
     return m.dx1[t] == m.x2[t]
 m.x1dotcon = Constraint(m.t, rule=_x1dot)
 
 def _x2dot(m, t):
+    if t == 0:
+        return Constraint.Skip
+
     return m.dx2[t] ==  -m.x2[t]+m.u[t]
 m.x2dotcon = Constraint(m.t, rule=_x2dot)
 
 def _x3dot(m, t):
+    if t == 0:
+        return Constraint.Skip
+
     return m.dx3[t] == m.x1[t]**2+m.x2[t]**2+0.005*m.u[t]**2
 m.x3dotcon = Constraint(m.t, rule=_x3dot)
 
