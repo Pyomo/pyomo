@@ -53,7 +53,7 @@ def setUpModule():
         if ((test_case.name,test_case.io) in testing_solvers) and \
            (test_case.available):
             testing_solvers[(test_case.name,test_case.io)] = True
-    print testing_solvers
+
 class _EvalXHATTesterBase(object):
 
     basename = None
