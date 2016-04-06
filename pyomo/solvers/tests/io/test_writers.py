@@ -177,7 +177,7 @@ ExpectedFailures.append(
      "found during preprocessing."))
 
 ExpectedFailures.append(
-    ('baron', 'bar', _trunk_version,
+    ('baron', 'bar', (15,2,0,0),
      model_types.simple_QP,
      "Baron will not return dual solution when a solution is "
      "found during preprocessing."))
