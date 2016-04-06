@@ -238,8 +238,13 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         # Install a virtual environment using venv
         #
         venv = os.path.join(sys.exec_prefix, 'bin', 'pyvenv')
-        if not os.path.exists(venv):
-            venv += '-%d.%d' % sys.version_info[:2]
+        for test in (venv, venv+'-%d.%d' % sys.version_info[:2]):
+            if os.path.exists(test):
+                venv = test
+                break
+            if os.path.exists(test+'.exe'):
+                venv = test+'.exe'
+                break
         venv_cmd = [venv, options.venv]
         if options.venv_sitepkgs:
             venv_cmd.append('--system-site-packages')
@@ -251,7 +256,11 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         #
         if options.verbose:
             print("\n************* Ensuring that pip is available in %s *******************" % options.venv)
-        call_subprocess([os.path.join(os.path.abspath(options.venv), 'bin', 'python'), '-m', 'ensurepip'], options)
+        python_executable = os.path.basename(sys.executable)
+        call_subprocess([
+                os.path.join( os.path.abspath(options.venv),
+                              'bin', python_executable ),
+                '-m', 'ensurepip'], options)
         #
         # Find the pip that is installed with the virtual environment
         #
@@ -326,7 +335,8 @@ def install_from_src(pip, srcdir, pip_src, python_dir, options):
     # the same as what is distributed in PyPI).  Any simple
     # source directories need to be built into a SDIST package).
     #
-    python = os.path.join(python_dir, 'bin', 'python')
+    python_executable = os.path.basename(sys.executable)
+    python = os.path.join(python_dir, 'bin', python_executable)
     cwd = os.getcwd()
     sdistDir = os.path.join(srcdir, 'sdist')
     distDir = os.path.join(srcdir, 'dist')
