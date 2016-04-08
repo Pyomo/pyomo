@@ -188,6 +188,22 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
     Create a virtual environment
     """
     if sys.version_info[:2] < (3,4):
+        pyvenv = None
+    else:
+        #
+        # Test for the pyvenv and pyvenv-#.# files
+        #
+        pyvenv_ = os.path.join(sys.exec_prefix, 'bin', 'pyvenv')
+        pyvenv = None
+        for fname in (pyvenv_, pyvenv_+'-%d.%d' % sys.version_info[:2]):
+            if os.path.exists(fname):
+                pyvenv = fname
+                break
+            if os.path.exists(fname+'.exe'):
+                pyvenv = fname+'.exe'
+                break
+
+    if pyvenv is None:
         #
         # Install the virtual environment with virtualenv
         #
@@ -235,17 +251,9 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         del os.environ['PYTHONPATH']
     else:
         #
-        # Install a virtual environment using venv
+        # Install a virtual environment using pyvenv
         #
-        venv = os.path.join(sys.exec_prefix, 'bin', 'pyvenv')
-        for test in (venv, venv+'-%d.%d' % sys.version_info[:2]):
-            if os.path.exists(test):
-                venv = test
-                break
-            if os.path.exists(test+'.exe'):
-                venv = test+'.exe'
-                break
-        venv_cmd = [venv, options.venv]
+        venv_cmd = [pyvenv, options.venv]
         if options.venv_sitepkgs:
             venv_cmd.append('--system-site-packages')
         if options.verbose:
