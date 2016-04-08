@@ -387,7 +387,17 @@ class BARONSHELL(SystemCallSolver):
 
             INPUT.readline()
             INPUT.readline()
-            objective_value = float(INPUT.readline().split()[4])
+            try:
+                objective_value = float(INPUT.readline().split()[4])
+            except IndexError:
+                # No objective value, so no solution to return
+                if solver_status == '1' and model_status in ('1','4'):
+                    logger.error(
+"""Failed to process BARON solution file: could not extract the final
+objective value, but BARON completed normally.  This is indicative of a
+bug in Pyomo's BARON solution parser.  Please report this (along with
+the Pyomo model and BARON version) to the Pyomo Developers.""")
+                return
             INPUT.readline()
             INPUT.readline()
 
