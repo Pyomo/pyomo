@@ -61,7 +61,8 @@ from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.scenariotree.manager_solver import \
     (ScenarioTreeManagerSolver,
      ScenarioTreeManagerSolverClientSerial,
-     ScenarioTreeManagerSolverClientPyro)
+     ScenarioTreeManagerSolverClientPyro,
+     ScenarioTreeManagerFactory)
 from pyomo.pysp.phutils import find_active_objective
 from pyomo.pysp.ef import create_ef_instance
 
