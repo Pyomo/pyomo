@@ -62,7 +62,7 @@ setup(name='Pyomo',
       #     pyomo/pyomo/version/__init__.py
       #     pyomo/RELEASE.txt
       #
-      version='4.4',
+      version='4.3.11328',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
       url='http://pyomo.org',
