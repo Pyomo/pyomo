@@ -609,8 +609,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
                     % (exp_type))
 
-        elif isinstance(exp,var._VarData) and \
-             (self._output_fixed_variable_bounds or (not exp.is_fixed())):
+        elif isinstance(exp,var._VarData) and (not exp.is_fixed()):
+            #(self._output_fixed_variable_bounds or
             if not self._symbolic_solver_labels:
                 OUTPUT.write(self._op_string[var._VarData]
                              % (self.ampl_var_id[self._varID_map[id(exp)]]))
