@@ -234,12 +234,23 @@ def construct_ph_options_parser(usage_string):
       action="store_true",
       dest="enable_outer_bound_convergence",
       default=False)
+    phOpts.add_argument('--enable-primal-dual-residual-convergence',
+      help="Terminate PH based on the primal-dual residual convergence. Default is False.",
+      action="store_true",
+      dest="enable_primal_dual_residual_convergence",
+      default=False)
     phOpts.add_argument('--outer-bound-convergence-threshold',
       help="The convergence threshold used in the outer bound convergerence criterion. Default is None, indicating unassigned",
       action="store",
       dest="outer_bound_convergence_threshold",
       type=float,
       default=None)
+    phOpts.add_argument('--primal-dual-residual-convergence-threshold',
+      help="The convergence threshold used in the primal-dual residual convergerence criterion. Default is 0.0001.",
+      action="store",
+      dest="primal_dual_residual_convergence_threshold",
+      type=float,
+      default=0.0001)
     phOpts.add_argument('--linearize-nonbinary-penalty-terms',
       help="Approximate the PH quadratic term for non-binary variables with a piece-wise linear function, using the supplied number of equal-length pieces from each bound to the average",
       action="store",

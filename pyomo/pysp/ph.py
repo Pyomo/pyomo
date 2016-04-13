@@ -1948,7 +1948,9 @@ class ProgressiveHedging(_PHBase):
         self._enable_normalized_termdiff_convergence = options.enable_normalized_termdiff_convergence
         self._enable_termdiff_convergence            = options.enable_termdiff_convergence
         self._enable_outer_bound_convergence         = options.enable_outer_bound_convergence
+        self._enable_primal_dual_residual_convergence = options.enable_primal_dual_residual_convergence
         self._outer_bound_convergence_threshold      = options.outer_bound_convergence_threshold
+        self._primal_dual_residual_convergence_threshold      = options.primal_dual_residual_convergence_threshold
         self._shutdown_pyro_workers             = options.shutdown_pyro_workers
 
         # clutters up the screen, when we really only care about the
@@ -2565,6 +2567,13 @@ class ProgressiveHedging(_PHBase):
                 (pyomo.pysp.convergence.NormalizedTermDiffConvergence(
                     convergence_threshold=self._termdiff_threshold))
             self._convergers.append(converger)
+
+        if self._enable_primal_dual_residual_convergence:
+            if self._verbose:
+                print("Enabling convergence based on primal-dual residual criterion")
+            self._convergers.append(
+                pyomo.pysp.convergence.PrimalDualResidualConvergence(
+                    convergence_threshold=self._primal_dual_residual_convergence_threshold))
 
         # indicate that we're ready to run.
         self._initialized = True
