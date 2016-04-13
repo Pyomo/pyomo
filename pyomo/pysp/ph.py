@@ -3824,8 +3824,8 @@ class ProgressiveHedging(_PHBase):
                     expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
                     if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
                     self._cost_history[self._current_iteration] = expected_cost
-
-                    if sum((converger.isConverged(self) for converger in self._convergers)):
+                    if all(converger.isConverged(self)
+                           for converger in self._convergers):
 
                         if (len(self._incumbent_cost_history) == 0) or \
                            ((self._objective_sense == minimize) and \
@@ -4039,7 +4039,8 @@ class ProgressiveHedging(_PHBase):
             expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
             if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
             self._cost_history[self._current_iteration] = expected_cost
-            if sum((converger.isConverged(self) for converger in self._convergers)):
+            if all(converger.isConverged(self)
+                   for converger in self._convergers):
                 if not _OLD_OUTPUT: print("Caching results for new incumbent solution")
                 self.cacheSolutions(self._incumbent_cache_id)
                 self._best_incumbent_key = self._current_iteration
@@ -4238,7 +4239,8 @@ class ProgressiveHedging(_PHBase):
                 expected_cost = self._scenario_tree.findRootNode().computeExpectedNodeCost()
                 if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
                 self._cost_history[self._current_iteration] = expected_cost
-                if sum((converger.isConverged(self) for converger in self._convergers)):
+                if all(converger.isConverged(self)
+                       for converger in self._convergers):
                     if (len(self._incumbent_cost_history) == 0) or \
                        ((self._objective_sense == minimize) and \
                         (expected_cost < min(self._incumbent_cost_history.values()))) or \
@@ -4261,8 +4263,9 @@ class ProgressiveHedging(_PHBase):
                       % (time.time() - self._solve_start_time))
 
                 # check for early termination.
-                if self._dual_mode is False:
-                    if sum((converger.isConverged(self) for converger in self._convergers)):
+                if not self._dual_mode:
+                    if all(converger.isConverged(self)
+                           for converger in self._convergers):
 
                         plugin_convergence = True
                         for plugin in self._ph_plugins:
