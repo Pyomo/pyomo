@@ -129,6 +129,11 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
 
             servers_acquired = sum(len(_serverlist) for _serverlist
                                    in itervalues(dispatcher_registered_servers))
+            # Don't overload the nameserver while trying to
+            # collect dispatchers with registered workers.
+            # If you haven't found them after the first few tries,
+            # it's very likely that you are not going to.
+            time.sleep(0.5)
 
         for name, servers_to_release in iteritems(dispatcher_servers_to_release):
             dispatcher_proxies[name].release_acquired_workers(servers_to_release)
