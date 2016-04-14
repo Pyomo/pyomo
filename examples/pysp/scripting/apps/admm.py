@@ -228,18 +228,6 @@ def EXTERNAL_initialize_for_admm(manager,
     user_cost_expression = scenario._instance_cost_expression
     admm_block.cost_expression = Expression(initialize=\
         scenario._probability * user_cost_expression)
-    # A bad attempt at handling multi-stage
-#    admm_block.cost_expression = Expression(initialize=0.0)
-#    for tree_node in scenario.node_list:
-#        cost_object_name, cost_object_index = \
-#            tree_node.stage._cost_variable
-#        stage_cost_object = scenario._instance.\
-#                            find_component(cost_object_name)[cost_object_index]
-#        admm_block.cost_expression.expr += \
-#            (stage_cost_object /
-#            #scenario._probability *
-#            tree_node._conditional_probability)
-#    admm_block.cost_expression.expr *= scenario._probability
     admm_block.lagrangian_expression = Expression(initialize=0.0)
     admm_block.penalty_expression = Expression(initialize=0.0)
     # these are used in the objective, they can be toggled
@@ -271,13 +259,13 @@ def EXTERNAL_initialize_for_admm(manager,
         node_block.y = Param(node_block.index, initialize=0.0, mutable=True)
         node_block.rho = Param(node_block.index, initialize=0.0, mutable=True)
 
-        for ndx in node_block.index:
-            varname, index = tree_node._variable_ids[ndx]
+        for id_ in node_block.index:
+            varname, index = tree_node._variable_ids[id_]
             var = scenario._instance.find_component(varname)[index]
             admm_block.lagrangian_expression.expr += \
-                node_block.y[ndx] * (var - node_block.z[ndx])
+                node_block.y[id_] * (var - node_block.z[id_])
             admm_block.penalty_expression.expr += \
-                (node_block.rho[ndx] / 2.0) * (var - node_block.z[ndx])**2
+                (node_block.rho[id_] / 2.0) * (var - node_block.z[id_])**2
 
     # The objective has changed so flag this if necessary.
     if manager.preprocessor is not None:
@@ -592,8 +580,8 @@ class ADMMAlgorithm(PySPConfiguredObject):
 
     def initialize_algorithm_data(self,
                                   rho_init=1.0,
-                                  z_init=0.0,
-                                  y_init=1.0):
+                                  y_init=1.0,
+                                  z_init=0.0):
         x = {}
         y = {}
         for scenario in self._manager.scenario_tree.scenarios:
