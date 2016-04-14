@@ -27,6 +27,9 @@ try:
     pympler_available = True
 except ImportError:                         #pragma:nocover
     pympler_available = False
+except AttributeError:                         #pragma:nocover
+    pympler_available = False
+
 
 from pyomo.util.plugin import ExtensionPoint
 from pyutilib.math import *
