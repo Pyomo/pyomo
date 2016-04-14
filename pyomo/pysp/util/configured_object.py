@@ -144,8 +144,9 @@ class PySPConfiguredObject(object):
             options = args[0]
             if not isinstance(options, PySPConfigBlock):
                 raise TypeError(
-                    "register_options(...) argument must be of type PySPConfigBlock, "
-                    "not %s" % (type(options).__name__))
+                    "register_options(...) argument must be of "
+                    "type PySPConfigBlock, not %s"
+                    % (type(options).__name__))
 
         bases = inspect.getmro(cls)
         assert bases[-1] is object
@@ -161,37 +162,63 @@ class PySPConfiguredObject(object):
         #
         for base in bases:
             #
-            # The check here is that PySPConfiguredObject needs to
-            # appear as an immediate base in a class definition for us
-            # to check the list of _registered options declared in
-            # that class definitions immediate scope. This allows
-            # _declared_options to be distributed across different
-            # containers in the class hierarchy, while leaving the
-            # ability for derived classes to NOT have to define an
-            # empty _declared_options block if they don't have any
-            # new options to add but are derived from some class which
-            # does use PySPConfiguredObject as a base class. By not
-            # declaring PySPConfiguredObject as an immediate base
-            # class, we know not to check for a _declared_options
-            # data member in this derived class's scope (because
-            # otherwise we'd be getting some base class's definition)
+            # The check here is that PySPConfiguredObject
+            # needs to appear as an immediate base in a
+            # class definition for us to assume that class
+            # is declaring options. This allows declared
+            # options to be distributed across different
+            # containers in the class hierarchy, while
+            # leaving the ability for derived classes to NOT
+            # have to define an empty _declared_options
+            # block or dummy _declare_options classmethod if
+            # they don't have any new options to add but are
+            # derived from some class which does use
+            # PySPConfiguredObject as a base class. By not
+            # declaring PySPConfiguredObject as an immediate
+            # base class, we know not to check for a
+            # _declared_options or _declare options in this
+            # derived class's scope (because otherwise we'd
+            # be getting some base class's definition)
             #
-            if any(base is PySPConfiguredObject for base in base.__bases__):
-                for name in base._declared_options:
-                    configval = base._declared_options.get(name)
-                    assert configval._parent is base._declared_options
-                    configval._parent = None
-                    declare_for_argparse = False
-                    if (configval._argparse is None) and \
-                       (options.get(prefix+name, None) is None):
-                        declare_for_argparse = True
-                    safe_declare_option(
-                        options,
-                        prefix+name,
-                        configval,
-                        relax_default_check=True,
-                        declare_for_argparse=declare_for_argparse)
-                    configval._parent = base._declared_options
+            if any(_base is PySPConfiguredObject
+                   for _base in base.__bases__):
+                assert hasattr(base, "_declared_options") or \
+                    hasattr(base, "_declare_options")
+                if hasattr(base, "_declared_options"):
+                    # TODO: deprecated in favor of the
+                    #       _declare_options classmethod
+                    for name in base._declared_options:
+                        configval = base._declared_options.get(name)
+                        assert configval._parent is base._declared_options
+                        configval._parent = None
+                        declare_for_argparse = False
+                        if (configval._argparse is None) and \
+                           (options.get(prefix+name, None) is None):
+                            declare_for_argparse = True
+                        safe_declare_option(
+                            options,
+                            prefix+name,
+                            configval,
+                            relax_default_check=True,
+                            declare_for_argparse=declare_for_argparse)
+                        configval._parent = base._declared_options
+                if hasattr(base, "_declare_options"):
+                    _declared_options = base._declare_options()
+                    for name in _declared_options:
+                        configval = _declared_options.get(name)
+                        assert configval._parent is _declared_options
+                        configval._parent = None
+                        declare_for_argparse = False
+                        if (configval._argparse is None) and \
+                           (options.get(prefix+name, None) is None):
+                            declare_for_argparse = True
+                        safe_declare_option(
+                            options,
+                            prefix+name,
+                            configval,
+                            relax_default_check=True,
+                            declare_for_argparse=declare_for_argparse)
+                        configval._parent = _declared_options
         return options
 
     @classmethod
