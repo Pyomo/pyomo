@@ -365,7 +365,17 @@ def _domain_nonnegative(val):
     val = float(val)
     if val < 0:
         raise ValueError(
-            "Value %s is not a non-negative."
+            "Value %s is not non-negative."
+            % (val))
+    return val
+_domain_nonnegative.doc = \
+    "<domain: non-negative value>"
+
+def _domain_positive(val):
+    val = float(val)
+    if val <= 0:
+        raise ValueError(
+            "Value %s is not positive."
             % (val))
     return val
 _domain_nonnegative.doc = \
@@ -2432,9 +2442,9 @@ if pyutilib.misc.config.argparse_is_available:
 # Register a common option
 #
 def safe_declare_common_option(configblock,
-                                name,
-                                prefix=None,
-                                ap_group=None):
+                               name,
+                               prefix=None,
+                               ap_group=None):
     assert isinstance(configblock, PySPConfigBlock)
     assert name not in _deprecated_block
     assert name in common_block
@@ -2499,7 +2509,7 @@ def safe_register_common_option(configblock,
 
     assert isinstance(configblock, PySPConfigBlock)
     assert name not in _deprecated_block
-    assert name in common_block
+    assert name in common_block, name
     common_value = common_block.get(name)
     assert common_value._parent == common_block
     assert common_value._userSet == False
