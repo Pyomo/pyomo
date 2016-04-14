@@ -26,6 +26,8 @@ try:
     pympler_available = True
 except ImportError:
     pympler_available = False
+except AttributeError:
+    pympler_available = False
 
 from pyutilib.pyro import shutdown_pyro_components
 from pyutilib.misc import import_file
