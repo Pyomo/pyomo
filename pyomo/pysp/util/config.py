@@ -534,7 +534,7 @@ safe_declare_unique_option(
             "like variable bounds as well as other scenario-specific information "
             "stored on the Scenario objects. This callback will be executed "
             "immediately after any 'pysp_aggregategetter_callback' function "
-            "that is specified. This option can used multiple times from the "
+            "that is specified. This option can be used multiple times from the "
             "command line to specify more than one callback function location."
         ),
         doc=None,
@@ -561,7 +561,7 @@ safe_declare_unique_option(
             "stored under the name _aggregate_user_data on the worker object. "
             "Potential uses include collecting aggregate scenario information "
             "that is subsequently used by a 'pysp_postinit_callback' function to "
-            "set tight variable bounds. This option can used multiple times from the "
+            "set tight variable bounds. This option can be used multiple times from the "
             "command line to specify more than one callback function location."
         ),
         doc=None,
@@ -1465,7 +1465,7 @@ safe_declare_unique_option(
             "plugin invoked to write the scenario tree solution. Use "
             "this option when generating a template configuration file "
             "or invoking command-line help in order to include any "
-            "plugin-specific options. This option can used multiple "
+            "plugin-specific options. This option can be used multiple "
             "times from the command line to specify more than one plugin."
         ),
         doc=None,
@@ -1531,7 +1531,7 @@ safe_declare_unique_option(
             "interface. Invoked to save a scenario tree solution. Use "
             "this option when generating a template configuration file "
             "or invoking command-line help in order to include any "
-            "plugin-specific options. This option can used multiple "
+            "plugin-specific options. This option can be used multiple "
             "times from the command line to specify more than one plugin."
         ),
         doc=None,
@@ -1552,7 +1552,7 @@ safe_declare_unique_option(
             "interface. Invoked to load a scenario tree solution. Use "
             "this option when generating a template configuration file "
             "or invoking command-line help in order to include any "
-            "plugin-specific options. This option can used multiple "
+            "plugin-specific options. This option can be used multiple "
             "times from the command line to specify more than one plugin."
         ),
         doc=None,
