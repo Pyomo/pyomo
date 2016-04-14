@@ -443,7 +443,6 @@ class ScenarioTreeNode(object):
                                          id_labeler=None,
                                          name_index_to_id_map=None,
                                          initialize_solution_data=True):
-
         self._variable_indices = {}
         self._variable_datas = {}
         self._standard_variable_ids = set()
@@ -1782,7 +1781,6 @@ class ScenarioTree(object):
                                          create_variable_ids=True,
                                          master_scenario_tree=None,
                                          initialize_solution_data=True):
-
         if (create_variable_ids == True) and \
            (master_scenario_tree != None):
             raise RuntimeError(
@@ -2031,17 +2029,13 @@ class ScenarioTree(object):
             compressed_tree_scenario._name = full_tree_scenario._name
             compressed_tree_scenario._probability = full_tree_scenario._probability
             compressed_tree._scenarios.append(compressed_tree_scenario)
-            #
-            # Copy Node Data
-            #
+
             full_tree_node = full_tree_scenario._leaf_node
+            ### copy the node
             compressed_tree_node = ScenarioTreeNode(
                 full_tree_node._name,
                 full_tree_node._conditional_probability,
                 compressed_tree._stage_map[full_tree_node._stage._name])
-            compressed_tree_scenario._node_list.append(compressed_tree_node)
-
-            compressed_tree_scenario._leaf_node = compressed_tree_node
             compressed_tree_node._variable_templates = \
                 copy.deepcopy(full_tree_node._variable_templates)
             compressed_tree_node._derived_variable_templates = \
@@ -2049,21 +2043,33 @@ class ScenarioTree(object):
             compressed_tree_node._scenarios.append(compressed_tree_scenario)
             compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
             compressed_tree_node._probability = full_tree_node._probability
+            ###
+
+            compressed_tree_scenario._node_list.append(compressed_tree_node)
+            compressed_tree_scenario._leaf_node = compressed_tree_node
             compressed_tree._tree_nodes.append(compressed_tree_node)
             compressed_tree._tree_node_map[compressed_tree_node._name] = \
                 compressed_tree_node
+
             previous_compressed_tree_node = compressed_tree_node
             full_tree_node = full_tree_node._parent
             while full_tree_node._name not in compressed_tree._tree_node_map:
 
+                ### copy the node
                 compressed_tree_node = ScenarioTreeNode(
                     full_tree_node._name,
                     full_tree_node._conditional_probability,
                     compressed_tree._stage_map[full_tree_node._stage._name])
+                compressed_tree_node._variable_templates = \
+                    copy.deepcopy(full_tree_node._variable_templates)
+                compressed_tree_node._derived_variable_templates = \
+                    copy.deepcopy(full_tree_node._derived_variable_templates)
                 compressed_tree_node._probability = full_tree_node._probability
-                compressed_tree_scenario._node_list.append(compressed_tree_node)
                 compressed_tree_node._scenarios.append(compressed_tree_scenario)
                 compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
+                ###
+
+                compressed_tree_scenario._node_list.append(compressed_tree_node)
                 compressed_tree._tree_nodes.append(compressed_tree_node)
                 compressed_tree._tree_node_map[compressed_tree_node._name] = \
                     compressed_tree_node
@@ -2083,8 +2089,9 @@ class ScenarioTree(object):
                     compressed_tree._tree_node_map[full_tree_node._name]
                 previous_compressed_tree_node._parent = compressed_tree_node
                 compressed_tree_node._scenarios.append(compressed_tree_scenario)
-                compressed_tree_scenario._node_list.append(compressed_tree_node)
                 compressed_tree_node._children.append(previous_compressed_tree_node)
+                compressed_tree_scenario._node_list.append(compressed_tree_node)
+
                 compressed_tree_node = compressed_tree_node._parent
                 while compressed_tree_node is not None:
                     compressed_tree_scenario._node_list.append(compressed_tree_node)
