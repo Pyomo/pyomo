@@ -58,6 +58,14 @@ class TestExamples(unittest.TestCase):
         print("Testing command: "+cmd)
         _run_cmd(cmd, shell=True)
 
+    @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
+    def test_admm(self):
+        cmd = 'python '+join(examples_dir, 'apps', 'admm.py')
+        cmd += " -m "+join(pysp_examples_dir, "farmer", "models")
+        cmd += " -s "+join(pysp_examples_dir, "farmer", "scenariodata")
+        print("Testing command: "+cmd)
+        _run_cmd(cmd, shell=True)
+
 @unittest.category('parallel')
 class TestParallelExamples(unittest.TestCase):
 
@@ -86,6 +94,43 @@ class TestParallelExamples(unittest.TestCase):
             cmd = ('python ' + \
                    join(examples_dir, 'solve_distributed.py') + \
                    ' %d') % (ns_port)
+            print("Testing command: "+cmd)
+            time.sleep(2)
+            [_poll(proc) for proc in scenariotreeserver_processes]
+            _run_cmd(cmd, shell=True)
+        finally:
+            _kill(ns_process)
+            _kill(dispatcher_process)
+            [_kill(proc) for proc in scenariotreeserver_processes]
+
+    @unittest.skipIf((solvers['glpk'] is None) or \
+                     (not (using_pyro3 or using_pyro4)),
+                     'glpk or Pyro / Pyro4 is not available')
+    def test_admm_parallel(self):
+        ns_host = '127.0.0.1'
+        ns_process = None
+        dispatcher_process = None
+        scenariotreeserver_processes = []
+        try:
+            ns_process, ns_port = \
+                _get_test_nameserver(ns_host=ns_host)
+            self.assertNotEqual(ns_process, None)
+            dispatcher_process, dispatcher_port = \
+                _get_test_dispatcher(ns_host=ns_host,
+                                     ns_port=ns_port)
+            self.assertNotEqual(dispatcher_process, None)
+            scenariotreeserver_processes = []
+            for i in range(3):
+                scenariotreeserver_processes.append(\
+                    subprocess.Popen(["scenariotreeserver", "--traceback"] + \
+                                     ["--pyro-host="+str(ns_host)] + \
+                                     ["--pyro-port="+str(ns_port)]))
+            cmd = ('python ' +
+                   join(examples_dir, 'apps', 'admm.py') +
+                   ' -m '+join(pysp_examples_dir, "farmer", "models") +
+                   ' -s '+join(pysp_examples_dir, "farmer", "scenariodata") +
+                   ' --pyro-host=' + ns_host +
+                   ' --pyro-port=' + str(ns_port))
             print("Testing command: "+cmd)
             time.sleep(2)
             [_poll(proc) for proc in scenariotreeserver_processes]
