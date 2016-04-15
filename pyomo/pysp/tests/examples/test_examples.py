@@ -34,6 +34,13 @@ have_dot = True
 if os.system('dot -? > /dev/null'):
     have_dot = False
 
+have_networkx = False
+try:
+    import networkx
+    have_networkx = True
+except ImportError:
+    have_networkx = False
+
 thisDir = dirname(abspath(__file__))
 baselineDir = join(thisDir, "baselines")
 pysp_examples_dir = \
@@ -66,6 +73,7 @@ class TestExamples(unittest.TestCase):
         print("Testing command: "+cmd)
         _run_cmd(cmd, shell=True)
 
+    @unittest.skipIf(not have_networkx, "networkx module is not installed")
     def test_compile_scenario_tree(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
@@ -79,6 +87,7 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(os.path.exists(tmpdir), True)
         shutil.rmtree(tmpdir, ignore_errors=True)
 
+    @unittest.skipIf(not have_networkx, "networkx module is not installed")
     def test_generate_distributed_NL(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
@@ -92,7 +101,8 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(os.path.exists(tmpdir), True)
         shutil.rmtree(tmpdir, ignore_errors=True)
 
-    @unittest.skipIf(not have_dot, "dot command is not available")
+    @unittest.skipIf((not have_dot) or (not have_networkx),
+                     "dot command is not available or networkx module is not installed")
     def test_scenario_tree_image(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpfname = os.path.join(thisDir, class_name+"_"+test_name)+".pdf"
@@ -198,6 +208,7 @@ class TestParallelExamples(unittest.TestCase):
                ' -s '+join(pysp_examples_dir, "farmer", "scenariodata"))
         self._run_cmd_with_pyro(cmd, 3)
 
+    @unittest.skipIf(not have_networkx, "networkx module is not installed")
     def test_compile_scenario_tree(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
@@ -211,6 +222,7 @@ class TestParallelExamples(unittest.TestCase):
         self.assertEqual(os.path.exists(tmpdir), True)
         shutil.rmtree(tmpdir, ignore_errors=True)
 
+    @unittest.skipIf(not have_networkx, "networkx module is not installed")
     def test_generate_distributed_NL(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
@@ -223,23 +235,6 @@ class TestParallelExamples(unittest.TestCase):
         self._run_cmd_with_pyro(cmd, 5)
         self.assertEqual(os.path.exists(tmpdir), True)
         shutil.rmtree(tmpdir, ignore_errors=True)
-
-    @unittest.skipIf(not have_dot, "dot command is not available")
-    def test_scenario_tree_image(self):
-        class_name, test_name = self.id().split('.')[-2:]
-        tmpfname = os.path.join(thisDir, class_name+"_"+test_name)+".pdf"
-        try:
-            os.remove(tmpfname)
-        except OSError:
-            pass
-        self.assertEqual(os.path.exists(tmpfname), False)
-        cmd = 'python '+join(examples_dir, 'apps', 'scenario_tree_image.py')
-        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
-        cmd += " --output-file="+tmpfname
-        print("Testing command: "+cmd)
-        self._run_cmd_with_pyro(cmd, 5)
-        self.assertEqual(os.path.exists(tmpfname), True)
-        os.remove(tmpfname)
 
 if __name__ == "__main__":
     unittest.main()
