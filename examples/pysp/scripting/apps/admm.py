@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import os
+import sys
 import time
 import math
 
@@ -939,4 +940,4 @@ def ADMM_main(args=None):
     return main(args=args)
 
 if __name__ == "__main__":
-    ADMM_main()
+    sys.exit(ADMM_main())

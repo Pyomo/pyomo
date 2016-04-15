@@ -287,4 +287,4 @@ def generate_distributed_NL_main(args=None):
     return main(args=args)
 
 if __name__ == "__main__":
-    main(args=sys.argv[1:])
+    sys.exit(main())

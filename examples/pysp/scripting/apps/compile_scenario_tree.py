@@ -48,7 +48,8 @@ def _pickle_compiled_scenario(worker,
                                  Objective,
                                  Block,
                                  Param,
-                                 Set)
+                                 Set,
+                                 BuildAction)
 
     assert output_directory is not None
     assert scenario._instance is not None
@@ -69,9 +70,10 @@ def _pickle_compiled_scenario(worker,
 
     scenario_instance_objective = \
         scenario._instance_objective
-    assert scenario_instance_objective.name in \
-        ("_PySP_UserCostObjective", "_PySP_CostObjective")
-    scenario_instance.del_component(scenario_instance_objective)
+    if scenario_instance_objective.name == "_PySP_CostObjective":
+        scenario_instance.del_component(scenario_instance_objective)
+    else:
+        scenario_instance_objective.expr = scenario_instance_cost_expression.expr
 
     assert hasattr(scenario_instance, "_ScenarioTreeSymbolMap")
     scenario_tree_symbol_map = scenario_instance._ScenarioTreeSymbolMap
@@ -100,6 +102,8 @@ def _pickle_compiled_scenario(worker,
         for set_ in block.component_objects(Set):
             set_.initialize = None
             set_.filter = None
+        for ba in block.component_objects(BuildAction):
+            ba._rule = None
 
     #
     # Pickle the scenario_instance
@@ -118,8 +122,10 @@ def _pickle_compiled_scenario(worker,
     #
     scenario_instance.add_component(scenario_instance_cost_expression.name,
                                     scenario_instance_cost_expression)
-    scenario_instance.add_component(scenario_instance_objective.name,
-                                    scenario_instance_objective)
+    if scenario_instance_objective.name == "_PySP_CostObjective":
+        scenario_instance.add_component(scenario_instance_objective.name,
+                                        scenario_instance_objective)
+    scenario_instance_objective.expr = scenario_instance_cost_expression
     scenario_instance._ScenarioTreeSymbolMap = scenario_tree_symbol_map
     if scenario._instance_original_objective_object is not None:
         scenario._instance_original_objective_object.deactivate()
@@ -279,4 +285,4 @@ def compile_scenario_tree_main(args=None):
     return main(args=args)
 
 if __name__ == "__main__":
-    main(args=sys.argv[1:])
+    sys.exit(main())

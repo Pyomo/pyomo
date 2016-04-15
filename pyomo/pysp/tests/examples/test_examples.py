@@ -34,6 +34,10 @@ from pyomo.opt import load_solvers
 
 from six import StringIO
 
+have_dot = True
+if os.system('dot -v'):
+    have_dot = False
+
 thisDir = dirname(abspath(__file__))
 baselineDir = join(thisDir, "baselines")
 pysp_examples_dir = \
@@ -65,6 +69,49 @@ class TestExamples(unittest.TestCase):
         cmd += " -s "+join(pysp_examples_dir, "farmer", "scenariodata")
         print("Testing command: "+cmd)
         _run_cmd(cmd, shell=True)
+
+    def test_compile_scenario_tree(self):
+        class_name, test_name = self.id().split('.')[-2:]
+        tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertEqual(os.path.exists(tmpdir), False)
+        cmd = 'python '+join(examples_dir, 'apps', 'compile_scenario_tree.py')
+        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
+        cmd += " --output-directory="+tmpdir
+        print("Testing command: "+cmd)
+        _run_cmd(cmd, shell=True)
+        self.assertEqual(os.path.exists(tmpdir), True)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_generate_distributed_NL(self):
+        class_name, test_name = self.id().split('.')[-2:]
+        tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertEqual(os.path.exists(tmpdir), False)
+        cmd = 'python '+join(examples_dir, 'apps', 'generate_distributed_NL.py')
+        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
+        cmd += " --output-directory="+tmpdir
+        print("Testing command: "+cmd)
+        _run_cmd(cmd, shell=True)
+        self.assertEqual(os.path.exists(tmpdir), True)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    @unittest.skipIf(not have_dot, "dot command is not available")
+    def test_scenario_tree_image(self):
+        class_name, test_name = self.id().split('.')[-2:]
+        tmpfname = os.path.join(thisDir, class_name+"_"+test_name)+".pdf"
+        try:
+            os.remove(tmpfname)
+        except OSError:
+            pass
+        self.assertEqual(os.path.exists(tmpfname), False)
+        cmd = 'python '+join(examples_dir, 'apps', 'scenario_tree_image.py')
+        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
+        cmd += " --output-file="+tmpfname
+        print("Testing command: "+cmd)
+        _run_cmd(cmd, shell=True)
+        self.assertEqual(os.path.exists(tmpfname), True)
+        os.remove(tmpfname)
 
 @unittest.category('parallel')
 class TestParallelExamples(unittest.TestCase):
@@ -103,10 +150,8 @@ class TestParallelExamples(unittest.TestCase):
             _kill(dispatcher_process)
             [_kill(proc) for proc in scenariotreeserver_processes]
 
-    @unittest.skipIf((solvers['glpk'] is None) or \
-                     (not (using_pyro3 or using_pyro4)),
-                     'glpk or Pyro / Pyro4 is not available')
-    def test_admm_parallel(self):
+    @unittest.nottest
+    def _run_cmd_with_pyro(self, cmd, num_servers):
         ns_host = '127.0.0.1'
         ns_process = None
         dispatcher_process = None
@@ -120,17 +165,14 @@ class TestParallelExamples(unittest.TestCase):
                                      ns_port=ns_port)
             self.assertNotEqual(dispatcher_process, None)
             scenariotreeserver_processes = []
-            for i in range(3):
+            for i in range(num_servers):
                 scenariotreeserver_processes.append(\
                     subprocess.Popen(["scenariotreeserver", "--traceback"] + \
                                      ["--pyro-host="+str(ns_host)] + \
                                      ["--pyro-port="+str(ns_port)]))
-            cmd = ('python ' +
-                   join(examples_dir, 'apps', 'admm.py') +
-                   ' -m '+join(pysp_examples_dir, "farmer", "models") +
-                   ' -s '+join(pysp_examples_dir, "farmer", "scenariodata") +
-                   ' --pyro-host=' + ns_host +
-                   ' --pyro-port=' + str(ns_port))
+            cmd += " --scenario-tree-manager=pyro"
+            cmd += " --pyro-host=" + ns_host
+            cmd += " --pyro-port=" + str(ns_port)
             print("Testing command: "+cmd)
             time.sleep(2)
             [_poll(proc) for proc in scenariotreeserver_processes]
@@ -139,6 +181,59 @@ class TestParallelExamples(unittest.TestCase):
             _kill(ns_process)
             _kill(dispatcher_process)
             [_kill(proc) for proc in scenariotreeserver_processes]
+
+    @unittest.skipIf((solvers['glpk'] is None) or \
+                     (not (using_pyro3 or using_pyro4)),
+                     'glpk or Pyro / Pyro4 is not available')
+    def test_admm(self):
+        cmd = ('python ' +
+               join(examples_dir, 'apps', 'admm.py') +
+               ' -m '+join(pysp_examples_dir, "farmer", "models") +
+               ' -s '+join(pysp_examples_dir, "farmer", "scenariodata"))
+        self._run_cmd_with_pyro(cmd, 3)
+
+    def test_compile_scenario_tree(self):
+        class_name, test_name = self.id().split('.')[-2:]
+        tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertEqual(os.path.exists(tmpdir), False)
+        cmd = 'python '+join(examples_dir, 'apps', 'compile_scenario_tree.py')
+        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
+        cmd += " --output-directory="+tmpdir
+        print("Testing command: "+cmd)
+        self._run_cmd_with_pyro(cmd, 5)
+        self.assertEqual(os.path.exists(tmpdir), True)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_generate_distributed_NL(self):
+        class_name, test_name = self.id().split('.')[-2:]
+        tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertEqual(os.path.exists(tmpdir), False)
+        cmd = 'python '+join(examples_dir, 'apps', 'generate_distributed_NL.py')
+        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
+        cmd += " --output-directory="+tmpdir
+        print("Testing command: "+cmd)
+        self._run_cmd_with_pyro(cmd, 5)
+        self.assertEqual(os.path.exists(tmpdir), True)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+    @unittest.skipIf(not have_dot, "dot command is not available")
+    def test_scenario_tree_image(self):
+        class_name, test_name = self.id().split('.')[-2:]
+        tmpfname = os.path.join(thisDir, class_name+"_"+test_name)+".pdf"
+        try:
+            os.remove(tmpfname)
+        except OSError:
+            pass
+        self.assertEqual(os.path.exists(tmpfname), False)
+        cmd = 'python '+join(examples_dir, 'apps', 'scenario_tree_image.py')
+        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
+        cmd += " --output-file="+tmpfname
+        print("Testing command: "+cmd)
+        self._run_cmd_with_pyro(cmd, 5)
+        self.assertEqual(os.path.exists(tmpfname), True)
+        os.remove(tmpfname)
 
 if __name__ == "__main__":
     unittest.main()
