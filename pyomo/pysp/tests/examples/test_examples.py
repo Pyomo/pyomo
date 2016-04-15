@@ -16,11 +16,7 @@ import difflib
 import filecmp
 import shutil
 
-try:
-    from subprocess import check_output as _run_cmd
-except:
-    # python 2.6
-    from subprocess import check_call as _run_cmd
+from subprocess import check_call as _run_cmd
 
 from pyutilib.pyro import using_pyro3, using_pyro4
 import pyutilib.services
@@ -35,7 +31,7 @@ from pyomo.opt import load_solvers
 from six import StringIO
 
 have_dot = True
-if os.system('dot --version'):
+if os.system('dot -? > /dev/null'):
     have_dot = False
 
 thisDir = dirname(abspath(__file__))
@@ -149,6 +145,11 @@ class TestParallelExamples(unittest.TestCase):
             _kill(ns_process)
             _kill(dispatcher_process)
             [_kill(proc) for proc in scenariotreeserver_processes]
+            if os.path.exists(os.path.join(thisDir,'Pyro_NS_URI')):
+                try:
+                    os.remove(os.path.join(thisDir,'Pyro_NS_URI'))
+                except OSError:
+                    pass
 
     @unittest.nottest
     def _run_cmd_with_pyro(self, cmd, num_servers):
@@ -181,6 +182,11 @@ class TestParallelExamples(unittest.TestCase):
             _kill(ns_process)
             _kill(dispatcher_process)
             [_kill(proc) for proc in scenariotreeserver_processes]
+            if os.path.exists(os.path.join(thisDir,'Pyro_NS_URI')):
+                try:
+                    os.remove(os.path.join(thisDir,'Pyro_NS_URI'))
+                except OSError:
+                    pass
 
     @unittest.skipIf((solvers['glpk'] is None) or \
                      (not (using_pyro3 or using_pyro4)),
