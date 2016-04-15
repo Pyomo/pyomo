@@ -762,7 +762,7 @@ class ADMMSolver(PySPConfiguredObject):
         self.dual_residual_history = OrderedDict()
         self.iterations = 0
         print("")
-        label_cols = ("{:^4} {:>16} {:>8} {:>8} {:>12}".format(
+        label_cols = ("{0:^4} {1:>16} {2:>8} {3:>8} {4:>12}".format(
             "iter","objective","pr_res","du_res","lg(||rho||)"))
         with ADMMAlgorithm(manager, self._options) as admm:
             rho, x, y, z = admm.initialize_algorithm_data(rho_init=rho,
@@ -826,17 +826,17 @@ class ADMMSolver(PySPConfiguredObject):
                       % (max_iterations))
 
         print("")
-        print("                        {:^24} {:^24}".format(
+        print("                        {0:^24} {1:^24}".format(
             "(scaled)", "(unscaled)"))
-        print("Objective..........:    {:^24} {:^24.16e}".format(
+        print("Objective..........:    {0:^24} {1:^24.16e}".format(
             "-", objective))
-        print("Primal residual....:    {:^24.16e} {:^24.16e}".format(
+        print("Primal residual....:    {0:^24.16e} {1:^24.16e}".format(
             primal_residual, unscaled_primal_residual))
-        print("Dual residual......:    {:^24.16e} {:^24.16e}".format(
+        print("Dual residual......:    {0:^24.16e} {1:^24.16e}".format(
             dual_residual, unscaled_dual_residual))
         unscaled_err = unscaled_primal_residual + unscaled_dual_residual
         err = primal_residual + dual_residual
-        print("Overall error......:    {:^24.16e} {:^24.16e}".format(
+        print("Overall error......:    {0:^24.16e} {1:^24.16e}".format(
             err, unscaled_err))
 
 def runadmm_register_options(options=None):
