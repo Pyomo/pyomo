@@ -35,7 +35,7 @@ from pyomo.opt import load_solvers
 from six import StringIO
 
 have_dot = True
-if os.system('dot -v'):
+if os.system('dot --version'):
     have_dot = False
 
 thisDir = dirname(abspath(__file__))
