@@ -65,7 +65,9 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                                "disable_advanced_preprocessing")
     safe_declare_common_option(_declared_options,
                                "preprocess_fixed_variables")
-    
+    safe_declare_common_option(_declared_options,
+                               "symbolic_solver_labels")
+
     #
     # various
     #
@@ -376,6 +378,8 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
            (not instance_freed_variables) and \
            (not instance_all_constraints_updated) and \
            (len(instance_constraints_updated_list) == 0):
+            if persistent_solver_in_use:
+                assert solver.instance_compiled()
 
             # instances are already preproccessed, nothing
             # needs to be done
@@ -457,6 +461,9 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
 
         elif len(instance_constraints_updated_list) > 0:
 
+            # TODO
+            assert not persistent_solver_in_use
+
             if self._options.verbose:
                 print("Preprocessing constraint list (size=%s) for "
                       "scenario %s" % (len(instance_constraints_updated_list),
@@ -481,6 +488,13 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                     setattr(block, repn_name, ComponentMap())
                 getattr(block, repn_name)[constraint_data] = \
                     repn_func(constraint_data.body, idMap=idMap)
+
+        if persistent_solver_in_use and \
+           (not solver.instance_compiled()):
+             solver.compile_instance(
+                 scenario_instance,
+                 symbolic_solver_labels=self._options.symbolic_solver_labels,
+                 output_fixed_variable_bounds=not self._options.preprocess_fixed_variables)
 
         _cleanup()
 

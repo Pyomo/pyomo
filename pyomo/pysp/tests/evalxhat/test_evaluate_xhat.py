@@ -44,7 +44,12 @@ _json_exact_comparison = True
 _diff_tolerance = 1e-4
 
 testing_solvers = {}
+testing_solvers['cplex','nl'] = False
 testing_solvers['cplex','lp'] = False
+testing_solvers['cplex','mps'] = False
+testing_solvers['cplex','python'] = False
+testing_solvers['_cplex_persistent','python'] = False
+testing_solvers['ipopt','nl'] = False
 def setUpModule():
     global testing_solvers
     import pyomo.environ
@@ -59,10 +64,19 @@ class _EvalXHATTesterBase(object):
     basename = None
     model_location = None
     scenario_tree_location = None
+    solver_name = None
+    solver_io = None
 
     def _setup(self, options):
         assert self.basename is not None
         assert self.model_location is not None
+        assert self.solver_name is not None
+        assert self.solver_io is not None
+        if not testing_solvers[self.solver_name, self.solver_io]:
+            self.skip("%s (interface=%s) is not available"
+                      % (self.solver_name, self.solver_io))
+        options['--solver'] = self.solver_name
+        options['--solver-io'] = self.solver_io
         options['--model-location'] = self.model_location
         if self.scenario_tree_location is not None:
             options['--scenario-tree-location'] = self.scenario_tree_location
@@ -98,8 +112,6 @@ class _EvalXHATTesterBase(object):
         return cmd
 
     def test_scenarios(self):
-        if not testing_solvers['cplex','lp']:
-            self.skip("cplex is not available")
         self._setup(self.options)
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
@@ -186,8 +198,6 @@ class _EvalXHATPyroTesterBase(_EvalXHATTesterBase):
             options['--pyro-required-scenariotreeservers'] = servers
 
     def test_scenarios_1server(self):
-        if not testing_solvers['cplex','lp']:
-            self.skip("cplex is not available")
         self._setup(self.options, servers=1)
         cmd = self._get_cmd()
         _run_cmd(cmd, shell=True)
@@ -208,6 +218,8 @@ class _EvalXHATPyroTesterBase(_EvalXHATTesterBase):
 def create_test_classes(basename,
                         model_location,
                         scenario_tree_location,
+                        solver_name,
+                        solver_io,
                         categories):
     assert basename is not None
 
@@ -216,7 +228,10 @@ def create_test_classes(basename,
     _base.basename = basename
     _base.model_location = model_location
     _base.scenario_tree_location = scenario_tree_location
+    _base.solver_name = solver_name
+    _base.solver_io = solver_io
 
+    class_append_name = basename + "_" + solver_name + "_" + solver_io
     class_names = []
 
     @unittest.category(*categories)
@@ -225,7 +240,7 @@ def create_test_classes(basename,
         def setUp(self):
             self.options = {}
             self.options['--scenario-tree-manager'] = 'serial'
-    class_names.append(TestEvalXHAT_Serial.__name__ + "_"+basename)
+    class_names.append(TestEvalXHAT_Serial.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestEvalXHAT_Serial, unittest.TestCase), {})
 
@@ -239,7 +254,7 @@ def create_test_classes(basename,
             _EvalXHATPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
-    class_names.append(TestEvalXHAT_Pyro.__name__ + "_"+basename)
+    class_names.append(TestEvalXHAT_Pyro.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestEvalXHAT_Pyro, unittest.TestCase), {})
 
@@ -254,7 +269,7 @@ def create_test_classes(basename,
         def _setup(self, options, servers=None):
             _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-multiple-scenariotreeserver-workers'] = ''
-    class_names.append(TestEvalXHAT_Pyro_MultipleWorkers.__name__ + "_"+basename)
+    class_names.append(TestEvalXHAT_Pyro_MultipleWorkers.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestEvalXHAT_Pyro_MultipleWorkers, unittest.TestCase), {})
 
@@ -269,7 +284,7 @@ def create_test_classes(basename,
         def _setup(self, options, servers=None):
             _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-handshake-at-startup'] = ''
-    class_names.append(TestEvalXHAT_Pyro_HandshakeAtStartup.__name__ + "_"+basename)
+    class_names.append(TestEvalXHAT_Pyro_HandshakeAtStartup.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestEvalXHAT_Pyro_HandshakeAtStartup, unittest.TestCase), {})
 
@@ -285,7 +300,7 @@ def create_test_classes(basename,
             _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-handshake-at-startup'] = ''
             options['--pyro-multiple-scenariotreeserver-workers'] = ''
-    class_names.append(TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+basename)
+    class_names.append(TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1],
         (TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
@@ -297,37 +312,66 @@ def create_test_classes(basename,
 # create the actual testing classes
 #
 
-farmer_examples_dir = join(pysp_examples_dir, "farmer")
-farmer_model_dir = join(farmer_examples_dir, "models")
-farmer_data_dir = join(farmer_examples_dir, "scenariodata")
-create_test_classes('farmer',
-                    farmer_model_dir,
-                    farmer_data_dir,
-                    ('nightly','expensive'))
+for solver_name, solver_io in [('cplex','lp'),
+                               ('cplex','mps'),
+                               ('cplex','nl'),
+                               ('cplex','python'),
+                               ('_cplex_persistent','python')]:
 
-finance_examples_dir = join(pysp_examples_dir, "finance")
-finance_model_dir = join(finance_examples_dir, "models")
-finance_data_dir = join(finance_examples_dir, "scenariodata")
-create_test_classes('finance',
-                    finance_model_dir,
-                    finance_data_dir,
-                    ('nightly','expensive'))
+    farmer_examples_dir = join(pysp_examples_dir, "farmer")
+    farmer_model_dir = join(farmer_examples_dir, "models")
+    farmer_data_dir = join(farmer_examples_dir, "scenariodata")
+    create_test_classes('farmer',
+                        farmer_model_dir,
+                        farmer_data_dir,
+                        solver_name,
+                        solver_io,
+                        ('nightly','expensive'))
 
-hydro_examples_dir = join(pysp_examples_dir, "hydro")
-hydro_model_dir = join(hydro_examples_dir, "models")
-hydro_data_dir = join(hydro_examples_dir, "scenariodata")
-create_test_classes('hydro',
-                    hydro_model_dir,
-                    hydro_data_dir,
-                    ('nightly','expensive'))
+    finance_examples_dir = join(pysp_examples_dir, "finance")
+    finance_model_dir = join(finance_examples_dir, "models")
+    finance_data_dir = join(finance_examples_dir, "scenariodata")
+    create_test_classes('finance',
+                        finance_model_dir,
+                        finance_data_dir,
+                        solver_name,
+                        solver_io,
+                        ('nightly','expensive'))
 
-baa99_examples_dir = join(pysp_examples_dir, "baa99")
-baa99_model_dir = join(baa99_examples_dir, "baa99.py")
-baa99_data_dir = None
-create_test_classes('baa99',
-                    baa99_model_dir,
-                    baa99_data_dir,
-                    ('nightly','expensive'))
+    hydro_examples_dir = join(pysp_examples_dir, "hydro")
+    hydro_model_dir = join(hydro_examples_dir, "models")
+    hydro_data_dir = join(hydro_examples_dir, "scenariodata")
+    create_test_classes('hydro',
+                        hydro_model_dir,
+                        hydro_data_dir,
+                        solver_name,
+                        solver_io,
+                        ('nightly','expensive'))
+
+for solver_name, solver_io in [('ipopt','nl')]:
+
+    networkx_examples_dir = join(pysp_examples_dir, "networkx_scenariotree")
+    networkx_model_dir = join(networkx_examples_dir, "ReferenceModel.py")
+    networkx_data_dir = None
+    create_test_classes('networkx',
+                        networkx_model_dir,
+                        networkx_data_dir,
+                        solver_name,
+                        solver_io,
+                        ('nightly','expensive'))
+
+# this example is big
+for solver_name, solver_io in [('cplex','lp')]:
+
+    baa99_examples_dir = join(pysp_examples_dir, "baa99")
+    baa99_model_dir = join(baa99_examples_dir, "baa99.py")
+    baa99_data_dir = None
+    create_test_classes('baa99',
+                        baa99_model_dir,
+                        baa99_data_dir,
+                        solver_name,
+                        solver_io,
+                        ('nightly','expensive'))
 
 if __name__ == "__main__":
     unittest.main()
