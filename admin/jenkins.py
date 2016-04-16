@@ -9,6 +9,7 @@
 
 import sys
 import os
+import subprocess
 try:
     from subprocess import check_output as _run_cmd
 except:
