@@ -10,6 +10,7 @@
 
 import logging
 import os
+import glob
 import sys
 import re
 import time
@@ -1155,25 +1156,29 @@ class CPLEXDirect(OptSolver):
         # the current directory.  this approach doesn't seem overly
         # efficient, but python os module functions don't accept regular
         # expression directly.
-        filename_list = os.listdir(".")
-        clone_re = re.compile('clone\d+\.log')
-        for filename in filename_list:
-            # CPLEX temporary files come in two flavors - cplex.log and
-            # clone*.log.  the latter is the case for multi-processor
-            # environments.
-            #
-            # IMPT: trap the possible exception raised by the file not existing.
-            #       this can occur in pyro environments where > 1 workers are
-            #       running CPLEX, and were started from the same directory.
-            #       these logs don't matter anyway (we redirect everything),
-            #       and are largely an annoyance.
-            try:
-                if filename == 'cplex.log':
-                    os.remove(filename)
-                elif clone_re.match(filename):
-                    os.remove(filename)
-            except OSError:
-                pass
+        try:
+            filename_list = glob.glob("cplex.log") + \
+                            glob.glob("clone*.log")
+            clone_re = re.compile('clone\d+\.log')
+            for filename in filename_list:
+                # CPLEX temporary files come in two flavors - cplex.log and
+                # clone*.log.  the latter is the case for multi-processor
+                # environments.
+                #
+                # IMPT: trap the possible exception raised by the file not existing.
+                #       this can occur in pyro environments where > 1 workers are
+                #       running CPLEX, and were started from the same directory.
+                #       these logs don't matter anyway (we redirect everything),
+                #       and are largely an annoyance.
+                try:
+                    if filename == 'cplex.log':
+                        os.remove(filename)
+                    elif clone_re.match(filename):
+                        os.remove(filename)
+                except OSError:
+                    pass
+        except OSError:
+            pass
 
         self._active_cplex_instance = None
         self._variable_symbol_map = None
