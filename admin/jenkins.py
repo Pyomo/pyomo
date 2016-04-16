@@ -85,8 +85,13 @@ elif config == "core":
     print("-" * 60)
     print("Running 'pyomo install-extras' ...")
     print("-" * 60)
-    output = _run_cmd("python/bin/pyomo install-extras", shell=True)
-    print(output.decode('ascii'))
+    if _run_cmd is subprocess.check_output:
+        output = _run_cmd("python/bin/pyomo install-extras", shell=True)
+        print(output.decode('ascii'))
+    elif _run_cmd is subprocess.check_call:
+        _run_cmd("python/bin/pyomo install-extras", shell=True)
+    else:
+        assert False
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
@@ -115,8 +120,13 @@ elif config == "booktests" or config == "book":
     # Install
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
     print("Running 'pyomo install-extras' ...")
-    output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py", shell=True)
-    print(output.decode('ascii'))
+    if _run_cmd is subprocess.check_output:
+        output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py", shell=True)
+        print(output.decode('ascii'))
+    elif _run_cmd is subprocess.check_call:
+        output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py", shell=True)
+    else:
+        assert False
     # Test
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
