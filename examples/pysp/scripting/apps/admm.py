@@ -12,10 +12,11 @@ import sys
 import time
 import math
 
-# TODO: run y update to server side so that a bound can be
-#       returned efficiently
-# TODO: handle bundles
+# TODO: run y update on the server side so that bounds can be
+#       returned efficiently if enabled
 # TODO: handle multi-stage
+#       (this has to do with fixing distributed variable id
+#        creation on the new scenario tree manager)
 
 try:
     from collections import OrderedDict
@@ -516,6 +517,7 @@ class ADMMAlgorithm(PySPConfiguredObject):
             invocation_type=InvocationType.PerScenario,
             function_args=(z,),
             oneway=True)
+
         self._manager.solve_scenarios()
         objective = 0.0
         for scenario in self._manager.scenario_tree.scenarios:
@@ -528,6 +530,7 @@ class ADMMAlgorithm(PySPConfiguredObject):
                 x_node_solution = x_scenario_solution[tree_node.name]
                 for id_ in tree_node._standard_variable_ids:
                     x_node[id_] = x_node_solution[id_]
+
         return objective
 
     def run_z_update(self, x, y, z, rho):
@@ -581,8 +584,16 @@ class ADMMAlgorithm(PySPConfiguredObject):
 
     def initialize_algorithm_data(self,
                                   rho_init=1.0,
-                                  y_init=1.0,
+                                  y_init=0.0,
                                   z_init=0.0):
+
+        # used to check dual-feasibility of initial y
+        y_sum = {}
+        for stage in self._manager.scenario_tree.stages[:-1]:
+            for tree_node in stage.nodes:
+                y_sum_node = y_sum[tree_node.name] = \
+                    dict((id_, 0.0) for id_ in tree_node._standard_variable_ids)
+
         x = {}
         y = {}
         for scenario in self._manager.scenario_tree.scenarios:
@@ -592,12 +603,26 @@ class ADMMAlgorithm(PySPConfiguredObject):
                 assert not tree_node.is_leaf_node()
                 x_node = x_scenario[tree_node.name] = {}
                 y_node = y_scenario[tree_node.name] = {}
+                y_sum_node = y_sum[tree_node.name]
                 for id_ in tree_node._standard_variable_ids:
                     x_node[id_] = None
                     if type(y_init) is dict:
                         y_node[id_] = y_init[scenario.name][tree_node.name][id_]
                     else:
                         y_node[id_] = y_init
+                    y_sum_node[id_] += y_node[id_]
+
+        # check dual-feasibility of y
+        for stage in self._manager.scenario_tree.stages[:-1]:
+            for tree_node in stage.nodes:
+                y_sum_node = y_sum[tree_node.name]
+                for id_ in tree_node._standard_variable_ids:
+                    if abs(y_sum_node[id_]) > 1e-6:
+                        name, index = tree_node._variable_ids[id_]
+                        raise ValueError(
+                            "Initial lagrange multipler estimates for non-"
+                            "anticipative variable %s do not sum to zero: %s"
+                            % (name+indexToString(index), repr(y_sum_node[id_])))
 
         rho = {}
         z = {}
@@ -704,11 +729,9 @@ class ADMMSolver(PySPConfiguredObject):
     def solve(self,
               manager,
               rho,
-              y_init=1.0,
+              y_init=0.0,
               z_init=0.0):
 
-        if manager.scenario_tree.contains_bundles():
-            raise ValueError("ADMM solver does not yet accept bundles")
         if len(manager.scenario_tree.stages) > 2:
             raise ValueError("ADMM solver does not yet handle more "
                              "than 2 time-stages")
