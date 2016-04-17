@@ -23,7 +23,7 @@ from pyomo.pysp.util.misc import (parse_command_line,
 from pyomo.pysp.scenariotree.manager import (ScenarioTreeManagerClientSerial,
                                              ScenarioTreeManagerClientPyro,
                                              InvocationType)
-from pyomo.core import Suffix
+from pyomo.core import Suffix, Block
 
 # generate an absolute path to this file
 thisfile = os.path.abspath(__file__)
@@ -32,20 +32,22 @@ def _write_bundle_NL(worker,
                      bundle,
                      output_directory,
                      linking_suffix_name,
-                     objective_suffix_name):
+                     objective_suffix_name,
+                     symbolic_solver_labels):
 
-    from pyomo.repn.plugins.ampl import ProblemWriter_nl
     assert os.path.exists(output_directory)
 
     bundle_instance = worker._bundle_binding_instance_map[bundle.name]
+    assert not hasattr(bundle_instance, ".tmpblock")
+    tmpblock = Block(concrete=True)
+    bundle_instance.add_component(".tmpblock", tmpblock)
 
     #
     # linking variable suffix
     #
-    bundle_instance.del_component(linking_suffix_name)
-    bundle_instance.add_component(linking_suffix_name,
-                                  Suffix(direction=Suffix.EXPORT))
-    linking_suffix = getattr(bundle_instance, linking_suffix_name)
+    tmpblock.add_component(linking_suffix_name,
+                           Suffix(direction=Suffix.EXPORT))
+    linking_suffix = getattr(tmpblock, linking_suffix_name)
 
     # Loop over all nodes for the bundle except the leaf nodes,
     # which have no blended variables
@@ -63,41 +65,39 @@ def _write_bundle_NL(worker,
     #
     # objective weight suffix
     #
-    bundle_instance.del_component(objective_suffix_name)
-    bundle_instance.add_component(objective_suffix_name,
-                                  Suffix(direction=Suffix.EXPORT))
+    tmpblock.add_component(objective_suffix_name,
+                           Suffix(direction=Suffix.EXPORT))
 
-    getattr(bundle_instance, objective_suffix_name)[bundle_instance] = \
+    getattr(tmpblock, objective_suffix_name)[bundle_instance] = \
         bundle._probability
 
     output_filename = os.path.join(output_directory, str(bundle.name)+".nl")
-    with ProblemWriter_nl() as nl_writer:
-        nl_writer(bundle_instance,
-                  output_filename,
-                  lambda x: True,
-                  {})
+    bundle_instance.write(
+        output_filename,
+        io_options={'symbolic_solver_labels': symbolic_solver_labels})
 
-    bundle_instance.del_component(linking_suffix_name)
-    bundle_instance.del_component(objective_suffix_name)
+    bundle_instance.del_component(tmpblock)
 
 def _write_scenario_NL(worker,
                        scenario,
                        output_directory,
                        linking_suffix_name,
-                       objective_suffix_name):
+                       objective_suffix_name,
+                       symbolic_solver_labels):
 
-    from pyomo.repn.plugins.ampl import ProblemWriter_nl
     assert os.path.exists(output_directory)
     instance = scenario._instance
+    assert not hasattr(instance, ".tmpblock")
+    tmpblock = Block(concrete=True)
+    instance.add_component(".tmpblock", tmpblock)
 
     #
     # linking variable suffix
     #
     bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
-    instance.del_component(linking_suffix_name)
-    instance.add_component(linking_suffix_name,
+    tmpblock.add_component(linking_suffix_name,
                            Suffix(direction=Suffix.EXPORT))
-    linking_suffix = getattr(instance, linking_suffix_name)
+    linking_suffix = getattr(tmpblock, linking_suffix_name)
 
     # Loop over all nodes for the scenario except the leaf node,
     # which has no blended variables
@@ -108,27 +108,24 @@ def _write_scenario_NL(worker,
     #
     # objective weight suffix
     #
-    instance.del_component(objective_suffix_name)
-    instance.add_component(objective_suffix_name,
+    tmpblock.add_component(objective_suffix_name,
                            Suffix(direction=Suffix.EXPORT))
-    getattr(instance, objective_suffix_name)[instance] = \
+    getattr(tmpblock, objective_suffix_name)[instance] = \
         scenario._probability
 
     output_filename = os.path.join(output_directory,
                                    str(scenario.name)+".nl")
-    with ProblemWriter_nl() as nl_writer:
-        nl_writer(instance,
-                  output_filename,
-                  lambda x: True,
-                  {})
+    instance.write(
+        output_filename,
+        io_options={'symbolic_solver_labels': symbolic_solver_labels})
 
-    instance.del_component(linking_suffix_name)
-    instance.del_component(objective_suffix_name)
+    instance.del_component(tmpblock)
 
 def write_distributed_NL_files(manager,
                                output_directory,
                                linking_suffix_name,
-                               objective_suffix_name):
+                               objective_suffix_name,
+                               symbolic_solver_labels=False):
 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
@@ -155,7 +152,8 @@ def write_distributed_NL_files(manager,
             invocation_type=InvocationType.PerBundle,
             function_args=(output_directory,
                            linking_suffix_name,
-                           objective_suffix_name))
+                           objective_suffix_name,
+                           symbolic_solver_labels))
 
     else:
         print("Executing scenario NL-file conversions")
@@ -165,7 +163,8 @@ def write_distributed_NL_files(manager,
             invocation_type=InvocationType.PerScenario,
             function_args=(output_directory,
                            linking_suffix_name,
-                           objective_suffix_name))
+                           objective_suffix_name,
+                           symbolic_solver_labels))
 
 def run_generate_distributed_NL_register_options(options=None):
     if options is None:
@@ -174,6 +173,7 @@ def run_generate_distributed_NL_register_options(options=None):
     safe_register_common_option(options, "profile")
     safe_register_common_option(options, "traceback")
     safe_register_common_option(options, "scenario_tree_manager")
+    safe_register_common_option(options, "symbolic_solver_labels")
     safe_register_unique_option(
         options,
         "output_directory",
@@ -190,7 +190,7 @@ def run_generate_distributed_NL_register_options(options=None):
         options,
         "linking_suffix_name",
         PySPConfigValue(
-            "ipopt_blend_id",
+            "variable_id",
             domain=_domain_must_be_str,
             description=(
                 "The suffix name used to identify common variables "
@@ -202,7 +202,7 @@ def run_generate_distributed_NL_register_options(options=None):
         options,
         "objective_suffix_name",
         PySPConfigValue(
-            "ipopt_blend_weight",
+            "objective_weight",
             domain=_domain_must_be_str,
             description=(
                 "The suffix name used to identify the relative "
@@ -233,10 +233,12 @@ def run_generate_distributed_NL(options):
     with manager_class(options) \
          as manager:
         manager.initialize()
-        write_distributed_NL_files(manager,
-                                   options.output_directory,
-                                   options.linking_suffix_name,
-                                   options.objective_suffix_name)
+        write_distributed_NL_files(
+            manager,
+            options.output_directory,
+            options.linking_suffix_name,
+            options.objective_suffix_name,
+            symbolic_solver_labels=options.symbolic_solver_labels)
 
     print("")
     print("Total execution time=%.2f seconds"
