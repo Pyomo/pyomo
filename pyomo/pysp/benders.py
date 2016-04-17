@@ -611,7 +611,9 @@ class BendersAlgorithm(PySPConfiguredObject):
             else:
                 self._master_solver.set_options(
                     self.get_option("master_solver_options"))
-        self._master_solver.options.mipgap = self.get_option("master_mipgap")
+        if self.get_option("master_mipgap") is not None:
+            self._master_solver.options.mipgap = \
+                self.get_option("master_mipgap")
 
         # The following attributes will be modified by the
         # solve() method. For users that are scripting, these
