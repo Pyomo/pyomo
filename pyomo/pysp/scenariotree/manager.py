@@ -119,7 +119,7 @@ class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
     invocations to their respective scenario tree workers which live
     in separate processes. Any scenario tree worker is itself an
     instance of a ScenarioTreeManager so the same invocation rules
-    apply when using this interface worker-local context. The
+    apply when using this interface in a worker-local context. The
     ScenarioTreeManagerClientSerial implementation is its own scenario
     tree worker, so all function invocations take place locally and on
     the same object whose method is invoked.
@@ -183,7 +183,7 @@ class _InvocationTypeDocumentedEnum(pyutilib.enum.Enum):
             to correspond exactly to the iteration order of the given
             scenario names.
 
-       - OnBundle(<bundle-name>:
+       - OnBundle(<bundle-name>):
             Identical to the OnScenario invocation type except with a
             bundle.
 
