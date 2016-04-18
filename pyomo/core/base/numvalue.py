@@ -325,7 +325,8 @@ class NumericValue(object):
                 object.__setattr__(self, key, val)
 
     def cname(self, fully_qualified=False, name_buffer=None):
-        """Return the name if this is a component, and else the value in a string"""
+        """If this is a component, return the component's name on the owning
+        block; otherwise return the value converted to a string"""
         _base = super(NumericValue, self)
         if hasattr(_base,'cname'):
             return _base.cname(fully_qualified, name_buffer)
@@ -362,24 +363,27 @@ class NumericValue(object):
         return self._polynomial_degree(None)
 
     def _polynomial_degree(self, result):
-        """Private method that computes the polynomial degree of this expression"""
+        """Private method that computes the polynomial degree of this
+        expression"""
         return 0
 
     def __float__(self):
         """Coerce the value to a floating point"""
-        raise TypeError("Implicit conversion of Pyomo NumericValue type `%s' to a float "
-                        "is disabled. This error is often the result of using Pyomo components "
-                        "as arguments to one of the Python built-in math module functions "
-                        "when defining expressions. Avoid this error by using Pyomo-provided "
-                        "math functions." % (self.cname(),))
+        raise TypeError(
+"""Implicit conversion of Pyomo NumericValue type `%s' to a float is
+disabled. This error is often the result of using Pyomo components as
+arguments to one of the Python built-in math module functions when
+defining expressions. Avoid this error by using Pyomo-provided math
+functions.""" % (self.cname(),))
 
     def __int__(self):
         """Coerce the value to an integer"""
-        raise TypeError("Implicit conversion of Pyomo NumericValue type `%s' to an integer "
-                        "is disabled. This error is often the result of using Pyomo components "
-                        "as arguments to one of the Python built-in math module functions "
-                        "when defining expressions. Avoid this error by using Pyomo-provided "
-                        "math functions." % (self.cname(),))
+        raise TypeError(
+"""Implicit conversion of Pyomo NumericValue type `%s' to an integer is
+disabled. This error is often the result of using Pyomo components as
+arguments to one of the Python built-in math module functions when
+defining expressions. Avoid this error by using Pyomo-provided math
+functions.""" % (self.cname(),))
 
     def __lt__(self,other):
         """Less than operator
