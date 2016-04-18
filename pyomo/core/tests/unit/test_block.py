@@ -13,6 +13,8 @@
 import os
 import sys
 import six
+
+from copy import deepcopy
 from os.path import abspath, dirname, join
 
 currdir = dirname( abspath(__file__) )
@@ -21,6 +23,7 @@ import pyutilib.th as unittest
 import pyutilib.services
 from pyomo.environ import *
 from pyomo.core.base.block import SimpleBlock
+from pyomo.core.base.expr import identify_variables
 from pyomo.opt import *
 
 solver = load_solvers('glpk')
@@ -494,6 +497,7 @@ class TestBlock(unittest.TestCase):
         self.block.construct()
 
     def tearDown(self):
+        self.block = None
         if os.path.exists("unknown.lp"):
             os.unlink("unknown.lp")
         pyutilib.services.TempfileManager.clear_tempfiles()
@@ -1337,6 +1341,192 @@ class TestBlock(unittest.TestCase):
                           list(m.component_map( set([Objective]), active=False, 
                                                 sort=True )) )
 
+
+    def test_deepcopy(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1])
+        m.c = Constraint(expr=m.x**2 + m.y[1] <= 5)
+        m.b = Block()
+        m.b.x = Var()
+        m.b.y = Var([1,2])
+        m.b.c = Constraint(expr=m.x**2 + m.y[1] + m.b.x**2 + m.b.y[1] <= 10)
+
+        n = deepcopy(m)
+        self.assertNotEqual(id(m), id(n))
+
+        self.assertNotEqual(id(m.x), id(n.x))
+        self.assertIs(m.x.parent_block(), m)
+        self.assertIs(m.x.parent_component(), m.x)
+        self.assertIs(n.x.parent_block(), n)
+        self.assertIs(n.x.parent_component(), n.x)
+
+        self.assertNotEqual(id(m.y), id(n.y))
+        self.assertIs(m.y.parent_block(), m)
+        self.assertIs(m.y[1].parent_component(), m.y)
+        self.assertIs(n.y.parent_block(), n)
+        self.assertIs(n.y[1].parent_component(), n.y)
+
+        self.assertNotEqual(id(m.c), id(n.c))
+        self.assertIs(m.c.parent_block(), m)
+        self.assertIs(m.c.parent_component(), m.c)
+        self.assertIs(n.c.parent_block(), n)
+        self.assertIs(n.c.parent_component(), n.c)
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(m.c.body)),
+            sorted(id(x) for x in (m.x,m.y[1])),
+        )
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(n.c.body)),
+            sorted(id(x) for x in (n.x,n.y[1])),
+        )
+
+        self.assertNotEqual(id(m.b), id(n.b))
+        self.assertIs(m.b.parent_block(), m)
+        self.assertIs(m.b.parent_component(), m.b)
+        self.assertIs(n.b.parent_block(), n)
+        self.assertIs(n.b.parent_component(), n.b)
+
+        self.assertNotEqual(id(m.b.x), id(n.b.x))
+        self.assertIs(m.b.x.parent_block(), m.b)
+        self.assertIs(m.b.x.parent_component(), m.b.x)
+        self.assertIs(n.b.x.parent_block(), n.b)
+        self.assertIs(n.b.x.parent_component(), n.b.x)
+
+        self.assertNotEqual(id(m.b.y), id(n.b.y))
+        self.assertIs(m.b.y.parent_block(), m.b)
+        self.assertIs(m.b.y[1].parent_component(), m.b.y)
+        self.assertIs(n.b.y.parent_block(), n.b)
+        self.assertIs(n.b.y[1].parent_component(), n.b.y)
+
+        self.assertNotEqual(id(m.b.c), id(n.b.c))
+        self.assertIs(m.b.c.parent_block(), m.b)
+        self.assertIs(m.b.c.parent_component(), m.b.c)
+        self.assertIs(n.b.c.parent_block(), n.b)
+        self.assertIs(n.b.c.parent_component(), n.b.c)
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
+        )
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(n.b.c.body)),
+            sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
+        )
+
+    def test_clone_model(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1])
+        m.c = Constraint(expr=m.x**2 + m.y[1] <= 5)
+        m.b = Block()
+        m.b.x = Var()
+        m.b.y = Var([1,2])
+        m.b.c = Constraint(expr=m.x**2 + m.y[1] + m.b.x**2 + m.b.y[1] <= 10)
+
+        n = m.clone()
+        self.assertNotEqual(id(m), id(n))
+
+        self.assertNotEqual(id(m.x), id(n.x))
+        self.assertIs(m.x.parent_block(), m)
+        self.assertIs(m.x.parent_component(), m.x)
+        self.assertIs(n.x.parent_block(), n)
+        self.assertIs(n.x.parent_component(), n.x)
+
+        self.assertNotEqual(id(m.y), id(n.y))
+        self.assertIs(m.y.parent_block(), m)
+        self.assertIs(m.y[1].parent_component(), m.y)
+        self.assertIs(n.y.parent_block(), n)
+        self.assertIs(n.y[1].parent_component(), n.y)
+
+        self.assertNotEqual(id(m.c), id(n.c))
+        self.assertIs(m.c.parent_block(), m)
+        self.assertIs(m.c.parent_component(), m.c)
+        self.assertIs(n.c.parent_block(), n)
+        self.assertIs(n.c.parent_component(), n.c)
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(m.c.body)),
+            sorted(id(x) for x in (m.x,m.y[1])),
+        )
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(n.c.body)),
+            sorted(id(x) for x in (n.x,n.y[1])),
+        )
+
+        self.assertNotEqual(id(m.b), id(n.b))
+        self.assertIs(m.b.parent_block(), m)
+        self.assertIs(m.b.parent_component(), m.b)
+        self.assertIs(n.b.parent_block(), n)
+        self.assertIs(n.b.parent_component(), n.b)
+
+        self.assertNotEqual(id(m.b.x), id(n.b.x))
+        self.assertIs(m.b.x.parent_block(), m.b)
+        self.assertIs(m.b.x.parent_component(), m.b.x)
+        self.assertIs(n.b.x.parent_block(), n.b)
+        self.assertIs(n.b.x.parent_component(), n.b.x)
+
+        self.assertNotEqual(id(m.b.y), id(n.b.y))
+        self.assertIs(m.b.y.parent_block(), m.b)
+        self.assertIs(m.b.y[1].parent_component(), m.b.y)
+        self.assertIs(n.b.y.parent_block(), n.b)
+        self.assertIs(n.b.y[1].parent_component(), n.b.y)
+
+        self.assertNotEqual(id(m.b.c), id(n.b.c))
+        self.assertIs(m.b.c.parent_block(), m.b)
+        self.assertIs(m.b.c.parent_component(), m.b.c)
+        self.assertIs(n.b.c.parent_block(), n.b)
+        self.assertIs(n.b.c.parent_component(), n.b.c)
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
+        )
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(n.b.c.body)),
+            sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
+        )
+
+    def test_clone_subblock(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1])
+        m.c = Constraint(expr=m.x**2 + m.y[1] <= 5)
+        m.b = Block()
+        m.b.x = Var()
+        m.b.y = Var([1,2])
+        m.b.c = Constraint(expr=m.x**2 + m.y[1] + m.b.x**2 + m.b.y[1] <= 10)
+
+        nb = m.b.clone()
+
+        self.assertNotEqual(id(m.b), id(nb))
+        self.assertIs(m.b.parent_block(), m)
+        self.assertIs(m.b.parent_component(), m.b)
+        self.assertIs(nb.parent_block(), None)
+        self.assertIs(nb.parent_component(), nb)
+
+        self.assertNotEqual(id(m.b.x), id(nb.x))
+        self.assertIs(m.b.x.parent_block(), m.b)
+        self.assertIs(m.b.x.parent_component(), m.b.x)
+        self.assertIs(nb.x.parent_block(), nb)
+        self.assertIs(nb.x.parent_component(), nb.x)
+
+        self.assertNotEqual(id(m.b.y), id(nb.y))
+        self.assertIs(m.b.y.parent_block(), m.b)
+        self.assertIs(m.b.y[1].parent_component(), m.b.y)
+        self.assertIs(nb.y.parent_block(), nb)
+        self.assertIs(nb.y[1].parent_component(), nb.y)
+
+        self.assertNotEqual(id(m.b.c), id(nb.c))
+        self.assertIs(m.b.c.parent_block(), m.b)
+        self.assertIs(m.b.c.parent_component(), m.b.c)
+        self.assertIs(nb.c.parent_block(), nb)
+        self.assertIs(nb.c.parent_component(), nb.c)
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(m.b.c.body)),
+            sorted(id(x) for x in (m.x, m.y[1], m.b.x, m.b.y[1])),
+        )
+        self.assertEqual(
+            sorted(id(x) for x in identify_variables(nb.c.body)),
+            sorted(id(x) for x in (m.x, m.y[1], nb.x, nb.y[1])),
+        )
 
 
     def Xtest_display(self):
