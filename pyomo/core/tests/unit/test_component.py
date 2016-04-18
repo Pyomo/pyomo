@@ -16,10 +16,9 @@ from pyomo.util import DeveloperError
 import pyomo.core.base._pyomo
 from pyomo.environ import *
 
-
 class TestComponent(unittest.TestCase):
 
-    def test_component1(self):
+    def test_construct_component_throws_exception(self):
         try:
             Component()
             self.fail("Expected DeveloperError")
