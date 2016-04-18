@@ -30,7 +30,7 @@ from pyomo.core.base.var import Var, VarList
 logger = logging.getLogger('pyomo.core')
 
 
-class _ConnectorValue(NumericValue):
+class _ConnectorData(NumericValue):
     """Holds the actual connector information"""
 
     __slots__ = ('connector','index','vars','aggregators')
@@ -68,7 +68,7 @@ class _ConnectorValue(NumericValue):
 
     def __getstate__(self):
         result = NumericValue.__getstate__(self)
-        for i in _ConnectorValue.__slots__:
+        for i in _ConnectorData.__slots__:
             result[i] = getattr(self, i)
         if type(result['connector']) is weakref.ref:
             result['connector'] = result['connector']()
@@ -195,7 +195,7 @@ class SimpleConnectorBase(IndexedComponent):
         return len(self._conval)
 
     def __getitem__(self,ndx):
-        """This method returns a _ConnectorValue object.
+        """This method returns a _ConnectorData object.
         """
         try:
             return self._conval[ndx]
@@ -214,7 +214,7 @@ class SimpleConnectorBase(IndexedComponent):
             raise TypeError(msg2)
 
     def _add_indexed_member(self, ndx):
-        new_conval = _ConnectorValue(create_name(self.name,ndx))
+        new_conval = _ConnectorData(create_name(self.name,ndx))
         new_conval.component = weakref.ref(self)
         new_conval.index = ndx
         
@@ -227,7 +227,7 @@ class SimpleConnectorBase(IndexedComponent):
             return
         self._constructed=True
         #
-        # Construct _ConnectorValue objects for all index values
+        # Construct _ConnectorData objects for all index values
         #
         rule = self._rule is not None
         extend = self._extends is not None
@@ -306,18 +306,18 @@ class SimpleConnectorBase(IndexedComponent):
                   ', '.join(sorted(self._conval[key].keys()))+"}"+'\n')
 
 
-class SimpleConnector(SimpleConnectorBase, _ConnectorValue):
+class SimpleConnector(SimpleConnectorBase, _ConnectorData):
 
     def __init__(self, *args, **kwd):
 
-        _ConnectorValue.__init__(self, kwd.get('name', None) )
+        _ConnectorData.__init__(self, kwd.get('name', None) )
         SimpleConnectorBase.__init__(self, *args, **kwd)
         self._conval[None] = self
         self._conval[None].component = weakref.ref(self)
         self._conval[None].index = None
 
     def __getstate__(self):
-        result = _ConnectorValue.__getstate__(self)
+        result = _ConnectorData.__getstate__(self)
         for key,value in iteritems(self.__dict__):
             result[key]=value
         if type(result['_conval'][None].component) is weakref.ref:
@@ -330,7 +330,7 @@ class SimpleConnector(SimpleConnectorBase, _ConnectorValue):
         self._conval[None].component = weakref.ref(self)
 
     def is_constant(self):
-        return _ConnectorValue.is_constant(self)
+        return _ConnectorData.is_constant(self)
 
 
 # a IndexedConnector is the implementation representing an indexed connector.
@@ -340,7 +340,7 @@ class IndexedConnector(SimpleConnectorBase):
     def __init__(self, *args, **kwds):
 
         SimpleConnectorBase.__init__(self, *args, **kwds)
-        self._dummy_val = _ConnectorValue(kwds.get('name', None))
+        self._dummy_val = _ConnectorData(kwds.get('name', None))
 
     def __float__(self):
         raise TypeError("Cannot access the value of array connector "+self.name)
@@ -496,7 +496,7 @@ class ConnectorExpander(Plugin):
             else:
                 for e in expr._args:
                     self._gather_connectors(e, connectors)
-        elif isinstance(expr, _ConnectorValue):
+        elif isinstance(expr, _ConnectorData):
             connectors.append(expr)
 
     def _validate_connectors(self, connectors):
@@ -547,7 +547,7 @@ class ConnectorExpander(Plugin):
                 else:
                     _substitute_vars(arg._args, var)
                 return arg
-            elif isinstance(arg, _ConnectorValue):
+            elif isinstance(arg, _ConnectorData):
                 v = arg.vars[var]
                 if v.is_expression():
                     v = v.clone()
@@ -564,7 +564,7 @@ class ConnectorExpander(Plugin):
                         _substitute_vars(arg._denominator, var)
                     else:
                         _substitute_vars(arg._args, var)
-                elif isinstance(arg, _ConnectorValue):
+                elif isinstance(arg, _ConnectorData):
                     v = arg.vars[var]
                     if v.is_expression():
                         v = v.clone()
