@@ -264,22 +264,11 @@ def as_numeric(obj):
 
 
 class NumericValue(object):
-    """
-    This is the base class for numeric values used in Pyomo.
+    """This is the base class for numeric values used in Pyomo.
 
-    For efficiency purposes, some derived classes do not call this
-    constructor (e.g. see the "_ExpressionBase" class defined in "expr.py").
-    This is fine if the value is finite or unspecified.  In that
-    case, no validation is performed, so the subclass can simply
-    specify the name, domain and value.
-
-    Constructor Arguments:
-        domain          The value domain.  Unspecified default: None.
-        name            The value name.  Unspecified default: None
-        value           The initial value.  Unspecified default: None.
-
-    Public Class Attributes:
-        value           The numeric value of this object.
+    For efficiency purposes, some derived classes do not call the base
+    class __init__() (e.g. see the "_ExpressionBase" class defined in
+    "expr.py").
     """
 
     __slots__ = ()
@@ -288,20 +277,25 @@ class NumericValue(object):
     __hash__ = None
 
     def __getstate__(self):
-        # Nominally, __getstate__() should return:
-        #
-        # state = super(Class, self).__getstate__()
-        # for i in Class.__slots__:
-        #    state[i] = getattr(self,i)
-        # return state
-        #
-        # However, in this case, the (nominal) parent class is 'object',
-        # and object does not implement __getstate__.  So, we will check
-        # to make sure that there is a base __getstate__() to call...
-        #
-        # Further, since there are actually no slots defined here, the
-        # real question is to either return an empty dict or the
-        # parent's dict.
+        """Prepare a picklable state of this instance for pickling.
+
+        Nominally, __getstate__() should return:
+
+            state = super(Class, self).__getstate__()
+            for i in Class.__slots__:
+                state[i] = getattr(self,i)
+            return state
+
+        However, in this case, the (nominal) parent class is 'object',
+        and object does not implement __getstate__.  So, we will check
+        to make sure that there is a base __getstate__() to call...
+        You might think that there is nothing to check, but multiple
+        inheritance could mean that another class got stuck between
+        this class and "object" in the MRO.
+
+        Further, since there are actually no slots defined here, the
+        real question is to either return an empty dict or the
+        parent's dict."""
         _base = super(NumericValue, self)
         if hasattr(_base, '__getstate__'):
             return _base.__getstate__()
@@ -309,11 +303,13 @@ class NumericValue(object):
             return {}
 
     def __setstate__(self, state):
-        # Note: our model for setstate is for derived classes to modify
-        # the state dictionary as control passes up the inheritance
-        # hierarchy (using super() calls).  All assignment of state ->
-        # object attributes is handled at the last class before 'object'
-        # (which may -- or may not (thanks to MRO) -- be here.
+        """Restore a pickled state into this instance
+
+        Note: our model for setstate is for derived classes to modify
+        the state dictionary as control passes up the inheritance
+        hierarchy (using super() calls).  All assignment of state ->
+        object attributes is handled at the last class before 'object'
+        (which may -- or may not (thanks to MRO) -- be here."""
         _base = super(NumericValue, self)
         if hasattr(_base, '__setstate__'):
             return _base.__setstate__(state)

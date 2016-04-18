@@ -392,27 +392,31 @@ class ComponentData(object):
         self._component = weakref_ref(owner)
 
     def __getstate__(self):
+        """Prepare a picklable state of this instance for pickling.
+
+        Nominally, __getstate__() should return:
+
+            state = super(Class, self).__getstate__()
+            for i in Class.__slots__:
+                state[i] = getattr(self,i)
+            return state
+
+        However, in this case, the (nominal) parent class is 'object',
+        and object does not implement __getstate__.  So, we will check
+        to make sure that there is a base __getstate__() to call...
+        You might think that there is nothing to check, but multiple
+        inheritance could mean that another class got stuck between
+        this class and "object" in the MRO.
+
+        This method must be defined to support pickling because this
+        class owns weakrefs for '_component', which must be either
+        removed or converted to hard references prior to pickling.
+
+        Further, since there is only a single slot, and that slot
+        (_component) requires special processing, we will just deal with
+        it explicitly.  As _component is a weakref (not pickable), we
+        need to resolve it to a concrete object.
         """
-        This method must be defined to support pickling because this class
-        owns weakrefs for '_component'.
-        """
-        #
-        # Nominally, __getstate__() should return:
-        #
-        # state = super(Class, self).__getstate__()
-        # for i in Class.__slots__:
-        #    state[i] = getattr(self,i)
-        # return state
-        #
-        # However, in this case, the (nominal) parent class is 'object',
-        # and object does not implement __getstate__.  So, we will check
-        # to make sure that there is a base __getstate__() to call...
-        #
-        # Further, since there is only a single slot, and that slot
-        # (_component) requires special processing, we will just deal
-        # with it explicitly.  As _component is a weakref (not
-        # pickable), we need to resolve it to a concrete object.
-        #
         _base = super(ComponentData,self)
         if hasattr(_base, '__getstate__'):
             state = _base.__getstate__()
@@ -426,9 +430,17 @@ class ComponentData(object):
         return state
 
     def __setstate__(self, state):
-        """
-        This method must be defined to support unpickling because this class
-        owns weakrefs for '_component'.
+        """Restore a pickled state into this instance
+
+        Note: our model for setstate is for derived classes to modify
+        the state dictionary as control passes up the inheritance
+        hierarchy (using super() calls).  All assignment of state ->
+        object attributes is handled at the last class before 'object'
+        (which may -- or may not (thanks to MRO) -- be here.
+
+        This method must be defined to support unpickling because this
+        class owns weakrefs for '_component', which must be restored
+        from the hard references used in the piclke.
         """
         #
         # FIXME: We shouldn't have to check for weakref.ref here, but if
