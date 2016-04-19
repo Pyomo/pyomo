@@ -147,16 +147,35 @@ class _ConnectorData(NumericValue):
             self.aggregators[var] = aggregate
 
 
-class SimpleConnectorBase(IndexedComponent):
-    """A collection of variables, which may be defined over a index"""
+class Connector(IndexedComponent):
+    """A collection of variables, which may be defined over a index
 
-    """ Constructor
+    The idea behind a Connector is to create a bundle of variables that
+    can be manipulated as a single variable within constraints.  While
+    Connectors inherit from variable (mostly so that the expression
+    infrastucture can manipulate them), they are not actual variables
+    that are exposed to the solver.  Instead, a preprocessor
+    (ConnectorExpander) will look for expressions that involve
+    connectors and replace the single constraint with a list of
+    constraints that involve the original variables contained within the
+    Connector.
+
+    Constructor
         Arguments:
            name         The name of this connector
            index        The index set that defines the distinct connectors.
                           By default, this is None, indicating that there
                           is a single connector.
     """
+
+    def __new__(cls, *args, **kwds):
+        if cls != Connector:
+            return super(Connector, cls).__new__(cls)
+        if args == ():
+            return SimpleConnector.__new__(SimpleConnector)
+        else:
+            return IndexedConnector.__new__(IndexedConnector)
+
 
     # TODO: default keyword is  not used?  Need to talk to Bill ...?
     def __init__(self, *args, **kwd):
@@ -306,12 +325,12 @@ class SimpleConnectorBase(IndexedComponent):
                   ', '.join(sorted(self._conval[key].keys()))+"}"+'\n')
 
 
-class SimpleConnector(SimpleConnectorBase, _ConnectorData):
+class SimpleConnector(Connector, _ConnectorData):
 
     def __init__(self, *args, **kwd):
 
         _ConnectorData.__init__(self, kwd.get('name', None) )
-        SimpleConnectorBase.__init__(self, *args, **kwd)
+        Connector.__init__(self, *args, **kwd)
         self._conval[None] = self
         self._conval[None].component = weakref.ref(self)
         self._conval[None].index = None
@@ -335,11 +354,11 @@ class SimpleConnector(SimpleConnectorBase, _ConnectorData):
 
 # a IndexedConnector is the implementation representing an indexed connector.
 
-class IndexedConnector(SimpleConnectorBase):
+class IndexedConnector(Connector):
     
     def __init__(self, *args, **kwds):
 
-        SimpleConnectorBase.__init__(self, *args, **kwds)
+        Connector.__init__(self, *args, **kwds)
         self._dummy_val = _ConnectorData(kwds.get('name', None))
 
     def __float__(self):
@@ -355,35 +374,12 @@ class IndexedConnector(SimpleConnectorBase):
     def __str__(self):
         return self.name
 
-    def construct(self, data=None):
-        SimpleConnectorBase.construct(self, data)
+    #def construct(self, data=None):
+    #    Connector.construct(self, data)
 
 
-class Connector(Component):
-    """A 'bundle' of variables that can be manipulated together"""
 
-    @classmethod
-    def conserved_quantity():
-        pass
-
-    # The idea behind a Connector is to create a bundle of variables
-    # that can be manipulated as a single variable within constraints.
-    # While Connectors inherit from variable (mostly so that the
-    # expression infrastucture can manipulate them), they are not actual
-    # variables that are exposed to the solver.  Instead, a preprocessor
-    # (ConnectorExpander) will look for expressions that involve
-    # connectors and replace the single constraint with a list of
-    # constraints that involve the original variables contained within
-    # the Connector.
-
-    def __new__(cls, *args, **kwds):
-        if args == ():
-            self = SimpleConnector(*args, **kwds)
-        else:
-            self = IndexedConnector(*args, **kwds)
-        return self
-
-
+register_component(Connector, "A bundle of variables that can be manipilated together.")
 
 
 class ConnectorExpander(Plugin):
@@ -585,7 +581,3 @@ class ConnectorExpander(Plugin):
                 cList.append( ( constraint.lower, c, constraint.upper ) )
 
 transform = ConnectorExpander()
-
-
-register_component(Connector, "A bundle of variables that can be manipilated together.")
-
