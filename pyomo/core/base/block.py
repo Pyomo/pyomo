@@ -783,9 +783,15 @@ component, use the block del_component() and add_component() methods.
         # Error, for disabled support implicit rule names
         #
         if '_rule' in val.__dict__ and val._rule is None:
-            frame = sys._getframe(2)
-            locals_ = frame.f_locals
-            if val.cname()+'_rule' in locals_:
+            _found = False
+            try:
+                _test = val.cname()+'_rule'
+                for i in (1,2):
+                    frame = sys._getframe(i)
+                    _found |= _test in frame.f_locals
+            except:
+                pass
+            if _found:
                 # JDS: Do not blindly reformat this message.  The
                 # formatter inserts arbitrarily-long cnames(), which can
                 # cause the resulting logged message to be very poorly
@@ -793,9 +799,9 @@ component, use the block del_component() and add_component() methods.
                 logger.warning(
 """As of Pyomo 4.0, Pyomo components no longer support implicit rules.
 You defined a component (%s) that appears
-to rely on an implicit rule (%s_rule).
+to rely on an implicit rule (%s).
 Components must now specify their rules explicitly using 'rule=' keywords.""" %
-                               (val.cname(True), val.cname()) )
+                    (val.cname(True), _test) )
         #
         # Don't reconstruct if this component has already been constructed.
         # This allows a user to move a component from one block to
