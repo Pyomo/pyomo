@@ -666,6 +666,14 @@ virtual python environment is created in the 'pyomo' directory.
         raise SystemExit(1)
 
     #
+    # The --tempdir option was specified
+    #
+    if options.tempdir:
+        rmtree(pyomo_install_tempdir)
+        os.mkdir(options.tempdir)
+        pyomo_install_tempdir = os.path.abspath(options.tempdir)
+        os.environ['PYOMO_INSTALL_TEMPDIR'] = pyomo_install_tempdir
+    #
     # Find the version of Python that will be used to install Pyomo
     #
     if options.python and not os.environ.get('PYOMO_INSTALL_RUNNING'):
@@ -677,14 +685,6 @@ virtual python environment is created in the 'pyomo' directory.
         python = resolve_interpreter(options.python)
         raise SystemExit(call_subprocess([python, __file__] + sys.argv[1:], options, env=env))
 
-    #
-    # The --tempdir option was specified
-    #
-    if options.tempdir:
-        rmtree(pyomo_install_tempdir)
-        os.mkdir(options.tempdir)
-        pyomo_install_tempdir = os.path.abspath(options.tempdir)
-        os.environ['PYOMO_INSTALL_TEMPDIR'] = pyomo_install_tempdir
     #
     # The --with-extras option was specified
     #
