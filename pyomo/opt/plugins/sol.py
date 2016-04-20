@@ -42,68 +42,71 @@ class ResultsReader_sol(results.AbstractResultsReader):
         """
         Parse a *.sol file
         """
+        try:
+            with open(filename,"r") as f:
+                return self._load(f, res, soln, suffixes)
+        except ValueError as e:
+            with open(filename,"r") as f:
+                fdata = f.read()
+            raise ValueError(
+                "Error reading '%s': %s.\n"
+                "SOL File Output:\n%s"
+                % (filename, str(e), fdata))
+
+    def _load(self, fin, res, soln, suffixes):
 
         if res is None:
             res = SolverResults()
         #
-        IN = open(filename,"r")
         msg = ""
-        line = IN.readline()
+        line = fin.readline()
         if line.strip() == "":
-            line = IN.readline()
+            line = fin.readline()
         while line:
             if line[0] == '\n' or (line[0] == '\r' and line[1] == '\n'):
                 break
             msg += line
-            line = IN.readline()
+            line = fin.readline()
         z = []
-        line = IN.readline()
+        line = fin.readline()
         if line[:7] == "Options":
-            line = IN.readline()
+            line = fin.readline()
             nopts = int(line)
             need_vbtol = False
             if nopts > 4:           # WEH - when is this true?
                 nopts -= 2
                 need_vbtol = True
             for i in xrange(nopts + 4):
-                line = IN.readline()
+                line = fin.readline()
                 z += [int(line)]
             if need_vbtol:          # WEH - when is this true?
-                line = IN.readline()
+                line = fin.readline()
                 z += [float(line)]
         else:
-            IN.close()
-            msg = ("Error reading \"" + filename +
-                   "\": no Options line found.\nSOL File Output:\n")
-            IN = open(filename, 'r')
-            for line in IN:
-                msg += line
-            IN.close()
-            raise ValueError(msg)
+            raise ValueError("no Options line found")
         n = z[nopts + 3] # variables
         m = z[nopts + 1] # constraints
         x = []
         y = []
         i = 0
         while i < m:
-            line = IN.readline()
+            line = fin.readline()
             y.append(float(line))
             i += 1
         i = 0
         while i < n:
-            line = IN.readline()
+            line = fin.readline()
             x.append(float(line))
             i += 1
         objno = [0,0]
-        line = IN.readline()
+        line = fin.readline()
         if line:                    # WEH - when is this true?
             if line[:5] != "objno":         #pragma:nocover
-                raise ValueError("Error reading \"" + filename +
-                                 "\": expected \"objno\", found", line)
+                raise ValueError("expected 'objno', found '%s'" % (line))
             t = line.split()
             if len(t) != 3:
-                raise ValueError("Error reading \"" + filename +
-                                 "\": expected two numbers in objno line, but found", line)
+                raise ValueError("expected two numbers in objno line, "
+                                 "but found '%s'" % (line))
             objno = [int(t[1]), int(t[2])]
         res.solver.message = msg.strip()
         res.solver.message = res.solver.message.replace("\n","; ")
@@ -174,7 +177,7 @@ class ResultsReader_sol(results.AbstractResultsReader):
                     soln_constraint["c"+str(i)] = {"Dual" : y[i]}
 
             ### Read suffixes ###
-            line = IN.readline()
+            line = fin.readline()
             while line:
                 line = line.strip()
                 if line == "":
@@ -185,10 +188,10 @@ class ResultsReader_sol(results.AbstractResultsReader):
                     # section like kestrel_option, which
                     # comes after all suffixes.
                     remaining = ""
-                    line = IN.readline()
+                    line = fin.readline()
                     while line:
                         remaining += line.strip()+"; "
-                        line = IN.readline()
+                        line = fin.readline()
                     res.solver.message += remaining
                     break
                 unmasked_kind = int(line[1])
@@ -200,20 +203,20 @@ class ResultsReader_sol(results.AbstractResultsReader):
                 namelen = int(line[3])
                 tablen = int(line[4])
                 tabline = int(line[5])
-                suffix_name = IN.readline().strip()
+                suffix_name = fin.readline().strip()
                 if any(re.match(suf,suffix_name) for suf in suffixes):
                     # ignore translation of the table number to string value for now,
                     # this information can be obtained from the solver documentation
                     for n in xrange(tabline):
-                        IN.readline()
+                        fin.readline()
                     if kind == 0: # Var
                         for cnt in xrange(nvalues):
-                            suf_line = IN.readline().split()
+                            suf_line = fin.readline().split()
                             soln_variable["v"+suf_line[0]][suffix_name] = \
                                 convert_function(suf_line[1])
                     elif kind == 1: # Con
                         for cnt in xrange(nvalues):
-                            suf_line = IN.readline().split()
+                            suf_line = fin.readline().split()
                             key = "c"+suf_line[0]
                             if key not in soln_constraint:
                                 soln_constraint[key] = {}
@@ -225,22 +228,21 @@ class ResultsReader_sol(results.AbstractResultsReader):
                                 convert_function(suf_line[1])
                     elif kind == 2: # Obj
                         for cnt in xrange(nvalues):
-                            suf_line = IN.readline().split()
+                            suf_line = fin.readline().split()
                             soln.objective.setdefault("o"+suf_line[0],{})[suffix_name] = \
                                 convert_function(suf_line[1])
                     elif kind == 3: # Prob
                         # Skip problem kind suffixes for now. Not sure the
                         # best place to put them in the results object
                         for cnt in xrange(nvalues):
-                            suf_line = IN.readline().split()
+                            suf_line = fin.readline().split()
                             soln.problem[suffix_name] = convert_function(suf_line[1])
                 else:
                     # do not store the suffix in the solution object
                     for cnt in xrange(nvalues):
-                        IN.readline()
-                line = IN.readline()
-        ###
-        IN.close()
+                        fin.readline()
+                line = fin.readline()
+
         #
         # This is a bit of a hack to accommodate PICO.  If
         # the PICO parser has parsed the # of constraints, then

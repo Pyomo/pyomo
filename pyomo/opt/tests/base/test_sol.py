@@ -84,5 +84,26 @@ class Test(unittest.TestCase):
             self.assertEqual(soln.solver.status,
                              SolverStatus.ok)
 
+    def test_bad_options(self):
+        with pyomo.opt.ReaderFactory("sol") as reader:
+            if reader is None:
+                raise IOError("Reader 'sol' is not registered")
+            with self.assertRaises(ValueError):
+                soln = reader(currdir+"bad_options.sol")
+
+    def test_bad_objno(self):
+        with pyomo.opt.ReaderFactory("sol") as reader:
+            if reader is None:
+                raise IOError("Reader 'sol' is not registered")
+            with self.assertRaises(ValueError):
+                soln = reader(currdir+"bad_objno.sol")
+
+    def test_bad_objnoline(self):
+        with pyomo.opt.ReaderFactory("sol") as reader:
+            if reader is None:
+                raise IOError("Reader 'sol' is not registered")
+            with self.assertRaises(ValueError):
+                soln = reader(currdir+"bad_objnoline.sol")
+
 if __name__ == "__main__":
     unittest.main()
