@@ -122,9 +122,9 @@ elif config == "booktests" or config == "book":
     hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
     print("Running 'pyomo install-extras' ...")
     if _run_cmd is subprocess.check_call:
-        output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py", shell=True)
+        output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
     elif _run_cmd is subprocess.check_output:
-        output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py", shell=True)
+        output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
         print(output.decode('ascii'))
     else:
         assert False
