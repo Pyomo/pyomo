@@ -88,7 +88,9 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                     self._solvers[ name[:-5].lower() ] = name[:-5]
         if solver_name not in self._solvers:
             raise ActionManagerError(
-                "Solver '%s' is not recognized by NEOS" % (solver_name))
+                "Solver '%s' is not recognized by NEOS. "
+                "Solver names recognized:\n%s"
+                % (solver_name, str(sorted(self._solvers.keys()))))
         #
         # Apply kestrel
         #
