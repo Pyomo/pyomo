@@ -19,7 +19,9 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 import pyomo.opt
-from pyomo.opt import TerminationCondition, SolutionStatus
+from pyomo.opt import (TerminationCondition,
+                       SolutionStatus,
+                       SolverStatus)
 
 old_tempdir = pyutilib.services.TempfileManager.tempdir
 
@@ -55,6 +57,8 @@ class Test(unittest.TestCase):
                              TerminationCondition.infeasible)
             self.assertEqual(soln.solution.status,
                              SolutionStatus.infeasible)
+            self.assertEqual(soln.solver.status,
+                             SolverStatus.warning)
 
     def test_infeasible2(self):
         with pyomo.opt.ReaderFactory("sol") as reader:
@@ -65,5 +69,20 @@ class Test(unittest.TestCase):
                              TerminationCondition.infeasible)
             self.assertEqual(soln.solution.status,
                              SolutionStatus.infeasible)
+            self.assertEqual(soln.solver.status,
+                             SolverStatus.warning)
+
+    def test_conopt_optimal(self):
+        with pyomo.opt.ReaderFactory("sol") as reader:
+            if reader is None:
+                raise IOError("Reader 'sol' is not registered")
+            soln = reader(currdir+"conopt_optimal.sol")
+            self.assertEqual(soln.solver.termination_condition,
+                             TerminationCondition.optimal)
+            self.assertEqual(soln.solution.status,
+                             SolutionStatus.optimal)
+            self.assertEqual(soln.solver.status,
+                             SolverStatus.ok)
+
 if __name__ == "__main__":
     unittest.main()

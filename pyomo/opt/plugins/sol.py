@@ -176,7 +176,10 @@ class ResultsReader_sol(results.AbstractResultsReader):
             ### Read suffixes ###
             line = IN.readline()
             while line:
-                line = line.strip().split()
+                line = line.strip()
+                if line == "":
+                    continue
+                line = line.split()
                 if line[0] != 'suffix':
                     # We assume this is the start of a
                     # section like kestrel_option, which
