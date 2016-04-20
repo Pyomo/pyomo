@@ -41,8 +41,18 @@ class NEOSRemoteSolver(SystemCallSolver):
            self._soln_file = pyutilib.services.TempfileManager.\
                              create_tempfile(suffix=".neos.sol")
            self._results_file = self._soln_file
+
+        # display the log/solver file names prior to execution. this is useful
+        # in case something crashes unexpectedly, which is not without precedent.
+        if self._keepfiles:
+            if self._log_file is not None:
+                print("Solver log file: '%s'" % self._log_file)
+            if self._soln_file is not None:
+                print("Solver solution file: '%s'" % self._soln_file)
+            if self._problem_files is not []:
+                print("Solver problem files: %s" % str(self._problem_files))
+
         return pyutilib.misc.Bunch(cmd="", log_file=self._log_file, env="")
 
     def _default_executable(self):
         return True
-

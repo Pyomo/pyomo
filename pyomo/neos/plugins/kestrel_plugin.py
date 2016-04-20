@@ -54,7 +54,10 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 "No solver passed to %s, use keyword option 'solver'"
                 % (type(self).__name__) )
         if not isinstance(solver, six.string_types):
-            solver = solver.name
+            solver_name = solver.name
+        else:
+            solver_name = solver
+            solver = None
 
         #
         # Handle ephemeral solvers options here. These
@@ -62,9 +65,16 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         # dictionary, but we will reset these options to
         # their original value at the end of this method.
         #
-        ephemeral_solver_options = {}
-        ephemeral_solver_options.update(kwds.pop('options', {}))
-        ephemeral_solver_options.update(
+        user_solver_options = {}
+        # make sure to transfer the options dict on the
+        # solver plugin if the user does not use a string
+        # to identify the neos solver. The ephemeral
+        # options must also go after these.
+        if solver is not None:
+            user_solver_options.update(solver.options)
+        user_solver_options.update(
+            kwds.pop('options', {}))
+        user_solver_options.update(
             OptSolver._options_string_to_dict(kwds.pop('options_string', '')))
 
         opt = SolverFactory('_neos')
@@ -76,20 +86,25 @@ class SolverManager_NEOS(AsynchronousSolverManager):
             for name in self.kestrel.solvers():
                 if name.endswith('AMPL'):
                     self._solvers[ name[:-5].lower() ] = name[:-5]
-        if not solver in self._solvers:
-            raise ActionManagerError("Solver '%s' is not recognized by NEOS" % solver)
+        if solver_name not in self._solvers:
+            raise ActionManagerError(
+                "Solver '%s' is not recognized by NEOS" % (solver_name))
         #
         # Apply kestrel
         #
-        os.environ['kestrel_options'] = 'solver=%s' % self._solvers[solver]
+        os.environ['kestrel_options'] = 'solver=%s' % self._solvers[solver_name]
         solver_options = {}
         for key in opt.options:
             solver_options[key]=opt.options[key]
-        solver_options.update(ephemeral_solver_options)
+        solver_options.update(user_solver_options)
 
         options = opt._get_options_string(solver_options)
+        # GH: Should we really be modifying the environment
+        #     for this manager (knowing that we are not
+        #     executing locally)
         if not options == "":
-            os.environ[self._solvers[solver].lower()+'_options'] = opt._get_options_string()
+            os.environ[self._solvers[solver_name].lower()+'_options'] = \
+                opt._get_options_string()
         xml = self.kestrel.formXML(opt._problem_files[0])
         (jobNumber, password) = self.kestrel.submit(xml)
         ah.job = jobNumber
@@ -141,15 +156,13 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 results = self.kestrel.neos.getFinalResults(jobNumber, ah.password)
 
                 (current_offset, current_message) = self._neos_log[jobNumber]
-                OUTPUT=open(opt._log_file, 'w')
-                six.print_(current_message, file=OUTPUT)
-                OUTPUT.close()
-                OUTPUT=open(opt._soln_file, 'w')
-                if six.PY2:
-                    six.print_(results.data, file=OUTPUT)
-                else:
-                    six.print_((results.data).decode('utf-8'), file=OUTPUT)
-                OUTPUT.close()
+                with open(opt._log_file, 'w') as OUTPUT:
+                    six.print_(current_message, file=OUTPUT)
+                with open(opt._soln_file, 'w') as OUTPUT:
+                    if six.PY2:
+                        six.print_(results.data, file=OUTPUT)
+                    else:
+                        six.print_((results.data).decode('utf-8'), file=OUTPUT)
 
                 rc = None
                 solver_results = opt.process_output(rc)
