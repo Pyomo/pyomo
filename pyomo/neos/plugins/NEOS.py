@@ -23,12 +23,11 @@ class NEOSRemoteSolver(SystemCallSolver):
     def __init__(self, **kwds):
         kwds["type"] = "neos"
         SystemCallSolver.__init__(self, **kwds)
-        self._valid_problem_formats=[ProblemFormat.nl]
+        self._valid_problem_formats = [ProblemFormat.nl]
         self._valid_result_formats = {}
         self._valid_result_formats[ProblemFormat.nl] = [ResultsFormat.sol]
         self._problem_format = ProblemFormat.nl
         self._results_format = ResultsFormat.sol
-        self.tmp_opt=SolverFactory('asl')
 
     def create_command_line(self, executable, problem_files):
         """
@@ -43,23 +42,6 @@ class NEOSRemoteSolver(SystemCallSolver):
                              create_tempfile(suffix=".neos.sol")
            self._results_file = self._soln_file
         return pyutilib.misc.Bunch(cmd="", log_file=self._log_file, env="")
-
-    def process_logfile(self):
-        """
-        This function creates and returns a SolverResults object that
-        is populated with data that is parsed from the solver output
-        provided by NEOS.
-        """
-        self.tmp_opt._soln_file = self._soln_file
-        self.tmp_opt._log_file = self._log_file
-        self.tmp_opt._results_file = self._results_file
-        return self.tmp_opt.process_logfile()
-
-    #def process_other_data(self,results):
-    #    """
-    #    Process the *.sol file.
-    #    """
-    #    self.tmp_opt.process_other_data(results)
 
     def _default_executable(self):
         return True
