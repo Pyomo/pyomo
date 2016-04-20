@@ -248,7 +248,8 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         # Find the pip that is installed with the virtual environment
         #
         pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
-        del os.environ['PYTHONPATH']
+        if 'PYTHONPATH' in os.environ:
+            del os.environ['PYTHONPATH']
     else:
         #
         # Install a virtual environment using pyvenv
@@ -273,7 +274,8 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         # Find the pip that is installed with the virtual environment
         #
         pip = os.path.join(os.path.abspath(options.venv), 'bin', 'pip')
-        del os.environ['PYTHONPATH']
+        if 'PYTHONPATH' in os.environ:
+            del os.environ['PYTHONPATH']
     python_dir = os.path.abspath(options.venv)
     #
     return pip, python_dir
@@ -725,10 +727,13 @@ virtual python environment is created in the 'pyomo' directory.
     #
     # Verify that pip is installed
     #
-    if options.verbose:
-        print("\n************* Installing pip *******************")
-    install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose, src=pip_src)
-    pip = find_pip(pyomo_install_tempdir)
+    if not sys.platform.startswith('java'):
+        if options.verbose:
+            print("\n************* Installing pip *******************")
+        install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose, src=pip_src)
+        pip = find_pip(pyomo_install_tempdir)
+    else:
+        pip = os.path.join(os.path.split(sys.executable)[0],'pip')
     if not os.path.exists(pip):
         logger.fatal("ERROR: The pip package has not been installed with python.")
         raise SystemExit(1)
