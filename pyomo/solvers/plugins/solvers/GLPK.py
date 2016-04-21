@@ -349,12 +349,12 @@ class GLPKSHELL(SystemCallSolver):
 
                 else:
                     raise ValueError
-
-            f.close()
         except Exception:
             e = sys.exc_info()[1]
             msg = "Error parsing solution description file, line %s: %s"
             raise ValueError(msg % (glp_line_count, str(e)))
+        finally:
+            f.close()
 
         range_duals = {}
         # Step 2: Make use of the GLPK's machine parseable format (--write) to
@@ -448,11 +448,12 @@ class GLPKSHELL(SystemCallSolver):
                         soln.variable[vname] = {"Value" : cprim,
                                                 "Rc" : float(cdual)}
 
-            f.close()
         except Exception:
             print(sys.exc_info()[1])
             msg = "Error parsing solution data file, line %d" % raw_line_count
             raise ValueError(msg)
+        finally:
+            f.close()
 
         if not soln is None:
             # For the range constraints, supply only the dual with the largest
