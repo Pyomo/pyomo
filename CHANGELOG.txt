@@ -9,6 +9,16 @@ Pyomo 4.4
 - Next release
 
 -------------------------------------------------------------------------------
+Pyomo 4.3 (4.3.11345)
+-------------------------------------------------------------------------------
+
+- Various fixes to the NEOS solver plugin and to the SOL parser for
+  certain NEOS solvers.
+- Fixed a bug that caused an exception to occur when dynamically adding blocks 
+  to a ConcreteModel.
+- Miscellaneous fixes to PySP scripting examples. 
+
+-------------------------------------------------------------------------------
 Pyomo 4.3 (4.3.11328)
 -------------------------------------------------------------------------------
 
