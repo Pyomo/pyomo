@@ -276,9 +276,9 @@ class Expression(IndexedComponent):
                   else self._index)
              ],
             self.iteritems(),
-            ("Key","Expression"),
+            ("Expression",),
             lambda k,v: \
-               [k, "Undefined" if v.expr is None else v.expr]
+               ["Undefined" if v.expr is None else v.expr]
             )
 
     def display(self, prefix="", ostream=None):

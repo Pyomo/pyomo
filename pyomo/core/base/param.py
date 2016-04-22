@@ -844,9 +844,8 @@ This has resulted in the conversion of the source to dense form.
                   ("Mutable", self._mutable),
                   ],
                  self.sparse_iteritems(),
-                 ("Key","Value"),
-                 lambda k, v: [ k,
-                                value(v)
+                 ("Value",),
+                 lambda k, v: [ value(v)
                                 ]
                  )
 
