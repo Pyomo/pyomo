@@ -15,13 +15,14 @@ import weakref
 import sys
 from six import iteritems, itervalues
 from six.moves import xrange
+from weakref import ref as weakref_ref
 
 from pyomo.util.plugin import Plugin, implements
 
 from pyomo.core.base.component import Component, register_component
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.expr import _ProductExpression
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, create_name
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.plugin import IPyomoScriptModifyInstance
@@ -131,10 +132,6 @@ class _ConnectorData(NumericValue):
                 return True
         return False
 
-    def pprint(self, ostream=None, verbose=False):
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write(str(self))
 
     def add(self, var, name=None, aggregate=None):
         if name is None:
@@ -288,27 +285,19 @@ class Connector(IndexedComponent):
                     self.add(val,key)
             
 
-    def pprint(self, ostream=None, verbose=False):
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write("  "+self.name+" :")
-        ostream.write("\tSize="+str(len(self)))
-        if self._index_set is not None:
-            ostream.write("\tIndicies: ")
-            for idx in self._index_set:
-                ostream.write(str(idx.name)+", ")
-            print("")
-        if None in self._conval:
-            ostream.write("\tName : Variable\n")
-            for item in iteritems(self._conval[None]):
-                ostream.write("\t %s : %s\n" % item)
-        else:
-            ostream.write("\tKey : Name : Variable\n")
-            tmp=self._conval.keys()
-            tmp.sort()
-            for key in tmp:
-                for name, var in iteritems(self._conval[key]):
-                    ostream.write("\t %s : %s : %s\n" % ( key, name, var ))
+    def _pprint(self, ostream=None, verbose=False):
+        """Print component information."""
+        def _line_generator(k,v):
+            for _k, _v in iteritems(self._conval[k]):
+                yield _k, len(_v), _v
+        return ( [("Size", len(self)),
+                  ("Index", self._index \
+                       if self._index != UnindexedComponent_set else None),
+                  ],
+                 iteritems(self._data),
+                 ( "Name","Size", "Variable", ),
+                 _line_generator
+             )
 
 
     def display(self, prefix="", ostream=None):
