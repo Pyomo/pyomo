@@ -15,6 +15,7 @@ import zipfile
 import shutil
 import logging
 import tempfile
+import subprocess
 try:
     from urllib.request import pathname2url as pathname2url
 except ImportError:
@@ -84,8 +85,6 @@ def call_subprocess(cmd, options, stdout=False, cwd=None, env=None):
     """
     A wrapper for subprocess.Popen that manages I/O in a consistent manner.
     """
-    import subprocess
-
     if env is None:
         env = os.environ.copy()
     #
@@ -281,7 +280,7 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
     return pip, python_dir
 
 
-def install_from_trunk(pip, options):
+def install_from_trunk_vpy(pip, options):
     """
     Installing from trunk (with vpy_install).
     """
@@ -329,6 +328,41 @@ def install_from_trunk(pip, options):
     python_dir = os.path.abspath(options.venv)
     #
     return pip
+
+
+def install_from_trunk_jython(pip, python_dir, options):
+    """
+    Install from PyPI or from Zip File
+    """
+    if options.venv:
+        pip, python_dir = install_virtualenv(options, pip=pip)
+        if options.venvonly:
+            return
+        options.venv = False
+    #
+    # Setup the sourc directory
+    #
+    srcDir = os.path.join(python_dir, 'src')
+    if not os.path.exists( srcDir ):
+        os.mkdir( srcDir )
+    python_executable = os.path.basename(sys.executable)
+    python = os.path.join(python_dir, 'bin', python_executable)
+    #
+    # Install 'nose' first
+    #
+    call_subprocess([pip, 'instally','nose'], options)
+    #
+    # Clone and install PyUtilib
+    #
+    cmd = [ 'git', 'clone', '-q', 'https://github.com/PyUtilib/pyutilib.git']
+    call_subprocess(cmd, options, cwd=srcDir)
+    call_subprocess([python, 'setup.py','develop'], options, cwd=os.path.join(srcDir,'pyutilib'))
+    #
+    # Checkout and install Pyomo
+    #
+    cmd = [ 'svn', 'checkout', '-q', 'https://software.sandia.gov/svn/public/pyomo/pyomo/trunk', 'pyomo' ]
+    call_subprocess(cmd, options, cwd=srcDir)
+    call_subprocess([python, 'setup.py','develop'], options, cwd=os.path.join(srcDir,'pyomo'))
 
 
 def install_from_src(pip, srcdir, pip_src, python_dir, options):
@@ -741,7 +775,10 @@ virtual python environment is created in the 'pyomo' directory.
     # Install Pyomo
     #
     if options.trunk:
-        pip = install_from_trunk(pip, options)
+        if getattr(subprocess,'jython',False):
+            pip = install_from_trunk_jython(pip, python_dir, options)
+        else:
+            pip = install_from_trunk_vpy(pip, options)
     elif options.zipfile or options.srcdir:
         offline = True  # Force offline for now
         pip = install_from_src(pip, srcdir, pip_src, python_dir, options)
