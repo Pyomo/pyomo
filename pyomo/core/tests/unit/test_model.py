@@ -666,6 +666,11 @@ class Test(unittest.TestCase):
                           ['y','I','x','c'] )
         self.assertEqual( len(list(identify_variables(instance.c.body))), 3 )
 
+    def test_error1(self):
+        model = ConcreteModel()
+        model.x = Var()
+        instance = model.create_instance()
+
 if __name__ == "__main__":
     unittest.main()
 

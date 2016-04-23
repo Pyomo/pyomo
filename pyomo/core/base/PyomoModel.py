@@ -56,7 +56,7 @@ import pyomo.opt
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt.results import SolverResults, Solution, SolutionStatus, UndefinedData
 
-from six import itervalues, iteritems, StringIO
+from six import itervalues, iteritems, StringIO, string_types
 from six.moves import xrange
 try:
     unicode
@@ -626,7 +626,7 @@ use the AbstractModel or ConcreteModel class instead.""")
         # filename is specified.  A concrete model is already
         # constructed, so passing in a data file is a waste of time.
         #
-        if self.is_constructed() and isinstance(filename, six.string_types):
+        if self.is_constructed() and isinstance(filename, string_types):
             msg = "The filename=%s will not be loaded - supplied as an " \
                   "argument to the create_instance() method of a "\
                   "concrete instance with name=%s." % (filename, name)
