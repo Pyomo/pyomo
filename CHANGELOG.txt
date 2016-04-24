@@ -3,10 +3,13 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 4.4
+Pyomo 4.3 (4.3.11377)
 -------------------------------------------------------------------------------
 
-- Next release
+- Restructured PySP tests to hide expected exception output
+- Updated pyomo_install to support jython (experimental)
+- Fixed a missing reference to 'six'
+- More robust management of file I/O in GLPK interface
 
 -------------------------------------------------------------------------------
 Pyomo 4.3 (4.3.11345)
