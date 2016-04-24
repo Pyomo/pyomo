@@ -8,21 +8,20 @@
 #  _________________________________________________________________________
 
 import sys
-import socket
+import re
 import os
 from os.path import join, dirname, abspath
 import time
-import subprocess
 import difflib
 import filecmp
 import shutil
-
+import subprocess
 try:
     from subprocess import check_output as _run_cmd
 except:
     # python 2.6
     from subprocess import check_call as _run_cmd
-
+import pyutilib.subprocess
 import pyutilib.services
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
@@ -43,6 +42,16 @@ _run_verbose = True
 
 class TestSMPSSimple(unittest.TestCase):
 
+    @unittest.nottest
+    def _assert_contains(self, filename, *checkstrs):
+        with open(filename, 'rb') as f:
+            fdata = f.read()
+        for checkstr in checkstrs:
+            self.assertNotEqual(
+                re.search(checkstr, fdata),
+                None)
+
+    @unittest.nottest
     def _get_cmd(self,
                  model_location,
                  scenario_tree_location=None,
@@ -76,149 +85,105 @@ class TestSMPSSimple(unittest.TestCase):
         print("Command: "+str(cmd))
         return cmd, options['--output-directory']
 
+    @unittest.nottest
+    def _run_bad_conversion_test(self, *args, **kwds):
+        cmd, output_dir = self._get_cmd(*args, **kwds)
+        outfile = output_dir+".out"
+        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
+        self.assertNotEqual(rc[0], 0)
+        self._assert_contains(
+            outfile,
+            b"ValueError: One or more deterministic parts of the problem found in file")
+        shutil.rmtree(output_dir,
+                      ignore_errors=True)
+        os.remove(outfile)
+
     def test_bad_variable_bounds_MPS(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_variable_bounds.py"),
             options={'--core-format': 'mps'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_variable_bounds_LP(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_variable_bounds.py"),
             options={'--core-format': 'lp'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_objective_constant_MPS(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_objective_constant.py"),
             options={'--core-format': 'mps'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_objective_constant_LP(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_objective_constant.py"),
             options={'--core-format': 'lp'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_objective_var_MPS(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_objective_var.py"),
             options={'--core-format': 'mps'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_objective_var_LP(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_objective_var.py"),
             options={'--core-format': 'lp'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_constraint_var_MPS(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_constraint_var.py"),
             options={'--core-format': 'mps'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_constraint_var_LP(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_constraint_var.py"),
             options={'--core-format': 'lp'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_constraint_rhs_MPS(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_constraint_rhs.py"),
             options={'--core-format': 'mps'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_bad_constraint_rhs_LP(self):
-        cmd, output_dir = self._get_cmd(
+        self._run_bad_conversion_test(
             join(thisDir, "model_bad_constraint_rhs.py"),
             options={'--core-format': 'lp'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
 
     def test_too_many_declarations(self):
         cmd, output_dir = self._get_cmd(
             join(thisDir, "model_too_many_declarations.py"),
             options={'--core-format': 'lp'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
+        outfile = output_dir+".out"
+        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
+        self.assertNotEqual(rc[0], 0)
+        self._assert_contains(
+            outfile,
+            b"RuntimeError: \(Scenario=Scenario1\): Component b.c was "
+            b"assigned multiple declarations in annotation type "
+            b"PySP_StochasticMatrixAnnotation. To correct this "
+            b"issue, ensure that multiple container components under "
+            b"which the component might be stored \(such as a Block "
+            b"and an indexed Constraint\) are not simultaneously set in "
+            b"this annotation.")
+        shutil.rmtree(output_dir,
+                      ignore_errors=True)
+        os.remove(outfile)
 
     def test_bad_component_type(self):
         cmd, output_dir = self._get_cmd(
             join(thisDir, "model_bad_component_type.py"),
             options={'--core-format': 'lp'})
-        with self.assertRaises(subprocess.CalledProcessError):
-            try:
-                _run_cmd(cmd, shell=True)
-            except:
-                shutil.rmtree(output_dir,
-                              ignore_errors=True)
-                raise
+        outfile = output_dir+".out"
+        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
+        self.assertNotEqual(rc[0], 0)
+        self._assert_contains(
+            outfile,
+            b"TypeError: \(Scenario=Scenario1\): Declarations "
+            b"in annotation type PySP_StochasticMatrixAnnotation "
+            b"must be of type Constraint or Block. Invalid type: "
+            b"<class 'pyomo.core.base.objective.SimpleObjective'>")
+        shutil.rmtree(output_dir,
+                      ignore_errors=True)
+        os.remove(outfile)
 
 class _SMPSTesterBase(object):
 
