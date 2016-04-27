@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from six.moves import range
+from six.moves import xrange as range
 from six import iteritems, iterkeys
 
 from pyomo.util.plugin import alias
