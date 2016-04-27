@@ -41,7 +41,6 @@ requires = [
     'PyUtilib>=5.3.5',
     'appdirs',
     'ply',
-    'nose',
     'six>=1.4',
     ]
 if sys.version_info < (2, 7):
