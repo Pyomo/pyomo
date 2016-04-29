@@ -116,7 +116,6 @@ def ExtractInternalNodeSolutionsWithSlamming(ph):
     #   assume that the argument was a json file with slamming instructions.
     # This will ignore suffixes we don't care about.
     # If there are no instructions use xbar.
-    # If they have given non-booleans, stack dump.
     # Note: there is an implicit pecking order.
     print ("For x-hat, using slamming suffixes in",ph._xhat_method)
     slamdict = {}
