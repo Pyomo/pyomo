@@ -14,7 +14,8 @@ import pyomo.version as pyomo
 class Tests(unittest.TestCase):
 
     def test_releaselevel(self):
-        self.assertTrue(pyomo.version_info[3] in ('trunk','VOTD','final'))
+        self.assertTrue( pyomo.version_info[3]
+                         in ('trunk','trunk {git}','VOTD','final') )
 
     def test_version(self):
         try:
@@ -26,17 +27,17 @@ class Tests(unittest.TestCase):
         if pyomo.version_info[3] == 'final':
             self.assertEqual(pyomo.version, version)
 
-        elif pyomo.version_info[3] == 'trunk':
+        elif pyomo.version_info[3] in ('trunk {svn}', 'trunk {git}'):
             tmp_ = version.split('.')
-            self.assertEqual( str(tmp_[0]), str(pyomo.version_info[0]))
-            self.assertEqual( str(tmp_[1]), str(pyomo.version_info[1]))
-            self.assertEqual( pyomo.version_info[2], 0 )
+            self.assertEqual(str(tmp_[0]), str(pyomo.version_info[0]))
+            self.assertEqual(str(tmp_[1]), str(pyomo.version_info[1]))
+            self.assertEqual(pyomo.version_info[2], 0)
         else:
             tmp_ = version.split('.')
-            self.assertEqual( int(tmp_[0]), pyomo.version_info[0])
-            self.assertEqual( tmp_[1], pyomo.version_info[1])
-            #self.assertEqual( tuple(int(x) for x in version.split('.')), pyomo.version_info[:2] )
-            self.assertNotEqual( pyomo.version_info[2], 0 )
+            self.assertEqual(str(tmp_[0]), str(pyomo.version_info[0]))
+            self.assertEqual(str(tmp_[1]), str(pyomo.version_info[1]))
+            #self.assertEqual(tuple(int(x) for x in version.split('.')), pyomo.version_info[:2])
+            self.assertNotEqual(pyomo.version_info[2], 0)
 
 
 if __name__ == "__main__":
