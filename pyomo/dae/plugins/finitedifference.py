@@ -173,7 +173,7 @@ class Finite_Difference_Transformation(Transformation):
 
         self._fe = {}
         for ds in block.component_map(ContinuousSet).itervalues():
-            if currentds is None or currentds is ds.cname(True):
+            if currentds is None or currentds == ds.cname(True):
                 generate_finite_elements(ds,self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds)-1 > self._nfe[currentds]:
@@ -199,7 +199,7 @@ class Finite_Difference_Transformation(Transformation):
         for d in block.component_map(DerivativeVar).itervalues():
             dsets = d.get_continuousset_list()
             for i in set(dsets):
-                if currentds is None or i.cname(True) is currentds:
+                if currentds is None or i.cname(True) == currentds:
                     oldexpr = d.get_derivative_expression()
                     loc = d.get_state_var()._contset[i]
                     count = dsets.count(i)
