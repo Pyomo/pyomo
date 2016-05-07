@@ -32,6 +32,21 @@ class _PHBoundExtensionImpl(_PHBoundBase):
 
         _PHBoundBase.__init__(self)
 
+    def _push_outer_bound_to_PH(self, ph, storage_key):
+        # push the updated outer bound to PH, for reporting purposes.
+        # moved to function by dlw May 2016
+        if ph._reported_outer_bound is None:
+            ph._reported_outer_bound = self._outer_bound_history[storage_key]
+        else:
+            if self._is_minimizing:
+                ph._reported_outer_bound = max(self._outer_bound_history[storage_key],
+                                               ph._reported_outer_bound)
+            else:
+                ph._reported_outer_bound = min(self._outer_bound_history[storage_key],
+                                               ph._reported_outer_bound)
+
+
+
     def _iteration_k_bound_solves(self, ph, storage_key):
 
         # storage key is for results (e.g. the ph iter number)
@@ -165,16 +180,7 @@ class _PHBoundExtensionImpl(_PHBoundBase):
                 self._outer_status_history[storage_key] = \
                     self.ComputeOuterBound(ph, storage_key)
 
-        # push the updated outer bound to PH, for reporting purposes.
-        if ph._reported_outer_bound is None:
-            ph._reported_outer_bound = self._outer_bound_history[storage_key]
-        else:
-            if self._is_minimizing:
-                ph._reported_outer_bound = max(self._outer_bound_history[storage_key],
-                                               ph._reported_outer_bound)
-            else:
-                ph._reported_outer_bound = min(self._outer_bound_history[storage_key],
-                                               ph._reported_outer_bound)
+            self._push_outer_bound_to_PH(ph, storage_key)
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms)
@@ -270,6 +276,10 @@ class _PHBoundExtensionImpl(_PHBoundBase):
         self._outer_bound_history[ph_iter], \
             self._outer_status_history[ph_iter] = \
                self.ComputeOuterBound(ph, ph_iter)
+
+        # dlw May 2016: the reported bound gets set for general iterations right after
+        #               assignment to the history, so we do it here also
+        self._push_outer_bound_to_PH(ph, ph_iter)
 
     def post_iteration_0(self, ph):
         """
