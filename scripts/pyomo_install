@@ -449,7 +449,7 @@ def install_from_pypi(pip, python_dir, options):
     baseCmd.extend(options.pip_options)
     if options.user:
         baseCmd.append('--user')
-    call_subprocess(baseCmd + ['--upgrade', 'Pyomo'], options)
+    call_subprocess(baseCmd + ['--use-wheel', '--upgrade', 'Pyomo'], options)
     if options.verbose:
         print("... done.")
     #
