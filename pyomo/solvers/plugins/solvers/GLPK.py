@@ -39,7 +39,7 @@ def configure_glpk():
         [registered_executable('glpsol').get_path(), "--version"], timelimit=2)
     if errcode == 0:
         _glpk_version = _extract_version(results)
-        glpk_file_flag = _glpk_version >= (4,42,0,0)
+        glpk_file_flag = _glpk_version >= (4,60,0,0)
 
 
 # Not sure how better to get these constants, but pulled from GLPK
@@ -78,14 +78,17 @@ class GLPK(OptSolver):
         if mode  == 'lp':
             if glpk_file_flag:
                 return SolverFactory('_glpk_shell', **kwds)
+            elif _glpk_version >= (4,42,0,0):
+                return SolverFactory('_glpk_shell_4_42', **kwds)
             else:
                 return SolverFactory('_glpk_shell_old', **kwds)
         if mode == 'mps':
             if glpk_file_flag:
                 opt = SolverFactory('_glpk_shell', **kwds)
+            elif _glpk_version >= (4,42,0,0):
+                opt = SolverFactory('_glpk_shell_4_42', **kwds)
             else:
                 opt = SolverFactory('_glpk_shell_old', **kwds)
-            opt = SolverFactory('_glpk_shell', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
             return opt
         if mode == 'python':
@@ -209,7 +212,6 @@ class GLPKSHELL(SystemCallSolver):
 
         return Bunch(cmd=cmd, log_file=self._log_file, env=None)
 
-
     def process_logfile(self):
         """
         Process logfile
@@ -251,7 +253,6 @@ class GLPKSHELL(SystemCallSolver):
 
         return results
 
-
     def _glpk_get_solution_status(self, status):
         if   GLP_OPT    == status: return SolutionStatus.optimal
         elif GLP_FEAS   == status: return SolutionStatus.feasible
@@ -260,7 +261,6 @@ class GLPKSHELL(SystemCallSolver):
         elif GLP_UNBND  == status: return SolutionStatus.unbounded
         elif GLP_UNDEF  == status: return SolutionStatus.other
         raise RuntimeError("Unknown solution status returned by GLPK solver")
-
 
     def process_soln_file (self, results):
         soln  = None
