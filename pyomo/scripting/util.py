@@ -948,7 +948,7 @@ def run_command(command=None, parser=None, args=None, name='unknown', data=None,
             if __debug__ and (options.runtime.logging == 'debug' or options.runtime.catch_errors):
                 if not logfile is None:
                     pyutilib.misc.reset_redirect()
-                TempfileManager.pop()
+                TempfileManager.pop(remove=not options.runtime.keep_files)
                 raise
 
             if not options.model is None and not options.model.save_file is None:
