@@ -10,6 +10,7 @@
 import logging
 import re
 import sys
+import csv
 
 import pyutilib.subprocess
 from pyutilib.misc import Bunch, Options
@@ -39,7 +40,7 @@ def configure_glpk():
         [registered_executable('glpsol').get_path(), "--version"], timelimit=2)
     if errcode == 0:
         _glpk_version = _extract_version(results)
-        glpk_file_flag = _glpk_version >= (4,60,0,0)
+        glpk_file_flag = _glpk_version >= (4,58,0,0)
 
 
 # Not sure how better to get these constants, but pulled from GLPK
@@ -53,12 +54,11 @@ GLP_NF = 4   # active free row or non-basic free variable
 GLP_NS = 5   # active equality constraint or non-basic fixed variable
 
    # solution status
-GLP_UNDEF  = 1  # solution is undefined
-GLP_FEAS   = 2  # solution is feasible
-GLP_INFEAS = 3  # solution is infeasible
-GLP_NOFEAS = 4  # no feasible solution exists
-GLP_OPT    = 5  # solution is optimal
-GLP_UNBND  = 6  # solution is unbounded
+GLP_UNDEF  = 'u'  # solution is undefined
+GLP_FEAS   = 'f'  # solution is feasible
+GLP_INFEAS = 'i'  # solution is infeasible
+GLP_NOFEAS = 'n'  # no feasible solution exists
+GLP_OPT    = 'o'  # solution is optimal
 
 
 class GLPK(OptSolver):
@@ -254,16 +254,14 @@ class GLPKSHELL(SystemCallSolver):
         return results
 
     def _glpk_get_solution_status(self, status):
-        if   GLP_OPT    == status: return SolutionStatus.optimal
-        elif GLP_FEAS   == status: return SolutionStatus.feasible
+        if GLP_FEAS     == status: return SolutionStatus.feasible
         elif GLP_INFEAS == status: return SolutionStatus.infeasible
         elif GLP_NOFEAS == status: return SolutionStatus.infeasible
-        elif GLP_UNBND  == status: return SolutionStatus.unbounded
         elif GLP_UNDEF  == status: return SolutionStatus.other
+        elif GLP_OPT    == status: return SolutionStatus.optimal
         raise RuntimeError("Unknown solution status returned by GLPK solver")
 
     def process_soln_file (self, results):
-        soln  = None
         pdata = self._glpfile
         psoln = self._rawfile
 
@@ -306,22 +304,6 @@ class GLPKSHELL(SystemCallSolver):
             prob.number_of_nonzeros    = pnonz
             prob.number_of_variables   = pcols
 
-            extract_duals = False
-            extract_reduced_costs = False
-            for suffix in self._suffixes:
-                flag = False
-                if re.match(suffix, "dual"):
-                    if not self.is_integer:
-                        flag = True
-                        extract_duals = True
-                if re.match(suffix, "rc"):
-                    if not self.is_integer:
-                        flag = True
-                        extract_reduced_costs = True
-                if not flag:
-                    # TODO: log a warning
-                    pass
-
             for line in f:
                 glp_line_count += 1
                 tokens = line.split()
@@ -356,114 +338,190 @@ class GLPKSHELL(SystemCallSolver):
         finally:
             f.close()
 
-        range_duals = {}
         # Step 2: Make use of the GLPK's machine parseable format (--write) to
         #    collect solution variable and constraint values.
-        raw_line_count = ' -- File not yet opened'
-        try:
-            f = open(psoln, 'r')
+        with open(psoln, 'r') as csvfile:
+            reader = csv.reader(csvfile, delimiter=' ')
+            row = next(reader)
+            if True:
+            #try:
+                row = next(reader)
+                while (row[0] == 'c'):
+                    row = next(reader)
+                if not row[0] == 's':
+                    raise ValueError("Expecting 's' row after 'c' rows")
 
-            raw_line_count = 1
-            prows, pcols = f.readline().split()
-            prows = int(prows)  # fails if not a number; intentional
-            pcols = int(pcols)  # fails if not a number; intentional
-
-            raw_line_count = 2
-            if self.is_integer:
-                pstat, obj_val = f.readline().split()
+                if row[1] == 'bas':
+                    self._process_soln_bas(row, reader, results, obj_name, variable_names, constraint_names)
+                elif row[1] == 'ipt':
+                    self._process_soln_ipt(row, reader, results, obj_name, variable_names, constraint_names)
+                elif row[1] == 'mip':
+                    self._process_soln_mip(row, reader, results, obj_name, variable_names, constraint_names)
             else:
-                pstat, dstat, obj_val = f.readline().split()
-                dstat = float(dstat) # dual status of basic solution.  Ignored.
+            #except Exception:
+                print("ERROR: " + str(sys.exc_info()[1]))
+                msg = "Error parsing solution data file, line %d" % reader.line_num
+                raise ValueError(msg)
 
-            pstat = float(pstat)       # fails if not a number; intentional
-            obj_val = float(obj_val)   # fails if not a number; intentional
-            soln_status = self._glpk_get_solution_status(pstat)
+    def _process_soln_bas(self, row, reader, results, obj_name, variable_names, constraint_names):
+        """
+        Process a basic solution
+        """
+        prows = int(row[2])
+        pcols = int(row[3])
+        pstat = row[4]
+        dstat = row[5]
+        obj_val = float(row[6])
 
-            if soln_status is SolutionStatus.infeasible:
-                solv.termination_condition = TerminationCondition.infeasible
+        solv = results.solver
+        if pstat == 'n':
+            solv.termination_condition = TerminationCondition.unbounded
+        elif pstat == 'i':
+            solv.termination_condition = TerminationCondition.infeasible
+        elif pstat == 'u':
+            if solv.termination_condition == TerminationCondition.unknown:
+                solv.termination_condition = TerminationCondition.other
 
-            elif soln_status is SolutionStatus.unbounded:
-                solv.termination_condition = TerminationCondition.unbounded
+        elif pstat == 'f':
+            soln   = results.solution.add()
+            soln.status = SolutionStatus.feasible
+            solv.termination_condition = TerminationCondition.optimal
 
-            elif soln_status is SolutionStatus.other:
-                if solv.termination_condition == TerminationCondition.unknown:
-                    solv.termination_condition = TerminationCondition.other
+            # TODO: Should we have a gap value for LP solves?
+            soln.gap = 0.0
+            results.problem.lower_bound = obj_val
+            results.problem.upper_bound = obj_val
 
-            elif soln_status in (SolutionStatus.optimal, SolutionStatus.feasible):
-                soln   = results.solution.add()
-                soln.status = soln_status
+            # I'd like to choose the correct answer rather than just doing
+            # something like commenting the obj_name line.  The point is that
+            # we ostensibly could or should make use of the user's choice in
+            # objective name.  In that vein I'd like to set the objective value
+            # to the objective name.  This would make parsing on the user end
+            # less 'arbitrary', as in the yaml key 'f'.  Weird
+            soln.objective[obj_name] = {'Value': obj_val}
 
-                prob.lower_bound = obj_val
-                prob.upper_bound = obj_val
+            extract_duals = False
+            extract_reduced_costs = False
+            for suffix in self._suffixes:
+                if re.match(suffix, "dual"):
+                    extract_duals = True
+                elif re.match(suffix, "rc"):
+                    extract_reduced_costs = True
 
-                # TODO: Does a 'feasible' status mean that we're optimal?
-                soln.gap=0.0
-                solv.termination_condition = TerminationCondition.optimal
+            range_duals = {}
+            while True:
+                row = next(reader)
+                if len(row) == 0:
+                    break
+                rtype = row[0]
+                if rtype == 'i':
+                    if not extract_duals:
+                        continue
+                    # NOTE: we are not using the row status (rst) value right now
+                    rtype, rid, rst, rprim, rdual = row 
+                    cname = constraint_names[int(rid)]
+                    if 'ONE_VAR_CONSTANT' == cname[-16:]:
+                        continue
+                    rdual = float(rdual)
+                    if cname.startswith('c_'):
+                        soln.constraint[cname] = {"Dual":rdual}
+                    elif cname.startswith('r_l_'):
+                        range_duals.setdefault(cname[4:],[0,0])[0] = rdual
+                    elif cname.startswith('r_u_'):
+                        range_duals.setdefault(cname[4:],[0,0])[1] = rdual
 
-                # I'd like to choose the correct answer rather than just doing
-                # something like commenting the obj_name line.  The point is that
-                # we ostensibly could or should make use of the user's choice in
-                # objective name.  In that vein I'd like to set the objective value
-                # to the objective name.  This would make parsing on the user end
-                # less 'arbitrary', as in the yaml key 'f'.  Weird
-                soln.objective[obj_name] = {'Value': obj_val}
-
-                if (self.is_integer is True) or (extract_duals is False):
-                    # we use nothing from this section so just read in the
-                    # lines and throw them away
-                    for mm in range(1, prows +1):
-                        raw_line_count += 1
-                        f.readline()
-                else:
-                    for mm in range(1, prows +1):
-                        raw_line_count += 1
-
-                        rstat, rprim, rdual = f.readline().split()
-                        rstat = float(rstat)
-
-                        cname = constraint_names[mm]
-                        if 'ONE_VAR_CONSTANT' == cname[-16:]: continue
-
-                        if cname.startswith('c_'):
-                            soln.constraint[cname] = {"Dual":float(rdual)}
-                        elif cname.startswith('r_l_'):
-                            range_duals.setdefault(cname[4:],[0,0])[0] = float(rdual)
-                        elif cname.startswith('r_u_'):
-                            range_duals.setdefault(cname[4:],[0,0])[1] = float(rdual)
-
-                for nn in range(1, pcols +1):
-                    raw_line_count += 1
-                    if self.is_integer:
-                        cprim = f.readline()      # should be a single number
-                    else:
-                        cstat, cprim, cdual = f.readline().split()
-                        cstat = float(cstat)  # fails if not a number; intentional
-
-                    vname = variable_names[nn]
-                    if 'ONE_VAR_CONSTANT' == vname: continue
+                elif rtype == 'j':
+                    # NOTE: we are not using the column status (cst) value right now
+                    rtype, cid, cst, cprim, cdual = row 
+                    vname = variable_names[int(cid)]
+                    if 'ONE_VAR_CONSTANT' == vname:
+                        continue
                     cprim = float(cprim)
                     if extract_reduced_costs is False:
                         soln.variable[vname] = {"Value" : cprim}
                     else:
-                        soln.variable[vname] = {"Value" : cprim,
-                                                "Rc" : float(cdual)}
+                        soln.variable[vname] = {"Value" : cprim, "Rc" : float(cdual)}
 
-        except Exception:
-            print(sys.exc_info()[1])
-            msg = "Error parsing solution data file, line %d" % raw_line_count
-            raise ValueError(msg)
-        finally:
-            f.close()
+                elif rtype == 'e':
+                    break
 
-        if not soln is None:
+                elif rtype == 'c':
+                    continue
+
+                else:
+                    raise ValueError("Unexpected row type: "+rtype)
+
             # For the range constraints, supply only the dual with the largest
             # magnitude (at least one should always be numerically zero)
             scon = soln.Constraint
-            for key,(ld,ud) in iteritems(range_duals):
+            for key, (ld,ud) in iteritems(range_duals):
                 if abs(ld) > abs(ud):
                     scon['r_l_'+key] = {"Dual":ld}
                 else:
                     scon['r_l_'+key] = {"Dual":ud}      # Use the same key
+
+    def _process_soln_mip(self, row, reader, results, obj_name, variable_names, constraint_names):
+        """
+        Process a basic solution
+        """
+        #prows = int(row[2])
+        #pcols = int(row[3])
+        status = row[4]
+        obj_val = float(row[5])
+
+        solv = results.solver
+        if status == 'n':
+            solv.termination_condition = TerminationCondition.infeasible
+        elif status == 'u':
+            if solv.termination_condition == TerminationCondition.unknown:
+                solv.termination_condition = TerminationCondition.other
+
+        elif status == 'f' or status == 'o':
+            soln   = results.solution.add()
+            if status == 'f':
+                soln.status = SolutionStatus.feasible
+                solv.termination_condition = TerminationCondition.feasible
+            else:
+                soln.status = SolutionStatus.optimal
+                solv.termination_condition = TerminationCondition.optimal
+
+            if status == 'o':
+                soln.gap = 0.0
+                results.problem.lower_bound = obj_val
+                results.problem.upper_bound = obj_val
+
+            # I'd like to choose the correct answer rather than just doing
+            # something like commenting the obj_name line.  The point is that
+            # we ostensibly could or should make use of the user's choice in
+            # objective name.  In that vein I'd like to set the objective value
+            # to the objective name.  This would make parsing on the user end
+            # less 'arbitrary', as in the yaml key 'f'.  Weird
+            soln.objective[obj_name] = {'Value': obj_val}
+
+            while True:
+                row = next(reader)
+                if len(row) == 0:
+                    break
+                rtype = row[0]
+                if rtype == 'i':
+                    # NOTE: we ignore the value of the constraint linear form
+                    continue
+
+                elif rtype == 'j':
+                    rtype, cid, cval = row 
+                    vname = variable_names[int(cid)]
+                    if 'ONE_VAR_CONSTANT' == vname:
+                        continue
+                    soln.variable[vname] = {"Value" : float(cval)}
+
+                elif rtype == 'e':
+                    break
+
+                elif rtype == 'c':
+                    continue
+
+                else:
+                    raise ValueError("Unexpected row type: "+rtype)
 
 
 register_executable(name='glpsol')
