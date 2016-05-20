@@ -109,13 +109,7 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
               ("inner" if self._is_minimizing else "outer"))
 
         # push the updated outer bound to PH, for reporting purposes.
-        if ph._reported_outer_bound is None:
-            ph._reported_outer_bound = self._outer_bound_history[storage_key]
-        else:
-            if self._is_minimizing:
-                ph._reported_outer_bound = max(self._outer_bound_history[storage_key], ph._reported_outer_bound)
-            else:
-                ph._reported_outer_bound = min(self._outer_bound_history[storage_key], ph._reported_outer_bound)
+        ph._update_reported_bounds(self._outer_bound_history[storage_key])
 
         # Deactivate the weight terms.
         self.DeactivatePHObjectiveWeightTerms(ph)
@@ -152,14 +146,7 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
                     self.ComputeInnerBound(ph, storage_key)
 
         # push the updated inner bound to PH, for reporting purposes.
-        if ph._reported_inner_bound == None:
-            ph._reported_inner_bound = self._inner_bound_history[storage_key]
-        else:
-            if self._is_minimizing:
-                ph._reported_inner_bound = min(self._inner_bound_history[storage_key], ph._reported_inner_bound)
-            else:
-                ph._reported_inner_bound = max(self._inner_bound_history[storage_key], ph._reported_inner_bound)
-
+        ph._update_reported_bounds(inner = self._inner_bound_history[storage_key])
 
         # Restore ph to its state prior to entering this method (e.g.,
         # fixed variables, scenario solutions, proximal terms,
@@ -394,6 +381,7 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
         self._outer_bound_history[ph_iter], \
             self._outer_status_history[ph_iter] = \
                 self.ComputeOuterBound(ph, ph_iter)
+        ph._update_reported_bounds(outer = self._outer_bound_history[ph_iter]) # dlw May 2016
 
         # YIKES - WHY IS THIS HERE????!!
         self._populate_bundle_dual_master_model(ph)

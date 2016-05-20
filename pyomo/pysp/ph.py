@@ -374,8 +374,8 @@ class _PHBase(object):
         # these probably should be the "best" values, because
         # they are used for convergence criterion, among other
         # things.
-        self._reported_inner_bound = None
-        self._reported_outer_bound = None
+        self._best_reported_inner_bound = None
+        self._best_reported_outer_bound = None
 
         # a simple boolean flag indicating whether or not this ph
         # instance has received an initialization method and has
@@ -1106,6 +1106,27 @@ class _PHBase(object):
         self._rho_check(tree_node, variable_id)
 
         return scenario._rho[tree_node._name][variable_id]
+    
+    #
+    # keep track of the best bounds reported - dlw May 2016 - temporary
+    #
+    def _update_reported_bounds(self, inner = None, outer = None):
+        # see if a reported bound is good enough to be the best
+        # (bear in mind that for the outer bound the worse the better)
+        def isbetter(a,b):
+            if self._objective_sense == minimize:
+                return a<b
+            else:
+                return a>b
+
+        if inner is not None:
+            if self._best_reported_inner_bound is None \
+            or isbetter(inner, self._best_reported_inner_bound):
+                self._best_reported_inner_bound = inner
+        if outer is not None:
+            if self._best_reported_outer_bound is None \
+            or isbetter(self._best_reported_outer_bound, outer):
+                self._best_reported_outer_bound = outer
 
     #
     # a utility intended for folks who are brave enough to script
@@ -4215,8 +4236,8 @@ class ProgressiveHedging(_PHBase):
                       +str(self._total_fixed_continuous_vars)+" "
                       "(total="+str(self._total_continuous_vars)+")")
 
-                if self._reported_inner_bound != None or self._reported_outer_bound != None:
-                    print("Outer bound=%20s Inner bound=%20s" % (self._reported_outer_bound, self._reported_inner_bound))
+                if self._best_reported_inner_bound != None or self._best_reported_outer_bound != None:
+                    print("Outer bound=%20s Inner bound=%20s" % (self._best_reported_outer_bound, self._best_reported_inner_bound))
 
                 # update the convergence statistic - prior to the
                 # plugins callbacks; technically, computing the
