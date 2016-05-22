@@ -7,9 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 #
-# This callback must be used with the aggregategetter.py
-# callback in order to populate the 
-# _aggregate_user_data object.
 
 # only need to set upper bounds on first-stage variables, i.e., those
 # being blended.
