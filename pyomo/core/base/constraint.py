@@ -442,10 +442,8 @@ class _GeneralConstraintData(_ConstraintData):
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR.generate_relational_expression.\
-           chainedInequality is not None:
-            from expr import chainedInequalityErrorMessage
-            raise TypeError(chainedInequalityErrorMessage())
+        if EXPR.generate_relational_expression.chainedInequality is not None:
+            raise TypeError(EXPR.chainedInequalityErrorMessage())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')

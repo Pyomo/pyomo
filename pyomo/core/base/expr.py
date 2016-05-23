@@ -32,6 +32,7 @@ _common_module_members = [
     'generate_intrinsic_function_expression',
     'generate_relational_expression',
     'generate_expression_bypassCloneCheck',
+    'chainedInequalityErrorMessage',
     '_ExpressionBase',
     '_EqualityExpression',
     '_InequalityExpression',
