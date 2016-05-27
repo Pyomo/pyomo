@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from __future__ import absolute_import
 import sys
 import os
 import subprocess
@@ -16,7 +15,7 @@ try:
 except:
     # python 2.6
     from subprocess import check_call as _run_cmd
-from . import driver
+import driver
 
 config = sys.argv[1]
 hname = os.uname()[1]
@@ -25,7 +24,7 @@ hname = hname.split('.')[0]
 print("\nStarting jenkins.py")
 print("Configuration=%s" % config)
 
-#os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/hudson/pyomo-vpy/test_tpls.ini'
+os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/src/pyomo/admin/config.ini'
 sys.path.append(os.getcwd())
 
 sys.argv = ['dummy', '--trunk', '--source', 'src', '-a', 'pyyaml']
