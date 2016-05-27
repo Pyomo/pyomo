@@ -1,0 +1,102 @@
+8.5
+8.5
+7
+1
+3
+7
+0
+None
+False
+6 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    C : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['a', 'b', 'c']
+    t_index : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    t_index_0 : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1.5, 3.5)
+        [1.5, 2.5, 3.5]
+    u_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1.5, 3.5)
+        [1.5, 2.5, 3.5]
+    v_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
+        [1, 2]
+
+17 Var Declarations
+    Za : Size=1, Index=None, Domain=NonNegativeReals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :     9 :  None : False : False
+    Zb : Size=3, Index=A, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :  None :     1 :  None : False : False
+          2 :  None :     4 :  None : False : False
+          3 :  None :     9 :  None : False : False
+    Zc : Size=3, Index=A, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :  None :     2 :  None : False : False
+          2 :  None :     2 :  None : False : False
+          3 :  None :     2 :  None : False : False
+    a : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :   0.0 :  None :  None : False :  True
+    b : Size=3, Index=A, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :     2 :  None :     3 : False :  True
+          2 :     4 :  None :     4 : False :  True
+          3 :     6 :  None :     7 : False :  True
+    m : Size=3, Index=A, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :  None :     3 :  None : False : False
+          2 :  None :     6 :  None : False : False
+          3 :  None :     9 :  None : False : False
+    r : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
+    s : Size=3, Index=A, Domain=None
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :     1 :  None :     2 : False :  True
+          2 :     2 :  None :     3 : False :  True
+          3 :     3 :  None :     4 : False :  True
+    t : Size=9, Index=t_index, Domain=Reals
+        Key        : Lower : Value : Upper : Fixed : Stale
+        (1.5, 'a') :  None :  None :  None : False :  True
+        (1.5, 'b') :  None :  None :  None : False :  True
+        (1.5, 'c') :  None :  None :  None : False :  True
+        (2.5, 'a') :  None :  None :  None : False :  True
+        (2.5, 'b') :  None :  None :  None : False :  True
+        (2.5, 'c') :  None :  None :  None : False :  True
+        (3.5, 'a') :  None :  None :  None : False :  True
+        (3.5, 'b') :  None :  None :  None : False :  True
+        (3.5, 'c') :  None :  None :  None : False :  True
+    u : Size=3, Index=u_index, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+        1.5 :  None :  None :  None : False :  True
+        2.5 :  None :  None :  None : False :  True
+        3.5 :  None :  None :  None : False :  True
+    v : Size=2, Index=v_index, Domain=Integers
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :     1 :  None :     3 : False :  True
+          2 :     5 :  None :     7 : False :  True
+    w : Size=1, Index=None, Domain=Boolean
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :  None :     1 : False :  True
+    x : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
+    y : Size=1, Index=None, Domain=A
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     1 :  None :     3 : False :  True
+    za : Size=1, Index=None, Domain=NonNegativeReals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :   8.5 :  None : False : False
+    zb : Size=3, Index=A, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :  None :     1 :  None : False : False
+          2 :  None :     7 :  None : False : False
+          3 :  None :     9 :  None : False : False
+    zc : Size=3, Index=A, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :  None :     2 :  None : False : False
+          2 :  None :     2 :  None : False : False
+          3 :  None :     2 :  None : False : False
+
+23 Declarations: x A y r w s u_index u C t_index_0 t_index t a b za zb zc m Za Zb Zc v_index v

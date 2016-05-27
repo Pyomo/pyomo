@@ -1,0 +1,852 @@
+
+== Pyomo Overview  ==
+
+=== Mathematical Modeling ===
+
+This chapter provides an introduction to Pyomo: Python Optimization Modeling Objects. 
+A more complete description is contained in <<PyomoBook>>. Pyomo
+supports the formulation and analysis of mathematical models for complex
+optimization applications.  This capability is commonly associated with
+algebraic modeling languages (AMLs) such as AMPL <<AMPL>> AIMMS <<AIMMS>>
+and GAMS <<GAMS>>.  Pyomo's modeling objects are embedded within Python, a
+full-featured high-level programming language that contains a rich set of
+supporting libraries.
+
+Modeling is a fundamental process in many aspects of scientific research,
+engineering and business.  Modeling involves the formulation of a simplified
+representation of a system or real-world object.  Thus, modeling tools like
+Pyomo can be used in a variety of ways:
+
+- *Explain phenomena* that arise in a system,
+
+- *Make predictions* about future states of a system,
+
+- *Assess key factors* that influence phenomena in a system,
+
+- *Identify extreme states* in a system, that might represent worst-case scenarios or
+ minimal cost plans, and
+
+- *Analyze trade-offs* to support human decision makers.
+
+Mathematical models represent system knowledge with a formalized
+mathematical language.
+The following mathematical concepts are central to modern
+modeling activities:
+
+variables::
+    Variables represent unknown or changing parts of a model (e.g. whether or not to make a decision, or the characteristic of a system outcome). The values taken by the variables are often referred to as a _solution_ and are usually an output of the optimization process.
+
+parameters::
+    Parameters represents the data that must be supplied to perform the optimization. In fact, in some settings the word _data_ is used in place of the word _parameters_. 
+
+relations::
+    These are equations, inequalities or other mathematical relationships that define how different parts of a model are connected to each other.
+
+goals::
+    These are functions that reflect goals and objectives for the system being modeled.
+
+The widespread availability of computing resources has made the
+numerical analysis of mathematical models a commonplace activity.
+Without a modeling language, the process of setting up input files,
+executing a solver and extracting the final results from the solver
+output is tedious and error prone.  This difficulty is compounded
+in complex, large-scale real-world applications which are difficult
+to debug when errors occur.  Additionally, there are many different
+formats used by optimization software packages, and few formats are
+recognized by many optimizers.  Thus the application of multiple
+optimization solvers to analyze a model introduces additional
+complexities.
+
+Pyomo is an AML that extends Python to include objects for mathematical modeling.
+Hart et al. <<PyomoBook>>, <<PyomoJournal>> compare Pyomo with other AMLs.  Although many 
+good AMLs have been developed for optimization models, the following are motivating 
+factors for the development of Pyomo: 
+
+Open Source::
+  Pyomo is developed within Pyomo's open source project to promote transparency of the modeling framework and encourage community development of Pyomo capabilities.
+
+Customizable Capability::
+  Pyomo supports a customizable capability through the extensive use of plug-ins to modularize software components.
+
+Solver Integration::
+  Pyomo models can be optimized with solvers that are written either in Python or in compiled, low-level languages.  
+
+Programming Language::
+  Pyomo leverages a high-level programming language, which has several advantages over custom AMLs:  a very robust language, extensive documentation, a rich set of standard libraries, support for modern programming features like classes and functions, and portability to many platforms.
+
+
+=== Overview of Modeling Components and Processes ===
+
+Pyomo supports an object-oriented design for the definition of
+optimization models.  The basic steps of a simple modeling process
+are:
+
+* Create model and declare components 
+* Instantiate the model
+* Apply solver
+* Interrogate solver results
+
+In practice, these steps may be applied repeatedly with different
+data or with different constraints applied to the model.  However,
+we focus on this simple modeling process to illustrate different
+strategies for modeling with Pyomo.
+
+A Pyomo _model_ consists of a collection of
+modeling _components_ that define different aspects of the model.
+Pyomo includes the modeling components that are commonly
+supported by modern AMLs:  index sets, symbolic parameters, decision
+variables, objectives, and constraints.
+These modeling components are defined in Pyomo through the following Python classes:
+
+Set::
+  set data that is used to define a model instance
+
+Param::
+  parameter data that is used to define a model instance
+
+Var::
+  decision variables in a model
+
+Objective::
+  expressions that are minimized or maximized in a model
+
+Constraint::
+  constraint expressions that impose restrictions on variable values in a model
+
+=== Abstract Versus Concrete Models ===
+
+A mathematical model can be defined using symbols that represent data values.  
+For example, the following equations represent a linear program
+(LP) to find optimal values for the vector latexmath:[$x$] with parameters latexmath:[$n$] and latexmath:[$b$], and parameter vectors latexmath:[$a$] and latexmath:[$c$]:
+[latexmath]
+++++++++++++++
+\begin{array}{lll}
+\min       & \sum_{j=1}^n c_j x_j &\\
+\mathrm{s.t.} & \sum_{j=1}^n a_{ij} x_j \geq b_i & \forall i = 1 \ldots m\\
+           & x_j \geq 0 & \forall j = 1 \ldots n
+\end{array}
+++++++++++++++
+NOTE: As a convenience, we use the symbol latexmath:[$\forall$] to mean ``for all'' or ``for each.'' 
+
+We call this an _abstract_ or _symbolic_ mathematical model since it relies on 
+unspecified parameter values.  Data values can be used to specify a _model instance_.
+The +AbstractModel+ class provides a context for defining and initializing abstract 
+optimization models in Pyomo when the data values will be supplied at the time a solution
+is to be obtained. 
+
+In some contexts a mathematical model can be directly defined
+with the data values supplied at the time of the model definition and built into the model.  
+We call these _concrete_ mathematical models.
+For example, the following LP model is a concrete instance of the previous abstract model:
+[latexmath]
+++++++++++++++
+\begin{array}{ll}
+\min       & 2 x_1 + 3 x_2\\
+\mathrm{s.t.} & 3 x_1 + 4 x_2 \geq 1\\
+           & x_1, x_2 \geq 0
+\end{array}
+++++++++++++++
+The +ConcreteModel+ class is used to define concrete 
+optimization models in Pyomo.
+
+=== A Simple Abstract Pyomo Model ===
+
+We repeat the abstract model already given:
+[latexmath]
+++++++++++++++
+\begin{array}{lll}
+\min       & \sum_{j=1}^n c_j x_j &\\
+\mathrm{s.t.} & \sum_{j=1}^n a_{ij} x_j \geq b_i & \forall i = 1 \ldots m\\
+           & x_j \geq 0 & \forall j = 1 \ldots n
+\end{array}
+++++++++++++++
+
+One way to implement this in Pyomo is as follows:
+----
+include::examples/PyomoGettingStarted/abstract1.py[]
+----
+
+NOTE: Python is interpreted one line at a time and if statements need to span a line
+for some reason then a line continuation character, which is backslash, must be used. In Python, indentation has meaning and must
+be consistent. Lines inside a function definition, for example, must be indented and the end of the indentation is used by Python
+to signal the end of the definition.
+
+We will now examine the lines in this example beginning with the import line 
+that is required in every Pyomo model. Its purpose is to make the symbols used by Pyomo known to Python.
+----
+from pyomo.core import *
+----
+
+The declaration of a model is also required. The use of the name +model+ is not required. Almost any name could be used, but we will use the name +model+ most of the time in this book. In this example, we are declaring that it will be an abstract model.
+----
+model = AbstractModel()
+----
+
+We declare the parameters latexmath:[$m$] and latexmath:[$n$] using the Pyomo +Param+ function. This function can take a
+variety of arguments; this example illustrates use of the +within+ option that is used by Pyomo to validate the
+data value that is assigned to the parameter. If this option were not given, then Pyomo would not object to any type of data being
+assigned to these parameters. As it is, assignment of a value that is not a non-negative integer will result in an error.
+----
+model.m = Param(within=NonNegativeIntegers)
+model.n = Param(within=NonNegativeIntegers)
+----
+
+Although not required, it is convenient to define index sets. In this example we use the +RangeSet+ function to
+declare that the sets will be a sequence of integers starting at 1 and ending at a value specified by the the parameters
++model.m+ and +model.n+. 
+----
+model.I = RangeSet(1, model.m)
+model.J = RangeSet(1, model.n)
+----
+
+The coefficient and right-hand-side data are defined as indexed parameters. When sets are given as arguments to the
++Param+ function, they indicate that the set will index the parameter.
+----
+model.a = Param(model.I, model.J)
+model.b = Param(model.I)
+model.c = Param(model.J)
+----
+
+NOTE: In Python, and therefore in Pyomo, any text after pound sign is considered to be a comment. 
+
+The next line
+interpreted by Python as part of the model declares the variable latexmath:[$x$]. The first argument to the
++Var+ function is a set, so it is defined as an index set for the variable. In this case the variable
+has only one index set, but multiple sets could be used as was the case for the declaration of the
+parameter +model.a+. The second argument specifies a domain for the variable. This information is part of the model
+and will passed to the solver when data is provided and the model is solved. Specification of the 
++NonNegativeReals+ domain implements the requirement that the variables be greater than or equal to zero.
+----
+# the next line declares a variable indexed by the set J
+model.x = Var(model.J, domain=NonNegativeReals)
+----
+
+In abstract models, Pyomo expressions are usually provided to objective function and constraint declarations via a function 
+defined with a 
+Python +def+ statement. The +def+ statement establishes a name for a function along with its arguments. When
+Pyomo uses a function to get objective function or constraint expressions, it always passes in the model (i.e., itself) as the
+the first argument so the model is always the first formal argument when declaring such functions in Pyomo. Additional arguments,
+if needed, follow. Since summation is an extremely common part of optimization models, Pyomo provides a flexible function to
+accommodate it. When given two arguments, the +summation+ function returns an expression for the sum of the product of the two arguments over their indexes. This
+only works, of course, if the two arguments have the same indexes. If it is given only one argument it returns an expression for
+the sum over all indexes of that argument. So in this example, when +summation+ is passed the arguments +model.c, model.x+ it returns an internal representation of the expression latexmath:[$\sum_{j=1}^{n}c_{j} x_{j}$].
+----
+def obj_expression(model):
+    return summation(model.c, model.x)
+----
+
+To declare an objective function, the Pyomo function called +Objective+ is used. The +rule+ argument
+gives the name of a function that returns the expression to be used. The default _sense_ is minimization. For
+maximization, the +sense=maximize+ argument must be used. The name that is declared, which is +OBJ+ in this
+case, appears in some reports and can be almost any name.
+----
+model.OBJ = Objective(rule=obj_expression)
+----
+
+Declaration of constraints is similar. A function is declared to deliver the constraint expression. In this case, there can be 
+multiple constraints of the same form because we index the constraints by latexmath:[$i$] in the expression
+latexmath:[$\sum_{j=1}^n a_{ij} x_j \geq b_i \;\;\forall i = 1 \ldots m$], which states that we need a constraint
+for each value of latexmath:[$i$] from one to latexmath:[$m$]. In order to parametrize the expression by latexmath:[$i$] we
+include it as a formal parameter to the function that declares the constraint expression. Technically, we could have used anything for 
+this argument, but that might be confusing. Using an +i+ for an latexmath:[$i$] seems sensible in this situation.
+----
+def ax_constraint_rule(model, i):
+    # return the expression for the constraint for i
+    return sum(model.a[i,j] * model.x[j] for j in model.J) >= model.b[i]
+----
+NOTE: In Python, indexes are in square brackets and function arguments are in parentheses.
+
+In order to declare constraints that use this expression, we use the Pyomo +Constraint+ function
+that takes a variety of arguments. In this case, our model specifies that we can have more than one constraint
+of the same form and we have created a set, +model.I+, over which these constraints can be indexed so
+that is the first argument to the constraint declaration function. The next argument gives the rule that will be used to generate
+expressions for the constraints. Taken as a whole, this constraint declaration says that a list of constraints indexed
+by the set +model.I+ will be created and for each member of +model.I+, the function +ax_constraint_rule+ will be 
+called and it will be passed the model object as well as the member of +model.I+.
+----
+# the next line creates one constraint for each member of the set model.I
+model.AxbConstraint = Constraint(model.I, rule=ax_constraint_rule)
+----
+
+In the object oriented view of all of this, we would say that +model+ object is a class instance of the +AbstractModel+ class, and +model.J+ is a 
++Set+ object that is contained by this model.
+Many modeling components in Pyomo can be optionally specified as _indexed_ _components_:
+collections of components that are referenced using one or more values.
+In this example, the parameter +model.c+ is indexed
+with set +model.J+. 
+
+In order to use this model, data must be given for the values of the parameters. Here is one file that
+provides data.
+----
+include::examples/PyomoGettingStarted/abstract1.dat[]
+----
+
+There are multiple formats that can be used to provide data to a Pyomo model, but the AMPL format works well
+for our purposes because it contains the names of the data elements together with the data. In AMPL data files, 
+text after a pound sign is treated as a comment. Lines generally do not matter, but statements must be terminated
+with a semi-colon.
+
+For this particular data file, there is one constraint, so the value of +model.m+ will be one and there are two
+variables (i.e., the vector +model.x+ is two elements long) so the value of +model.n+ will be two. These
+two assignments are accomplished with standard assignments. Notice that in AMPL format input, the name of the model is
+omitted.
+----
+param m := 1 ;
+param n := 2 ;
+----
+
+There is only one constraint, so only two values are needed for +model.a+. When assigning values to arrays and vectors in
+AMPL format, one way to do it is to give the index(es) and the the value. The line 1 2 4 causes +model.a[1,2]+ to get the value
+4. Since +model.c+ has only one index, only one index value is needed so, for example, the line 1 2 causes +model.c[1]+ to
+get the value 2. Line breaks generally do not matter in AMPL format data files, so the assignment of the value for the single index of 
++model.b+ is given on one line since that is easy to read.
+----
+param a :=
+1 1 3
+1 2 4
+;
+
+param c:=
+1 2
+2 3
+;
+
+param b := 1 1 ;
+----
+// vim:set syntax=asciidoc:
+
+When working with Pyomo (or any other AML), it is convenient to write abstract models in a somewhat more
+abstract way by using index sets that contain strings rather than index sets that are implied by
+latexmath:[$1,\ldots,m$] or the summation from 1 to latexmath:[$n$]. When this is done, the size of the set
+is implied by the input, rather than specified directly. Furthermore, the index entries may have no real order.
+Often, a mixture of integers and indexes and strings as indexes is needed in the same model. To start with
+an illustration of general indexes, consider a slightly different Pyomo implementation of the model we just presented.
+----
+include::examples/PyomoGettingStarted/abstract2.py[]
+----
+
+To get the same instantiated model, the following data file can be used.
+----
+include::examples/PyomoGettingStarted/abstract2a.dat[]
+----
+
+However, this model can also be fed different data for problems of the same general form using meaningful indexes.
+----
+include::examples/PyomoGettingStarted/abstract2.dat[]
+----
+
+=== A Simple Concrete Pyomo Model ===
+
+It is possible to get nearly the same flexible behavior from models declared to be abstract and models
+declared to be concrete in Pyomo; however, we will focus on a straightforward concrete example here where
+the data is hard-wired into the model file. Python programmers will quickly realize that the
+data could have come from other sources. 
+
+We repeat the concrete model already given:
+[latexmath]
+++++++++++++++
+\begin{array}{ll}
+\min       & 2 x_1 + 3 x_2\\
+\mathrm{s.t.} & 3 x_1 + 4 x_2 \geq 1\\
+           & x_1, x_2 \geq 0
+\end{array}
+++++++++++++++
+
+This is implemented as a concrete model as follows:
+----
+include::examples/PyomoGettingStarted/concrete1.py[]
+----
+
+Although rule functions can also be used to specify constraints and objectives, in this example we use the +expr+ option that is available only in concrete models. This option gives a direct specification of the expression.
+
+=== Solving the Simple Examples ===
+
+Pyomo supports modeling and scripting but does not install a solver
+automatically. In order to solve a model, there must be a solver installed
+on the computer to be used. If there is a solver, then the +pyomo+
+command can be used to solve a problem instance.
+
+Suppose that the solver named glpk (also known as glpsol) is installed on the computer. Suppose further that an abstract model is in the file named +abstract1.py+ and a data file for it is in the file named +abstract1.dat+. From the command prompt, with both files in the current directory, a solution can be obtained with the command:
+----
+pyomo abstract1.py abstract1.dat --solver=glpk
+----
+Since glpk is the default solver, there really is no need specify it so the
++--solver+ option can be dropped. 
+
+NOTE: There are two dashes before the command line option names such as
++solver+.
+
+To continue the example, if CPLEX is installed then it can be listed as the solver. The command to solve with
+CPLEX is
+----
+pyomo abstract1.py abstract1.dat --solver=cplex
+----
+This yields the following output on the screen:
+----
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.07] Creating model
+[    0.15] Applying solver
+[    0.37] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: 0.666666666667
+    Solver results file: results.json
+[    0.39] Applying Pyomo postprocessing actions
+[    0.39] Pyomo Finished
+----
+The numbers is square brackets indicate how much time was required for each step. Results are written to the file named +results.json+, which
+has a special structure that makes it useful for post-processing. To see a summary of results written to the screen, use the
++--summary+ option:
+----
+pyomo abstract1.py abstract1.dat --solver=cplex --summary
+----
+To see a list of Pyomo command line options, use:
+----
+pyomo --help
+----
+NOTE: There are two dashes before +help+.
+
+For a concrete model, no data file is specified on the Pyomo command line.
+
+== Sets ==
+
+Sets can be declared using the +Set+ and +RangeSet+ functions or by
+assigning set expressions.  The simplest set declaration creates
+a set and postpones creation of its members:
+----
+model.A = Set()
+----
+
+The +Set+ function takes optional arguments such as:
+
+* doc = String describing the set
+* dimen = Dimension of the members of the set
+* filter = A boolean function used during construction to indicate if a potential new member should be assigned to the set
+* initialize = A function that returns the members to initialize the set.
+ordered = A boolean indicator that the set is ordered; the default is +False+
+* validate = A boolean function that validates new member data
+* virtual = A boolean indicator that the set will never have elements; it is unusual for a modeler to create a virtual set; they are typically used as domains for sets, parameters and variables
+* within = Set used for validation; it is a super-set of the set being declared.
+
+To create a set whose members will be two dimensional, use
+----
+model.B = Set(dimen=2)
+----
+
+To create a set of all the numbers in set +model.A+ doubled, one could use
+----
+def doubleA_init(model):
+    return (i*2 for i in model.A)
+model.C = Set(initialize=DoubleA_init)
+----
+As an aside we note that as always in Python, there are lot
+of ways to accomplish the same thing. Also, note that this
+will generate an error if +model.A+ contains elements for
+which multiplication times two is not defined.
+
+The +initialize+ option can refer to a Python set, which can be returned by a function or given directly as in
+----
+model.D = Set(initialize=['red', 'green', 'blue'])
+----
+
+The +initialize+ option can also specify a
+function that is applied sequentially to generate set members. Consider the case of
+a simple set. In this case, the initialization
+function accepts a set element number and model and
+returns the set element associated with that number:
+----
+def Z_init(model, i):
+    if i > 10:
+        return Set.End
+    return 2*i+1
+model.Z = Set(initialize=Z_init)
+----
+The +Set.End+ return value terminates input to the set. Additional information about iterators for set initialization is
+in <<PyomoBook>>.
+
+NOTE: Data specified in an input file will override the data specified by the initialize options.
+
+If sets are given as arguments to +Set+ without keywords, they are interpreted as indexes for an array of sets. For example, to create an array of sets
+that is indexed by the members of the set +model.A+, use
+----
+model.E = Set(model.A)
+----
+
+Arguments can be combined. For example, to create an array of sets with three dimensional members indexed by set +model.A+, use
+----
+model.F = Set(model.A, dimen=3)
+----
+
+The +initialize+ option can be used to
+create a set that contains a sequence of numbers, but
+the +RangeSet+ function provides a concise mechanism for simple
+sequences. This function
+takes as its arguments a start value, a final value, and a
+step size. If the +RangeSet+ has only a single argument, then that value defines the final value in the sequence; the first value and step size default to one. If two values given, they are the first and last value in the sequence and the step size defaults to one. For
+example, the following declaration creates a set with the 
+numbers 1.5, 5 and 8.5:
+----
+model.G = RangeSet(1.5, 10, 3.5)
+----
+
+Sets may also be created by assigning other Pyomo sets as in these examples that also
+illustrate the set operators union, intersection, difference, and exclusive-or:
+----
+model.H = model.A
+model.I = model.A | model.D # union
+model.J = model.A & model.D # intersection
+model.K = model.A - model.D # difference
+model.L = model.A ^ model.D # exclusive-or
+----
+
+=== Predefined Virtual Sets ===
+
+For use in specifying domains for sets, parameters and variables, Pyomo
+provides the following pre-defined virtual sets:
+
+* Any:  all possible values
+* Reals :  floating point values
+* PositiveReals:  strictly positive floating point values 
+* NonPositiveReals:  non-positive floating point values 
+* NegativeReals:  strictly negative floating point values 
+* NonNegativeReals:  non-negative floating point values 
+* PercentFraction:  floating point values in the interval [0,1] 
+* Integers:  integer values 
+* PositiveIntegers:  positive integer values 
+* NonPositiveIntegers:  non-positive integer values 
+* NegativeIntegers:  negative integer values 
+* NonNegativeIntegers:  non-negative integer values 
+* Boolean:  boolean values, which can be represented as False/True, 0/1, ’False’/’True’ and ’F’/’T’
+* Binary: same as boolean
+
+For example, if the set +model.M+ is declared to be within the virtual set +NegativeIntegers+ then 
+an attempt to add anything other than a negative integer will result in an error. Here
+is the declaration:
+----
+model.M = Set(within=NegativeIntegers)
+----
+
+=== Sparse Index Sets ===
+
+It is common for an index set to be used to index variables
+and parameters in a constraint as well as to index other index
+sets. For example, one may want to have a constraint that holds
+----
+for i in model.I, k in model.K, v in model.V[k]
+----
+
+There are many ways to accomplish this, but one good way
+is to create a set of tuples composed of all of +model.k, model.V[k]+ pairs.
+This can be done as follows:
+----
+def kv_init(model):
+    return ((k,v) for k in model.K for v in model.V[k])
+model.KV=Set(dimen=2, initialize=kv_init)
+----
+So then if there was a constraint defining rule such as
+----
+def MyC_rule(model, i, k, v):
+   return ...
+----
+Then a constraint could be declared using
+----
+model.MyConstraint = Constraint(model.I,model.KV,rule=c1Rule)
+----
+
+Here is the first few lines of a model that illustrates this:
+
+----
+from pyomo.core import *
+
+model = AbstractModel()
+
+model.I=Set()
+model.K=Set()
+model.V=Set(model.K)
+
+def kv_init(model):
+    return ((k,v) for k in model.K for v in model.V[k])
+model.KV=Set(dimen=2, initialize=kv_init)
+
+model.a = Param(model.I, model.K)
+
+model.y = Var(model.I)
+model.x = Var(model.I, model.KV)
+
+#include a constraint
+#x[i,k,v] <= a[i,k]*y[i], for i in model.I, k in model.K, v in model.V[k]
+
+def c1Rule(model,i,k,v):
+   return model.x[i,k,v] <= model.a[i,k]*model.y[i]
+model.c1 = Constraint(model.I,model.KV,rule=c1Rule) 
+----
+
+== Parameters ==
+
+The word "parameters" is used in many settings. When discussing a Pyomo model, we use the word
+to refer to data that must be provided in order to find an optimal (or good) assignment of values
+to the decision variables. Parameters are declared with the +Param+ function, which takes arguments
+that are very similar to the +Set+ function. For example, the following code snippet declares sets 
++model.A+, +model.B+ and then a parameter array +model.P+ that is indexed by +model.A+:
+----
+model.A = Set()
+model.B = Set()
+model.P = Param(model.A, model.B)
+----
+
+In addition to sets that serve as indexes, the +Param+ function takes
+the following command options:
+
+* default = The value absent any other specification.
+* doc = String describing the parameter
+* initialize = A function (or Python object) that returns the members to initialize the parameter values.
+* rule = (this is a synonym for +initilize+)
+* validate = A boolean function with arguments that are the prospective parameter value, the parameter indices and the model.
+* within = Set used for validation; it specifies the domain of the parameter values.
+
+These options perform in the same way as they do for +Set+. For example,
+suppose that +Model.A = RangeSet(1,3)+, then there are many ways to create a parameter that is a square matrix with 9, 16, 25 on the main diagonal zeros elsewhere, here are two ways to do it. First using a Python object to initialize:
+----
+v={}
+v[1,1] = 9
+v[2,2] = 16
+v[3,3] = 25
+model.S = Param(model.A, model.A, initialize=v, default=0)
+----
+And now using an initialization rule that is automatically called once for
+each index tuple (remember that we are assuming that +model.A+ contains
+1,2,3)
+----
+def s_init(model, i, j):
+    if i == j:
+        return i*i
+    else:
+        return 0.0
+model.S = Param(model.A, model.A, rule=s_init)
+----
+In this example, the index set contained integers, but index sets need not be numeric. It is very common to use strings.
+
+NOTE: Data specified in an input file will override the data specified by the initialize options.
+
+
+
+== Variables ==
+
+Variables are intended to ultimately be given values by an optimization package. The are
+declared and optionally bounded, given initial values, and documented using
+the Pyomo +Var+ function. If index sets are given as arguments to this function
+they are used to index the variable, other optional directives include:
+
+* bounds = A function (or Python object) that gives a (lower,upper) bound pair for the variable
+* domain = A set that is a super-set of the values the variable can take on.
+* initialize = A function (or Python object) that gives a starting value for the variable; this is particularly important for non-linear models
+* within = (synonym for +domain+)
+
+The following code snippet illustrates some aspects of these options by declaring a _singleton_ (i.e. unindexed) variable named +model.LumberJack+
+that will take on real values between zero and 6 and it initialized to be 1.5:
+----
+model.LumberJack = Var(within=NonNegativeReals, bounds=(0,6), initialize=1.5)
+----
+Instead of the +initialize+ option, initialization is sometimes done with a Python assignment statement
+as in
+----
+model.LumberJack = 1.5
+----
+
+For indexed variables, bounds and initial values are often specified by a rule (a Python function) that
+itself may make reference to parameters or other data. The formal arguments to these rules begins
+with the model followed by the indexes. This is illustrated in the following code snippet that
+makes use of Python dictionaries declared as lb and ub that are used by a function
+to provide bounds:
+----
+model.A = Set(initialize=['Scones', 'Tea']
+lb = {'Scones':2, 'Tea':4}
+ub = {'Scones':5, 'Tea':7}
+def fb(model, i):
+   return (lower[i], upper[i])
+model.PriceToCharge = Var(model.A, domain=PositiveInteger, bounds=fb)
+----
+
+NOTE: Many of the pre-defined virtual sets that are used as domains imply bounds. A strong
+example is the set +Boolean+ that implies bounds of zero and one.
+
+== Objectives ==
+
+An objective is a function of variables that returns a value that an optimization package
+attempts to maximize or minimize. The +Objective+ function in Pyomo declares
+an objective. Although other mechanisms are possible, this function is typically
+passed the name of a another function that gives the expression. 
+Here is a very simple version of such a function that assumes +model.x+ has
+previously been declared as a +Var+:
+----
+def ObjRule(model):
+    return 2*model.x[1] + 3*model.x[2]
+model.g = Objective(rule=ObjRule)
+----
+
+It is more common for an objective function to refer to parameters as in this example
+that assumes that +model.p+ has been declared as a parameters and that +model.x+ has been declared with
+the same index set, while +model.y+ has been declared as a singleton:
+----
+def profrul(model):
+   return summation(model.p, model.x) + model.y
+model.Obj = Objective(rule=ObjRule, sense=maximize)
+----
+This example uses the +sense+ option to specify maximization. The default sense is
++minimize+.
+
+== Constraints ==
+
+Most constraints are specified using equality or inequality expressions
+that are created using a rule, which is a Python function. For example, if the variable
++model.x+ has the indexes 'butter' and 'scones', then this constraint limits
+the sum for them to be exactly three:
+----
+def teaOKrule(model):
+    return(model.x['butter'] + model.x['scones'] == 3)
+model.TeaConst = Constraint, rule=teaOKrule)
+----
+
+Instead of expressions involving equality (==) or inequalities (`<=` or `>=`),
+constraints can also be expressed using a 3-tuple if the form (lb, expr, ub)
+where lb and ub can be +None+, which is interpreted as 
+lb `<=` expr `<=` ub. Variables can appear only in the middle expr. For example,
+the following two constraint declarations have the same meaning:
+----
+model.x = Var()
+
+def aRule(model):
+   return model.x >= 2
+Boundx = Constraint(rule=aRule)
+
+def bRule(model):
+   return (2, model.x, None)
+Boundx = Constraint(rule=bRule)
+----
+For this simple example, it would also be possible to declare 
++model.x+ with a +bound+ option to accomplish the same thing.
+
+Constraints (and objectives) can be indexed by lists or sets. When
+the declaration contains lists or sets as arguments, the elements are iteratively
+passed to the rule function. If there is more than one, then the cross product
+is sent. For example the following constraint could be interpreted as 
+placing a budget of latexmath:[$i$] on the latexmath:[$i^{\mbox{th}}$] item
+to buy where the cost per item is given by the parameter +model.a+:
+----
+model.A = RangeSet(1,10)
+model.a = Param(model.A, within=PostiveReals)
+model.ToBuy = Var(model.A)
+def bud_rule(model, i):
+    return model.a[i]*model.ToBuy[i] <= i
+aBudget = Constraint(model.A)
+----
+
+NOTE: Python and Pyomo are case sensitive so +model.a+ is not the same
+as +model.A+.
+
+== Rules to Generate Expressions ==
+
+Both objectives and constraints make use of rules to generate
+expressions. These are Python functions that return the appropriate
+expression. These are first-class functions that can access
+global data as well as data passed in, including the model object.
+
+Operations on model elements results in expressions, which seems
+natural in expression like the constraints we have seen so far. It is also
+possible to build up expressions. The following example illustrates this along
+with a reference to global Pyton data in the form of a Python variable called +switch+:
+----
+switch = 3
+
+model.A = RangeSet(1, 10)
+model.c = Param(model.A)
+model.d = Param()
+model.x = Var(model.A, domain=Boolean)
+
+def pi_rule(model)
+    accexpr = summation(model.c, model.x)
+    if switch >= 2:
+        accexpr = accexpr - model.d
+    return accexpr >= 0.5
+PieSlice = Constraint(rule=pi_rule)
+----
+In this example, the constraint that is generated depends on the value
+of the Python variable called +switch+. If the value is 2 or greater, then 
+the constraint is +summation(model.c, model.x) - model.d >= 0.5+; otherwise,
+the +model.d+ term is not present.
+
+CAUTION: Because model elements result in expressions, not values, the following
+does not work as expected in an abstract model!
+----
+model.A = RangeSet(1, 10)
+model.c = Param(model.A)
+model.d = Param()
+model.x = Var(model.A, domain=Boolean)
+
+def pi_rule(model)
+    accexpr = summation(model.c, model.x)
+    if model.d >= 2:  # NOT in an abstract model!!
+        accexpr = accexpr - model.d
+    return accexpr >= 0.5
+PieSlice = Constraint(rule=pi_rule)
+----
+The trouble is that +model.d >= 2+ results in an expression, not its evaluated value. Instead use +if value(model.d) >= 2+
+
+== Non-linear Expressions ==
+
+Pyomo supports non-linear expressions and can call non-linear solvers such as Ipopt.
+
+== Data Input ==
+
+For abstract models, Pyomo supports data input from a data command file or using ModelData object. 
+
+=== Data Command Files ===
+The syntax of a data command files is based on AMPL’s data commands. Often, however, the data command
+file refers to files in other formats.
+
+Here are the commands of interest to us that can be used in data command files:
+
+• +set+ declares set data.
+• +param+ declares a table of parameter data, which can also
+include the declaration of the set data used to index parameter data.
+• +import+ defines import
+from external data sources such as ASCII table files, CSV files, ranges in
+spreadsheets, and database tables.
+• +include+ specifies a data command file that is to be pro-
+cessed immediately.
+• The +data+ and +end+ commands do not perform any actions, but they provide
+compatibility with AMPL scripts that define data commands.
+
+The +namespace+ declaration allows data commands to be organized into named
+groups that can be enabled or disabled during model construction.
+
+NOTE: Apart from the +set+ and +param+ commands, Pyomo’s data commands do not exactly correspond to AMPL data
+commands. In particular, the syntax of
+the AMPL table command allows the user to specify complex mappings from
+table data values to corresponding model parameters and sets. The corresponding
+Pyomo import command supports much simpler mappings. Complex mappings
+are accomplished in Pyomo via scripting.
+
+=== ModelData Objects ===
+
+The ModelData object reads in data
+sequentially. Any data previously read is overwritten.
+
+Here is an excerpt from an example in <<PyomoBook>> that illustrates
+the use of ModelData objects:
+----
+from pyomo.core import ModelData
+from pyomo.opt import SolverFactory
+from DiseaseEstimation import model
+
+modeldata = ModelData()
+modeldata.add(’DiseaseEstimation.dat’)
+modeldata.add(’DiseasePop.dat’)
+modeldata.read(model)
+instance = model.create(modeldata)
+----
+
+// vim: set syntax=asciidoc:

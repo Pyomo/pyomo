@@ -1,0 +1,225 @@
+
+== Quick Start ==
+
+This section provides a quick guide for installing and using the
+latest Pyomo release.  Note that the following installation
+instructions assume that the user has network access.  Strategies
+for off-line installation are described later in this book.
+
+=== Installing Pyomo ===
+
+==== Installing with a Scientific Python Distribution ====
+
+Linux, Mac OS/X and other Unix variants typically have Python
+pre-installed.  However, scientific Python distributions that contain
+the SciPy Stack include many utilities that Pyomo users will find
+useful, including SciPy optimizers and MatplotLib plotting capabilities.
+See SciPy's list of link:http://www.scipy.org/install.html[scientific
+Python distributions].  
+
+.Step 1: Install Python
+
+Many scientific Python distributions are available on Linux, Windows
+and Mac.  Download and execute an installer that is suitable for
+your platform.
+
+.Step 2: Install Pyomo
+
+Scientific Python distributions include the `pip` package that is used
+to download and install the latest Pyomo release.  
+The Python
+installation includes a `bin` or `Scripts` directory that includes a `pip`
+script.
+Add this directory to your `PATH` so you can execute the `pip` script. If you have
+administrator access, then you can install Pyomo in your system
+Python installation by executing the following in a shell:
+[[shell]]
+----
+pip install Pyomo
+----
+You can also install Pyomo in a user's `HOME` directory. This
+does not require administrator access, but the Pyomo package appears
+to be installed with the system Python.  Execute the following in
+a shell:
+[[shell]]
+----
+pip install --user Pyomo
+----
+
+
+==== Installing with a Standard Python Distribution ====
+
+Linux, Mac OS/X and other Unix variants typically have Python
+pre-installed, and the `python` command will typically be available
+without modifying your `PATH` environment.
+
+.Step 1: Install pip
+
+For Python versions before 3.4, the `pip` package wll need to be
+explicitly installed.  On Linux, you may be able to install `pip`
+with a package manager like `yum` or `apt-get`.  Alternatively, you
+can securely download the
+link:https://raw.github.com/pypa/pip/master/contrib/get-pip.py[get-pip.py]
+script using your web browser (or a command-line tool like `curl`).
+Then, you execute the following in a shell:
+[[shell]]
+----
+python get-pip.py
+----
+
+.Step 2: Install Pyomo
+
+If you have administrator access, then you can install Pyomo in your system Python installation by executing the following in a shell:
+[[shell]]
+----
+pip install pyomo
+----
+You can also install Pyomo in a user's `HOME` directory. This does not require administrator 
+access, but the Pyomo package appears to be installed with the system Python.
+Execute the following in a shell:
+[[shell]]
+----
+pip install --user pyomo
+----
+
+=== Installing Auxilliary Software ===
+
+Pyomo has conditional dependencies on a variety of third-party
+packages.  These are not installed with Pyomo, and many of them can
+be installed by installing the `pyomo.extras` package:
+[[shell]]
+----
+pip install pyomo.extras
+----
+
+NOTE: Pyomo has a conditional dependency on the `numpy` and
+`scipy` packages.  If you explicitly install `numpy` or `scipy`, then 
+`pyomo.extras` should be installed afterward.
+
+Pyomo does not include any stand-alone optimization solvers.
+Consequently, most users will want to install third-party solvers to
+analyze optimization models built with Pyomo.  The command
+[[shell]]
+----
+pyomo help -s
+----
+provides documentation about Pyomo's solver interfaces, and it will
+dynamically check for available solvers.
+
+NOTE: Users with network access can remotely optimize Pyomo models
+on the NEOS server, so optimization solvers do not need to be
+installed to get started with Pyomo.
+
+
+=== Getting Started ===
+
+==== Running Python ====
+
+If the +PATH+ environment has been configured to include the system
+Python installation, then the Pyomo scripts can be executed without
+further configuration.  The simplest way to get started with Pyomo
+is to import the `pyomo` package that you wish to work with.  For
+example, you would import `pyomo.core` to use Pyomo:
+[[shell]]
+----
+\$ python
+Python 2.7.5 (default, Aug  1 2013, 01:01:17) 
+[GCC 4.2.1 Compatible Apple Clang 4.1 ((tags/Apple/clang-421.11.66))] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import pyomo.core
+>>> 
+-----
+See link:https://software.sandia.gov/trac/pyomo/wiki/Documentation[Getting
+Started with Pyomo] for further discussion of how to use Pyomo
+packages.
+
+==== Optimizing with a NEOS Solver ====
+
+As a quick test of your installation, you can used Pyomo to analyze the
+diet problem.  Download the +diet.py+ model file and +diet1.dat+
+data file here: https://software.sandia.gov/svn/public/pyomo/pyomo/trunk/examples/pyomo/diet.
+
+If you have network access, then you can run the +pyomo+ command
+to optimize this model:
+[[shell]]
+-----
+pyomo solve --solver-manager=neos --solver=cbc diet1.py diet.dat
+-----
+You should get an output like the following:
+[[shell]]
+----
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.03] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: 2.81
+    Solver results file: results.json
+[    0.14] Applying Pyomo postprocessing actions
+[    0.14] Pyomo Finished
+----
+
+==== Optimizing with a Local Solver ====
+
+The `pyomo` command can also use a solver that is installed
+locally.  For example, if you have installed the +glpk+ software,
+then you can optimize this model as follows:
+[[shell]]
+-----
+pyomo solve --solver=glpk diet1.py diet.dat
+-----
+
+
+== Overview ==
+
+Pyomo is available under the
+link:https://software.sandia.gov/trac/pyomo/wiki/Licensing[BSD]
+open-source license.  The following table describes standard installation options:
+
+image::Table_overview_small.png[align="center",alt="Installation Overview"]
+
+Installation options can be differentiated based on where the Pyomo
+source is downloaded and where Pyomo is installed.  Pyomo can be installed from
+
+1. PyPI     - the standard Python distribution server
+
+2. ZIP File - a ZIP file that contains Pyomo source files
+
+3. Trunk    - the subversion repository that contains the latest Pyomo revisions.  
+
+Pyomo can be installed in
+
+a. System Python         - Python's site packages directory
+
+b. User HOME             - the user's HOME directory
+
+c. Virtual Environment   - a Python virtual environment that is created in a user-specified directory
+
+Only a subset of these options are recommended for general users,
+and only a few others are supported for developers.
+
+The <<Prerequisites,Prerequisites>> chapter discusses packages that
+you may need to install Pyomo.  Pyomo requires one of the following
+Python versions: 2.6 2.7, 3.2, 3.3 or 3.4.  Pyomo also requires the
+installation of several freely available Python libraries, but these
+are automatically installed with Pyomo.
+
+Chapter <<InstallingPyomoUsers,Installing Pyomo for Users>> describes
+four installation options for Pyomo users.  This chapter discusses
+installation with `pip` and `pyomo_install`.
+Chapter <<InstallingPyomoDevelopers,Installing Pyomo for Developers>>
+describes three additional installation options for Pyomo developers.
+These installation options can only be performed with `pyomo_install`.
+
+Additional installation details are provided in subsequent chapters:
+
+* <<OptionalPackages,Optional Packages>>:  Other packages that Pyomo can optionally leverage.
+* <<InstallationFAQ,Installation Issues>>:  Helpful information for resolving issues with Pyomo installation.
+* <<Platforms,Platform Notes>>:  Documentation of platform-specific issues, especially for installation.
+* <<Solvers,Solver Notes>>:  Documentation for third-party solvers that can be called from Pyomo.
+
+// vim: set syntax=asciidoc:

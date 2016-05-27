@@ -1,0 +1,23 @@
+Getting Started with Pyomo 3.1
+==============================
+:doctype: book
+
+include::book-start.txt[]
+
+include::intro.txt[]
+
+include::pyomo.txt[]
+
+include::pysp.txt[]
+
+include::scripts.txt[]
+
+include::solvers.txt[]
+
+include::blackbox.txt[]
+
+include::reference.txt[]
+
+include::book-end.txt[]
+
+// vim: set syntax=asciidoc:

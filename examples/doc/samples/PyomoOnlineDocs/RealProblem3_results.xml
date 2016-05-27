@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+ <ColinResponse>
+  <Gradient>
+   1 -1 -0.79999999999999982 0.0040000000000000105
+  </Gradient>
+  <NonlinearConstraintValues>
+   -0.8899999999999999 4.8300999999999998
+  </NonlinearConstraintValues>
+  <FunctionValue>
+   0.2701
+  </FunctionValue>
+  <Hessian>
+   (2, 2, 2) (3, 3, 0.12000000000000022)
+  </Hessian>
+  <Jacobian>
+   (0, 0, 1) (0, 1, 1) (0, 2, 1) (0, 3, 1) (1, 0, 0.02) (1, 1, -0.20000000000000001) (1, 2, 2.2000000000000002) (1, 3, -3.7999999999999998)
+  </Jacobian>
+ </ColinResponse>

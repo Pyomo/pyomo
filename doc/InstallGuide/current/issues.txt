@@ -1,0 +1,127 @@
+
+[[InstallationFAQ]]
+== Installation Issues ==
+
+Here are some of the most common issues encountered by Pyomo users.
+If you do not see your question answered here, the best route for
+getting an answer is by engaging the Pyomo community through the
+link:http://groups.google.com/group/pyomo-forum[pyomo-forum mailing
+list].
+
+=== Python Installation ===
+
+The standard Python distribution is built with the C language, and
+thus this is sometimes called CPython.  CPython distributions are
+available for all major platforms, and this is the most common
+version of Python that is used in practice.  Linux and Macintosh
+distributions commonly include CPython, and no additional configuration
+is required to execute the Python interpreter.
+
+On Windows platforms, CPython can be easily installed with an
+installer executable.  However, the user must edit the PATH environment
+variable to include the Python installation path.
+
+Other noteworthy implementations of Python are Jython, written in
+Java, IronPython, written for the Common Language Runtime, and PyPy,
+a Python interpreter writen in Python.  A major difference between
+CPython, Jython and IronPython is that they support extensions with
+C, Java and .NET application framework respectively.  PyPy supports
+these extensions depending on the underlying Python interpreter,
+and it uses a JIT compiler to improve the execution of Python code.
+
+Pyomo is developed and tested using CPython.  Other Python implementations have
+been evaluated, and their status is summarized here:
+
+* Jython:  The +virtualenv+ package is not supported in Jython.
+This package is critical for the development, testing and deployment
+of Pyomo.
+
+* IronPython:  This Python implementation does not currently support 
+installation with +setuptools+ or +distribute+, which are commonly used installation
+mechanisms in CPython.  Pyomo depends on these packages.
+
+* PyPy:  Many Pyomo package install with PyPy.  There remain some issues with
+reference counting in Python, which are documented in Pyomo ticket #4437.
+
+
+=== Pyomo Installation ===
+
+==== Help with `pyomo_install` ====
+
+There are numerous options to the `pyomo_install` script, which can be displayed by typing:
+[[shell]]
+----
+./pyomo_install --help
+----
+
+IMPORTANT: Make sure you do ''not'' have the `PYTHONHOME` environment
+variable defined prior to installing with `pyomo_install`.  Such a
+definition interferes with the construction of the Pyomo virtualized
+Python environment.
+
+
+==== Using the `HTTP_PROXY` Environment Variable ====
+
+In many computing environments, it may be necessary to set the
+`HTTP_PROXY` environment variable to use the `wget` and `pyomo_install`
+commands.  A typical value for this variable is something like
+"http://foo.institution.domain:80".  Your local system administrator
+can help you assess whether you need an HTTP proxy for web access.
+For example, at Sandia (New Mexico only) the proxy
+`http://sonproxy.sandia.gov:80` is used for the SON network, and
+`http://wwwproxy.sandia.gov:80` is used for the SRN network.
+
+
+====  Installation error: Filename ... does not start with any of these prefixes: ... ====
+
+We have seen the error:
+
+----
+Installation error: Filename ... does not start with any of these prefixes: ...]
+----
+when installing on Windows.  This appears to be a limitation of the
+virtual environment logic.  Specifically, this was triggered by
+explicitly specifying the Python path with a lower-case drive name.
+For example:
+[[shell]]
+----
+c:\Python27\python.exe pyomo_install
+----
+Using a capital drive name resolved this issue:
+[[shell]]
+----
+C:\Python27\python.exe pyomo_install
+----
+
+
+====  Installation error: Setup script exited with error: command 'gcc' failed ... ====
+
+Several Python packages that Pyomo relies on (e.g., coverage and
+PyYAML) include compiled "C" extensions.  This error indicated that
+the extensions did not successfully compile.  In most cases, the
+root cause is that the Python C headers are not installed or available
+on your system.  For Linux/UNIX users, make sure you have the
+`python-devel` package installed.
+
+=== Using Subversion with a Proxy ===
+
+Subversion does not use the `HTTP_PROXY` environment variable to
+configure its behavior. Rather, this must be done by modifying the
+local subversion configuration.
+
+=== Python environment variables ===
+
+The `PYTHONPATH` and `PYTHONHOME` environment variables are used
+to customize the way that Python is configured.  The `PYTHONHOME`
+variable defines the location of the standard Python libraries that
+are used, and `PYTHONPATH` augments the default search path for
+module files.
+
+When Pyomo is installed in a virtual Python environment, these
+environment variables are generally not necessary.  We have seen
+many cases where Pyomo scripts failed to operate properly when these
+variables were defines, so we generally recommend that the user
+disable these variables before installing Pyomo in a virtual
+environment.
+
+// vim: set syntax=asciidoc:

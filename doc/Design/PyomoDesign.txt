@@ -1,0 +1,13 @@
+Pyomo Online Documentation 4.1
+==============================
+:doctype: book
+
+include::intro.txt[]
+
+include::components.txt[]
+
+include::flatten.txt[]
+
+include::multilayer.txt[]
+
+// vim: set syntax=asciidoc:

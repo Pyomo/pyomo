@@ -1,0 +1,29 @@
+
+set TASKS := T1 T2 T3 T4 T5;
+set PEOPLE := P1 P2 P3 P4;
+set SLOTS := S1 S2;
+
+param amt (tr):  
+         T1    T2    T3    T4    T5 :=
+    P1    1     0     2     0     0
+    P2    0     1     2     0     0
+    P3    0     0     1     2     0
+    P4    0     0     0     1     2 ;
+
+param:   ntasks :=
+    T1   1
+    T2   1
+    T3   1
+    T4   1
+    T5   1 ;
+
+param:   minp   maxp :=
+    T1   1      5
+    T2   1      5
+    T3   1      5
+    T4   1      5
+    T5   1      5 ;
+
+param:   nrooms :=
+    S1   5
+    S2   5 ;

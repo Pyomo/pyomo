@@ -1,0 +1,30 @@
+Pyomo Data Managers
+-------------------
+  csv
+      CSV file interface
+  dat
+      Pyomo data command file interface
+  json
+      JSON file interface
+  pymysql
+      pymysql database interface
+  pyodbc
+      pyodbc database interface
+  pypyodbc
+      pypyodbc database interface
+  sqlite3
+      sqlite3 database interface
+  tab
+      TAB file interface
+  xls
+      Excel XLS file interface
+  xlsb
+      Excel XLSB file interface
+  xlsm
+      Excel XLSM file interface
+  xlsx
+      Excel XLSX file interface
+  xml
+      XML file interface
+  yaml
+      YAML file interface

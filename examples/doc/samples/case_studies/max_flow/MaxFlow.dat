@@ -1,0 +1,23 @@
+set nodes := Zoo A B C D E Home;
+set arcs := (Zoo,A) (Zoo,B) (A,C) (A,D) (B,A) (B,C) (C,D) (C,E) (D,E) (D,Home) (E,Home);
+set sources := Zoo;
+set sinks := Home;
+
+param: supply :=
+Zoo 1000000;
+
+param: demand :=
+Home 0;
+
+param: upperBound :=
+Zoo A 11
+Zoo B 8
+A C 5
+A D 8
+B A 4
+B C 3
+C D 12
+C E 4
+D E 5
+D Home 10
+E Home 6;

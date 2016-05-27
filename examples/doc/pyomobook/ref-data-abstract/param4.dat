@@ -1,0 +1,6 @@
+set A := a c e;
+
+param B default 0.0 := 
+c 30
+e 50
+;

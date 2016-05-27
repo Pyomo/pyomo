@@ -1,0 +1,54 @@
+
+
+[colophon]
+Bibliography
+------------
+
+- [[[AIMMS]]] http://www.aimms.com/
+
+- [[[AMPL]]] http://www.ampl.com
+
+- [[[GAMS]]] http://www.gams.com
+
+- [[[Coliny]]] Hart and Siirola. Coliny Technical Report. Sandia National Labs.
+
+- [[[Dakota]]] Eldred et al.  Dakota Technical Report. Sandia National Labs.
+
+- [[[MPG]]] TODO: math programming guide
+
+- [[[PyomoBook]]] Hart, W.E., Laird, C., Watson, J.-P., Woodruff, D.L., Pyomo – Optimization Modeling in Python, Springer, 2012.
+
+- [[[PyomoJournal]]] William E. Hart, Jean-Paul Watson, David L. Woodruff, "Pyomo: modeling and solving mathematical programs in Python," Mathematical Programming Computation, Volume 3, Number 3, August 2011
+
+- [[[BirgeLouveauxBook]]] Introduction to Stochastic Programming; J.R. Birge and F. Louveaux; Springer Series in Operations Research; New York: Springer, 1997
+
+[colophon]
+Colophon
+--------
+
+This book was created using +asciidoc+ software.
+
+The Sandia National Laboratories Laboratory-Directed Research and
+Development Program and the U.S. Department of Energy Office of Science
+Advanced Scientific Computing Research Program funded portions of this
+work.
+
+Sandia National Laboratories is a multi-program laboratory managed and
+operated by Sandia Corporation, a wholly owned subsidiary of Lockheed
+Martin Corporation, for the U.S. Department of Energy's National Nuclear
+Security Administration under contract DE-AC04-94AL85000.
+SAND 2012-1572P.
+
+image::SNL_logo.{epspng}[scaledwidth="50%",align="center",alt="Sandia National Laboratories"]
+image::DOE_logo.{epspng}[scaledwidth="40%",align="center",alt="United States Department of Energy"]
+
+
+[index]
+Example Index
+-------------
+////////////////////////////////////////////////////////////////
+The index is normally left completely empty, it's contents being
+generated automatically by the DocBook toolchain.
+////////////////////////////////////////////////////////////////
+
+// vim: set syntax=asciidoc:

@@ -1,0 +1,62 @@
+set places := Albany Abq Atlanta Boise Boston Casper Charleston 
+              Chicago;
+set routes := (Albany,Casper) (Albany,Boise) (Abq,Boise) 
+             (Abq,Boston) (Atlanta,Boston) (Atlanta,Chicago) 
+             (Boise,Casper) (Boise, Charleston) 
+             (Boston, Charleston) (Boston,Chicago);
+             
+param supply :=
+Albany 10000
+Abq 7000
+Atlanta 9000
+Boise 0
+Boston 3000
+Casper 0
+Charleston 0
+Chicago 0;
+
+param demand :=
+Albany 0
+Abq 0
+Atlanta 0
+Boise 2000
+Boston 0
+Casper 7000
+Charleston 8000
+Chicago 6000;
+
+param minimum :=
+Albany Casper 3000
+Albany Boise 1000
+Abq Boise 0
+Abq Boston 2000
+Atlanta Boston 1000
+Atlanta Chicago 500
+Boise Casper 1500
+Boise Charleston 1000
+Boston Charleston 2000
+Boston Chicago 1000;
+
+param maximum :=
+Albany Casper 6000
+Albany Boise 5000
+Abq Boise 4000
+Abq Boston 7000
+Atlanta Boston 5000
+Atlanta Chicago 4000
+Boise Casper 6000
+Boise Charleston 5000
+Boston Charleston 7000
+Boston Chicago 3000;
+
+param cost :=
+Albany Casper .6
+Albany Boise .4
+Abq Boise .3
+Abq Boston .5
+Atlanta Boston .2
+Atlanta Chicago .125
+Boise Casper .25
+Boise Charleston .3
+Boston Charleston .5
+Boston Chicago .2;

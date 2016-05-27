@@ -1,0 +1,23 @@
+
+[colophon]
+Colophon
+--------
+
+This book was created using +asciidoc+ software.
+
+The Sandia National Laboratories Laboratory-Directed Research and
+Development Program and the U.S. Department of Energy Office of Science
+Advanced Scientific Computing Research Program funded portions of this
+work.
+
+Sandia National Laboratories is a multi-program laboratory managed and
+operated by Sandia Corporation, a wholly owned subsidiary of Lockheed
+Martin Corporation, for the U.S. Department of Energy's National Nuclear
+Security Administration under contract DE-AC04-94AL85000.
+SAND 2012-1572P.
+
+image::SNL_logo.{epspng}[scaledwidth="50%",align="center",alt="Sandia National Laboratories"]
+image::DOE_logo.{epspng}[scaledwidth="40%",align="center",alt="United States Department of Energy"]
+
+
+// vim: set syntax=asciidoc:

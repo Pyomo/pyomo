@@ -1,0 +1,83 @@
+[preface]
+== Preface ==
+
+This book provides a quick introduction to Pyomo.  Pyomo is a
+collection of Python software packages that supports a diverse set
+of optimization capabilities for formulating and analyzing optimization
+models.  A central component of Pyomo is Pyomo, which supports the
+formulation and analysis of mathematical models for complex
+optimization applications.  This capability is commonly associated
+with algebraic modeling languages (AMLs), which support the description
+and analysis of mathematical models with a high-level language.
+Although most AMLs are implemented in custom modeling languages,
+Pyomo's modeling objects are embedded within Python, a full-featured
+high-level programming language that contains a rich set of supporting
+libraries.
+
+Pyomo has also proven an effective framework for developing high-level
+optimization and analysis tools. For example, the PySP package
+provides generic solvers for stochastic programming. PySP leverages
+the fact that Pyomo's modeling objects are embedded within a
+full-featured high-level programming language, which allows for
+transparent parallelization of subproblems using Python parallel
+communication libraries.
+
+=== Goals of the Book ===
+
+In this book, we provide a broad overview of different components
+of the Pyomo software.  There are roughly two main goals for this
+book:
+
+1. Help users get started with different Pyomo capabilities:  Our
+goal is not to provide a comprehensive reference, but rather to
+provide a tutorial with simple and illustrative examples.  Also,
+we aim to provide explanations behind the design and philosophy of
+Pyomo.
+
+2. Provide preliminary documentation of new features and capabilities
+in Pyomo.  We know that a new feature or capability probably will
+not be used unless it is documented.  As Pyomo evolves, we plan to
+use this book to document these features.  This provides users some
+context concerning the focus of Pyomo development, and it also
+provides an opportunity to get early feedback on new features before
+they are documented in other contexts.
+
+=== Who Should Read This Book ===
+
+This book is intended to be a reference for students, academic
+researchers and practitioners.  Pyomo has been effectively used in
+the classroom with undergraduate and graduate students.  However,
+we assume that the reader is generally familiar with optimization
+and mathematical modeling.  Although this book does not contain a
+glossary, we recommend the Mathematical Programming Glossary <<MPG>>
+as a reference for the reader.  We also assume that the reader is
+generally familiar with the Python programming language.  There are
+a variety of books describing Python, as well as excellent documentation
+of the Python language and the software packages bundled with Python
+distributions.
+
+
+=== Comments and Questions ===
+
+Further information about Pyomo and Pyomo is available on the Pyomo wiki:
+
+    https://software.sandia.gov/trac/pyomo
+
+Pyomo is also hosted at COIN-OR:
+
+    https://projects.coin-or.org/Pyomo
+
+We strongly encourage feedback from readers about the software on the Pyomo Forum:
+
+    pyomo-forum@googlegroups.com
+
+If you have comments about this pre-alpha rough draft of the book, please
+send them to DLWoodruff@UCDavis.edu.
+We hope this will include feedback on typos and errors in our
+examples.  Additionally, we welcome comments on the presentation
+of this material, and suggestions for material that we should develop
+in the other book chapters.
+
+Good Luck!
+
+// vim: set syntax=asciidoc:

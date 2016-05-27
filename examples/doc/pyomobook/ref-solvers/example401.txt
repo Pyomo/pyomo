@@ -1,0 +1,31 @@
+
+Problem: 
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 2
+  Number of variables: 2
+  Sense: unknown
+Solver: 
+- Status: ok
+  Message: Ipopt 3.12.3\x3a Optimal Solution Found
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+  Time: 0.0274360179901
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: None
+  Status: optimal
+  Message: Ipopt 3.12.3\x3a Optimal Solution Found
+  Objective:
+    obj:
+      Value: 0.799999994967
+  Variable:
+    x:
+      Value: 2.391332152e-09
+    y:
+      Value: 0.399999996288
+  Constraint: No values
+

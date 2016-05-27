@@ -1,0 +1,107 @@
+
+[[Platforms]]
+== Platform Notes ==
+
+We have successfully installed and executed Pyomo on a wide
+range of platforms. In the course of doing so (and helping other
+users do so), we have identified a number of issues that are worth
+mentioning, and easily correctable.
+
+=== Windows XP, Vista, and 7 ===
+
+An issue we have observed on Windows Vista is the following error: 
+
+----
+WindowsError: [Error 740] The requested operation requires elevation
+----
+This issue is due to the new and "improved" Windows Vista permissions
+scheme. Basically, `python.exe` needs to run with administrator
+privileges, e.g., to compile things in site packages. To accomplish
+this, simply navigate via Explorer to where `python.exe` is located
+(typically `C:\Python2.6`) and right-click on the `python.exe` icon.
+Then, select the "Compatability" tab and check the "Run this program
+as an administrator" box.
+
+In addition, some distributions of CPLEX and AMPL appear to have
+overloaded the name for the `CPLEX.exe` executable. Pyomo currently
+interacts with CPLEX via the command-line, interactive version, and
+not the version with the AMPL/NL driver. The symptom of this situation
+is a failed solve, which can be easily diagnosed by turning on the
+"--keepfiles" option in pyomo and looking at the CPLEX output log.
+The fix is to simply make sure the interactive CPLEX is first in
+your PATH environment variable.
+
+
+=== Windows 7 ===
+
+To install on Windows 7 (and possibly other Windows systems), it
+is necessary to run with administrator privileges when installing
+Pyomo. Otherwise, the `pyomo_install` script will generate error
+messages indicating the lack of write permission in various
+directories. If installing from the command prompt, one can right-click
+on the "Command Prompt" icon and select "Run as administrator" to
+obtain such permissions. It is worth noting that this is not always
+necessary, as in many environments users are automatically granted
+administrator privileges.
+
+Various users have observed issues when running `pyomo_install` under Windows 7, related to the subversion client obtained from http://tortoisesvn.tigris.org. In particular, you may observe the following error:
+
+----
+Can't move '.svn/tmp/entries' to '.svn/entries': The file or directory is corrupted and unreadable.
+----
+
+To quote the Tigris site:
+
+----
+This error message typically occurs when you try to update or commit
+your working copy, and seems to be common on Windows 7 systems. It
+is due to another process holding a handle on a file that Subversion
+needs to move or modify. This might be a virus scanner, but on
+Windows 7 it is likely to be the Windows Indexing Service. Turn off
+the indexing service on your working copies and repositories, and
+exclude them from virus scans.
+----
+
+Some combination of disabling the indexer and the antivirus software
+seems to correct the problem; please let us know if this is not the
+case.
+
+
+=== Red Hat Linux ===
+
+No issues involving installation on Red Hat systems have been observed.
+
+
+=== Ubuntu Linux ===
+
+Some distributions of Ubuntu do not install by default with subversion.
+Users and/or their system administrators will need to install this
+package.
+
+Similarly, some Ubuntu distributions do not appear to have a full
+Python 2.6 install. Specifically, the `cProfile` package can be
+missing, and will need to be installed.
+
+
+=== MacOS (Snow Leopard) ===
+
+At least one user has reported problems during execution of the
+`pyomo_install` script on MacOS, specifically related to the installation of
+the "psutils" package. When attempting to compile this package,
+one may observe numerous compile errors relating to various system
+header files. This issue appears to be due to ARCHFLAGS on some
+systems defaulting to the PowerPC architecture. To fix this issue,
+first execute:
+[[shell]]
+----
+sudo ARCHFLAGS="-arch i386 -arch x86_64" easy_install psutil
+----
+
+Next, re-execute `pyomo_install`. With `psutil` successfully installed,
+`pyomo_install` will simply use the installed package and skip the
+re-install.
+
+
+// vim:set syntax=asciidoc:
+
+

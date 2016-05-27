@@ -1,0 +1,23 @@
+Pyomo Installation Guide 4.0
+============================
+:doctype: book
+
+include::book-start.txt[]
+
+include::intro.txt[]
+
+include::prereq.txt[]
+
+include::overview.txt[]
+
+include::optional.txt[]
+
+include::issues.txt[]
+
+include::platforms.txt[]
+
+include::solvers.txt[]
+
+include::book-end.txt[]
+
+// vim: set syntax=asciidoc:

@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+
+<article>
+<info>
+<abstract>
+<para><emphasis role="strong">Note:</emphasis> This
+            document lists changes only since the 1.77.0 release.
+            If you instead want a record of the complete list of
+            changes for the codebase over its entire history, you
+            can obtain one by running the following commands:
+            
+<screen>  <code>svn checkout https://docbook.svn.sourceforge.net/svnroot/docbook/trunk/xsl</code>
+  <code>svn log --xml --verbose xsl &gt; ChangeHistory.xml</code></screen></para>
+</abstract>
+</info><title>Changes since the 1.77.0 release</title>
+
+<sect1 xml:id="V1.77.1">
+<title>Release Notes: 1.77.1</title>
+<para>The following is a list of changes that have been made
+        since the 1.77.0 release.</para>
+
+<sect2 xml:id="V1.77.1_FO">
+<title>FO</title>
+<para>The following changes have been made to the
+            <filename>fo</filename> code
+            since the 1.77.0 release.</para>
+<itemizedlist>
+<listitem>
+<para><literal>Robert Stayton: docbook.xsl</literal></para><screen><phrase role="commit-message">Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+from the <tag>filename</tag>.</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>Robert Stayton: block.xsl</literal></para><screen><phrase role="commit-message">In <tag>sidebar</tag>, turn off space before first <tag>para</tag> if there is no <tag>title</tag>.</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>Robert Stayton: math.xsl</literal></para><screen><phrase role="commit-message">Restored templates for mml:* elements that were accidentally deleted.</phrase></screen>
+</listitem>
+</itemizedlist>
+</sect2><!--end of FO changes for 1.77.1-->
+
+<sect2 xml:id="V1.77.1_HTML">
+<title>HTML</title>
+<para>The following changes have been made to the
+            <filename>html</filename> code
+            since the 1.77.0 release.</para>
+<itemizedlist>
+<listitem>
+<para><literal>Robert Stayton: docbook.xsl</literal></para><screen><phrase role="commit-message">Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+from the <tag>filename</tag>.</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>Robert Stayton: sections.xsl</literal></para><screen><phrase role="commit-message">Use $div.element variable in place of div to support html5 <tag>section</tag> element.
+output</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>Robert Stayton: autoidx.xsl</literal></para><screen><phrase role="commit-message">Fix bug 3528673, missing "separator" param on template with
+match="<tag>indexterm</tag>" mode="<tag>reference</tag>".  That param is passed 
+for endofrange processing to output the range separator.</phrase></screen>
+</listitem>
+</itemizedlist>
+</sect2><!--end of HTML changes for 1.77.1-->
+
+<sect2 xml:id="V1.77.1_Roundtrip">
+<title>Roundtrip</title>
+<para>The following changes have been made to the
+            <filename>roundtrip</filename> code
+            since the 1.77.0 release.</para>
+<itemizedlist>
+<listitem>
+<para><literal>Robert Stayton: dbk2ooo.xsl; dbk2pages.xsl; dbk2wordml.xsl; dbk2wp.xsl</literal></para><screen><phrase role="commit-message">Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+from the <tag>filename</tag>.</phrase></screen>
+</listitem>
+</itemizedlist>
+</sect2><!--end of Roundtrip changes for 1.77.1-->
+
+<sect2 xml:id="V1.77.1_Slides">
+<title>Slides</title>
+<para>The following changes have been made to the
+            <filename>slides</filename> code
+            since the 1.77.0 release.</para>
+<itemizedlist>
+<listitem>
+<para><literal>Robert Stayton: html/slides-common.xsl</literal></para><screen><phrase role="commit-message">Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+from the <tag>filename</tag>.</phrase></screen>
+</listitem>
+</itemizedlist>
+</sect2><!--end of Slides changes for 1.77.1-->
+
+<sect2 xml:id="V1.77.1_Website">
+<title>Website</title>
+<para>The following changes have been made to the
+            <filename>website</filename> code
+            since the 1.77.0 release.</para>
+<itemizedlist>
+<listitem>
+<para><literal>Robert Stayton: website-common.xsl</literal></para><screen><phrase role="commit-message">Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+from the <tag>filename</tag>.</phrase></screen>
+</listitem>
+</itemizedlist>
+</sect2><!--end of Website changes for 1.77.1-->
+
+<sect2 xml:id="V1.77.1_Webhelp">
+<title>Webhelp</title>
+<para>The following changes have been made to the
+            <filename>webhelp</filename> code
+            since the 1.77.0 release.</para>
+<itemizedlist>
+<listitem>
+<para><literal>David Cramer: xsl/webhelp-common.xsl</literal></para><screen><phrase role="commit-message">Webhelp: Increase default value for <parameter>chunk.section.depth</parameter></phrase></screen>
+</listitem>
+<listitem>
+<para><literal>kasunbg: docsrc/readme.xml</literal></para><screen><phrase role="commit-message">updated webhelp documentation</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>kasunbg: template/content/search/nwSearchFnt.js; xsl/webhelp-common.xsl</literal></para><screen><phrase role="commit-message">Removed the script htmlFileList.js since it's content is in htmlFileInfoList.js</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>Robert Stayton: xsl/webhelp-common.xsl</literal></para><screen><phrase role="commit-message">In the &lt;h1&gt; output, replace call to 'get.doc.title' with
+mode="title.markup" because get.doc.title returns only
+the string value of the <tag>title</tag>, losing any markup such
+as &lt;<tag>trademark</tag>&gt; or &lt;<tag>superscript</tag>&gt;.</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>kasunbg: template/common/css/positioning.css; template/content/search/nwSearchFnt.js</literal></para><screen><phrase role="commit-message">Remove unnecessary bits of code from webhelp</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>David Cramer: docsrc/readme.xml</literal></para><screen><phrase role="commit-message">Webhelp: Minor edits to the readme</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>David Cramer: xsl/webhelp.xsl; xsl/titlepage.templates.xsl; xsl/titlepage.templates.xml</literal></para><screen><phrase role="commit-message">Webhelp: Suppress abstracts from titlepages. These are used to create the search result summary sentence and should not be shown</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>David Cramer: build.xml</literal></para><screen><phrase role="commit-message">Webhelp: calculate path to profile.xsl from main build.xml file</phrase></screen>
+</listitem>
+</itemizedlist>
+</sect2><!--end of Webhelp changes for 1.77.1-->
+
+<sect2 xml:id="V1.77.1_Template">
+<title>Template</title>
+<para>The following changes have been made to the
+            <filename>template</filename> code
+            since the 1.77.0 release.</para>
+<itemizedlist>
+<listitem>
+<para><literal>Robert Stayton: titlepage.xsl</literal></para><screen><phrase role="commit-message">Undo last change because not implemented correctly.</phrase></screen>
+</listitem>
+<listitem>
+<para><literal>Robert Stayton: titlepage.xsl</literal></para><screen><phrase role="commit-message">Fix xsl:element to not overwrite the incoming fo: namespace
+if the $ns param is not set.</phrase></screen>
+</listitem>
+</itemizedlist>
+</sect2><!--end of Template changes for 1.77.1-->
+
+</sect1>
+</article>
+

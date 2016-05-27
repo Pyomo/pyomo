@@ -1,0 +1,4 @@
+This is a partial snapshot of the DocBook XSL distribution used to work
+around an issue with current ASCIIDOC distributions where the
+distributed XSL files rely on an internet connection to the docbook
+sourceforge site.

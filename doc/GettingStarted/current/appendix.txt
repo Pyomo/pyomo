@@ -1,0 +1,12 @@
+:numbered!:
+
+[appendix]
+Example Appendix
+----------------
+One or more optional appendixes go here at section level 1.
+
+Appendix Sub-section
+~~~~~~~~~~~~~~~~~~~
+Sub-section body.
+
+// vim: set syntax=asciidoc:

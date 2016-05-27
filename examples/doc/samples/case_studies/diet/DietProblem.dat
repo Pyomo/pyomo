@@ -1,0 +1,31 @@
+set foods := steak apple rice;
+set nutrients := calories protein vc;
+
+param: max_volume := 400;
+
+param: costs :=
+steak 10
+apple 2
+rice 1;
+
+param: volumes :=
+steak 1
+apple 1
+rice 1;
+
+param: min_nutrient :=
+calories 2000
+protein 56
+vc 300;
+
+param: max_nutrient :=
+calories 4000
+protein 168
+vc 2000;
+
+param nutrient_value:
+           steak apple rice :=
+calories    180   65    143
+protein     40    1     5
+vc          0     30    0;
+

@@ -1,0 +1,2 @@
+[model::ModelValue] bad2.py:10: Comparison on attribute model.q not wrapped in value()
+[model::ModelValue] bad2.py:10: Comparison on attribute model.q not wrapped in value()

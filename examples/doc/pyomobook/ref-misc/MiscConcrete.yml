@@ -1,0 +1,40 @@
+Problem: 
+- Name: unknown
+  Lower bound: 10.0
+  Upper bound: 10.0
+  Number of objectives: 1
+  Number of constraints: 15
+  Number of variables: 13
+  Number of nonzeros: 21
+  Sense: maximize
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: feasible
+  Objective: 
+    x1: 
+      Value: 10.0
+  Variable: 
+    x18:
+      Value: 2
+    x21:
+      Value: 3
+    x24:
+      Value: 5
+    x16:
+      Value: 7
+    x20:
+      Value: 4
+    x17:
+      Value: 1
+  Constraint: No values
+

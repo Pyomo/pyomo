@@ -1,0 +1,126 @@
+
+[[Prerequisites]]
+== Prerequisites ==
+
+=== Python Version ===
+
+Pyomo requires Python versions 2.6, 2.7, 3.2, 3.3 or 3.4. In
+particular, some components rely on Python modules that exhibited
+known bugs in Python 2.5.  We generally recommend installing a
+scientific Python distribution;  see SciPy's list of
+link:http://www.scipy.org/install.html[scientific Python distributions].
+
+* Windows users:
++
+The link:http://python.org/download[Python web site] provides binary
+downloads for MS Windows installers.  Recall that the PATH
+environment variable may need to be updated, as the installers
+typically do not update it automatically.  On Windows, this can be
+easily accomplished via the Control Panel "Advanced System Settings"
+panel.
+
+* Linux/UNIX users:
++
+Most flavors of Unix ship with Python, and a compatible version of
+Python can often be easily installed using your distribution's
+package manager.  Note that you will need to install both the
+`python` package and (if separate) the `python-devel` package (to
+get the Python header files that are needed to compile some external
+applications distributed with Pyomo).  Most Linux installers put
+the Python executable on a common location on your path.  If this
+is not the case for your particular distribution, you can add the
+location to your shell's PATH environment variable.
+
+* Mac users:
++
+The link:http://python.org/download[Python web site] provides binary
+downloads for Mac installers.  Recall that the PATH environment
+variable may need to be updated, as these installers typically do not
+update it automatically.
+
+Please be aware of 32-bit versus 64-bit issues, particularly if you
+are running Windows. In particular, if running a 64-bit Windows OS
+(likely at this point, but not so with XP or earlier versions), you
+should use the Python 2.X.Y Windows X86-64 installer, as opposed
+to the (32-bit) Python 2.X.Y Windows installer. If you run 32-bit
+Python on a 64-bit Windows platform, for example, you will not have
+access to more than 3GB of RAM (actually a bit less) - even when
+your machine has more.
+
+
+=== Installers ===
+
+Installing Pyomo requires that one of the following installation
+tools or executables be downloaded: the `pip` Python package or the
+`pyomo_install` script.
+
+==== Pip ====
+
+The `pip` package can be used to download and install the latest Pyomo release.  For Python versions
+before 3.4, the `pip` package will need to be explicitly installed. On
+Linux, you may be able to install `pip` with a package manager like
+`yum` or `apt-get`.  Alternatively, you can securely download the
+link:https://raw.github.com/pypa/pip/master/contrib/get-pip.py[get-pip.py]
+script using your web browser (or a command-line tool like `curl`).
+Then, you execute the following in a shell:
+[[shell]]
+----
+python get-pip.py
+----
+
+The `pip` command requires internet access to download Pyomo and
+the packages it depends on.  You need to specify the `HTTP_PROXY`
+environment to install from PyPI through a proxy server.
+
+
+==== The `pyomo_install` Script ====
+
+The `pyomo_install` script is used to download and install the
+latest Pyomo release.  The `pyomo_install` has a `--help` option
+that provides detailed help instructions.
+
+You can download the
+link:https://software.sandia.gov/trac/pyomo/downloader/download/file/70[pyomo_install]
+script using your web browser, or you can download from 
+[[shell]]
+----
+https://software.sandia.gov/svn/public/pyomo/pyomo/trunk/scripts/pyomo_install
+----
+using a command-line tool like `curl`.
+
+Depending on the command-line options, the `pyomo_install` command
+may require internet access to download Pyomo and the packages it
+depends on.  Specifically, you may need to specify the `HTTP_PROXY`
+environment to install from PyPI through a proxy server.  Also,
+developers installing the Pyomo trunk may need to configure
+subversion to specify a proxy server.
+
+NOTE: The `pyomo_install` command has not been developed or tested
+on MS Windows.  Although some of the installation strategies supported
+by `pyomo_install` may work on MS Windows, this installer is not
+recommended for that platform.
+
+NOTE: The `pyomo_install` script does not bundle Python packages.
+Instead, it either installs packages from PyPI or it installs from
+a ZIP file.
+
+
+=== Subversion (For Developers) ===
+
+Installation of the Pyomo trunk requires the subversion software.
+On Unix systems, this is commonly pre-installed.  On Windows,
+subversion installers can be obtained from
+link:http://www.collab.net/downloads/subversion/[CollabNet].
+
+Only the command-line client is necessary; specifically, the
+"CollabNet Subversion Command Line" distribution should be used.
+Do ''not'' install "CollabNet Subversion Edge", as it downloads and
+installs Python. While the CollabNet download is free, CollabNet
+will require you to create a login - presumably to track usage
+statistics. The installer updates the system PATH variable
+automatically.
+
+
+
+
+// vim: set syntax=asciidoc:

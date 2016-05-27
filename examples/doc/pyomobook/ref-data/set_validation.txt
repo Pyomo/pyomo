@@ -1,0 +1,29 @@
+10 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['AA', 'BB', 'CC']
+    B : Dim=0, Dimen=1, Size=1, Domain=A, Ordered=False, Bounds=None
+        ['BB']
+    C : Dim=0, Dimen=1, Size=1, Domain=None, Ordered=False, Bounds=None
+        ['CC']
+    D : Dim=0, Dimen=2, Size=3, Domain=D_domain, Ordered=False, Bounds=None
+        [('AA', 'BB'), ('BB', 'BB'), ('CC', 'BB')]
+    D_domain : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    E : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('AA', 'BB'), ('BB', 'BB'), ('CC', 'BB')]
+    F : Dim=1, Dimen=1, Size=3, Domain=A, ArraySize=3, Ordered=False, Bounds=None
+        Key : Members
+          1 :  ['AA']
+          2 :  ['BB']
+          3 :  ['CC']
+    F_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    G : Dim=1, Dimen=1, Size=3, Domain=None, ArraySize=3, Ordered=False, Bounds=None
+        Key : Members
+          1 :  ['AA']
+          2 :  ['BB']
+          3 :  ['CC']
+    G_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+10 Declarations: A B C D_domain D E F_index F G_index G

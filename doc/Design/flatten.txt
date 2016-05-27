@@ -1,0 +1,234 @@
+== Flattening Indices == 
+
+=== A Motivating Example ===
+
+Consider a simple multi-commodity flow model:
+[source,python]
+----
+from pyomo.environ import *
+
+model = ConcreteModel()
+
+# Sets
+model.Nodes = [1,2,3]
+model.Edges = [(1,2), (2,1), (1,3), (3,1)]
+model.Commodities = [(1,2), (3,2)]
+
+# Variables
+model.Flow = Var(model.Commodities,
+                 model.Edges,
+                 within=NonNegativeReals)
+----
+There are a number of ways to interpret this syntax. Focusing on
+how to access a particular index, one faces the following choices:
+
+- Flow[c,e] for a commodity c and an edge e
+
+- Flow[(s,t),(u,v)] for a commodity (s,t) and an edge (u,v)
+
+- Flow[s,t,u,v] for a commodity (s,t) and an edge (u,v)
+
+A modeler that is fluent in Python knows that the first two bullets
+are equivalent from the viewpoint of the Python interpretor, and they
+know that the third bullet is _not_ interpreted the same as the first
+two. The modeler runs a quick test to determine which of the
+interpretations is correct:
+[source,python]
+----
+for c in model.Commodities:
+    (s,t) = c
+    for e in model.Edges:
+        (u,v) = e
+        print(model.Flow[c,e])
+        print(model.Flow[(s,t),(u,v)])
+        print(model.Flow[s,t,u,v])
+----
+
+The modeler does not realize that her decision to use the
+first and second bullet forms will likely increase the build
+time of her model by an order of magnitude (see:
+./component_container_examples/slow_index.py)
+
+=== Considering Unflattened Pyomo Models ===
+
+Some developers have argued that tuple flattening is the correct
+approach because we use a similar style of indexing in math
+programming papers. For example, one might encounter the following
+notation:
+
+* latexmath:[$P_{ijk} = d_{jk}\qquad\forall\; i \in V;\; (j,k) \in E$]
+
+Advocates of tuple flattening in Pyomo would have you note that the
+indexing for the variable latexmath:[$P$] is written as
+latexmath:[$P_{ijk}$] not latexmath:[$P_{i(jk)}$]. However, one could
+argue that we exclude the parentheses for the same reason that we exclude
+the commas, which is that it reduces clutter, and the human mind, being
+excellent at disambiguation, is able to extract the inferred meaning
+from latexmath:[$P_{ijk}$] perhaps more easily without the extra
+characters. Being the math programmers we are, we of course know that
+human language (even written mathematical notation) does not translate
+directly into an algorithm. We include _psuedocode_ in our papers, not
+machine parsable code. With these comments aside, lets discuss the
+more fundamental issue with Pyomo's Set operations.
+
+==== A Cartesian Product it is Not ====
+
+The Cartesian product can be defined using set-builder notation as:
+latexmath:[$X_1\times...\times X_n = \{(x_1,...,x_n)\;|\;x_1\in
+X1,...,\;x_n\in X_n\}$]. One should note from this definition that the
+Cartesian product is +not+ associative (in the general case where all
+latexmath:[$X_i \neq \emptyset$]). That is, latexmath:[$(A\times
+B)\times C \neq A\times B\times C \neq A\times(B\times C)$]. One
+should also note that this definition is entirely independent of what
+elements make up the individual sets (e.g., carrots, objects, real
+numbers, elements of latexmath:[$\mathbb{R}^3$], 10-tuples).
+
+With this definition in mind, let's examine a straightforward implementation
+in Python. Consider how one would implement a Cartesian product across 2
+sets latexmath:[$A,B$]:
+[source,python]
+----
+def CartesianProduct(A, B):
+   prod = set()
+   for a in A:
+      for b in B:
+         prod.add((a,b))
+   return prod
+----
+Note that this implementation is sufficiently abstracted from the type
+of objects that are contained in each of the sets. As far as Python is
+concerned, if it's hashable it can live inside of a Set. Let's make
+this example concrete by defining the sets latexmath:[$A,B$] as the
+following:
+[source,python]
+----
+A = set([(1,2), (2,2)])
+B = set(['a', 'b'])
+----
+Consider an what an arbitrary element in latexmath:[$x\in A\times
+B$] looks like:
+[source,python]
+----
+prod = CartesianProduct(A,B)
+print(((1,2),'a') in prod) # -> True
+print((1,2,'a') in prod)   # -> False
+----
+Now lets translate this example to Pyomo. Our initial attempt might be the following:
+[source,python]
+----
+model = ConcreteModel()
+model.A = Set(initialize=A)
+# -> ValueError: The value=(1, 2) is a tuple for set=A, which has dimen=1
+----
+Ouch, another error. Let's fix that:
+
+[source,python]
+----
+model = ConcreteModel()
+model.A = Set(dimen=2, initialize=A)
+model.B = Set(initialize=B)
+model.prod = A*B
+print(((1,2),'a') in model.prod) # -> False
+print((1,2,'a') in model.prod)   # -> True
+----
+One will note that the output from the +print+ function shows that the
+resulting set +model.prod+ violates the definition of a Cartesian
+product over 2 sets.
+
+*GH*:: This is the part where a new user starts yelling 4-letter words
+       at their computer screen.
+
+Okay, so our first attempt didn't produce the set we were looking
+for. Let's try a different approach. We've already computed the
+Cartesian product using our own function, why don't we just store that
+in a Pyomo Set object. Remembering our lesson about defining model.A,
+and using our knowledge that 2-tuples live inside of our 2-set
+Cartesian product (by definition) we go with:
+[source,python]
+----
+model = ConcreteModel()
+model.prod = Set(dimen=2, initialize=prod)
+# -> ValueError: The value=(1, 2, 'a') is a tuple for set=prod, which has dimen=2
+----
+By changing +dimen=2+ to +dimen=3+, one ends up with some Python code
+that doesn't raise an exception but indeed does not produce a
+Cartesian product.
+
+*GH*:: At this point, we are asking the user to abandon their
+       intuitive notion that +len(<a-tuple>)+ is equivalent to the
+       +dimension of <a-tuple>+, and also accept the fact that Pyomo's
+       definition of cross product (this phrase is used in the
+       _published_ Pyomo book to describe the * operator on Set) is
+       not the same as the definition found on Wikipedia. I am
+       frustrated by this point. Are you?
+
+The question to ask at this point is why.
+
+* Why is it necessary to declare a dimension for a Set?
+
+*GH*:: Is it because it is necessary to disambiguate external data
+       file parsing (like in the DAT format)? Okay great, but I don't
+       use those, so why is this (or Set for that matter) a dependency
+       for concrete modeling.
+
+* Why does Pyomo implement the Cartesian product this way?
+
+*GH*:: Does it have something to do with AMPL or the previous bullet
+       point?  Is it even possible to define a non-associative n-ary
+       operator (set product) by overloading an associative binary
+       operator (*)?
+
+I'll end this section with another motivating example for an interface
+that does not have a dependency on Set.
+
+*Exercise 1*:: Use the Python data structure of your choice to store a
+               random value for each element in latexmath:[$A\times B$].
+* *GH*:: This is my answer:
+[source,python]
+----
+import random
+d = dict(((a,b), random.random()) for a in A for b in B)
+# or
+d = dict()
+for a in A:
+   for b in B:
+      d[a,b] = random.random()
+----
+
+*Exercise 2*:: Define a Pyomo variable for each element in latexmath:[$A\times B$].
+* *GH*:: This would be my answer, and I don't know why we do not want
+         to allow users to extend their thought process in this
+         way. It has been noted in other sections of this document
+         that I am confusing our indexed component containers with
+         dictionaries, and that this might be indicative of a problem
+         with the documentation. I can assure you it has nothing to do
+         with the documentation. It has everything to do with my
+         understanding of how we use the containers in all places in
+         pyomo.* +except+ the construction phase, and the fact that
+         our component emulates _dict_ in every sense of the word
+         +except+ giving users access to __setitem__. A _dict_ is an
+         intuitive tool for this job, whereas understanding how
+         Pyomo's Set works is not intuitive.
+[source,python]
+----
+model.v = VarDict(((a,b), VarData(Reals)) for a in A for b in B)
+# or
+model.v = VarDict()
+for a in A:
+   for b in B:
+      model.v[a,b] = VarData(Reals)
+----
+
+Here are some potential answers if you are forced to used the current
+version of Pyomo:
+
+* Abandon the definition of Cartesian product and simply use +model.prod+ from
+  above to index a standard Var.
+
+* Use the manually computed version of +prod+ and place it inside a Pyomo +SetOf+
+  object, and use that to index the variable.
+
+* Use +namedtuple+ objects instead of pure tuples to trick Pyomo into
+  doing the correct thing.
+
+// vim: set syntax=asciidoc:

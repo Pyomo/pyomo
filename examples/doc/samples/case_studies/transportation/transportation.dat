@@ -1,0 +1,20 @@
+set warehouses := quick brown fox;
+set stores := jumps over the lazy dog;
+
+param: supply :=
+quick 3250
+brown 7000
+fox   1250;
+
+param: demand :=
+jumps 3000
+over  3000
+the   4000
+lazy  500
+dog   1000;
+
+param costs:
+      jumps over the lazy dog :=
+quick  1     3    2   2    1
+brown  4     5    1   1    3
+fox    2     3    3   2    1;

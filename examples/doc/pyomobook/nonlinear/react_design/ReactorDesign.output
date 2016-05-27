@@ -1,0 +1,101 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+Ipopt 3.9.2: 
+
+**********************************************************
+This program contains Ipopt, a library for large-scale non
+ Ipopt is released as open source code under the Eclipse P
+         For more information visit http://projects.coin-o
+**********************************************************
+
+This is Ipopt version 3.9.2, running with linear solver ma
+
+Number of nonzeros in equality constraint Jacobian...:    
+Number of nonzeros in inequality constraint Jacobian.:    
+Number of nonzeros in Lagrangian Hessian.............:    
+
+Total number of variables............................:    
+                     variables with only lower bounds:    
+                variables with lower and upper bounds:    
+                     variables with only upper bounds:    
+Total number of equality constraints.................:    
+Total number of inequality constraints...............:    
+        inequality constraints with only lower bounds:    
+   inequality constraints with lower and upper bounds:    
+        inequality constraints with only upper bounds:    
+
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg)
+   0 -2.0000000e+03 3.17e+02 6.25e-01  -1.0 0.00e+00    - 
+   1 -1.0801475e+03 2.71e+01 2.46e+00  -1.0 1.39e+03    - 
+   2 -1.0763574e+03 4.43e+00 1.87e+02  -1.0 3.66e+02    - 
+   3 -1.0727252e+03 5.01e-01 5.26e+00  -1.0 9.35e+01    - 
+   4 -1.0726714e+03 1.02e-01 1.22e-01  -1.0 6.03e+01    - 
+   5 -1.0724371e+03 1.72e-05 2.93e-05  -2.5 4.19e-01    - 
+   6 -1.0724372e+03 4.04e-10 3.93e-09  -3.8 3.85e-03    - 
+   7 -1.0724372e+03 1.51e-12 2.69e-11  -5.7 2.24e-04    - 
+   8 -1.0724372e+03 4.55e-14 7.81e-14  -8.6 2.78e-06    - 
+
+Number of Iterations....: 8
+
+                                   (scaled)               
+Objective...............:  -1.0724372001073814e+03   -1.07
+Dual infeasibility......:   7.8080721909049831e-14    7.80
+Constraint violation....:   4.5474735088646414e-14    4.54
+Complementarity.........:   2.5059065225775025e-09    2.50
+Overall NLP error.......:   2.5059065225775025e-09    2.50
+
+
+Number of objective function evaluations             = 9
+Number of objective gradient evaluations             = 9
+Number of equality constraint evaluations            = 9
+Number of inequality constraint evaluations          = 0
+Number of equality constraint Jacobian evaluations   = 9
+Number of inequality constraint Jacobian evaluations = 0
+Number of Lagrangian Hessian evaluations             = 8
+Total CPU secs in IPOPT (w/o function evaluations)   =    
+Total CPU secs in NLP function evaluations           =    
+
+EXIT: Optimal Solution Found.
+[    0.10] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: <undefined>
+      Status: unknown
+    Solver results file: results.yml
+
+==========================================================
+Solution Summary
+==========================================================
+
+Model unknown
+
+  Variables:
+    Variable sv :   Size=1 Domain=PositiveReals
+      Value=1.34381176107
+    Variable ca :   Size=1 Domain=PositiveReals
+      Value=3874.25886724
+    Variable cb :   Size=1 Domain=PositiveReals
+      Value=1072.43720011
+    Variable cc :   Size=1 Domain=PositiveReals
+      Value=1330.09353341
+    Variable cd :   Size=1 Domain=PositiveReals
+      Value=1861.60519963
+
+  Objectives:
+    Objective obj :   Size=1
+      Value=1072.43720011
+
+  Constraints:
+    Constraint ca_bal :   Size=1
+      Value=-6.29370333627e-9
+    Constraint cb_bal :   Size=1
+      Value=4.86625140184e-9
+    Constraint cc_bal :   Size=1
+      Value=-3.57454155164e-9
+    Constraint cd_bal :   Size=1
+      Value=-5.0026756071e-9
+
+[    0.11] Applying Pyomo postprocessing actions
+[    0.11] Pyomo Finished

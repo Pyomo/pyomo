@@ -1,0 +1,534 @@
+%-
+%- DONE
+
+\chapter{Pyomo Modeling Strategies}
+\label{chap:overview}
+
+\abstract{This chapter illustrates different strategies for formulating 
+and optimizing algebraic optimization models using Pyomo. We provide a 
+brief overview of the core modeling components supported by Pyomo.  Then, 
+we describe how to formulate both concrete and abstract models with Pyomo.  
+Finally, we provide a brief tutorial on how these models can be analyzed with the \code{pyomo} command.}
+
+\section{Modeling Components}
+
+Pyomo supports an object-oriented design for the definition of
+optimization models.  The basic steps of a simple modeling process are:
+\begin{enumerate}
+
+\item Create model and declare components 
+\item Instantiate the model
+\item Apply solver
+\item Interrogate solver results
+
+\end{enumerate}
+In practice, these steps may be applied repeatedly with different data or with 
+different constraints applied to the model.  However, we focus on this
+simple modeling process to illustrate different strategies for modeling with
+Pyomo.
+
+A Pyomo {\em model} consists of a collection of
+modeling {\em components} that define different aspects of the model.\index{model}\index{modeling component}
+Pyomo includes the modeling components that are commonly
+supported by modern AMLs:  index sets, symbolic parameters, decision
+variables, objectives, and constraints.
+These modeling components are defined in Pyomo through the following Python classes:
+\begin{center}
+\begin{tabular}{ll}
+\code{Set} & set data that is used to define a model instance\index{Set component@\code{Set} component}\index{set!Set@\code{Set} component}\index{data!set} \\
+\code{Param} & parameter data that is used to define a model instance\index{Param component@\code{Param} component}\index{parameter!Param@\code{Param} component}\index{data!parameter} \\
+\code{Var} & decision variables in a model\index{Var component@\code{Var} component}\index{variable!Var@\code{Var} component} \\
+\code{Objective} & expressions that are minimized or maximized in a model\index{Objective component@\code{Objective} component}\index{objective!Objective@\code{Objective} component} \\
+\code{Constraint} \hspace{0.2in} & constraint expressions in a model\index{Constraint component@\code{Constraint} component}\index{constraint!Constraint@\code{Constraint} component}
+\end{tabular}
+\end{center}
+Two model classes provide a context for defining and initializing 
+these modeling components: \code{ConcreteModel} and \code{AbstractModel}.\footnote{In versions
+1.x and 2.x of Pyomo, the \code{Model} class serves as an alias for the \code{AbstractModel}
+class. Both the aliasing and the \code{Model} class will be deprecated in Pyomo 3.1 and 
+subsequent releases.} \index{ConcreteModel component@\code{ConcreteModel} component}\index{model!ConcreteModel@\code{ConcreteModel} component}\index{AbstractModel component@\code{AbstractModel} component}\index{model!AbstractModel@\code{AbstractModel} component}
+For example, modeling components can be directly added to an \code{AbstractModel} object as an
+attribute of the object:
+\listing{examples/overview/simple1.py}{body}{4}{6}
+The \code{model} object is a class instance of the \code{AbstractModel} class, and \code{model.I} is a 
+\code{Set} object that is contained by this model.\index{class instance}
+Many modeling components in Pyomo can be optionally specified as {\it indexed components}:
+collections of components that are referenced using one or more values\index{indexed component}.
+In this example, the parameter \code{p} is indexed
+with set \code{I}. 
+
+\begin{Xnotebox}
+For simplicity, many short examples in this book omit the Python import statement for \code{pyomo.core}\index{pyomo.core package@\code{pyomo.core} package}.  These examples assume that this package has been previously imported with the following command:
+\begin{quote}
+\begin{lstlisting}[frame=none]
+from pyomo.core import *
+\end{lstlisting}
+\end{quote}
+This command imports all of the classes, functions and data from the \code{pyomo.core} package;  see Appendix~\ref{chap:python} for further details about 
+importing Python packages.
+\end{Xnotebox}
+
+The following sections describe different strategies for creating
+models with Pyomo.  We begin with strategies for generating concrete
+models and progress to more general strategies for abstract models.
+To illustrate this flexibility, we consider a generalization of the 
+simple LP that we introduced in Chapter~\ref{chap:intro}:
+\begin{equation}
+\label{eqn:simple-abstract}
+\begin{array}{lll}
+\min & \sum_{i=1}^n c_i x_i &\\
+\st & \sum_{i=1}^n a_{ij} x_i \geq b_j \hspace{0.25in} & \forall j = 1 \ldots m\\
+    & x_i \geq 0 & \forall i = 1 \ldots n
+\end{array}
+\end{equation}
+The following LP is a model instance (i.e., a model object with fully specified data)\index{model instance} of the abstract LP ~\ref{eqn:simple-abstract}:
+\begin{equation}
+\label{eqn:simple-concrete}
+\begin{array}{ll}
+\min & x_1 + 2 x_2\\
+\st & 3 x_1 + 4 x_2 \geq 1\\
+    & 2 x_1 + 5 x_2 \geq 2\\
+    & x_1, x_2 \geq 0
+\end{array}
+\end{equation}
+The examples in this chapter illustrate different ways of formulating both
+abstract and concrete models.
+
+We conclude this chapter with a brief introduction to the \code{pyomo}
+command, which can be used to optimize Pyomo models within a Unix or
+Windows command shell.\index{pyomo command@\code{pyomo} command}  Additionally, we summarize how Pyomo model
+scripts can be setup to construct and solve model instances\index{model!instance}.  Note that
+additional detail about Pyomo modeling components can be found in
+Chapter~\ref{chap:components2}, Chapter~\ref{chap:components1}, and Chapter~\ref{chap:components3}.  Additional detail
+about the \code{pyomo} command and scripting with Pyomo models can be
+found in Chapter~\ref{chap:command}.
+
+
+\section{Concrete Models: Specifying Components Via Expressions}
+
+\index{concrete model}
+The simplest way to express a concrete model is by directly creating
+the modeling components with expressions that specify numerical values;
+the alternative, two-step process involving an abstract model is described
+in Section~\ref{chap:overview-abstractmodels}.
+The \code{ConcreteModel} class is used to define these types of models:
+\listing{examples/overview/concrete1-parts.py}{model}{4}{4}
+In contrast to \code{AbstractModel} objects, 
+model components contained in\linebreak \code{ConcreteModel} objects
+are immediately initialized as they are added to
+the model instance.\index{model!initialization}
+
+Decision variables are required to define non-trivial expressions in Pyomo. In the
+simplest case, we can define each decision variable separately:
+\listing{examples/overview/concrete1-parts.py}{var}{8}{9}
+The \code{within} argument used in these declarations constrains the values of
+the defined variables to the set of non-negative real numbers, in this case by
+having Pyomo to automatically generate the associated lower bound constraints\index{variable!bounds}.
+
+An optimization objective is defined by passing an algebraic expression involving
+numeric constants and Pyomo variables as an argument -- via the \code{expr} keyword --
+to the \code{Objective} class constructor\index{objective!expression}:
+\listing{examples/overview/concrete1-parts.py}{obj}{13}{13}
+The objective expression is defined implicitly by Pyomo, using overloading of the Python
+multiplication and addition operators. This is done automatically so the modeller need only
+give the expression as shown in the example.  Similarly, constraints of a concrete model are
+defined by passing an expression as an argument -- again via the \code{expr} keyword -- 
+to the \code{Constraint} class constructor\index{constraint!expression}:
+\listing{examples/overview/concrete1-parts.py}{con}{17}{18}
+Note that this expression additionally specifies a constraint bound, via overloading
+of the Python \code{>=} operator.
+Example~\ref{ex:concrete1} includes the entire formulation for this concrete model\index{constraint!bounds}.
+
+For large concrete models, the use of explicit variables will be cumbersome, since this requires separate 
+declarations for each variable in the model.  To address this issue, Pyomo supports the notion of variable 
+\emph{indexing}. For example, the variable \code{x} can be defined with an explicit index set\index{indexed component}:
+\listing{examples/overview/concrete2-parts.py}{var}{6}{6}
+This indexed variable can be used to specify the objectives and constraints with a natural, extensible syntax:
+\listing{examples/overview/concrete2-parts.py}{expr}{10}{12}
+Indexed variables allow logically related sets of variables to be grouped under a common name, and naturally
+differentiated via a sub-script.
+
+Example~\ref{ex:concrete2} includes the formulation for the indexed concrete model of Formulation(~\ref{eqn:simple-concrete}).
+
+A limitation of the formulation in Example~\ref{ex:concrete2}
+is that the data used is explicitly expressed in the specification of
+the index set for \code{x} and the numerical values in the constraints
+and objective. Any change in data values requires potentially extensive
+modifications to the concrete model. Alternatively, this data can be
+symbolically specified using standard Python data structures and subsequently
+used in the formulation of the expressions for objectives and constraints.  
+For example, the following declarations define Python dictionary objects 
+that represent the data used in the objectives and constraints for
+Formulation~(\ref{eqn:simple-concrete}):
+\listing{examples/overview/concrete3a-parts.py}{Xdata}{4}{7}
+Using this symbolic data, the objective can be simply redefined as follows:
+\listing{examples/overview/concrete3a-parts.py}{obj}{13}{13}
+An even more extensible formulation of this objective uses Python 
+iteration syntax to sum over a set of related (indexed) decision variables.  
+The Python \code{sum} function and {\em generator} syntax can be used 
+to provide a concise specification of a summation\index{python!generator syntax}\index{python!sum@\code{sum} function}:
+\listing{examples/overview/concrete3-parts.py}{obj}{13}{13}
+This syntax specifies that the terms \code{c[i]*model.x[i]} are generated
+by iterating over the set \code{N}.  As these terms are generated, the
+function \code{sum} adds them together to form the overall expression.
+This type of inlining of summations is a powerful feature that provides
+a syntax that is similar to that used in AMLs with custom languages.
+Example~\ref{ex:concrete3} includes the complete formulation of the concrete model using these
+external data declarations.
+
+
+\section{Concrete Models: Specifying Components Via Rules}
+
+Although the abstract formulation in Formulation~(\ref{eqn:simple-abstract})
+specifies a set of constraints, each constraint declared in
+Example~\ref{ex:concrete3} is defined separately.  As in the case of 
+decision variables, this modeling approach will become cumbersome
+for large models.
+
+Pyomo addresses this and other, related issues by allowing modeling components
+to be initialized with user-defined functions, which we call 
+{\em rules}.\index{constraint!rule}  The idea is that complex initialization of a
+collection of constraints or objectives (for example) can be managed by a function 
+that generates each constraint or objective expression individually\index{objective!expression}\index{constraint!expression}.  Similarly, rules
+can be used to construct complex sets and parameters in a generic manner.
+
+Example~\ref{ex:concrete4} illustrates the use of a rule to define the
+constraints for Formulation~(\ref{eqn:simple-concrete}) in a generic manner.
+The index set \code{M} defines the indices of the constraint \code{con}, and
+the function \code{con\_rule} is used to construct the individual constraint
+expressions\index{indexed component}. The arguments to this rule are the constraint indices\index{constraint!index}, in addition 
+to the model instance that is being constructed. As with all components added
+to a \code{ConcreteModel} object, initialization is immediately executed, for
+all values of the specified index set. Note that the name of a rule 
+used to define a constraint (or other modeling component) is not restricted.
+However, some advanced Pyomo features require the use of unique rule names
+(e.g. see Chapter~\ref{chap:scripts}).
+
+\index{component!rule}
+Although the function arguments for component rules are similar for all
+component types, the expected type of the values returned are different:
+\begin{center}
+\begin{tabular}{ll}
+\code{Set} & rule must return a Python set or list object.\\
+\code{Param} & rule must return an integer or float value.\\
+\code{Objective} & rule must return an expression\index{objective!expression}. \\
+\code{Constraint} \hspace{0.2in} & rule must return a constraint expression\index{constraint!expression}.
+\end{tabular}
+\end{center}
+The distinction between an objective and constraint expression is simply the
+imposition of a lower or upper bound (or both) in the case of a constraint.\index{expression!objective vs. constraint}
+The \code{Set} and \code{Param} classes also support direct initialization
+with the \code{initialize} argument.\index{set!initialize}\index{parameter!initialize}  This argument allows the user to
+specify the data that initializes this class, thereby avoiding the need to
+specify a Python function for a \code{rule} argument.\index{data!set}\index{data!parameter}
+
+Example~\ref{ex:concrete5} illustrates the use of \code{rule} and
+\code{initialize} arguments in the context of the full spectrum of modeling 
+components. This example is more verbose than Example~\ref{ex:concrete4}, and
+it does not represent the model in a more flexible manner.  Thus, 
+the modeling representation in Example~\ref{ex:concrete4}
+might be preferable.  However, Example~\ref{ex:concrete5} avoids the
+specification of global data, which promotes encapsulation that may be
+important in complex applications.
+
+
+
+\section{Abstract Models}
+\label{chap:overview-abstractmodels}
+
+\index{abstract model}There are many contexts where a strong separation of model and data is
+either helpful or necessary\index{data-model separation}.  Model data may not be immediately available,
+or it may be stored in an external database\index{database} or spreadsheet\index{spreadsheet}.  Alternatively, it may simply be
+desirable to represent a model in an abstract form that is agnostic to 
+the manner in which the data is managed.
+
+A simple strategy for managing models abstractly is to create a Python
+function whose arguments reflect the data that is needed to create a
+concrete model.  Example~\ref{ex:abstract4} illustrates this approach
+using the concrete model developed in Example~\ref{ex:concrete4}. 
+The function \code{create\_model} has arguments \code{N}, \code{M},
+\code{c}, \code{a} and \code{b} that represent the data needed to create
+a concrete model for Formulation~(\ref{eqn:simple-abstract}).  Consequently,
+this function provides a strong separation of model and data, and
+it can be viewed as a constructor for an abstract model. The code in
+both Examples~\ref{ex:concrete4} and \ref{ex:abstract4} can be executed
+using the \code{pyomo} command (see Chapter~\ref{chap:overview:pyomo} below),
+ultimately yielding identical model instances and therefore 
+identical optimization solutions.
+
+Pyomo also supports the definition of \textit{abstract} models that are defined
+independent of any specific data.\index{abstract model} Example~\ref{ex:abstract5} illustrates 
+the definition of an abstract model in Pyomo for Formulation~(\ref{eqn:simple-abstract}).  
+In contrast to concrete models, abstract models strictly define the existence of model
+components and the relationships between them (e.g. the fact that set \code{N} is used
+to index parameter \code{c})\index{indexed component}. 
+
+The abstract model in Example~\ref{ex:abstract5} differs from the concrete model in 
+Example~\ref{ex:concrete5} in three main respects. The first difference is that the class 
+\code{AbstractModel} is used instead of \code{ConcreteModel}.\index{AbstractModel component@\code{AbstractModel} component}\index{model!AbstractModel@\code{AbstractModel} component}  This informs Pyomo that this is 
+an abstract model that will be constructed with auxiliary data.  Because data is not immediately 
+available, the construction of modeling components is deferred until a model instance is generated\index{model!instance}.  The second difference is that 
+declarations of data components do not contain references to the data that will be used to 
+construct these components.  The final difference is that all objective and constraint 
+components must be defined via rules\index{constraint!rule}\index{objective!rule}. This is a requirement in abstract models, since the 
+construction of these components ultimately depends on the availability of specific data.
+
+\begin{Xnotebox}
+Pyomo does allow for hybrid models where some components are initialized
+with data while others are defined abstractly.  Further, Pyomo data
+components can be defined with default values that are used when data 
+is not specified.  These options are discussed in Chapters~\ref{chap:components2}, \ref{chap:components1}, and \ref{chap:components3}.  However, with few exceptions these hybrid models 
+must be defined with the \code{AbstractModel} class, and thus Pyomo treats them 
+as an abstract model.
+\end{Xnotebox}
+
+Pyomo includes a rich set of options for
+initializing an abstract model to create a model instance that can then
+be optimized (see Chapter~\ref{chap:data}).\index{model!instance}
+A simple strategy is to supply a {\it data command file} that
+specifies values for set and parameter data.\index{data command file}
+The syntax of Pyomo's data command files is very similar to the data command syntax
+supported by AMPL~\cite{AMPL}.\index{algebraic modeling language!AMPL}  A goal of Pyomo is to support the same
+syntax for \code{set} and \code{param} data commands that is used in AMPL.
+However, the syntax for other commands relating to file inclusion and table
+imports and exports is somewhat different (see Chapter~\ref{chap:data}).
+Example~\ref{ex:abstract5.dat} shows a file of data commands that be
+used to initialize the abstract model in Example~\ref{ex:abstract5}.
+This process is described in Section~\ref{chap:overview:pyomo}.
+
+
+\if 0
+% WEH - include this after we implement this functionality.  I think that this will require a new Model base class: ExtensibleModel
+
+\section{Defining Models with Python Classes}
+
+Another strategy for defining models with Pyomo is to create model classes that
+are a subclass of \code{Model}.  This approach has the disadvantage that it requires the user to employ more advanced programming features in Python.  However, it has the advantage that the model initialization can be customized
+in a problem-specific manner.  In particular, using this approach with Pyomo
+eliminates the need to specify rules for constructing modeling components.
+
+Example~\ref{ex:model5.py}
+\fi
+
+
+\section{Optimizing Models}
+\label{chap:overview:pyomo}
+
+The previous sections have outlined different strategies for creating
+and populating a Pyomo model object\index{model!object}.  After the modeler has specified how this
+will be done, he Python commands for doing it are generally invoked by using an executable script.
+The most straightforward way is to invoke the \code{pyomo} command that calls a
+pre-written script to perform optimization in a standard manner. \index{pyomo command@\code{pyomo} command}
+Alternatively, a script can be created to customize the process using solver components
+from Pyomo as introduced in Section~\ref{sec:optscripts}.
+
+
+\subsection{Optimization With The \code{pyomo} Command \label{sec:pyomocommand}}
+
+The Pyomo software distribution includes the \code{pyomo} command that can be used
+to construct a Pyomo model, create a model instance from user-supplied data (in
+the case of abstract models), apply an optimizer, and summarize the results\index{model!instance}.  For 
+example, the following command-line optimizes the \code{concrete1.py} model using
+the default LP solver \code{glpk}:\indexsolver{GLPK}
+\listing{examples/overview/pyomo.concrete1.sh}{cmd}{4}{4}
+Similarly, the following command-line optimizes the \code{abstract5.py} model using
+data in \code{abstract5.dat}, also using \code{glpk}:
+\listing{examples/overview/pyomo.abstract5.sh}{cmd}{4}{4}
+When the \code{pyomo} command loads a user-defined Pyomo model, it by default looks for
+the presence of a \code{ConcreteModel} or \code{AbstractModel} named \code{model}
+in the supplied Python file. We have used this name for all models introduced in this 
+chapter. However, if a name other than \code{model} is used, this can be specified via 
+the \code{pyomo} option \code{--model-name=MODEL\_NAME}, \index{model!name} 
+e.g., \code{--model-name=mymodel}.
+
+The \code{pyomo} command automatically executes the following steps:
+\begin{itemize}
+\item Create a model
+\item Read the instance data (if applicable)
+\item Generate a model instance (if the model is abstract)
+\item Apply simple preprocessors to the model instance
+\item Apply a solver to the model instance
+\item Load the results into the model instance
+\item Display the solver results
+\end{itemize}
+A variety of optional command-line arguments are provided to further guide and 
+provide additional information about the optimization process; documentation of
+the various available options is available by specifying the \code{--help} option.
+Options can control how much or even if debugging information is printed, including 
+logging information generated by the optimizer and a summary of the model generated 
+by Pyomo. Further, Pyomo can be configured to keep all intermediate files used
+during optimization, which facilitates debugging of the model construction process. 
+See Chapter~\ref{chap:command} for further details about this command.
+
+
+\subsection{Optimization Scripts \label{sec:optscripts}}
+
+\index{scripting}
+Scripts that control the optimization process provide users with powerful
+programmability.  To introduce the topic, we describe a simple Python
+script to perform optimization of a Pyomo model instance. Suppose
+that the model in Example~\ref{ex:concrete1} is stored in the file
+\code{concrete1.py}. The script in Example~\ref{ex:script1} can then be
+used to import this model, display the created model, create a solver
+interface, perform optimization, and display the results. Note that this
+script does not rely on the \code{pyomo.core}\index{pyomo.core package@\code{pyomo.core} package} package directly. Pyomo
+is only used to create an optimization model.  Subsequent optimization
+and analysis of this model is handled in a generic manner with other
+Pyomo packages.
+
+Once a Pyomo model has been created, it can be printed using the \code{pprint} method:
+\listing{examples/overview/script1-parts.py}{pprint}{5}{5}
+This command summarizes the information in the Pyomo model.  For concrete models, this 
+includes the constraint and objective expressions\index{constraint!expression}\index{objective!expression}. In abstract models, this information
+is omitted unless the model object has been constructed with externally supplied data.
+
+Before performing optimization, Pyomo needs to perform various preprocessing steps to 
+collect variables, simplify expressions, and other pre-optimization tasks.\index{preprocessing}\index{expression!simplification of} Such preprocessing 
+is automatically performed by the \code{create} method of both the concrete and abstract Pyomo 
+models:
+\listing{examples/overview/script1-parts.py}{create}{9}{10}
+For concrete models this method simply returns the model instance, with various annotations 
+performed by the preprocessor. For abstract models, additional arguments specifying the 
+data used to construct the model instance must be supplied. We note that Pyomo's preprocessing capabilities do not 
+currently involve the \textit{presolve} operations that are commonly employed by industrial
+AMLs to simplify models prior to solution by an optimizer.\index{model!presolve}\index{presolve}
+
+Next, we apply an optimizer to find an optimal solution to our model instance.  For example, 
+the GLPK \cite{glpk} linear programming solver can be used within Pyomo as follows:\indexsolver{GLPK}
+\listing{examples/overview/script1-parts.py}{opt}{14}{15}
+The first line in this example creates a Python object to interface to the GLPK solver.
+The Pyomo model instance is then optimized, with the solver returning an object that 
+contains the solution(s) generated during optimization. This optimization process is 
+executed using components of the \code{pyomo.opt}\index{pyomo.opt package@\code{pyomo.opt} package} package, which manage the setup and execution 
+of optimizers.  Additionally, Pyomo optimization plugins are used to manage the
+execution of specific optimizers.
+
+Finally, the results of the optimization can be displayed simply by executing the
+following command:
+\listing{examples/overview/script1-parts.py}{write}{19}{19}
+This output is in the YAML format~\cite{YAML}, which is a highly structured data format 
+that is also human readable.  
+\if 0
+Chapter~\ref{chap:results} provides a detailed description 
+of the results object and the YAML results format.
+\fi
+
+The process for optimizing abstract models (given a data source) is only slightly different.  
+Suppose that the model in Example~\ref{ex:abstract5} is stored in the file \linebreak \code{abstract5.py}, 
+while the data in Example~\ref{ex:abstract5.dat} is stored in the file\linebreak \code{abstract5.dat}.
+The script in Example~\ref{ex:script2} imports this model, creates a model instance from the
+supplied data, creates a solver interface, performs optimization, and displays the results.  
+The primary difference (other than the use of an abstract model) is the specification of a 
+data file, which defines the sets and parameters that are used to construct the model 
+instance.
+
+\section{Discussion}
+
+Perhaps the two Python modeling tools most similar to Pyomo are
+PuLP~\cite{PuLP} and APLEpy~\cite{APLEpy}.\index{algebraic modeling language!PuLP}\index{algebraic modeling language!APLEpy}  These package both support
+the construction of concrete models using Python objects.  However,
+Pyomo is clearly distinguished by its ability to support the definition
+of abstract models.  Although most of this chapter has focused on
+examples using concrete models, most of the development effort in Pyomo
+has focused on the mechanisms that support abstract models.  In fact,
+the \code{ConcreteModel} class is just a specialization of that mechanism
+to immediately construct model components!
+
+Another distinguishing aspect of Pyomo is the fact that models are complete
+and self-contained Python objects that a user creates.  We believe that this 
+is a feature, since it allows the user to create and managed multiple models 
+simultaneously. However, we have heard users complain about the additional 
+syntax that this requires. In this way, PuLP and APLEpy may be a bit simpler 
+for beginning users, perhaps at the expense of some object-orientation.
+
+In practice, we have observed that users working on abstract models
+tend to work with the \code{pyomo} command, while users working on
+concrete models tend to work with Python scripts.  The \code{pyomo}
+command is relatively mature, since its interface is well-defined.
+However, Pyomo's scripting capabilities are still being extended.
+Although the simple examples shown in this chapter are straightforward,
+more complex examples that we have developed often rely on features of
+Pyomo and Pyomo that were not intended for general, public use.  
+Consequently, we expect that the scripting capabilities of Pyomo and 
+Pyomo will significantly evolve in future releases of this software.
+
+
+\begin{subappendices}
+
+\section{Examples}
+
+\subsection{Concrete Pyomo Model with Explicit Variables}
+\label{ex:concrete1}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) using explicit variables.
+\listing{examples/samples/pyomo_book/overview_concrete1.py}{}{1}{8}
+
+
+\subsection{Concrete Pyomo Model with Indexed Variables}
+\label{ex:concrete2}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) using indexed variables.
+\listing{examples/samples/pyomo_book/overview_concrete2.py}{}{1}{7}
+
+
+\subsection{Concrete Pyomo Model with External Data}
+\label{ex:concrete3}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) 
+with (a) external data declarations and (b) expressions defined using Python's generator syntax.
+\listing{examples/samples/pyomo_book/overview_concrete3.py}{}{1}{15}
+
+
+\subsection{Concrete Pyomo Model with Constraint Rules}
+\label{ex:concrete4}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) using a constraint rule to create constraints \code{con}.
+\listing{examples/samples/pyomo_book/overview_concrete4.py}{}{1}{15}
+
+
+\subsection{Concrete Pyomo Model with Abstract Component Declarations}
+\label{ex:concrete5}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) that uses \code{rule} and \code{initialize} arguments for
+all modeling components.
+\listing{examples/samples/pyomo_book/overview_concrete5.py}{}{1}{25}
+
+
+\subsection{Using a Function to Construct a Concrete Pyomo Model}
+\label{ex:abstract4}
+
+A function that creates a concrete Pyomo model for Formulation~(\ref{eqn:simple-abstract}) using only data provide in the argument list.
+\listing{examples/samples/pyomo_book/overview_abstract4.py}{}{1}{17}
+
+
+\subsection{Abstract Pyomo Model}
+
+\subsubsection{Pyomo Model}
+\label{ex:abstract5}
+
+An abstract Pyomo model for Formulation~(\ref{eqn:simple-abstract}).
+\listing{examples/samples/pyomo_book/overview_abstract5.py}{}{1}{20}
+
+
+\subsubsection{Data Commands}
+\label{ex:abstract5.dat}
+
+Data commands for the abstract Pyomo model in Example~\ref{ex:abstract5} that are used to generate the concrete model in Formulation~(\ref{eqn:simple-concrete}).
+\listing{examples/samples/pyomo_book/overview_abstract5.dat}{}{1}{17}
+
+
+\subsection{A Python Script that Optimizes a Concrete Pyomo Model}
+\label{ex:script1}
+
+A Python script that creates the concrete Pyomo model in Example~\ref{ex:concrete1} and performs optimization using the GLPK linear programming solver.
+\listing{examples/samples/pyomo_book/overview_script1.py}{}{1}{12}
+
+
+\subsection{A Python Script that Optimizes an Abstract Pyomo Model}
+\label{ex:script2}
+
+A Python script that creates a model instance from the abstract Pyomo model in Example~\ref{ex:abstract5} and performs optimization using the GLPK linear programming solver.
+\listing{examples/samples/pyomo_book/overview_script2.py}{}{1}{12}
+
+
+\end{subappendices}

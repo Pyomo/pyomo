@@ -1,0 +1,5 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+Model written to file 'unknown.lp'
+[    0.00] Pyomo Finished

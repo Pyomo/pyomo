@@ -1,0 +1,297 @@
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Declarations: A
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Declarations: A
+1 Set Declarations
+    C : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
+        [('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)]
+
+1 Declarations: C
+1 Set Declarations
+    D : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('A1', 1), ('A2', 2), ('A3', 3)]
+
+1 Declarations: D
+1 Param Declarations
+    z : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+
+1 Declarations: z
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Param Declarations
+    y : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+
+2 Declarations: A y
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+2 Param Declarations
+    w : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   4.3
+         A2 :   4.4
+         A3 :   4.5
+    x : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+
+3 Declarations: A x w
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Param Declarations
+    y : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+
+2 Declarations: A y
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Param Declarations
+    w : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   4.3
+         A2 :   4.4
+         A3 :   4.5
+
+2 Declarations: A w
+3 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+    I : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+        ['I1', 'I2', 'I3', 'I4']
+    u_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+1 Param Declarations
+    u : Size=12, Index=u_index, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('I1', 'A1') :   1.3
+        ('I1', 'A2') :   2.3
+        ('I1', 'A3') :   3.3
+        ('I2', 'A1') :   1.4
+        ('I2', 'A2') :   2.4
+        ('I2', 'A3') :   3.4
+        ('I3', 'A1') :   1.5
+        ('I3', 'A2') :   2.5
+        ('I3', 'A3') :   3.5
+        ('I4', 'A1') :   1.6
+        ('I4', 'A2') :   2.6
+        ('I4', 'A3') :   3.6
+
+4 Declarations: A I u_index u
+3 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+    I : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+        ['I1', 'I2', 'I3', 'I4']
+    t_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+1 Param Declarations
+    t : Size=12, Index=t_index, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'I1') :   1.3
+        ('A1', 'I2') :   1.4
+        ('A1', 'I3') :   1.5
+        ('A1', 'I4') :   1.6
+        ('A2', 'I1') :   2.3
+        ('A2', 'I2') :   2.4
+        ('A2', 'I3') :   2.5
+        ('A2', 'I4') :   2.6
+        ('A3', 'I1') :   3.3
+        ('A3', 'I2') :   3.4
+        ('A3', 'I3') :   3.5
+        ('A3', 'I4') :   3.6
+
+4 Declarations: A I t_index t
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Param Declarations
+    s : Size=2, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A3 :   3.5
+
+2 Declarations: A s
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3', 'A4']
+
+1 Param Declarations
+    y : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+
+2 Declarations: A y
+1 Set Declarations
+    A : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+
+1 Param Declarations
+    p : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'B1') :   4.3
+        ('A2', 'B2') :   4.4
+        ('A3', 'B3') :   4.5
+
+2 Declarations: A p
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Declarations: A
+1 Set Declarations
+    y_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+2 Param Declarations
+    y : Size=3, Index=y_index, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+    z : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+
+3 Declarations: z y_index y
+['A1', 'A2', 'A3']
+1.1
+A1 3.3
+A2 3.4
+A3 3.5
+1 Set Declarations
+    A : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+
+1 Param Declarations
+    p : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'B1') :   4.3
+        ('A2', 'B2') :   4.4
+        ('A3', 'B3') :   4.5
+
+2 Declarations: A p
+1 Set Declarations
+    A : Dim=0, Dimen=2, Size=0, Domain=None, Ordered=False, Bounds=None
+        []
+
+1 Param Declarations
+    p : Size=0, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+
+2 Declarations: A p
+1 Set Declarations
+    A : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+
+1 Param Declarations
+    p : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key          : Value
+        ('A1', 'B1') :   4.3
+        ('A2', 'B2') :   4.4
+        ('A3', 'B3') :   4.5
+
+2 Declarations: A p
+HERE
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Param Declarations
+    p : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   4.3
+         A2 :   4.4
+         A3 :   4.5
+
+2 Declarations: A p
+3 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        [u'A1', u'A2', u'A3']
+    B : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [(1, u'B1'), (2, u'B2'), (3, u'B3')]
+    C : Dim=1, Dimen=1, Size=6, Domain=None, ArraySize=2, Ordered=False, Bounds=None
+        Key : Members
+         A1 : [1, 2, 3]
+         A3 : [10, 20, 30]
+
+3 Param Declarations
+    p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   0.1
+    q : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+    r : Size=3, Index=B, Domain=Any, Default=None, Mutable=False
+        Key        : Value
+        (1, u'B1') :   3.3
+        (2, u'B2') :   3.4
+        (3, u'B3') :   3.5
+
+6 Declarations: A B C p q r
+3 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+    B : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [(1, 'B1'), (2, 'B2'), (3, 'B3')]
+    C : Dim=1, Dimen=1, Size=6, Domain=None, ArraySize=2, Ordered=False, Bounds=None
+        Key : Members
+         A1 : [1, 2, 3]
+         A3 : [10, 20, 30]
+
+3 Param Declarations
+    p : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   0.1
+    q : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   3.3
+         A2 :   3.4
+         A3 :   3.5
+    r : Size=3, Index=B, Domain=Any, Default=None, Mutable=False
+        Key       : Value
+        (1, 'B1') :   3.3
+        (2, 'B2') :   3.4
+        (3, 'B3') :   3.5
+
+6 Declarations: A B C p q r
+1 Set Declarations
+    C : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
+        [('A1', 1), ('A1', 2), ('A1', 3), ('A2', 1), ('A2', 2), ('A2', 3), ('A3', 1), ('A3', 2), ('A3', 3)]
+
+1 Declarations: C
+1 Set Declarations
+    C : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('A1', 1), ('A2', 2), ('A3', 3)]
+
+1 Declarations: C

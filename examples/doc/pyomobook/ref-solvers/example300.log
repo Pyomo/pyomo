@@ -1,0 +1,20 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+Job 3824196 submitted to NEOS, password='WusNxJcw'
+Check the following URL for progress report :
+http://www.neos-server.org/neos/cgi-bin/nph-neos-solver...
+Job 3824196 dispatched
+password: WusNxJcw
+---------- Begin Solver Output -----------
+Job submitted to NEOS HTCondor pool.
+[   11.25] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: 0.8
+    Solver results file: results.yml
+[   11.25] Applying Pyomo postprocessing actions
+[   11.25] Pyomo Finished

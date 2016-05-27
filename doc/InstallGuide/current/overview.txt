@@ -1,0 +1,175 @@
+
+[[InstallingPyomoUsers]]
+== Installing Pyomo for Users ==
+
+The following table summarizes the different installation options
+that are recommended for users:
+
+image::Table_users_small.png[align="center",alt="Installation Recommendations for Users"]
+
+Users can install Pyomo from PyPI or a ZIP file, and Pyomo can be
+installed either in the system Python directories or in the user's
+HOME directory.  Each of these options are described in the following
+sections; there may be multiple ways to install a specific installation
+option, and these are documented together.
+
+NOTE: Installing from a ZIP file is supported to enable users to
+install a snapshot of Pyomo.  Daily snapshots are available from
+the link:https://software.sandia.gov/trac/pyomo/downloader[Pyomo
+download site];  download the file `pyomo_votd.zip`.
+
+NOTE: The `pyomo_install` script does not support the `--with-extras`
+option when installing from a ZIP file.
+
+
+=== Option 1a: Installation from PyPI into the System Python Directory ===
+
+This installation option downloads and installs the latest Pyomo release from
+PyPI into the system Python installation.  Note
+that this installation option requires administrator access.
+
+The following command uses `pip` to download and install Pyomo:
+[[shell]]
+----
+pip install Pyomo
+----
+On Linux and Mac systems, you may need to run this command with `sudo` to provide administrator access:
+[[shell]]
+----
+sudo pip install Pyomo
+----
+
+
+=== Option 1b: Installation from PyPI into the User's HOME Directory ===
+
+This installation option downloads and installs the latest Pyomo release from
+PyPI into Python's alternate user installation.
+The alternate user installation is included in Python's packages,
+so this installation option does not require additional customization
+of Python.
+
+NOTE: This installation strategy installs Pyomo in the user's
+HOME directory.  The specific directory name depends on the type
+of machine;  see the Python documentation for further details.
+
+The following command uses `pip` to download and install Pyomo:
+[[shell]]
+----
+pip install --user pyomo
+----
+
+
+=== Option 2a: Installation from a ZIP File into the System Python Directory ===
+
+This installation option installs Pyomo from a ZIP file into the
+system Python installation.  Note that this installation option
+requires administrator access.  This installation is done offline;
+no external dependencies are installed and no network access is
+required.
+
+The following command uses `pyomo_install` to extract files from
+the ZIP file and install Pyomo:
+[[shell]]
+----
+pyomo_install --zip=pyomo_votd.zip
+----
+
+
+=== Option 2b: Installation from a ZIP File into the User's HOME Directory ===
+
+This installation option installs Pyomo from a ZIP file into 
+Python's alternate user installation.  This
+installation is done offline;  no external dependencies are installed
+and no network access is required.  The alternate user installation
+is included in Python's packages, so this installation option does
+not require additional customization of Python.
+
+NOTE: This installation strategy installs Pyomo in the user's
+HOME directory.  The specific directory name depends on the type
+of machine;  see the Python documentation for further details.
+
+The following command uses `pyomo_install` to extract files from the ZIP file and install Pyomo:
+[[shell]]
+----
+pyomo_install --zip=pyomo_votd.zip --user
+----
+
+
+
+[[InstallingPyomoDevelopers]]
+== Installing Pyomo for Developers ==
+
+The following table summarizes all of the installation options that
+are supported for Pyomo:
+
+image::Table_developers_small.png[align="center",alt="Installation Recommendations for Developers"]
+
+Three additional options are supported for developers,
+all of which install Pyomo in a virtual Python environment.  A
+virtual Python environment is an isolated Python installation that
+depends on the system Python installation, but which mimics a
+complete Python installation.  A virtual Python environment can be
+created by a user in their directory without requiring administrative
+privileges.
+
+
+
+=== Option 1c: Installation from PyPI into a Virtual Environment ===
+
+This installation option downloads and installs the latest Pyomo
+release from PyPI into a virtual Python environment.
+
+The following command uses `pyomo_install` to download and install Pyomo:
+[[shell]]
+----
+pyomo_install --venv=pyomo
+----
+The virtual Python environment is created in the `pyomo` directory,
+and the command `pyomo/bin/python` executes a virtual Python
+environment into which Pyomo has been installed.
+
+
+=== Option 2c: Installation from a ZIP File into a Virtual Environment ===
+
+This installation option installs Pyomo from a ZIP file into a
+virtual Python environment. This installation is done offline;  no
+external dependencies are installed and no network access is required.
+
+The following command uses `pyomo_install` to extract files from the ZIP file and install Pyomo:
+[[shell]]
+----
+pyomo_install --zip=pyomo_votd.zip --venv=pyomo
+----
+The virtual Python environment is created in the `pyomo` directory,
+and the command `pyomo/bin/python` executes a virtual Python
+environment into which Pyomo has been installed.
+
+
+=== Option 3c: Installation from Trunk into a Virtual Environment ===
+
+This installation option uses subversion to checkout Pyomo packages,
+and Pyomo is installed in a virtual Python environment.
+
+The following command uses `pyomo_install` to checkout and install Pyomo:
+[[shell]]
+----
+pyomo_install --trunk --venv=pyomo
+----
+The virtual Python environment is created in the `pyomo` directory,
+and the command `pyomo/bin/python` executes a virtual Python
+environment into which Pyomo has been installed.
+
+[NOTE]
+=====
+For Option 3c, the `--with-extras` option installs `pyomo.extras`
+in an +editable+ mode.  If you wish to install `pyomo.extras` after
+installing Pyomo, then the following `pip` command must be executed:
+
+[[shell]]
+----
+pip install -e svn+https://software.sandia.gov/svn/public/pyomo/pyomo.extras/trunk
+----
+=====
+
+
+// vim: set syntax=asciidoc:

@@ -1,0 +1,151 @@
+Changes since the 1.77.0 release
+
+Note: This document lists changes only since the 1.77.0 release. If you instead
+want a record of the complete list of changes for the codebase over its entire
+history, you can obtain one by running the following commands:
+
+  svn checkout https://docbook.svn.sourceforge.net/svnroot/docbook/trunk/xsl
+  svn log --xml --verbose xsl > ChangeHistory.xml
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Table of Contents
+
+Release Notes: 1.77.1
+
+    FO
+    HTML
+    Roundtrip
+    Slides
+    Website
+    Webhelp
+    Template
+
+Release Notes: 1.77.1
+
+The following is a list of changes that have been made since the 1.77.0
+release.
+
+FO
+
+The following changes have been made to the fo code since the 1.77.0 release.
+
+  • Robert Stayton: docbook.xsl
+
+    Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+    from the filename.
+
+  • Robert Stayton: block.xsl
+
+    In sidebar, turn off space before first para if there is no title.
+
+  • Robert Stayton: math.xsl
+
+    Restored templates for mml:* elements that were accidentally deleted.
+
+HTML
+
+The following changes have been made to the html code since the 1.77.0 release.
+
+  • Robert Stayton: docbook.xsl
+
+    Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+    from the filename.
+
+  • Robert Stayton: sections.xsl
+
+    Use $div.element variable in place of div to support html5 section element.
+    output
+
+  • Robert Stayton: autoidx.xsl
+
+    Fix bug 3528673, missing "separator" param on template with
+    match="indexterm" mode="reference".  That param is passed
+    for endofrange processing to output the range separator.
+
+Roundtrip
+
+The following changes have been made to the roundtrip code since the 1.77.0
+release.
+
+  • Robert Stayton: dbk2ooo.xsl; dbk2pages.xsl; dbk2wordml.xsl; dbk2wp.xsl
+
+    Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+    from the filename.
+
+Slides
+
+The following changes have been made to the slides code since the 1.77.0
+release.
+
+  • Robert Stayton: html/slides-common.xsl
+
+    Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+    from the filename.
+
+Website
+
+The following changes have been made to the website code since the 1.77.0
+release.
+
+  • Robert Stayton: website-common.xsl
+
+    Import the VERSION.xsl file instead of VERSION so mimetype is interpreted correctly
+    from the filename.
+
+Webhelp
+
+The following changes have been made to the webhelp code since the 1.77.0
+release.
+
+  • David Cramer: xsl/webhelp-common.xsl
+
+    Webhelp: Increase default value for chunk.section.depth
+
+  • kasunbg: docsrc/readme.xml
+
+    updated webhelp documentation
+
+  • kasunbg: template/content/search/nwSearchFnt.js; xsl/webhelp-common.xsl
+
+    Removed the script htmlFileList.js since it's content is in htmlFileInfoList.js
+
+  • Robert Stayton: xsl/webhelp-common.xsl
+
+    In the <h1> output, replace call to 'get.doc.title' with
+    mode="title.markup" because get.doc.title returns only
+    the string value of the title, losing any markup such
+    as <trademark> or <superscript>.
+
+  • kasunbg: template/common/css/positioning.css; template/content/search/
+    nwSearchFnt.js
+
+    Remove unnecessary bits of code from webhelp
+
+  • David Cramer: docsrc/readme.xml
+
+    Webhelp: Minor edits to the readme
+
+  • David Cramer: xsl/webhelp.xsl; xsl/titlepage.templates.xsl; xsl/
+    titlepage.templates.xml
+
+    Webhelp: Suppress abstracts from titlepages. These are used to create the search result summary sentence and should not be shown
+
+  • David Cramer: build.xml
+
+    Webhelp: calculate path to profile.xsl from main build.xml file
+
+Template
+
+The following changes have been made to the template code since the 1.77.0
+release.
+
+  • Robert Stayton: titlepage.xsl
+
+    Undo last change because not implemented correctly.
+
+  • Robert Stayton: titlepage.xsl
+
+    Fix xsl:element to not overwrite the incoming fo: namespace
+    if the $ns param is not set.
+

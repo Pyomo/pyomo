@@ -1,0 +1,12 @@
+param p1 := 0.88;
+param p2 := 0.82;
+param p3 := 0.92;
+param p4 := 0.84;
+param p5 := 0.73;
+param p6 := 0.87;
+param p7 := 2700;
+param p8 := 2300;
+param p9 := 540;
+param ps := 700000;
+
+

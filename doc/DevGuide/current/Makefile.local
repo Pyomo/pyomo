@@ -1,0 +1,14 @@
+ 
+TARGETS=PyomoDevGuide
+
+#####################################################################
+# Special auto-generated targets:
+.PHONY: outputs
+outputs: pyomo_api.txt
+pyomo_api.txt:
+	pyomo help --api --asciidoc > pyomo_api.txt
+auto_clean:
+	rm pyomo_api.txt
+clean: auto_clean
+ 
+#####################################################################

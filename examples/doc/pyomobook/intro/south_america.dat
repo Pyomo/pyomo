@@ -1,0 +1,14 @@
+# Adapted from example in 
+#
+#   Jonathan L. Gross and Jay Yellen, "Graph Theory and Its Applications, 2nd Edition",
+#   Chapman & Hall/CRC, Boca Raon, FL, 2006.
+#
+set vertices := Ar Bo Br Ch Co Ec FG Gu Pa Pe Su Ur Ve ;
+
+set edges := (FG,Su) (FG,Br) (Su,Gu) (Su,Br) (Gu,Ve) (Gu,Br)
+             (Ve,Co) (Ve,Br) (Co,Ec) (Co,Pe) (Co,Br) (Ec,Pe)
+             (Pe,Ch) (Pe,Bo) (Pe,Br) (Ch,Ar) (Ch,Bo) (Ar,Ur)
+             (Ar,Br) (Ar,Pa) (Ar,Bo) (Ur,Br) (Bo,Pa) (Bo,Br)
+             (Pa,Br);
+
+param ncolors := 4;
