@@ -23,7 +23,7 @@ _init_url="$URL$"
 # VOTD build
 _major=4
 _minor=3
-_micro=11377
+_micro=11388
 _releaselevel='invalid'
 _serial=0
 
