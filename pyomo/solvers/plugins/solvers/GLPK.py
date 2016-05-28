@@ -76,7 +76,7 @@ class GLPK(OptSolver):
             mode = 'lp'
         #
         if mode  == 'lp':
-            if glpk_file_flag is None:
+            if _glpk_version is None:
                 logger.error('GLPK solver is not installed')
                 return 
             elif glpk_file_flag:
@@ -86,7 +86,7 @@ class GLPK(OptSolver):
             else:
                 return SolverFactory('_glpk_shell_old', **kwds)
         if mode == 'mps':
-            if glpk_file_flag is None:
+            if _glpk_version is None:
                 logger.error('GLPK solver is not installed')
                 return 
             elif glpk_file_flag:
