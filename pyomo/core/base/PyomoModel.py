@@ -855,11 +855,10 @@ from solvers are immediately loaded into the original model instance.""")
 
                 if report_timing is True:
                     total_time = time.time() - start_time
-                    comp = self.find_component(component_name)
-                    if isinstance(comp, IndexedComponent):
-                        clen = len(comp)
+                    if isinstance(component, IndexedComponent):
+                        clen = len(component)
                     else:
-                        assert isinstance(comp, Component)
+                        assert isinstance(component, Component)
                         clen = 1
                     print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
