@@ -110,7 +110,7 @@ elif config == "nonpysp":
 elif config == "parallel":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800' # 30 minutes
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
-    driver.perform_build('pyomo', coverage=True, omit=pyutilib, config='pyomo_all.ini')
+    driver.perform_build('pyomo', cat='parallel', coverage=True, omit=pyutilib, config='pyomo_all.ini')
 
 elif config == "expensive":
     pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
