@@ -38,7 +38,7 @@ optimization problems (i.e. with real variables).  The
 following example defines a simple continuous optimization problem:
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/RealProblem1@prob.py[]
+include::examples/RealProblem1@prob.py[]
 ----
 This problem is equivalent to the following problem definition:
 [latexmath]
@@ -63,7 +63,7 @@ variables, integer variables and binary variables.  The following example define
 a simple mixed-integer optimization problem:
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/MIProblem1@prob.py[]
+include::examples/MIProblem1@prob.py[]
 ----
 This problem is equivalent to the following problem definition:
 [latexmath]
@@ -87,7 +87,7 @@ as a specification of how the optimizer is applied.  Consider the
 following XML specification:
 [source,xml]
 ----
-include::examples/PyomoOnlineDocs/RealProblem1.xml[]
+include::examples/RealProblem1.xml[]
 ----
 This XML specification defines a +MINLP0+ problem, which indicated
 that this is a mixed-integer problem that supports zero-order
@@ -97,7 +97,7 @@ are computed with the +RealProblem1.py+ command-line, which defines
 and uses the +RealProblem1+ class defined above:
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/RealProblem1@.py[]
+include::examples/RealProblem1@.py[]
 ----
 
 Note that this command is a Python script that includes the shebang
@@ -124,7 +124,7 @@ that the Coliny solver will only evaluate feasible points, so a
 simpler problem definition can be used:
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/RealProblem2@.py[]
+include::examples/RealProblem2@.py[]
 ----
 
 The last two lines of +RealProblem1.py+ create a problem instance
@@ -140,12 +140,12 @@ class manages the parsing of the input and generation of the output
 file.  For example, consider the following input file:
 [source,xml]
 ----
-include::examples/PyomoOnlineDocs/RealProblem1_request.xml[]
+include::examples/RealProblem1_request.xml[]
 ----
 The +RealProblem1.py+ script creates the following output file:
 [source,xml]
 ----
-include::examples/PyomoOnlineDocs/RealProblem1_results.xml[]
+include::examples/RealProblem1_results.xml[]
 ----
 
 
@@ -214,18 +214,18 @@ The following detailed example illustrates the use of all of these methods in a
 simple application:
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/RealProblem3@prob.py[]
+include::examples/RealProblem3@prob.py[]
 ----
 The +response_types+ attribute defined in the constructor specifies the type of information that
 this class can compute.  For example, consider the following input XML file:
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/RealProblem3_request.xml[]
+include::examples/RealProblem3_request.xml[]
 ----
 This input file requests that the class compute all of the response values, and thus the following output is generated:
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/RealProblem3_results.xml[]
+include::examples/RealProblem3_results.xml[]
 ----
 Note that the values for Jacobian and Hessian matrices are represented in a sparse manner.  Currently, these are represented with a list of tuple values, though a sparse matrix representation might be supported in the future.
 

@@ -163,7 +163,7 @@ We repeat the abstract model already given:
 One way to implement this in Pyomo is as follows:
 [python]
 ----
-include::examples/PyomoOnlineDocs/abstract1.py[]
+include::examples/abstract1.py[]
 ----
 
 NOTE: Python is interpreted one line at a time.  A line continuation
@@ -306,7 +306,7 @@ In order to use this model, data must be given for the values of the parameters.
 provides data.
 [shell]
 ----
-include::examples/PyomoOnlineDocs/abstract1.dat[]
+include::examples/abstract1.dat[]
 ----
 
 There are multiple formats that can be used to provide data to a Pyomo model, but the AMPL format works well
@@ -353,19 +353,19 @@ Often, a mixture of integers and indexes and strings as indexes is needed in the
 an illustration of general indexes, consider a slightly different Pyomo implementation of the model we just presented. [[abstract2.py,abstract2.py]]
 [python]
 ----
-include::examples/PyomoOnlineDocs/abstract2.py[]
+include::examples/abstract2.py[]
 ----
 
 To get the same instantiated model, the following data file can be used.
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/abstract2a.dat[]
+include::examples/abstract2a.dat[]
 ----
 
 However, this model can also be fed different data for problems of the same general form using meaningful indexes.[[abstract2.dat,abstract2.dat]]
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/abstract2.dat[]
+include::examples/abstract2.dat[]
 ----
 
 === A Simple Concrete Pyomo Model ===
@@ -388,7 +388,7 @@ We repeat the concrete model already given:
 This is implemented as a concrete model as follows:
 [python]
 ----
-include::examples/PyomoOnlineDocs/concrete1.py[]
+include::examples/concrete1.py[]
 ----
 
 Although rule functions can also be used to specify constraints and objectives, in this example we use the +expr+ option that is available only in concrete models. This option gives a direct specification of the expression.
@@ -733,11 +733,11 @@ model.NodesIn = Set(model.Nodes, initialize=NodesIn_init)
 with a similar definition for +model.NodesOut+.  This code creates a list of sets
 for +NodesIn+, one set of nodes for each node. The full model is [[Isinglecomm.py,Isinglecomm.py]]:
 ----
-include::examples/PyomoOnlineDocs/Isinglecomm.py[]
+include::examples/Isinglecomm.py[]
 ----
 for this model, a toy data file would be:
 ----
-include::examples/PyomoOnlineDocs/Isinglecomm.dat[]
+include::examples/Isinglecomm.dat[]
 ----
 
 This can be done somewhat more efficiently, and perhaps more clearly,
@@ -1236,7 +1236,7 @@ The important thing to note is that variables that are going to appear as the in
 [[abstract2piece.py,abstract2piece.py]]
 [python]
 ----
-include::examples/PyomoOnlineDocs/abstract2piece.py[]
+include::examples/abstract2piece.py[]
 ----
 A more advanced example is provided as <<abstract2piecebuild.py>>.
 
@@ -1361,7 +1361,7 @@ The following example illustrates a simple +table+ command that declares data fo
 [[table0.dat,table0.dat]]
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table0.dat[]
+include::examples/table0.dat[]
 ----
 The parameter +M+ is indexed by column +A+.  The column labels are
 provided after the colon and before the +:=+.  Subsequently, the
@@ -1369,13 +1369,13 @@ table data is provided.  Note that the syntax is not sensitive to
 whitespace.  Thus, the following is an equivalent +table+ command:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table1.dat[]
+include::examples/table1.dat[]
 ----
 
 Multiple parameters can be declared by simply including additional parameter names.  For example:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table2.dat[]
+include::examples/table2.dat[]
 ----
 This example declares data for the +M+ and +N+ parameters.  As this
 example illustrates, these parameters may have different indexing
@@ -1384,24 +1384,24 @@ columns.
 The indexing columns represent set data, which is specified separately.  For example:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table3.dat[]
+include::examples/table3.dat[]
 ----
 This examples declares data for the +M+ and +N+ parameters, along with the +A+ and +Z+ indexing sets.  The correspondence between the index set +Z+ and the indices of parameter +N+ can be made more explicit
 by indexing +N+ by +Z+:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table4.dat[]
+include::examples/table4.dat[]
 ----
 Set data can also be specified independent of parameter data:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table5.dat[]
+include::examples/table5.dat[]
 ----
 
 Finally, singleton parameter values can be specified with a simple +table+ command:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table6.dat[]
+include::examples/table6.dat[]
 ----
 
 The previous examples considered examples of the +table+ command
@@ -1410,7 +1410,7 @@ used without column labels.  For example, the file <<table0.dat>> can be revised
 labels as follows:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table0.ul.dat[]
+include::examples/table0.ul.dat[]
 ----
 The +columns=4+ is a keyword-value pair that defines the number of
 columns in this table;  this must be explicitly specified in unlabeled
@@ -1422,12 +1422,12 @@ the column where the +M+ data is provided.
 Similarly, set data can be declared referencing the integer column labels:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table3.ul.dat[]
+include::examples/table3.ul.dat[]
 ----
 Declared set names can also be used to index parameters:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/table4.ul.dat[]
+include::examples/table4.ul.dat[]
 ----
 
 
@@ -1458,7 +1458,7 @@ would be different cost data under circumstances that we will label
 "JohnD." This could be represented using the following data file:
 [ampl]
 ----
-include::examples/PyomoOnlineDocs/abs2nspace.dat[]
+include::examples/abs2nspace.dat[]
 ----
 
 To use this data file with <<abstract2.py>>, a namespace must be
@@ -1498,13 +1498,13 @@ sources and formats.  The most common format is a table representation of set an
 parameter data.  For example, consider the file +A.tab+, which defines a simple set:
 [text]
 ----
-include::examples/PyomoOnlineDocs/tab/A.tab[]
+include::../../../examples/pyomo/tutorials/tab/A.tab[]
 ----
 The following example illustrates how a +DataPortal+ object can be used to load
 this data into a model:
 [python]
 ----
-include::examples/PyomoOnlineDocs/data_portal@set1.py[]
+include::examples/data_portal@set1.py[]
 ----
 The +load+ method opens the data file, processes it, and loads the data in a format
 that is then used to construct a model instance.  The +load+ method can be called
@@ -1519,12 +1519,12 @@ option is used to specify data for a multi-dimensional set.  For example, consid
 the file +C.tab+:
 [text]
 ----
-include::examples/PyomoOnlineDocs/tab/C.tab[]
+include::../../../examples/pyomo/tutorials/tab/C.tab[]
 ----
 If a two-dimensional set is declared, then it can be loaded with the same syntax:
 [python]
 ----
-include::examples/PyomoOnlineDocs/data_portal@set2.py[]
+include::examples/data_portal@set2.py[]
 ----
 This example also illustrates that the column titles do not directly
 impact the process of loading data.  The set +model.A+
@@ -1538,23 +1538,23 @@ The simplest parameter is a singleton.  For example, consider the file +Z.tab+ t
 just one number:
 [text]
 ----
-include::examples/PyomoOnlineDocs/tab/Z.tab[]
+include::../../../examples/pyomo/tutorials/tab/Z.tab[]
 ----
 This data is loaded with the following syntax:
 [python]
 ----
-include::examples/PyomoOnlineDocs/data_portal@param1.py[]
+include::examples/data_portal@param1.py[]
 ----
 
 Indexed parameters can be defined from table data.  For example, consider the file +Y.tab+:
 [text]
 ----
-include::examples/PyomoOnlineDocs/tab/Y.tab[]
+include::../../../examples/pyomo/tutorials/tab/Y.tab[]
 ----
 The parameter +y+ is loaded with the following syntax:
 [python]
 ----
-include::examples/PyomoOnlineDocs/data_portal@param2.py[]
+include::examples/data_portal@param2.py[]
 ----
 Pyomo assumes that the parameter values are defined on the rightmost
 column;  the column names are not used to specify the index and
@@ -1568,19 +1568,19 @@ Multiple parameters can be initialized at once by specifying a
 list (or tuple) of component parameters.  For example, consider the file +XW.tab+:
 [text]
 ----
-include::examples/PyomoOnlineDocs/tab/XW.tab[]
+include::../../../examples/pyomo/tutorials/tab/XW.tab[]
 ----
 The parameters +x+ and +w+ are loaded with the following syntax:
 [python]
 ----
-include::examples/PyomoOnlineDocs/data_portal@param3.py[]
+include::examples/data_portal@param3.py[]
 ----
 Note that the data for set +A+ is predefined in this example.  The index set can
 be loaded along with the parameter data using the +index+ option as
 shown in the next example:
 [python]
 ----
-include::examples/PyomoOnlineDocs/data_portal@param4.py[]
+include::examples/data_portal@param4.py[]
 ----
 
 We have previously noted that the column names are not used to
@@ -1593,7 +1593,7 @@ in that order, to form the table that defines the component data.
 For example, consider the following load declaration:
 [python]
 ----
-include::examples/PyomoOnlineDocs/data_portal@param5.py[]
+include::examples/data_portal@param5.py[]
 ----
 The columns +A+ and +W+ are selected from the file +XW.tab+, and a
 the data for a single parameter is loaded.
@@ -1629,7 +1629,7 @@ A full example, which extends the <<abstract2.py>> and
 [[abstract2piecebuild.py,abstract2piecebuild.py]]
 [python]
 ----
-include::examples/PyomoOnlineDocs/abstract2piecebuild.py[]
+include::examples/abstract2piecebuild.py[]
 ----
 This example uses the build action to create a model component with breakpoints for a
 <<piecewise>> function.  The +BuildAction+ is triggered by the assignment to
@@ -1648,11 +1648,11 @@ use a build action.
 
 The full model is [[Isinglebuild.py,Isinglebuild.py]]:
 ----
-include::examples/PyomoOnlineDocs/Isinglebuild.py[]
+include::examples/Isinglebuild.py[]
 ----
 for this model, the same data file can be used as for <<Isinglecomm.py>> such as the toy data file:
 ----
-include::examples/PyomoOnlineDocs/Isinglecomm.dat[]
+include::examples/Isinglecomm.dat[]
 ----
 
 Build actions can also be a way to implement data validation,

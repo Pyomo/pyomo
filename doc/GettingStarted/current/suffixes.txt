@@ -295,7 +295,7 @@ direction.
 
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/ipopt_warmstart.py[]
+include::examples/ipopt_warmstart.py[]
 ----
 
 The difference in performance can be seen by examining Ipopt's
@@ -359,7 +359,7 @@ The next example shows an abstract model where suffixes are attached
 only to the variables:
 [python]
 ----
-include::examples/PyomoOnlineDocs/AbstractSuffixes.py[]
+include::examples/AbstractSuffixes.py[]
 ----
 
 

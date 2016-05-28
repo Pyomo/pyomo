@@ -28,7 +28,7 @@ no variable values will be output for the first solution found because all of th
 
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/iterative1.py[]
+include::examples/iterative1.py[]
 ----
 
 Let us now analyze this script. The first line is a comment that happens to give the name of the file. This is followed by
@@ -192,7 +192,7 @@ values. The following example illustrates this.
 
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/iterative2.py[]
+include::examples/iterative2.py[]
 ----
 
 In this example, the variables are binary. The model
@@ -412,7 +412,7 @@ value of +x[2]+ is accessed.
 
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/noiteration1.py[]
+include::examples/noiteration1.py[]
 ----
 
 NOTE: If this script is run without modification, Pyomo is likely to issue a warning because there are no constraints. The warning is because some solvers may fail if given a problem instance that does not have any constraints.
@@ -451,7 +451,7 @@ for v in instance.component_objects(Var, active=True):
 Another way to access all of the variables (particularly if there are blocks) is as follows:
 [python]
 ----
-include::examples/PyomoOnlineDocs/block_iter_example@compprintloop.py[]
+include::examples/block_iter_example@compprintloop.py[]
 ----
 The use of +True+ as an argument to +cname+ indicates that the full name is desired. 
 
@@ -547,7 +547,7 @@ that the model in +abstract2.py+ does contain a constraint named
 
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/driveabs2.py[]
+include::examples/driveabs2.py[]
 ----
 
 Concrete models are slightly different because the model is the instance. Here is a complete example that relies on the file +concrete1.py+ to 
@@ -555,7 +555,7 @@ provide the model and instantiate it.
 
 [source,python]
 ----
-include::examples/PyomoOnlineDocs/driveconc1.py[]
+include::examples/driveconc1.py[]
 ----
 
 ==== All Duals from Workflow Callbacks ====
@@ -728,7 +728,7 @@ The commands are:
 This example demonstrates how to use these services to solve two instances in parallel.
 [python]
 ----
-include::examples/PyomoOnlineDocs/parallel.py[]
+include::examples/parallel.py[]
 ----
 This example creates two instances that are very similar and then
 sends them to be dispatched to solvers. If there are two solvers, then
