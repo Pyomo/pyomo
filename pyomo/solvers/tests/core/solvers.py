@@ -16,7 +16,7 @@ import pyutilib.autotest
 import pyomo.misc.plugin
 
 import pyomo.solvers.plugins.testdriver.pyomo
-import pyomo.data.pyomo.plugins
+#import pyomo.data.pyomo.plugins
 
 currdir = dirname(abspath(__file__))+os.sep
 rootdir = None
@@ -344,7 +344,8 @@ class SolverTestingDriver(pyomo.solvers.plugins.testdriver.pyomo.PyomoTestDriver
         # For each test in options. test, call the corresponding plugin function
         try:
             for test in re.split('[ ]+',options.tests):
-                fn = getattr(pyomo.data.pyomo.plugins, test)
+                # WEH - Edit this to figure out which packages we are running
+                #fn = getattr(pyomo.data.pyomo.plugins, test)
                 fn(options.results, data, options)
         except Exception:
             e = sys.exc_info()[1]

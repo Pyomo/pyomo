@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     import pyutilib.th as unittest
     import pyutilib.autotest
-    import pyomo.data.core
+    #import pyomo.data.core
 
     pyutilib.autotest.create_test_suites(filename=currdir+'test_solvers.yml', _globals=globals())
 
