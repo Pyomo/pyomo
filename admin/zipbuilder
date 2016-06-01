@@ -11,7 +11,7 @@
 set -o pipefail
 
 PACKAGE=pyomo
-INI=pyomo
+INI=config
 
 BASE_OS=`uname | cut -d'-' -f1`
 if test "$BASE_OS" == "Darwin"; then
