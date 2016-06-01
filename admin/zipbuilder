@@ -62,9 +62,9 @@ if test -n "$PYPI"; then
     touch ${PACKAGE}.zip
 fi
 
-if test ! -d hudson; then
-    svn co https://software.sandia.gov/svn/fast/hudson/python hudson || exit 1
-fi
+#if test ! -d hudson; then
+#    svn co --trust-server-cert https://software.sandia.gov/svn/fast/hudson/python hudson || exit 1
+#fi
 if test ! -d vpy; then
     git clone https://github.com/PyUtilib/pyutilib.virtualenv.git vpy || exit 1
 fi
@@ -77,9 +77,10 @@ import os
 
 sys.argv = ['dummy', '--preinstall', $MODE]
 sys.path.append(os.getcwd())
+sys.path.append('pyomo/admin')
 os.environ['WORKSPACE'] = os.getcwd()
-import hudson.driver
-hudson.driver.perform_build(
+import driver
+driver.perform_build(
     '${PACKAGE}', cat=None, config='${INI}.ini', dest='preinstall' )
 "
 python -c "$SCRIPT" | tee ${PACKAGE}.log || exit 1
