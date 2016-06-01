@@ -105,6 +105,9 @@ def runPyomoTests():
     testdirs = []
     for topdir in dirs:
         for root, subdirs, files in os.walk(topdir):
+            if not '__init__.py' in files:
+                # Skip directories that do not contain a __init__.py file.
+                continue
             for f in files:
                 if f.startswith("test_"):
                     testdirs.append(root)
