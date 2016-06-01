@@ -19,7 +19,7 @@ if test "$BASE_OS" == "Darwin"; then
     XARGS_REPL='-x -L 1 -J'
     LS_COLOR=
 else
-    SED_RE=-r
+    SED_RE=-E
     XARGS_REPL=-I
     LS_COLOR=--color=none
 fi
@@ -136,7 +136,7 @@ else
     # trunk
     pwd
     REV=`git log -1 --format="%h"`
-    printf "${PACKAGE} installer for: VOTD.%d\n" $REV > $VER
+    printf "${PACKAGE} installer for: VOTD.%s\n" $REV > $VER
     # Update the VOTD micro version number
     VER_FILE=src/${PACKAGE}/${PACKAGE}/version/__init__.py
     cat $VER_FILE | sed $SED_RE "s/_micro=[0-9]*/_micro=$REV/" > tmp
