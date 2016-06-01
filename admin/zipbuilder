@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -v
 
 # The old version of "rebuild".  I am mostly keeping this here so for
 # archival purposes.
