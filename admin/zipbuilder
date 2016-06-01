@@ -74,11 +74,12 @@ fi
 SCRIPT="
 import sys
 import os
+import os.path
 
+os.environ['WORKSPACE'] = os.getcwd()
 sys.argv = ['dummy', '--preinstall', $MODE]
 sys.path.append(os.getcwd())
-sys.path.append('pyomo/admin')
-os.environ['WORKSPACE'] = os.getcwd()
+sys.path.append(os.path.join(os.environ['WORKSPACE'], 'pyomo/admin'))
 import driver
 driver.perform_build(
     '${PACKAGE}', cat=None, config='${INI}.ini', dest='preinstall' )
