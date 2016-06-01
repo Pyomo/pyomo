@@ -76,10 +76,10 @@ import sys
 import os
 import os.path
 
-os.environ['WORKSPACE'] = os.getcwd()
 sys.argv = ['dummy', '--preinstall', $MODE]
 sys.path.append(os.getcwd())
 sys.path.append(os.path.join(os.environ['WORKSPACE'], 'pyomo/admin'))
+os.environ['WORKSPACE'] = os.getcwd()
 print(sys.path)
 import driver
 driver.perform_build(
