@@ -131,10 +131,10 @@ elif config == "booktests" or config == "book":
         assert False
     # Test
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
+    #pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
     driver.perform_tests('pyomo', cat='book')
 
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
-    driver.perform_tests('pyomo', cat='performance')
+    driver.perform_build('pyomo', cat='performance')
 
