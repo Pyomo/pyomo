@@ -83,6 +83,7 @@ sys.path.append(os.getcwd())
 sys.path.append(admin_path)
 os.environ['WORKSPACE'] = os.getcwd()
 print(sys.path)
+print(os.environ)
 import driver
 driver.perform_build(
     '${PACKAGE}', cat=None, config=os.path.join(admin_path, '${INI}.ini'), dest='preinstall' )
