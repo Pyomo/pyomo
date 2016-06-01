@@ -134,12 +134,11 @@ if test -z "$MODE"; then
     echo RELEASE
 else
     # trunk
-    PKG_SVN=`grep -i -A1 "package ${PACKAGE}\$" $LOG | tail -1 | cut -d: -f2- \
-            | xargs svn info | grep '^Revision' | cut -d: -f2 | tr -d ' '`
-    printf "${PACKAGE} installer for: VOTD.%d\n" $PKG_SVN > $VER
+    REV = `git log -1 --format="%h"`
+    printf "${PACKAGE} installer for: VOTD.%d\n" $REV > $VER
     # Update the VOTD micro version number
     VER_FILE=src/${PACKAGE}/${PACKAGE}/version/__init__.py
-    cat $VER_FILE | sed $SED_RE "s/_micro=[0-9]*/_micro=$PKG_SVN/" > tmp
+    cat $VER_FILE | sed $SED_RE "s/_micro=[0-9]*/_micro=$REV/" > tmp
     mv tmp $VER_FILE
 
     echo "This installer includes the following package revisions:" >> $VER
