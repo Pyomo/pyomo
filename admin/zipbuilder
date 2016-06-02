@@ -169,9 +169,9 @@ find . -name .svn | xargs rm -rf
 
 
 if test -z "$MODE"; then
-    ZIPFILE=${PACKAGE}_${PKG_SVN}.zip 
+    ZIPFILE=${PACKAGE}_${REV}.zip 
 else
-    ZIPFILE=${PACKAGE}_votd_${PKG_SVN}.zip 
+    ZIPFILE=${PACKAGE}_votd_${REV}.zip 
 fi
 
 # build the ZIP needed for ${PACKAGE}_install
