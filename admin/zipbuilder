@@ -182,7 +182,7 @@ pwd
 echo $ZIPFILE
 rm -f ../${PACKAGE}.zip ../${ZIPFILE}
 \ls $LS_COLOR | grep -v '^bin' | grep -v '^include' | grep -v '^lib' \
-    | xargs $XARGS_REPL % zip -r ../${ZIPFILE} % -x \*.pyc 
+    | xargs -I % zip -r ../${ZIPFILE} % -x \*.pyc 
 #\ls --color=none | grep -v '^bin' | grep -v '^include' | grep -v '^lib' \
 #    | xargs -i zip -r ../${PACKAGE}.zip {} -x \*.pyc 
 #\ls | grep -v '^bin' | grep -v '^include' | grep -v '^lib' \
