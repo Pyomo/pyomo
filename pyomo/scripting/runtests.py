@@ -109,7 +109,7 @@ def runPyomoTests():
                 # Skip directories that do not contain a __init__.py file.
                 continue
             for f in files:
-                if f.startswith("test_"):
+                if f.startswith("test"):
                     testdirs.append(root)
                     break
     #
