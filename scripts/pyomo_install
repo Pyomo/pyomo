@@ -360,7 +360,7 @@ def install_from_trunk_jython(pip, python_dir, options):
     #
     # Checkout and install Pyomo
     #
-    cmd = [ 'svn', 'checkout', '-q', 'https://software.sandia.gov/svn/public/pyomo/pyomo/trunk', 'pyomo' ]
+    cmd = [ 'git', 'clone', '-q', 'https://github.com/Pyomo/pyomo.git']
     call_subprocess(cmd, options, cwd=srcDir)
     call_subprocess([python, 'setup.py','develop'], options, cwd=os.path.join(srcDir,'pyomo'))
 
