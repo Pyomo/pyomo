@@ -20,9 +20,9 @@ if test "$BASE_OS" == "Darwin"; then
     LS_COLOR=
 else
     #SED_RE=-r
-    #XARGS_REPL=-I
+    XARGS_REPL=-I
     SED_RE=-E
-    XARGS_REPL='-x -L 1 -J'
+    #XARGS_REPL='-x -L 1 -J'
     LS_COLOR=--color=none
 fi
 
