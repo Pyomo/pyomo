@@ -137,8 +137,11 @@ if test -z "$MODE"; then
     echo RELEASE
 else
     # trunk
+    pushd ../../pyomo
     pwd
     REV=`git log -1 --format="%h"`
+    popd
+
     printf "${PACKAGE} installer for: VOTD.%s\n" $REV > $VER
     # Update the VOTD micro version number
     VER_FILE=src/${PACKAGE}/${PACKAGE}/version/__init__.py
