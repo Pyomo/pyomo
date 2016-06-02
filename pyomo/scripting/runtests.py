@@ -102,6 +102,9 @@ def runPyomoTests():
             else:
                 dirs.append(os.path.join('pyomo','pyomo',dir))
     #
+    excluding = set()
+    for e in _options.exclude:
+        excluding.add(os.path.join('pyomo','pyomo',e))
     testdirs = []
     for topdir in dirs:
         for root, subdirs, files in os.walk(topdir):
@@ -110,7 +113,12 @@ def runPyomoTests():
                 continue
             for f in files:
                 if f.startswith("test"):
-                    testdirs.append(root)
+                    skip=False
+                    for e in excluding:
+                        if root.startswith(e):
+                            skip=True
+                    if not skip:
+                        testdirs.append(root)
                     break
     #
     pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+testdirs)
