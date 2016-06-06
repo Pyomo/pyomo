@@ -459,6 +459,7 @@ def solve_fixed_scenario_solutions(
     _block = model._interscenario_plugin
     _param = _block.fixed_variable_values
     _sep = _block.separation_variables
+    _con = _block.fixed_variables_constraint
 
     # We need to know which scenarios are local to this instance ... so
     # we don't waste time repeating work.
@@ -469,21 +470,14 @@ def solve_fixed_scenario_solutions(
 
     ipopt = SolverFactory("ipopt")
 
-    print "Initial Cost", scenario_or_bundle._cost, scenario_or_bundle._instance_cost_expression()
-
     #
     # Turn off RHO!
     #
     _saved_rho_values = _block.rho().extract_values()
     _block.rho().store_values(0)
 
-    print "Initial Cost", scenario_or_bundle._cost, scenario_or_bundle._instance_cost_expression()
-
     # Enable the constraints to fix the Stage 1 variables:
-    _block.fixed_variables_constraint.activate()
-
-    print "Initial Cost", scenario_or_bundle._cost, scenario_or_bundle._instance_cost_expression()
-    scenario_or_bundle.model().display()
+    _con.activate()
 
     # Solve each solution here and cache the resulting objective
     cutlist = []
@@ -505,7 +499,7 @@ def solve_fixed_scenario_solutions(
         assert( len(var_values) == len(_param) )
         for var_id, var_value in iteritems(var_values):
             _param[var_id] = var_value
-        
+
         # TODO: We only need to update the CanonicalRepn for the binding
         # constraints ... so we could save a LOT of time by not
         # preprocessing the whole model.
@@ -543,23 +537,21 @@ def solve_fixed_scenario_solutions(
                 model.load(results)
             else:
                 model.solutions.load_from(results)
+            #
+            # Turn off W, recompute the objective
+            #
+            _saved_w_values = _block.weights().extract_values()
+            _block.weights().store_values(0)
+            obj_values.append(value(_block.original_obj()))
+            _block.weights().store_values(_saved_w_values)
+
+            # NOTE: Getting the dual values resolves the model
+            # (potentially relaxing second state variables.
             if _block.enable_rho:
                 dual_values.append( get_dual_values(ph._solver, model) )
             else:
                 dual_values.append(None)
             cutlist.append(".  ")
-            #
-            # Turn off W, recompute the objective
-            #
-            print "Cost", scenario_or_bundle._cost, scenario_or_bundle._instance_cost_expression()
-            scenario_or_bundle.model().display()
-            print "Obj:", value(_block.original_obj()),
-            _saved_w_values = _block.weights().extract_values()
-            _block.weights().store_values(0)
-            print value(_block.original_obj()),
-            obj_values.append(value(_block.original_obj()))
-            _block.weights().store_values(_saved_w_values)
-            print value(_block.original_obj())
         elif True or tc in _infeasible_termination_conditions:
             state = 1 #'INFEASIBLE'
             obj_values.append(None)
@@ -593,7 +585,7 @@ def solve_fixed_scenario_solutions(
     _block.rho().store_values(_saved_rho_values)
 
     # Disable the constraints to fix the Stage 1 variables:
-    _block.fixed_variables_constraint.deactivate()
+    _con.deactivate()
 
     return obj_values, dual_values, cutlist
 
@@ -767,7 +759,6 @@ class InterScenarioPlugin(SingletonPlugin):
         # objectives, duals, and any cuts
         partial_obj_values, dual_values, cuts, probability \
             = self._solve_interscenario_solutions( ph )
-        print partial_obj_values
 
         # Compute the non-anticipative objective values for each
         # scenario solution
@@ -790,11 +781,6 @@ class InterScenarioPlugin(SingletonPlugin):
                              for x in cuts[_id]),
                     ','.join(soln[1])
                 ))
-            print "MISC: [%s] [%s] [%s] [%s]" % (
-                ", ".join("%10.2f" % x._objective for x in _scenarios),
-                ", ".join("%10.2f" % x._cost for x in _scenarios),
-                ", ".join("%10.2f" % x._weight_term_cost for x in _scenarios),
-                ", ".join("%10.2f" % x._proximal_term_cost for x in _scenarios),
             )
         scenarioCosts = [ ph._scenario_tree.get_scenario(x)._cost 
                           for s in self.unique_scenario_solutions
