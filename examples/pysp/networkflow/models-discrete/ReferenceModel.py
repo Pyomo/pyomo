@@ -55,7 +55,7 @@ model.M = Param(within=NonNegativeReals)
 # total arc capacity - a first stage variable.
 model.x = Var(model.Arcs, within=NonNegativeReals)
 
-model.discrete_x = Var(model.Arcs, within=NonNegativeIntegers, bounds=(0,15))
+model.discrete_x = Var(model.Arcs, within=NonNegativeIntegers)
 model.scale_x = Param(initialize=10)
 def set_x(m,*i):
     return m.x[i] == m.scale_x * m.discrete_x[i]
@@ -84,7 +84,7 @@ def flow_balance_constraint_rule(model, v, k, l):
     elif v == l:
         return (sum([model.y[k, l, i, j] for (i, j) in model.Aplus[v]]) - sum([model.y[k, l, i, j] for (i, j) in model.Aminus[v]]) - model.Demand[k, l]) == 0.0
     else:
-        return (sum([model.y[k, l, i, j] for (i, j) in model.Aplus[v]]) - sum([model.y[k, l, i, j] for (i, j) in model.Aminus[v]])) == 0.0      
+        return (sum([model.y[k, l, i, j] for (i, j) in model.Aplus[v]]) - sum([model.y[k, l, i, j] for (i, j) in model.Aminus[v]])) == 0.0
 model.FlowBalanceConstraint = Constraint(model.Nodes, model.Nodes, model.Nodes, rule=flow_balance_constraint_rule)
 
 def capacity_constraint_rule(model, i, j):
@@ -98,11 +98,11 @@ model.xSymmetryConstraint = Constraint(model.Arcs, rule=x_symmetry_constraint_ru
 def b0_symmetry_constraint_rule(model, i, j):
     return (model.b0[i, j] - model.b0[j, i]) == 0.0
 model.b0SymmetryConstraint = Constraint(model.Arcs, rule=b0_symmetry_constraint_rule)
-    
+
 def b_symmetry_constraint_rule(model, i, j):
     return (model.b[i, j] - model.b[j, i]) == 0.0
 model.bSymmetryConstraint = Constraint(model.Arcs, rule=b_symmetry_constraint_rule)
-    
+
 def bought_arc0_constraint_rule(model, k, l, i, j):
     return (0.0, model.M * model.b0[i, j] - model.y[k, l, i, j], None)
 model.BoughtArc0Constraint = Constraint(model.Nodes, model.Nodes, model.Arcs, rule=bought_arc0_constraint_rule)
