@@ -14,6 +14,7 @@ from six.moves import xrange
 import weakref
 
 import pyutilib
+from pyutilib.misc.timing import tic, toc
 
 from pyomo.core import (
     minimize, value, TransformationFactory,
@@ -71,11 +72,16 @@ _IntegerDomains = (
     IntegerInterval,
 )
 
-def get_modified_instance( ph, scenario_tree, scenario_or_bundle, *options):
+def get_modified_instance( ph, scenario_tree, scenario_or_bundle, **options):
     if scenario_or_bundle._name in get_modified_instance.data:
         return get_modified_instance.data[scenario_or_bundle._name]
 
-    epsilon, cut_scale, allow_slack, enable_rho, enable_cuts = options
+    epsilon     = options.pop('epsilon')
+    cut_scale   = options.pop('cut_scale')
+    allow_slack = options.pop('allow_slack')
+    enable_rho  = options.pop('enable_rho')
+    enable_cuts = options.pop('enable_cuts')
+    assert( len(options) == 0 )
 
     # Note: the var_ids are on the ORIGINAL scenario models 
     rootNode = scenario_tree.findRootNode()
@@ -93,7 +99,7 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle, *options):
 
     # Now, make a copy for us to play with
     model = base_model.clone()
-    get_modified_instance.data[scenario_or_bundle._name] = model
+    get_modified_instance.data[scenario_or_bundle._name] = model, base_model
 
     # Right now, this is hard-coded for 2-stage problems - so we only
     # need to worry about the variables from the root node.  These
@@ -183,7 +189,8 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle, *options):
     # Note: we wait to deactivate the objective until after we
     # preprocess so that the obective is correctly processed.
     model._interscenario_plugin.separation_obj.deactivate()
-    return model
+    toc("InterScenario: generated modified problem instance")
+    return get_modified_instance.data[scenario_or_bundle._name]
 
 get_modified_instance.data = {}
 
@@ -376,14 +383,9 @@ def solve_separation_problem(solver, model, fallback):
 
 
 def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
-                  feasibility_cuts, optimality_cuts, resolve ):
+                  feasibility_cuts, incumbent_cuts, resolve ):
     # Find the model
-    if scenario_tree.contains_bundles():
-        base_model = ph._bundle_binding_instance_map[scenario_or_bundle._name]
-    else:
-        base_model = ph._instances[scenario_or_bundle._name]
-
-    model = get_modified_instance(ph, scenario_tree, scenario_or_bundle)
+    model, base_model = get_modified_instance(ph, scenario_tree, scenario_or_bundle)
     epsilon = model._interscenario_plugin.epsilon
     cut_scale = model._interscenario_plugin.cut_scale
 
@@ -396,12 +398,12 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
                 2 * (_sep*(1-cut_scale))
                   * (_src[i]() - (_par+_sep*(1-cut_scale)))
                 for i, (_sep, _par) in iteritems(cut) 
-                if abs(_sep) > epsilon
+                if abs(_sep) > epsilon*max(1,_par)
             )
             if expr is not 0:
                 _cl.add( expr >= 0 )
 
-        for cut in optimality_cuts:
+        for cut in incumbent_cuts:
             _int_binaries = []
             for vid, val in iteritems(cut[1]):
                 # Deal with integer variables
@@ -461,10 +463,10 @@ def add_new_cuts( ph, scenario_tree, scenario_or_bundle,
 
 def solve_fixed_scenario_solutions( 
         ph, scenario_tree, scenario_or_bundle, 
-        scenario_solutions, *model_options ):
+        scenario_solutions, **model_options ):
 
-    model = get_modified_instance( ph, scenario_tree, scenario_or_bundle, 
-                                   *model_options )
+    model, base_model = get_modified_instance(
+        ph, scenario_tree, scenario_or_bundle, **model_options )
     _block = model._interscenario_plugin
     _param = model._interscenario_plugin.fixed_variable_values
     _sep = model._interscenario_plugin.separation_variables
@@ -492,7 +494,7 @@ def solve_fixed_scenario_solutions(
             # Here is where we could save some time and not repeat work
             # ... for now I am being lazy and re-solving so that we get
             # the dual values, etc for this scenario as well.  If nothing
-            # else, i makes averaging easier.
+            # else, it makes averaging easier.
             pass
 
         assert( len(var_values) == len(_param) )
@@ -512,6 +514,7 @@ def solve_fixed_scenario_solutions(
                 var_id_map = {}
                 canonical_preprocess_block_constraints(_block, var_id_map)
 
+        toc("preprocessed scenario %s" % ( scenario_or_bundle._name, ))
         output_buffer = StringIO()
         pyutilib.misc.setup_redirect(output_buffer)
         try:
@@ -523,6 +526,8 @@ def solve_fixed_scenario_solutions(
             raise
         finally:
             pyutilib.misc.reset_redirect()
+        toc("solved solution from scenario set %s on scenario %s" %
+            ( scenario_name_list, scenario_or_bundle._name, ))
 
         ss = results.solver.status 
         tc = results.solver.termination_condition
@@ -552,6 +557,8 @@ def solve_fixed_scenario_solutions(
             else:
                 cut = "X  "
             cutlist.append( cut )
+            toc("solved separation problem for solution from scenario set %s on scenario %s" % 
+                ( scenario_name_list, scenario_or_bundle._name, ))
         else:
             state = 2 #'NONOPTIMAL'
             obj_values.append(None)
@@ -564,50 +571,6 @@ def solve_fixed_scenario_solutions(
     return obj_values, dual_values, cutlist
 
 
-def solve_ph_scenarios( ph, scenario_tree, scenario_or_bundle, *options ):
-    # We need to know which scenarios are local to this instance ... so
-    # we don't waste time repeating work.
-    if scenario_tree.contains_bundles():
-        model = ph._bundle_binding_instance_map[scenario_or_bundle._name]
-        local_scenarios = scenario_or_bundle._scenario_names
-    else:
-        model = ph._instances[scenario_or_bundle._name]
-        local_scenarios = [ scenario_or_bundle._name ]
-
-    _block = model._interscenario_plugin
-    _src = model._interscenario_plugin.local_stage1_varmap
-
-    # Note:  add_new_cuts() takes care of calling preprocess!
-
-    output_buffer = StringIO()
-    pyutilib.misc.setup_redirect(output_buffer)
-    try:
-        results = ph._solver.solve(model, tee=True) # warmstart=True)
-    except:
-        logger.warning("Exception raised re-solving the PH scenario "
-                       "subproblem")
-        logger.warning("Solver log:\n%s" % output_buffer.getvalue())
-        raise
-    finally:
-        pyutilib.misc.reset_redirect()
-
-    ss = results.solver.status 
-    tc = results.solver.termination_condition
-    #self.timeInSolver += results['Solver'][0]['Time']
-    if ss == SolverStatus.ok and tc in _acceptable_termination_conditions:
-        state = 0 #'FEASIBLE'
-        if PYOMO_4_0:
-            model.load(results)
-        else:
-            model.solutions.load_from(results)
-        x_values = dict((_id, value(_var())) for _id, _var in iteritems(_src))
-    else:
-        state = 1 #'INFEASIBLE'
-        x_values = None
-
-    return x_values
-
-
 class InterScenarioPlugin(SingletonPlugin):
 
     implements(phextension.IPHExtension) 
@@ -615,17 +578,19 @@ class InterScenarioPlugin(SingletonPlugin):
     def __init__(self):
         self.enableRhoUpdates = True
         self.enableFeasibilityCuts = True
-        self.enableOptimalityCuts = True
-        self.epsilon = 1e-4
+        self.enableIncumbentCuts = True
+        self.epsilon = 1e-7
         self.cut_scale = 0#1e-4
         self.allow_variable_slack = False
         self.convergenceRelativeDegredation = 0.33
         self.convergenceAbsoluteDegredation = 0.001
         # Force this plugin to run every N iterations
-        self.iterationInterval = 100
+        self.iterationInterval = 1
         # multiplier on computed rho values
         self.rhoScale = 0.75
-        # How quickly rho moves to new values [0: jump to max, 1: jump to min]
+        # How quickly rho moves to new values [0..1]
+        #   0: no damping (jump to calculated rho)
+        #   1: complete damping (do not change current value of rho)
         self.rhoDamping = 0.1
         # Minimum difference in objective to include a cut, and minimum
         # difference in variable values to include that term in a cut
@@ -647,7 +612,7 @@ class InterScenarioPlugin(SingletonPlugin):
         self.x_deviation = None
         self.lastConvergenceMetric = None
         self.feasibility_cuts = []
-        self.optimality_cuts = []
+        self.incumbent_cuts = []
         self.lastRun = 0
         self.average_solution = None
         self.converger = NormalizedTermDiffConvergence()
@@ -680,27 +645,18 @@ class InterScenarioPlugin(SingletonPlugin):
         count = 0
         while self.rho is None and self.feasibility_cuts:
             count += 1
-            print( "InterScenario plugin: PH iteration 0 re-solve pass %s" 
+            toc( "InterScenario plugin: PH iteration 0 re-solve pass %s"
                    % (count,) )
+            _stale_scenarios = []
+            for _id, _soln in enumerate(self.unique_scenario_solutions):
+                _was_cut = sum(
+                    1 for c in self.feasibility_cuts if type(c[_id]) is tuple)
+                if _was_cut:
+                    _stale_scenarios.extend(_soln[1])
+
             self._distribute_cuts(ph, True)
-            new_x = self._re_solve_ph_scenarios(ph)
+            toc("InterScenario: distributed cuts to scenarios")
             self._interscenario_plugin(ph)
-        if count:
-            # Transfer the current values for the first stage variables
-            # back to PH, and recompute the xbar
-            rootNode = ph._scenario_tree.findRootNode()
-            for _scenario_id, _scenario_data in enumerate(new_x):
-                if _scenario_data is None:
-                    continue
-                _xMap = rootNode._scenarios[_scenario_id]._x[rootNode._name]
-                for _id, _val in iteritems(_scenario_data):
-                    _xMap[_id] = _val
-            ph.update_variable_statistics()
-            #if self.enableRhoUpdates:
-            #    for v, r in iteritems(self.rho):
-            #        ph.setRhoAllScenarios(rootNode, v, 0)
-            #    self.rho = None
-            #    self.x_deviation = None
         self.lastRun = 0
 
     def post_iteration_0(self, ph):
@@ -712,7 +668,7 @@ class InterScenarioPlugin(SingletonPlugin):
         pass
 
     def pre_iteration_k_solves(self, ph):
-        if self.feasibility_cuts or self.optimality_cuts:
+        if self.feasibility_cuts or self.incumbent_cuts:
             self._distribute_cuts(ph)
         pass
 
@@ -767,7 +723,7 @@ class InterScenarioPlugin(SingletonPlugin):
 
 
     def _interscenario_plugin(self,ph):
-        print("InterScenario plugin: analyzing scenario dual information")
+        toc("InterScenario plugin: analyzing scenario dual information")
 
         # (1) Collect all scenario (first) stage variables
         self._collect_unique_scenario_solutions(ph)
@@ -787,19 +743,21 @@ class InterScenarioPlugin(SingletonPlugin):
             partial_obj_values, probability )
 
         for _id, soln in enumerate(self.unique_scenario_solutions):
-            print("  Scenario %2d: generated %2d cuts, "
-                  "cut by %2d other scenarios; objective %10s, "
-                  "scenario cost [%s], cut obj [%s]" % (
-                _id,
-                sum(1 for c in cuts[_id] if type(c) is tuple),
-                sum(1 for c in cuts if type(c[_id]) is tuple),
-                "None" if self.feasible_objectives[_id] is None
+            print(
+                "  Solution %2d: generated %2d cuts, "
+                "cut by %2d other scenarios; objective %10s, "
+                "scenario cost [%s], cut obj [%s] [generated by %s]" % (
+                    _id,
+                    sum(1 for c in cuts[_id] if type(c) is tuple),
+                    sum(1 for c in cuts if type(c[_id]) is tuple),
+                    "None" if self.feasible_objectives[_id] is None
                     else "%10.2f" % self.feasible_objectives[_id],
-                ", ".join( "%10.2f" % ph._scenario_tree.get_scenario(x)._cost 
-                           for x in soln[1] ),
-                " ".join( "%5.2f" % x[0] if type(x) is tuple else "%5s" % x 
-                          for x in cuts[_id] ),
-            ))
+                    ", ".join("%10.2f"%ph._scenario_tree.get_scenario(x)._cost
+                              for x in soln[1]),
+                    " ".join("%5.2f" % x[0] if type(x) is tuple else "%5s" % x
+                             for x in cuts[_id]),
+                    ','.join(soln[1])
+                ))
         scenarioCosts = [ ph._scenario_tree.get_scenario(x)._cost 
                           for s in self.unique_scenario_solutions
                           for x in s[1] ]
@@ -857,14 +815,17 @@ class InterScenarioPlugin(SingletonPlugin):
             _damping = self.rhoDamping
             for v,r in iteritems(new_rho):
                 if self.rho[v]:
-                    self.rho[v] += _damping*(_scale*r - self.rho[v])
+                    self.rho[v] += (1-_damping)*(_scale*r - self.rho[v])
                     #self.rho[v] = max(_scale*r,  self.rho[v]) - \
                     #    _damping*abs(_scale*r - self.rho[v])
                 else:
                     self.rho[v] = _scale*r
 
-        for v,l in iteritems(loginfo):
-            print(l % (self.rho[v],))
+        for v,l in sorted(iteritems(loginfo)):
+            if v is None:
+                print(l)
+            else:
+                print(l % (self.rho[v],))
 
         #print("SETTING SELF.RHO", self.rho)
         rootNode = ph._scenario_tree.findRootNode()
@@ -893,7 +854,6 @@ class InterScenarioPlugin(SingletonPlugin):
                 self.unique_scenario_solutions.append( 
                     ( scenario._x[rootNode._name], [scenario._name] ) )           
 
-
     def _solve_interscenario_solutions(self, ph):
         results = ([],[],[],)
         probability = []
@@ -908,14 +868,14 @@ class InterScenarioPlugin(SingletonPlugin):
 
         for problem in subproblems:
             probability.append(problem._probability)
-            options = (
-                self.unique_scenario_solutions, 
-                self.epsilon, 
-                self.cut_scale,
-                self.allow_variable_slack,
-                self.enableRhoUpdates,
-                self.enableFeasibilityCuts
-                )
+            options=( self.unique_scenario_solutions, )
+            kwd_options = {
+                'epsilon':     self.epsilon,
+                'cut_scale':   self.cut_scale,
+                'allow_slack': self.allow_variable_slack,
+                'enable_rho':  self.enableRhoUpdates,
+                'enable_cuts': self.enableFeasibilityCuts
+            }
             if distributed:
                 action_handles.append(
                     ph._solver_manager.queue(
@@ -926,12 +886,13 @@ class InterScenarioPlugin(SingletonPlugin):
                         generateResponse=True,
                         module_name='pyomo.pysp.plugins.interscenario',
                         function_name='solve_fixed_scenario_solutions',
-                        function_kwds=None,
+                        function_kwds=kwd_options,
                         function_args=options,
                     ) )
             else:
                 _tmp = solve_fixed_scenario_solutions(
-                    ph, ph._scenario_tree, problem, *options )
+                    ph, ph._scenario_tree, problem,
+                    *options, **kwd_options )
                 for i,r in enumerate(results):
                     r.append(_tmp[i])
                 #cutlist.extend(_tmp[-1])
@@ -952,52 +913,6 @@ class InterScenarioPlugin(SingletonPlugin):
                 num_results_so_far += 1
 
         return results + (probability,) # + (cutlist,)
-
-
-    def _re_solve_ph_scenarios(self, ph):
-        results = []
-        distributed = isinstance( ph._solver_manager, SolverManager_PHPyro )
-        action_handles = []
-
-        if ph._scenario_tree.contains_bundles():
-            subproblems = ph._scenario_tree._scenario_bundles
-        else:
-            subproblems = ph._scenario_tree._scenarios
-
-        for problem in subproblems:
-            options = (
-                )
-            if distributed:
-                action_handles.append(
-                    ph._solver_manager.queue(
-                        action="invoke_external_function",
-                        name=problem._name,
-                        queue_name=ph._phpyro_job_worker_map[problem._name],
-                        invocation_type=InvocationType.SingleInvocation.key,
-                        generateResponse=True,
-                        module_name='pyomo.pysp.plugins.interscenario',
-                        function_name='solve_ph_scenarios',
-                        function_kwds=None,
-                        function_args=options,
-                    ) )
-            else:
-                _tmp = solve_ph_scenarios(
-                    ph, ph._scenario_tree, problem, *options )
-                results.append(_tmp)
-
-        if distributed:
-            num_results_so_far = 0
-            num_results = len(action_handles)
-            results.extend([None]*num_results)
-
-            while (num_results_so_far < num_results):
-                _ah = ph._solver_manager.wait_any()
-                _ah_id = action_handles.index(_ah)
-                _tmp = ph._solver_manager.get_results(_ah)
-                results[_ah_id] = _tmp
-                num_results_so_far += 1
-
-        return results
 
 
     def _distribute_cuts(self, ph, resolve=False):
@@ -1043,7 +958,7 @@ class InterScenarioPlugin(SingletonPlugin):
                                  if type(c[id]) is tuple
                                  and c[id][0] > allCutThreshold )
 
-            if not cuts and not self.optimality_cuts:
+            if not cuts and not self.incumbent_cuts:
                 resolves.append(None)
                 continue
 
@@ -1060,22 +975,25 @@ class InterScenarioPlugin(SingletonPlugin):
                         function_name='add_new_cuts',
                         function_kwds=None,
                         function_args=( cuts,
-                                        self.optimality_cuts,
+                                        self.incumbent_cuts,
                                         resolve ),
                     ) )
             else:
                 ans = add_new_cuts( ph, ph._scenario_tree, problem,
-                                    cuts, self.optimality_cuts, resolve )
+                                    cuts, self.incumbent_cuts, resolve )
                 resolves.append(ans)
+                toc("distributed cuts to scenario %s%s" %
+                    ( problem._name,
+                      ' and resolved scenario' if resolve else '' ))
 
-        print( "InterScenario plugin: added %d feasibility cuts from a "
+        toc( "InterScenario plugin: added %d feasibility cuts from a "
                "library of %s cuts" % (totalCuts, len(cutObj)) )
         self.feasibility_cuts = []
 
-        if self.optimality_cuts:
-            print( "InterScenario plugin: added %d optimality cuts" % 
-                   (len(self.optimality_cuts), ) )
-            self.optimality_cuts = []
+        if self.incumbent_cuts:
+            print( "InterScenario plugin: added %d incumbent cuts" %
+                   (len(self.incumbent_cuts), ) )
+            self.incumbent_cuts = []
 
 
         if distributed:
@@ -1089,6 +1007,8 @@ class InterScenarioPlugin(SingletonPlugin):
                 num_results_so_far += 1
 
         if resolve:
+            # Transfer the first stage values and cost back to PH and
+            # recompute xbar
             rootNode = ph._scenario_tree.findRootNode()
             for _id, problem in enumerate(subproblems):
                 ans = resolves[_id]
@@ -1096,8 +1016,11 @@ class InterScenarioPlugin(SingletonPlugin):
                     continue
                 for scenario in get_scenarios(problem):
                     scenario._cost = ans[1]
-                    scenario._x[rootNode._name] = dict(ans[0])
-    
+                    assert( sorted(ans[0]) == 
+                            sorted(scenario._x[rootNode._name]) )
+                    scenario._x[rootNode._name] = ans[0] #[_vid] = _vval
+            ph.update_variable_statistics()
+
     
     def _compute_objective(self, partial_obj_values, probability):
         obj_values = []
@@ -1140,15 +1063,15 @@ class InterScenarioPlugin(SingletonPlugin):
             elif rootNode.is_variable_semicontinuous(_id):
                 assert False, "FIXME"
             else:
-                # we can not add optimality cuts for continuous domains
+                # we can not add incumbent cuts for continuous domains
                 continuous_vars.append(_id)
 
         if self.incumbent is None or \
            self.incumbent[0] * self._sense_to_min > best_obj:
             # Cut the old incumbent
-            if self.enableOptimalityCuts and self.incumbent and not continuous_vars:
+            if self.enableIncumbentCuts and self.incumbent and not continuous_vars:
                 _x = self.incumbent[1][0]
-                self.optimality_cuts.append(
+                self.incumbent_cuts.append(
                     ( dict((vid, round(_x[vid])) for vid in binary_vars),
                       dict((vid, round(_x[vid])) for vid in integer_vars),
                 ) )
@@ -1156,20 +1079,20 @@ class InterScenarioPlugin(SingletonPlugin):
             self.incumbent = ( best_obj*self._sense_to_min,
                                self.unique_scenario_solutions[best_id],
                                best_id )
-            print("New incumbent: %s = %s, %s" % self.incumbent)
-            logger.info("New incumbent: %s" % (self.incumbent[0],))
+            print("InterScenario: new incumbent: %s = %s, %s" % self.incumbent)
+            logger.info("InterScenario: new incumbent: %s" % (self.incumbent[0],))
         else:
             # Keep existing incumbent... so the best thing here can be cut
             best_id = -1
 
-        if continuous_vars or not self.enableOptimalityCuts:
+        if continuous_vars or not self.enableIncumbentCuts:
             return
 
         for _id, obj in feasible_obj:
             if _id == best_id:
                 continue
             _x = self.unique_scenario_solutions[_id][0]
-            self.optimality_cuts.append(
+            self.incumbent_cuts.append(
                 ( dict((vid, round(_x[vid])) for vid in binary_vars),
                   dict((vid, round(_x[vid])) for vid in integer_vars),
                   ) )
@@ -1283,7 +1206,15 @@ class InterScenarioPlugin(SingletonPlugin):
                 weighted_rho[v] = _min_rho
 
 
-        loginfo = {}
+        loginfo = {
+            None:
+            "%4s: %6s [%7s, %7s] %7s;  "
+            "%6s [%6s, %6s] %6s;  RHO %7s : %7s" % (
+                '---',
+                'Dual', 'min', 'max', 'stdev',
+                'Var', 'min', 'max', 'stdev',
+                'computed', 'final' )
+        }
         for k, duals in iteritems(dual_info):
             # DISABLE!
             #break
