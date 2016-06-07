@@ -48,11 +48,11 @@ class _IndexedComponent_slicer(object):
     iteration process.  This works because all the calls to __getitem__
     / __getattr__ happen *before* the first call to next()
     """
-    def __init__(self, component, fixed):
+    def __init__(self, component, fixed, sliced):
         # _iter_stack holds either an iterator (if this devel in the
         # hierarchy is a slice) or None (if this level is either a
         # SimpleComponent or is explicitly indexed).
-        self._iter_stack = [ self._slice_generator(component, fixed) ]
+        self._iter_stack = [ self._slice_generator(component, fixed, sliced) ]
         self._subcomponents = []
         # Since this is an object, users may change these flags between
         # where they declare the slice and iterate over it.
@@ -132,20 +132,36 @@ class _IndexedComponent_slicer(object):
                 # We have a concrete object at the end of the chain. Return it
                 return _comp
 
-    def _slice_generator(self, component, fixed):
+    def _slice_generator(self, component, fixed, sliced):
         #
         # Iterate through the component index and yield the
         # component data values that match the slice
         # template.
         #
+        index_count = len(fixed) + len(sliced)
+        max_fixed = 0 if not fixed else max(fixed)
+        # Handle the "special" wildcard slice that can match any number
+        # of indices
+        if index_count-1 in sliced and sliced[index_count-1].step is not None:
+            index_count = None
+
         for index in component.__iter__():
+            # We want a tuple of indices, so convert scalard to tuples
+            _idx = index if type(index) is tuple else (index,)
+
+            # Veryfy the number of indices: if there is a wildcard
+            # slice, then there must be enough indices to at least match
+            # the fixed indices.  Without the wildcard slice, the number
+            # of indices must match exactly.
+            if index_count is None:
+                if max_fixed >= len(_idx):
+                    continue
+            elif len(_idx) != index_count:
+                continue
+
             flag = True
             for key, val in iteritems(fixed):
-                try:
-                    if not val == index[key]:
-                        flag = False
-                        break
-                except TypeError:
+                if not val == _idx[key]:
                     flag = False
                     break
             if flag:
@@ -418,24 +434,30 @@ You can silence this warning by one of three ways:
             # Iterate through a slice
             #
             fixed = {}
-            sliced = set()
+            sliced = {}
             #
             # Setup the slice template (in fixed)
             #
             if type(ndx) is slice:
-                sliced.add(0)
-            else:
-                i = 0
-                for val in ndx:
-                    if type(val) is slice:
-                        if not (val.start is None and val.stop is None and val.step is None):
-                            raise ValueError("Indexed components can only indexed with complex slices.  No start, stop or step valus can be specified.")
-                        sliced.add(i)
-                    else:
-                        fixed[i] = val
-                    i = i + 1
-            if len(sliced) > 0:
-                return _IndexedComponent_slicer(self, fixed)
+                ndx = [ndx]
+
+            for i,val in enumerate(ndx):
+                if type(val) is slice:
+                    if val.start is not None or val.stop is not None:
+                        raise IndexError(
+                            "Indexed components can only indexed with simple "
+                            "slices: start and stop values are not allowed.")
+                    if val.step is not None and i < len(ndx)-1:
+                        raise IndexError(
+                            "Indexed components can only indexed with simple "
+                            "slices: the Pyomo wildcard slice (non-None step; "
+                            "e.g., '::0') can only appear as the last index")
+                    sliced[i] = val
+                else:
+                    fixed[i] = val
+
+            if sliced:
+                return _IndexedComponent_slicer(self, fixed, sliced)
             else:
                 # The index isn't sliced, so simply re-raise the
                 # TypeError that occurred in the previous 'try' block.

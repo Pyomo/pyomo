@@ -128,6 +128,21 @@ class TestComponentSlices(unittest.TestCase):
         self.assertEqual(
             ans, ['b[1,4].c[1,4]', 'b[1,4].c[2,4]', 'b[1,4].c[3,4]'] )
 
+    def test_wildcard_slice(self):
+        _slicer = self.m.b[:]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual( ans, [] )
+
+        _slicer = self.m.b[::0]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual(
+            ans, [ 'b[1,4]', 'b[1,5]', 'b[1,6]',
+                   'b[2,4]', 'b[2,5]', 'b[2,6]',
+                   'b[3,4]', 'b[3,5]', 'b[3,6]',
+               ] )
+
     def test_nonterminal_slice(self):
         _slicer = self.m.b[:,4].x
         self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
