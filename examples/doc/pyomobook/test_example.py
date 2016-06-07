@@ -9,6 +9,9 @@ import pyomo.environ
 # Find all *.txt files, and use them to define baseline tests
 currdir = os.path.dirname(os.path.abspath(__file__))+os.sep
 datadir = currdir
+testdirs = [currdir, os.path.abspath(os.path.join(currdir, '..', '..', 'pyomo')), 
+                     os.path.abspath(os.path.join(currdir, '..', '..', 'pysp')),
+                     os.path.join(currdir, '..', 'samples')]
 
 solver_dependencies =   {
                         'Test_nonlinear': 
@@ -85,9 +88,13 @@ def filter(line):
     status = 'Time:' in line or line.startswith('[') or 'with format cpxlp' in line or 'usermodel = <module' in line or line.startswith('File') or 'execution time=' in line
     return status
 
-for fname in glob.glob(os.path.join(currdir,'*')):
+for tdir in testdirs:
+  #print(tdir)
+  for fname in glob.glob(os.path.join(tdir,'*')):
+    #print("HERE "+fname)
     if not os.path.isdir(fname):
         continue
+    #print("HERE - DIRECTORY")
 
     # Declare an empty TestCase class
     fname_ = fname.replace('-','_')
@@ -104,6 +111,7 @@ for fname in glob.glob(os.path.join(currdir,'*')):
     
     #
     for file in list(glob.glob(fname+'/*.py')) + list(glob.glob(fname+'/*/*.py')):
+        #print(file)
         bname = os.path.basename(file)
         dir_ = os.path.dirname(os.path.abspath(file))+os.sep
         name='.'.join(bname.split('.')[:-1])
@@ -114,8 +122,10 @@ for fname in glob.glob(os.path.join(currdir,'*')):
             if os.path.exists(dir_+name+suffix_):
                 suffix = suffix_
                 break
+        #print([dir_, name, suffix])
         #
         if not suffix is None:
+            cwd = os.getcwd()
             os.chdir(dir_)
             if suffix_ in ['.txt2', '.yml2']:
                 forceskip = check_skip(tfname2_, 'test_'+tname.replace('.','_'))
@@ -123,7 +133,7 @@ for fname in glob.glob(os.path.join(currdir,'*')):
             else:
                 forceskip = check_skip(tfname_, 'test_'+tname.replace('.','_'))
                 Test.add_baseline_test(cmd='cd %s; %s %s' % (dir_, sys.executable, os.path.abspath(bname)),  baseline=dir_+name+suffix, name=tname, filter=filter, tolerance=1e-7, forceskip=forceskip)
-            os.chdir(currdir)
+            os.chdir(cwd)
 
     #
     for file in list(glob.glob(fname+'/*.sh')) + list(glob.glob(fname+'/*/*.sh')):
@@ -140,6 +150,7 @@ for fname in glob.glob(os.path.join(currdir,'*')):
                 break
         #
         if not suffix is None:
+            cwd = os.getcwd()
             os.chdir(dir_)
             if suffix_ in ['.txt2', '.yml2']:
                 forceskip = check_skip(tfname2_, 'test_'+tname.replace('.','_'))
@@ -147,7 +158,7 @@ for fname in glob.glob(os.path.join(currdir,'*')):
             else:
                 forceskip = check_skip(tfname_, 'test_'+tname.replace('.','_'))
                 Test.add_baseline_test(cmd='cd %s; %s' % (dir_, os.path.abspath(bname)),  baseline=dir_+name+suffix, name=tname, filter=filter, tolerance=1e-7, forceskip=forceskip)
-            os.chdir(currdir)
+            os.chdir(cwd)
     #
     Test = None
 
