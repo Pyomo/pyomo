@@ -8,13 +8,13 @@
 
 Pyomo is a Python-based open-source software package that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
- - [Pyomo Home](http://www.pyomo.org)
- - [About Pyomo](http://www.pyomo.org/about)
- - [Download](http://www.pyomo.org/installation/)
- - [Documentation](http://www.pyomo.org/documentation/)
- - [Blog](http://www.pyomo.org/blog/)
+* [Pyomo Home](http://www.pyomo.org)
+* [About Pyomo](http://www.pyomo.org/about)
+* [Download](http://www.pyomo.org/installation/)
+* [Documentation](http://www.pyomo.org/documentation/)
+* [Blog](http://www.pyomo.org/blog/)
 
- Pyomo is available under the BSD License.
+Pyomo is available under the BSD License.
 
 ### Installation
 
