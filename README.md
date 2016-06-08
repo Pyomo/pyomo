@@ -13,7 +13,7 @@ Pyomo is a Python-based open-source software package that supports a diverse set
  - [Download](http://www.pyomo.org/installation/)
  - [Documentation](http://www.pyomo.org/documentation/)
  - [Blog](http://www.pyomo.org/blog/)
- - 
+
  Pyomo is available under the BSD License.
 
 ### Installation
