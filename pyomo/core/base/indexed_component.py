@@ -48,16 +48,21 @@ class _IndexedComponent_slicer(object):
     iteration process.  This works because all the calls to __getitem__
     / __getattr__ happen *before* the first call to next()
     """
+    attribute = 1
+    getitem = 2
+    call = 3
+
     def __init__(self, component, fixed, sliced):
         # _iter_stack holds either an iterator (if this devel in the
         # hierarchy is a slice) or None (if this level is either a
         # SimpleComponent or is explicitly indexed).
         self._iter_stack = [ self._slice_generator(component, fixed, sliced) ]
-        self._subcomponents = []
+        self._call_stack = [ (0,None) ]
         # Since this is an object, users may change these flags between
         # where they declare the slice and iterate over it.
-        self.key_errors_generate_exceptions = False
-        self.attribute_errors_generate_exceptions = False
+        self.call_errors_generate_exceptions = True
+        self.key_errors_generate_exceptions = True
+        self.attribute_errors_generate_exceptions = True
 
     def __iter__(self):
         return self
@@ -73,31 +78,32 @@ class _IndexedComponent_slicer(object):
             # Get the next element in the deepest active slice
             try:
                 _comp = self._iter_stack[idx].next()
+                idx += 1
             except StopIteration:
                 if not idx:
                     # Top-level iterator is done.  We are done.
                     # (This is how the infinite loop terminates!)
                     raise
+                self._iter_stack[idx] = None
                 idx -= 1
                 continue
             # Walk down the hierarchy to get to the final object
-            while idx < len(self._subcomponents):
-                _subcomp = self._subcomponents[idx]
-                try:
-                    _comp = getattr(_comp, _subcomp[0])
-                except AttributeError:
-                    # Since we are slicing, we may only be interested in
-                    # things that match.  We will allow users to
-                    # (silently) ignore any attribute errors generated
-                    # by concrete indices in the slice hierarchy...
-                    if self.attribute_errors_generate_exceptions:
-                        raise
-                    break
-                if _subcomp[1] is None:
-                    _subslice = None
-                else:
+            while idx < len(self._call_stack):
+                _call = self._call_stack[idx]
+                if _call[0] == _IndexedComponent_slicer.attribute:
                     try:
-                        _subslice = _comp.__getitem__( *(_subcomp[1]) )
+                        _comp = getattr(_comp, _call[1])
+                    except AttributeError:
+                        # Since we are slicing, we may only be interested in
+                        # things that match.  We will allow users to
+                        # (silently) ignore any attribute errors generated
+                        # by concrete indices in the slice hierarchy...
+                        if self.attribute_errors_generate_exceptions:
+                            raise
+                        break
+                elif _call[0] == _IndexedComponent_slicer.getitem:
+                    try:
+                        _comp = _comp.__getitem__( *(_call[1]) )
                     except KeyError:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
@@ -107,28 +113,37 @@ class _IndexedComponent_slicer(object):
                         if self.key_errors_generate_exceptions:
                             raise
                         break
-                    if _subslice.__class__ is _IndexedComponent_slicer:
+                    if _comp.__class__ is _IndexedComponent_slicer:
                         # Extract the _slice_generator (for
                         # efficiency... these are always 1-level slices,
                         # so we don't need the overhead of the
                         # _IndexedComponent_slicer object)
-                        _subslice = _subslice._iter_stack[0]
+                        self._iter_stack[idx] = _comp._iter_stack[0]
                         try:
-                            _comp = _subslice.next()
+                            _comp = _comp.next()
                         except StopIteration:
                             # We got a slicer, but the slicer doesn't
                             # matching anything.  We should break here,
                             # which (due to 'while True' above) will
                             # walk back up to the next iterator and move
                             # on
+                            self._iter_stack[idx] = None
                             break
-                    else:
-                        # Concrete component and not a sub-slice.
-                        _comp, _subslice = _subslice, None
+                elif _call[0] == _IndexedComponent_slicer.call:
+                    try:
+                        _comp = _comp( *(_call[1]) )
+                    except:
+                        # Since we are slicing, we may only be
+                        # interested in things that match.  We will
+                        # allow users to (silently) ignore any key
+                        # errors generated by concrete indices in the
+                        # slice hierarchy...
+                        if self.call_errors_generate_exceptions:
+                            raise
+                        break
                 idx += 1
-                self._iter_stack[idx] = _subslice
 
-            if idx == len(self._subcomponents):
+            if idx == len(self._call_stack):
                 # We have a concrete object at the end of the chain. Return it
                 return _comp
 
@@ -169,12 +184,20 @@ class _IndexedComponent_slicer(object):
 
     def __getattr__(self, name):
         self._iter_stack.append(None)
-        self._subcomponents.append([name,None])
+        self._call_stack.append( (
+            _IndexedComponent_slicer.attribute, name ) )
         return self
 
     def __getitem__(self, *idx):
-        assert self._subcomponents[-1][1] is None
-        self._subcomponents[-1][1] = idx
+        self._iter_stack.append(None)
+        self._call_stack.append( (
+            _IndexedComponent_slicer.getitem, idx ) )
+        return self
+
+    def __call__(self, *idx):
+        self._iter_stack.append(None)
+        self._call_stack.append( (
+            _IndexedComponent_slicer.call, idx ) )
         return self
 
 class IndexedComponent(Component):
