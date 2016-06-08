@@ -67,18 +67,17 @@ class _ConnectorValue(NumericValue):
             return self.name
 
     def __getstate__(self):
-        result = NumericValue.__getstate__(self)
+        state = super(_ConnectorValue, self).__getstate__()
         for i in _ConnectorValue.__slots__:
-            result[i] = getattr(self, i)
-        if type(result['connector']) is weakref.ref:
-            result['connector'] = result['connector']()
-        return result
+            state[i] = getattr(self, i)
+        if type(state['connector']) is weakref.ref:
+            state['connector'] = state['connector']()
+        return state
 
     def __setstate__(self, state):
-        for (slot_name, value) in iteritems(state):
-            self.__dict__[slot_name] = value
-        if 'connector' in self.__dict__ and self.connector is not None:
-            self.connector = weakref.ref(self.connector)
+        if 'connector' in state and state['connector'] is not None:
+            state['connector'] = weakref.ref(state['connector'])
+        super(_ConnectorValue, self).__setstate__(state)
 
     def set_value(self, value):
         msg = "Cannot specify the value of a connector '%s'"
@@ -315,19 +314,6 @@ class SimpleConnector(SimpleConnectorBase, _ConnectorValue):
         self._conval[None] = self
         self._conval[None].component = weakref.ref(self)
         self._conval[None].index = None
-
-    def __getstate__(self):
-        result = _ConnectorValue.__getstate__(self)
-        for key,value in iteritems(self.__dict__):
-            result[key]=value
-        if type(result['_conval'][None].component) is weakref.ref:
-            result['_conval'][None].component = None
-        return result
-
-    def __setstate__(self, dict):
-        for key in dict:
-            setattr(self, key, dict[key])
-        self._conval[None].component = weakref.ref(self)
 
     def is_constant(self):
         return _ConnectorValue.is_constant(self)
