@@ -7,6 +7,8 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+print "HERE" # this is a bug that will kill tests in Python 3.x
+
 import pyomo.core.base.log_config
 from pyomo.core.base.config import PyomoOptions
 
