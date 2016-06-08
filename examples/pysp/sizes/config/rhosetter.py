@@ -6,7 +6,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-
+#@pyomobook:
 def ph_rhosetter_callback(ph, scenario_tree, scenario):
    
    MyRhoFactor = 1.0
@@ -31,3 +31,4 @@ def ph_rhosetter_callback(ph, scenario_tree, scenario):
                scenario,
                symbol_map.getSymbol(scenario_instance.NumUnitsCutFirstStage[i,j]),
                scenario_instance.UnitReductionCost * MyRhoFactor * 0.001)
+#@:pyomobook
