@@ -38,7 +38,7 @@ model.b = Var(model.A, bounds=f)
 
 # @decl5:
 model.za = Var(initialize=9, within=NonNegativeReals)
-model.zb = Var(model.A, initialize={1:1, 2:4, 3:9}, dense=True)
+model.zb = Var(model.A, initialize={1:1, 2:4}, dense=True)
 model.zc = Var(model.A, initialize=2)
 # @:decl5
 
