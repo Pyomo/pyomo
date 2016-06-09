@@ -20,8 +20,8 @@ for var in model.component_data_objects(Var):
 
 # @loop2:
 print("\nLoop Over Indexed Variable:")
-for index in model.y:
-    print("%s %s" % (model.y[index], model.y[index]()))
+for idx in model.y:
+    print("%s %s" % (model.y[idx], model.y[idx]()))
 # @:loop2
 
 # @loop3:
