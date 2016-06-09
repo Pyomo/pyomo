@@ -68,9 +68,9 @@ model = ConcreteModel()
 model.b = Block()
 model.b.x = Var()
 
-print(model.b.x.cname())                        # 'b'
-print(model.b.x.cname(True))                    # 'x.b'
-print(model.b.x.cname(fully_qualified=True))    # 'x.b'
+print(model.b.x.cname())                        # 'x'
+print(model.b.x.cname(True))                    # 'b.x'
+print(model.b.x.cname(fully_qualified=True))    # 'b.x'
 # @:nested1
 
 print("special1")
