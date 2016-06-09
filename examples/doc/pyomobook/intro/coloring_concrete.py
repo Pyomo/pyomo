@@ -5,6 +5,8 @@
 #  "Graph Theory and Its Applications, 2nd Edition",
 #  Chapman & Hall/CRC, Boca Raon, FL, 2006.
 #
+
+# Define data for the graph of interest.
 vertices = set(['Ar', 'Bo', 'Br', 'Ch', 'Co', 'Ec', 
                 'FG', 'Gu', 'Pa', 'Pe', 'Su', 'Ur', 'Ve'])
 
