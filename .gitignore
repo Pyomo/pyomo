@@ -4,3 +4,4 @@
 *.out
 *.pyc
 *.pyo
+*.spy
