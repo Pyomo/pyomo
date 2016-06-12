@@ -202,6 +202,8 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
                 pyvenv = fname+'.exe'
                 break
 
+    if options.verbose:
+        print("\n************* pyvenv: %s *******************" % str(pyvenv))
     if pyvenv is None:
         #
         # Install the virtual environment with virtualenv
@@ -276,6 +278,13 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         if 'PYTHONPATH' in os.environ:
             del os.environ['PYTHONPATH']
     python_dir = os.path.abspath(options.venv)
+    #
+    # Install Conda
+    #
+    if options.verbose:
+        print("\n************* Installing Conda in %s *******************" % options.venv)
+    call_subprocess([pip, 'install', 'auxlib'], options)
+    call_subprocess([pip, 'install', 'conda'], options)
     #
     return pip, python_dir
 
