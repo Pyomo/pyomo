@@ -199,7 +199,7 @@ def construct_ph_options_parser(usage_string):
       type=str,
       default=None)
     phOpts.add_argument('--max-iterations',
-      help="The maximal number of PH iterations. Default is 100.",
+      help="The maximum number of PH iterations. Default is 100.",
       action="store",
       dest="max_iterations",
       type=int,
