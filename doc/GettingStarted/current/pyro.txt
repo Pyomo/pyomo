@@ -119,10 +119,13 @@ It is important to remember that the name server, the dispatch
 server, and the mip server processes are persistent, and need to
 be terminated when a user has completed computational experiments.
 Actually, that is not entirely correct - the server processes can
-live forever, and continue to receive work. The only issue is when
-multiple users are attempting to use the same compute platform, are
-running their own servers, etc. While this may work, we have not
-tested it fully yet!
+live forever, and continue to receive work. On some shared computers
+with batch queue managers, they will be shutdown automatically; on
+other systems the user must shut them down or arrange for them
+to be shut down (e.g., by using the +runph+ command option +--shutdown-pyro+).
+When multiple users are attempting to use the same compute platform and are
+running their own servers, each user may want to their +PYRO_NS_PORT+
+system environment variable to a unique value.
 
 // vim: set syntax=asciidoc:
 
