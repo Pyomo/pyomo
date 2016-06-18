@@ -73,8 +73,8 @@ class _EvalXHATTesterBase(object):
         assert self.solver_name is not None
         assert self.solver_io is not None
         if not testing_solvers[self.solver_name, self.solver_io]:
-            self.skip("%s (interface=%s) is not available"
-                      % (self.solver_name, self.solver_io))
+            self.skipTest("%s (interface=%s) is not available"
+                          % (self.solver_name, self.solver_io))
         options['--solver'] = self.solver_name
         options['--solver-io'] = self.solver_io
         options['--model-location'] = self.model_location
@@ -248,7 +248,6 @@ def create_test_classes(basename,
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
     class TestEvalXHAT_Pyro(_base,
-                            unittest.TestCase,
                             _EvalXHATPyroTesterBase):
         def setUp(self):
             _EvalXHATPyroTesterBase.setUp(self)
@@ -262,7 +261,6 @@ def create_test_classes(basename,
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
     class TestEvalXHAT_Pyro_MultipleWorkers(_base,
-                                            unittest.TestCase,
                                             _EvalXHATPyroTesterBase):
         def setUp(self):
             _EvalXHATPyroTesterBase.setUp(self)
@@ -277,7 +275,6 @@ def create_test_classes(basename,
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
     class TestEvalXHAT_Pyro_HandshakeAtStartup(_base,
-                                               unittest.TestCase,
                                                _EvalXHATPyroTesterBase):
         def setUp(self):
             _EvalXHATPyroTesterBase.setUp(self)
@@ -292,7 +289,6 @@ def create_test_classes(basename,
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
     class TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers(_base,
-                                                               unittest.TestCase,
                                                                _EvalXHATPyroTesterBase):
         def setUp(self):
             _EvalXHATPyroTesterBase.setUp(self)
