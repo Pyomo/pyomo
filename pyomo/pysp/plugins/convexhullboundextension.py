@@ -265,15 +265,16 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 #        print "V_BOUNDS CONSTRAINT:"
 #        self._master_model.V_Bound.pprint()
 
-
-        solver = SolverFactory("cplex")
-        results=solver.solve(self._master_model,tee=False,load_solutions=False)
-        self._master_model.solutions.load_from(results)
+        with SolverFactory(ph._solver_type,
+                           solver_io=ph._solver_io) as solver:
+            results = solver.solve(self._master_model,
+                                   tee=False,
+                                   load_solutions=False)
+            self._master_model.solutions.load_from(results)
 #        print "MASTER MODEL WVAR FOLLOWING SOLVE:"
 #        self._master_model.pprint()
 
 #        self._master_model.pprint()
-
 
     #
     # take the weights from the current convex hull master problem
