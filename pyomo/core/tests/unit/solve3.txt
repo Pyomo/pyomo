@@ -1,12 +1,12 @@
 Model unknown
 
   Variables:
-    x : Size=4, Index=A, Domain=Reals
-        Key : Lower : Value : Upper : Fixed : Stale
-          1 :    -1 :  None :     1 : False :  True
-          2 :    -1 :  None :     1 : False :  True
-          3 :    -1 :  None :     1 : False :  True
-          4 :    -1 :  None :     1 : False :  True
+    x : Size=4, Index=A
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :    -1 :  None :     1 : False :  True :  Reals
+          2 :    -1 :  None :     1 : False :  True :  Reals
+          3 :    -1 :  None :     1 : False :  True :  Reals
+          4 :    -1 :  None :     1 : False :  True :  Reals
 
   Objectives:
     obj : Size=1, Index=None, Active=True

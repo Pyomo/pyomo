@@ -3,13 +3,13 @@
         [1, 2]
 
 2 Var Declarations
-    x : Size=1, Index=None, Domain=NonNegativeReals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :     0 :  None :  None : False :  True
-    x_indexed : Size=2, Index=s, Domain=NonNegativeReals
-        Key : Lower : Value : Upper : Fixed : Stale
-          1 :     0 :  None :  None : False :  True
-          2 :     0 :  None :  None : False :  True
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :  None : False :  True : NonNegativeReals
+    x_indexed : Size=2, Index=s
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :     0 :  None :  None : False :  True : NonNegativeReals
+          2 :     0 :  None :  None : False :  True : NonNegativeReals
 
 1 Objective Declarations
     obj : Size=1, Index=None, Active=True

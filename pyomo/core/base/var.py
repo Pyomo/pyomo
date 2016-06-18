@@ -697,19 +697,18 @@ class Var(IndexedComponent):
         return ( [("Size", len(self)),
                   ("Index", self._index \
                        if self._index != UnindexedComponent_set else None),
-                  ("Domain", None if self._domain_init_value is None else self._domain_init_value.name),
                   ],
                  iteritems(self._data),
-                 ( "Key","Lower","Value","Upper","Fixed","Stale" ),
+                 ( "Key","Lower","Value","Upper","Fixed","Stale","Domain"),
                  lambda k, v: [ k,
                                 value(v.lb),
                                 v.value,
                                 value(v.ub),
                                 v.fixed,
                                 v.stale,
+                                v.domain
                                 ]
                  )
-
 
 class SimpleVar(_GeneralVarData, Var):
     """"A single variable."""
