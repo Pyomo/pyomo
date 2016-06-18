@@ -26,7 +26,6 @@ import os
 import logging
 import time
 import itertools
-import math
 
 try:
     from collections import OrderedDict
