@@ -122,7 +122,7 @@ ExpectedFailures.append(
 ExpectedFailures.append(
 	('scip', 'nl', (3, 1, 0, 9),
 	 model_types.simple_SOS1,
-	 "SCIP (scipampl) does not recognize sos2 constraints "
+	 "SCIP (scipampl) does not recognize sos1 constraints "
 	 "inside NL files. A ticket has been filed."))
 
 #
