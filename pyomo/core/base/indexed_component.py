@@ -14,7 +14,7 @@ import pyutilib.misc
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 
-from six import PY3, itervalues, iteritems
+from six import PY3, itervalues, iteritems, advance_iterator
 
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -80,7 +80,7 @@ class _IndexedComponent_slicer(object):
                 idx -= 1
             # Get the next element in the deepest active slice
             try:
-                _comp = self._iter_stack[idx].next()
+                _comp = advance_iterator(self._iter_stack[idx])
                 idx += 1
             except StopIteration:
                 if not idx:
@@ -123,7 +123,7 @@ class _IndexedComponent_slicer(object):
                         # _IndexedComponent_slicer object)
                         self._iter_stack[idx] = _comp._iter_stack[0]
                         try:
-                            _comp = _comp.next()
+                            _comp = advance_iterator(_comp)
                         except StopIteration:
                             # We got a slicer, but the slicer doesn't
                             # matching anything.  We should break here,

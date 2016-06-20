@@ -235,12 +235,12 @@ class TestComponentSlices(unittest.TestCase):
         _slicer = self.m.b[1,:].c[:,4].component('y', False)
         self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
         _slicer.call_errors_generate_exceptions = True
-        self.assertRaises( _slicer.next )
+        self.assertRaises( TypeError,_slicer.next )
 
         _slicer = self.m.b[1,:].c[:,4].component()
         self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
         _slicer.call_errors_generate_exceptions = True
-        self.assertRaises( _slicer.next )
+        self.assertRaises( TypeError, _slicer.next )
 
 
 if __name__ == "__main__":
