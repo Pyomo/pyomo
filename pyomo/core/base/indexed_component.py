@@ -68,6 +68,9 @@ class _IndexedComponent_slicer(object):
         return self
 
     def next(self):
+        return self.__next__()
+
+    def __next__(self):
         idx = len(self._iter_stack)-1
         while True:
             # Flush out any non-slice levels.  Since we initialize
