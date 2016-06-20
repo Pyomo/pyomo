@@ -22,9 +22,13 @@ from pyutilib.th import nottest
 from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
-     UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT
+     UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT, \
+     _getrefcount_available
 from pyomo.core.base.var import SimpleVar
 
+@unittest.skipIf(
+    not _getrefcount_available, "Coopr 3-style expressions are not "
+    "supported on platforms that do not implement sys.getrefcount")
 class Expression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
