@@ -26,9 +26,6 @@ from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
      _getrefcount_available
 from pyomo.core.base.var import SimpleVar
 
-@unittest.skipIf(
-    not _getrefcount_available, "Coopr 3-style expressions are not "
-    "supported on platforms that do not implement sys.getrefcount")
 class Expression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
@@ -302,6 +299,9 @@ class TestNumericValue(unittest.TestCase):
 
 
 
+@unittest.skipIf(
+    not _getrefcount_available, "Coopr 3-style expressions are not "
+    "supported on platforms that do not implement sys.getrefcount")
 class Generate_SumExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -654,6 +654,9 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[2], -5)
 
 
+@unittest.skipIf(
+    not _getrefcount_available, "Coopr 3-style expressions are not "
+    "supported on platforms that do not implement sys.getrefcount")
 class Generate_ProductExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -1500,6 +1503,9 @@ class PrettyPrinter_newStyle(unittest.TestCase):
                                        currdir+"varpprint.txt" )
 
 
+@unittest.skipIf(
+    not _getrefcount_available, "Coopr 3-style expressions are not "
+    "supported on platforms that do not implement sys.getrefcount")
 class InplaceExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2311,6 +2317,10 @@ def TrapRefCount_fcn(obj, target = None):
     else:
         return TrapRefCount.inst.saved_fcn(obj, target)
 
+
+@unittest.skipIf(
+    not _getrefcount_available, "Coopr 3-style expressions are not "
+    "supported on platforms that do not implement sys.getrefcount")
 class CloneIfNeeded(unittest.TestCase):
 
     def setUp(self):
@@ -2602,8 +2612,9 @@ class CloneIfNeeded(unittest.TestCase):
         self.assertEqual(len(expr1._args), 3)
         self.assertEqual( EXPR.generate_relational_expression.clone_counter,
                           count + 1)
-class CloneExpression(unittest.TestCase):
 
+
+class CloneExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -2796,8 +2807,8 @@ class CloneExpression(unittest.TestCase):
         self.assertEqual(expr1._then(), expr2._then())
         self.assertEqual(expr1._else(), expr2._else())
 
-class IsFixedIsConstant(unittest.TestCase):
 
+class IsFixedIsConstant(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
