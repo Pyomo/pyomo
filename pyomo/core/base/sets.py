@@ -593,7 +593,7 @@ class Set(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Set:
             return super(Set, cls).__new__(cls)
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             if kwds.get('ordered',False) is False:
                 return SimpleSet.__new__(SimpleSet)
             else:

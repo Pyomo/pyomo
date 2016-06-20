@@ -21,7 +21,8 @@ from pyomo.util.plugin import Plugin, implements
 from pyomo.core.base.component import Component, register_component
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.expr import _ProductExpression
-from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.indexed_component import IndexedComponent, \
+    UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, create_name
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.plugin import IPyomoScriptModifyInstance
@@ -363,7 +364,7 @@ class Connector(Component):
     # the Connector.
 
     def __new__(cls, *args, **kwds):
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             self = SimpleConnector(*args, **kwds)
         else:
             self = IndexedConnector(*args, **kwds)
