@@ -560,7 +560,9 @@ def solve_fixed_scenario_solutions(
                 cut = solve_separation_problem(ph._solver, model, True)
                 if cut == '????':
                     if ph._solver.problem_format() != ProblemFormat.nl:
-                        ampl_preprocess_block_constraints(_block)
+                        model.preprocess()
+                        #ampl_preprocess_block_objectives(_block)
+                        #ampl_preprocess_block_constraints(_block)
                     cut = solve_separation_problem(ipopt, model, False)
             else:
                 cut = "X  "
@@ -781,7 +783,7 @@ class InterScenarioPlugin(SingletonPlugin):
                              for x in cuts[_id]),
                     ','.join(soln[1])
                 ))
-            )
+
         scenarioCosts = [ ph._scenario_tree.get_scenario(x)._cost 
                           for s in self.unique_scenario_solutions
                           for x in s[1] ]
@@ -865,18 +867,26 @@ class InterScenarioPlugin(SingletonPlugin):
         # See ph.py:update_variable_statistics for a multistage version...
         rootNode = ph._scenario_tree.findRootNode()
         for scenario in rootNode._scenarios:
+            _this_sol = dict(scenario._x[rootNode._name])
+            for _id, _val in iteritems(scenario._x[rootNode._name]):
+                #if rootNode.is_variable_fixed(_id):
+                #    continue
+                if rootNode.is_variable_binary(_id) or \
+                        rootNode.is_variable_integer(_id):
+                    _this_sol[_id] = int(round(_val))
+
             found = False
             # Note: because we are looking for unique variable values,
             # then if the user is bundling, this will implicitly re-form
             # the bundles
             for _sol in self.unique_scenario_solutions:
-                if scenario._x[rootNode._name] == _sol[0]:
+                if _this_sol == _sol[0]:
                     _sol[1].append(scenario._name)
                     found = True
                     break
             if not found:
-                self.unique_scenario_solutions.append( 
-                    ( scenario._x[rootNode._name], [scenario._name] ) )           
+                self.unique_scenario_solutions.append(
+                    ( _this_sol, [scenario._name] ) )
 
     def _solve_interscenario_solutions(self, ph):
         results = ([],[],[],)
@@ -1091,7 +1101,7 @@ class InterScenarioPlugin(SingletonPlugin):
                 continuous_vars.append(_id)
 
         if self.incumbent is None or \
-           self.incumbent[0] * self._sense_to_min > best_obj:
+           self.incumbent[0] * self._sense_to_min > best_obj + self.epsilon:
             # Cut the old incumbent
             if self.enableIncumbentCuts and self.incumbent and not continuous_vars:
                 _x = self.incumbent[1][0]
@@ -1105,7 +1115,7 @@ class InterScenarioPlugin(SingletonPlugin):
                                best_id )
             print("InterScenario: new incumbent: %s = %s, %s" % self.incumbent)
             logger.info("InterScenario: new incumbent: %s" % (self.incumbent[0],))
-        else:
+        elif self.incumbent[0]*self._sense_to_min < best_obj - self.epsilon:
             # Keep existing incumbent... so the best thing here can be cut
             best_id = -1
 
