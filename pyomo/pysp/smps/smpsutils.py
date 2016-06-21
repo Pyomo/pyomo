@@ -1244,7 +1244,7 @@ def convert_explicit(output_directory,
     # verify that these files match across scenarios.
     #
     core_filename = os.path.join(output_directory,
-                                 basename+"."+core_format)
+                                 basename+".cor")
     _safe_remove_file(core_filename)
     shutil.copy2(os.path.join(scenario_directory,
                              (basename+"."+core_format+"."+
