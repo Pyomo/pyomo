@@ -314,6 +314,16 @@ for solver_name, solver_io in [('cplex','lp'),
                                ('cplex','python'),
                                ('_cplex_persistent','python')]:
 
+    simple_quadratic_examples_dir = join(pysp_examples_dir, "simple_quadratic")
+    simple_quadratic_model_dir = join(simple_quadratic_examples_dir, "ReferenceModel.py")
+    simple_quadratic_data_dir = None
+    create_test_classes('simple_quadratic',
+                        simple_quadratic_model_dir,
+                        simple_quadratic_data_dir,
+                        solver_name,
+                        solver_io,
+                        ('nightly','expensive'))
+
     farmer_examples_dir = join(pysp_examples_dir, "farmer")
     farmer_model_dir = join(farmer_examples_dir, "models")
     farmer_data_dir = join(farmer_examples_dir, "scenariodata")
