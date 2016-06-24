@@ -149,8 +149,9 @@ class ResultsReader_sol(results.AbstractResultsReader):
             soln_status = SolutionStatus.error
         res.solver.id = objno[1]
         # Hack for CONOPT
-        if res.solver.message.startswith('CONOPT 3.17A\\x3a Locally optimal')\
-                and objno[1] == 100:
+        if objno[1] == 100 and \
+            res.solver.message.startswith(
+                'CONOPT 3.17A\\x3a Locally optimal'):
             objno_message = "CONOPT found locally optimal solution."
             res.solver.status = SolverStatus.ok
         ##res.problem.name = osrl.header.instanceName
