@@ -121,6 +121,4 @@ def runPyomoTests():
                         testdirs.append(root)
                     break
     #
-    rc = pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+testdirs)
-    print("The return value is: "+repr(rc))
-    return rc
+    return pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+testdirs)
