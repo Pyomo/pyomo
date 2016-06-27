@@ -22,7 +22,7 @@ install:
   # We need wheel installed to build wheels
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "python --version"
-  - "python -m pip install -v -U pip setuptools"
+  - "python -m pip install -U pip setuptools"
   - "python -m pip install coverage"
   - "python -m pip install nose"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
