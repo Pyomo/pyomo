@@ -25,6 +25,7 @@ install:
   - "python -m pip install -v -U pip setuptools"
   - "python -m pip install coverage"
   - "python -m pip install nose"
+  - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "dir %PYTHON%\\Scripts"
 
 build: off
