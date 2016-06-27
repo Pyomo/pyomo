@@ -14,7 +14,6 @@ __all__ = ("SPSolverResults",
 import time
 import logging
 
-from collections import OrderedDict
 from pyomo.opt import undefined
 
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
