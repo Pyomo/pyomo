@@ -154,7 +154,7 @@ class TestSMPSSimple(unittest.TestCase):
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
-            b"RuntimeError: \(Scenario=Scenario1\): Component b.c was "
+            b"RuntimeError: Component b.c was "
             b"assigned multiple declarations in annotation type "
             b"PySP_StochasticMatrixAnnotation. To correct this "
             b"issue, ensure that multiple container components under "
@@ -174,9 +174,9 @@ class TestSMPSSimple(unittest.TestCase):
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
-            b"TypeError: \(Scenario=Scenario1\): Declarations "
+            b"TypeError: Declarations "
             b"in annotation type PySP_StochasticMatrixAnnotation "
-            b"must be of type Constraint or Block. Invalid type: "
+            b"must be of types Constraint or Block. Invalid type: "
             b"<class 'pyomo.core.base.objective.SimpleObjective'>")
         shutil.rmtree(output_dir,
                       ignore_errors=True)

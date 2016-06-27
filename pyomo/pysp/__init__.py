@@ -24,6 +24,7 @@ import pyomo.pysp.generators
 import pyomo.pysp.convergence
 import pyomo.pysp.scenariotree
 import pyomo.pysp.phobjective
+import pyomo.pysp.implicitsp
 
 import pyomo.pysp.ef
 import pyomo.pysp.ph

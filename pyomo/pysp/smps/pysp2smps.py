@@ -172,12 +172,13 @@ def run_pysp2smps(options):
                   options.file_determinism}
 
     if options.compile_scenario_instances:
-        raise ValueError("The pysp2smps script does not allow the compile_scenario_instances "
-                         "option to be set to True.")
+        raise ValueError("The pysp2smps script does not allow the "
+                         "compile_scenario_instances option to be "
+                         "set to True.")
 
     if options.explicit:
-        logger.warn("DEPRECATED: The use of the --explicit option is no longer necessary. "
-                    "It is the default behavior")
+        logger.warn("DEPRECATED: The use of the --explicit option "
+                    "is no longer necessary. It is the default behavior")
 
     manager_class = None
     if options.scenario_tree_manager == 'serial':
@@ -196,7 +197,8 @@ def run_pysp2smps(options):
                 io_options=io_options,
                 disable_consistency_checks=options.disable_consistency_checks,
                 keep_scenario_files=options.keep_scenario_files,
-                keep_auxiliary_files=options.keep_auxiliary_files)
+                keep_auxiliary_files=options.keep_auxiliary_files,
+                verbose=options.verbose)
 
     end_time = time.time()
 
