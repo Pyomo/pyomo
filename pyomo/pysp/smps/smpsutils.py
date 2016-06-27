@@ -1372,7 +1372,7 @@ def convert_explicit(output_directory,
                 rc = os.system('diff -q '+scenario_core_row_filename+' '+
                                core_row_filename)
             else:
-                rc = not filecmp.cmp(scenario_core_row_filename, core_row_filename)
+                rc = not filecmp.cmp(scenario_core_row_filename, core_row_filename, shallow=False)
             if rc:
                 raise ValueError(
                     "The row ordering indicated in file '%s' does not match that "
@@ -1393,7 +1393,7 @@ def convert_explicit(output_directory,
                 rc = os.system('diff -q '+scenario_core_col_filename+' '+
                                core_col_filename)
             else:
-                rc = not filecmp.cmp(scenario_core_col_filename, core_col_filename)
+                rc = not filecmp.cmp(scenario_core_col_filename, core_col_filename, shallow=False)
             if rc:
                 raise ValueError(
                     "The column ordering indicated in file '%s' does not match "
@@ -1414,7 +1414,7 @@ def convert_explicit(output_directory,
                 rc = os.system('diff -q '+scenario_tim_filename+' '+
                                tim_filename)
             else:
-                rc = not filecmp.cmp(scenario_tim_filename, tim_filename)
+                rc = not filecmp.cmp(scenario_tim_filename, tim_filename, shallow=False)
             if rc:
                 raise ValueError(
                     "Main .tim file '%s' does not match .tim file for "
@@ -1437,7 +1437,8 @@ def convert_explicit(output_directory,
                                sto_struct_filename)
             else:
                 rc = not filecmp.cmp(scenario_sto_struct_filename,
-                                     sto_struct_filename)
+                                     sto_struct_filename,
+                                     shallow=False)
             if rc:
                 raise ValueError(
                     "The structure of stochastic entries indicated in file '%s' "
@@ -1458,7 +1459,7 @@ def convert_explicit(output_directory,
                 rc = os.system('diff -q '+scenario_core_det_filename+' '+
                                core_det_filename)
             else:
-                rc = not filecmp.cmp(scenario_core_det_filename, core_det_filename)
+                rc = not filecmp.cmp(scenario_core_det_filename, core_det_filename, shallow=False)
             if rc:
                 raise ValueError(
                     "One or more deterministic parts of the problem found in file '%s' do "

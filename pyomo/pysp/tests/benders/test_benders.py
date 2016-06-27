@@ -13,9 +13,6 @@ import os
 from os.path import join, dirname, abspath
 import time
 import subprocess
-import difflib
-import filecmp
-import shutil
 
 try:
     from subprocess import check_output as _run_cmd
