@@ -42,6 +42,9 @@ class Test(unittest.TestCase):
         pyutilib.services.TempfileManager.clear_tempfiles()
 
 
+    def test_force_failure(self):
+        self.assertEqual(0,1)        
+
     def test_clone_concrete_model(self):
         def _populate(b, *args):
             b.A = RangeSet(1,3)
