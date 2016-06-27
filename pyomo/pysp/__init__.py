@@ -38,5 +38,6 @@ import pyomo.pysp.lagrangeMorePR
 import pyomo.pysp.lagrangeParam
 import pyomo.pysp.benders
 import pyomo.pysp.smps
+import pyomo.pysp.solvers
 
 PluginGlobals.pop_env()
