@@ -9,3 +9,5 @@
 
 import pyomo.pysp.solvers.spsolver
 from pyomo.pysp.solvers.spsolver import SPSolverFactory
+
+import pyomo.pysp.solvers.sd
