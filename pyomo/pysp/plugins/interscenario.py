@@ -1117,6 +1117,7 @@ class InterScenarioPlugin(SingletonPlugin):
             logger.info("InterScenario: new incumbent: %s" % (self.incumbent[0],))
         elif self.incumbent[0]*self._sense_to_min < best_obj - self.epsilon:
             # Keep existing incumbent... so the best thing here can be cut
+            print("Incumbent: %s = %s, %s" % self.incumbent)
             best_id = -1
 
         if continuous_vars or not self.enableIncumbentCuts:
@@ -1178,6 +1179,7 @@ class InterScenarioPlugin(SingletonPlugin):
                   - min(s[0][v] for s in self.unique_scenario_solutions) ) 
                 for v in xbar )
 
+        max_dual = dict((v,0.) for v in xbar)
         weighted_rho = dict((v,0.) for v in xbar)
         for soln_id, soln_p in enumerate(soln_prob):
             x = self.unique_scenario_solutions[soln_id][0]
@@ -1188,6 +1190,7 @@ class InterScenarioPlugin(SingletonPlugin):
                     continue
                 for v,d in iteritems(dual_values[scen_id][soln_id]):
                     avg_dual[v] += math.copysign(d, xbar[v]-x[v]) * p
+                    max_dual[v] = max(max_dual[v], abs(d))
                 p_total += p
             if p_total:
                 for v in avg_dual:
@@ -1196,6 +1199,10 @@ class InterScenarioPlugin(SingletonPlugin):
             #                     for v in xbar )
             for v,x_dev in iteritems(self.x_deviation):
                 weighted_rho[v] += soln_prob[soln_id]*avg_dual[v]/(x_dev+1.)
+
+        if False: # MAX dual (not average)
+            for v,x_dev in iteritems(self.x_deviation):
+                weighted_rho[v] += max_dual[v]/(x_dev+1.)
 
         # var_info: { var_id : [ scenario values ] }
         #   - this has the list of all values for a single 1st stage
