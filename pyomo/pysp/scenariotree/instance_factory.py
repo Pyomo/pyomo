@@ -85,7 +85,7 @@ def _extract_pathspec(
     """
 
     logger.debug("expanding pathspec %s to %s"
-                % (pathspec, os.path.expanduser(pathspec)))
+                 % (pathspec, os.path.expanduser(pathspec)))
     pathspec = os.path.expanduser(pathspec)
 
     if archives is None:
