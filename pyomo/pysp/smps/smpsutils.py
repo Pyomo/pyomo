@@ -41,7 +41,6 @@ from pyomo.pysp.annotations import (locate_annotations,
 from six import iteritems, itervalues
 
 thisfile = os.path.abspath(__file__)
-thisfile.replace(".pyc","").replace(".py","")
 
 logger = logging.getLogger('pyomo.pysp')
 

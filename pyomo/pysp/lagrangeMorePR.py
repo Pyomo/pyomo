@@ -425,13 +425,11 @@ def run(args=None):
 
    scenario_instance_factory = \
         ScenarioTreeInstanceFactory(options.model_directory,
-                                    options.instance_directory,
-                                    options.verbose)
+                                    options.instance_directory)
 
    full_scenario_tree = \
             GenerateScenarioTreeForPH(options,
                                       scenario_instance_factory)
-
 
    solver_manager = SolverManagerFactory(options.solver_manager_type)
    if solver_manager is None:

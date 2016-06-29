@@ -1,0 +1,11 @@
+param Bundling := True;
+
+set Bundles :=
+b1
+b2
+b3
+;
+
+set BundleScenarios[b1] := s1;
+set BundleScenarios[b2] := s2;
+set BundleScenarios[b3] := s3;

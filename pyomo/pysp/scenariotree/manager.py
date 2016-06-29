@@ -729,17 +729,17 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
         scenario_instance_factory = \
             ScenarioTreeInstanceFactory(
                 self._options.model_location,
-                scenario_tree_location=self._options.scenario_tree_location,
-                verbose=self._options.verbose)
+                self._options.scenario_tree_location)
 
         #
-        # Try prevent unnecessarily re-importing the model module
-        # if other callbacks are in the same location
+        # Try to prevent unnecessarily re-importing the model module
+        # if other callbacks are in the same location. Doing so might
+        # have serious consequences.
         #
-        self._modules_imported[scenario_instance_factory._model_location] = \
-            scenario_instance_factory._model_module
-        self._modules_imported[scenario_instance_factory._model_filename] = \
-            scenario_instance_factory._model_module
+        if scenario_instance_factory._model_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _model_filename] = \
+                scenario_instance_factory._model_module
 
         if self._options.output_times or \
            self._options.verbose:
@@ -756,7 +756,8 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
                        self._options.scenario_tree_downsample_fraction,
                     bundles=self._options.scenario_bundle_specification,
                     random_bundles=self._options.create_random_bundles,
-                    random_seed=self._options.scenario_tree_random_seed)
+                    random_seed=self._options.scenario_tree_random_seed,
+                    verbose=self._options.verbose)
 
             # print the input tree for validation/information
             # purposes.
@@ -1122,6 +1123,10 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             this_module = pyutilib.misc.import_file(module_name,
                                                     clear_cache=True)
             self._modules_imported[module_name] = this_module
+            self._modules_imported[this_module.__file__] = this_module
+            if this_module.__file__.endswith(".pyc"):
+                self._modules_imported[this_module.__file__[:-1]] = \
+                    this_module
 
         module_attrname = function_name
         subname = None
@@ -1365,7 +1370,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                 output_instance_construction_time=\
                    self._options.output_instance_construction_time,
                 profile_memory=self._options.profile_memory,
-                compile_scenario_instances=self._options.compile_scenario_instances)
+                compile_scenario_instances=self._options.compile_scenario_instances,
+                verbose=self._options.verbose)
 
         if self._options.output_times or \
            self._options.verbose:

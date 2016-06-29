@@ -172,24 +172,23 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
             self._scenario_instance_factory = \
                 ScenarioTreeInstanceFactory(
                     self._options.model_location,
-                    scenario_tree_location=self._options.scenario_tree_location,
-                    verbose=self._options.verbose)
+                    self._options.scenario_tree_location)
 
             #
-            # Try prevent unnecessarily re-imported the model module
-            # if other callbacks are in the same location
+            # Try to prevent unnecessarily re-importing the model module
+            # if other callbacks are in the same location. Doing so might
+            # have serious consequences.
             #
-            self._modules_imported[
-                self._scenario_instance_factory._model_location] = \
-                    self._scenario_instance_factory._model_module
-            self._modules_imported[
-                self._scenario_instance_factory._model_filename] = \
-                    self._scenario_instance_factory._model_module
+            if scenario_instance_factory._model_module is not None:
+                self._modules_imported[scenario_instance_factory.\
+                                       _model_filename] = \
+                    scenario_instance_factory._model_module
 
             self._full_scenario_tree = \
                 self._scenario_instance_factory.generate_scenario_tree(
                     downsample_fraction=self._options.scenario_tree_downsample_fraction,
-                    random_seed=self._options.scenario_tree_random_seed)
+                    random_seed=self._options.scenario_tree_random_seed,
+                    verbose=self._options.verbose)
 
             if self._full_scenario_tree is None:
                  raise RuntimeError("Unable to launch scenario tree worker - "
