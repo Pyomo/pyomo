@@ -8,20 +8,20 @@ g3 1 1 0	# problem unknown
  4 1 	# nonzeros in Jacobian, obj. gradient
  0 0	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
-C0
+C0	#con.simplified_piecewise_constraint[1]
 n0
-C1
+C1	#con.simplified_piecewise_constraint[2]
 n0
-O0 0
+O0 0	#obj
 n0
-x0
-r
+x0	# initial guess
+r	#2 ranges (rhs's)
 1 -2.0
 1 0.0
-b
+b	#2 bounds (on variables)
 0 -5 5
 3
-k1
+k1	#intermediate Jacobian column lengths
 2
 J0 2
 0 -1.0
