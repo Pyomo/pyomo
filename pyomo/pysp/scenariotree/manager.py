@@ -352,6 +352,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
         super(ScenarioTreeManager, self).__init__(*args, **kwds)
 
         init_start_time = time.time()
+        self._error_shutdown = False
         self._scenario_tree = None
         # bundle info
         self._scenario_to_bundle_map = {}
@@ -443,18 +444,19 @@ class ScenarioTreeManager(PySPConfiguredObject):
 
     def __exit__(self, *args):
         if args[0] is not None:
-            sys.stderr.write("Exception encountered. Scenario tree manager attempting "
-                             "to shut down.\n")
+            sys.stderr.write("Exception encountered. Scenario tree manager "
+                             "attempting to shut down.\n")
             tmp = StringIO()
             _args = list(args) + [None, tmp]
             traceback.print_exception(*_args)
+            self._error_shutdown = True
             try:
                 self.close()
             except:
-                sys.stderr.write("Exception encountered during emergency scenario "
-                                 "tree manager shutdown. Printing original exception "
-                                 "here:\n")
-                sys.stderr.write(tmp.getvalue())
+                logger.error("Exception encountered during emergency scenario "
+                             "tree manager shutdown. Printing original exception "
+                             "here:\n")
+                logger.error(tmp.getvalue())
                 raise
         else:
             self.close()
@@ -1801,7 +1803,10 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
     def _close_impl(self):
         if self._action_manager is not None:
-            self.release_scenariotreeservers()
+            if self._error_shutdown:
+                self.release_scenariotreeservers(ignore_errors=2)
+            else:
+                self.release_scenariotreeservers()
         if self._options.pyro_shutdown:
             print("Shutting down Pyro components.")
             shutdown_pyro_components(
@@ -1864,7 +1869,7 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
         return len(self._action_manager.server_pool)
 
-    def release_scenariotreeservers(self):
+    def release_scenariotreeservers(self, ignore_errors=False):
         """Release the pool of scenario tree servers and destroy the
         action manager."""
 
@@ -1894,6 +1899,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         # transmit reset or shutdown requests
         action_handles = []
         self.pause_transmit()
+
+        self._action_manager.ignore_task_errors = ignore_errors
         for server_name in self._action_manager.server_pool:
             action_handles.append(self._action_manager.queue(
                 queue_name=server_name,
