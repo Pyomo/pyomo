@@ -368,7 +368,8 @@ class Expression(IndexedComponent):
         # We no longer need these
         #
         self._init_expr = None
-        self._init_rule = None
+        # Utilities like DAE assume this stays around
+        #self._init_rule = None
 
         #
         # Construct _GeneralExpressionData objects for all index values
