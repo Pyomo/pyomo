@@ -12,7 +12,7 @@ import logging
 import copy
 
 import pyomo.util.plugin
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, PersistentSolver
 from pyomo.core import *
 from pyomo.pysp import phextension
 from pyomo.pysp.plugins.phboundextension import (_PHBoundBase,
@@ -264,12 +264,15 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
 
 #        print "V_BOUNDS CONSTRAINT:"
 #        self._master_model.V_Bound.pprint()
-
         with SolverFactory(ph._solver_type,
                            solver_io=ph._solver_io) as solver:
-            results = solver.solve(self._master_model,
-                                   tee=False,
-                                   load_solutions=False)
+            # the reason we go through this trouble rather
+            # than harcoding cplex as the solver is so that
+            # we can test the script and not have to worry
+            # about a missing solver
+            if isinstance(solver, PersistentSolver):
+                solver.compile_instance(self._master_model)
+            results = solver.solve(self._master_model)
             self._master_model.solutions.load_from(results)
 #        print "MASTER MODEL WVAR FOLLOWING SOLVE:"
 #        self._master_model.pprint()
