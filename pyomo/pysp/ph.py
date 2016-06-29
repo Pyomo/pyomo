@@ -30,6 +30,7 @@ from pyomo.opt import (UndefinedData,
                        ProblemFormat,
                        undefined,
                        SolverFactory,
+                       PersistentSolver,
                        SolverStatus,
                        TerminationCondition,
                        SolutionStatus)
@@ -1106,7 +1107,7 @@ class _PHBase(object):
         self._rho_check(tree_node, variable_id)
 
         return scenario._rho[tree_node._name][variable_id]
-    
+
     #
     # keep track of the best bounds reported - dlw May 2016 - temporary
     #
@@ -2273,6 +2274,10 @@ class ProgressiveHedging(_PHBase):
         isPHPyro =  isinstance(self._solver_manager,
                                pyomo.solvers.plugins.\
                                smanager.phpyro.SolverManager_PHPyro)
+        if isinstance(self._solver, PersistentSolver) and \
+           (not isPHPyro):
+            raise TypeError("Persistent solvers are only supported "
+                            "when using PHPyro")
 
         initialization_action_handles = []
         if isPHPyro:
