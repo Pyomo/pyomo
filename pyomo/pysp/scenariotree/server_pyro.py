@@ -179,10 +179,14 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
             # if other callbacks are in the same location. Doing so might
             # have serious consequences.
             #
-            if scenario_instance_factory._model_module is not None:
-                self._modules_imported[scenario_instance_factory.\
+            if self._scenario_instance_factory._model_module is not None:
+                self._modules_imported[self._scenario_instance_factory.\
                                        _model_filename] = \
-                    scenario_instance_factory._model_module
+                    self._scenario_instance_factory._model_module
+            if self._scenario_instance_factory._scenario_tree_module is not None:
+                self._modules_imported[self._scenario_instance_factory.\
+                                       _scenario_tree_filename] = \
+                    self._scenario_instance_factory._scenario_tree_module
 
             self._full_scenario_tree = \
                 self._scenario_instance_factory.generate_scenario_tree(

@@ -260,6 +260,11 @@ class Test(unittest.TestCase):
         with self.assertRaises(TypeError):
             with ScenarioTreeInstanceFactory(
                     model=join(testdatadir, "reference_test_model.py"),
+                    scenario_tree=int) as f:
+                pass
+        with self.assertRaises(ValueError):
+            with ScenarioTreeInstanceFactory(
+                    model=join(testdatadir, "reference_test_model.py"),
                     scenario_tree=None) as f:
                 pass
         with self.assertRaises(TypeError):
@@ -317,6 +322,7 @@ class Test(unittest.TestCase):
                 data_location=testdatadir) as factory:
             self.assertTrue(factory.model_directory() is None)
             self.assertTrue(factory.scenario_tree_directory() is not None)
+            self.assertTrue(factory._scenario_tree_module is not None)
             self._check_factory(factory)
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)

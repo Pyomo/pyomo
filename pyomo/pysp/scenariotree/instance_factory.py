@@ -272,6 +272,7 @@ class ScenarioTreeInstanceFactory(object):
         self._model_object = None
         self._model_callback = None
         self._scenario_tree_filename = None
+        self._scenario_tree_module = None
         self._scenario_tree_model = None
         self._data_directory = None
         try:
@@ -357,14 +358,14 @@ class ScenarioTreeInstanceFactory(object):
             elif self._scenario_tree_filename.endswith(".py"):
                 if self._scenario_tree_filename == self._model_filename:
                     # try not to clobber the model import
-                    (scenario_tree_module,
+                    (self._scenario_tree_module,
                      scenario_tree_model,
                      scenario_tree_callback) = \
                         _import_model_or_callback(
                             self._model_module,
                             "pysp_scenario_tree_model_callback")
                 else:
-                    (scenario_tree_module,
+                    (self._scenario_tree_module,
                      scenario_tree_model,
                      scenario_tree_callback) = \
                         _import_model_or_callback(

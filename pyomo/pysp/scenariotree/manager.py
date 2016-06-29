@@ -740,6 +740,10 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
             self._modules_imported[scenario_instance_factory.\
                                    _model_filename] = \
                 scenario_instance_factory._model_module
+        if scenario_instance_factory._scenario_tree_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _scenario_tree_filename] = \
+                scenario_instance_factory._scenario_tree_module
 
         if self._options.output_times or \
            self._options.verbose:
