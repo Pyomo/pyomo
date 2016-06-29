@@ -838,16 +838,21 @@ class InterScenarioPlugin(SingletonPlugin):
         # (5) compute and publish the new incumbent
         self._update_incumbent(ph)
 
-        # (6) set the new rho values
-        if ph._current_iteration == 0 and \
-                cutCount > self.recutThreshold*(subProblemCount-len(cuts)) and\
-                ( _del_avg is None or
-                  _del_avg > self.iteration0RecutBoundImprovement ):
-            # Bypass RHO updates and check for more cuts
-            #self.lastRun = ph._current_iteration - self.iterationInterval
-            return
+        # (6a) If this is iteration 0, and we have feasibility cuts, and
+        # they are (sufficiently) helping the Lagrangean bound, then
+        # skip setting rho and do another round oc cuts
+        if ph._current_iteration == 0:
+            # Tell ph that we may have a good opter bound
+            ph._update_reported_bounds(outer=self.average_solution)
 
-        # (7) compute updated rho estimates
+            if ( cutCount > self.recutThreshold*(subProblemCount-len(cuts)) 
+                 and ( _del_avg is None or
+                       _del_avg > self.iteration0RecutBoundImprovement )):
+                # Bypass RHO updates and check for more cuts
+                #self.lastRun = ph._current_iteration - self.iterationInterval
+                return
+
+        # (6b) compute updated rho estimates
         new_rho, loginfo = self._process_dual_information(
             ph, dual_values, probability )
         _scale = self.rhoScale
@@ -1144,6 +1149,10 @@ class InterScenarioPlugin(SingletonPlugin):
             self.incumbent = ( best_obj*self._sense_to_min,
                                self.unique_scenario_solutions[best_id],
                                best_id )
+
+            # Tell PH (that we have a good inner bound)
+            ph._update_reported_bounds(inner=best_obj)
+
             msg = "InterScenario plugin: NEW incumbent: %s = %s, %s" \
                   % self.incumbent
             print(msg)
