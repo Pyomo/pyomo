@@ -24,6 +24,7 @@ import pyomo.scripting.convert as convert
 _NL_diff_tol = 1e-9
 _LP_diff_tol = 1e-9
 
+@unittest.category('smoke', 'nightly', 'expensive')
 class Test(unittest.TestCase):
 
     def run_convert2nl(self, name):
@@ -89,7 +90,6 @@ class Test(unittest.TestCase):
         self.assertFileEqualsBaseline(join(currdir,'unknown.nl'), currdir+'indexed_nonlinear.nl', tolerance=_NL_diff_tol)
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
-
 
 if __name__ == "__main__":
     unittest.main()
