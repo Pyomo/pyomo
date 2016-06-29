@@ -5,7 +5,7 @@ from pyomo.environ import *
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
 
-with tempfile.NamedTemporaryFile(suffix=".dat", delete=False) as f:
+with tempfile.NamedTemporaryFile(mode="w", suffix=".dat", delete=False) as f:
     f.write("""
 set Stages :=
 t1
