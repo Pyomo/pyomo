@@ -2179,14 +2179,19 @@ class ProgressiveHedging(_PHBase):
             self._solution_plugins = solution_plugins
 
         #
-        # Try prevent unnecessarily re-importing the model module
-        # if other callbacks are in the same location
+        # Try to prevent unnecessarily re-importing the model module
+        # if other callbacks are in the same location. Doing so might
+        # have serious consequences.
         #
         scenario_instance_factory = scenario_tree._scenario_instance_factory
-        self._modules_imported[scenario_instance_factory._model_location] = \
-            scenario_instance_factory._model_module
-        self._modules_imported[scenario_instance_factory._model_filename] = \
-            scenario_instance_factory._model_module
+        if scenario_instance_factory._model_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _model_filename] = \
+                scenario_instance_factory._model_module
+        if scenario_instance_factory._scenario_tree_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _scenario_tree_filename] = \
+                scenario_instance_factory._scenario_tree_module
 
         # The first step in PH initialization is to impose an order on
         # the user-defined plugins. Invoking wwextensions and
