@@ -22,8 +22,11 @@ install:
   # We need wheel installed to build wheels
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "python --version"
+  - "python -m pip install -U pip setuptools"
   - "python -m pip install coverage"
   - "python -m pip install nose"
+  - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
+  - "python setup.py develop"
   - "dir %PYTHON%\\Scripts"
 
 build: off
@@ -36,8 +39,7 @@ test_script:
   # Note that you must use the environment variable %PYTHON% to refer to
   # the interpreter you're using - Appveyor does not do anything special
   # to put the Python evrsion you want to use on PATH.
-  - "%PYTHON%\\python.exe setup.py develop"
-  - "%PYTHON%\\Scripts\\test.pyomo.exe --cat=nightly --cov -v"
+  - "test.pyomo --cat=nightly --cov -v"
 
 #after_test:
   # This step builds your wheels.

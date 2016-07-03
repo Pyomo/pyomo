@@ -8,32 +8,32 @@ g3 1 1 0	# problem unknown
  4 2 	# nonzeros in Jacobian, obj. gradient
  0 0	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
-C0
-o46
-o2
+C0	#nonlinear_constraint[0,1]
+o46	#cos
+o2	#*
 n5.0
-v0
-C1
-o46
-o2
+v0	#X[0,1]
+C1	#nonlinear_constraint[8,3]
+o46	#cos
+o2	#*
 n5.0
-v1
-O0 1
+v1	#X[8,3]
+O0 1	#obj
 n0
-x4
+x4	# initial guess
 0 1.7
 1 1.7
 2 1.25
 3 1.25
-r
+r	#2 ranges (rhs's)
 4 0.0
 4 0.0
-b
+b	#4 bounds (on variables)
 0 -2 2
 0 -2 2
 3
 3
-k3
+k3	#intermediate Jacobian column lengths
 1
 2
 3

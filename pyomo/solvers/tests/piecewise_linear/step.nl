@@ -8,30 +8,30 @@ g3 1 1 0	# problem unknown
  23 2 	# nonzeros in Jacobian, obj. gradient
  0 0	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
-C0
+C0	#con.INC_constraint1
 n0
-C1
+C1	#con.INC_constraint2
 n0
-C2
+C2	#con.INC_constraint3[1]
 n0
-C3
+C3	#con.INC_constraint3[2]
 n0
-C4
+C4	#con.INC_constraint3[3]
 n0
-C5
+C5	#con.INC_constraint3[4]
 n0
-C6
+C6	#con.INC_constraint4[1]
 n0
-C7
+C7	#con.INC_constraint4[2]
 n0
-C8
+C8	#con.INC_constraint4[3]
 n0
-C9
+C9	#con.INC_constraint4[4]
 n0
-O0 1
+O0 1	#obj
 n0
-x0
-r
+x0	# initial guess
+r	#10 ranges (rhs's)
 4 0.0
 4 0.0
 1 0.0
@@ -42,7 +42,7 @@ r
 1 0.0
 1 0.0
 1 0.0
-b
+b	#11 bounds (on variables)
 0 0 3
 3
 1 1
@@ -54,7 +54,7 @@ b
 0 0 1
 0 0 1
 0 0 1
-k10
+k10	#intermediate Jacobian column lengths
 1
 2
 4

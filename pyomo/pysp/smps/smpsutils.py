@@ -12,9 +12,8 @@ import operator
 import shutil
 import filecmp
 import copy
-
-thisfile = os.path.abspath(__file__)
-thisfile.replace(".pyc","").replace(".py","")
+import logging
+import itertools
 
 from pyomo.opt import WriterFactory
 from pyomo.core.base.numvalue import value
@@ -23,7 +22,7 @@ from pyomo.core.base.block import (Block,
                                    SortComponents)
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.expression import Expression
-from pyomo.core.base.objective import Objective, _ObjectiveData
+from pyomo.core.base.objective import Objective
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.param import _ParamData
@@ -41,6 +40,10 @@ from pyomo.pysp.annotations import (locate_annotations,
 
 from six import iteritems, itervalues
 
+thisfile = os.path.abspath(__file__)
+
+logger = logging.getLogger('pyomo.pysp')
+
 # LONG TERM TODO:
 #  - Multi-stage?
 #  - Quadratic constraints and objectives?
@@ -52,70 +55,6 @@ def _safe_remove_file(filename):
         os.remove(filename)
     except OSError:
         pass
-
-def _expand_annotation_entries(scenario,
-                               ctype,
-                               annotation,
-                               check_value=None):
-    if ctype is Constraint:
-        ctype_data = _ConstraintData
-    else:
-        assert ctype is Objective
-        ctype_data = _ObjectiveData
-
-    annotation_data = annotation.data
-    items = []
-    component_ids = set()
-    def _append(component, val):
-        items.append((component, val))
-        if id(component) in component_ids:
-            raise RuntimeError(
-                "(Scenario=%s): Component %s was assigned multiple declarations "
-                "in annotation type %s. To correct this issue, ensure that "
-                "multiple container components under which the component might "
-                "be stored (such as a Block and an indexed Constraint) are not "
-                "simultaneously set in this annotation." % (scenario.name,
-                                                            component.cname(True),
-                                                            annotation.__class__.__name__))
-        component_ids.add(id(component))
-
-    for component in annotation_data:
-        component_annotation_value = annotation_data[component]
-        if isinstance(component, ctype_data):
-            if component.active:
-                _append(component, component_annotation_value)
-        elif isinstance(component, ctype):
-            for index in component:
-                obj = component[index]
-                if obj.active:
-                    _append(obj, component_annotation_value)
-        elif isinstance(component, _BlockData):
-            if component.active:
-                for obj in component.component_data_objects(
-                        ctype,
-                        active=True,
-                        descend_into=True):
-                    _append(obj, component_annotation_value)
-        elif isinstance(component, Block):
-            for index in component:
-                block = component[index]
-                if block.active:
-                    for obj in block.component_data_objects(
-                            ctype,
-                            active=True,
-                            descend_into=True):
-                        _append(obj, component_annotation_value)
-        else:
-            raise TypeError(
-                "(Scenario=%s): Declarations in annotation type %s must be of type "
-                "%s or Block. Invalid type: %s" % (scenario.name,
-                                                   annotation.__class__.__name__,
-                                                   ctype.__name__,
-                                                   type(component)))
-        if check_value is not None:
-            check_value(component, component_annotation_value)
-
-    return items
 
 def map_constraint_stages(scenario,
                           scenario_tree,
@@ -164,9 +103,9 @@ def map_constraint_stages(scenario,
                 SOSConstraint,
                 active=True,
                 descend_into=False):
-            raise TypeError("(Scenario=%s): SOSConstraints are not allowed with the "
+            raise TypeError("SOSConstraints are not allowed with the "
                             "SMPS format. Invalid constraint: %s"
-                            % (scenario.name, constraint_data.cname(True)))
+                            % (constraint_data.cname(True)))
 
         block_canonical_repn = getattr(block, "_canonical_repn", None)
         if block_canonical_repn is None:
@@ -210,28 +149,25 @@ def map_constraint_stages(scenario,
                 assigned_constraint_stage_id = constraint_stage_assignments.get(constraint_data, None)
                 if assigned_constraint_stage_id is None:
                     raise ValueError(
-                        "(Scenario=%s): The %s annotation type was found on the model but "
+                        "The %s annotation type was found on the model but "
                         "no stage declaration was provided for constraint %s."
-                        % (scenario.name,
-                           PySP_ConstraintStageAnnotation.__name__,
+                        % (PySP_ConstraintStageAnnotation.__name__,
                            constraint_data.cname(True)))
                 elif assigned_constraint_stage_id == 1:
                     if constraint_stage is secondstage:
                         raise RuntimeError(
-                            "(Scenario=%s): The %s annotation declared constraint %s as first-stage, "
+                            "The %s annotation declared constraint %s as first-stage, "
                             "but this constraint contains references to second-stage variables."
-                            % (scenario.name,
-                               PySP_ConstraintStageAnnotation.__name__,
+                            % (PySP_ConstraintStageAnnotation.__name__,
                                constraint_data.cname(True)))
                 elif assigned_constraint_stage_id == 2:
                     # override the inferred stage-ness (whether or not it was first- or second-stage)
                     constraint_stage = secondstage
                 else:
                     raise ValueError(
-                        "(Scenario=%s): The %s annotation was declared with an invalid value (%s) "
+                        "The %s annotation was declared with an invalid value (%s) "
                         "for constraint %s. Valid values are 1 or 2."
-                        % (scenario.name,
-                           PySP_ConstraintStageAnnotation.__name__,
+                        % (PySP_ConstraintStageAnnotation.__name__,
                            assigned_constraint_stage_id,
                            constraint_data.cname(True)))
 
@@ -282,10 +218,10 @@ def map_variable_stages(scenario, scenario_tree, symbol_map):
         try:
             symbol = byObject[id(vardata)]
         except KeyError:
-            raise ValueError("(Scenario=%s): Variable with name '%s' was declared "
+            raise ValueError("Variable with name '%s' was declared "
                              "on the scenario tree but did not appear "
                              "in the reference scenario LP/MPS file."
-                             % (scenario.name, vardata.cname(True)))
+                             % (vardata.cname(True)))
         if symbol == "RHS":
             raise RuntimeError(
                 "Congratulations! You have hit an edge case. The "
@@ -310,9 +246,8 @@ def map_variable_stages(scenario, scenario_tree, symbol_map):
             find_component(cost_variable_name)
         if stage_cost_component.type() is not Expression:
             raise RuntimeError(
-                "(Scenario=%s): All StageCost objects must be declared "
-                "as Expression components when using this tool"
-                % (scenario.name))
+                "All StageCost objects must be declared "
+                "as Expression components when using this tool")
 
     # The *ONLY* case where we allow variables to exist on the
     # model that were not declared on the scenario tree is when
@@ -368,9 +303,8 @@ def map_variable_stages(scenario, scenario_tree, symbol_map):
               +str(len(all_vars)))
         print("Variables Missing from Scenario Tree "
               "(or LP/MPS file):"+str(all_vars-tree_vars-cost_vars))
-        raise RuntimeError("(Scenario=%s): Failed verify that all model variables "
-                           "have been declared on the scenario tree"
-                           % (scenario.name))
+        raise RuntimeError("Failed verify that all model variables "
+                           "have been declared on the scenario tree")
 
     # A necessary but not sufficient sanity check to make sure the
     # second stage variable sets are the same for all
@@ -426,6 +360,10 @@ def _convert_explicit_setup(worker, scenario, *args, **kwds):
     try:
         return _convert_explicit_setup_without_cleanup(
             worker, scenario, *args, **kwds)
+    except:
+        logger.error("Failed to complete partial SMPS conversion "
+                     "for scenario: %s" % (scenario.name))
+        raise
     finally:
         for block, block_cached_attrs in cached_attrs:
             for name in block_cached_attrs:
@@ -460,11 +398,7 @@ def _convert_explicit_setup_without_cleanup(worker,
     constraint_stage_assignments = None
     if constraint_stage_annotation is not None:
         constraint_stage_assignments = ComponentMap(
-            _expand_annotation_entries(
-                scenario,
-                Constraint,
-                constraint_stage_annotation,
-                check_value=None))
+            constraint_stage_annotation.expand_entries())
 
     stochastic_rhs = locate_annotations(
         reference_model,
@@ -500,11 +434,10 @@ def _convert_explicit_setup_without_cleanup(worker,
        (stochastic_matrix is None) and \
        (stochastic_objective is None):
         raise RuntimeError(
-            "(Scenario=%s): No stochastic annotations found. SMPS "
+            "No stochastic annotations found. SMPS "
             "conversion requires at least one of the following "
             "annotation types:\n - %s\n - %s\n - %s"
-            % (scenario.name,
-               PySP_StochasticRHSAnnotation.__name__,
+            % (PySP_StochasticRHSAnnotation.__name__,
                PySP_StochasticMatrixAnnotation.__name__,
                PySP_StochasticObjectiveAnnotation.__name__))
 
@@ -593,9 +526,8 @@ def _convert_explicit_setup_without_cleanup(worker,
         objective_repn.linear = tuple(obj_coefs)
 
     else:
-        raise RuntimeError("(Scenario=%s): A linear objective is required for "
-                           "conversion to SMPS format."
-                           % (scenario.name))
+        raise RuntimeError("A linear objective is required for "
+                           "conversion to SMPS format.")
     """
 
     #
@@ -666,7 +598,7 @@ def _convert_explicit_setup_without_cleanup(worker,
             in StageToConstraintMap[secondstage.name])
     firststage_variable_ids = \
         set(id(variable_data) for symbol, variable_data, scenario_tree_id
-            in StageToVariableMap[secondstage.name])
+            in StageToVariableMap[firststage.name])
 
     #
     # Write the explicit column ordering (variables) used
@@ -813,42 +745,20 @@ def _convert_explicit_setup_without_cleanup(worker,
             #
             # Stochastic RHS
             #
-            def _check_rhs_value(component, val):
-                # IMPT: the check for 'is' must not be changed to '=='
-                if not ((val is True) or
-                        ((type(val) is tuple) and
-                         (len(val) == 2) and
-                         (val in ((True,False),
-                                  (True,True),
-                                  (False,True))))):
-                    raise ValueError(
-                        "(Scenario=%s): Entries in the %s annotation type must be "
-                        "assigned the value True or a 2-tuple with at least "
-                        "one of the entries set to True. Invalid value (%s) "
-                        "declared for entry %s."
-                        % (scenario.name,
-                           PySP_StochasticRHSAnnotation.__name__,
-                           val,
-                           component.cname(True)))
             rhs_template = "    RHS    %s    %.17g\n"
             if stochastic_rhs is not None:
                 empty_rhs_annotation = False
-                if len(stochastic_rhs.data) > 0:
+                if stochastic_rhs.has_declarations():
                     empty_rhs_annotation = False
-                    sorted_values = _expand_annotation_entries(
-                        scenario,
-                        Constraint,
-                        stochastic_rhs,
-                        check_value=_check_rhs_value)
+                    sorted_values = stochastic_rhs.expand_entries()
                     sorted_values.sort(
                         key=lambda x: x[0].cname(True, constraint_name_buffer))
                     if len(sorted_values) == 0:
                         raise RuntimeError(
-                            "(Scenario=%s): The %s annotation was declared "
+                            "The %s annotation was declared "
                             "with explicit entries but no active Constraint "
                             "objects were recovered from those entries."
-                            % (scenario.name,
-                               PySP_StochasticRHSAnnotation.__name__))
+                            % (PySP_StochasticRHSAnnotation.__name__))
                 else:
                     empty_rhs_annotation = True
                     sorted_values = tuple((constraint_data, stochastic_rhs.default)
@@ -862,25 +772,23 @@ def _convert_explicit_setup_without_cleanup(worker,
                         # flagged by PySP or the user as second-stage
                         if id(constraint_data) not in secondstage_constraint_ids:
                             raise RuntimeError(
-                                "(Scenario=%s): The constraint %s has been declared "
+                                "The constraint %s has been declared "
                                 "in the %s annotation but it was not identified as "
                                 "a second-stage constraint. To correct this issue, "
                                 "either remove the constraint from this annotation "
                                 "or manually declare it as second-stage using the "
                                 "%s annotation."
-                                % (scenario.name,
-                                   constraint_data.cname(True),
+                                % (constraint_data.cname(True),
                                    PySP_StochasticRHSAnnotation.__name__,
                                    PySP_ConstraintStageAnnotation.__name__))
 
                     constraint_repn = \
                         canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
-                        raise RuntimeError("(Scenario=%s): Only linear constraints are "
+                        raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
-                                           % (scenario.name,
-                                              constraint_data.cname(True)))
+                                           % (constraint_data.cname(True)))
 
                     body_constant = constraint_repn.constant
                     # We are going to rewrite the core problem file
@@ -970,22 +878,17 @@ def _convert_explicit_setup_without_cleanup(worker,
             matrix_template = "    %s    %s    %.17g\n"
             if stochastic_matrix is not None:
                 empty_matrix_annotation = False
-                if len(stochastic_matrix.data) > 0:
+                if stochastic_matrix.has_declarations():
                     empty_matrix_annotation = False
-                    sorted_values = _expand_annotation_entries(
-                        scenario,
-                        Constraint,
-                        stochastic_matrix,
-                        check_value=None)
+                    sorted_values = stochastic_matrix.expand_entries()
                     sorted_values.sort(
                         key=lambda x: x[0].cname(True, constraint_name_buffer))
                     if len(sorted_values) == 0:
                         raise RuntimeError(
-                            "(Scenario=%s): The %s annotation was declared "
+                            "The %s annotation was declared "
                             "with explicit entries but no active Constraint "
                             "objects were recovered from those entries."
-                            % (scenario.name,
-                               PySP_StochasticRHSAnnotation.__name__))
+                            % (PySP_StochasticRHSAnnotation.__name__))
                 else:
                     empty_matrix_annotation = True
                     sorted_values = tuple((constraint_data,stochastic_matrix.default)
@@ -999,24 +902,22 @@ def _convert_explicit_setup_without_cleanup(worker,
                         # flagged by PySP or the user as second-stage
                         if id(constraint_data) not in secondstage_constraint_ids:
                             raise RuntimeError(
-                                "(Scenario=%s): The constraint %s has been declared "
+                                "The constraint %s has been declared "
                                 "in the %s annotation but it was not identified as "
                                 "a second-stage constraint. To correct this issue, "
                                 "either remove the constraint from this annotation "
                                 "or manually declare it as second-stage using the "
                                 "%s annotation."
-                                % (scenario.name,
-                                   constraint_data.cname(True),
+                                % (constraint_data.cname(True),
                                    PySP_StochasticMatrixAnnotation.__name__,
                                    PySP_ConstraintStageAnnotation.__name__))
                     constraint_repn = \
                         canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
-                        raise RuntimeError("(Scenario=%s): Only linear constraints are "
+                        raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
-                                           % (scenario.name,
-                                              constraint_data.cname(True)))
+                                           % (constraint_data.cname(True)))
                     assert len(constraint_repn.variables) > 0
                     if var_list is None:
                         var_list = constraint_repn.variables
@@ -1043,12 +944,11 @@ def _convert_explicit_setup_without_cleanup(worker,
                                 break
                         if var_coef is None:
                             raise RuntimeError(
-                                "(Scenario=%s): The coefficient for variable %s has "
+                                "The coefficient for variable %s has "
                                 "been marked as stochastic in constraint %s using "
                                 "the %s annotation, but the variable does not appear"
                                 " in the canonical constraint expression."
-                                % (scenario.name,
-                                   var_data.cname(True),
+                                % (var_data.cname(True),
                                    constraint_data.cname(True),
                                    PySP_StochasticMatrixAnnotation.__name__))
                         var_label = symbol_map.byObject[id(var_data)]
@@ -1072,20 +972,15 @@ def _convert_explicit_setup_without_cleanup(worker,
             #
             obj_template = "    %s    %s    %.17g\n"
             if stochastic_objective is not None:
-                if len(stochastic_objective.data) > 0:
-                    sorted_values = _expand_annotation_entries(
-                        scenario,
-                        Objective,
-                        stochastic_objective,
-                        check_value=None)
+                if stochastic_objective.has_declarations():
+                    sorted_values = stochastic_objective.expand_entries()
                     assert len(sorted_values) <= 1
                     if len(sorted_values) == 0:
                         raise RuntimeError(
-                            "(Scenario=%s): The %s annotation was declared "
+                            "The %s annotation was declared "
                             "with explicit entries but no active Objective "
                             "objects were recovered from those entries."
-                            % (scenario.name,
-                               PySP_StochasticObjectiveAnnotation.__name__))
+                            % (PySP_StochasticObjectiveAnnotation.__name__))
                     objdata, (objective_variables, include_constant) = \
                         sorted_values[0]
                     assert objdata is objective_data
@@ -1094,11 +989,10 @@ def _convert_explicit_setup_without_cleanup(worker,
                         stochastic_objective.default
 
                 if not isinstance(objective_repn, LinearCanonicalRepn):
-                    raise RuntimeError("(Scenario=%s): Only linear objectives are "
+                    raise RuntimeError("Only linear objectives are "
                                        "accepted for conversion to SMPS format. "
                                        "Objective %s is not linear."
-                                       % (scenario.name,
-                                          objective_data.cname(True)))
+                                       % (objective_data.cname(True)))
                 if objective_variables is None:
                     objective_variables = objective_repn.variables
                 stochastic_objective_label = symbol_map.byObject[id(objective_data)]
@@ -1123,12 +1017,11 @@ def _convert_explicit_setup_without_cleanup(worker,
                             break
                     if var_coef is None:
                         raise RuntimeError(
-                            "(Scenario=%s): The coefficient for variable %s has "
+                            "The coefficient for variable %s has "
                             "been marked as stochastic in objective %s using "
                             "the %s annotation, but the variable does not appear"
                             " in the canonical objective expression."
-                            % (scenario.name,
-                               var_data.cname(True),
+                            % (var_data.cname(True),
                                objective_data.cname(True),
                                PySP_StochasticObjectiveAnnotation.__name__))
                     var_label = symbol_map.byObject[id(var_data)]
@@ -1201,7 +1094,8 @@ def convert_explicit(output_directory,
                      io_options=None,
                      disable_consistency_checks=False,
                      keep_scenario_files=False,
-                     keep_auxiliary_files=False):
+                     keep_auxiliary_files=False,
+                     verbose=False):
     import pyomo.environ
     import pyomo.solvers.plugins.smanager.phpyro
 
@@ -1309,51 +1203,61 @@ def convert_explicit(output_directory,
                 shutil.copyfileobj(fsrc, fdst)
         fdst.write('ENDATA\n')
 
-    print("\nSMPS Conversion Complete")
-    print("Output Saved To: "+os.path.relpath(output_directory))
-    print("Basis Problem Information:")
-    (firststage_row_count,
-     row_count,
-     firststage_col_count,
-     col_count,
-     stochastic_constraint_count,
-     stochastic_secondstage_rhs_count,
-     stochastic_firststagevar_constraint_count,
-     stochastic_secondstagevar_constraint_count,
-     stochastic_firststagevar_objective_count,
-     stochastic_secondstagevar_objective_count) = counts[reference_scenario_name]
-    print(" - Objective:")
-    print("    - Stochastic Variable Coefficients: %d"
-          % (stochastic_firststagevar_objective_count + \
-             stochastic_secondstagevar_objective_count))
-    print("        - First-Stage:  %d"
-          % (stochastic_firststagevar_objective_count))
-    print("        - Second-Stage: %d"
-          % (stochastic_secondstagevar_objective_count))
-    print(" - Constraint Matrix:")
-    print("    - Columns: %d" % (col_count))
-    print("        - First-Stage:  %d" % (firststage_col_count))
-    print("        - Second-Stage: %d" % (col_count - firststage_col_count))
-    print("    - Rows:    %d" % (row_count))
-    print("        - First-Stage:  %d" % (firststage_row_count))
-    print("        - Second-Stage: %d" % (row_count - firststage_row_count))
-    print("    - Stochastic Second-Stage Rows: %d" % (stochastic_constraint_count))
-    print("        - Stochastic Right-Hand-Sides:      %d"
-          % (stochastic_secondstage_rhs_count))
-    print("        - Stochastic Variable Coefficients: %d"
-          % (stochastic_firststagevar_constraint_count + \
-             stochastic_secondstagevar_constraint_count))
-    print("            - First-Stage:  %d"
-          % (stochastic_firststagevar_constraint_count))
-    print("            - Second-Stage: %d"
-          % (stochastic_secondstagevar_constraint_count))
+    if verbose:
+        print("\nSMPS Conversion Complete")
+        print("Output Saved To: "+os.path.relpath(output_directory))
+        print("Basic Problem Information:")
+        (firststage_row_count,
+         row_count,
+         firststage_col_count,
+         col_count,
+         stochastic_constraint_count,
+         stochastic_secondstage_rhs_count,
+         stochastic_firststagevar_constraint_count,
+         stochastic_secondstagevar_constraint_count,
+         stochastic_firststagevar_objective_count,
+         stochastic_secondstagevar_objective_count) = \
+            counts[reference_scenario_name]
+        print(" - Objective:")
+        print("    - Stochastic Variable Coefficients: %d"
+              % (stochastic_firststagevar_objective_count + \
+                 stochastic_secondstagevar_objective_count))
+        print("        - First-Stage:  %d"
+              % (stochastic_firststagevar_objective_count))
+        print("        - Second-Stage: %d"
+              % (stochastic_secondstagevar_objective_count))
+        print(" - Constraint Matrix:")
+        print("    - Columns: %d" % (col_count))
+        print("        - First-Stage:  %d"
+              % (firststage_col_count))
+        print("        - Second-Stage: %d"
+              % (col_count - firststage_col_count))
+        print("    - Rows:    %d" % (row_count))
+        print("        - First-Stage:  %d"
+              % (firststage_row_count))
+        print("        - Second-Stage: %d"
+              % (row_count - firststage_row_count))
+        print("    - Stochastic Second-Stage Rows: %d"
+              % (stochastic_constraint_count))
+        print("        - Stochastic Right-Hand-Sides:      %d"
+              % (stochastic_secondstage_rhs_count))
+        print("        - Stochastic Variable Coefficients: %d"
+              % (stochastic_firststagevar_constraint_count + \
+                 stochastic_secondstagevar_constraint_count))
+        print("            - First-Stage:  %d"
+              % (stochastic_firststagevar_constraint_count))
+        print("            - Second-Stage: %d"
+              % (stochastic_secondstagevar_constraint_count))
 
     if not disable_consistency_checks:
-        print("\nStarting scenario structure consistency checks across scenario "
-              "files stored in %s." % (scenario_directory))
-        print("This may take some time. If this test is prohibitively slow or can "
-              "not be executed on your system, it can be disabled by activating the "
-              "disable_consistency_check option.")
+        if verbose:
+            print("\nStarting scenario structure consistency checks "
+                  "across scenario files stored in %s."
+                  % (scenario_directory))
+            print("This may take some time. If this test is "
+                  "prohibitively slow or can not be executed on "
+                  "your system, disable it by activating the "
+                  "disable_consistency_check option.")
         has_diff = False
         try:
             if not os.system('diff --help > /dev/null'):
@@ -1362,8 +1266,8 @@ def convert_explicit(output_directory,
                 has_diff = False
         except:
             has_diff = False
-
-        print(" - Checking row and column ordering...")
+        if verbose:
+            print(" - Checking row and column ordering...")
         for scenario in scenario_tree.scenarios:
             scenario_core_row_filename = \
                 os.path.join(scenario_directory,
@@ -1372,15 +1276,18 @@ def convert_explicit(output_directory,
                 rc = os.system('diff -q '+scenario_core_row_filename+' '+
                                core_row_filename)
             else:
-                rc = not filecmp.cmp(scenario_core_row_filename, core_row_filename)
+                rc = not filecmp.cmp(scenario_core_row_filename,
+                                     core_row_filename,
+                                     shallow=False)
             if rc:
                 raise ValueError(
-                    "The row ordering indicated in file '%s' does not match that "
-                    "for scenario %s indicated in file '%s'. This suggests that the "
-                    "same constraint is being classified in different time stages "
-                    "across scenarios. Consider manually declaring constraint "
-                    "stages using the %s annotation if not already doing so, or "
-                    "report this issue to the PySP developers."
+                    "The row ordering indicated in file '%s' does not match "
+                    "that for scenario %s indicated in file '%s'. This "
+                    "suggests that the same constraint is being classified "
+                    "in different time stages across scenarios. Consider "
+                    "manually declaring constraint stages using the %s "
+                    "annotation if not already doing so, or report this "
+                    "issue to the PySP developers."
                     % (core_row_filename,
                        scenario.name,
                        scenario_core_row_filename,
@@ -1393,19 +1300,23 @@ def convert_explicit(output_directory,
                 rc = os.system('diff -q '+scenario_core_col_filename+' '+
                                core_col_filename)
             else:
-                rc = not filecmp.cmp(scenario_core_col_filename, core_col_filename)
+                rc = not filecmp.cmp(scenario_core_col_filename,
+                                     core_col_filename,
+                                     shallow=False)
             if rc:
                 raise ValueError(
-                    "The column ordering indicated in file '%s' does not match "
-                    "that for scenario %s indicated in file '%s'. This suggests that"
-                    " the set of variables on the model changes across scenarios. "
-                    "This is not allowed by the SMPS format. If you feel this is a "
-                    "developer error, please report this issue to the PySP "
-                    "developers." % (core_col_filename,
-                                     scenario.name,
-                                     scenario_core_col_filename))
+                    "The column ordering indicated in file '%s' does not "
+                    "match that for scenario %s indicated in file '%s'. "
+                    "This suggests that the set of variables on the model "
+                    "changes across scenarios. This is not allowed by the "
+                    "SMPS format. If you feel this is a developer error, "
+                    "please report this issue to the PySP developers."
+                    % (core_col_filename,
+                       scenario.name,
+                       scenario_core_col_filename))
 
-        print(" - Checking time-stage classifications...")
+        if verbose:
+            print(" - Checking time-stage classifications...")
         for scenario in scenario_tree.scenarios:
             scenario_tim_filename = \
                 os.path.join(scenario_directory,
@@ -1414,20 +1325,24 @@ def convert_explicit(output_directory,
                 rc = os.system('diff -q '+scenario_tim_filename+' '+
                                tim_filename)
             else:
-                rc = not filecmp.cmp(scenario_tim_filename, tim_filename)
+                rc = not filecmp.cmp(scenario_tim_filename,
+                                     tim_filename,
+                                     shallow=False)
             if rc:
                 raise ValueError(
                     "Main .tim file '%s' does not match .tim file for "
-                    "scenario %s located at '%s'. This indicates there was a "
-                    "problem translating the reference model to SMPS format. "
-                    "Please make sure the problem structures are identical "
-                    "over all scenarios (e.g., no. of variables, no. of constraints"
-                    "), or report this issue to the PySP developers if you feel "
-                    "that it is a developer error." % (tim_filename,
-                                                       scenario.name,
-                                                       scenario_tim_filename))
+                    "scenario %s located at '%s'. This indicates there was "
+                    "a problem translating the reference model to SMPS "
+                    "format. Please make sure the problem structure is "
+                    "identical over all scenarios (e.g., no. of variables, "
+                    "no. of constraints), or report this issue to the PySP "
+                    "developers if you feel that it is a developer error."
+                    % (tim_filename,
+                       scenario.name,
+                       scenario_tim_filename))
 
-        print(" - Checking sparse locations of stochastic elements...")
+        if verbose:
+            print(" - Checking sparse locations of stochastic elements...")
         for scenario in scenario_tree.scenarios:
             scenario_sto_struct_filename = \
                 os.path.join(scenario_directory,
@@ -1437,19 +1352,23 @@ def convert_explicit(output_directory,
                                sto_struct_filename)
             else:
                 rc = not filecmp.cmp(scenario_sto_struct_filename,
-                                     sto_struct_filename)
+                                     sto_struct_filename,
+                                     shallow=False)
             if rc:
                 raise ValueError(
-                    "The structure of stochastic entries indicated in file '%s' "
-                    "does not match that for scenario %s indicated in file '%s'. "
-                    "This suggests that the set of variables appearing in some "
-                    "expression declared as stochastic is changing across scenarios."
-                    " If you feel this is a developer error, please report this "
-                    "issue to the PySP developers." % (sto_struct_filename,
-                                                       scenario.name,
-                                                       scenario_sto_struct_filename))
+                    "The structure of stochastic entries indicated in file "
+                    "'%s' does not match that for scenario %s indicated in "
+                    "file '%s'. This suggests that the set of variables "
+                    "appearing in some expression declared as stochastic is "
+                    "changing across scenarios. If you feel this is a "
+                    "developer error, please report this issue to the PySP "
+                    "developers." % (sto_struct_filename,
+                                     scenario.name,
+                                     scenario_sto_struct_filename))
 
-        print(" - Checking deterministic sections in the core problem file...")
+        if verbose:
+            print(" - Checking deterministic sections in the core "
+                  "problem file...")
         for scenario in scenario_tree.scenarios:
             scenario_core_det_filename = \
                 os.path.join(scenario_directory,
@@ -1458,14 +1377,17 @@ def convert_explicit(output_directory,
                 rc = os.system('diff -q '+scenario_core_det_filename+' '+
                                core_det_filename)
             else:
-                rc = not filecmp.cmp(scenario_core_det_filename, core_det_filename)
+                rc = not filecmp.cmp(scenario_core_det_filename,
+                                     core_det_filename,
+                                     shallow=False)
             if rc:
                 raise ValueError(
-                    "One or more deterministic parts of the problem found in file '%s' do "
-                    "not match those for scenario %s found in file %s. This suggests "
-                    "that one or more locations of stochastic data have not been "
-                    "been annotated on the reference Pyomo model. If this seems like "
-                    "a tolerance issue or a developer error, please report this issue "
+                    "One or more deterministic parts of the problem found "
+                    "in file '%s' do not match those for scenario %s found "
+                    "in file %s. This suggests that one or more locations "
+                    "of stochastic data have not been been annotated on the "
+                    "reference Pyomo model. If this seems like a tolerance "
+                    "issue or a developer error, please report this issue "
                     "to the PySP developers."
                     % (core_det_filename,
                        scenario.name,
@@ -1478,7 +1400,8 @@ def convert_explicit(output_directory,
         _safe_remove_file(core_det_filename)
 
     if not keep_scenario_files:
-        print("Cleaning temporary per-scenario files")
+        if verbose:
+            print("Cleaning temporary per-scenario files")
         for scenario in scenario_tree.scenarios:
 
             scenario_core_row_filename = \
@@ -1535,13 +1458,584 @@ def convert_explicit(output_directory,
         if len(os.listdir(scenario_directory)) == 0:
             shutil.rmtree(scenario_directory, ignore_errors=True)
     else:
-        print("Temporary per-scenario files are retained in "
-              "scenario_files subdirectory")
+        if verbose:
+            print("Temporary per-scenario files are retained in "
+                  "scenario_files subdirectory")
+        pass
+
+    return None
 
 def convert_implicit(output_directory,
                      basename,
-                     scenario_instance_factory,
-                     io_options=None,
-                     disable_consistency_checks=False,
-                     keep_scenario_files=False):
-    raise NotImplementedError("This functionality has not been fully implemented")
+                     sp,
+                     core_format='mps',
+                     io_options=None):
+
+    if io_options is None:
+        io_options = {}
+
+    import pyomo.environ
+    assert os.path.exists(output_directory)
+    assert core_format in ('lp', 'mps')
+
+    io_options = dict(io_options)
+
+    if sp.has_stochastic_variable_bounds:
+        raise ValueError("Problems with stochastic variables bounds "
+                         "can not be converted into an implicit "
+                         "SMPS representation")
+
+    #
+    # Reinterpret the stage-ness of variables on the sp by
+    # pushing derived first-stage variables into the second
+    # stage.
+    #
+    first_stage_variables = []
+    first_stage_variable_ids = set()
+    second_stage_variables = []
+    second_stage_variable_ids = set()
+    assert len(sp.stage_to_variables_map) == 2
+    for vardata, derived in sp.stage_to_variables_map[1]:
+        if not derived:
+            first_stage_variables.append(vardata)
+            first_stage_variable_ids.add(id(vardata))
+        else:
+            second_stage_variables.append(vardata)
+            second_stage_variable_ids.add(id(vardata))
+    for vardata, derived in sp.stage_to_variables_map[2]:
+        second_stage_variables.append(vardata)
+        second_stage_variable_ids.add(id(vardata))
+    # sort things to keep file output deterministic
+    cname_buffer = {}
+    first_stage_variables.sort(key=lambda x: x.cname(True, cname_buffer))
+    cname_buffer = {}
+    second_stage_variables.sort(key=lambda x: x.cname(True, cname_buffer))
+
+    assert len(first_stage_variables) == \
+        len(first_stage_variable_ids)
+    assert len(second_stage_variables) == \
+        len(second_stage_variable_ids)
+
+    #
+    # Interpret the stage-ness of constraints based on the
+    # appearence of second-stage variables or stochastic data
+    #
+    first_stage_constraints = []
+    first_stage_constraint_ids = set()
+    second_stage_constraints = []
+    second_stage_constraint_ids = set()
+    for condata in sp.constraint_to_variables_map:
+        # check if the constraint is associated with stochastic data
+        if condata in sp.constraint_to_stochastic_data_map:
+            second_stage_constraints.append(condata)
+            second_stage_constraint_ids.add(id(condata))
+            continue
+        # if no stochastic data, check for second-stage variables
+        for vardata in sp.constraint_to_variables_map[condata]:
+            if id(vardata) in second_stage_variable_ids:
+                second_stage_constraints.append(condata)
+                second_stage_constraint_ids.add(id(condata))
+                break
+        else: # this else is executed when no 'break' occurs in the for-loop
+            # the constraint is first-stage
+            first_stage_constraints.append(condata)
+            first_stage_constraint_ids.add(id(condata))
+    # sort things to keep file output deterministic
+    cname_buffer = {}
+    first_stage_constraints.sort(key=lambda x: x.cname(True, cname_buffer))
+    cname_buffer = {}
+    second_stage_constraints.sort(key=lambda x: x.cname(True, cname_buffer))
+
+    #
+    # Create column (variable) ordering maps for LP/MPS files
+    #
+    column_order = ComponentMap()
+    # first stage
+    for column_cntr, vardata in enumerate(first_stage_variables):
+        column_order[vardata] = column_cntr
+    # second stage
+    for column_cntr, vardata in enumerate(second_stage_variables,
+                                          len(column_order)):
+        column_order[vardata] = column_cntr
+
+    #
+    # Create row (constraint) ordering maps for LP/MPS files
+    #
+    row_order = ComponentMap()
+    # first stage
+    for row_cntr, vardata in enumerate(first_stage_constraints):
+        row_order[vardata] = row_cntr
+    # second stage
+    for row_cntr, vardata in enumerate(second_stage_constraints,
+                                       len(row_order)):
+        row_order[vardata] = row_cntr
+
+
+    # For consistancy set all stochastic parameters to zero
+    # before writing the core file (some may not have been
+    # initialized with a value)
+    param_vals_orig = ComponentMap()
+    for paramdata in sp.stochastic_data:
+        param_vals_orig[paramdata] = paramdata.value
+        paramdata.value = 0
+
+    #
+    # Write the ordered LP/MPS file
+    #
+    output_filename = os.path.join(output_directory,
+                                   basename+".cor")
+    with WriterFactory(core_format) as writer:
+        assert 'column_order' not in io_options
+        assert 'row_order' not in io_options
+        io_options['column_order'] = column_order
+        io_options['row_order'] = row_order
+        io_options['force_objective_constant'] = True
+        output_fname, symbol_map = writer(sp.reference_model,
+                                          output_filename,
+                                          lambda x: True,
+                                          io_options)
+        assert output_fname == output_filename
+    canonical_repn_cache = {}
+    for block in sp.reference_model.block_data_objects(
+            active=True,
+            descend_into=True):
+        canonical_repn_cache[id(block)] = block._canonical_repn
+
+    # Reset stochastic parameter to their
+    # original setting values
+    param_vals_orig = ComponentMap()
+    for paramdata, orig_val in param_vals_orig.items():
+        paramdata.value = orig_val
+    del param_vals_orig
+
+    # Collect constraint symbols and deal with the fact that
+    # the LP/MPS writer prepends constraint names with
+    # things like 'c_e_', 'c_l_', etc depending on the
+    # constraint bound type and will even split a constraint
+    # into two constraints if it has two bounds
+    constraint_symbols = ComponentMap()
+    _reverse_alias = \
+        dict((symbol, []) for symbol in symbol_map.bySymbol)
+    for alias, obj_weakref in iteritems(symbol_map.aliases):
+        _reverse_alias[symbol_map.byObject[id(obj_weakref())]].append(alias)
+    # ** SORT POINT TO AVOID NON-DETERMINISTIC ROW ORDERING ***
+    for _aliases in itervalues(_reverse_alias):
+        _aliases.sort()
+    for condata in itertools.chain(first_stage_constraints,
+                                   second_stage_constraints):
+        symbol = symbol_map.byObject[id(condata)]
+        # if it is a range constraint this will account for
+        # that fact and hold and alias for each bound
+        aliases = _reverse_alias[symbol]
+        constraint_symbols[condata] = aliases
+
+    """
+    #
+    # Write the explicit column ordering (variables) used
+    # for the ordered LP/MPS file
+    #
+    with open(os.path.join(output_directory, basename+".col"), "w") as f_col:
+        # first-stage variables
+        for vardata in first_stage_variables:
+            varid = id(vardata)
+            if varid in symbol_map.byObject:
+                f_col.write(symbol_map.byObject[varid]+"\n")
+        # second-stage variables
+        for vardata in second_stage_variables:
+            varid = id(vardata)
+            if varid in symbol_map.byObject:
+                f_col.write(symbol_map.byObject[varid]+"\n")
+        # the writer will always add the dummy variable
+        # ONE_VAR_CONSTANT because we force to appear via
+        # objective constant (even if it is zero) using the
+        # 'force_objective_constant' io option
+        f_col.write("ONE_VAR_CONSTANT\n")
+
+    #
+    # Write the explicit row ordering (constraints) used
+    # for the ordered LP/MPS file
+    #
+    with open(os.path.join(output_directory, basename+".row"), "w") as f_row:
+        # the objective is always the first row in SMPS format
+        f_row.write(symbol_map.byObject[id(sp.objective)]+"\n")
+        # first-stage constraints
+        for condata in first_stage_constraints:
+            symbols = constraint_symbols[condata]
+            # because range constraints are split into two
+            # constraints (hopefully our ordering of the r_l_
+            # and r_u_ forms is the same as the LP/MPS file!)
+            for symbol in symbols:
+                f_row.write(symbol+"\n")
+        # second-stage constraints
+        for condata in second_stage_constraints:
+            symbols = constraint_symbols[condata]
+            # because range constraints are split into two
+            # constraints (hopefully our ordering of the r_l_
+            # and r_u_ forms is the same as the LP/MPS file!)
+            for symbol in symbols:
+                f_row.write(symbol+"\n")
+        # the writer will always add the dummy variable
+        # ONE_VAR_CONSTANT because we force to appear via
+        # objective constant (even if it is zero) using the
+        # 'force_objective_constant' io option
+        f_row.write("c_e_ONE_VAR_CONSTANT")
+    """
+
+    #
+    # Write the .tim file
+    #
+    with open(os.path.join(output_directory, basename+".tim"), "w") as f_tim:
+        f_tim.write("TIME %s\n" % (basename))
+        if core_format == 'mps':
+            f_tim.write("PERIODS IMPLICIT\n")
+            f_tim.write("    %s %s TIME1\n"
+                        % (symbol_map.byObject[id(first_stage_variables[0])],
+                           symbol_map.byObject[id(sp.objective)]))
+            symbols = constraint_symbols[second_stage_constraints[0]]
+            if len(symbols) == 1:
+                # equality constraint
+                assert (symbols[0].startswith('c_e_') or \
+                        symbols[0].startswith('c_l_') or \
+                        symbols[0].startswith('c_u_'))
+                stage2_row_start = symbols[0]
+            else:
+                # range constraint (assumed the LP/MPS writer outputs
+                # the lower range constraint first)
+                symbols = sorted(symbols)
+                assert (symbols[0].startswith('r_l_') or \
+                        symbols[0].startswith('r_u_'))
+                stage2_row_start = symbols[0]
+            # don't assume there is always a second stage variable
+            if id(second_stage_variables[0]) in symbol_map.byObject:
+                f_tim.write("    %s "
+                            % (symbol_map.byObject[id(second_stage_variables[0])]))
+            else:
+                f_tim.write("    ONE_VAR_CONSTANT ")
+            f_tim.write("%s TIME2\n" % (stage2_row_start))
+        else:
+            assert core_format == "lp"
+            f_tim.write("PERIODS EXPLICIT\n")
+            f_tim.write("    TIME1\n")
+            f_tim.write("    TIME2\n")
+            line_template = "    %s %s\n"
+            f_tim.write("ROWS\n")
+            # the objective is always the first row in SMPS format
+            f_tim.write(line_template
+                        % (symbol_map.byObject[id(sp.objective)],
+                           "TIME1"))
+            # first-stage constraints
+            for condata in first_stage_constraints:
+                for symbol in constraint_symbols[condata]:
+                    f_tim.write(line_template % (symbol, "TIME1"))
+            # second-stage constraints
+            for condata in second_stage_constraints:
+                for symbol in constraint_symbols[condata]:
+                    f_tim.write(line_template % (symbol, "TIME2"))
+            f_tim.write(line_template % ("c_e_ONE_VAR_CONSTANT", "TIME2"))
+
+            f_tim.write("COLS\n")
+            # first-stage variables
+            for vardata in first_stage_variables:
+                varid = id(vardata)
+                if varid in symbol_map.byObject:
+                    f_tim.write(line_template % (symbol_map.byObject[varid], "TIME1"))
+            # second-stage variables
+            for vardata in second_stage_variables:
+                varid = id(vardata)
+                if varid in symbol_map.byObject:
+                    f_tim.write(line_template % (symbol_map.byObject[varid], "TIME2"))
+            f_tim.write(line_template % ("ONE_VAR_CONSTANT", "TIME2"))
+
+        f_tim.write("ENDATA\n")
+
+    #
+    # Write the body of the .sto file
+    #
+    # **NOTE: In the code that follows we assume the LP/MPS
+    #         writer always moves constraint body
+    #         constants to the rhs and that the lower part
+    #         of any range constraints are written before
+    #         the upper part.
+    #
+    stochastic_data_seen = ComponentMap()
+    line_template = "    %s    %s    %.17g    %.17g\n"
+    with open(os.path.join(output_directory,
+                           basename+".sto"),'w') as f_sto:
+        f_sto.write('STOCH '+basename+'\n')
+        # TODO: For the time being, we are assuming all
+        #       parameter distributions are discrete
+        #       tables. This header will need to change when
+        #       we start supporting other distributions
+        f_sto.write('INDEP         DISCRETE\n')
+        constraint_name_buffer = {}
+        objective_name_buffer = {}
+        variable_name_buffer = {}
+
+        #
+        # Stochastic objective elements
+        #
+
+        if len(sp.objective_to_stochastic_data_map) > 0:
+            assert len(sp.objective_to_stochastic_data_map) == 1
+            assert list(sp.objective_to_stochastic_data_map.keys())[0] is sp.objective
+            # setting compute values to False allows us to
+            # extract the location of Param objects in the
+            # constant or variable coefficient
+            objective_repn = generate_canonical_repn(sp.objective.expr,
+                                                     compute_values=False)
+            if not isinstance(objective_repn, LinearCanonicalRepn):
+                raise ValueError(
+                    "Cannot output implicit SP representation for component "
+                    "'%s'. The implicit SMPS writer does not yet handle "
+                    "stochastic constraints within nonlinear expressions."
+                    % (condata.cname(True)))
+
+            # sort the variable list by the column ordering
+            # so that we have deterministic output
+            objective_variable_data = list(zip(objective_repn.variables,
+                                               objective_repn.linear))
+            objective_variable_data.sort(key=lambda x: column_order[x[0]])
+            if objective_repn.constant is not None:
+                objective_variable_data.append(("ONE_VAR_CONSTANT",
+                                                objective_repn.constant))
+            stochastic_objective_label = symbol_map.byObject[id(sp.objective)]
+            for vardata, varcoef in objective_variable_data:
+                params = list(sp._collect_mutable_parameters(varcoef).values())
+                stochastic_params = [p for p in params
+                                     if p in sp.stochastic_data]
+                # NOTE: Be sure to keep track of
+                for pdata in stochastic_params:
+                    if pdata in stochastic_data_seen:
+                        raise ValueError(
+                            "Cannot output implicit SP representation for component "
+                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "case where a stochastic data component appears in "
+                            "multiple expressions or locations within a single "
+                            "expression (e.g., multiple constraints, or multiple "
+                            "variable coefficients within a constraint). The "
+                            "parameter '%s' appearing in component '%s' was "
+                            "previously encountered in another location in "
+                            "component %s."
+                            % (sp.objective.cname(True),
+                               pdata.cname(True),
+                               sp.objective.cname(True),
+                               stochastic_data_seen[pdata].cname(True)))
+                    else:
+                        stochastic_data_seen[pdata] = sp.objective
+
+                if len(stochastic_params) == 1:
+                    paramdata = stochastic_params[0]
+                    if varcoef is not paramdata:
+                        # TODO: Basically need to rescale / shift
+                        # the original distribution. I think both of these
+                        # operations are trivial to transform any probability
+                        # measure. I'm just not going to get into that right now.
+                        raise ValueError(
+                            "Cannot output implicit SP representation for component "
+                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "case where a stochastic data component appears "
+                            "in an expression that defines a single variable's "
+                            "coefficient. The coefficient for variable '%s' must be "
+                            "exactly set to parameters '%s' in the expression."
+                            % (sp.objective.cname(True),
+                               (vardata.cname(True) if vardata != "ONE_VAR_CONSTANT" else "ONE_VAR_CONSTANT"),
+                               paramdata.cname(True)))
+
+                    # output the parameter's distribution (provided by the user)
+                    distribution = sp.stochastic_data[paramdata]
+                    if type(distribution) is not list:
+                        # TODO: relax this when we start supporting other distributions
+                        #       or add some object oriented components for defining
+                        #       them.
+                        raise TypeError(
+                            "Invalid distribution type '%s' for stochastic "
+                            "parameter '%s'. The implicit SMPS writer currently "
+                            "only supports discrete table distributions defined "
+                            "by a list of values or a list of (probability, value) "
+                            "tuples.")
+                    assert len(distribution) > 0
+                    if type(distribution[0]) is not tuple:
+                        uniformp = 1.0/len(distribution)
+                        distribution = [(uniformp, v_) for v_ in distribution]
+                    else:
+                        assert len(distribution[0]) == 2
+                    if not isinstance(vardata, _VarData):
+                        assert vardata == "ONE_VAR_CONSTANT"
+                        varlabel = vardata
+                    else:
+                        varlabel = symbol_map.byObject[id(vardata)]
+                    for prob, val in distribution:
+                        f_sto.write(line_template % (varlabel,
+                                                     stochastic_objective_label,
+                                                     val,
+                                                     prob))
+                elif len(stochastic_params) > 1:
+                    # TODO: Need to output a new distribution based
+                    # on some mathematical expression involving
+                    # multiple distributions. Might be hard for
+                    # general distributions, but would not be that
+                    # difficult for discrete tables.
+                    raise ValueError(
+                        "Cannot output implicit SP representation for component "
+                        "'%s'. The implicit SMPS writer does not yet handle the "
+                        "case where multiple stochastic data components appear "
+                        "in an expression that defines a single variable's "
+                        "coefficient. The coefficient for variable '%s' involves "
+                        "stochastic parameters: %s"
+                        % (sp.objective.cname(True),
+                           vardata.cname(True),
+                           [p.cname(True) for p in stochastic_params]))
+
+        #
+        # Stochastic constraint matrix and rhs elements
+        #
+
+        stochastic_constraints = list(sp.constraint_to_stochastic_data_map.keys())
+        stochastic_constraints.sort(key=lambda x: row_order[x])
+        for condata in stochastic_constraints:
+
+            # setting compute values to False allows us to
+            # extract the location of Param objects in the
+            # constant or variable coefficient
+            constraint_repn = generate_canonical_repn(condata.body,
+                                                      compute_values=False)
+            if not isinstance(constraint_repn, LinearCanonicalRepn):
+                raise ValueError(
+                    "Cannot output implicit SP representation for component "
+                    "'%s'. The implicit SMPS writer does not yet handle "
+                    "stochastic constraints within nonlinear expressions."
+                    % (condata.cname(True)))
+
+            # sort the variable list by the column ordering
+            # so that we have deterministic output
+            constraint_variable_data = list(zip(constraint_repn.variables,
+                                                constraint_repn.linear))
+            constraint_variable_data.sort(key=lambda x: column_order[x[0]])
+            constraint_variable_data = \
+                [(vardata, symbol_map.byObject[id(vardata)], varcoef)
+                 for vardata, varcoef in constraint_variable_data]
+
+            # check if any stochastic data appears in the constant
+            # falling out of the body of the constraint expression
+            if (constraint_repn.constant is not None):
+                # TODO: We can probably support this, just do not want to get
+                #       into it right now. It also seems like this is an edge case
+                #       that is hard to reproduce because _ConstraintData moves
+                #       this stuff out of the body when it is build (so it won't
+                #       show up in the body canonical repn)
+                for pdata in sp._collect_mutable_parameters(constraint_repn.constant):
+                    if pdata in sp.stochastic_data:
+                        raise ValueError(
+                            "Cannot output implicit SP representation for component "
+                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "case where a stochastic data appears in the body of a "
+                            "constraint expression that must be moved to the bounds. "
+                            "The constraint must be written so that the stochastic "
+                            "element '%s' is a simple bound or a simple variable "
+                            "coefficient." % (condata.cname(True),
+                                              pdata.cname(True)))
+
+            symbols = constraint_symbols[condata]
+            if len(symbols) == 2:
+                # TODO: We can handle range constraints (just not in the body).
+                #       Will add support for range constraints with stochastic data
+                #       in one or both of the bounds later.
+                raise ValueError(
+                    "Cannot output implicit SP representation for component "
+                    "'%s'. The implicit SMPS writer does not yet handle range "
+                    "constraints that have stochastic data."
+                    % (condata.cname(True)))
+
+            # fix this later, for now we assume it is not a range constraint
+            assert len(symbols) == 1
+            stochastic_constraint_label = symbols[0]
+            if stochastic_constraint_label.startswith('c_e_') or \
+               stochastic_constraint_label.startswith('c_l_'):
+                constraint_variable_data.append(("RHS","RHS",condata.lower))
+            elif stochastic_constraint_label.startswith('c_u_'):
+                constraint_variable_data.append(("RHS","RHS",condata.upper))
+
+            for vardata, varlabel, varcoef in constraint_variable_data:
+                params = list(sp._collect_mutable_parameters(varcoef).values())
+                stochastic_params = [p for p in params
+                                     if p in sp.stochastic_data]
+                # NOTE: Be sure to keep track of
+                for pdata in stochastic_params:
+                    if pdata in stochastic_data_seen:
+                        raise ValueError(
+                            "Cannot output implicit SP representation for component "
+                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "case where a stochastic data component appears in "
+                            "multiple expressions or locations within a single "
+                            "expression (e.g., multiple constraints, or multiple "
+                            "variable coefficients within a constraint). The "
+                            "parameter '%s' appearing in component '%s' was "
+                            "previously encountered in another location in "
+                            "component %s."
+                            % (condata.cname(True),
+                               pdata.cname(True),
+                               condata.cname(True),
+                               stochastic_data_seen[pdata].cname(True)))
+                    else:
+                        stochastic_data_seen[pdata] = condata
+
+                if len(stochastic_params) == 1:
+                    paramdata = stochastic_params[0]
+                    if varcoef is not paramdata:
+                        # TODO: Basically need to rescale / shift
+                        # the original distribution. I think both of these
+                        # operations are trivial to transform any probability
+                        # measure. I'm just not going to get into that right now.
+                        raise ValueError(
+                            "Cannot output implicit SP representation for component "
+                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "case where a stochastic data component appears "
+                            "in an expression that defines a single variable's "
+                            "coefficient. The coefficient for variable '%s' must be "
+                            "exactly set to parameters '%s' in the expression."
+                            % (condata.cname(True),
+                               (vardata.cname(True) if vardata != "RHS" else "RHS"),
+                               paramdata.cname(True)))
+
+                    # output the parameter's distribution (provided by the user)
+                    distribution = sp.stochastic_data[paramdata]
+                    if type(distribution) is not list:
+                        # TODO: relax this when we start supporting other distributions
+                        #       or add some object oriented components for defining
+                        #       them.
+                        raise TypeError(
+                            "Invalid distribution type '%s' for stochastic "
+                            "parameter '%s'. The implicit SMPS writer currently "
+                            "only supports discrete table distributions defined "
+                            "by a list of values or a list of (probability, value) "
+                            "tuples.")
+                    assert len(distribution) > 0
+                    if type(distribution[0]) is not tuple:
+                        uniformp = 1.0/len(distribution)
+                        distribution = [(uniformp, v_) for v_ in distribution]
+                    else:
+                        assert len(distribution[0]) == 2
+                    for prob, val in distribution:
+                        f_sto.write(line_template % (varlabel,
+                                                     stochastic_constraint_label,
+                                                     val,
+                                                     prob))
+                elif len(stochastic_params) > 1:
+                    # TODO: Need to output a new distribution based
+                    # on some mathematical expression involving
+                    # multiple distributions. Might be hard for
+                    # general distributions, but would not be that
+                    # difficult for discrete tables.
+                    raise ValueError(
+                        "Cannot output implicit SP representation for component "
+                        "'%s'. The implicit SMPS writer does not yet handle the "
+                        "case where multiple stochastic data components appear "
+                        "in an expression that defines a single variable's "
+                        "coefficient. The coefficient for variable '%s' involves "
+                        "stochastic parameters: %s"
+                        % (condata.cname(True),
+                           vardata.cname(True),
+                           [p.cname(True) for p in stochastic_params]))
+        f_sto.write("ENDATA\n")
+
+    return symbol_map

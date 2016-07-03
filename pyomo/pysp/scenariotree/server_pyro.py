@@ -17,13 +17,22 @@ import copy
 import argparse
 import logging
 import traceback
+import base64
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 import pyutilib.misc
 from pyutilib.misc import PauseGC
 from pyutilib.pyro import (TaskWorker,
                            TaskWorkerServer,
                            shutdown_pyro_components,
-                           TaskProcessingError)
+                           TaskProcessingError,
+                           using_pyro4)
+if using_pyro4:
+    import Pyro4
+
 from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        PersistentSolver,
@@ -46,6 +55,7 @@ from pyomo.pysp.scenariotree.server_pyro_utils import \
     (WorkerInitType,
      WorkerInit)
 
+import six
 from six import iteritems
 
 logger = logging.getLogger('pyomo.pysp')
@@ -132,7 +142,19 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
     def process(self, data):
         self._worker_task_return_queue = self._current_task_client
         try:
-            return self._process(data)
+            # The only reason we are go through this much
+            # effort to deal with the serpent serializer
+            # is because it is the default in Pyro4.
+            if using_pyro4 and \
+               (Pyro4.config.SERIALIZER == 'serpent'):
+                if six.PY3:
+                    assert type(data) is dict
+                    assert data['encoding'] == 'base64'
+                    data = base64.b64decode(data['data'])
+                else:
+                    assert type(data) is unicode
+                    data = str(data)
+            return pickle.dumps(self._process(pickle.loads(data)))
         except:
             logger.error(
                 "Scenario tree server %s caught an exception of type "
@@ -140,10 +162,9 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
                 % (self.WORKERNAME, sys.exc_info()[0].__name__))
             traceback.print_exception(*sys.exc_info())
             self._worker_error = True
-            return TaskProcessingError(traceback.format_exc())
+            return pickle.dumps(TaskProcessingError(traceback.format_exc()))
 
     def _process(self, data):
-
         data = pyutilib.misc.Bunch(**data)
         result = None
         if not data.action.startswith('ScenarioTreeServerPyro_'):
@@ -172,24 +193,27 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
             self._scenario_instance_factory = \
                 ScenarioTreeInstanceFactory(
                     self._options.model_location,
-                    scenario_tree_location=self._options.scenario_tree_location,
-                    verbose=self._options.verbose)
+                    self._options.scenario_tree_location)
 
             #
-            # Try prevent unnecessarily re-imported the model module
-            # if other callbacks are in the same location
+            # Try to prevent unnecessarily re-importing the model module
+            # if other callbacks are in the same location. Doing so might
+            # have serious consequences.
             #
-            self._modules_imported[
-                self._scenario_instance_factory._model_location] = \
+            if self._scenario_instance_factory._model_module is not None:
+                self._modules_imported[self._scenario_instance_factory.\
+                                       _model_filename] = \
                     self._scenario_instance_factory._model_module
-            self._modules_imported[
-                self._scenario_instance_factory._model_filename] = \
-                    self._scenario_instance_factory._model_module
+            if self._scenario_instance_factory._scenario_tree_module is not None:
+                self._modules_imported[self._scenario_instance_factory.\
+                                       _scenario_tree_filename] = \
+                    self._scenario_instance_factory._scenario_tree_module
 
             self._full_scenario_tree = \
                 self._scenario_instance_factory.generate_scenario_tree(
                     downsample_fraction=self._options.scenario_tree_downsample_fraction,
-                    random_seed=self._options.scenario_tree_random_seed)
+                    random_seed=self._options.scenario_tree_random_seed,
+                    verbose=self._options.verbose)
 
             if self._full_scenario_tree is None:
                  raise RuntimeError("Unable to launch scenario tree worker - "

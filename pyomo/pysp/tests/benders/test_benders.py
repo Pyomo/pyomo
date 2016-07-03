@@ -13,9 +13,6 @@ import os
 from os.path import join, dirname, abspath
 import time
 import subprocess
-import difflib
-import filecmp
-import shutil
 
 try:
     from subprocess import check_output as _run_cmd
@@ -300,7 +297,7 @@ for solver_name, solver_io in [('cplex','lp'),
 for solver_name, solver_io in [('cplex','lp')]:
 
     baa99_examples_dir = join(pysp_examples_dir, "baa99")
-    baa99_model_dir = join(baa99_examples_dir, "baa99.py")
+    baa99_model_dir = join(baa99_examples_dir, "ReferenceModel.py")
     baa99_data_dir = None
     create_test_classes('baa99',
                         baa99_model_dir,

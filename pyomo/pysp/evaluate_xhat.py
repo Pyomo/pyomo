@@ -180,8 +180,7 @@ def run_evaluate_xhat(options,
                 "To disable this check use the disable_solution_loader_check "
                 "option flag.")
 
-        evaluate_current_node_solution(manager,
-                                       exception_on_failure=True)
+        evaluate_current_node_solution(manager)
 
         objective = sum(scenario.probability * \
                         scenario.get_current_objective()

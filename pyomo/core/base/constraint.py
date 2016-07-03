@@ -20,6 +20,7 @@ from pyomo.core.base import expr as EXPR
 from pyomo.core.base.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
+                                      is_constant,
                                       _sub)
 from pyomo.core.base.component import (ActiveComponentData,
                                        register_component)
@@ -556,7 +557,8 @@ class _GeneralConstraintData(_ConstraintData):
         # Replace numeric bound values with a NumericConstant object,
         # and reset the values to 'None' if they are 'infinite'
         #
-        if self._lower is not None:
+        if (self._lower is not None) and \
+           is_constant(self._lower):
             val = self._lower()
             if not pyutilib.math.is_finite(val):
                 if val > 0:
@@ -569,7 +571,8 @@ class _GeneralConstraintData(_ConstraintData):
                     "Constraint '%s' created with a non-numeric "
                     "lower bound." % (self.cname(True)))
 
-        if self._upper is not None:
+        if (self._upper is not None) and \
+           is_constant(self._upper):
             val = self._upper()
             if not pyutilib.math.is_finite(val):
                 if val < 0:

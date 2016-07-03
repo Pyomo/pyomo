@@ -308,13 +308,13 @@ class _PHSolverServer(_PHBase):
         assert os.path.exists(model_location)
         assert (data_location is None) or os.path.exists(data_location)
         scenario_instance_factory = ScenarioTreeInstanceFactory(model_location,
-                                                                data_location,
-                                                                self._verbose)
+                                                                data_location)
         self._scenario_tree = scenario_instance_factory.generate_scenario_tree(
             downsample_fraction=None,
             bundles=scenario_bundle_specification,
             random_bundles=create_random_bundles,
-            random_seed=scenario_tree_random_seed)
+            random_seed=scenario_tree_random_seed,
+            verbose=self._verbose)
 
         if self._scenario_tree is None:
              raise RuntimeError("Unable to launch PH solver server - scenario tree construction failed.")
@@ -351,7 +351,8 @@ class _PHSolverServer(_PHBase):
         instances = self._scenario_tree._scenario_instance_factory.\
                     construct_instances_for_scenario_tree(
                         self._scenario_tree,
-                        compile_scenario_instances=compile_scenario_instances)
+                        compile_scenario_instances=compile_scenario_instances,
+                        verbose=self._verbose)
 
         # with the scenario instances now available, have the scenario
         # tree compute the variable match indices at each node.

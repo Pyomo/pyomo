@@ -16,11 +16,6 @@ import difflib
 import filecmp
 import shutil
 import subprocess
-try:
-    from subprocess import check_output as _run_cmd
-except:
-    # python 2.6
-    from subprocess import check_call as _run_cmd
 import pyutilib.subprocess
 import pyutilib.services
 import pyutilib.th as unittest
@@ -47,9 +42,11 @@ class TestSMPSSimple(unittest.TestCase):
         with open(filename, 'rb') as f:
             fdata = f.read()
         for checkstr in checkstrs:
-            self.assertNotEqual(
-                re.search(checkstr, fdata),
-                None)
+            if re.search(checkstr, fdata) is None:
+                self.fail("File %s does not contain test string:\n%s\n"
+                          "------------------------------------------\n"
+                          "File data:\n%s\n"
+                          % (filename, checkstr, fdata))
 
     @unittest.nottest
     def _get_cmd(self,
@@ -76,13 +73,13 @@ class TestSMPSSimple(unittest.TestCase):
             shutil.rmtree(options['--output-directory'],
                           ignore_errors=True)
 
-        cmd = 'pysp2smps '
+        cmd = ['pysp2smps']
         for name, val in options.items():
-            cmd += name
             if val != '':
-                cmd += "="+str(options[name])
-            cmd += ' '
-        print("Command: "+str(cmd))
+                cmd.append(name+"="+str(options[name]))
+            else:
+                cmd.append(name)
+        print("Command: "+str(' '.join(cmd)))
         return cmd, options['--output-directory']
 
     @unittest.nottest
@@ -157,7 +154,7 @@ class TestSMPSSimple(unittest.TestCase):
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
-            b"RuntimeError: \(Scenario=Scenario1\): Component b.c was "
+            b"RuntimeError: Component b.c was "
             b"assigned multiple declarations in annotation type "
             b"PySP_StochasticMatrixAnnotation. To correct this "
             b"issue, ensure that multiple container components under "
@@ -177,9 +174,9 @@ class TestSMPSSimple(unittest.TestCase):
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
-            b"TypeError: \(Scenario=Scenario1\): Declarations "
+            b"TypeError: Declarations "
             b"in annotation type PySP_StochasticMatrixAnnotation "
-            b"must be of type Constraint or Block. Invalid type: "
+            b"must be of types Constraint or Block. Invalid type: "
             b"<class 'pyomo.core.base.objective.SimpleObjective'>")
         shutil.rmtree(output_dir,
                       ignore_errors=True)
@@ -212,13 +209,13 @@ class _SMPSTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = 'pysp2smps '
+        cmd = ['pysp2smps']
         for name, val in self.options.items():
-            cmd += name
             if val != '':
-                cmd += "="+str(self.options[name])
-            cmd += ' '
-        print("Command: "+str(cmd))
+                cmd.append(name+"="+str(self.options[name]))
+            else:
+                cmd.append(name)
+        print("Command: "+str(' '.join(cmd)))
         return cmd
 
     def _diff(self, baselinedir, outputdir, dc=None):
@@ -255,7 +252,7 @@ class _SMPSTesterBase(object):
         self._setup(self.options)
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        pyutilib.subprocess.run(cmd)
         self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_baseline'),
                    self.options['--output-directory'])
 
@@ -263,7 +260,7 @@ class _SMPSTesterBase(object):
         self._setup(self.options)
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        pyutilib.subprocess.run(cmd)
         self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_baseline'),
                    self.options['--output-directory'])
 
@@ -272,7 +269,7 @@ class _SMPSTesterBase(object):
         self.options['--core-format'] = 'lp'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        pyutilib.subprocess.run(cmd)
         self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
@@ -281,7 +278,7 @@ class _SMPSTesterBase(object):
         self.options['--core-format'] = 'mps'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        pyutilib.subprocess.run(cmd)
         self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
@@ -358,7 +355,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self._setup(self.options, servers=1)
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        pyutilib.subprocess.run(cmd)
         self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_baseline'),
                    self.options['--output-directory'])
 
@@ -366,7 +363,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self._setup(self.options, servers=1)
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        pyutilib.subprocess.run(cmd)
         self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_baseline'),
                    self.options['--output-directory'])
 
@@ -375,7 +372,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--core-format'] = 'lp'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        pyutilib.subprocess.run(cmd)
         self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
 
@@ -384,7 +381,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--core-format'] = 'mps'
         self.options['--symbolic-solver-labels'] = ''
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        pyutilib.subprocess.run(cmd)
         self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
 

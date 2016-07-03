@@ -8,46 +8,46 @@ g3 1 1 0	# problem unknown
  108 2 	# nonzeros in Jacobian, obj. gradient
  0 0	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
-C0
+C0	#linearized_constraint[0,1].LOG_constraint1
 n0
-C1
+C1	#linearized_constraint[0,1].LOG_constraint2
 n0
-C2
+C2	#linearized_constraint[0,1].LOG_constraint3
 n0
-C3
+C3	#linearized_constraint[0,1].LOG_constraint4[1]
 n0
-C4
+C4	#linearized_constraint[0,1].LOG_constraint4[2]
 n0
-C5
+C5	#linearized_constraint[0,1].LOG_constraint4[3]
 n0
-C6
+C6	#linearized_constraint[0,1].LOG_constraint5[1]
 n0
-C7
+C7	#linearized_constraint[0,1].LOG_constraint5[2]
 n0
-C8
+C8	#linearized_constraint[0,1].LOG_constraint5[3]
 n0
-C9
+C9	#linearized_constraint[8,3].LOG_constraint1
 n0
-C10
+C10	#linearized_constraint[8,3].LOG_constraint2
 n0
-C11
+C11	#linearized_constraint[8,3].LOG_constraint3
 n0
-C12
+C12	#linearized_constraint[8,3].LOG_constraint4[1]
 n0
-C13
+C13	#linearized_constraint[8,3].LOG_constraint4[2]
 n0
-C14
+C14	#linearized_constraint[8,3].LOG_constraint4[3]
 n0
-C15
+C15	#linearized_constraint[8,3].LOG_constraint5[1]
 n0
-C16
+C16	#linearized_constraint[8,3].LOG_constraint5[2]
 n0
-C17
+C17	#linearized_constraint[8,3].LOG_constraint5[3]
 n0
-O0 1
+O0 1	#obj
 n0
-x0
-r
+x0	# initial guess
+r	#18 ranges (rhs's)
 4 0.0
 4 0.0
 4 1.0
@@ -66,7 +66,7 @@ r
 1 1.0
 1 1.0
 1 1.0
-b
+b	#28 bounds (on variables)
 0 -2 2
 0 -2 2
 3
@@ -95,7 +95,7 @@ b
 0 0 1
 0 0 1
 0 0 1
-k27
+k27	#intermediate Jacobian column lengths
 1
 2
 3

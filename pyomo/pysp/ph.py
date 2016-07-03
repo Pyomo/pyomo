@@ -30,6 +30,7 @@ from pyomo.opt import (UndefinedData,
                        ProblemFormat,
                        undefined,
                        SolverFactory,
+                       PersistentSolver,
                        SolverStatus,
                        TerminationCondition,
                        SolutionStatus)
@@ -1106,7 +1107,7 @@ class _PHBase(object):
         self._rho_check(tree_node, variable_id)
 
         return scenario._rho[tree_node._name][variable_id]
-    
+
     #
     # keep track of the best bounds reported - dlw May 2016 - temporary
     #
@@ -2179,14 +2180,19 @@ class ProgressiveHedging(_PHBase):
             self._solution_plugins = solution_plugins
 
         #
-        # Try prevent unnecessarily re-importing the model module
-        # if other callbacks are in the same location
+        # Try to prevent unnecessarily re-importing the model module
+        # if other callbacks are in the same location. Doing so might
+        # have serious consequences.
         #
         scenario_instance_factory = scenario_tree._scenario_instance_factory
-        self._modules_imported[scenario_instance_factory._model_location] = \
-            scenario_instance_factory._model_module
-        self._modules_imported[scenario_instance_factory._model_filename] = \
-            scenario_instance_factory._model_module
+        if scenario_instance_factory._model_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _model_filename] = \
+                scenario_instance_factory._model_module
+        if scenario_instance_factory._scenario_tree_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _scenario_tree_filename] = \
+                scenario_instance_factory._scenario_tree_module
 
         # The first step in PH initialization is to impose an order on
         # the user-defined plugins. Invoking wwextensions and
@@ -2268,6 +2274,10 @@ class ProgressiveHedging(_PHBase):
         isPHPyro =  isinstance(self._solver_manager,
                                pyomo.solvers.plugins.\
                                smanager.phpyro.SolverManager_PHPyro)
+        if isinstance(self._solver, PersistentSolver) and \
+           (not isPHPyro):
+            raise TypeError("Persistent solvers are only supported "
+                            "when using PHPyro")
 
         initialization_action_handles = []
         if isPHPyro:

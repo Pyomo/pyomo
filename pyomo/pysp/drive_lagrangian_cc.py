@@ -295,8 +295,7 @@ def run(args=None):
    #scenario_instance_factory, full_scenario_tree = load_models(options)
    scenario_instance_factory = \
         ScenarioTreeInstanceFactory(options.model_directory,
-                                    options.instance_directory,
-                                    options.verbose)
+                                    options.instance_directory)
 
    full_scenario_tree = \
             GenerateScenarioTreeForPH(options,

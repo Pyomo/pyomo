@@ -184,7 +184,7 @@ def get_modified_instance( ph, scenario_tree, scenario_or_bundle, **options):
     # (temporarily) deactivate the fixed stage-1 variables
     _con.deactivate()
 
-    toc("InterScenario: generated modified problem instance")
+    toc("InterScenario plugin: generated modified problem instance")
     return model
 
 def get_dual_values(solver, model):
@@ -603,10 +603,21 @@ class InterScenarioPlugin(SingletonPlugin):
         self.epsilon = 1e-7
         self.cut_scale = 0#1e-4
         self.allow_variable_slack = False
-        self.convergenceRelativeDegredation = 0.33
-        self.convergenceAbsoluteDegredation = 0.001
         # Force this plugin to run every N iterations
-        self.iterationInterval = 1
+        self.iterationInterval = 100
+        # Alternative methods to trigger the plugin:
+        #
+        # If the convergence metric degrades by either a relative or
+        # absolute amount
+        self.convergenceRelativeDegredation = 10.33
+        self.convergenceAbsoluteDegredation = 10.001
+        # If at least recutThreshold fraction of all-to-all scenario
+        # tests produced feasibility cuts
+        self.recutThreshold = 0.33
+        # If at least this fraction of unique solutions are preserved
+        # from one iteration to the next
+        self.repeated_solution_threshhold = 0.90
+
         # multiplier on computed rho values
         self.rhoScale = 0.75
         # How quickly rho moves to new values [0..1]
@@ -619,13 +630,9 @@ class InterScenarioPlugin(SingletonPlugin):
         # Fraction of the cut library to use for cross-scenario
         # (all-to-all) cuts
         self.cutThreshold_crossCut = 0
-        # Force the InterScenario plugin to re-run the next iteration if
-        # at least recutThreshold fraction of all-to-all scenario tests
-        # produced feasibility cuts
-        self.recutThreshold = 0.33
         # Force the InterScenario plugin to re-run while the improvement
         # in the Lagrangean bound is at least this much:
-        self.recutBoundImprovement = 0.0025
+        self.iteration0RecutBoundImprovement = 0.0025
 
     def reset(self, ph):
         self.incumbent = None
@@ -637,6 +644,7 @@ class InterScenarioPlugin(SingletonPlugin):
         self.lastRun = 0
         self.average_solution = None
         self.converger = NormalizedTermDiffConvergence()
+        self.unique_scenario_solutions = []
 
     def pre_ph_initialization(self,ph):
         self.reset(ph)
@@ -666,6 +674,7 @@ class InterScenarioPlugin(SingletonPlugin):
         #self.rho = dict((v,ph._rho) for v in ph._scenario_tree.findRootNode()._xbars)
 
     def post_iteration_0_solves(self, ph):
+        self._collect_unique_scenario_solutions(ph)
         self._interscenario_plugin(ph)
         count = 0
         while self.rho is None and self.feasibility_cuts:
@@ -680,7 +689,8 @@ class InterScenarioPlugin(SingletonPlugin):
                     _stale_scenarios.extend(_soln[1])
 
             self._distribute_cuts(ph, True)
-            toc("InterScenario: distributed cuts to scenarios")
+            toc("InterScenario plugin: distributed cuts to scenarios")
+            self._collect_unique_scenario_solutions(ph)
             self._interscenario_plugin(ph)
         self.lastRun = 0
 
@@ -707,6 +717,13 @@ class InterScenarioPlugin(SingletonPlugin):
         delta = curr - last
         #print("InterScenario convergence:", last, curr, delta)
         run = False
+
+        if ( self._collect_unique_scenario_solutions(ph) >=
+             self.repeated_solution_threshhold ):
+            print("InterScenario plugin: triggered by no change in "
+                  "scenario solutions")
+            run = True
+
         if ( delta > last * self.convergenceRelativeDegredation and
              delta > self.convergenceAbsoluteDegredation ):
             print( "InterScenario plugin: triggered by convergence degredation "
@@ -743,6 +760,7 @@ class InterScenarioPlugin(SingletonPlugin):
         pass
 
     def post_ph_execution(self, ph):
+        self._collect_unique_scenario_solutions(ph)
         self._interscenario_plugin(ph)
         pass
 
@@ -751,7 +769,7 @@ class InterScenarioPlugin(SingletonPlugin):
         toc("InterScenario plugin: analyzing scenario dual information")
 
         # (1) Collect all scenario (first) stage variables
-        self._collect_unique_scenario_solutions(ph)
+        #self._collect_unique_scenario_solutions(ph)
 
         # (2) Filter them to find a set we want to distribute
         pass
@@ -820,15 +838,21 @@ class InterScenarioPlugin(SingletonPlugin):
         # (5) compute and publish the new incumbent
         self._update_incumbent(ph)
 
-        # (6) set the new rho values
-        if ph._current_iteration == 0 and \
-                cutCount > self.recutThreshold*(subProblemCount-len(cuts)) and\
-                ( _del_avg is None or _del_avg > self.recutBoundImprovement ):
-            # Bypass RHO updates and check for more cuts
-            #self.lastRun = ph._current_iteration - self.iterationInterval
-            return
+        # (6a) If this is iteration 0, and we have feasibility cuts, and
+        # they are (sufficiently) helping the Lagrangean bound, then
+        # skip setting rho and do another round oc cuts
+        if ph._current_iteration == 0:
+            # Tell ph that we may have a good opter bound
+            ph._update_reported_bounds(outer=self.average_solution)
 
-        # (7) compute updated rho estimates
+            if ( cutCount > self.recutThreshold*(subProblemCount-len(cuts)) 
+                 and ( _del_avg is None or
+                       _del_avg > self.iteration0RecutBoundImprovement )):
+                # Bypass RHO updates and check for more cuts
+                #self.lastRun = ph._current_iteration - self.iterationInterval
+                return
+
+        # (6b) compute updated rho estimates
         new_rho, loginfo = self._process_dual_information(
             ph, dual_values, probability )
         _scale = self.rhoScale
@@ -862,6 +886,7 @@ class InterScenarioPlugin(SingletonPlugin):
 
     def _collect_unique_scenario_solutions(self, ph):
         # list of (varmap, scenario_list) tuples
+        _old_unique_scenario_solutions = self.unique_scenario_solutions
         self.unique_scenario_solutions = []
 
         # See ph.py:update_variable_statistics for a multistage version...
@@ -887,6 +912,17 @@ class InterScenarioPlugin(SingletonPlugin):
             if not found:
                 self.unique_scenario_solutions.append(
                     ( _this_sol, [scenario._name] ) )
+
+        _unchanged = 0
+        for _old_soln, _old_scen in _old_unique_scenario_solutions:
+            for _soln, _scen in self.unique_scenario_solutions:
+                if _old_soln == _soln:
+                    _unchanged += 1
+                    break
+        print( "Interscenario plugin: %s unchanged scenario solutions "
+               "(out of %s)" %
+               ( _unchanged, len(self.unique_scenario_solutions) ))
+        return float(_unchanged) / len(self.unique_scenario_solutions)
 
     def _solve_interscenario_solutions(self, ph):
         results = ([],[],[],)
@@ -1113,10 +1149,19 @@ class InterScenarioPlugin(SingletonPlugin):
             self.incumbent = ( best_obj*self._sense_to_min,
                                self.unique_scenario_solutions[best_id],
                                best_id )
-            print("InterScenario: new incumbent: %s = %s, %s" % self.incumbent)
-            logger.info("InterScenario: new incumbent: %s" % (self.incumbent[0],))
+
+            # Tell PH (that we have a good inner bound)
+            ph._update_reported_bounds(inner=best_obj)
+
+            msg = "InterScenario plugin: NEW incumbent: %s = %s, %s" \
+                  % self.incumbent
+            print(msg)
+            logger.info(msg)
         elif self.incumbent[0]*self._sense_to_min < best_obj - self.epsilon:
             # Keep existing incumbent... so the best thing here can be cut
+            msg = "InterScenario plugin: incumbent: %s = %s, %s" \
+                  % self.incumbent
+            print(msg)
             best_id = -1
 
         if continuous_vars or not self.enableIncumbentCuts:
@@ -1178,6 +1223,7 @@ class InterScenarioPlugin(SingletonPlugin):
                   - min(s[0][v] for s in self.unique_scenario_solutions) ) 
                 for v in xbar )
 
+        max_dual = dict((v,0.) for v in xbar)
         weighted_rho = dict((v,0.) for v in xbar)
         for soln_id, soln_p in enumerate(soln_prob):
             x = self.unique_scenario_solutions[soln_id][0]
@@ -1188,6 +1234,7 @@ class InterScenarioPlugin(SingletonPlugin):
                     continue
                 for v,d in iteritems(dual_values[scen_id][soln_id]):
                     avg_dual[v] += math.copysign(d, xbar[v]-x[v]) * p
+                    max_dual[v] = max(max_dual[v], abs(d))
                 p_total += p
             if p_total:
                 for v in avg_dual:
@@ -1196,6 +1243,10 @@ class InterScenarioPlugin(SingletonPlugin):
             #                     for v in xbar )
             for v,x_dev in iteritems(self.x_deviation):
                 weighted_rho[v] += soln_prob[soln_id]*avg_dual[v]/(x_dev+1.)
+
+        if False: # MAX dual (not average)
+            for v,x_dev in iteritems(self.x_deviation):
+                weighted_rho[v] += max_dual[v]/(x_dev+1.)
 
         # var_info: { var_id : [ scenario values ] }
         #   - this has the list of all values for a single 1st stage
