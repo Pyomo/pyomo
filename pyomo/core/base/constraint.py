@@ -705,8 +705,8 @@ class Constraint(ActiveIndexedComponent):
                     raise
                 if tmp is None:
                     raise ValueError(
-                        "Constraint rule returned None instead of "
-                        "Constraint.Skip")
+                        "Constraint '%s': rule returned None instead of "
+                        "Constraint.Skip" % (self.cname(True),) )
 
             assert None not in self._data
             cdata = self._check_skip_add(None, tmp, condata=self)
@@ -723,8 +723,9 @@ class Constraint(ActiveIndexedComponent):
 
             if not _init_expr is None:
                 raise IndexError(
-                    "Cannot initialize multiple indices of a "
-                    "constraint with a single expression")
+                    "Constraint '%s': Cannot initialize multiple indices "
+                    "of a constraint with a single expression" % 
+                    (self.cname(True),) )
 
             for ndx in self._index:
                 try:
@@ -744,8 +745,9 @@ class Constraint(ActiveIndexedComponent):
                     raise
                 if tmp is None:
                     raise ValueError(
-                        "Constraint rule returned None instead of "
-                        "Constraint.Skip for index %s" % str(ndx))
+                        "Constraint '%s': rule returned None instead of "
+                        "Constraint.Skip for index %s" %
+                        (self.cname(True), str(ndx)) )
 
                 cdata = self._check_skip_add(ndx, tmp)
                 if cdata is not None:
@@ -1149,8 +1151,8 @@ class ConstraintList(IndexedConstraint):
                                           val)
                 if expr is None:
                     raise ValueError(
-                        "Constraint rule returned None "
-                        "instead of ConstraintList.End")
+                        "ConstraintList '%s': rule returned None "
+                        "instead of ConstraintList.End" % (self.cname(True),) )
                 if (expr.__class__ is tuple) and \
                    (expr == ConstraintList.End):
                     return
@@ -1161,8 +1163,8 @@ class ConstraintList(IndexedConstraint):
             for expr in _generator:
                 if expr is None:
                     raise ValueError(
-                        "Constraint generator returned None "
-                        "instead of ConstraintList.End")
+                        "ConstraintList '%s': generator returned None "
+                        "instead of ConstraintList.End" % (self.cname(True),) )
                 if (expr.__class__ is tuple) and \
                    (expr == ConstraintList.End):
                     return
