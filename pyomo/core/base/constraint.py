@@ -37,6 +37,13 @@ logger = logging.getLogger('pyomo.core')
 
 _simple_constraint_rule_types = set([ type(None), bool ])
 
+_rule_returned_none_error = """Constraint '%s': rule returned None.
+
+Constraint rules must return either a valid expression, a 2- or 3-member
+tuple, or one of Constraint.Skip, Constraint.Feasible, or
+Constraint.Infeasible.  The most common cause of this error is
+forgetting to include the "return" statement at the end of your rule.
+"""
 
 def simple_constraint_rule( fn ):
     """
@@ -705,8 +712,7 @@ class Constraint(ActiveIndexedComponent):
                     raise
                 if tmp is None:
                     raise ValueError(
-                        "Constraint '%s': rule returned None instead of "
-                        "Constraint.Skip" % (self.cname(True),) )
+                        _rule_returned_none_error % (self.cname(True),) )
 
             assert None not in self._data
             cdata = self._check_skip_add(None, tmp, condata=self)
@@ -745,9 +751,8 @@ class Constraint(ActiveIndexedComponent):
                     raise
                 if tmp is None:
                     raise ValueError(
-                        "Constraint '%s': rule returned None instead of "
-                        "Constraint.Skip for index %s" %
-                        (self.cname(True), str(ndx)) )
+                        _rule_returned_none_error % 
+                        ('%s[%s]' % (self.cname(True), str(ndx)),) )
 
                 cdata = self._check_skip_add(ndx, tmp)
                 if cdata is not None:
