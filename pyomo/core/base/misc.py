@@ -166,8 +166,9 @@ def tabular_writer(ostream, prefix, data, header, row_generator):
     # in the data (probably an expression or vector)
     _width = ["%"+str(i)+"s" for i in _width]
 
-    if sum( 1 for x in itervalues(_rows) if x is not None
-            for r in x if ' ' in r[-1] ):
+    if any( ' ' in r[-1]
+            for x in itervalues(_rows) if x is not None
+            for r in x  ):
         _width[-1] = '%s'
     for _key in sorted(_rows):
         _rowSet = _rows[_key]
