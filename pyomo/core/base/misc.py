@@ -103,6 +103,17 @@ def _safe_to_str(obj):
         return "None"
 
 def tabular_writer(ostream, prefix, data, header, row_generator):
+    """Output data in tabular form
+
+    Parameters:
+    - ostream: the stream to write to
+    - prefix:  prefix each line with this string
+    - data:    a generator returning (key, value) pairs (e.g., from iteritems())
+    - header:  list of column header strings
+    - row_generator: a generator that returns tuples of values for each
+      line of the table
+    """
+
     _rows = {}
     #_header = ("Key","Initial Value","Lower Bound","Upper Bound",
     #           "Current Value","Fixed","Stale")
