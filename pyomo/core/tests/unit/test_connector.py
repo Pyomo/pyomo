@@ -18,6 +18,7 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
+from six import StringIO
 
 from pyomo.environ import *
 
@@ -31,8 +32,18 @@ class TestConnector(unittest.TestCase):
 
         model = AbstractModel()
         model.c = Connector()
-        self.assertEqual(len(model.c), 1)
+        self.assertEqual(len(model.c), 0)
+        # FIXME: Not sure I like this behavior: but since this is
+        # (currently) an attribute, there is no way to check for
+        # construction withough converting it to a property.
+        #
+        # TODO: if we move away from multiple inheritance for
+        # simplevars, then this can trigger an exception (cleanly)
         self.assertEqual(len(model.c.vars), 0)
+
+        inst = model.create_instance()
+        self.assertEqual(len(inst.c), 1)
+        self.assertEqual(len(inst.c.vars), 0)
 
     def test_default_indexed_constructor(self):
         model = ConcreteModel()
@@ -42,8 +53,12 @@ class TestConnector(unittest.TestCase):
 
         model = AbstractModel()
         model.c = Connector([1,2,3])
-        self.assertEqual(len(model.c), 3)
-        self.assertEqual(len(model.c[1].vars), 0)
+        self.assertEqual(len(model.c), 0)
+        self.assertRaises(ValueError, model.c.__getitem__, 1)
+
+        inst = model.create_instance()
+        self.assertEqual(len(inst.c), 3)
+        self.assertEqual(len(inst.c[1].vars), 0)
 
     def test_add_scalar_vars(self):
         pipe = ConcreteModel()
@@ -88,11 +103,37 @@ class TestConnector(unittest.TestCase):
         pipe.pIn  = Var( within=NonNegativeReals )
 
         pipe.OUT = Connector()
-        pipe.OUT.add(pipe.flow, "flow")
+        pipe.OUT.add(-pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
         pipe.OUT.add(pipe.pIn, "pressure")
 
-        pipe.pprint()
+        os = StringIO()
+        pipe.OUT.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""OUT : Size=1, Index=None
+    Key  : Name        : Size : Variable
+    None :    pressure :    1 : pIn
+         :        flow :    1 : -1 * flow
+         : composition :    3 : composition
+""")
+
+        def _IN(m, i):
+            return { 'pressure': pipe.pIn,
+                     'flow': pipe.composition[i] * pipe.flow }
+
+        pipe.IN = Connector(pipe.SPECIES, rule=_IN)
+        os = StringIO()
+        pipe.IN.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""IN : Size=3, Index=SPECIES
+    Key : Name     : Size : Variable
+      a : pressure :    1 : pIn
+        :     flow :    1 : composition[a] * flow
+      b : pressure :    1 : pIn
+        :     flow :    1 : composition[b] * flow
+      c : pressure :    1 : pIn
+        :     flow :    1 : composition[c] * flow
+""")
         
     def test_single_scalar_expand(self):
         m = ConcreteModel()
@@ -104,7 +145,14 @@ class TestConnector(unittest.TestCase):
 
         TransformationFactory('core.expand_connectors').apply_to(m)
 
-        m.pprint()
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=1, Index=c.expanded_index, Active=True
+    Key : Lower : Body : Upper : Active
+      1 :   1.0 :    x :   1.0 :   True
+""")
+
 
 if __name__ == "__main__":
     unittest.main()
