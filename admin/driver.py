@@ -101,9 +101,10 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
         configfile = config
 
     if 'PYPI_URL' in os.environ:
-        pypi_url = os.environ['PYPI_URL']
+        pypi_url = [ '--pypi-url', os.environ['PYPI_URL'] ]
     else:
-        pypi_url = 'http://giskard.sandia.gov:8888/pypi'
+        pypi_url = [ '--pypi-url', 'http://giskard.sandia.gov:8888/pypi',
+                     '--trusted-host', 'giskard.sandia.gov' ]
 
     if 'PICO' in os.environ and os.environ['PICO'] == 'yes':
         os.environ['PATH'] = os.pathsep.join(
@@ -126,7 +127,7 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
             os.path.join( os.environ['WORKSPACE'],'vpy','pyutilib','virtualenv', 'vpy_install.py' ),
             '--debug', '-v', '--system-site-packages', '--config', configfile ]
         if pypi_url:
-            cmd.extend([ '--pypi-url', pypi_url ])
+            cmd.extend( pypi_url )
         if virtualenv_args is None:
             cmd.extend(sys.argv[1:])
         else:
