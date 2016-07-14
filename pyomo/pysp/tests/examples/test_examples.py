@@ -31,7 +31,7 @@ from pyomo.opt import load_solvers
 from six import StringIO
 
 have_dot = True
-if os.system('dot -? > /dev/null'):
+if os.system('dot -?'):
     have_dot = False
 
 have_networkx = False
