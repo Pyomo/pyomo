@@ -197,7 +197,7 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     os.chdir(os.path.join( os.environ['WORKSPACE'],'src' ))
     libdir = os.path.join( os.environ['WORKSPACE'],'python','lib','*' )
     libdir = libdir + "," + os.path.join( libdir,'site-packages','*' )
-    if not omit is None:
+    if omit is not None:
         omit = ","+omit
     else:
         omit = ""
