@@ -42,11 +42,12 @@ class _IndexedComponent_slicer(object):
 
     The basic concept is to interrupt the normal slice generation
     procedure to return a specialized iterator (this object).  This
-    object supports simple getitem / getattr calls and caches them until
-    it is time to actually iterate through the slice.  We then walk down
-    the cached names / indices and resolve the final objects during the
-    iteration process.  This works because all the calls to __getitem__
-    / __getattr__ happen *before* the first call to next()
+    object supports simple getitem / getattr / call methods and caches
+    them until it is time to actually iterate through the slice.  We
+    then walk down the cached names / indices and resolve the final
+    objects during the iteration process.  This works because all the
+    calls to __getitem__ / __getattr__ / __call__ happen *before* the
+    first call to next()
     """
     attribute = 1
     getitem = 2
@@ -65,12 +66,15 @@ class _IndexedComponent_slicer(object):
         self.attribute_errors_generate_exceptions = True
 
     def __iter__(self):
+        """This class implements the iterator API"""
         return self
 
     def next(self):
+        """__next__() iterator for Py2 compatibility"""
         return self.__next__()
 
     def __next__(self):
+        """Return the next element in the slice."""
         idx = len(self._iter_stack)-1
         while True:
             # Flush out any non-slice levels.  Since we initialize
@@ -151,11 +155,11 @@ class _IndexedComponent_slicer(object):
                 return _comp
 
     def _slice_generator(self, component, fixed, sliced):
-        #
-        # Iterate through the component index and yield the
-        # component data values that match the slice
-        # template.
-        #
+        """Utility method (generator) for generating the elements of one slice
+
+        Iterate through the component index and yield the component data
+        values that match the slice template.
+        """
         index_count = len(fixed) + len(sliced)
         max_fixed = 0 if not fixed else max(fixed)
         # Handle the "special" wildcard slice that can match any number
@@ -186,18 +190,38 @@ class _IndexedComponent_slicer(object):
                 yield component._data[index]
 
     def __getattr__(self, name):
+        """Override the "." operator to defer resolution until iteration.
+
+        Creating a slice of a component returns a
+        _IndexedComponent_slicer object.  Subsequent attempts to resolve
+        attributes hit this method.
+        """
         self._iter_stack.append(None)
         self._call_stack.append( (
             _IndexedComponent_slicer.attribute, name ) )
         return self
 
     def __getitem__(self, *idx):
+        """Override the "[]" operator to defer resolution until iteration.
+
+        Creating a slice of a component returns a
+        _IndexedComponent_slicer object.  Subsequent attempts to query
+        items hit this method.
+        """
         self._iter_stack.append(None)
         self._call_stack.append( (
             _IndexedComponent_slicer.getitem, idx ) )
         return self
 
     def __call__(self, *idx):
+        """Override the "()" operator to defer resolution until iteration.
+
+        Creating a slice of a component returns a
+        _IndexedComponent_slicer object.  Subsequent attempts to call
+        items hit this method.  When combined with the __getattr__
+        method, this allows us to defer general method calls (like
+        "component()") until iteration time.
+        """
         self._iter_stack.append(None)
         self._call_stack.append( (
             _IndexedComponent_slicer.call, idx ) )
