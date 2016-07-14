@@ -14,9 +14,11 @@ import pyomo.environ
 
 from six import iteritems
 
-has_gurobi_license = True
-if os.system('gurobi_cl --license'):
-    has_gurobi_license = False
+from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
+has_gurobi_license = GUROBISHELL.license_is_valid()
+
+from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
+has_baron_license = BARONSHELL.license_is_valid()
 
 class SolverTestCase(object):
 
@@ -64,6 +66,9 @@ class SolverTestCase(object):
                           (self.solver.executable() is not None))
         if (self.name == "gurobi") and \
            (not has_gurobi_license):
+            self.available = False
+        if (self.name == "baron") and \
+           (not has_baron_license):
             self.available = False
         return self.solver, self.io_options
 

@@ -12,6 +12,7 @@ import sys
 import re
 import time
 import logging
+import subprocess
 
 import pyutilib.services
 import pyutilib.misc
@@ -107,6 +108,26 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         self._capabilities.integer = True
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
+
+    @staticmethod
+    def license_is_valid(executable='gurobi_cl'):
+        """
+        Runs a check for a valid Gurobi license using the
+        given executable (default is 'gurobi_cl'). All
+        output is hidden. If the test fails for any reason
+        (including the executable being invalid), then this
+        function will return False.
+        """
+        try:
+            rc = subprocess.call([executable, "--license"],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT)
+        except OSError:
+            rc = 1
+        if rc:
+            return False
+        else:
+            return True
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.soln

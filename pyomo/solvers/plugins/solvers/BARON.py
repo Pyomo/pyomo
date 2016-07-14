@@ -10,6 +10,7 @@
 import itertools
 import logging
 import os
+import subprocess
 import re
 import tempfile
 
@@ -73,6 +74,48 @@ class BARONSHELL(SystemCallSolver):
         #               and you will need to go add extra logic to output
         #               the number's sign.
         self._precision_string = '.17g'
+
+    @staticmethod
+    def license_is_valid(executable='baron'):
+        """
+        Runs a check for a valid Baron license using the
+        given executable (default is 'baron'). All output is
+        hidden. If the test fails for any reason (including
+        the executable being invalid), then this function
+        will return False.
+        """
+        with tempfile.NamedTemporaryFile(mode='w',
+                                         delete=False) as f:
+            with tempfile.NamedTemporaryFile(mode='w',
+                                             delete=False) as fr:
+                pass
+            f.write("//This is a dummy .bar file created to "
+                    "return the baron version//\n"
+                    "OPTIONS {\n"
+                    "ResName: \""+fr.name+"\";\n"
+                    "Summary: 0;\n"
+                    "}\n"
+                    "POSITIVE_VARIABLES x1;\n"
+                    "OBJ: minimize x1;")
+        try:
+            rc = subprocess.call([executable, f.name],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT)
+        except OSError:
+            rc = 1
+        finally:
+            try:
+                os.remove(fr.name)
+            except OSError:
+                pass
+            try:
+                os.remove(f.name)
+            except OSError:
+                pass
+        if rc:
+            return False
+        else:
+            return True
 
     def _default_executable(self):
         executable = pyutilib.services.registered_executable("baron")
