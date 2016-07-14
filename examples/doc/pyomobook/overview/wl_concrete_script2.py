@@ -4,6 +4,7 @@ from wl_concrete import model, N, M # import model
 solver = SolverFactory('glpk') # create the glpk solver
 solver.solve(model)            # solve 
 
+# @output:
 # produce nicely formatted output
 for wl in N:
     if value(model.y[wl]) > 0.5:
@@ -11,4 +12,4 @@ for wl in N:
         print(str(wl), 'serves customers:', customers)
     else:
         print(str(wl)+': do not build')
-
+# @:output
