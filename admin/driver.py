@@ -104,7 +104,7 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
         pypi_url = [ '--pypi-url', os.environ['PYPI_URL'] ]
     else:
         pypi_url = [ '--pypi-url', 'http://giskard.sandia.gov:8888/pypi',
-                     '--trusted-host', 'giskard.sandia.gov' ]
+                     '--trust-pypi-url' ]
 
     if 'PICO' in os.environ and os.environ['PICO'] == 'yes':
         os.environ['PATH'] = os.pathsep.join(
