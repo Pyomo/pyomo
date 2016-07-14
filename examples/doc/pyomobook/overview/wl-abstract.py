@@ -3,14 +3,18 @@ from pyomo.environ import *
 
 model = AbstractModel()
 model.name = "(WL)"
-
+# @setdecl:
 model.N = Set()
 model.M = Set()
+# @:setdecl
+# @paramdecl:
 model.d = Param(model.N,model.M)
 model.P = Param()
-
+# @:paramdecl
+# @vardecl:
 model.x = Var(model.N, model.M, bounds=(0,1))
 model.y = Var(model.N, within=Binary)
+# @:vardecl
 
 def obj_rule(model):
     return sum(model.d[n,m]*model.x[n,m] for n in model.N for m in model.M)
