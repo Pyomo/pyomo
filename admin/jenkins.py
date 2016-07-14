@@ -76,6 +76,7 @@ print("\nPython path:\n\t%s" % sys.path)
 
 coverage_omit=','.join([
     os.sep.join([os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*', 'tests']),
+    'pyomo.*.tests',
     os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*']),
     'pyutilib.*',
 ])
