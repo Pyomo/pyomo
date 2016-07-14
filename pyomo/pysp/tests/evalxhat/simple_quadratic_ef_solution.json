@@ -1,0 +1,46 @@
+[
+  {
+    "RootNode": {
+      "x": [
+        [
+          null, 
+          5.676249999998458
+        ]
+      ]
+    }
+  }, 
+  {
+    "LeafNode_Scenario1": {
+      "y": [
+        [
+          null, 
+          5.67624999992454
+        ]
+      ]
+    }, 
+    "LeafNode_Scenario2": {
+      "y": [
+        [
+          null, 
+          5.67625000021941
+        ]
+      ]
+    }, 
+    "LeafNode_Scenario3": {
+      "y": [
+        [
+          null, 
+          5.67624999999447
+        ]
+      ]
+    }, 
+    "LeafNode_Scenario4": {
+      "y": [
+        [
+          null, 
+          5.67624999985541
+        ]
+      ]
+    }
+  }
+]

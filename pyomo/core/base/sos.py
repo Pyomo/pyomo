@@ -149,7 +149,7 @@ class SOSConstraint(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != SOSConstraint:
             return super(SOSConstraint, cls).__new__(cls)
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleSOSConstraint.__new__(SimpleSOSConstraint)
         else:
             return IndexedSOSConstraint.__new__(IndexedSOSConstraint)

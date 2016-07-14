@@ -12,7 +12,7 @@ model.foo = Suffix()
 # Assign the value 1.0 to suffix 'foo' for model.x
 model.x.set_suffix_value('foo', 1.0)
 
-# Assign the value 1.0 to suffix model.foo for model.x
+# Assign the value 2.0 to suffix model.foo for model.x
 model.x.set_suffix_value(model.foo, 2.0)
 
 # Get the value of suffix 'foo' for model.x

@@ -33,7 +33,9 @@ except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
 from pyomo.util import pyomo_command
-from pyomo.opt import SolverFactory, TerminationCondition
+from pyomo.opt import (SolverFactory,
+                       TerminationCondition,
+                       PersistentSolver)
 from pyomo.core import (value, minimize, Set,
                         Objective, SOSConstraint,
                         Constraint, Var, RangeSet,
@@ -603,6 +605,9 @@ class BendersAlgorithm(PySPConfiguredObject):
         self._master_solver = SolverFactory(
             self.get_option("master_solver"),
             solver_io=self.get_option("master_solver_io"))
+        if isinstance(self._master_solver, PersistentSolver):
+            raise TypeError("BendersAlgorithm does not support "
+                            "PersistenSolver types")
         if len(self.get_option("master_solver_options")):
             if type(self.get_option("master_solver_options")) is tuple:
                 self._master_solver.set_options(
@@ -699,7 +704,10 @@ class BendersAlgorithm(PySPConfiguredObject):
             invocation_type=InvocationType.PerScenario,
             oneway=True)
 
-    def generate_cut(self, xhat, update_stages=()):
+    def generate_cut(self,
+                     xhat,
+                     update_stages=(),
+                     return_solve_results=False):
         """
         Generate a cut for the first-stage solution xhat by
         solving the subproblems. By default, only the stage
@@ -710,7 +718,8 @@ class BendersAlgorithm(PySPConfiguredObject):
         loaded for the variables on the scenario tree.
         """
         self.update_fix_constraints(xhat)
-        self._manager.solve_subproblems(update_stages=update_stages)
+        solve_results = \
+            self._manager.solve_subproblems(update_stages=update_stages)
 
         cut_data = self.collect_cut_data()
         benders_cut = BendersOptimalityCut(
@@ -718,7 +727,10 @@ class BendersAlgorithm(PySPConfiguredObject):
             dict((name, cut_data[name]['SSC']) for name in cut_data),
             dict((name, cut_data[name]['duals']) for name in cut_data))
 
-        return benders_cut
+        if return_solve_results:
+            return benders_cut, solve_results
+        else:
+            return benders_cut
 
     #
     # Any of the methods above this point can be called without
@@ -1193,7 +1205,9 @@ class BendersAlgorithm(PySPConfiguredObject):
             self.master_bound_history[i] = current_master_bound
 
             new_xhat = self.extract_master_xhat()
-            new_cut_info = self.generate_cut(new_xhat)
+            new_cut_info, solve_results = \
+                self.generate_cut(new_xhat,
+                                  return_solve_results=True)
 
             # compute the true objective at xhat by
             # replacing the current value of the master cut
@@ -1219,12 +1233,13 @@ class BendersAlgorithm(PySPConfiguredObject):
                 if self.incumbent_objective > incumbent_objective_prev:
                     self.incumbent_xhat = new_xhat
 
-            self.optimality_gap = abs(best_master_bound - self.incumbent_objective) / \
-                                  (self.get_option("optimality_gap_epsilon") + \
-                                   abs(self.incumbent_objective))
+            self.optimality_gap = \
+                abs(best_master_bound - self.incumbent_objective) / \
+                (self.get_option("optimality_gap_epsilon") + \
+                 abs(self.incumbent_objective))
 
-            min_time_sub = min(self._manager._solve_times.values())
-            max_time_sub = max(self._manager._solve_times.values())
+            min_time_sub = min(solve_results.solve_time.values())
+            max_time_sub = max(solve_results.solve_time.values())
             print("%6d %16.4f %16.4f %11.3f%% %10.2f %10.2f %10.2f %10.2f"
                   % (i, current_master_bound, self.incumbent_objective,
                      self.optimality_gap*100, stop_time_master - start_time_master,

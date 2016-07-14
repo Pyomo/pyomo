@@ -160,11 +160,11 @@ def _update_constraint(con):
     resulting from the discretization.
     """
 
+    _rule=con.rule
+    _parent=con._parent()
     for i in con.index_set():
         if i not in con:
             # Code taken from the construct() method of Constraint
-            _rule=con.rule
-            _parent=con._parent()
             con.add(i,apply_indexed_rule(con,_rule,_parent,i))
 
 def _update_expression(expre): 
@@ -172,13 +172,12 @@ def _update_expression(expre):
     This method will construct any additional indices in a expression 
     resulting from the discretization 
     """ 
-    _index = expre.index_set() 
-    # Code taken from the construct() method of Expression 
-    if expre.is_indexed(): 
-        expre._add_members(_index) 
-    else: 
-        expre._data[None] = expre 
-    expre._initialize_members(_index)
+    _rule=expre._init_rule
+    _parent=expre._parent()
+    for i in expre.index_set():
+        if i not in expre:
+            # Code taken from the construct() method of Expression
+            expre.add(i,apply_indexed_rule(expre,_rule,_parent,i))
 
 def create_access_function(var):
     """

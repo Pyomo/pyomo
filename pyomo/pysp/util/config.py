@@ -330,7 +330,7 @@ def _domain_unit_interval(val):
             % (val))
     return val
 _domain_unit_interval.doc = \
-    "<domain: value in the interval [0,1]"
+    "<domain: value in the interval [0,1]>"
 
 def _domain_percent(val):
     val = float(val)
@@ -339,7 +339,7 @@ def _domain_percent(val):
             "Value %s is not between 0 and 100")
     return val
 _domain_percent.doc = \
-    "<domain: value in the interval [0,100]"
+    "<domain: value in the interval [0,100]>"
 
 def _domain_nonnegative_integer(val):
     val = int(val)

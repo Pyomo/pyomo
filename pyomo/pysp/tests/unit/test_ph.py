@@ -826,6 +826,8 @@ class TestPH(unittest.TestCase):
             baseline_dir+"farmer_ef_with_solve_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
+        self.assertTrue(os.path.exists(ef_output_file))
+        os.remove(ef_output_file)
 
     def test_farmer_ef_with_solve_cplex_with_csv_writer(self):
         if solver['cplex'] is None:
@@ -879,6 +881,8 @@ class TestPH(unittest.TestCase):
             baseline_dir+"farmer_maximize_ef_with_solve_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
+        self.assertTrue(os.path.exists(ef_output_file))
+        os.remove(ef_output_file)
 
     def test_farmer_ef_with_solve_gurobi(self):
         if solver['gurobi'] is None:
@@ -900,6 +904,8 @@ class TestPH(unittest.TestCase):
             baseline_dir+"farmer_ef_with_solve_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
+        self.assertTrue(os.path.exists(ef_output_file))
+        os.remove(ef_output_file)
 
     def test_farmer_maximize_ef_with_solve_gurobi(self):
         if solver['gurobi'] is None:
@@ -920,6 +926,8 @@ class TestPH(unittest.TestCase):
             baseline_dir+"farmer_maximize_ef_with_solve_gurobi.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
+        self.assertTrue(os.path.exists(ef_output_file))
+        os.remove(ef_output_file)
 
     def test_farmer_ef_with_solve_ipopt(self):
         if solver['asl:ipopt'] is None:
@@ -947,6 +955,8 @@ class TestPH(unittest.TestCase):
                baseline_dir+"farmer_ef_with_solve_ipopt.baseline",
                filter=filter_time_and_data_dirs,
                tolerance=_diff_tolerance_relaxed)
+        self.assertTrue(os.path.exists(ef_output_file))
+        os.remove(ef_output_file)
 
     def test_hydro_ef(self):
         hydro_examples_dir = pysp_examples_dir + "hydro"
@@ -1056,6 +1066,8 @@ class TestPH(unittest.TestCase):
                baseline_dir+"sizes3_ef_with_solve_gurobi.baseline",
                filter=filter_time_and_data_dirs,
                tolerance=_diff_tolerance)
+        self.assertTrue(os.path.exists(ef_output_file))
+        os.remove(ef_output_file)
 
     def test_forestry_ef(self):
         forestry_examples_dir = pysp_examples_dir + "forestry"
@@ -1179,6 +1191,9 @@ class TestPH(unittest.TestCase):
             baseline_dir+"lagrangian_cc_networkflow1ef3_cplex.baseline",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
+        self.assertTrue(os.path.exists(
+            this_test_file_directory+"ScenarioList.csv"))
+        os.remove(this_test_file_directory+"ScenarioList.csv")
 
     def test_lagrangian_param_1cc_networkflow1ef3_cplex(self):
         if solver['cplex'] is None:
@@ -1201,6 +1216,15 @@ class TestPH(unittest.TestCase):
             baseline_dir+"lagrangian_param_1cc_networkflow1ef3_cplex.baseline",
             filter=filter_lagrange,
             tolerance=_diff_tolerance)
+        self.assertTrue(os.path.exists(
+            this_test_file_directory+"ScenarioList.csv"))
+        os.remove(this_test_file_directory+"ScenarioList.csv")
+        self.assertTrue(os.path.exists(
+            this_test_file_directory+"OptimalSelections.csv"))
+        os.remove(this_test_file_directory+"OptimalSelections.csv")
+        self.assertTrue(os.path.exists(
+            this_test_file_directory+"PRoptimal.csv"))
+        os.remove(this_test_file_directory+"PRoptimal.csv")
 
     def test_lagrangian_morepr_1cc_networkflow1ef3_cplex(self):
         if solver['cplex'] is None:

@@ -15,8 +15,10 @@ from weakref import ref as weakref_ref
 
 from pyomo.core.base.component import (ComponentData,
                                        register_component)
-from pyomo.core.base.indexed_component import (IndexedComponent,
-                                               normalize_index)
+from pyomo.core.base.indexed_component import (
+    IndexedComponent,
+    UnindexedComponent_set,
+    normalize_index, )
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
@@ -244,7 +246,7 @@ class Expression(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Expression:
             return super(Expression, cls).__new__(cls)
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleExpression.__new__(SimpleExpression)
         else:
             return IndexedExpression.__new__(IndexedExpression)
@@ -366,7 +368,8 @@ class Expression(IndexedComponent):
         # We no longer need these
         #
         self._init_expr = None
-        self._init_rule = None
+        # Utilities like DAE assume this stays around
+        #self._init_rule = None
 
         #
         # Construct _GeneralExpressionData objects for all index values

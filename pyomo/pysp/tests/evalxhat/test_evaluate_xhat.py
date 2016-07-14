@@ -13,8 +13,6 @@ import os
 from os.path import join, dirname, abspath
 import time
 import subprocess
-import difflib
-import filecmp
 import shutil
 
 try:
@@ -314,6 +312,16 @@ for solver_name, solver_io in [('cplex','lp'),
                                ('cplex','python'),
                                ('_cplex_persistent','python')]:
 
+    simple_quadratic_examples_dir = join(pysp_examples_dir, "simple_quadratic")
+    simple_quadratic_model_dir = join(simple_quadratic_examples_dir, "ReferenceModel.py")
+    simple_quadratic_data_dir = None
+    create_test_classes('simple_quadratic',
+                        simple_quadratic_model_dir,
+                        simple_quadratic_data_dir,
+                        solver_name,
+                        solver_io,
+                        ('nightly','expensive'))
+
     farmer_examples_dir = join(pysp_examples_dir, "farmer")
     farmer_model_dir = join(farmer_examples_dir, "models")
     farmer_data_dir = join(farmer_examples_dir, "scenariodata")
@@ -360,7 +368,7 @@ for solver_name, solver_io in [('ipopt','nl')]:
 for solver_name, solver_io in [('cplex','lp')]:
 
     baa99_examples_dir = join(pysp_examples_dir, "baa99")
-    baa99_model_dir = join(baa99_examples_dir, "baa99.py")
+    baa99_model_dir = join(baa99_examples_dir, "ReferenceModel.py")
     baa99_data_dir = None
     create_test_classes('baa99',
                         baa99_model_dir,

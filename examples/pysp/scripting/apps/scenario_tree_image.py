@@ -24,14 +24,14 @@ from pyomo.pysp.scenariotree.instance_factory import \
 def generate_scenario_tree_image(options):
     with ScenarioTreeInstanceFactory(
             options.model_location,
-            scenario_tree_location=options.scenario_tree_location,
-            verbose=options.verbose) as factory:
+            options.scenario_tree_location) as factory:
 
         scenario_tree = factory.generate_scenario_tree(
             downsample_fraction=options.scenario_tree_downsample_fraction,
             bundles=options.scenario_bundle_specification,
             random_bundles=options.create_random_bundles,
-            random_seed=options.scenario_tree_random_seed)
+            random_seed=options.scenario_tree_random_seed,
+            verbose=options.verbose)
 
         with TempfileManager.push():
             tmpdotfile = TempfileManager.create_tempfile(suffix=".dot")

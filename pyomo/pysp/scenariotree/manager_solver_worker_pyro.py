@@ -62,7 +62,7 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
                                                     object_name,
                                                     new_ids):
 
-        if self._options.verbose:
+        if self.get_option("verbose"):
             if self._scenario_tree.contains_bundles():
                 print("Received request to update master "
                       "scenario tree ids for bundle="+object_name)
@@ -122,26 +122,33 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
                                   ephemeral_solver_options,
                                   disable_warmstart):
 
-        if self._options.verbose:
+        if self.get_option("verbose"):
             print("Received request to queue solves for %s" % (object_type))
 
         # suppress any verbose output within _solve_objects
         # as it will be repeated by the client
-        self_verbose = self._options.verbose
-        self_output_times = self._options.output_times
-        self._options.verbose = False
-        self._options.output_times = False
-        failures = super(ScenarioTreeManagerSolverWorkerPyro, self).\
-                   _solve_objects(object_type,
-                                  objects,
-                                  update_stages,
-                                  ephemeral_solver_options,
-                                  disable_warmstart,
-                                  False, # exception_on_failure
-                                  False, # check_status
-                                  False) # async
-        self._options.verbose = self_verbose
-        self._options.output_times = self_output_times
+        self_verbose = self.get_option("verbose")
+        self_output_times = self.get_option("output_times")
+        setattr(self._options,
+                self.get_full_option_name("verbose"),
+                False)
+        setattr(self._options,
+                self.get_full_option_name("output_times"),
+                False)
+        manager_results = super(ScenarioTreeManagerSolverWorkerPyro, self).\
+                          _solve_objects(object_type,
+                                         objects,
+                                         update_stages,
+                                         ephemeral_solver_options,
+                                         disable_warmstart,
+                                         False, # check_status
+                                         False) # async
+        setattr(self._options,
+                self.get_full_option_name("verbose"),
+                self_verbose)
+        setattr(self._options,
+                self.get_full_option_name("output_times"),
+                self_output_times)
 
         if object_type == 'bundles':
             if objects is None:
@@ -154,19 +161,20 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
         results = {}
         for object_name in objects:
 
-            object_results = results[object_name] = {}
-            auxiliary_values = object_results['auxiliary_values'] = {}
-            auxiliary_values['solve_time'] = self._solve_times[object_name]
-            auxiliary_values['pyomo_solve_time'] = \
-                self._pyomo_solve_times[object_name]
-            auxiliary_values['gaps'] = self._gaps[object_name]
-            auxiliary_values['termination_condition'] = \
-                str(self._termination_condition[object_name])
-            auxiliary_values['solution_status'] = \
-                str(self._solution_status[object_name])
+            manager_object_results = \
+                manager_results.results_for(object_name)
+            # Convert enums to strings to avoid difficult
+            # behavior related to certain Pyro serializer
+            # settings
+            manager_object_results['solver_status'] = \
+                str(manager_object_results['solver_status'])
+            manager_object_results['termination_condition'] = \
+                str(manager_object_results['termination_condition'])
+            manager_object_results['solution_status'] = \
+                str(manager_object_results['solution_status'])
 
             if object_type == 'bundles':
-                solution = object_results['solution'] = {}
+                solution = {}
                 for scenario_name in self._scenario_tree.\
                        get_bundle(object_name).scenario_names:
                     scenario = self._scenario_tree.get_scenario(
@@ -177,10 +185,11 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
                             self._reverse_master_scenario_tree_id_map)
             else:
                 scenario = self._scenario_tree.get_scenario(object_name)
-                object_results['solution'] = \
-                    scenario.copy_solution(
-                        translate_ids=\
-                        self._reverse_master_scenario_tree_id_map)
+                solution = scenario.copy_solution(
+                    translate_ids=\
+                    self._reverse_master_scenario_tree_id_map)
+
+            results[object_name] = (manager_object_results, solution)
 
         return results
 

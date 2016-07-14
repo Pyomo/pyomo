@@ -429,7 +429,7 @@ class Var(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Var:
             return super(Var, cls).__new__(cls)
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleVar.__new__(SimpleVar)
         else:
             return IndexedVar.__new__(IndexedVar)

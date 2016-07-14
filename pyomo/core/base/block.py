@@ -27,7 +27,7 @@ from pyomo.core.base.sets import Set,  _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import IndexedComponent, \
-    ActiveIndexedComponent
+    ActiveIndexedComponent, UnindexedComponent_set
 
 logger = logging.getLogger('pyomo.core')
 
@@ -1485,7 +1485,7 @@ class Block(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Block:
             return super(Block, cls).__new__(cls)
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleBlock.__new__(SimpleBlock)
         else:
             return IndexedBlock.__new__(IndexedBlock)

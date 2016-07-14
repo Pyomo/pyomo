@@ -352,6 +352,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
         super(ScenarioTreeManager, self).__init__(*args, **kwds)
 
         init_start_time = time.time()
+        self._error_shutdown = False
         self._scenario_tree = None
         # bundle info
         self._scenario_to_bundle_map = {}
@@ -443,18 +444,19 @@ class ScenarioTreeManager(PySPConfiguredObject):
 
     def __exit__(self, *args):
         if args[0] is not None:
-            sys.stderr.write("Exception encountered. Scenario tree manager attempting "
-                             "to shut down.\n")
+            sys.stderr.write("Exception encountered. Scenario tree manager "
+                             "attempting to shut down.\n")
             tmp = StringIO()
             _args = list(args) + [None, tmp]
             traceback.print_exception(*_args)
+            self._error_shutdown = True
             try:
                 self.close()
             except:
-                sys.stderr.write("Exception encountered during emergency scenario "
-                                 "tree manager shutdown. Printing original exception "
-                                 "here:\n")
-                sys.stderr.write(tmp.getvalue())
+                logger.error("Exception encountered during emergency scenario "
+                             "tree manager shutdown. Printing original exception "
+                             "here:\n")
+                logger.error(tmp.getvalue())
                 raise
         else:
             self.close()
@@ -729,17 +731,21 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
         scenario_instance_factory = \
             ScenarioTreeInstanceFactory(
                 self._options.model_location,
-                scenario_tree_location=self._options.scenario_tree_location,
-                verbose=self._options.verbose)
+                self._options.scenario_tree_location)
 
         #
-        # Try prevent unnecessarily re-importing the model module
-        # if other callbacks are in the same location
+        # Try to prevent unnecessarily re-importing the model module
+        # if other callbacks are in the same location. Doing so might
+        # have serious consequences.
         #
-        self._modules_imported[scenario_instance_factory._model_location] = \
-            scenario_instance_factory._model_module
-        self._modules_imported[scenario_instance_factory._model_filename] = \
-            scenario_instance_factory._model_module
+        if scenario_instance_factory._model_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _model_filename] = \
+                scenario_instance_factory._model_module
+        if scenario_instance_factory._scenario_tree_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _scenario_tree_filename] = \
+                scenario_instance_factory._scenario_tree_module
 
         if self._options.output_times or \
            self._options.verbose:
@@ -756,7 +762,8 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
                        self._options.scenario_tree_downsample_fraction,
                     bundles=self._options.scenario_bundle_specification,
                     random_bundles=self._options.create_random_bundles,
-                    random_seed=self._options.scenario_tree_random_seed)
+                    random_seed=self._options.scenario_tree_random_seed,
+                    verbose=self._options.verbose)
 
             # print the input tree for validation/information
             # purposes.
@@ -1122,6 +1129,10 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
             this_module = pyutilib.misc.import_file(module_name,
                                                     clear_cache=True)
             self._modules_imported[module_name] = this_module
+            self._modules_imported[this_module.__file__] = this_module
+            if this_module.__file__.endswith(".pyc"):
+                self._modules_imported[this_module.__file__[:-1]] = \
+                    this_module
 
         module_attrname = function_name
         subname = None
@@ -1365,7 +1376,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                 output_instance_construction_time=\
                    self._options.output_instance_construction_time,
                 profile_memory=self._options.profile_memory,
-                compile_scenario_instances=self._options.compile_scenario_instances)
+                compile_scenario_instances=self._options.compile_scenario_instances,
+                verbose=self._options.verbose)
 
         if self._options.output_times or \
            self._options.verbose:
@@ -1791,7 +1803,10 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
     def _close_impl(self):
         if self._action_manager is not None:
-            self.release_scenariotreeservers()
+            if self._error_shutdown:
+                self.release_scenariotreeservers(ignore_errors=2)
+            else:
+                self.release_scenariotreeservers()
         if self._options.pyro_shutdown:
             print("Shutting down Pyro components.")
             shutdown_pyro_components(
@@ -1854,7 +1869,7 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
         return len(self._action_manager.server_pool)
 
-    def release_scenariotreeservers(self):
+    def release_scenariotreeservers(self, ignore_errors=False):
         """Release the pool of scenario tree servers and destroy the
         action manager."""
 
@@ -1884,6 +1899,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         # transmit reset or shutdown requests
         action_handles = []
         self.pause_transmit()
+
+        self._action_manager.ignore_task_errors = ignore_errors
         for server_name in self._action_manager.server_pool:
             action_handles.append(self._action_manager.queue(
                 queue_name=server_name,

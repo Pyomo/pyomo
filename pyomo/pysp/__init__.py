@@ -24,6 +24,7 @@ import pyomo.pysp.generators
 import pyomo.pysp.convergence
 import pyomo.pysp.scenariotree
 import pyomo.pysp.phobjective
+import pyomo.pysp.implicitsp
 
 import pyomo.pysp.ef
 import pyomo.pysp.ph
@@ -38,5 +39,6 @@ import pyomo.pysp.lagrangeMorePR
 import pyomo.pysp.lagrangeParam
 import pyomo.pysp.benders
 import pyomo.pysp.smps
+import pyomo.pysp.solvers
 
 PluginGlobals.pop_env()
