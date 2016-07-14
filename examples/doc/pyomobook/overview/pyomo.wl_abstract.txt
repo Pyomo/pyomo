@@ -1,3 +1,4 @@
+/Users/cdlaird/Documents/software/python-venv/pyomo-book/bin/pyomo
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
@@ -37,7 +38,7 @@ Solver:
       Number of bounded subproblems: 1
       Number of created subproblems: 1
   Error rc: 0
-  Time: 0.006844997406005859
+  Time: 0.006999015808105469
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------

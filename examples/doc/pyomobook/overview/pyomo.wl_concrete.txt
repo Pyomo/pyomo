@@ -37,7 +37,7 @@ Solver:
       Number of bounded subproblems: 1
       Number of created subproblems: 1
   Error rc: 0
-  Time: 0.006732940673828125
+  Time: 0.0067119598388671875
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------

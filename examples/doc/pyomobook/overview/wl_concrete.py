@@ -1,4 +1,4 @@
-# warehouse-location-concrete.py: ConcreteModel version of warehouse location determination problem
+# wl_concrete.py: ConcreteModel version of warehouse location determination problem
 from pyomo.environ import *
 
 model = ConcreteModel()

@@ -1,4 +1,4 @@
-# snippets that show the warehouse location problem implemented as scalar quantities
+# wl_scalar.py: snippets that show the warehouse location problem implemented as scalar quantities
 from pyomo.environ import *
 
 model = ConcreteModel()

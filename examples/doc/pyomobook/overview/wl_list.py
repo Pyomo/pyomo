@@ -1,4 +1,4 @@
-# warehouse location problem using constraint lists
+# wl_list.py: Warehouse location problem using constraint lists
 from pyomo.environ import *
 
 model = ConcreteModel()
