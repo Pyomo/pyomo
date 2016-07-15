@@ -398,10 +398,15 @@ def _kill(proc):
         return
     if proc.stdout is not None:
         proc.stdout.close()
-    try:
-        proc.terminate()
-    except:
-        proc.kill()
+    if proc.returncode is None:
+        try:
+            proc.terminate()
+        except:
+            if proc.returncode is None:
+                try:
+                    proc.kill()
+                except:
+                    pass
 
 def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
     if not (using_pyro3 or using_pyro4):
