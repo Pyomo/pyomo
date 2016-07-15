@@ -25,6 +25,7 @@ install:
 - pip install openpyxl
 - pip install $PYRO
 - pip install coverage
+- pip install networkx
 - pip install git+https://github.com/PyUtilib/pyutilib
 - python setup.py develop
 script:
