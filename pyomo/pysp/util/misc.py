@@ -396,6 +396,8 @@ def _poll(proc, running=True):
 def _kill(proc):
     if proc is None:
         return
+    if proc.stdout is not None:
+        proc.stdout.close()
     try:
         proc.kill()
     except:

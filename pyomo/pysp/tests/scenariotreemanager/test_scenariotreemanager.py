@@ -840,70 +840,118 @@ class _ScenarioTreeManagerTesterBase(object):
                 self.assertEqual(results[worker_name], ((None,), {'a': None}))
 
     @unittest.nottest
-    def _scenarios_test(self, async=False, oneway=False, delay=False):
+    def _scenarios_test(self,
+                        async=False,
+                        oneway=False,
+                        delay=False):
         self._setup(self.options)
         with self.cls(self.options, **_init_kwds) as manager:
-            self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
+            self._run_function_tests(manager,
+                                     async=async,
+                                     oneway=oneway,
+                                     delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), False)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
-    def _bundles1_test(self, async=False, oneway=False, delay=False):
+    def _bundles1_test(self,
+                       async=False,
+                       oneway=False,
+                       delay=False):
         options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict1
         with self.cls(self.options, **_init_kwds) as manager:
-            self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
+            self._run_function_tests(manager,
+                                     async=async,
+                                     oneway=oneway,
+                                     delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
-    def _bundles2_test(self, async=False, oneway=False, delay=False):
+    def _bundles2_test(self,
+                       async=False,
+                       oneway=False,
+                       delay=False):
         options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict2
         with self.cls(self.options, **_init_kwds) as manager:
-            self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
+            self._run_function_tests(manager,
+                                     async=async,
+                                     oneway=oneway,
+                                     delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     @unittest.nottest
-    def _bundles3_test(self, async=False, oneway=False, delay=False):
+    def _bundles3_test(self,
+                       async=False,
+                       oneway=False,
+                       delay=False):
         options = PySPConfigBlock()
         self._setup(self.options)
         self.options.scenario_bundle_specification = self._bundle_dict3
         with self.cls(self.options, **_init_kwds) as manager:
-            self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
+            self._run_function_tests(manager,
+                                     async=async,
+                                     oneway=oneway,
+                                     delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
 
     def test_scenarios(self):
-        self._scenarios_test(async=False, oneway=False, delay=False)
+        self._scenarios_test(async=False,
+                             oneway=False,
+                             delay=False)
     def test_scenarios_async(self):
-        self._scenarios_test(async=True, oneway=False, delay=False)
+        self._scenarios_test(async=True,
+                             oneway=False,
+                             delay=False)
     def test_scenarios_async_delay(self):
-        self._scenarios_test(async=True, oneway=False, delay=True)
+        self._scenarios_test(async=True,
+                             oneway=False,
+                             delay=True)
 
     def test_bundles1(self):
-        self._bundles1_test(async=False, oneway=False, delay=False)
+        self._bundles1_test(async=False,
+                            oneway=False,
+                            delay=False)
     def test_bundles1_async(self):
-        self._bundles1_test(async=True, oneway=False, delay=False)
+        self._bundles1_test(async=True,
+                            oneway=False,
+                            delay=False)
     def test_bundles1_async_delay(self):
-        self._bundles1_test(async=True, oneway=False, delay=True)
+        self._bundles1_test(async=True,
+                            oneway=False,
+                            delay=True)
 
     def test_bundles2(self):
-        self._bundles2_test(async=False, oneway=False, delay=False)
+        self._bundles2_test(async=False,
+                            oneway=False,
+                            delay=False)
     def test_bundles2_async(self):
-        self._bundles2_test(async=True, oneway=False, delay=False)
+        self._bundles2_test(async=True,
+                            oneway=False,
+                            delay=False)
     def test_bundles2_async_delay(self):
-        self._bundles2_test(async=True, oneway=False, delay=True)
+        self._bundles2_test(async=True,
+                            oneway=False,
+                            delay=True)
 
     def test_bundles3(self):
-        self._bundles3_test(async=False, oneway=False, delay=False)
+        self._bundles3_test(async=False,
+                            oneway=False,
+                            delay=False)
     def test_bundles3_async(self):
-        self._bundles3_test(async=True, oneway=False, delay=False)
+        self._bundles3_test(async=True,
+                            oneway=False,
+                            delay=False)
     def test_bundles3_async_delay(self):
-        self._bundles3_test(async=True, oneway=False, delay=True)
+        self._bundles3_test(async=True,
+                            oneway=False,
+                            delay=True)
 
     def test_random_bundles(self):
         options = PySPConfigBlock()
@@ -935,35 +983,7 @@ _pyomo_ns_port = None
 _pyomo_ns_process = None
 _dispatch_srvr_port = None
 _dispatch_srvr_process = None
-_dispatch_srvr_options = "--host localhost --daemon-host localhost"
 _taskworker_processes = []
-def _setUpModule():
-    global _pyomo_ns_port
-    global _pyomo_ns_process
-    global _dispatch_srvr_port
-    global _dispatch_srvr_process
-    global _taskworker_processes
-    if _pyomo_ns_process is None:
-        _pyomo_ns_process, _pyomo_ns_port = \
-            _get_test_nameserver(ns_host=_pyomo_ns_host)
-    assert _pyomo_ns_process is not None
-    if _dispatch_srvr_process is None:
-        _dispatch_srvr_process, _dispatch_srvr_port = \
-            _get_test_dispatcher(ns_host=_pyomo_ns_host,
-                                 ns_port=_pyomo_ns_port)
-    assert _dispatch_srvr_process is not None
-    if len(_taskworker_processes) == 0:
-        for i in range(3):
-            _taskworker_processes.append(\
-                subprocess.Popen(["scenariotreeserver", "--traceback"] + \
-                                 ["--import-module="+thisfile] + \
-                                 (["--verbose"] if _run_verbose else []) + \
-                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
-                                 ["--pyro-port="+str(_pyomo_ns_port)]))
-
-        time.sleep(2)
-        [_poll(proc) for proc in _taskworker_processes]
-
 def tearDownModule():
     global _pyomo_ns_port
     global _pyomo_ns_process
@@ -988,8 +1008,51 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
     cls = ScenarioTreeManagerClientPyro
 
+    def _setUpPyro(self):
+        global _pyomo_ns_port
+        global _pyomo_ns_process
+        global _dispatch_srvr_port
+        global _dispatch_srvr_process
+        global _taskworker_processes
+        if _pyomo_ns_process is None:
+            _pyomo_ns_process, _pyomo_ns_port = \
+                _get_test_nameserver(ns_host=_pyomo_ns_host)
+        assert _pyomo_ns_process is not None
+        if _dispatch_srvr_process is None:
+            _dispatch_srvr_process, _dispatch_srvr_port = \
+                _get_test_dispatcher(ns_host=_pyomo_ns_host,
+                                     ns_port=_pyomo_ns_port)
+        assert _dispatch_srvr_process is not None
+        class_name, test_name = self.id().split('.')[-2:]
+        if len(_taskworker_processes) == 0:
+            for i in range(3):
+                outname = os.path.join(thisdir,
+                                       class_name+"."+test_name+".scenariotreeserver_"+str(i+1)+".out")
+                self._tempfiles.append(outname)
+                with open(outname, "w") as f:
+                    _taskworker_processes.append(
+                        subprocess.Popen(["scenariotreeserver", "--traceback"] + \
+                                         ["--import-module="+thisfile] + \
+                                         (["--verbose"] if _run_verbose else []) + \
+                                         ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                         ["--pyro-port="+str(_pyomo_ns_port)],
+                                         stdout=f,
+                                         stderr=subprocess.STDOUT))
+
+            time.sleep(2)
+            [_poll(proc) for proc in _taskworker_processes]
+
+    def _cleanup(self):
+        for fname in self._tempfiles:
+            try:
+                os.remove(fname)
+            except OSError:
+                pass
+        self._tempfiles = []
+
     def setUp(self):
-        _setUpModule()
+        self._tempfiles = []
+        self._setUpPyro()
         [_poll(proc) for proc in _taskworker_processes]
         self.options = PySPConfigBlock()
         ScenarioTreeManagerClientPyro.register_options(
@@ -1005,67 +1068,113 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
             options.pyro_required_scenariotreeservers = servers
 
     @unittest.nottest
-    def _scenarios_1server_test(self, async=False, oneway=False, delay=False):
+    def _scenarios_1server_test(self,
+                                async=False,
+                                oneway=False,
+                                delay=False):
         self._setup(self.options, servers=1)
         with self.cls(self.options, **_init_kwds) as manager:
-            self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
+            self._run_function_tests(manager,
+                                     async=async,
+                                     oneway=oneway,
+                                     delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), False)
         self.assertEqual(list(self.options.unused_user_values()), [])
+        self._cleanup()
 
     @unittest.nottest
-    def _bundles1_1server_test(self, async=False, oneway=False, delay=False):
+    def _bundles1_1server_test(self,
+                               async=False,
+                               oneway=False,
+                               delay=False):
         self._setup(self.options, servers=1)
         self.options.scenario_bundle_specification = self._bundle_dict1
         with self.cls(self.options, **_init_kwds) as manager:
-            self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
+            self._run_function_tests(manager,
+                                     async=async,
+                                     oneway=oneway,
+                                     delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
+        self._cleanup()
 
     @unittest.nottest
-    def _bundles2_1server_test(self, async=False, oneway=False, delay=False):
+    def _bundles2_1server_test(self,
+                               async=False,
+                               oneway=False,
+                               delay=False):
         self._setup(self.options, servers=1)
         self.options.scenario_bundle_specification = self._bundle_dict2
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
+        self._cleanup()
 
     @unittest.nottest
-    def _bundles3_1server_test(self, async=False, oneway=False, delay=False):
+    def _bundles3_1server_test(self,
+                               async=False,
+                               oneway=False,
+                               delay=False):
         self._setup(self.options, servers=1)
         self.options.scenario_bundle_specification = self._bundle_dict3
         with self.cls(self.options, **_init_kwds) as manager:
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
+        self._cleanup()
 
     def test_scenarios_1server(self):
-        self._scenarios_1server_test(async=False, oneway=False, delay=False)
+        self._scenarios_1server_test(async=False,
+                                     oneway=False,
+                                     delay=False)
     def test_scenarios_1server_async(self):
-        self._scenarios_1server_test(async=True, oneway=False, delay=False)
+        self._scenarios_1server_test(async=True,
+                                     oneway=False,
+                                     delay=False)
     def test_scenarios_1server_async_delay(self):
-        self._scenarios_1server_test(async=True, oneway=False, delay=True)
+        self._scenarios_1server_test(async=True,
+                                     oneway=False,
+                                     delay=True)
 
     def test_bundles1_1server(self):
-        self._bundles1_1server_test(async=False, oneway=False, delay=False)
+        self._bundles1_1server_test(async=False,
+                                    oneway=False,
+                                    delay=False)
     def test_bundles1_1server_async(self):
-        self._bundles1_1server_test(async=True, oneway=False, delay=False)
+        self._bundles1_1server_test(async=True,
+                                    oneway=False,
+                                    delay=False)
     def test_bundles1_1server_async_delay(self):
-        self._bundles1_1server_test(async=True, oneway=False, delay=True)
+        self._bundles1_1server_test(async=True,
+                                    oneway=False,
+                                    delay=True)
 
     def test_bundles2_1server(self):
-        self._bundles2_1server_test(async=False, oneway=False, delay=False)
+        self._bundles2_1server_test(async=False,
+                                    oneway=False,
+                                    delay=False)
     def test_bundles2_1server_async(self):
-        self._bundles2_1server_test(async=True, oneway=False, delay=False)
+        self._bundles2_1server_test(async=True,
+                                    oneway=False,
+                                    delay=False)
     def test_bundles2_1server_async_delay(self):
-        self._bundles2_1server_test(async=True, oneway=False, delay=True)
+        self._bundles2_1server_test(async=True,
+                                    oneway=False,
+                                    delay=True)
 
     def test_bundles3_1server(self):
-        self._bundles3_1server_test(async=False, oneway=False, delay=False)
+        self._bundles3_1server_test(async=False,
+                                    oneway=False,
+                                    delay=False)
     def test_bundles3_1server_async(self):
-        self._bundles3_1server_test(async=True, oneway=False, delay=False)
+        self._bundles3_1server_test(async=True,
+                                    oneway=False,
+                                    delay=False)
     def test_bundles3_1server_async_delay(self):
-        self._bundles3_1server_test(async=True, oneway=False, delay=True)
+        self._bundles3_1server_test(async=True,
+                                    oneway=False,
+                                    delay=True)
 
     def test_random_bundles_1server(self):
         options = PySPConfigBlock()
