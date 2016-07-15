@@ -15,12 +15,6 @@ import time
 import subprocess
 import shutil
 
-try:
-    from subprocess import check_output as _run_cmd
-except:
-    # python 2.6
-    from subprocess import check_call as _run_cmd
-
 import pyutilib.services
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
@@ -32,10 +26,10 @@ from pyomo.environ import *
 
 from six import StringIO
 
-thisDir = dirname(abspath(__file__))
-baselineDir = join(thisDir, "baselines")
+thisdir = dirname(abspath(__file__))
+baselineDir = join(thisdir, "baselines")
 pysp_examples_dir = \
-    join(dirname(dirname(dirname(dirname(thisDir)))), "examples", "pysp")
+    join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
 _run_verbose = True
 _json_exact_comparison = True
@@ -65,6 +59,29 @@ class _EvalXHATTesterBase(object):
     solver_name = None
     solver_io = None
 
+    def setUp(self):
+        self._tempfiles = []
+        self.options = {}
+        self.options['--scenario-tree-manager'] = 'serial'
+
+    def _run_cmd(self, cmd):
+        class_name, test_name = self.id().split('.')[-2:]
+        outname = os.path.join(thisdir,
+                               class_name+"."+test_name+".out")
+        self._tempfiles.append(outname)
+        with open(outname, "w") as f:
+            subprocess.check_call(cmd,
+                                  stdout=f,
+                                  stderr=subprocess.STDOUT)
+
+    def _cleanup(self):
+        for fname in self._tempfiles:
+            try:
+                os.remove(fname)
+            except OSError:
+                pass
+        self._tempfiles = []
+
     def _setup(self, options):
         assert self.basename is not None
         assert self.model_location is not None
@@ -79,19 +96,19 @@ class _EvalXHATTesterBase(object):
         if self.scenario_tree_location is not None:
             options['--scenario-tree-location'] = self.scenario_tree_location
         if _run_verbose:
-            options['--verbose'] = ''
-        options['--output-times'] = ''
-        options['--traceback'] = ''
+            options['--verbose'] = None
+        options['--output-times'] = None
+        options['--traceback'] = None
         options['--solution-loader-extension'] = 'pyomo.pysp.plugins.jsonio'
         options['--jsonloader-input-name'] = \
-            join(thisDir, self.basename+'_ef_solution.json')
+            join(thisdir, self.basename+'_ef_solution.json')
         options['--solution-saver-extension'] = 'pyomo.pysp.plugins.jsonio'
 
         class_name, test_name = self.id().split('.')[-2:]
         options['--jsonsaver-output-name'] = \
-            join(thisDir, class_name+"."+test_name+'_solution.json')
+            join(thisdir, class_name+"."+test_name+'_solution.json')
         options['--output-scenario-costs'] = \
-            join(thisDir, class_name+"."+test_name+'_costs.json')
+            join(thisdir, class_name+"."+test_name+'_costs.json')
         if os.path.exists(options['--jsonsaver-output-name']):
             shutil.rmtree(options['--jsonsaver-output-name'],
                           ignore_errors=True)
@@ -100,65 +117,41 @@ class _EvalXHATTesterBase(object):
                           ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = 'evaluate_xhat '
+        cmd = ['evaluate_xhat']
         for name, val in self.options.items():
-            cmd += name
-            if val != '':
-                cmd += "="+str(self.options[name])
-            cmd += ' '
-        print("Command: "+str(cmd))
+            cmd.append(name)
+            if val is not None:
+                cmd.append(str(val))
+        class_name, test_name = self.id().split('.')[-2:]
+        print("%s.%s: Testing command: %s" % (class_name,
+                                              test_name,
+                                              str(' '.join(cmd))))
         return cmd
 
     def test_scenarios(self):
         self._setup(self.options)
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        self._run_cmd(cmd)
         self.assertMatchesJsonBaseline(
             self.options['--jsonsaver-output-name'],
-            join(thisDir, self.basename+'_ef_solution.json'),
+            join(thisdir, self.basename+'_ef_solution.json'),
             tolerance=_diff_tolerance,
             delete=True,
             exact=_json_exact_comparison)
         self.assertMatchesJsonBaseline(
             self.options['--output-scenario-costs'],
-            join(thisDir, self.basename+'_ef_costs.json'),
+            join(thisdir, self.basename+'_ef_costs.json'),
             tolerance=_diff_tolerance,
             delete=True,
             exact=_json_exact_comparison)
+        self._cleanup()
 
 _pyomo_ns_host = '127.0.0.1'
 _pyomo_ns_port = None
 _pyomo_ns_process = None
 _dispatch_srvr_port = None
 _dispatch_srvr_process = None
-_dispatch_srvr_options = "--host localhost --daemon-host localhost"
 _taskworker_processes = []
-def _setUpModule():
-    global _pyomo_ns_port
-    global _pyomo_ns_process
-    global _dispatch_srvr_port
-    global _dispatch_srvr_process
-    global _taskworker_processes
-    if _pyomo_ns_process is None:
-        _pyomo_ns_process, _pyomo_ns_port = \
-            _get_test_nameserver(ns_host=_pyomo_ns_host)
-    assert _pyomo_ns_process is not None
-    if _dispatch_srvr_process is None:
-        _dispatch_srvr_process, _dispatch_srvr_port = \
-            _get_test_dispatcher(ns_host=_pyomo_ns_host,
-                                 ns_port=_pyomo_ns_port)
-    assert _dispatch_srvr_process is not None
-    if len(_taskworker_processes) == 0:
-        for i in range(3):
-            _taskworker_processes.append(\
-                subprocess.Popen(["scenariotreeserver", "--traceback"] + \
-                                 (["--verbose"] if _run_verbose else []) + \
-                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
-                                 ["--pyro-port="+str(_pyomo_ns_port)]))
-
-        time.sleep(2)
-        [_poll(proc) for proc in _taskworker_processes]
-
 def tearDownModule():
     global _pyomo_ns_port
     global _pyomo_ns_process
@@ -173,16 +166,50 @@ def tearDownModule():
     _dispatch_srvr_process = None
     [_kill(proc) for proc in _taskworker_processes]
     _taskworker_processes = []
-    if os.path.exists(join(thisDir, "Pyro_NS_URI")):
+    if os.path.exists(join(thisdir, "Pyro_NS_URI")):
         try:
-            os.remove(join(thisDir, "Pyro_NS_URI"))
+            os.remove(join(thisdir, "Pyro_NS_URI"))
         except OSError:
             pass
 
 class _EvalXHATPyroTesterBase(_EvalXHATTesterBase):
 
+    def _setUpPyro(self):
+        global _pyomo_ns_port
+        global _pyomo_ns_process
+        global _dispatch_srvr_port
+        global _dispatch_srvr_process
+        global _taskworker_processes
+        if _pyomo_ns_process is None:
+            _pyomo_ns_process, _pyomo_ns_port = \
+                _get_test_nameserver(ns_host=_pyomo_ns_host)
+        assert _pyomo_ns_process is not None
+        if _dispatch_srvr_process is None:
+            _dispatch_srvr_process, _dispatch_srvr_port = \
+                _get_test_dispatcher(ns_host=_pyomo_ns_host,
+                                     ns_port=_pyomo_ns_port)
+        assert _dispatch_srvr_process is not None
+        class_name, test_name = self.id().split('.')[-2:]
+        if len(_taskworker_processes) == 0:
+            for i in range(3):
+                outname = os.path.join(thisdir,
+                                       class_name+"."+test_name+".scenariotreeserver_"+str(i+1)+".out")
+                self._tempfiles.append(outname)
+                with open(outname, "w") as f:
+                    _taskworker_processes.append(
+                        subprocess.Popen(["scenariotreeserver", "--traceback"] + \
+                                         (["--verbose"] if _run_verbose else []) + \
+                                         ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                         ["--pyro-port="+str(_pyomo_ns_port)],
+                                         stdout=f,
+                                         stderr=subprocess.STDOUT))
+
+            time.sleep(2)
+            [_poll(proc) for proc in _taskworker_processes]
+
     def setUp(self):
-        _setUpModule()
+        self._tempfiles = []
+        self._setUpPyro()
         [_poll(proc) for proc in _taskworker_processes]
         self.options = {}
         self.options['--scenario-tree-manager'] = 'pyro'
@@ -198,19 +225,20 @@ class _EvalXHATPyroTesterBase(_EvalXHATTesterBase):
     def test_scenarios_1server(self):
         self._setup(self.options, servers=1)
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
+        self._run_cmd(cmd)
         self.assertMatchesJsonBaseline(
             self.options['--jsonsaver-output-name'],
-            join(thisDir, self.basename+'_ef_solution.json'),
+            join(thisdir, self.basename+'_ef_solution.json'),
             tolerance=_diff_tolerance,
             delete=True,
             exact=_json_exact_comparison)
         self.assertMatchesJsonBaseline(
             self.options['--output-scenario-costs'],
-            join(thisDir, self.basename+'_ef_costs.json'),
+            join(thisdir, self.basename+'_ef_costs.json'),
             tolerance=_diff_tolerance,
             delete=True,
             exact=_json_exact_comparison)
+        self._cleanup()
 
 @unittest.nottest
 def create_test_classes(basename,
@@ -235,9 +263,7 @@ def create_test_classes(basename,
     @unittest.category(*categories)
     class TestEvalXHAT_Serial(_base,
                               _EvalXHATTesterBase):
-        def setUp(self):
-            self.options = {}
-            self.options['--scenario-tree-manager'] = 'serial'
+        pass
     class_names.append(TestEvalXHAT_Serial.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestEvalXHAT_Serial, unittest.TestCase), {})
@@ -264,7 +290,7 @@ def create_test_classes(basename,
             _EvalXHATPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-multiple-scenariotreeserver-workers'] = ''
+            options['--pyro-multiple-scenariotreeserver-workers'] = None
     class_names.append(TestEvalXHAT_Pyro_MultipleWorkers.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestEvalXHAT_Pyro_MultipleWorkers, unittest.TestCase), {})
@@ -278,7 +304,7 @@ def create_test_classes(basename,
             _EvalXHATPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-handshake-at-startup'] = ''
+            options['--pyro-handshake-at-startup'] = None
     class_names.append(TestEvalXHAT_Pyro_HandshakeAtStartup.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestEvalXHAT_Pyro_HandshakeAtStartup, unittest.TestCase), {})
@@ -292,8 +318,8 @@ def create_test_classes(basename,
             _EvalXHATPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _EvalXHATPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-handshake-at-startup'] = ''
-            options['--pyro-multiple-scenariotreeserver-workers'] = ''
+            options['--pyro-handshake-at-startup'] = None
+            options['--pyro-multiple-scenariotreeserver-workers'] = None
     class_names.append(TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+class_append_name)
     globals()[class_names[-1]] = type(
         class_names[-1],
