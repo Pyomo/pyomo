@@ -55,6 +55,9 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 % (type(self).__name__) )
         if not isinstance(solver, six.string_types):
             solver_name = solver.name
+            if solver_name == 'asl':
+                solver_name = \
+                    os.path.basename(solver.executable())
         else:
             solver_name = solver
             solver = None

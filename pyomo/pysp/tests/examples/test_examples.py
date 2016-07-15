@@ -31,7 +31,12 @@ from pyomo.opt import load_solvers
 from six import StringIO
 
 have_dot = True
-if os.system('dot -? > /dev/null'):
+try:
+    if subprocess.call(["dot", "-?"],
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.STDOUT):
+        have_dot = False
+except:
     have_dot = False
 
 have_networkx = False
@@ -55,23 +60,23 @@ class TestExamples(unittest.TestCase):
 
     @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
     def test_ef_duals(self):
-        cmd = 'python '+join(examples_dir, 'ef_duals.py')
-        print("Testing command: "+cmd)
-        _run_cmd(cmd, shell=True)
+        cmd = ['python', join(examples_dir, 'ef_duals.py')]
+        print("Testing command: "+(' '.join(cmd)))
+        _run_cmd(cmd)
 
     @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
     def test_benders_scripting(self):
-        cmd = 'python '+join(examples_dir, 'benders_scripting.py')
-        print("Testing command: "+cmd)
-        _run_cmd(cmd, shell=True)
+        cmd = ['python', join(examples_dir, 'benders_scripting.py')]
+        print("Testing command: "+(' '.join(cmd)))
+        _run_cmd(cmd)
 
     @unittest.skipIf(solvers['cplex'] is None, 'cplex not available')
     def test_admm(self):
-        cmd = 'python '+join(examples_dir, 'apps', 'admm.py')
-        cmd += " -m "+join(pysp_examples_dir, "farmer", "models")
-        cmd += " -s "+join(pysp_examples_dir, "farmer", "scenariodata")
-        print("Testing command: "+cmd)
-        _run_cmd(cmd, shell=True)
+        cmd = ['python', join(examples_dir, 'apps', 'admm.py')]
+        cmd.extend(["-m", join(pysp_examples_dir, "farmer", "models")])
+        cmd.extend(["-s", join(pysp_examples_dir, "farmer", "scenariodata")])
+        print("Testing command: "+(' '.join(cmd)))
+        _run_cmd(cmd)
 
     @unittest.skipIf(not have_networkx, "networkx module is not installed")
     def test_compile_scenario_tree(self):
@@ -79,11 +84,13 @@ class TestExamples(unittest.TestCase):
         tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
         shutil.rmtree(tmpdir, ignore_errors=True)
         self.assertEqual(os.path.exists(tmpdir), False)
-        cmd = 'python '+join(examples_dir, 'apps', 'compile_scenario_tree.py')
-        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
-        cmd += " --output-directory="+tmpdir
-        print("Testing command: "+cmd)
-        _run_cmd(cmd, shell=True)
+        cmd = ['python', join(examples_dir, 'apps', 'compile_scenario_tree.py')]
+        cmd.extend(["-m", join(pysp_examples_dir,
+                               "networkx_scenariotree",
+                               "ReferenceModel.py")])
+        cmd.extend(["--output-directory", tmpdir])
+        print("Testing command: "+(' '.join(cmd)))
+        _run_cmd(cmd)
         self.assertEqual(os.path.exists(tmpdir), True)
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -93,11 +100,13 @@ class TestExamples(unittest.TestCase):
         tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
         shutil.rmtree(tmpdir, ignore_errors=True)
         self.assertEqual(os.path.exists(tmpdir), False)
-        cmd = 'python '+join(examples_dir, 'apps', 'generate_distributed_NL.py')
-        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
-        cmd += " --output-directory="+tmpdir
-        print("Testing command: "+cmd)
-        _run_cmd(cmd, shell=True)
+        cmd = ['python', join(examples_dir, 'apps', 'generate_distributed_NL.py')]
+        cmd.extend(["-m", join(pysp_examples_dir,
+                               "networkx_scenariotree",
+                               "ReferenceModel.py")])
+        cmd.extend(["--output-directory", tmpdir])
+        print("Testing command: "+(' '.join(cmd)))
+        _run_cmd(cmd)
         self.assertEqual(os.path.exists(tmpdir), True)
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -111,11 +120,13 @@ class TestExamples(unittest.TestCase):
         except OSError:
             pass
         self.assertEqual(os.path.exists(tmpfname), False)
-        cmd = 'python '+join(examples_dir, 'apps', 'scenario_tree_image.py')
-        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
-        cmd += " --output-file="+tmpfname
-        print("Testing command: "+cmd)
-        _run_cmd(cmd, shell=True)
+        cmd = ['python', join(examples_dir, 'apps', 'scenario_tree_image.py')]
+        cmd.extend(["-m", join(pysp_examples_dir,
+                               "networkx_scenariotree",
+                               "ReferenceModel.py")])
+        cmd.extend(["--output-file", tmpfname])
+        print("Testing command: "+(' '.join(cmd)))
+        _run_cmd(cmd)
         self.assertEqual(os.path.exists(tmpfname), True)
         os.remove(tmpfname)
 
@@ -144,13 +155,11 @@ class TestParallelExamples(unittest.TestCase):
                     subprocess.Popen(["scenariotreeserver", "--traceback"] + \
                                      ["--pyro-host="+str(ns_host)] + \
                                      ["--pyro-port="+str(ns_port)]))
-            cmd = ('python ' + \
-                   join(examples_dir, 'solve_distributed.py') + \
-                   ' %d') % (ns_port)
-            print("Testing command: "+cmd)
+            cmd = ['python', join(examples_dir, 'solve_distributed.py'), ns_port]
+            print("Testing command: "+(' '.join(cmd)))
             time.sleep(2)
             [_poll(proc) for proc in scenariotreeserver_processes]
-            _run_cmd(cmd, shell=True)
+            _run_cmd(cmd)
         finally:
             _kill(ns_process)
             _kill(dispatcher_process)
@@ -181,13 +190,13 @@ class TestParallelExamples(unittest.TestCase):
                     subprocess.Popen(["scenariotreeserver", "--traceback"] + \
                                      ["--pyro-host="+str(ns_host)] + \
                                      ["--pyro-port="+str(ns_port)]))
-            cmd += " --scenario-tree-manager=pyro"
-            cmd += " --pyro-host=" + ns_host
-            cmd += " --pyro-port=" + str(ns_port)
-            print("Testing command: "+cmd)
+            cmd.append("--scenario-tree-manager=pyro")
+            cmd.append("--pyro-host="+ns_host)
+            cmd.append("--pyro-port="+str(ns_port))
+            print("Testing command: "+(' '.join(cmd)))
             time.sleep(2)
             [_poll(proc) for proc in scenariotreeserver_processes]
-            _run_cmd(cmd, shell=True)
+            _run_cmd(cmd)
         finally:
             _kill(ns_process)
             _kill(dispatcher_process)
@@ -202,10 +211,10 @@ class TestParallelExamples(unittest.TestCase):
                      (not (using_pyro3 or using_pyro4)),
                      'glpk or Pyro / Pyro4 is not available')
     def test_admm(self):
-        cmd = ('python ' +
-               join(examples_dir, 'apps', 'admm.py') +
-               ' -m '+join(pysp_examples_dir, "farmer", "models") +
-               ' -s '+join(pysp_examples_dir, "farmer", "scenariodata"))
+        cmd = ['python',
+               join(examples_dir, 'apps', 'admm.py'),
+               '-m', join(pysp_examples_dir, "farmer", "models"),
+               '-s', join(pysp_examples_dir, "farmer", "scenariodata")]
         self._run_cmd_with_pyro(cmd, 3)
 
     @unittest.skipIf(not have_networkx, "networkx module is not installed")
@@ -214,10 +223,12 @@ class TestParallelExamples(unittest.TestCase):
         tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
         shutil.rmtree(tmpdir, ignore_errors=True)
         self.assertEqual(os.path.exists(tmpdir), False)
-        cmd = 'python '+join(examples_dir, 'apps', 'compile_scenario_tree.py')
-        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
-        cmd += " --output-directory="+tmpdir
-        print("Testing command: "+cmd)
+        cmd = ['python ', join(examples_dir, 'apps', 'compile_scenario_tree.py')]
+        cmd.extend(["-m", join(pysp_examples_dir,
+                               "networkx_scenariotree",
+                               "ReferenceModel.py")])
+        cmd.extend(["--output-directory", tmpdir])
+        print("Testing command: "+(' '.join(cmd)))
         self._run_cmd_with_pyro(cmd, 5)
         self.assertEqual(os.path.exists(tmpdir), True)
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -228,10 +239,12 @@ class TestParallelExamples(unittest.TestCase):
         tmpdir = os.path.join(thisDir, class_name+"_"+test_name)
         shutil.rmtree(tmpdir, ignore_errors=True)
         self.assertEqual(os.path.exists(tmpdir), False)
-        cmd = 'python '+join(examples_dir, 'apps', 'generate_distributed_NL.py')
-        cmd += " -m "+join(pysp_examples_dir, "networkx_scenariotree", "ReferenceModel.py")
-        cmd += " --output-directory="+tmpdir
-        print("Testing command: "+cmd)
+        cmd = ['python', join(examples_dir, 'apps', 'generate_distributed_NL.py')]
+        cmd.extend(["-m", join(pysp_examples_dir,
+                               "networkx_scenariotree",
+                               "ReferenceModel.py")])
+        cmd.extend(["--output-directory", tmpdir])
+        print("Testing command: "+(' '.join(cmd)))
         self._run_cmd_with_pyro(cmd, 5)
         self.assertEqual(os.path.exists(tmpdir), True)
         shutil.rmtree(tmpdir, ignore_errors=True)

@@ -6,11 +6,19 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
+import os
 
-from six import iteritems
 from pyomo.opt import SolverFactory
 from pyomo.opt.base.solvers import UnknownSolver
 import pyomo.environ
+
+from six import iteritems
+
+from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
+has_gurobi_license = GUROBISHELL.license_is_valid()
+
+from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
+has_baron_license = BARONSHELL.license_is_valid()
 
 class SolverTestCase(object):
 
@@ -56,6 +64,12 @@ class SolverTestCase(object):
                          (self.solver.available(exception_flag=False)) and \
                          ((not hasattr(self.solver,'executable')) or \
                           (self.solver.executable() is not None))
+        if (self.name == "gurobi") and \
+           (not has_gurobi_license):
+            self.available = False
+        if (self.name == "baron") and \
+           (not has_baron_license):
+            self.available = False
         return self.solver, self.io_options
 
     def has_capability(self,tag):
