@@ -398,6 +398,8 @@ def _kill(proc):
         return
     if proc.stdout is not None:
         proc.stdout.close()
+    if proc.stderr is not None:
+        proc.stderr.close()
     if proc.returncode is None:
         try:
             proc.terminate()
