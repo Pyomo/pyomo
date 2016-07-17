@@ -1,13 +1,11 @@
 # rosenbrock.py: A Pyomo model for minimizing the Rosenbrock function
 # @intro:
-import pyomo.environ
-from pyomo.core import *
-
+from pyomo.environ import *
 model = AbstractModel()
 # @:intro
 # @vars:
-model.x = Var(initialize = 1.5)
-model.y = Var(initialize = 1.5)
+model.x = Var(initialize=1.5)
+model.y = Var(initialize=1.5)
 # @:vars
 # @obj:
 def rosenbrock(model):

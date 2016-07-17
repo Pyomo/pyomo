@@ -18,7 +18,7 @@ model.y = Var(model.N, within=Binary)
 
 def obj_rule(model):
     return sum(model.d[n,m]*model.x[n,m] for n in model.N for m in model.M)
-model.z = Objective(rule=obj_rule)
+model.obj = Objective(rule=obj_rule)
 
 # @deliver:
 def one_per_cust_rule(model, m):

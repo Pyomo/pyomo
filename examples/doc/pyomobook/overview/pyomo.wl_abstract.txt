@@ -1,8 +1,7 @@
-/Users/cdlaird/Documents/software/python-venv/pyomo-book/bin/pyomo
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
-[    0.01] Applying solver
+[    0.02] Applying solver
 [    0.03] Processing results
     Number of solutions: 1
     Solution Information
@@ -10,8 +9,8 @@
       Status: optimal
       Function Value: 2745.0
     Solver results file: results.yml
-[    0.03] Applying Pyomo postprocessing actions
-[    0.03] Pyomo Finished
+[    0.04] Applying Pyomo postprocessing actions
+[    0.04] Pyomo Finished
 # ==========================================================
 # = Solver Results                                         =
 # ==========================================================
@@ -38,7 +37,7 @@ Solver:
       Number of bounded subproblems: 1
       Number of created subproblems: 1
   Error rc: 0
-  Time: 0.006999015808105469
+  Time: 0.006715059280395508
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
@@ -49,7 +48,7 @@ Solution:
   Status: optimal
   Message: None
   Objective:
-    z:
+    obj:
       Value: 2745
   Variable:
     x[Ashland,Chicago]:

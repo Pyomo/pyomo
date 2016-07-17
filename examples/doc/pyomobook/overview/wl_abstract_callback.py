@@ -1,4 +1,4 @@
-# wl_abstract_script.py: Scripting using an AbstractModel
+# wl_abstract_callback.py: AbstractModel with Callback for post processing
 from pyomo.environ import *
 
 model = AbstractModel()
@@ -28,9 +28,17 @@ model.warehouse_active = Constraint(model.N, model.M, rule=warehouse_active_rule
 def num_warehouses_rule(model):
     return sum(model.y[n] for n in model.N) <= model.P
 model.num_warehouses = Constraint(rule=num_warehouses_rule)
-# @abstractsolve:
-instance = model.create_instance('wl_data.dat')
-solver = SolverFactory('glpk')
-solver.solve(instance)
-instance.y.pprint()
-# @:abstractsolve
+
+# @callback:
+def pyomo_postprocess(options=None, instance=None, \
+                      results=None):
+    print('***')
+    for wl in instance.y:
+        if value(instance.y[wl]) > 0.5:
+            customers = [str(cl) for cl in instance.M if value(instance.x[wl, cl] > 0.5)]
+            print(str(wl), 'serves customers:', customers)
+        else:
+            print(str(wl)+": do not build")
+    print('***')
+# @:callback
+

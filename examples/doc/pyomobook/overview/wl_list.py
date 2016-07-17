@@ -27,7 +27,7 @@ model.y = Var(N, within=Binary)
 # @:vars
 
 # @obj:
-model.z = Objective(expr=sum(d[n,m]*model.x[n,m] for n in N for m in M))
+model.obj = Objective(expr=sum(d[n,m]*model.x[n,m] for n in N for m in M))
 # @:obj
 
 # @conslist:

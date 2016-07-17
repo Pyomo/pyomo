@@ -2,7 +2,7 @@
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
 [    0.00] Applying solver
-[    0.03] Processing results
+[    0.02] Processing results
     Number of solutions: 1
     Solution Information
       Gap: None
@@ -17,12 +17,12 @@ Solution Summary
 Model unknown
 
   Variables:
-    x : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :     0 :   2.0 :     4 : False : False
-    y : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :     0 :   2.0 :     4 : False : False
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :   2.0 :     4 : False : False :  Reals
+    y : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :   2.0 :     4 : False : False :  Reals
 
   Objectives:
     obj : Size=1, Index=None, Active=True
@@ -32,5 +32,5 @@ Model unknown
   Constraints:
     None
 
-[    0.04] Applying Pyomo postprocessing actions
-[    0.04] Pyomo Finished
+[    0.02] Applying Pyomo postprocessing actions
+[    0.02] Pyomo Finished

@@ -1,5 +1,4 @@
-import pyomo.environ
-from pyomo.core import *
+from pyomo.environ import *
 
 model = AbstractModel()
 
@@ -34,3 +33,10 @@ model.SusDynamics = Constraint(model.S_SI, rule=_SusDynamics)
 def _Data(model, i):
     return model.P_REP_CASES[i] == model.I[i]+model.eps_I[i]
 model.Data = Constraint(model.S_SI, rule=_Data)
+
+def pyomo_postprocess(options=None, instance=None, \
+                      results=None):
+    print(' ***')
+    print(' *** Optimal beta Value: %.2f' % value(instance.beta))
+    print(' *** Optimal alpha Value: %.2f' % value(instance.alpha))
+    print(' ***')

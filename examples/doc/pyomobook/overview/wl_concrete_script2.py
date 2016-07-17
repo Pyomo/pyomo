@@ -11,5 +11,5 @@ for wl in N:
         customers = [str(cl) for cl in M if value(model.x[wl, cl] > 0.5)]
         print(str(wl), 'serves customers:', customers)
     else:
-        print(str(wl)+': do not build')
+        print(str(wl)+": do not build")
 # @:output

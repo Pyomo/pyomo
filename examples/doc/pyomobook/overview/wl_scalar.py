@@ -26,4 +26,7 @@ model.one_warehouse_for_LA = Constraint(expr=model.x_Harlingen_LA + model.x_Memp
 #...
 # @:cons
 
+# @maxY:
+model.maxY = Constraint(expr=model.y_Harlingen + model.y_Memphis + model.y_Ashland <= P)
+# @:maxY
 model.pprint()
