@@ -398,10 +398,17 @@ def _kill(proc):
         return
     if proc.stdout is not None:
         proc.stdout.close()
-    try:
-        proc.kill()
-    except:
-        pass
+    if proc.stderr is not None:
+        proc.stderr.close()
+    if proc.returncode is None:
+        try:
+            proc.terminate()
+        except:
+            if proc.returncode is None:
+                try:
+                    proc.kill()
+                except:
+                    pass
 
 def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
     if not (using_pyro3 or using_pyro4):
@@ -425,7 +432,7 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
                 cmd += ["--port="+str(ns_port)]
             print(' '.join(cmd))
             ns_process = \
-                subprocess.Popen(cmd)
+                subprocess.Popen(cmd, stdout=subprocess.PIPE)
             time.sleep(5)
             _poll(ns_process)
             break
@@ -435,6 +442,7 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
             time.sleep(20)
             _kill(ns_process)
             ns_port = None
+            ns_process = None
     return ns_process, ns_port
 
 def _get_test_dispatcher(ns_host=None, ns_port=None, num_tries=20):
@@ -451,7 +459,8 @@ def _get_test_dispatcher(ns_host=None, ns_port=None, num_tries=20):
                 subprocess.Popen(["dispatch_srvr"] + \
                                  ["--host="+str(ns_host)] + \
                                  ["--port="+str(ns_port)] + \
-                                 ["--daemon-port="+str(dispatcher_port)])
+                                 ["--daemon-port="+str(dispatcher_port)],
+                                 stdout=subprocess.PIPE)
             time.sleep(5)
             _poll(dispatcher_process)
             break

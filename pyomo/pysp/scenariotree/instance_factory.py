@@ -146,8 +146,7 @@ def _extract_pathspec(
                 normalized_location,
                 subdir=archive_subdir)
             unarchived_dir = archive.normalize_name(
-                tempfile.mkdtemp(prefix='pysp_unarchived',
-                                 dir=os.path.dirname(normalized_location)))
+                tempfile.mkdtemp(prefix='pysp_unarchived'))
             archives.append(((normalized_location, archive_subdir),
                              archive,
                              unarchived_dir))

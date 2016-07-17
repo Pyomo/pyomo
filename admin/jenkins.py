@@ -81,7 +81,10 @@ coverage_omit=','.join([
     'pyutilib.*',
 ])
 
-if config == "default":
+if config == "notests":
+    driver.perform_install('pyomo', config='pyomo_all.ini')
+
+elif config == "default":
     driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
 
 elif config == "core":

@@ -104,7 +104,7 @@ class TestExamples(unittest.TestCase):
         self._cleanup()
 
     @unittest.skipIf(not have_networkx,
-                     "networkx module is not installed")
+                     "networkx module not installed")
     def test_compile_scenario_tree(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpdir = os.path.join(thisdir, class_name+"_"+test_name)
@@ -121,7 +121,7 @@ class TestExamples(unittest.TestCase):
         self._cleanup()
 
     @unittest.skipIf(not have_networkx,
-                     "networkx module is not installed")
+                     "networkx module not installed")
     def test_generate_distributed_NL(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpdir = os.path.join(thisdir, class_name+"_"+test_name)
@@ -138,7 +138,7 @@ class TestExamples(unittest.TestCase):
         self._cleanup()
 
     @unittest.skipIf((not have_dot) or (not have_networkx),
-                     "dot command is not available or networkx module is not installed")
+                     "dot command not available or networkx module not installed")
     def test_scenario_tree_image(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpfname = os.path.join(thisdir, class_name+"_"+test_name)+".pdf"
@@ -158,6 +158,8 @@ class TestExamples(unittest.TestCase):
         self._cleanup()
 
 @unittest.category('parallel')
+@unittest.skipIf(not (using_pyro3 or using_pyro4),
+                 "Pyro / Pyro4 not available")
 class TestParallelExamples(unittest.TestCase):
 
     def setUp(self):
@@ -225,9 +227,8 @@ class TestParallelExamples(unittest.TestCase):
         self._tempfiles = []
 
 
-    @unittest.skipIf((solvers['glpk'] is None) or \
-                     (not (using_pyro3 or using_pyro4)),
-                     'glpk or Pyro / Pyro4 is not available')
+    @unittest.skipIf(solvers['glpk'] is None,
+                     'glpk not available')
     def test_solve_distributed(self):
         ns_host = '127.0.0.1'
         ns_process = None
@@ -269,9 +270,8 @@ class TestParallelExamples(unittest.TestCase):
                     pass
         self._cleanup()
 
-    @unittest.skipIf((solvers['glpk'] is None) or \
-                     (not (using_pyro3 or using_pyro4)),
-                     'glpk or Pyro / Pyro4 is not available')
+    @unittest.skipIf(solvers['cplex'] is None,
+                     'cplex not available')
     def test_admm(self):
         cmd = ['python',
                join(examples_dir, 'apps', 'admm.py'),
@@ -280,7 +280,8 @@ class TestParallelExamples(unittest.TestCase):
         self._run_cmd_with_pyro(cmd, 3)
         self._cleanup()
 
-    @unittest.skipIf(not have_networkx, "networkx module is not installed")
+    @unittest.skipIf(not have_networkx,
+                     "networkx module not installed")
     def test_compile_scenario_tree(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpdir = os.path.join(thisdir, class_name+"_"+test_name)
@@ -296,7 +297,8 @@ class TestParallelExamples(unittest.TestCase):
         shutil.rmtree(tmpdir, ignore_errors=True)
         self._cleanup()
 
-    @unittest.skipIf(not have_networkx, "networkx module is not installed")
+    @unittest.skipIf(not have_networkx,
+                     "networkx module not installed")
     def test_generate_distributed_NL(self):
         class_name, test_name = self.id().split('.')[-2:]
         tmpdir = os.path.join(thisdir, class_name+"_"+test_name)

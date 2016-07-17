@@ -33,7 +33,8 @@ from pyomo.opt import (UndefinedData,
                        PersistentSolver,
                        SolverStatus,
                        TerminationCondition,
-                       SolutionStatus)
+                       SolutionStatus,
+                       SolverStatus)
 
 import pyomo.pysp.convergence
 from pyomo.pysp.phboundbase import (_PHBoundBase,
@@ -2969,8 +2970,14 @@ class ProgressiveHedging(_PHBase):
                         print("Results obtained for bundle=%s" % (bundle_name))
 
                     if (len(bundle_results.solution) == 0) or \
+                       (bundle_results.solution(0).status ==
+                        SolutionStatus.infeasible) or \
                        (bundle_results.solution(0).status == \
-                       SolutionStatus.infeasible) or \
+                        SolutionStatus.error) or \
+                       (bundle_results.solution(0).status == \
+                        SolutionStatus.unbounded) or \
+                       (bundle_results.solver.status != \
+                        SolverStatus.ok) or \
                        (bundle_results.solver.termination_condition == \
                         TerminationCondition.infeasible):
 
@@ -3136,7 +3143,13 @@ class ProgressiveHedging(_PHBase):
 
                     if (len(results.solution) == 0) or \
                        (results.solution(0).status == \
-                       SolutionStatus.infeasible) or \
+                        SolutionStatus.infeasible) or \
+                       (results.solution(0).status == \
+                        SolutionStatus.error) or \
+                       (results.solution(0).status == \
+                        SolutionStatus.unbounded) or \
+                       (results.solver.status != \
+                        SolverStatus.ok) or \
                        (results.solver.termination_condition == \
                         TerminationCondition.infeasible):
 
