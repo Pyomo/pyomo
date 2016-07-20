@@ -9,9 +9,9 @@
 import pyutilib.th as unittest
 
 import pyomo.core as pc
-from pyomo.pysp.implicitsp import ImplicitSP
+from pyomo.pysp.embeddedsp import EmbeddedSP
 
-class TestImplicitSP(unittest.TestCase):
+class TestEmbeddedSP(unittest.TestCase):
 
     def test_collect_mutable_parameters(self):
         model = pc.ConcreteModel()
@@ -21,156 +21,156 @@ class TestImplicitSP(unittest.TestCase):
         model.x = pc.Var()
         for obj in [model.p, model.q[1]]:
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 obj)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 obj + 1)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 2 * (obj + 1))
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 2 * obj)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 2 * obj + 1)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 2 * obj + 1 + model.x)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 obj * model.x)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 model.x / obj)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 model.x / (2 * obj))
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 obj * pc.log(2 * model.x))
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 obj * pc.sin(model.r) ** model.x)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_mutable_parameters(
+            result = EmbeddedSP._collect_mutable_parameters(
                 model.x**(obj * pc.sin(model.r)))
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             1.0)
         self.assertEqual(len(result), 0)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             model.p + model.q[1] + model.r)
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             model.p + 1 + model.r + model.q[1])
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             model.q[1] * 2 * (model.p + model.r) + model.r)
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             2 * model.x * model.p * model.q[1] * model.r)
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             2 * obj * model.q[1] * model.r + 1)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 1)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             2 * model.q[1] + 1 + model.x - model.p)
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             model.r * model.x)
         self.assertEqual(len(result), 0)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             model.x / obj)
         self.assertTrue(id(obj) in result)
         self.assertEqual(len(result), 1)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             model.x / (2 * model.q[1] / model.p))
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             (model.p / model.q[1]) * pc.log(2 * model.x))
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             model.q[1] * pc.sin(model.p) ** (model.x + model.r))
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_mutable_parameters(
+        result = EmbeddedSP._collect_mutable_parameters(
             (model.p + model.x) ** (model.q[1] * pc.sin(model.r)))
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
@@ -186,111 +186,111 @@ class TestImplicitSP(unittest.TestCase):
         model.x = pc.Var()
         for obj in [model.p, model.q[1]]:
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 obj)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 obj + 1)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 2 * (obj + 1))
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 2 * obj)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 2 * obj + 1)
             self.assertTrue(id(obj) in result)
             self.assertEqual(len(result), 1)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 2 * obj + 1 + model.x)
             self.assertTrue(id(obj) in result)
             self.assertTrue(id(model.x) in result)
             self.assertEqual(len(result), 2)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 obj * model.x)
             self.assertTrue(id(obj) in result)
             self.assertTrue(id(model.x) in result)
             self.assertEqual(len(result), 2)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 model.x / obj)
             self.assertTrue(id(obj) in result)
             self.assertTrue(id(model.x) in result)
             self.assertEqual(len(result), 2)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 model.x / (2 * obj))
             self.assertTrue(id(obj) in result)
             self.assertTrue(id(model.x) in result)
             self.assertEqual(len(result), 2)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 obj * pc.log(2 * model.x))
             self.assertTrue(id(obj) in result)
             self.assertTrue(id(model.x) in result)
             self.assertEqual(len(result), 2)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 obj * pc.sin(model.r) ** model.x)
             self.assertTrue(id(obj) in result)
             self.assertTrue(id(model.x) in result)
             self.assertEqual(len(result), 2)
             del result
 
-            result = ImplicitSP._collect_variables(
+            result = EmbeddedSP._collect_variables(
                 model.x**(obj * pc.sin(model.r)))
             self.assertTrue(id(obj) in result)
             self.assertTrue(id(model.x) in result)
             self.assertEqual(len(result), 2)
             del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             1.0)
         self.assertEqual(len(result), 0)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             model.p + model.q[1] + model.r)
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             model.p + 1 + model.r + model.q[1])
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             model.q[1] * 2 * (model.p + model.r) + model.r)
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             2 * model.x * model.p * model.q[1] * model.r)
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
@@ -298,13 +298,13 @@ class TestImplicitSP(unittest.TestCase):
         self.assertEqual(len(result), 3)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             2 * obj * model.q[1] * model.r + 1)
         self.assertTrue(id(model.q[1]) in result)
         self.assertEqual(len(result), 1)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             2 * model.q[1] + 1 + model.x - model.p)
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
@@ -312,20 +312,20 @@ class TestImplicitSP(unittest.TestCase):
         self.assertEqual(len(result), 3)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             model.r * model.x)
         self.assertTrue(id(model.x) in result)
         self.assertEqual(len(result), 1)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             model.x / obj)
         self.assertTrue(id(obj) in result)
         self.assertTrue(id(model.x) in result)
         self.assertEqual(len(result), 2)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             model.x / (2 * model.q[1] / model.p))
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
@@ -333,7 +333,7 @@ class TestImplicitSP(unittest.TestCase):
         self.assertEqual(len(result), 3)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             (model.p / model.q[1]) * pc.log(2 * model.x))
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
@@ -341,7 +341,7 @@ class TestImplicitSP(unittest.TestCase):
         self.assertEqual(len(result), 3)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             model.q[1] * pc.sin(model.p) ** (model.x + model.r))
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
@@ -349,7 +349,7 @@ class TestImplicitSP(unittest.TestCase):
         self.assertEqual(len(result), 3)
         del result
 
-        result = ImplicitSP._collect_variables(
+        result = EmbeddedSP._collect_variables(
             (model.p + model.x) ** (model.q[1] * pc.sin(model.r)))
         self.assertTrue(id(model.p) in result)
         self.assertTrue(id(model.q[1]) in result)
@@ -357,7 +357,7 @@ class TestImplicitSP(unittest.TestCase):
         self.assertEqual(len(result), 3)
         del result
 
-TestImplicitSP = unittest.category('smoke','nightly','expensive')(TestImplicitSP)
+TestEmbeddedSP = unittest.category('smoke','nightly','expensive')(TestEmbeddedSP)
 
 if __name__ == "__main__":
     unittest.main()

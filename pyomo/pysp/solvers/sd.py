@@ -43,7 +43,7 @@ from pyomo.pysp.scenariotree.manager_solver import \
     (ScenarioTreeManagerSolver,
      ScenarioTreeManagerFactory)
 import pyomo.pysp.smps.smpsutils
-from pyomo.pysp.implicitsp import ImplicitSP
+from pyomo.pysp.embeddedsp import EmbeddedSP
 from pyomo.pysp.solvers.spsolver import (SPSolver,
                                          SPSolverResults,
                                          SPSolverFactory)
@@ -410,9 +410,9 @@ class SDSolver(SPSolver, PySPConfiguredObject):
                           symbolic_solver_labels}
 
             symbol_map = None
-            if isinstance(sp, ImplicitSP):
+            if isinstance(sp, EmbeddedSP):
                 symbol_map = pyomo.pysp.smps.smpsutils.\
-                             convert_implicit(
+                             convert_embedded(
                                  sdinput_directory,
                                  "pysp_model",
                                  sp,

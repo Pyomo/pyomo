@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ("ImplicitSP,")
+__all__ = ("EmbeddedSP,")
 
 import itertools
 
@@ -37,7 +37,8 @@ from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.manager_solver import \
     ScenarioTreeManagerSolverClientSerial
-from six.moves import xrange
+
+from six.moves import xrange, zip
 
 # TODO: generate explicit annotations
 
@@ -131,7 +132,7 @@ def _map_variable_stages(model):
               variable_stage_assignments.items():
             if stagenum > 2:
                 raise ValueError(
-                    "Implicit stochastic programs must be two-stage "
+                    "Embedded stochastic programs must be two-stage "
                     "(for now), but variable with name '%s' has been "
                     "annotated with stage number: %s"
                     % (var.cname(True), stagenum))
@@ -193,7 +194,7 @@ def _extract_stochastic_data(model):
                 % (paramdata.cname(True)))
     return stochastic_data
 
-class ImplicitSP(object):
+class EmbeddedSP(object):
 
     @staticmethod
     def _collect_mutable_parameters(exp):
@@ -207,16 +208,16 @@ class ImplicitSP(object):
             ans = {}
             if exp.__class__ is pyomo.core.base.expr._ProductExpression:
                 for subexp in exp._numerator:
-                    ans.update(ImplicitSP.\
+                    ans.update(EmbeddedSP.\
                                _collect_mutable_parameters(subexp))
                 for subexp in exp._denominator:
-                    ans.update(ImplicitSP.\
+                    ans.update(EmbeddedSP.\
                                _collect_mutable_parameters(subexp))
             else:
                 # This is fragile: we assume that all other expression
                 # objects "play nice" and just use the _args member.
                 for subexp in exp._args:
-                    ans.update(ImplicitSP.\
+                    ans.update(EmbeddedSP.\
                                _collect_mutable_parameters(subexp))
             return ans
         elif isinstance(exp, _ParamData):
@@ -232,16 +233,16 @@ class ImplicitSP(object):
             ans = {}
             if exp.__class__ is pyomo.core.base.expr._ProductExpression:
                 for subexp in exp._numerator:
-                    ans.update(ImplicitSP.\
+                    ans.update(EmbeddedSP.\
                                _collect_variables(subexp))
                 for subexp in exp._denominator:
-                    ans.update(ImplicitSP.\
+                    ans.update(EmbeddedSP.\
                                _collect_variables(subexp))
             else:
                 # This is fragile: we assume that all other expression
                 # objects "play nice" and just use the _args member.
                 for subexp in exp._args:
-                    ans.update(ImplicitSP.\
+                    ans.update(EmbeddedSP.\
                                _collect_variables(subexp))
             return ans
         elif isinstance(exp, _VarData):
@@ -405,11 +406,14 @@ class ImplicitSP(object):
             upper_params = tuple(
                 self._collect_mutable_parameters(con.upper).values())
 
+            # TODO: Can we make this declaration sparse
+            #       by idenfifying which variables have
+            #       stochastic coefficients? How to handle
+            #       non-linear expressions? Currently, this
+            #       code also fails to detect that mutable
+            #       "constant" expressions might fall out
+            #       of the body and into the bounds.
             if len(body_params) > 0:
-                # TODO: Can we make this declaration sparse
-                #       by idenfifying which variables have
-                #       stochastic coefficients? How to handle
-                #       non-linear expressions?
                 sto_conbody.declare(con)
             if (len(lower_params) > 0) or \
                (len(upper_params) > 0):
@@ -455,7 +459,7 @@ class ImplicitSP(object):
                 if param in self.stochastic_data:
                     raise ValueError(
                         "SOSConstraints with stochastic data are currently"
-                        " not supported in implicit stochastic programs. "
+                        " not supported in embedded stochastic programs. "
                         "The SOSConstraint component '%s' has a weight "
                         "term for variable '%s' that references stochastic"
                         " parameter '%s'"
@@ -524,27 +528,27 @@ class ImplicitSP(object):
         # now add any necessary annotations
         if sto_obj.has_declarations():
             assert not hasattr(self.reference_model,
-                               ".pyspimplicitsp_stochastic_objective_annotation")
+                               ".pyspembeddedsp_stochastic_objective_annotation")
             setattr(self.reference_model,
-                    ".pyspimplicitsp_stochastic_objective_annotation",
+                    ".pyspembeddedsp_stochastic_objective_annotation",
                     sto_obj)
         if sto_conbody.has_declarations():
             assert not hasattr(self.reference_model,
-                               ".pyspimplicitsp_stochastic_constraint_body_annotation")
+                               ".pyspembeddedsp_stochastic_constraint_body_annotation")
             setattr(self.reference_model,
-                    ".pyspimplicitsp_stochastic_constraint_body_annotation",
+                    ".pyspembeddedsp_stochastic_constraint_body_annotation",
                     sto_conbody)
         if sto_conbounds.has_declarations():
             assert not hasattr(self.reference_model,
-                               ".pyspimplicitsp_stochastic_constraint_bounds_annotation")
+                               ".pyspembeddedsp_stochastic_constraint_bounds_annotation")
             setattr(self.reference_model,
-                    ".pyspimplicitsp_stochastic_constraint_bounds_annotation",
+                    ".pyspembeddedsp_stochastic_constraint_bounds_annotation",
                     sto_conbounds)
         if sto_varbounds.has_declarations():
             assert not hasattr(self.reference_model,
-                               ".pyspimplicitsp_stochastic_variable_bounds_annotation")
+                               ".pyspembeddedsp_stochastic_variable_bounds_annotation")
             setattr(self.reference_model,
-                    ".pyspimplicitsp_stochastic_variable_bounds_annotation",
+                    ".pyspembeddedsp_stochastic_variable_bounds_annotation",
                     sto_varbounds)
 
         # TODO: This is a hack. Cleanup the PySP solver interface
@@ -593,15 +597,9 @@ class ImplicitSP(object):
         return len(self.objective_to_stochastic_data_map) > 0
 
     @property
-    def has_stochastic_constraint_body(self):
+    def has_stochastic_constraints(self):
         """Returns whether the SP has stochastic data in the body of any constraints."""
-        return len(self.constraint_to_stochastic_data_body_map) > 0
-
-    @property
-    def has_stochastic_constraint_bounds(self):
-        """Returns whether the SP has stochastic data in the bounds (or right-hand-side) of any constraints."""
-        return (len(self.constraint_to_stochastic_data_lb_map) > 0) or \
-            (len(self.constraint_to_stochastic_data_ub_map) > 0)
+        return len(self.constraint_to_stochastic_data_map) > 0
 
     @property
     def has_stochastic_variable_bounds(self):

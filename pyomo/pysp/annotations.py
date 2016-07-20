@@ -28,7 +28,10 @@ def locate_annotations(model, annotation_type, max_allowed=None):
     type are found on the model.
     """
 
-    annotations = [(name, obj) for name, obj in vars(model).items()
+    annotations = [(name, obj)
+                   for block in model.block_data_objects(active=True,
+                                                         descend_into=True)
+                   for name, obj in vars(block).items()
                    if isinstance(obj, annotation_type)]
     if (max_allowed is not None) and (len(annotations) > max_allowed):
         raise ValueError("Too many annotations of type %s found on "

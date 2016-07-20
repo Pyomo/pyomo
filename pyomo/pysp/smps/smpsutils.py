@@ -32,7 +32,7 @@ from pyomo.repn import LinearCanonicalRepn
 from pyomo.repn import generate_canonical_repn
 from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
 from pyomo.pysp.scenariotree.manager import InvocationType
-from pyomo.pysp.implicitsp import ImplicitSP
+from pyomo.pysp.embeddedsp import EmbeddedSP
 from pyomo.pysp.annotations import (locate_annotations,
                                     _ConstraintStageAnnotation,
                                     StochasticConstraintBoundsAnnotation,
@@ -150,7 +150,7 @@ def map_constraint_stages(scenario,
                 #       re-categorized as standard variables
                 #       where non-anticipativity will be enforced.
                 constraint_stage = firststage
-                for var in ImplicitSP._collect_variables(con.body).values():
+                for var in EmbeddedSP._collect_variables(con.body).values():
                     if not var.fixed:
                         if id(var) in secondstage_variable_ids:
                             constraint_stage = secondstage
@@ -911,7 +911,7 @@ def _convert_explicit_setup_without_cleanup(
                         stochastic_objective.default
 
                 if not isinstance(objective_repn, LinearCanonicalRepn):
-                    raise RuntimeError("Only linear objectives are "
+                    raise RuntimeError("Only linear stochastic objectives are "
                                        "accepted for conversion to SMPS format. "
                                        "Objective %s is not linear."
                                        % (objective_object.cname(True)))
@@ -1390,7 +1390,7 @@ def convert_explicit(output_directory,
 
     return None
 
-def convert_implicit(output_directory,
+def convert_embedded(output_directory,
                      basename,
                      sp,
                      core_format='mps',
@@ -1408,7 +1408,7 @@ def convert_implicit(output_directory,
 
     if sp.has_stochastic_variable_bounds:
         raise ValueError("Problems with stochastic variables bounds "
-                         "can not be converted into an implicit "
+                         "can not be converted into an embedded "
                          "SMPS representation")
 
     #
@@ -1714,8 +1714,8 @@ def convert_implicit(output_directory,
                                                      compute_values=False)
             if not isinstance(objective_repn, LinearCanonicalRepn):
                 raise ValueError(
-                    "Cannot output implicit SP representation for component "
-                    "'%s'. The implicit SMPS writer does not yet handle "
+                    "Cannot output embedded SP representation for component "
+                    "'%s'. The embedded SMPS writer does not yet handle "
                     "stochastic constraints within nonlinear expressions."
                     % (con.cname(True)))
 
@@ -1736,8 +1736,8 @@ def convert_implicit(output_directory,
                 for param in stochastic_params:
                     if param in stochastic_data_seen:
                         raise ValueError(
-                            "Cannot output implicit SP representation for component "
-                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "Cannot output embedded SP representation for component "
+                            "'%s'. The embedded SMPS writer does not yet handle the "
                             "case where a stochastic data component appears in "
                             "multiple expressions or locations within a single "
                             "expression (e.g., multiple constraints, or multiple "
@@ -1760,8 +1760,8 @@ def convert_implicit(output_directory,
                         # operations are trivial to transform any probability
                         # measure. I'm just not going to get into that right now.
                         raise ValueError(
-                            "Cannot output implicit SP representation for component "
-                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "Cannot output embedded SP representation for component "
+                            "'%s'. The embedded SMPS writer does not yet handle the "
                             "case where a stochastic data component appears "
                             "in an expression that defines a single variable's "
                             "coefficient. The coefficient for variable '%s' must be "
@@ -1778,7 +1778,7 @@ def convert_implicit(output_directory,
                         #       them.
                         raise TypeError(
                             "Invalid distribution type '%s' for stochastic "
-                            "parameter '%s'. The implicit SMPS writer currently "
+                            "parameter '%s'. The embedded SMPS writer currently "
                             "only supports discrete table distributions defined "
                             "by a list of values or a list of (probability, value) "
                             "tuples.")
@@ -1805,8 +1805,8 @@ def convert_implicit(output_directory,
                     # general distributions, but would not be that
                     # difficult for discrete tables.
                     raise ValueError(
-                        "Cannot output implicit SP representation for component "
-                        "'%s'. The implicit SMPS writer does not yet handle the "
+                        "Cannot output embedded SP representation for component "
+                        "'%s'. The embedded SMPS writer does not yet handle the "
                         "case where multiple stochastic data components appear "
                         "in an expression that defines a single variable's "
                         "coefficient. The coefficient for variable '%s' involves "
@@ -1830,8 +1830,8 @@ def convert_implicit(output_directory,
                                                       compute_values=False)
             if not isinstance(constraint_repn, LinearCanonicalRepn):
                 raise ValueError(
-                    "Cannot output implicit SP representation for component "
-                    "'%s'. The implicit SMPS writer does not yet handle "
+                    "Cannot output embedded SP representation for component "
+                    "'%s'. The embedded SMPS writer does not yet handle "
                     "stochastic constraints within nonlinear expressions."
                     % (con.cname(True)))
 
@@ -1855,8 +1855,8 @@ def convert_implicit(output_directory,
                 for param in sp._collect_mutable_parameters(constraint_repn.constant):
                     if param in sp.stochastic_data:
                         raise ValueError(
-                            "Cannot output implicit SP representation for component "
-                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "Cannot output embedded SP representation for component "
+                            "'%s'. The embedded SMPS writer does not yet handle the "
                             "case where a stochastic data appears in the body of a "
                             "constraint expression that must be moved to the bounds. "
                             "The constraint must be written so that the stochastic "
@@ -1870,8 +1870,8 @@ def convert_implicit(output_directory,
                 #       Will add support for range constraints with stochastic data
                 #       in one or both of the bounds later.
                 raise ValueError(
-                    "Cannot output implicit SP representation for component "
-                    "'%s'. The implicit SMPS writer does not yet handle range "
+                    "Cannot output embedded SP representation for component "
+                    "'%s'. The embedded SMPS writer does not yet handle range "
                     "constraints that have stochastic data."
                     % (con.cname(True)))
 
@@ -1892,8 +1892,8 @@ def convert_implicit(output_directory,
                 for param in stochastic_params:
                     if param in stochastic_data_seen:
                         raise ValueError(
-                            "Cannot output implicit SP representation for component "
-                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "Cannot output embedded SP representation for component "
+                            "'%s'. The embedded SMPS writer does not yet handle the "
                             "case where a stochastic data component appears in "
                             "multiple expressions or locations within a single "
                             "expression (e.g., multiple constraints, or multiple "
@@ -1916,8 +1916,8 @@ def convert_implicit(output_directory,
                         # operations are trivial to transform any probability
                         # measure. I'm just not going to get into that right now.
                         raise ValueError(
-                            "Cannot output implicit SP representation for component "
-                            "'%s'. The implicit SMPS writer does not yet handle the "
+                            "Cannot output embedded SP representation for component "
+                            "'%s'. The embedded SMPS writer does not yet handle the "
                             "case where a stochastic data component appears "
                             "in an expression that defines a single variable's "
                             "coefficient. The coefficient for variable '%s' must be "
@@ -1934,7 +1934,7 @@ def convert_implicit(output_directory,
                         #       them.
                         raise TypeError(
                             "Invalid distribution type '%s' for stochastic "
-                            "parameter '%s'. The implicit SMPS writer currently "
+                            "parameter '%s'. The embedded SMPS writer currently "
                             "only supports discrete table distributions defined "
                             "by a list of values or a list of (probability, value) "
                             "tuples.")
@@ -1956,8 +1956,8 @@ def convert_implicit(output_directory,
                     # general distributions, but would not be that
                     # difficult for discrete tables.
                     raise ValueError(
-                        "Cannot output implicit SP representation for component "
-                        "'%s'. The implicit SMPS writer does not yet handle the "
+                        "Cannot output embedded SP representation for component "
+                        "'%s'. The embedded SMPS writer does not yet handle the "
                         "case where multiple stochastic data components appear "
                         "in an expression that defines a single variable's "
                         "coefficient. The coefficient for variable '%s' involves "
