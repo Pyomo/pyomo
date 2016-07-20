@@ -287,15 +287,20 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
                 num_output = 0
 
-                var_hash_order = sorted(iterkeys(x[2]))
-                if column_order is not None:
-                    # sort by the maximum column number assigned
-                    # the variables appearing in a term (e.g., x*y)
-                    var_hash_order.sort(
-                        key=lambda term: max(column_order[var_hashes[vh]]
-                                             for vh in term))
+                var_hashes_order = list(iterkeys(x[2]))
+                # sort by the sorted tuple of symbols (or column assignments)
+                # for the variables appearing in the term
+                if column_order is None:
+                    var_hashes_order.sort(
+                        key=lambda term: \
+                          sorted(variable_symbol_dictionary[id(var_hashes[vh])]
+                                 for vh in term))
+                else:
+                    var_hashes_order.sort(
+                        key=lambda term: sorted(column_order[var_hashes[vh]]
+                                                for vh in term))
 
-                for var_hash in var_hash_order:
+                for var_hash in var_hashes_order:
 
                     coefficient = x[2][var_hash]
 
@@ -310,16 +315,27 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     output_file.write(quad_coef_string_template % coefficient)
                     term_variables = []
 
-                    for var in var_hash:
+                    var_hash_order = list(iterkeys(var_hash))
+                    # sort by symbols (or column assignments)
+                    if column_order is None:
+                        var_hash_order.sort(
+                            key=lambda vh: \
+                              variable_symbol_dictionary[id(var_hashes[vh])])
+                    else:
+                        var_hash_order.sort(
+                            key=lambda vh: column_order[var_hashes[vh]])
+
+                    for var in var_hash_order:
                         vardata = var_hashes[var]
                         self._referenced_variable_ids[id(vardata)] = vardata
                         name = variable_symbol_dictionary[id(vardata)]
                         term_variables.append(name)
 
                     if len(term_variables) == 2:
-                        output_file.write("%s * %s" % (term_variables[0],term_variables[1]))
+                        output_file.write("%s * %s"
+                                          % (term_variables[0], term_variables[1]))
                     else:
-                        output_file.write("%s ^ 2" % term_variables[0])
+                        output_file.write("%s ^ 2" % (term_variables[0]))
                     output_file.write("\n")
 
                 output_file.write("]")
