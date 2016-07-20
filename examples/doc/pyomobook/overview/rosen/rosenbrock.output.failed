@@ -1,0 +1,6 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.01] Applying solver
+ERROR: Unexpected exception while running model Rosenbrock.py
+	Problem constructing solver `ipopt`

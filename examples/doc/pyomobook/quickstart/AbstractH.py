@@ -23,5 +23,5 @@ def obj_rule(model):
 model.z = Objective(rule=obj_rule, sense=maximize)
 
 def budget_rule(model):
-    return summation(model.c, model.x) <= model.b
+    return sum(model.c[i]*model.x[i] for i in model.A) <= model.b
 model.budgetconstr = Constraint(rule=budget_rule)

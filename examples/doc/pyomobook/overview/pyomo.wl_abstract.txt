@@ -1,16 +1,16 @@
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
-[    0.03] Applying solver
-[    0.05] Processing results
+[    0.02] Applying solver
+[    0.03] Processing results
     Number of solutions: 1
     Solution Information
       Gap: 0.0
-      Status: feasible
-      Function Value: 0.8
+      Status: optimal
+      Function Value: 2745.0
     Solver results file: results.yml
-[    0.05] Applying Pyomo postprocessing actions
-[    0.05] Pyomo Finished
+[    0.04] Applying Pyomo postprocessing actions
+[    0.04] Pyomo Finished
 # ==========================================================
 # = Solver Results                                         =
 # ==========================================================
@@ -19,12 +19,12 @@
 # ----------------------------------------------------------
 Problem: 
 - Name: unknown
-  Lower bound: 0.8
-  Upper bound: 0.8
+  Lower bound: 2745.0
+  Upper bound: 2745.0
   Number of objectives: 1
-  Number of constraints: 3
-  Number of variables: 3
-  Number of nonzeros: 5
+  Number of constraints: 18
+  Number of variables: 16
+  Number of nonzeros: 40
   Sense: minimize
 # ----------------------------------------------------------
 #   Solver Information
@@ -34,10 +34,10 @@ Solver:
   Termination condition: optimal
   Statistics: 
     Branch and bound: 
-      Number of bounded subproblems: 0
-      Number of created subproblems: 0
+      Number of bounded subproblems: 1
+      Number of created subproblems: 1
   Error rc: 0
-  Time: 0.00894713401794
+  Time: 0.006715059280395508
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
@@ -45,12 +45,22 @@ Solution:
 - number of solutions: 1
   number of solutions displayed: 1
 - Gap: 0.0
-  Status: feasible
+  Status: optimal
   Message: None
   Objective:
     obj:
-      Value: 0.8
+      Value: 2745
   Variable:
-    x[2]:
-      Value: 0.4
+    x[Ashland,Chicago]:
+      Value: 1
+    x[Ashland,NYC]:
+      Value: 1
+    x[Harlingen,Houston]:
+      Value: 1
+    x[Harlingen,LA]:
+      Value: 1
+    y[Ashland]:
+      Value: 1
+    y[Harlingen]:
+      Value: 1
   Constraint: No values

@@ -23,6 +23,7 @@ install:
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "python --version"
   - "python -m pip install -U pip setuptools"
+  - "python -m pip install networkx"
   - "python -m pip install coverage"
   - "python -m pip install nose"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"

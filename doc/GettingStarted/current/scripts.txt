@@ -687,6 +687,16 @@ into the +opt.solve(…)+ method using the +options+ keyword. Those
 options will only persist within that solve and temporarily override
 any matching options in the options dictionary on the solver object.
 
+=== Specifying the Path to a Solver ===
+
+Often, the executables for solvers are in the path; however, for situations
+where they are not,
+the SolverFactory function accepts the keyword +executable+, which you can use to set an absolute or relative path to a solver executable. E.g.,
+[source,python]
+----
+opt = SolverFactory("ipopt", executable="../ipopt")
+----
+
 === Warm Starts ===
 
 Some solvers support a warm start based on current values of variables. To use this feature, set the values of

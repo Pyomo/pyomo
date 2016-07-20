@@ -1,4 +1,4 @@
-# AMPL format data file for the warehouse location problem
+# wl_data.dat: AMPL format data file for the warehouse location problem
 
 set N := Harlingen Memphis Ashland ;
 set M := NYC LA Chicago Houston;

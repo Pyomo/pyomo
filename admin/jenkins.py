@@ -74,9 +74,18 @@ print("\nPython version: %s" % sys.version)
 print("\nSystem PATH:\n\t%s" % os.environ['PATH'])
 print("\nPython path:\n\t%s" % sys.path)
 
-if config == "default":
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
-    driver.perform_build('pyomo', coverage=True, omit=pyutilib, config='pyomo_all.ini')
+coverage_omit=','.join([
+    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*', 'tests']),
+    'pyomo.*.tests',
+    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*']),
+    'pyutilib.*',
+])
+
+if config == "notests":
+    driver.perform_install('pyomo', config='pyomo_all.ini')
+
+elif config == "default":
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
 
 elif config == "core":
     # Install
@@ -96,26 +105,22 @@ elif config == "core":
         assert False
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
     print("-" * 60)
     print("Performing tests")
     print("-" * 60)
-    driver.perform_tests('pyomo', coverage=True, omit=pyutilib)
+    driver.perform_tests('pyomo', coverage=True, omit=coverage_omit)
 
 elif config == "nonpysp":
     os.environ['TEST_PACKAGES'] = '-e pysp'
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
-    driver.perform_build('pyomo', coverage=True, omit=pyutilib, config='pyomo_all.ini')
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
 
 elif config == "parallel":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800' # 30 minutes
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
-    driver.perform_build('pyomo', cat='parallel', coverage=True, omit=pyutilib, config='pyomo_all.ini')
+    driver.perform_build('pyomo', cat='parallel', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
 
 elif config == "expensive":
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
     driver.perform_build('pyomo',
-        cat='expensive', coverage=True, omit=pyutilib,
+        cat='expensive', coverage=True, omit=coverage_omit,
         virtualenv_args=sys.argv[1:])
 
 elif config == "booktests" or config == "book":
@@ -131,7 +136,6 @@ elif config == "booktests" or config == "book":
         assert False
     # Test
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
-    #pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
     driver.perform_tests('pyomo', cat='book')
 
 elif config == "perf":

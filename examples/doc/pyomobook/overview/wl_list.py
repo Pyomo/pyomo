@@ -1,4 +1,4 @@
-# warehouse location problem using constraint lists
+# wl_list.py: Warehouse location problem using constraint lists
 from pyomo.environ import *
 
 model = ConcreteModel()
@@ -27,7 +27,7 @@ model.y = Var(N, within=Binary)
 # @:vars
 
 # @obj:
-model.z = Objective(expr=sum(d[n,m]*model.x[n,m] for n in N for m in M))
+model.obj = Objective(expr=sum(d[n,m]*model.x[n,m] for n in N for m in M))
 # @:obj
 
 # @conslist:
