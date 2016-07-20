@@ -41,7 +41,7 @@ class _VirtualSet(SimpleSet):
         SimpleSet.__init__(self, *args, **kwds)
         self.virtual=True
         self.concrete=False
-        
+
         global _virtual_sets
         _virtual_sets.append(self)
 

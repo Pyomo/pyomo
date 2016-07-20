@@ -287,16 +287,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
                 num_output = 0
 
-                if column_order is None:
-                    var_hash_order = sorted(iterkeys(x[2]))
-                else:
-                    var_hash_order = sorted(iterkeys(x[2]))
-                    if any(len(var_hash) > 1 for var_hash in var_hash_order):
-                        raise NotImplementedError(
-                            "This is difficult to do correctly. "
-                            "If you can figure it out, feel free...")
-                    else:
-                        var_hash_order.sort(key=lambda vh: column_order[var_hashes[vh[0]]])
+                var_hash_order = sorted(iterkeys(x[2]))
+                if column_order is not None:
+                    # sort by the maximum column number assigned
+                    # the variables appearing in a term (e.g., x*y)
+                    var_hash_order.sort(
+                        key=lambda term: max(column_order[var_hashes[vh]]
+                                             for vh in term))
 
                 for var_hash in var_hash_order:
 
