@@ -627,21 +627,5 @@ class Test(unittest.TestCase):
         self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
         self.assertEqual(canonical_degree(rep), None)
 
-    def test_Expr_if_nonlinear(self):
-        model = ConcreteModel()
-        model.x = Var()
-
-        rep = generate_canonical_repn(Expr_if(IF=model.x, THEN=1.0, ELSE=-1.0))
-        self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
-        self.assertEqual(canonical_degree(rep), None)
-        rep = generate_canonical_repn(Expr_if(IF=1.0,
-                                              THEN=Expr_if(IF=model.x**2, THEN=1.0, ELSE=-1.0),
-                                              ELSE=-1.0))
-        self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
-        self.assertEqual(canonical_degree(rep), None)
-        rep = generate_canonical_repn(Expr_if(IF=model.x**2, THEN=1.0, ELSE=-1.0))
-        self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
-        self.assertEqual(canonical_degree(rep), None)
-
 if __name__ == "__main__":
     unittest.main()
