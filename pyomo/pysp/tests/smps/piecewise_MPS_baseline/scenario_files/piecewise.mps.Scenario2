@@ -58,13 +58,6 @@ COLUMNS
      x19 c_u_x38_ 1
      x2 x20 1
      x2 c_e_x22_ 1
-     x3 c_e_x30_ 1
-     x4 x20 -1
-     x4 c_e_x31_ 1
-     x5 x20 1
-     x5 c_l_x32_ 1
-     x5 r_l_x39_ 1
-     x5 r_u_x39_ 1
      x6 c_e_x21_ -2
      x6 c_u_x27_ -1
      x7 c_e_x21_ -3
@@ -77,6 +70,13 @@ COLUMNS
      x8 c_u_x29_ -1
      x9 c_e_x21_ -3
      x9 c_u_x26_ 1
+     x3 c_e_x30_ 1
+     x4 x20 -1
+     x4 c_e_x31_ 1
+     x5 x20 1
+     x5 c_l_x32_ 1
+     x5 r_l_x39_ 1
+     x5 r_u_x39_ 1
      ONE_VAR_CONSTANT x20 -1
      ONE_VAR_CONSTANT c_e_ONE_VAR_CONSTANT 1
 RHS
@@ -116,13 +116,13 @@ BOUNDS
  BV BOUND x18
  BV BOUND x19
  FR BOUND x2
- LO BOUND x3 -10
- UP BOUND x3 10
- FR BOUND x4
- FR BOUND x5
  MI BOUND x6
  UP BOUND x6 1
  FR BOUND x7
  FR BOUND x8
  LO BOUND x9 0
+ LO BOUND x3 -10
+ UP BOUND x3 10
+ FR BOUND x4
+ FR BOUND x5
 ENDATA

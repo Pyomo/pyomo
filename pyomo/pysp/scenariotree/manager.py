@@ -708,6 +708,7 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
         if self.__class__ is ScenarioTreeManagerClient:
             raise NotImplementedError(
                 "%s is an abstract class for subclassing" % self.__class__)
+        factory = kwds.pop("factory", None)
         super(ScenarioTreeManagerClient, self).__init__(*args, **kwds)
 
         # callback info
@@ -719,8 +720,16 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
         self._postinit_keys = []
         self._postinit_names = []
         self._modules_imported = {}
-        self._generate_scenario_tree()
-        self._import_callbacks()
+        if factory is None:
+            self._generate_scenario_tree()
+            self._import_callbacks()
+        else:
+            self._scenario_tree = factory.generate_scenario_tree(
+                downsample_fraction=self._options.scenario_tree_downsample_fraction,
+                bundles=self._options.scenario_bundle_specification,
+                random_bundles=self._options.create_random_bundles,
+                random_seed=self._options.scenario_tree_random_seed,
+                verbose=self._options.verbose)
 
     def _generate_scenario_tree(self):
 
@@ -849,6 +858,12 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
     def initialize(self, async=False):
         """Initialize the scenario tree manager client.
 
+        Note: Calling complete() on an asynchronous result
+              returned from this method will causes changes
+              in the state of this object. One should avoid
+              using the client until initialization is
+              complete.
+
         Args:
             async:
                  When set to True, the return value will be an
@@ -862,11 +877,6 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
             initial return value (True is most cases). If 'async' is
             set to True, this return value will be nested inside an
             asynchronous object.
-
-        *NOTE: Calling complete() on an asynchronous object returned
-               from this method may causes changes in the object whose
-               method is called. One should avoid using the client
-               until initialization is complete.
         """
         return super(ScenarioTreeManagerClient, self).initialize(async=async)
 
@@ -1843,7 +1853,7 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         self._action_manager.acquire_servers(num_servers, timeout=timeout)
         # extract server options
         server_options = ScenarioTreeServerPyro.\
-                             extract_user_options_to_dict(self._options)
+                         extract_user_options_to_dict(self._options)
         # override these options just in case this instance factory
         # extracted from an archive
         server_options['model_location'] = \

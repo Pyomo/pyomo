@@ -15,6 +15,6 @@ def pysp_instance_creation_callback(scenario_name, node_names):
         model.cc = Constraint(expr=0 <= model.x + model.y <= 2)
     else:
         assert False
-    model.smat = PySP_StochasticRHSAnnotation()
+    model.smat = StochasticConstraintBoundsAnnotation()
     model.smat.declare(model.cc, lb=True, ub=False)
     return model

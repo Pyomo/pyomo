@@ -2,10 +2,11 @@ from pyomo.core import *
 from pyomo.pysp.scenariotree.tree_structure_model import \
     ScenarioTreeModelFromNetworkX
 from pyomo.pysp.annotations import \
-    (PySP_ConstraintStageAnnotation,
-     PySP_StochasticRHSAnnotation,
-     PySP_StochasticMatrixAnnotation,
-     PySP_StochasticObjectiveAnnotation)
+    (ConstraintStageAnnotation,
+     StochasticConstraintBoundsAnnotation,
+     StochasticConstraintBodyAnnotation,
+     StochasticObjectiveAnnotation,
+     StochasticVariableBoundsAnnotation)
 
 def simple_twostage_scenario_tree():
     from pyomo.pysp.scenariotree.tree_structure_model \

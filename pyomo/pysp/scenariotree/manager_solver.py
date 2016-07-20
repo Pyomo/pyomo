@@ -827,8 +827,8 @@ class _ScenarioTreeManagerSolverWorker(_ScenarioTreeManagerWorker,
     # registering the bundle instance with the preprocessor and
     # creating a solver for the bundle
     def _add_bundle_impl(self, bundle_name, scenario_list):
-        super(_ScenarioTreeManagerSolverWorker, self)._add_bundle_impl(bundle_name,
-                                                                       scenario_list)
+        super(_ScenarioTreeManagerSolverWorker, self).\
+            _add_bundle_impl(bundle_name, scenario_list)
         assert bundle_name not in self._bundle_solvers
         self._bundle_solvers[bundle_name] = \
             SolverFactory(self.get_option("solver"),

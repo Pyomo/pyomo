@@ -1,8 +1,7 @@
 from pyomo.core import *
-from pyomo.pysp.annotations import (PySP_ConstraintStageAnnotation,
-                                    PySP_StochasticRHSAnnotation,
-                                    PySP_StochasticMatrixAnnotation,
-                                    PySP_StochasticObjectiveAnnotation)
+from pyomo.pysp.annotations import (StochasticConstraintBoundsAnnotation,
+                                    StochasticConstraintBodyAnnotation,
+                                    StochasticObjectiveAnnotation)
 
 def pysp_scenario_tree_model_callback():
     from pyomo.pysp.scenariotree.tree_structure_model \
@@ -18,6 +17,7 @@ def pysp_scenario_tree_model_callback():
     st_model.StageVariables[first_stage].add('x')
     st_model.StageDerivedVariables[first_stage].add('y')
     st_model.StageDerivedVariables[first_stage].add('fx')
+    st_model.StageDerivedVariables[first_stage].add('p_first_stage')
 
     # Second Stage
     st_model.StageCost[second_stage] = 'StageCost[2]'
@@ -25,6 +25,7 @@ def pysp_scenario_tree_model_callback():
     st_model.StageDerivedVariables[second_stage].add('q')
     st_model.StageDerivedVariables[second_stage].add('fz')
     st_model.StageDerivedVariables[second_stage].add('r')
+    st_model.StageDerivedVariables[first_stage].add('p_second_stage')
 
     return st_model
 
@@ -79,6 +80,7 @@ def create_instance(scenario_name):
                                      pw_repn='INC',
                                      f_rule=[0.,0.,-1.,2.+cnt,1.],
                                      force_pw=True)
+
     return model
 
 def pysp_instance_creation_callback(scenario_name, node_names):
@@ -88,31 +90,17 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     #
     # SMPS Related Annotations
     #
-
-    model.constraint_stage = PySP_ConstraintStageAnnotation()
-    model.constraint_stage.declare(model.c_first_stage, 1)
-    model.constraint_stage.declare(model.p_first_stage, 1)
-    model.constraint_stage.declare(model.c_second_stage, 2)
-    model.constraint_stage.declare(model.r_second_stage, 2)
-    model.constraint_stage.declare(model.p_second_stage, 2)
-
-    # The difficulty with Piecewise is that it hides the
-    # structure of the underlying constraints (there may be
-    # more than one). It doesn't seem possible to direct a
-    # modeler on how to go about tagging specific
-    # constraints.  For this reason, we allow the
-    # PySP_StochasticRHS and PySP_StochasticMatrix suffixes
-    # to contain entries for entire blocks, where we
-    # interpret this as meaning all rhs and constraint
-    # matrix entries should be treated as stochastic.
-    model.stoch_rhs = PySP_StochasticRHSAnnotation()
+    model.stoch_rhs = StochasticConstraintBoundsAnnotation()
+    # declarations can be blocks to imply that all
+    # components (Constraints in this case) should be
+    # considered on that block
     model.stoch_rhs.declare(model.p_second_stage)
     model.stoch_rhs.declare(model.r_second_stage)
-    model.stoch_matrix = PySP_StochasticMatrixAnnotation()
+    model.stoch_matrix = StochasticConstraintBodyAnnotation()
     # exercise more of the code by testing this with an
     # indexed block and a single block
     model.stoch_matrix.declare(model.c_second_stage, variables=[model.r])
     model.stoch_matrix.declare(model.p_second_stage[1])
-    model.stoch_objective = PySP_StochasticObjectiveAnnotation()
+    model.stoch_objective = StochasticObjectiveAnnotation()
 
     return model

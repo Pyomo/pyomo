@@ -28,13 +28,8 @@ ROWS
  L  r_u_r_second_stage_
  E  c_e_ONE_VAR_CONSTANT
 COLUMNS
-     x c_e_p_first_stage_INC_constraint1_ 1
-     x c_l_c_first_stage_ 1
-     x c_l_c_second_stage_ 1
      fx o 1
      fx c_e_p_first_stage_INC_constraint2_ 1
-     fz o -1
-     fz c_e_p_second_stage(1)_INC_constraint2_ 1
      p_first_stage_INC_bin_y(1) c_u_p_first_stage_INC_constraint3(1)_ -1
      p_first_stage_INC_bin_y(1) c_u_p_first_stage_INC_constraint4(1)_ 1
      p_first_stage_INC_bin_y(2) c_u_p_first_stage_INC_constraint3(2)_ -1
@@ -72,6 +67,11 @@ COLUMNS
      p_second_stage(1)_INC_delta(4) c_e_p_second_stage(1)_INC_constraint1_ -5
      p_second_stage(1)_INC_delta(4) c_e_p_second_stage(1)_INC_constraint2_ 3
      p_second_stage(1)_INC_delta(4) c_u_p_second_stage(1)_INC_constraint3(3)_ 1
+     x c_e_p_first_stage_INC_constraint1_ 1
+     x c_l_c_first_stage_ 1
+     x c_l_c_second_stage_ 1
+     fz o -1
+     fz c_e_p_second_stage(1)_INC_constraint2_ 1
      r o 1
      r c_l_c_second_stage_ 2
      r r_l_r_second_stage_ 1
@@ -102,10 +102,7 @@ RHS
      RHS r_u_r_second_stage_ 0
      RHS c_e_ONE_VAR_CONSTANT 1
 BOUNDS
- LO BOUND x 0
- UP BOUND x 10
  FR BOUND fx
- FR BOUND fz
  BV BOUND p_first_stage_INC_bin_y(1)
  BV BOUND p_first_stage_INC_bin_y(2)
  BV BOUND p_first_stage_INC_bin_y(3)
@@ -122,6 +119,9 @@ BOUNDS
  FR BOUND p_second_stage(1)_INC_delta(2)
  FR BOUND p_second_stage(1)_INC_delta(3)
  LO BOUND p_second_stage(1)_INC_delta(4) 0
+ LO BOUND x 0
+ UP BOUND x 10
+ FR BOUND fz
  FR BOUND r
  LO BOUND z -10
  UP BOUND z 10

@@ -11,9 +11,9 @@ pysp_scenario_tree_model_callback = \
 
 def pysp_instance_creation_callback(scenario_name, node_names):
     model = simple_twostage_model()
-    model.srhs = PySP_StochasticRHSAnnotation()
-    model.smat = PySP_StochasticMatrixAnnotation()
-    model.sobj = PySP_StochasticObjectiveAnnotation()
+    model.srhs = StochasticConstraintBoundsAnnotation()
+    model.smat = StochasticConstraintBodyAnnotation()
+    model.sobj = StochasticObjectiveAnnotation()
     if scenario_name == "Scenario1":
         model.x.setlb(0)
     elif scenario_name == "Scenario2":

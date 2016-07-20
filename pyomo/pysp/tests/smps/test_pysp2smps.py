@@ -147,8 +147,7 @@ class TestSMPSSimple(unittest.TestCase):
 
     def test_too_many_declarations(self):
         cmd, output_dir = self._get_cmd(
-            join(thisdir, "model_too_many_declarations.py"),
-            options={'--core-format': 'lp'})
+            join(thisdir, "model_too_many_declarations.py"))
         outfile = output_dir+".out"
         rc = pyutilib.subprocess.run(cmd, outfile=outfile)
         self.assertNotEqual(rc[0], 0)
@@ -156,7 +155,7 @@ class TestSMPSSimple(unittest.TestCase):
             outfile,
             b"RuntimeError: Component b.c was "
             b"assigned multiple declarations in annotation type "
-            b"PySP_StochasticMatrixAnnotation. To correct this "
+            b"StochasticConstraintBodyAnnotation. To correct this "
             b"issue, ensure that multiple container components under "
             b"which the component might be stored \(such as a Block "
             b"and an indexed Constraint\) are not simultaneously set in "
@@ -167,17 +166,31 @@ class TestSMPSSimple(unittest.TestCase):
 
     def test_bad_component_type(self):
         cmd, output_dir = self._get_cmd(
-            join(thisdir, "model_bad_component_type.py"),
-            options={'--core-format': 'lp'})
+            join(thisdir, "model_bad_component_type.py"))
         outfile = output_dir+".out"
         rc = pyutilib.subprocess.run(cmd, outfile=outfile)
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
             b"TypeError: Declarations "
-            b"in annotation type PySP_StochasticMatrixAnnotation "
+            b"in annotation type StochasticConstraintBodyAnnotation "
             b"must be of types Constraint or Block. Invalid type: "
             b"<class 'pyomo.core.base.objective.SimpleObjective'>")
+        shutil.rmtree(output_dir,
+                      ignore_errors=True)
+        os.remove(outfile)
+
+    def test_unsupported_variable_bounds(self):
+        cmd, output_dir = self._get_cmd(
+            join(thisdir, "model_unsupported_variable_bounds.py"))
+        outfile = output_dir+".out"
+        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
+        self.assertNotEqual(rc[0], 0)
+        self._assert_contains(
+            outfile,
+            b"ValueError: The SMPS writer does not currently support "
+            b"stochastic variable bounds. Invalid annotation type: "
+            b"StochasticVariableBoundsAnnotation")
         shutil.rmtree(output_dir,
                       ignore_errors=True)
         os.remove(outfile)
@@ -225,6 +238,7 @@ class _SMPSTesterBase(object):
         options['--traceback'] = None
         options['--keep-scenario-files'] = None
         options['--keep-auxiliary-files'] = None
+        options['--enforce-derived-nonanticipativity'] = None
         class_name, test_name = self.id().split('.')[-2:]
         options['--output-directory'] = \
             join(thisdir, class_name+"."+test_name)

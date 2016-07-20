@@ -12,7 +12,7 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     assert model.find_component("b") is None
     model.b = Block()
     model.b.c = Constraint(expr=model.y == 1)
-    model.smat = PySP_StochasticMatrixAnnotation()
+    model.smat = StochasticConstraintBodyAnnotation()
     model.smat.declare(model.b)
     model.smat.declare(model.b.c)
     return model

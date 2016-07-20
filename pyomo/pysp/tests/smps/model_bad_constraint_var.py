@@ -15,7 +15,7 @@ def pysp_instance_creation_callback(scenario_name, node_names):
         model.cc = Constraint(expr=model.x + 3*model.y >= 1)
     else:
         assert False
-    model.smat = PySP_StochasticMatrixAnnotation()
+    model.smat = StochasticConstraintBodyAnnotation()
     model.smat.declare(model.cc,
                        variables=(model.x,))
     return model

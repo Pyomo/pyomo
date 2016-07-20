@@ -27,23 +27,23 @@ ROWS
     c_e_ONE_VAR_CONSTANT TIME2
 COLS
     x1 TIME1
-    x10 TIME2
-    x11 TIME2
-    x12 TIME2
-    x13 TIME2
-    x14 TIME2
-    x15 TIME2
-    x16 TIME2
-    x17 TIME2
-    x18 TIME2
-    x19 TIME2
-    x2 TIME2
+    x10 TIME1
+    x11 TIME1
+    x12 TIME1
+    x13 TIME1
+    x14 TIME1
+    x15 TIME1
+    x16 TIME1
+    x17 TIME1
+    x18 TIME1
+    x19 TIME1
+    x2 TIME1
+    x6 TIME1
+    x7 TIME1
+    x8 TIME1
+    x9 TIME1
     x3 TIME2
     x4 TIME2
     x5 TIME2
-    x6 TIME2
-    x7 TIME2
-    x8 TIME2
-    x9 TIME2
     ONE_VAR_CONSTANT TIME2
 ENDATA

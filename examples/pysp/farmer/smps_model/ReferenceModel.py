@@ -14,8 +14,7 @@
 #
 
 from pyomo.core import *
-from pyomo.pysp.annotations import (PySP_ConstraintStageAnnotation,
-                                    PySP_StochasticMatrixAnnotation)
+from pyomo.pysp.annotations import StochasticConstraintBodyAnnotation
 
 #
 # Model
@@ -128,20 +127,9 @@ model.Total_Cost_Objective = Objective(rule=total_cost_rule,
 
 def declare_annotations_rule(model):
     #
-    # Annotate constraint stages
-    #
-    model.constraint_stage = PySP_ConstraintStageAnnotation()
-    # first-stage constraints
-    model.constraint_stage.declare(model.ConstrainTotalAcreage, 1)
-    # second-stage constraints
-    model.constraint_stage.declare(model.EnforceQuotas, 2)
-    model.constraint_stage.declare(model.EnforceCattleFeedRequirement, 2)
-    model.constraint_stage.declare(model.LimitAmountSold, 2)
-
-    #
     # Annotate stochastic constraint matrix coefficients
     #
-    model.stoch_matrix = PySP_StochasticMatrixAnnotation()
+    model.stoch_matrix = StochasticConstraintBodyAnnotation()
     # DevotedAcreage[i] has a stochastic coefficient in two constraints
     for i in model.CROPS:
         model.stoch_matrix.declare(model.EnforceCattleFeedRequirement[i],

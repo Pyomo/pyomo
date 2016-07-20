@@ -338,7 +338,6 @@ class ScenarioTreeNode(object):
         # NOTE: At some point we should check that the index sets
         #       across all scenarios at a node actually match for each
         #       variable.
-
         self._variable_indices.setdefault(
             component_name, []).extend(new_match_indices)
 
@@ -1723,7 +1722,7 @@ class ScenarioTree(object):
                     cost_expr_name = "_PySP_UserCostExpression"
                     cost_expr = Expression(name=cost_expr_name,
                                            initialize=user_objective.expr)
-                    scenario_instance.add_component(cost_expr_name,cost_expr)
+                    scenario_instance.add_component(cost_expr_name, cost_expr)
                     scenario._instance_cost_expression = cost_expr
 
                     # We have wrapped the original objective expression

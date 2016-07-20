@@ -9,7 +9,7 @@ pysp_scenario_tree_model_callback = \
 
 def pysp_instance_creation_callback(scenario_name, node_names):
     model = simple_twostage_model()
-    model.sobj = PySP_StochasticObjectiveAnnotation()
+    model.sobj = StochasticObjectiveAnnotation()
     model.sobj.declare(model.o, include_constant=False)
     if scenario_name == "Scenario1":
         model.o.expr = model.o.expr + 0

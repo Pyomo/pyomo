@@ -17,10 +17,10 @@ BLOCKS DISCRETE REPLACE
     p_second_stage(1)_INC_delta(3)    c_e_p_second_stage(1)_INC_constraint1_    -5
     p_second_stage(1)_INC_delta(4)    c_e_p_second_stage(1)_INC_constraint1_    -5
     z    c_e_p_second_stage(1)_INC_constraint1_    1
-    fz    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_delta(2)    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_delta(3)    c_e_p_second_stage(1)_INC_constraint2_    -3
     p_second_stage(1)_INC_delta(4)    c_e_p_second_stage(1)_INC_constraint2_    1
+    fz    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_bin_y(1)    c_u_p_second_stage(1)_INC_constraint3(1)_    -1
     p_second_stage(1)_INC_delta(2)    c_u_p_second_stage(1)_INC_constraint3(1)_    1
     p_second_stage(1)_INC_bin_y(2)    c_u_p_second_stage(1)_INC_constraint3(2)_    -1
@@ -54,10 +54,10 @@ BLOCKS DISCRETE REPLACE
     p_second_stage(1)_INC_delta(3)    c_e_p_second_stage(1)_INC_constraint1_    -5
     p_second_stage(1)_INC_delta(4)    c_e_p_second_stage(1)_INC_constraint1_    -5
     z    c_e_p_second_stage(1)_INC_constraint1_    1
-    fz    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_delta(2)    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_delta(3)    c_e_p_second_stage(1)_INC_constraint2_    -4
     p_second_stage(1)_INC_delta(4)    c_e_p_second_stage(1)_INC_constraint2_    2
+    fz    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_bin_y(1)    c_u_p_second_stage(1)_INC_constraint3(1)_    -1
     p_second_stage(1)_INC_delta(2)    c_u_p_second_stage(1)_INC_constraint3(1)_    1
     p_second_stage(1)_INC_bin_y(2)    c_u_p_second_stage(1)_INC_constraint3(2)_    -1
@@ -91,10 +91,10 @@ BLOCKS DISCRETE REPLACE
     p_second_stage(1)_INC_delta(3)    c_e_p_second_stage(1)_INC_constraint1_    -5
     p_second_stage(1)_INC_delta(4)    c_e_p_second_stage(1)_INC_constraint1_    -5
     z    c_e_p_second_stage(1)_INC_constraint1_    1
-    fz    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_delta(2)    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_delta(3)    c_e_p_second_stage(1)_INC_constraint2_    -5
     p_second_stage(1)_INC_delta(4)    c_e_p_second_stage(1)_INC_constraint2_    3
+    fz    c_e_p_second_stage(1)_INC_constraint2_    1
     p_second_stage(1)_INC_bin_y(1)    c_u_p_second_stage(1)_INC_constraint3(1)_    -1
     p_second_stage(1)_INC_delta(2)    c_u_p_second_stage(1)_INC_constraint3(1)_    1
     p_second_stage(1)_INC_bin_y(2)    c_u_p_second_stage(1)_INC_constraint3(2)_    -1

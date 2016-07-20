@@ -12,8 +12,7 @@
 
 import itertools
 
-from pyomo.pysp.annotations import (PySP_ConstraintStageAnnotation,
-                                    PySP_StochasticRHSAnnotation)
+from pyomo.pysp.annotations import StochasticConstraintBoundsAnnotation
 
 #
 # Import the reference model
@@ -26,13 +25,7 @@ from baa99_basemodel import model
 # in this file
 #
 
-model.constraint_stage = PySP_ConstraintStageAnnotation()
-model.constraint_stage.declare(model.s1, 2)
-model.constraint_stage.declare(model.s2, 2)
-model.constraint_stage.declare(model.d1, 2)
-model.constraint_stage.declare(model.d2, 2)
-
-model.stoch_rhs = PySP_StochasticRHSAnnotation()
+model.stoch_rhs = StochasticConstraintBoundsAnnotation()
 model.stoch_rhs.declare(model.d1)
 model.stoch_rhs.declare(model.d2)
 

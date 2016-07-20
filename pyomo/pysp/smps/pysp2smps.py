@@ -50,7 +50,6 @@ def pysp2smps_register_options(options=None):
     safe_register_common_option(options, "traceback")
     safe_register_common_option(options, "verbose")
     safe_register_common_option(options, "symbolic_solver_labels")
-    safe_register_common_option(options, "file_determinism")
     safe_register_unique_option(
         options,
         "explicit",
@@ -98,6 +97,21 @@ def pysp2smps_register_options(options=None):
             description=(
                 "The basename to use for all SMPS related output "
                 "files. ** Required **"
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_unique_option(
+        options,
+        "enforce_derived_nonanticipativity",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Adds nonanticipativity constraints for variables flagged "
+                "as derived within their respective time stage (except for "
+                "the final time stage). The default behavior behavior is "
+                "to treat derived variables as belonging to the final "
+                "time stage."
             ),
             doc=None,
             visibility=0))
@@ -167,9 +181,7 @@ def run_pysp2smps(options):
     start_time = time.time()
 
     io_options = {'symbolic_solver_labels':
-                  options.symbolic_solver_labels,
-                  'file_determinism':
-                  options.file_determinism}
+                  options.symbolic_solver_labels}
 
     if options.compile_scenario_instances:
         raise ValueError("The pysp2smps script does not allow the "
@@ -194,8 +206,11 @@ def run_pysp2smps(options):
                 options.basename,
                 scenario_tree_manager,
                 core_format=options.core_format,
+                enforce_derived_nonanticipativity=\
+                  options.enforce_derived_nonanticipativity,
                 io_options=io_options,
-                disable_consistency_checks=options.disable_consistency_checks,
+                disable_consistency_checks=\
+                  options.disable_consistency_checks,
                 keep_scenario_files=options.keep_scenario_files,
                 keep_auxiliary_files=options.keep_auxiliary_files,
                 verbose=options.verbose)
