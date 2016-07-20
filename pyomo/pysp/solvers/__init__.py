@@ -11,3 +11,8 @@ import pyomo.pysp.solvers.spsolver
 from pyomo.pysp.solvers.spsolver import SPSolverFactory
 
 import pyomo.pysp.solvers.sd
+import pyomo.pysp.solvers.admm
+import pyomo.pysp.solvers.benders
+import pyomo.pysp.solvers.ef
+import pyomo.pysp.solvers.schuripopt
+import pyomo.pysp.solvers.ddsip

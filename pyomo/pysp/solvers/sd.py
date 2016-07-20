@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-# TODO silence pysp2smps
 # TODO Fix the seed defaults. The I think the default
 #      behavior should be to provide no needs and enable
 #      AUTO_SEED. There are so many seeds to provide that
@@ -22,7 +21,7 @@ import sys
 import time
 
 import pyutilib.subprocess
-from pyutilib.services import registered_executable, TempfileManager
+import pyutilib.services
 
 from pyomo.util import pyomo_command
 from pyomo.core import maximize
@@ -195,13 +194,16 @@ class SDSolver(SPSolver, PySPConfiguredObject):
             options = PySPConfigBlock()
         safe_register_unique_option(
             options,
-            "sd_executable",
+            "executable",
             PySPConfigValue(
                 "sd",
                 domain=_domain_must_be_str,
                 description=(
                     "Name of the executable used when launching the "
-                    "SD solver. By default, the name 'sd' will be used."
+                    "SD solver. The default is 'sd'. This "
+                    "option can be set to an absolute or relative path. "
+                    "Otherwise, it is assumed that the named executable "
+                    "will be found in the shell's search path."
                 ),
                 doc=None,
                 visibility=0),
@@ -346,12 +348,6 @@ class SDSolver(SPSolver, PySPConfiguredObject):
 
         return options
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
-
     def __init__(self, *args, **kwds):
         super(SDSolver, self).__init__(*args, **kwds)
         self._name = "sd"
@@ -370,14 +366,15 @@ class SDSolver(SPSolver, PySPConfiguredObject):
             raise ValueError("SD solver does not yet handle "
                              "maximization problems")
 
-        TempfileManager.push()
+        pyutilib.services.TempfileManager.push()
         try:
 
             #
             # Setup the SD working directory
             #
 
-            working_directory = TempfileManager.create_tempdir()
+            working_directory = pyutilib.services.\
+                                TempfileManager.create_tempdir()
             config_filename = os.path.join(working_directory,
                                            "config.sd")
             sdinput_directory = os.path.join(working_directory,
@@ -439,7 +436,7 @@ class SDSolver(SPSolver, PySPConfiguredObject):
 
             start = time.time()
             rc, log = pyutilib.subprocess.run(
-                self.get_option("sd_executable"),
+                self.get_option("executable"),
                 cwd=working_directory,
                 stdin="pysp_model",
                 outfile=logfile,
@@ -461,9 +458,6 @@ class SDSolver(SPSolver, PySPConfiguredObject):
                 for symbol, varvalue in xhat.items():
                     symbol_map.bySymbol[symbol]().value = varvalue
             else:
-                # TODO: this is a hack for the non-implicit SP case
-                #       so that this solver can still be run using
-                #       the explicit scenario intput representation
                 results.xhat = xhat
 
         finally:
@@ -471,7 +465,7 @@ class SDSolver(SPSolver, PySPConfiguredObject):
             #
             # cleanup
             #
-            TempfileManager.pop(
+            pyutilib.services.TempfileManager.pop(
                 remove=not keep_solver_files)
 
         return results
@@ -613,36 +607,38 @@ def runsd_register_options(options=None):
                                "profile")
     safe_register_common_option(options,
                                "traceback")
+    safe_register_common_option(options,
+                                "output_scenario_tree_solution")
     ScenarioTreeManagerFactory.register_options(options)
     SDSolver.register_options(options)
 
     return options
 
-#
-# Construct a senario tree manager and solve it
-# with the SDSolver.
-#
-
 def runsd(options):
-    import pyomo.environ
-
+    """
+    Construct a senario tree manager and solve it
+    with the SD solver.
+    """
     start_time = time.time()
-
     with ScenarioTreeManagerFactory(options) \
          as manager:
         manager.initialize()
         print("")
         print("Running SD solver for stochastic "
               "programming problems")
-        with SDSolver(options) as sd:
-            results = sd.solve(manager)
-
+        sd = SDSolver(options)
+        results = sd.solve(manager,
+                           output_solver_log=True)
         print(results)
+
+        if options.output_scenario_tree_solution:
+            print("Final solution (scenario tree format):")
+            manager.scenario_tree.snapshotSolutionFromScenarios()
+            manager.scenario_tree.pprintSolution()
 
     print("")
     print("Total execution time=%.2f seconds"
           % (time.time() - start_time))
-
     return 0
 
 #

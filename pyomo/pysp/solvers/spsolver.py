@@ -54,16 +54,13 @@ class SPSolver(PySPConfiguredObject):
         super(SPSolver, self).__init__(*args, **kwds)
         self._name = None
 
-    def solve(self, *args, **kwds):
-        raise NotImplementedError
-
     @property
     def options(self):
         return self._options
 
     @property
     def name(self):
-        self._name
+        return self._name
 
     def solve(self, sp, *args, **kwds):
 
