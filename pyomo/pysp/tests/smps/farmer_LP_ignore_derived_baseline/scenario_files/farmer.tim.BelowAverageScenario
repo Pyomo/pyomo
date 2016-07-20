@@ -1,0 +1,35 @@
+TIME farmer
+PERIODS EXPLICIT
+    TIME1
+    TIME2
+ROWS
+    x13 TIME1
+    c_u_x14_ TIME1
+    c_l_x15_ TIME2
+    c_l_x16_ TIME2
+    c_l_x17_ TIME2
+    c_u_x18_ TIME2
+    c_u_x19_ TIME2
+    c_u_x20_ TIME2
+    r_l_x21_ TIME2
+    r_u_x21_ TIME2
+    r_l_x22_ TIME2
+    r_u_x22_ TIME2
+    r_l_x23_ TIME2
+    r_u_x23_ TIME2
+    c_e_ONE_VAR_CONSTANT TIME2
+COLS
+    x1 TIME1
+    x2 TIME1
+    x3 TIME1
+    x10 TIME2
+    x11 TIME2
+    x12 TIME2
+    x4 TIME2
+    x5 TIME2
+    x6 TIME2
+    x7 TIME2
+    x8 TIME2
+    x9 TIME2
+    ONE_VAR_CONSTANT TIME2
+ENDATA

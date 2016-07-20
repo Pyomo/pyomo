@@ -9,12 +9,16 @@ o:
 
 s.t.
 
+c_l_c_first_stage_:
++1 x
+>= 0
+
 c_e_p_first_stage_INC_constraint1_:
++1 x
 -2 p_first_stage_INC_delta(1)
 -3 p_first_stage_INC_delta(2)
 -2 p_first_stage_INC_delta(3)
 -3 p_first_stage_INC_delta(4)
-+1 x
 = 0
 
 c_e_p_first_stage_INC_constraint2_:
@@ -23,9 +27,25 @@ c_e_p_first_stage_INC_constraint2_:
 -1 p_first_stage_INC_delta(3)
 = 10
 
-c_l_c_first_stage_:
+c_e_p_second_stage(1)_INC_constraint1_:
+-5 p_second_stage(1)_INC_delta(1)
+-5 p_second_stage(1)_INC_delta(2)
+-5 p_second_stage(1)_INC_delta(3)
+-5 p_second_stage(1)_INC_delta(4)
++1 z
+= -10
+
+c_e_p_second_stage(1)_INC_constraint2_:
++1 fz
++1 p_second_stage(1)_INC_delta(2)
+-4 p_second_stage(1)_INC_delta(3)
++2 p_second_stage(1)_INC_delta(4)
+= 0
+
+c_l_c_second_stage_:
 +1 x
->= 0
++1 r
+>= -100
 
 c_u_p_first_stage_INC_constraint3(1)_:
 -1 p_first_stage_INC_bin_y(1)
@@ -56,26 +76,6 @@ c_u_p_first_stage_INC_constraint4(3)_:
 +1 p_first_stage_INC_bin_y(3)
 -1 p_first_stage_INC_delta(3)
 <= 0
-
-c_e_p_second_stage(1)_INC_constraint1_:
--5 p_second_stage(1)_INC_delta(1)
--5 p_second_stage(1)_INC_delta(2)
--5 p_second_stage(1)_INC_delta(3)
--5 p_second_stage(1)_INC_delta(4)
-+1 z
-= -10
-
-c_e_p_second_stage(1)_INC_constraint2_:
-+1 p_second_stage(1)_INC_delta(2)
--4 p_second_stage(1)_INC_delta(3)
-+2 p_second_stage(1)_INC_delta(4)
-+1 fz
-= 0
-
-c_l_c_second_stage_:
-+1 x
-+1 r
->= -100
 
 c_u_p_second_stage(1)_INC_constraint3(1)_:
 -1 p_second_stage(1)_INC_bin_y(1)

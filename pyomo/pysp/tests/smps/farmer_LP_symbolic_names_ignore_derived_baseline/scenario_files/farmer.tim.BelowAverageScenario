@@ -1,0 +1,35 @@
+TIME farmer
+PERIODS EXPLICIT
+    TIME1
+    TIME2
+ROWS
+    Total_Cost_Objective TIME1
+    c_u_ConstrainTotalAcreage_ TIME1
+    c_l_EnforceCattleFeedRequirement(CORN)_ TIME2
+    c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_ TIME2
+    c_l_EnforceCattleFeedRequirement(WHEAT)_ TIME2
+    c_u_LimitAmountSold(CORN)_ TIME2
+    c_u_LimitAmountSold(SUGAR_BEETS)_ TIME2
+    c_u_LimitAmountSold(WHEAT)_ TIME2
+    r_l_EnforceQuotas(CORN)_ TIME2
+    r_u_EnforceQuotas(CORN)_ TIME2
+    r_l_EnforceQuotas(SUGAR_BEETS)_ TIME2
+    r_u_EnforceQuotas(SUGAR_BEETS)_ TIME2
+    r_l_EnforceQuotas(WHEAT)_ TIME2
+    r_u_EnforceQuotas(WHEAT)_ TIME2
+    c_e_ONE_VAR_CONSTANT TIME2
+COLS
+    DevotedAcreage(CORN) TIME1
+    DevotedAcreage(SUGAR_BEETS) TIME1
+    DevotedAcreage(WHEAT) TIME1
+    QuantityPurchased(CORN) TIME2
+    QuantityPurchased(SUGAR_BEETS) TIME2
+    QuantityPurchased(WHEAT) TIME2
+    QuantitySubQuotaSold(CORN) TIME2
+    QuantitySubQuotaSold(SUGAR_BEETS) TIME2
+    QuantitySubQuotaSold(WHEAT) TIME2
+    QuantitySuperQuotaSold(CORN) TIME2
+    QuantitySuperQuotaSold(SUGAR_BEETS) TIME2
+    QuantitySuperQuotaSold(WHEAT) TIME2
+    ONE_VAR_CONSTANT TIME2
+ENDATA

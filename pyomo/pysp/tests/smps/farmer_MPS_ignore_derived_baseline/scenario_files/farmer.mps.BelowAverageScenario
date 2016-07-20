@@ -1,0 +1,97 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME BelowAverageScenario
+OBJSENSE
+ MIN
+ROWS
+ N  x13
+ L  c_u_x14_
+ G  c_l_x15_
+ G  c_l_x16_
+ G  c_l_x17_
+ L  c_u_x18_
+ L  c_u_x19_
+ L  c_u_x20_
+ G  r_l_x21_
+ L  r_u_x21_
+ G  r_l_x22_
+ L  r_u_x22_
+ G  r_l_x23_
+ L  r_u_x23_
+ E  c_e_ONE_VAR_CONSTANT
+COLUMNS
+     x1 x13 230
+     x1 c_u_x14_ 1
+     x1 c_l_x15_ 2.3999999999999999
+     x1 c_u_x18_ -2.3999999999999999
+     x2 x13 260
+     x2 c_u_x14_ 1
+     x2 c_l_x16_ 16
+     x2 c_u_x19_ -16
+     x3 x13 150
+     x3 c_u_x14_ 1
+     x3 c_l_x17_ 2
+     x3 c_u_x20_ -2
+     x10 x13 210
+     x10 c_l_x15_ 1
+     x11 x13 100000
+     x11 c_l_x16_ 1
+     x12 x13 238
+     x12 c_l_x17_ 1
+     x4 x13 -150
+     x4 c_l_x15_ -1
+     x4 c_u_x18_ 1
+     x4 r_l_x21_ 1
+     x4 r_u_x21_ 1
+     x5 x13 -36
+     x5 c_l_x16_ -1
+     x5 c_u_x19_ 1
+     x5 r_l_x22_ 1
+     x5 r_u_x22_ 1
+     x6 x13 -170
+     x6 c_l_x17_ -1
+     x6 c_u_x20_ 1
+     x6 r_l_x23_ 1
+     x6 r_u_x23_ 1
+     x7 c_l_x15_ -1
+     x7 c_u_x18_ 1
+     x8 x13 -10
+     x8 c_l_x16_ -1
+     x8 c_u_x19_ 1
+     x9 c_l_x17_ -1
+     x9 c_u_x20_ 1
+     ONE_VAR_CONSTANT x13 0
+     ONE_VAR_CONSTANT c_e_ONE_VAR_CONSTANT 1
+RHS
+     RHS c_u_x14_ 500
+     RHS c_l_x15_ 240
+     RHS c_l_x16_ 0
+     RHS c_l_x17_ 200
+     RHS c_u_x18_ 0
+     RHS c_u_x19_ 0
+     RHS c_u_x20_ 0
+     RHS r_l_x21_ 0
+     RHS r_u_x21_ 100000
+     RHS r_l_x22_ 0
+     RHS r_u_x22_ 6000
+     RHS r_l_x23_ 0
+     RHS r_u_x23_ 100000
+     RHS c_e_ONE_VAR_CONSTANT 1
+BOUNDS
+ LO BOUND x1 0
+ UP BOUND x1 500
+ LO BOUND x2 0
+ UP BOUND x2 500
+ LO BOUND x3 0
+ UP BOUND x3 500
+ LO BOUND x10 0
+ LO BOUND x11 0
+ LO BOUND x12 0
+ LO BOUND x4 0
+ LO BOUND x5 0
+ LO BOUND x6 0
+ LO BOUND x7 0
+ LO BOUND x8 0
+ LO BOUND x9 0
+ENDATA

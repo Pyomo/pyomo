@@ -1,0 +1,128 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME Scenario2
+OBJSENSE
+ MIN
+ROWS
+ N  x20
+ G  c_l_x21_
+ G  c_l_x22_
+ G  r_l_x23_
+ L  r_u_x23_
+ E  c_e_x24_
+ E  c_e_x25_
+ L  c_u_x26_
+ L  c_u_x27_
+ L  c_u_x28_
+ L  c_u_x29_
+ L  c_u_x30_
+ L  c_u_x31_
+ E  c_e_x32_
+ E  c_e_x33_
+ L  c_u_x34_
+ L  c_u_x35_
+ L  c_u_x36_
+ L  c_u_x37_
+ L  c_u_x38_
+ L  c_u_x39_
+ E  c_e_ONE_VAR_CONSTANT
+COLUMNS
+     x1 c_l_x21_ 1
+     x1 c_l_x22_ 1
+     x1 c_e_x24_ 1
+     x2 x20 1
+     x2 c_e_x25_ 1
+     x3 c_e_x32_ 1
+     x4 x20 -1
+     x4 c_e_x33_ 1
+     x5 x20 1
+     x5 c_l_x22_ 1
+     x5 r_l_x23_ 1
+     x5 r_u_x23_ 1
+     x6 c_e_x24_ -2
+     x6 c_u_x29_ -1
+     x7 c_e_x24_ -3
+     x7 c_e_x25_ 1
+     x7 c_u_x26_ 1
+     x7 c_u_x30_ -1
+     x8 c_e_x24_ -2
+     x8 c_e_x25_ -1
+     x8 c_u_x27_ 1
+     x8 c_u_x31_ -1
+     x9 c_e_x24_ -3
+     x9 c_u_x28_ 1
+     x10 c_u_x26_ -1
+     x10 c_u_x29_ 1
+     x11 c_u_x27_ -1
+     x11 c_u_x30_ 1
+     x12 c_u_x28_ -1
+     x12 c_u_x31_ 1
+     x13 c_e_x32_ -5
+     x13 c_u_x37_ -1
+     x14 c_e_x32_ -5
+     x14 c_e_x33_ 1
+     x14 c_u_x34_ 1
+     x14 c_u_x38_ -1
+     x15 c_e_x32_ -5
+     x15 c_e_x33_ -4
+     x15 c_u_x35_ 1
+     x15 c_u_x39_ -1
+     x16 c_e_x32_ -5
+     x16 c_e_x33_ 2
+     x16 c_u_x36_ 1
+     x17 c_u_x34_ -1
+     x17 c_u_x37_ 1
+     x18 c_u_x35_ -1
+     x18 c_u_x38_ 1
+     x19 c_u_x36_ -1
+     x19 c_u_x39_ 1
+     ONE_VAR_CONSTANT x20 -1
+     ONE_VAR_CONSTANT c_e_ONE_VAR_CONSTANT 1
+RHS
+     RHS c_l_x21_ 0
+     RHS c_l_x22_ -100
+     RHS r_l_x23_ -1
+     RHS r_u_x23_ 0
+     RHS c_e_x24_ 0
+     RHS c_e_x25_ 10
+     RHS c_u_x26_ 0
+     RHS c_u_x27_ 0
+     RHS c_u_x28_ 0
+     RHS c_u_x29_ 0
+     RHS c_u_x30_ 0
+     RHS c_u_x31_ 0
+     RHS c_e_x32_ -10
+     RHS c_e_x33_ 0
+     RHS c_u_x34_ 0
+     RHS c_u_x35_ 0
+     RHS c_u_x36_ 0
+     RHS c_u_x37_ 0
+     RHS c_u_x38_ 0
+     RHS c_u_x39_ 0
+     RHS c_e_ONE_VAR_CONSTANT 1
+BOUNDS
+ LO BOUND x1 0
+ UP BOUND x1 10
+ FR BOUND x2
+ LO BOUND x3 -10
+ UP BOUND x3 10
+ FR BOUND x4
+ FR BOUND x5
+ MI BOUND x6
+ UP BOUND x6 1
+ FR BOUND x7
+ FR BOUND x8
+ LO BOUND x9 0
+ BV BOUND x10
+ BV BOUND x11
+ BV BOUND x12
+ MI BOUND x13
+ UP BOUND x13 1
+ FR BOUND x14
+ FR BOUND x15
+ LO BOUND x16 0
+ BV BOUND x17
+ BV BOUND x18
+ BV BOUND x19
+ENDATA

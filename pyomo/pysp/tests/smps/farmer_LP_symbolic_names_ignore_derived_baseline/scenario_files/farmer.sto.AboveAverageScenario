@@ -1,0 +1,7 @@
+ BL BLOCK1 PERIOD2 0.33333332999999998
+    DevotedAcreage(CORN)    c_l_EnforceCattleFeedRequirement(CORN)_    3.6000000000000001
+    DevotedAcreage(SUGAR_BEETS)    c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_    24
+    DevotedAcreage(WHEAT)    c_l_EnforceCattleFeedRequirement(WHEAT)_    3
+    DevotedAcreage(CORN)    c_u_LimitAmountSold(CORN)_    -3.6000000000000001
+    DevotedAcreage(SUGAR_BEETS)    c_u_LimitAmountSold(SUGAR_BEETS)_    -24
+    DevotedAcreage(WHEAT)    c_u_LimitAmountSold(WHEAT)_    -3

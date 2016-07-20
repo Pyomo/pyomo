@@ -1,5 +1,5 @@
 TIME piecewise
 PERIODS IMPLICIT
     x1 x20 TIME1
-    x3 c_e_x30_ TIME2
+    x10 c_e_x22_ TIME2
 ENDATA
