@@ -4,9 +4,9 @@ indexed1
         [1, 2, 3]
 
 1 Var Declarations
-    x : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :  None :  None :  None : False :  True
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
 
 1 Objective Declarations
     o : Size=1, Index=None, Active=True
@@ -36,19 +36,19 @@ True
 False
 blocks1
 1 Var Declarations
-    x : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :  None :  None :  None : False :  True
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
 
 1 Block Declarations
     b : Size=1, Index=None, Active=True
         2 Var Declarations
-            x : Size=1, Index=None, Domain=Reals
-                Key  : Lower : Value : Upper : Fixed : Stale
-                None :  None :  None :  None : False :  True
-            y : Size=1, Index=None, Domain=Reals
-                Key  : Lower : Value : Upper : Fixed : Stale
-                None :  None :  None :  None : False :  True
+            x : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            y : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
 
         2 Declarations: x y
 
@@ -64,22 +64,31 @@ False
 True
 [1, 3]
 [1, 2, 3]
-1
-1
-indexed2
-[1, 3]
+1.42
+1.42
+special2
+3
+3
+True
+True
 [1, 2, 3]
-[(1, 1), (3, 3)]
-[(1, 1), (2, 0), (3, 3)]
-[1, 3]
-[1, 0, 3]
+[1, 2, 3]
+p[1]
+q[1]
+indexed2
+3
+True
+False
+[1, 2, 3]
+1.42
+[1, 2, 3]
 indexed3
 [1, 3]
 [1, 2, 3]
-[(1, 1), (3, 3)]
-[(1, 1), (2, 0), (3, 3)]
-[1, 3]
-[1, 0, 3]
+[(1, 1.42), (3, 3.14)]
+[(1, 1.42), (2, 0), (3, 3.14)]
+[1.42, 3.14]
+[1.42, 0, 3.14]
 indexed4
 [1, 2]
 [(1, 3), (1, 4), (2, 3), (2, 4)]
