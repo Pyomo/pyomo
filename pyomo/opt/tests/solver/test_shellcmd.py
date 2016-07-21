@@ -39,6 +39,15 @@ isexe_relpath = (os.path.curdir + os.path.sep + \
 
 is_windows = os.name == 'nt'
 
+print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+import os
+print("os.name: "+str(os.name))
+import platform
+print("platform.system: "+str(platform.system()))
+import sys
+print("sys.platform: "+str(sys.platform))
+print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+
 class Test(unittest.TestCase):
 
     @classmethod
