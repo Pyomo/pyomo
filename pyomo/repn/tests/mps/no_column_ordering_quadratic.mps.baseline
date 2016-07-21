@@ -1,0 +1,43 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME unknown
+OBJSENSE
+ MIN
+ROWS
+ N  obj
+ L  c_u_con_
+COLUMNS
+     a obj 1
+     a c_u_con_ 1
+     b obj 1
+     b c_u_con_ 1
+     c obj 1
+     c c_u_con_ 1
+RHS
+     RHS c_u_con_ 1
+BOUNDS
+ FR BOUND a
+ FR BOUND b
+ FR BOUND c
+QUADOBJ
+     a a 2
+     a b 1
+     b a 1
+     a c 1
+     c a 1
+     b b 2
+     b c 1
+     c b 1
+     c c 2
+QCMATRIX    c_u_con_
+     a a 1
+     a b 0.5
+     b a 0.5
+     a c 0.5
+     c a 0.5
+     b b 1
+     b c 0.5
+     c b 0.5
+     c c 1
+ENDATA

@@ -35,6 +35,12 @@ from pyomo.repn import (generate_canonical_repn,
 
 logger = logging.getLogger('pyomo.core')
 
+def _no_negative_zero(val):
+    """Make sure -0 is never output. Makes diff tests easier."""
+    if val == 0:
+        return 0
+    return val
+
 class ProblemWriter_mps(AbstractProblemWriter):
 
     pyomo.util.plugin.alias('mps', 'Generate the corresponding MPS file')
@@ -262,7 +268,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     "proceed." % (soscondata.cname(True), vardata.cname(True)))
             self._referenced_variable_ids[id(vardata)] = vardata
             output_file.write(sos_template_string
-                              % (variable_symbol_map.getSymbol(vardata), weight))
+                              % (variable_symbol_map.getSymbol(vardata),
+                                 weight))
 
     def _print_model_MPS(self,
                          model,
@@ -498,7 +505,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     variable_to_column)
                 bound = constraint_data.lower
                 bound = self._get_bound(bound) - offset
-                rhs_data.append((label, bound))
+                rhs_data.append((label, _no_negative_zero(bound)))
             else:
                 if constraint_data.lower is not None:
                     if constraint_data.upper is not None:
@@ -515,7 +522,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         variable_to_column)
                     bound = constraint_data.lower
                     bound = self._get_bound(bound) - offset
-                    rhs_data.append((label, bound))
+                    rhs_data.append((label, _no_negative_zero(bound)))
                 if constraint_data.upper is not None:
                     if constraint_data.lower is not None:
                         label = 'r_u_' + con_symbol + '_'
@@ -531,7 +538,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         variable_to_column)
                     bound = constraint_data.upper
                     bound = self._get_bound(bound) - offset
-                    rhs_data.append((label, bound))
+                    rhs_data.append((label, _no_negative_zero(bound)))
 
         if len(column_data[-1]) > 0:
             # ONE_VAR_CONSTANT = 1
@@ -551,9 +558,10 @@ class ProblemWriter_mps(AbstractProblemWriter):
             if len(col_entries) > 0:
                 var_label = variable_symbol_dictionary[id(vardata)]
                 for i, (row_label, coef) in enumerate(col_entries):
-                    output_file.write(column_template % (var_label,
-                                                         row_label,
-                                                         coef))
+                    output_file.write(column_template
+                                      % (var_label,
+                                         row_label,
+                                         _no_negative_zero(coef)))
             elif include_all_variable_bounds:
                 # the column is empty, so add a (0 * var)
                 # term to the objective
@@ -563,18 +571,20 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 #   seem to work for CPLEX 12.6, so I am
                 #   doing it this way so that it will work for both
                 var_label = variable_symbol_dictionary[id(vardata)]
-                output_file.write(column_template % (var_label,
-                                                     objective_label,
-                                                     0))
+                output_file.write(column_template
+                                  % (var_label,
+                                     objective_label,
+                                     0))
 
         assert cnt == len(column_data)-1
         if len(column_data[-1]) > 0:
             col_entries = column_data[-1]
             var_label = "ONE_VAR_CONSTANT"
             for i, (row_label, coef) in enumerate(col_entries):
-                output_file.write(column_template % (var_label,
-                                                     row_label,
-                                                     coef))
+                output_file.write(column_template
+                                  % (var_label,
+                                     row_label,
+                                     _no_negative_zero(coef)))
 
         #
         # RHS section
@@ -582,6 +592,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         rhs_template = "     RHS %s %"+self._precision_string+"\n"
         output_file.write("RHS\n")
         for i, (row_label, rhs) in enumerate(rhs_data):
+            # note: we have already converted any -0 to 0 by this point
             output_file.write(rhs_template % (row_label, rhs))
 
         # SOS constraints
@@ -636,19 +647,13 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     if vardata.value is None:
                         raise ValueError("Variable cannot be fixed to a value of None.")
                     output_file.write((" FX BOUND "+entry_template)
-                                      % (var_label, value(vardata.value)))
+                                      % (var_label,
+                                         _no_negative_zero(value(vardata.value))))
                     continue
 
-                vardata_lb = self._get_bound(vardata.lb)
-                vardata_ub = self._get_bound(vardata.ub)
-                # Make it harder for -0 to show up in
-                # the output. This makes file diffing
-                # for test baselines slightly less
-                # annoying
-                if vardata_lb == 0:
-                    vardata_lb = 0
-                if vardata_ub == 0:
-                    vardata_ub = 0
+                # convert any -0 to 0 to make baseline diffing easier
+                vardata_lb = _no_negative_zero(self._get_bound(vardata.lb))
+                vardata_ub = _no_negative_zero(self._get_bound(vardata.ub))
                 unbounded_lb = (vardata_lb is None) or (vardata_lb == -infinity)
                 unbounded_ub = (vardata_ub is None) or (vardata_ub == infinity)
                 treat_as_integer = False
@@ -712,26 +717,36 @@ class ProblemWriter_mps(AbstractProblemWriter):
             #output_file.write("QMATRIX\n")
             label, quad_terms = quadobj_data[0]
             assert label == objective_label
-            for (var1, var2), coef in sorted(quad_terms,
-                                             key=lambda _x: (variable_to_column[_x[0][0]],
-                                                             variable_to_column[_x[0][1]])):
+            # sort by the sorted tuple of symbols (or column assignments)
+            # for the variables appearing in the term
+            quad_terms = sorted(quad_terms,
+                                key=lambda _x: \
+                                  sorted((variable_to_column[_x[0][0]],
+                                          variable_to_column[_x[0][1]])))
+            for term, coef in quad_terms:
+                # sort the term for consistent output
+                var1, var2 = sorted(term,
+                                    key=lambda _x: variable_to_column[_x])
                 var1_label = variable_symbol_dictionary[id(var1)]
                 var2_label = variable_symbol_dictionary[id(var2)]
                 # Don't forget that a quadratic objective is always
                 # assumed to be divided by 2
                 if var1_label == var2_label:
-                    output_file.write(column_template % (var1_label,
-                                                         var2_label,
-                                                         coef * 2))
+                    output_file.write(column_template
+                                      % (var1_label,
+                                         var2_label,
+                                         _no_negative_zero(coef * 2)))
                 else:
                     # the matrix needs to be symmetric so split
                     # the coefficient (but remember it is divided by 2)
-                    output_file.write(column_template % (var1_label,
-                                                         var2_label,
-                                                         coef))
-                    output_file.write(column_template % (var2_label,
-                                                         var1_label,
-                                                         coef))
+                    output_file.write(column_template
+                                      % (var1_label,
+                                         var2_label,
+                                         _no_negative_zero(coef)))
+                    output_file.write(column_template
+                                      % (var2_label,
+                                         var1_label,
+                                         _no_negative_zero(coef)))
 
         #
         # QCMATRIX section
@@ -739,24 +754,35 @@ class ProblemWriter_mps(AbstractProblemWriter):
         if len(quadmatrix_data) > 0:
             for row_label, quad_terms in quadmatrix_data:
                 output_file.write("QCMATRIX    %s\n" % (row_label))
-                for (var1, var2), coef in sorted(quad_terms,
-                                                 key=lambda _x: (variable_to_column[_x[0][0]],
-                                                                 variable_to_column[_x[0][1]])):
+                # sort by the sorted tuple of symbols (or
+                # column assignments) for the variables
+                # appearing in the term
+                quad_terms = sorted(quad_terms,
+                                    key=lambda _x: \
+                                      sorted((variable_to_column[_x[0][0]],
+                                              variable_to_column[_x[0][1]])))
+                for term, coef in quad_terms:
+                    # sort the term for consistent output
+                    var1, var2 = sorted(term,
+                                        key=lambda _x: variable_to_column[_x])
                     var1_label = variable_symbol_dictionary[id(var1)]
                     var2_label = variable_symbol_dictionary[id(var2)]
                     if var1_label == var2_label:
-                        output_file.write(column_template % (var1_label,
-                                                             var2_label,
-                                                             coef))
+                        output_file.write(column_template
+                                          % (var1_label,
+                                             var2_label,
+                                             _no_negative_zero(coef)))
                     else:
                         # the matrix needs to be symmetric so split
                         # the coefficient
-                        output_file.write(column_template % (var1_label,
-                                                             var2_label,
-                                                             coef * 0.5))
-                        output_file.write(column_template % (var2_label,
-                                                             var1_label,
-                                                             coef * 0.5))
+                        output_file.write(column_template
+                                          % (var1_label,
+                                             var2_label,
+                                             _no_negative_zero(coef * 0.5)))
+                        output_file.write(column_template
+                                          % (var2_label,
+                                             var1_label,
+                                             coef * 0.5))
 
         output_file.write("ENDATA\n")
 
