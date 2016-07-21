@@ -11,7 +11,7 @@
 from __future__ import division
 
 #__all__ = ( 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
-#            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh', 
+#            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
 #            'atanh', 'ceil', 'floor' )
 
 import copy
@@ -255,7 +255,7 @@ class _ExpressionBase(NumericValue):
     def polynomial_degree(self):
         _typeList = TreeWalkerHelper.typeList
 
-        _stackMax = len(_stack) 
+        _stackMax = len(_stack)
         _stackIdx = 0
 
         _obj = self
@@ -339,7 +339,7 @@ class _ExpressionBase(NumericValue):
         _infix = False
         _bypass_prefix = False
         argList = self._arguments()
-        _stack = [ [ self, argList, 0, len(argList), 
+        _stack = [ [ self, argList, 0, len(argList),
                      precedence if precedence is not None else self._precedence() ] ]
         while _stack:
             _parent, _args, _idx, _len, _prec = _stack[-1]
@@ -412,14 +412,12 @@ class _NegationExpression(_ExpressionBase):
         if verbose:
             ostream.write(self.cname())
         elif not self._args[0].is_expression and _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
-            ostream.write("-")        
+            ostream.write("-")
         else:
             ostream.write("- ")
 
     def _apply_operation(self, result):
         return -result.pop()
-
-    
 
 class _UnaryFunctionExpression(_ExpressionBase):
     """An object that defines a mathematical expression that can be evaluated"""
@@ -799,11 +797,11 @@ class _SumExpression(_ExpressionBase):
             raise TypeError(
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?" 
+                "value defined over an index that you did not specify?"
                 % (etype, other.cname(True), ) )
         elif other.is_constant():
             other = other()
-        
+
         self._args.append(other)
         return self
 
@@ -851,11 +849,11 @@ class _SumExpression(_ExpressionBase):
             raise TypeError(
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?" 
+                "value defined over an index that you did not specify?"
                 % (etype, other.cname(), ) )
         elif other.is_constant():
             other = - ( other() )
-        
+
         self._args.append(other)
         return self
 
@@ -885,7 +883,7 @@ class Expr_if(_ExpressionBase):
         """Constructor"""
         if safe_mode:
             self._parent_expr = None
-        
+
         self._if = as_numeric(IF)
         self._then = as_numeric(THEN)
         self._else = as_numeric(ELSE)
@@ -921,7 +919,7 @@ class Expr_if(_ExpressionBase):
     def is_fixed(self):
         if self._if.is_fixed():
             if self._if():
-                return self._then.is_fixed() 
+                return self._then.is_fixed()
             else:
                 return self._else.is_fixed()
         else:
@@ -1006,7 +1004,7 @@ class _LinearExpression(_ExpressionBase):
 
     def __copy__(self):
         """Clone this object using the specified arguments"""
-        return self.__class__( 
+        return self.__class__(
             copy.copy(self._const),
             self._args.__class__(
                 (clone_expression(a) for a in self._args) ),
@@ -1075,7 +1073,7 @@ class _LinearExpression(_ExpressionBase):
                     return
                 ostream.write(str(coef))
             elif coef.is_expression():
-                coef.to_string( ostream=ostream, verbose=verbose, 
+                coef.to_string( ostream=ostream, verbose=verbose,
                                 precedence=_ProductExpression.PRECEDENCE )
             else:
                 ostream.write(str(coef))
@@ -1091,7 +1089,7 @@ class _LinearExpression(_ExpressionBase):
                 idx -= 1
             _l = self._coef[id(self._args[idx])]
             _lt = _l.__class__
-            if _lt is _NegationExpression or ( 
+            if _lt is _NegationExpression or (
                     _lt in native_numeric_types and _l < 0 ):
                 ostream.write(' - ')
             else:
@@ -1137,7 +1135,7 @@ class _LinearExpression(_ExpressionBase):
                 else:
                     self._args.append(other)
                 self._coef[_id] = 1
-            return self  
+            return self
         elif _type in native_numeric_types:
             if other:
                 self._const += other
@@ -1148,7 +1146,7 @@ class _LinearExpression(_ExpressionBase):
         except AttributeError:
             other = as_numeric(other)
             _is_expr = other.is_expression()
-        
+
         if _is_expr:
             if safe_mode and other._parent_expr:
                 raise EntangledExpressionError(self, other)
@@ -1186,7 +1184,7 @@ class _LinearExpression(_ExpressionBase):
         except AttributeError:
             other = as_numeric(other)
             _is_expr = other.is_expression()
-        
+
         if _is_expr:
             if safe_mode and other._parent_expr:
                 raise EntangledExpressionError(self, other)
@@ -1352,7 +1350,7 @@ class _LinearExpression(_ExpressionBase):
         # non-NumericValue object.
         self._const = other / self._const
         return self
-            
+
     def __neg__(self):
         self *= -1
         return self
@@ -1385,7 +1383,7 @@ def generate_expression(etype, _self, _other):
         if safe_mode and _self_expr:
             _self._parent_expr = bypass_backreference or ref(ans)
         return ans
-    
+
     if _other.__class__ in native_numeric_types:
         _other_expr = False
     else:
@@ -1405,7 +1403,7 @@ def generate_expression(etype, _self, _other):
             raise TypeError(
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?" 
+                "value defined over an index that you did not specify?"
                 % (etype, _other.cname(), ) )
         elif _other.is_constant():
             _other = _other()
@@ -1466,7 +1464,7 @@ def generate_expression(etype, _self, _other):
                     ans = _LinearExpression()
                 ans._const = _ProductExpression((_self, _other))
                 return ans
-                
+
     elif etype == _add:
         #if _self_expr and type(_self) is _SumExpression:
         #    if _other_expr and type(_other) is _SumExpression:
@@ -1626,8 +1624,8 @@ def generate_relational_expression(etype, lhs, rhs):
         raise TypeError(
             "Argument for expression '%s' is an indexed numeric value "
             "specified without an index: %s\n    Is variable or parameter "
-            "'%s' defined over an index that you did not specify?" 
-            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype), 
+            "'%s' defined over an index that you did not specify?"
+            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
                lhs.cname(), lhs.cname()))
     elif lhs.is_expression():
         if lhs.is_relational():
@@ -1638,8 +1636,8 @@ def generate_relational_expression(etype, lhs, rhs):
         raise TypeError(
             "Argument for expression '%s' is an indexed numeric value "
             "specified without an index: %s\n    Is variable or parameter "
-            "'%s' defined over an index that you did not specify?" 
-            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype), 
+            "'%s' defined over an index that you did not specify?"
+            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
                rhs.cname(), rhs.cname()))
     elif rhs.is_expression():
         if rhs.is_relational():
@@ -1762,7 +1760,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
         return fcn(arg)
     elif arg.is_constant():
         return fcn(arg())
-    
+
     if arg.is_indexed():
         raise ValueError("Argument for intrinsic function '%s' is an "\
             "n-ary numeric value: %s\n    Have you given variable or "\
@@ -1784,7 +1782,7 @@ def _rmul_override(_self, _other):
             #generate_expression.clone_counter += 1
     elif _self.is_constant():
         _self = _self()
-    
+
     if _other.__class__ not in native_numeric_types:
         _other = as_numeric(_other)
         if _other.is_constant():
@@ -1816,10 +1814,10 @@ class TreeWalkerHelper(object):
     stack = []
     max = 0
     inuse = False
-    typeList = { _SumExpression: 1, 
-                 _InequalityExpression: 1, 
-                 _EqualityExpression: 1, 
-                 _ProductExpression: 2, 
+    typeList = { _SumExpression: 1,
+                 _InequalityExpression: 1,
+                 _EqualityExpression: 1,
+                 _ProductExpression: 2,
                  _NegationExpression: 3,
                  _LinearExpression: 4,
     }

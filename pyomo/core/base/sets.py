@@ -46,12 +46,12 @@ def process_setarg(arg):
         raise TypeError("Cannot index a component with an indexed set")
     elif isinstance(arg,Component):
         # Argument is some other component
-        raise TypeError('Cannot index a component with a non-set component "%s"' 
-                        % (arg.cname(True)))
+        raise TypeError("Cannot index a component with a non-set "
+                        "component: %s" % (arg.cname(True)))
     else:
         try:
             #
-            # If the argument has a set_options attribute, then use 
+            # If the argument has a set_options attribute, then use
             # it to initialize a set
             #
             options = getattr(arg,'set_options')
@@ -118,7 +118,7 @@ class _SetData(_SetDataBase):
     Constructor Arguments:
         owner       The Set object that owns this data.
         bounds      A tuple of bounds for set values: (lower, upper)
-    
+
     Public Class Attributes:
         value       The set values
         _bounds     The tuple of bound values
@@ -128,7 +128,7 @@ class _SetData(_SetDataBase):
 
     def __init__(self, owner, bounds):
         #
-        # The following is equivalent to calling 
+        # The following is equivalent to calling
         # the base ComponentData constructor.
         #
         self._component = weakref_ref(owner)
@@ -169,7 +169,7 @@ class _SetData(_SetDataBase):
         The underlying set data.
 
         Note that this method is preferred to the direct use of the
-        'value' attribute in most cases.  The reason is that the 
+        'value' attribute in most cases.  The reason is that the
         underlying set values may not be stored as a Python set() object.
         In fact, the underlying set values may not be explicitly stored
         in the Set() object at all!
@@ -225,7 +225,7 @@ class _OrderedSetData(_SetDataBase):
     Constructor Arguments:
         owner       The Set object that owns this data.
         bounds      A tuple of bounds for set values: (lower, upper)
-    
+
     Public Class Attributes:
         value       The set values
         _bounds     The tuple of bound values
@@ -236,7 +236,7 @@ class _OrderedSetData(_SetDataBase):
     of the owning component:
         InsertionOrder      The order_dict maps from the insertion order
                                 back to the member of the value array.
-        SortedOrder         The ordered attribute of the owning component can 
+        SortedOrder         The ordered attribute of the owning component can
                                 be used to define the sort order.  By default,
                                 the Python ordering of the set types is used.
                                 Note that a _stable_ sort method is required
@@ -247,14 +247,14 @@ class _OrderedSetData(_SetDataBase):
 
     def __init__(self, owner, bounds):
         #
-        # The following is equivalent to calling 
+        # The following is equivalent to calling
         # the base ComponentData constructor.
         #
         self._component = weakref_ref(owner)
         #
         self._bounds = bounds
         if self.parent_component().ordered is Set.InsertionOrder:
-            self._is_sorted = 0 
+            self._is_sorted = 0
         else:
             self._is_sorted = 1
         self._clear()
@@ -284,7 +284,7 @@ class _OrderedSetData(_SetDataBase):
         Return the underlying set data.
 
         Note that this method returns a value that is different from the
-        'value' attribute.  The underlying set values are not be stored 
+        'value' attribute.  The underlying set values are not be stored
         as a Python set() object.
         """
         return set(self.value)
@@ -378,7 +378,7 @@ class _OrderedSetData(_SetDataBase):
     def __getitem__(self, idx):
         """
         Return the specified member of the set.
-        
+
         The public Set API is 1-based, even though the
         internal order_dict is (pythonically) 0-based.
         """
@@ -398,7 +398,7 @@ class _OrderedSetData(_SetDataBase):
 
     def ord(self, match_element):
         """
-        Return the position index of the input value.  The 
+        Return the position index of the input value.  The
         position indices start at 1.
         """
         if self._is_sorted == 2:
@@ -552,9 +552,9 @@ class Set(IndexedComponent):
                             be contained in this set
         domain          A set that defines the type of values that can
                             be contained in this set
-        initialize      A dictionary or rule for setting up this set 
+        initialize      A dictionary or rule for setting up this set
                             with existing model data
-        validate        A rule for validating membership in this set.  This has 
+        validate        A rule for validating membership in this set.  This has
                             the functional form:
                                 f: data -> bool
                             and returns true if the data belongs in the set
@@ -577,7 +577,7 @@ class Set(IndexedComponent):
         domain          A set that defines the type of values that can
                             be contained in this set
         filter          A function that is used to filter set entries.
-        initialize      A dictionary or rule for setting up this set 
+        initialize      A dictionary or rule for setting up this set
                             with existing model data
         name            A name for this component
         ordered         Specifies whether the set is ordered.
@@ -691,7 +691,7 @@ class Set(IndexedComponent):
                 raise ValueError("The value="+str(element)+" violates the validation rule of set="+self.cname(True))
         if not self.dimen is None:
             if self.dimen > 1 and type(element) is not tuple:
-                
+
                 raise ValueError("The value="+str(element)+" is not a tuple for set="+self.cname(True)+", which has dimen="+str(self.dimen))
             elif self.dimen == 1 and type(element) is tuple:
                 raise ValueError("The value="+str(element)+" is a tuple for set="+self.cname(True)+", which has dimen="+str(self.dimen))
@@ -798,9 +798,9 @@ class SimpleSetBase(Set):
              ("Domain", None if self.domain is None else self.domain.name),
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
-            iteritems( {None: self} ), 
-            None, 
-            lambda k, v: [ 
+            iteritems( {None: self} ),
+            None,
+            lambda k, v: [
                 "Virtual" if not v.concrete or v.virtual \
                     else v.value if v.ordered \
                     else sorted(v) ] )
@@ -912,10 +912,10 @@ class SimpleSetBase(Set):
         #        set_ = SetOf(element)
         #        return set_.issubset(self)
 
-        # 
+        #
         # When dealing with a concrete set, just check if the element is
         # in the set. There is no need for extra validation.
-        #        
+        #
         if self._constructed and self.concrete is True:
            return self._set_contains(element)
         #
@@ -940,7 +940,7 @@ class SimpleSetBase(Set):
 
     def isdisjoint(self, other):
         """
-        Return True if the set has no elements in common with 'other'. 
+        Return True if the set has no elements in common with 'other'.
         Sets are disjoint if and only if their intersection is the empty set.
         """
         other = self._set_repn(other)
@@ -948,7 +948,7 @@ class SimpleSetBase(Set):
         for elt in tmp:
             return False
         return True
-        
+
     def issubset(self,other):
         """
         Return True if the set is a subset of 'other'.
@@ -1032,7 +1032,7 @@ class SimpleSetBase(Set):
     # -  is equivalent to difference
     # ^  is equivalent to symmetric_difference
     # *  is equivalent to cross
-    
+
     __le__  = issubset
     __ge__  = issuperset
     __or__  = union
@@ -1146,8 +1146,8 @@ class SimpleSetBase(Set):
                     val = apply_indexed_rule(self, self.initialize, self._parent(), ctr)
                     if val is None:
                         raise ValueError("Set rule returned None instead of Set.Skip")
-        
-            # Update the bounds if after using the rule, the set is 
+
+            # Update the bounds if after using the rule, the set is
             # a one dimensional list of all numeric values
             if self.dimen == 1:
                 if type(self._bounds) is tuple:
@@ -1218,7 +1218,7 @@ class SimpleSet(SimpleSetBase,_SetData):
         """
         A wrapper function that tests if the element is in
         the data associated with a concrete set.
-        """ 
+        """
         return element in self.value
 
 
@@ -1239,7 +1239,7 @@ class OrderedSimpleSet(SimpleSetBase,_OrderedSetData):
         """
         A wrapper function that tests if the element is in
         the data associated with a concrete set.
-        """ 
+        """
         return element in self.order_dict
 
 
@@ -1316,16 +1316,16 @@ class SetOf(SimpleSet):
         """
         A wrapper function that tests if the element is in
         the data associated with a concrete set.
-        """ 
+        """
         return element in self._elements
-        
+
     def data(self):
         """
         Return the underlying set data by constructing
         a python set() object explicitly.
         """
         return set(self)
-            
+
 
 class _SetOperator(SimpleSet):
     """A derived SimpleSet object that contains a concrete virtual single set."""
@@ -1383,11 +1383,10 @@ class _SetOperator(SimpleSet):
 
     def _set_contains(self, element):
         raise IOError("Undefined set operation")
-        
+
     def data(self):
         """The underlying set data."""
         return set(self)
-            
 
 class _SetUnion(_SetOperator):
 
@@ -1403,7 +1402,6 @@ class _SetUnion(_SetOperator):
 
     def _set_contains(self, elt):
         return elt in self._setA or elt in self._setB
-    
 
 class _SetIntersection(_SetOperator):
 
@@ -1417,7 +1415,6 @@ class _SetIntersection(_SetOperator):
 
     def _set_contains(self, elt):
         return elt in self._setA and elt in self._setB
-    
 
 class _SetDifference(_SetOperator):
 
@@ -1431,7 +1428,6 @@ class _SetDifference(_SetOperator):
 
     def _set_contains(self, elt):
         return elt in self._setA and not elt in self._setB
-    
 
 class _SetSymmetricDifference(_SetOperator):
 
@@ -1448,14 +1444,13 @@ class _SetSymmetricDifference(_SetOperator):
 
     def _set_contains(self, elt):
         return (elt in self._setA) ^ (elt in self._setB)
-    
 
 class _SetProduct(_SetOperator):
 
     def __init__(self, *args, **kwd):
         kwd['dimen_test'] = False
-        
-        # every input argument in a set product must be iterable. 
+
+        # every input argument in a set product must be iterable.
         for arg in args:
             # obviouslly, if the object has an '__iter__' method, then
             # it is iterable.  Checking for this prevents us from trying
@@ -1519,7 +1514,7 @@ class _SetProduct(_SetOperator):
             return ctr == len(element)
         except:
             return False
-        
+
     def __len__(self):
         ans = 1
         for _set in self.set_tuple:
@@ -1678,10 +1673,10 @@ class IndexedSet(Set):
              ("Bounds", self._bounds)],
             iteritems(self._data),
             ("Key","Members"),
-            lambda k, v: [ 
+            lambda k, v: [
                 k,
                 v.value if self.ordered else sorted(v.value) ] )
-            
+
     def construct(self, values=None):
         """
         Apply the rule to construct values in each set

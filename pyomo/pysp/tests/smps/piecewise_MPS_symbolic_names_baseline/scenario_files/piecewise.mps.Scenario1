@@ -98,7 +98,7 @@ RHS
      RHS c_u_p_second_stage(1)_INC_constraint4(1)_ 0
      RHS c_u_p_second_stage(1)_INC_constraint4(2)_ 0
      RHS c_u_p_second_stage(1)_INC_constraint4(3)_ 0
-     RHS r_l_r_second_stage_ -0
+     RHS r_l_r_second_stage_ 0
      RHS r_u_r_second_stage_ 0
      RHS c_e_ONE_VAR_CONSTANT 1
 BOUNDS

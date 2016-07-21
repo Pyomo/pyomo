@@ -79,7 +79,7 @@ COLUMNS
 RHS
      RHS c_l_x21_ 0
      RHS c_l_x22_ -100
-     RHS r_l_x23_ -0
+     RHS r_l_x23_ 0
      RHS r_u_x23_ 0
      RHS c_e_x24_ 0
      RHS c_e_x25_ 10

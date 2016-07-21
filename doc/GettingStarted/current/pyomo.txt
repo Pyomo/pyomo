@@ -133,8 +133,8 @@ The +AbstractModel+ class provides a context for defining and initializing abstr
 optimization models in Pyomo when the data values will be supplied at the time a solution
 is to be obtained. 
 
-In some contexts a mathematical model can be directly defined
-with the data values supplied at the time of the model definition and built into the model.  
+In many contexts a mathematical model can be directly defined
+with the data values supplied at the time of the model definition.  
 We call these _concrete_ mathematical models.
 For example, the following LP model is a concrete instance of the previous abstract model:
 [latexmath]

@@ -6,9 +6,8 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-import os
-
 import pyutilib.th as unittest
+
 from pyomo.pysp.scenariotree.tree_structure_model import \
     (ScenarioTreeModelFromNetworkX,
      CreateConcreteTwoStageScenarioTreeModel)
@@ -643,6 +642,7 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         ScenarioTree(scenariotreeinstance=model)
 
 TestScenarioTree = unittest.category('smoke','nightly','expensive')(TestScenarioTree)
+TestScenarioTreeFromNetworkX = unittest.category('smoke','nightly','expensive')(TestScenarioTreeFromNetworkX)
 
 if __name__ == "__main__":
     unittest.main()

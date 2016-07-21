@@ -51,10 +51,17 @@ logger = logging.getLogger('pyomo.pysp')
 #       to distinguish between the two with model annotations?
 
 def _safe_remove_file(filename):
+    """Try to remove a file, ignoring failure."""
     try:
         os.remove(filename)
     except OSError:
         pass
+
+def _no_negative_zero(val):
+    """Make sure -0 is never output. Makes diff tests easier."""
+    if val == 0:
+        return 0
+    return val
 
 def map_constraint_stages(scenario,
                           scenario_tree,
@@ -740,7 +747,8 @@ def _convert_explicit_setup_without_cleanup(worker,
             objective_name_buffer = {}
             variable_name_buffer = {}
             scenario_probability = scenario.probability
-            f_sto.write(" BL BLOCK1 PERIOD2 %.17g\n" % (scenario_probability))
+            f_sto.write(" BL BLOCK1 PERIOD2 %.17g\n"
+                        % (_no_negative_zero(scenario_probability)))
 
             #
             # Stochastic RHS
@@ -808,8 +816,9 @@ def _convert_explicit_setup_without_cleanup(worker,
                             stochastic_secondstage_rhs_count += 1
                             f_sto.write(rhs_template %
                                         (con_label,
-                                         value(constraint_data.lower) - \
-                                         value(body_constant)))
+                                         _no_negative_zero(
+                                             value(constraint_data.lower) - \
+                                             value(body_constant))))
                             f_coords.write("RHS %s\n" % (con_label))
                             # We are going to rewrite the core problem file
                             # with all stochastic values set to zero. This will
@@ -828,8 +837,9 @@ def _convert_explicit_setup_without_cleanup(worker,
                                 stochastic_secondstage_rhs_count += 1
                                 f_sto.write(rhs_template %
                                             (con_label,
-                                             value(constraint_data.lower) - \
-                                             value(body_constant)))
+                                             _no_negative_zero(
+                                                 value(constraint_data.lower) - \
+                                                 value(body_constant))))
                                 f_coords.write("RHS %s\n" % (con_label))
                                 # We are going to rewrite the core problem file
                                 # with all stochastic values set to zero. This will
@@ -844,8 +854,9 @@ def _convert_explicit_setup_without_cleanup(worker,
                             stochastic_secondstage_rhs_count += 1
                             f_sto.write(rhs_template %
                                         (con_label,
-                                         value(constraint_data.upper) - \
-                                         value(body_constant)))
+                                         _no_negative_zero(
+                                             value(constraint_data.upper) - \
+                                             value(body_constant))))
                             f_coords.write("RHS %s\n" % (con_label))
                             # We are going to rewrite the core problem file
                             # with all stochastic values set to zero. This will
@@ -860,8 +871,9 @@ def _convert_explicit_setup_without_cleanup(worker,
                                 stochastic_secondstage_rhs_count += 1
                                 f_sto.write(rhs_template %
                                             (con_label,
-                                             value(constraint_data.upper) - \
-                                             value(body_constant)))
+                                             _no_negative_zero(
+                                                 value(constraint_data.upper) - \
+                                                 value(body_constant))))
                                 f_coords.write("RHS %s\n" % (con_label))
                                 # We are going to rewrite the core problem file
                                 # with all stochastic values set to zero. This will
@@ -958,9 +970,10 @@ def _convert_explicit_setup_without_cleanup(worker,
                             else:
                                 stochastic_secondstagevar_constraint_count += 1
                             stochastic_lp_labels.add(con_label)
-                            f_sto.write(matrix_template % (var_label,
-                                                           con_label,
-                                                           value(var_coef)))
+                            f_sto.write(matrix_template
+                                        % (var_label,
+                                           con_label,
+                                           _no_negative_zero(value(var_coef))))
                             f_coords.write("%s %s\n" % (var_label, con_label))
 
                     constraint_repn.linear = tuple(new_coefs)
@@ -1029,9 +1042,10 @@ def _convert_explicit_setup_without_cleanup(worker,
                         stochastic_firststagevar_objective_count += 1
                     else:
                         stochastic_secondstagevar_objective_count += 1
-                    f_sto.write(obj_template % (var_label,
-                                                stochastic_objective_label,
-                                                value(var_coef)))
+                    f_sto.write(obj_template
+                                % (var_label,
+                                   stochastic_objective_label,
+                                   _no_negative_zero(value(var_coef))))
                     f_coords.write("%s %s\n"
                                    % (var_label,
                                       stochastic_objective_label))
@@ -1048,7 +1062,7 @@ def _convert_explicit_setup_without_cleanup(worker,
                     stochastic_secondstagevar_objective_count += 1
                     f_sto.write(obj_template % ("ONE_VAR_CONSTANT",
                                                 stochastic_objective_label,
-                                                obj_constant))
+                                                _no_negative_zero(obj_constant)))
                     f_coords.write("%s %s\n"
                                    % ("ONE_VAR_CONSTANT",
                                       stochastic_objective_label))
@@ -1867,8 +1881,8 @@ def convert_implicit(output_directory,
                     for prob, val in distribution:
                         f_sto.write(line_template % (varlabel,
                                                      stochastic_objective_label,
-                                                     val,
-                                                     prob))
+                                                     _no_negative_zero(val),
+                                                     _no_negative_zero(prob)))
                 elif len(stochastic_params) > 1:
                     # TODO: Need to output a new distribution based
                     # on some mathematical expression involving
@@ -2018,8 +2032,8 @@ def convert_implicit(output_directory,
                     for prob, val in distribution:
                         f_sto.write(line_template % (varlabel,
                                                      stochastic_constraint_label,
-                                                     val,
-                                                     prob))
+                                                     _no_negative_zero(val),
+                                                     _no_negative_zero(prob)))
                 elif len(stochastic_params) > 1:
                     # TODO: Need to output a new distribution based
                     # on some mathematical expression involving

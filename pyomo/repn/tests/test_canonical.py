@@ -75,7 +75,7 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.constant == None)
         self.assertTrue(rep.variables != None)
         # rep.variables should have the 3 variables...
-        baseline = { id(i.x[1]) : 2, 
+        baseline = { id(i.x[1]) : 2,
                      id(i.x[2]) : 4,
                      id(i.x[3]) : 6 }
         self.assertEqual(baseline,
@@ -94,9 +94,9 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.variables != None)
         self.assertTrue(rep.linear != None)
         # rep.variables should have the 3 variables...
-        baseline = { id(m.x[1]) : 2, 
+        baseline = { id(m.x[1]) : 2,
                      id(m.x[2]) : 4,
-                     id(m.x[3]) : 6 }        
+                     id(m.x[3]) : 6 }
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
 
@@ -108,10 +108,10 @@ class Test(unittest.TestCase):
         # rep should only have variables and linear terms
         self.assertTrue(rep.variables != None)
         self.assertTrue(rep.linear != None)
-        # rep.variables should have the 3 variables... 
-        baseline = { id(x[0]) : 2, 
+        # rep.variables should have the 3 variables...
+        baseline = { id(x[0]) : 2,
                      id(x[1]) : 4,
-                     id(x[2]) : 6 }        
+                     id(x[2]) : 6 }
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
 
@@ -124,7 +124,7 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.linear != None)
         self.assertTrue(rep.variables != None)
         # rep.variables should have the 2 of the 3 variables...
-        baseline = { id(x[1]) : 9.0, 
+        baseline = { id(x[1]) : 9.0,
                      id(x[2]) : 4.0 }
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
@@ -139,7 +139,7 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.linear != None)
         self.assertTrue(rep.variables != None)
         # rep.variables should have the 2 of the 3 variables...
-        baseline = { id(x[2]) : 4.0, 
+        baseline = { id(x[2]) : 4.0,
                      id(x[1]) : 9.0 }
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
@@ -155,7 +155,7 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.variables != None)
         # rep should have the 1 of the 3 variables...
         baseline = { id(x[1]) : 5.0,
-                     None : 1.2 } 
+                     None : 1.2 }
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
 
@@ -170,7 +170,7 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.variables != None)
         # rep.variables should have the 1 of the 3 variables...
         baseline = { id(x[1]) : 13.0,
-                     None : 5.4 } 
+                     None : 5.4 }
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
 
@@ -189,7 +189,7 @@ class Test(unittest.TestCase):
                                     1: x[2],
                                     2: x[3] })
         # check the expression encoding
-        self.assertEqual(rep[2], {frozendict({0:2}):1.0, 
+        self.assertEqual(rep[2], {frozendict({0:2}):1.0,
                                   frozendict({0:1, 1:1}):2.0})
         self.assertEqual(rep[3], {frozendict({1:1, 2:2}):3.0})
 
@@ -233,7 +233,7 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.constant == None)
         self.assertTrue(rep.variables != None)
 
-        baseline = { id(m.x[1]) : 1.0, 
+        baseline = { id(m.x[1]) : 1.0,
                      id(m.x[2]) : 2.0,
                      id(m.x[3]) : 3.0 }
         self.assertEqual(baseline,
@@ -256,8 +256,8 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.constant == None)
         self.assertTrue(rep.variables != None)
 
-        # rep.variables should have the 3 variables... 
-        baseline = { id(m.x[1]) : 1.0, 
+        # rep.variables should have the 3 variables...
+        baseline = { id(m.x[1]) : 1.0,
                      id(m.x[2]) : 2.0,
                      id(m.x[3]) : 3.0 }
         self.assertEqual(baseline,
@@ -280,8 +280,8 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.constant == None)
         self.assertTrue(rep.variables != None)
 
-        # rep.variables should have the 3 variables... 
-        baseline = { id(m.x[1]) : 1.0, 
+        # rep.variables should have the 3 variables...
+        baseline = { id(m.x[1]) : 1.0,
                      id(m.x[2]) : 2.0,
                      id(m.x[3]) : 3.0 }
         self.assertEqual(baseline,
@@ -302,7 +302,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(rep), 2)
         self.assertTrue(None in rep)
         self.assertTrue(-1 in rep)
-        # rep[-1] should have the 4 variables... 
+        # rep[-1] should have the 4 variables...
         self.assertEqual(rep[-1], { 3: m.y,
                                     0: m.x[1],
                                     1: m.x[2],
@@ -322,7 +322,7 @@ class Test(unittest.TestCase):
         self.assertEqual(len(rep), 2)
         self.assertTrue(None in rep)
         self.assertTrue(-1 in rep)
-        # rep[-1] should have the 3 variables... 
+        # rep[-1] should have the 3 variables...
         self.assertEqual(rep[-1], { 1: m.y,
                                     0: m.x[1],
                                     2: m.x[2] })
@@ -344,9 +344,9 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.linear != None)
         self.assertTrue(rep.variables != None)
 
-        # rep.variables should have the 2 of 3 variables... 
+        # rep.variables should have the 2 of 3 variables...
 
-        baseline = { id(m.x[1]) : 1.0, 
+        baseline = { id(m.x[1]) : 1.0,
                      id(m.x[2]) : 0.5,
                      None : 2.75 }
         self.assertEqual(baseline,
@@ -362,12 +362,12 @@ class Test(unittest.TestCase):
         self.assertEqual(len(rep), 2)
         self.assertTrue(None in rep)
         self.assertTrue(-1 in rep)
-        # rep[-1] should have 2 variables... 
+        # rep[-1] should have 2 variables...
         self.assertEqual(rep[-1], { 0: x[1],
                                     1: x[2] })
         # check the expression encoding
         self.assertIs(rep[None], expr)
-        
+
     def test_general_nonlinear_fixed(self):
         I = range(3)
         x = [Var() for i in I]
@@ -384,7 +384,7 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.linear != None)
         self.assertTrue(rep.constant != None)
 
-        # rep.variables should have 1 variable... 
+        # rep.variables should have 1 variable...
         baseline = { id(x[1]) : 1.0,
                      None: 5.0 }
         self.assertEqual(baseline,
@@ -402,20 +402,20 @@ class Test(unittest.TestCase):
         #rep_A = generate_canonical_repn(exprA)
         #rep_B = generate_canonical_repn(exprB)
         #self.assertEqual( rep_A[-1], rep_B[-1] )
-        
+
         # Deterministic form should care which expression comes first
         idMap_1 = {}
         rep_A = generate_canonical_repn(exprA, idMap_1)
         rep_B = generate_canonical_repn(exprB, idMap_1)
         self.assertEqual(set(map(lambda x:x.name, rep_A.variables)), set(map(lambda x:x.name, rep_B.variables)))
-        
+
         idMap_2 = {}
         rep_B = generate_canonical_repn(exprB, idMap_2)
         rep_A = generate_canonical_repn(exprA, idMap_2)
         self.assertEqual(set(map(lambda x:x.name, rep_A.variables)), set(map(lambda x:x.name, rep_B.variables)))
 
         self.assertNotEqual( idMap_1, idMap_2 )
-        
+
     def test_Expression_nonindexed(self):
         m = ConcreteModel()
         m.x = Var(initialize=3.0)
@@ -584,7 +584,7 @@ class Test(unittest.TestCase):
         self.assertTrue(rep.linear != None)
         self.assertTrue(rep.constant != None)
         self.assertTrue(rep.variables != None)
-        baseline = { id(model.x) : 1, 
+        baseline = { id(model.x) : 1,
                      id(model.y) : 3,
                      None        : 10}
         self.assertEqual(baseline,
@@ -610,22 +610,6 @@ class Test(unittest.TestCase):
         rep = generate_canonical_repn(Expr_if(IF=0.0, THEN=1.0, ELSE=-model.x**2))
         self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
         self.assertEqual(canonical_degree(rep), 2)
-
-    def test_Expr_if_nonlinear(self):
-        model = ConcreteModel()
-        model.x = Var()
-
-        rep = generate_canonical_repn(Expr_if(IF=model.x, THEN=1.0, ELSE=-1.0))
-        self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
-        self.assertEqual(canonical_degree(rep), None)
-        rep = generate_canonical_repn(Expr_if(IF=1.0,
-                                              THEN=Expr_if(IF=model.x**2, THEN=1.0, ELSE=-1.0),
-                                              ELSE=-1.0))
-        self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
-        self.assertEqual(canonical_degree(rep), None)
-        rep = generate_canonical_repn(Expr_if(IF=model.x**2, THEN=1.0, ELSE=-1.0))
-        self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
-        self.assertEqual(canonical_degree(rep), None)
 
     def test_Expr_if_nonlinear(self):
         model = ConcreteModel()
