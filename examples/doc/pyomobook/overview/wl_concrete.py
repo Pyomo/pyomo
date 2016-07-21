@@ -5,7 +5,7 @@ model = ConcreteModel()
 model.name = "(WL)"
 
 N = ['Harlingen', 'Memphis', 'Ashland']
-M = ['NYC', 'LA', 'Chicago']
+M = ['NYC', 'LA', 'Chicago', 'Houston']
 d = {('Harlingen', 'NYC'): 1956, \
      ('Harlingen', 'LA'): 1606, \
      ('Harlingen', 'Chicago'): 1410, \

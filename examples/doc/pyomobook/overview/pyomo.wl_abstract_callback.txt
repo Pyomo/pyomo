@@ -12,7 +12,7 @@
 [    0.03] Applying Pyomo postprocessing actions
 ***
 Ashland serves customers: ['Chicago', 'NYC']
-Harlingen serves customers: ['Houston', 'LA']
 Memphis: do not build
+Harlingen serves customers: ['LA', 'Houston']
 ***
 [    0.03] Pyomo Finished
