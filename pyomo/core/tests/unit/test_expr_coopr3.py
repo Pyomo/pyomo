@@ -1784,7 +1784,6 @@ class GeneralExpressionGeneration(unittest.TestCase):
         m.a = Var()
         m.b = Var()
         e = EXPR._ExpressionBase([m.a, m.b])
-        self.assertRaises(NotImplementedError, e.clone)
         self.assertRaises(NotImplementedError, e)
 
 

@@ -142,12 +142,7 @@ class _ExpressionBase(NumericValue):
         ostream.write(" )")
 
     def clone(self, substitute=None):
-        clone_expression(self, substitute)
-
-    def __deepcopy__(self, memo):
-        """Clone this object using the specified arguments"""
-        raise NotImplementedError("Derived expression (%s) failed to "\
-            "implement __deepcopy__()" % ( str(self.__class__), ))
+        return clone_expression(self, substitute)
 
     def simplify(self, model): #pragma:nocover
         print("""
@@ -241,12 +236,6 @@ class _ExternalFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def __deepcopy__(self, memo):
-        ans = memo[id(self)] = self.__class__(
-            self._fcn,
-            tuple(deepcopy(x, memo) for x in self._args) )
-        return ans
-
     def cname(self):
         return self._fcn.cname()
 
@@ -291,14 +280,6 @@ class _IntrinsicFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def __deepcopy__(self, memo):
-        ans = memo[id(self)] = self.__class__(
-            deepcopy(self._name, memo),
-            None,
-            tuple(deepcopy(x, memo) for x in self._args),
-            deepcopy(self._operator, memo) )
-        return ans
-
     def _apply_operation(self, values):
         return self._operator(*tuple(values))
 
@@ -323,11 +304,6 @@ class _AbsExpression(_IntrinsicFunctionExpression):
     def __getstate__(self):
         return _IntrinsicFunctionExpression.__getstate__(self)
 
-    def __deepcopy__(self, memo):
-        ans = memo[id(self)] = self.__class__(
-            tuple(deepcopy(x, memo) for x in self._args) )
-        return ans
-
 # Should this actually be a special class, or just an instance of
 # _IntrinsicFunctionExpression (like sin, cos, etc)?
 class _PowExpression(_IntrinsicFunctionExpression):
@@ -340,11 +316,6 @@ class _PowExpression(_IntrinsicFunctionExpression):
 
     def __getstate__(self):
         return _IntrinsicFunctionExpression.__getstate__(self)
-
-    def __deepcopy__(self, memo):
-        ans = memo[id(self)] = self.__class__(
-            tuple(deepcopy(x, memo) for x in self._args) )
-        return ans
 
     def polynomial_degree(self):
         # _PowExpression is a tricky thing.  In general, a**b is
@@ -466,13 +437,6 @@ class _InequalityExpression(_LinearExpression):
     def _precedence(self):
         return _InequalityExpression.PRECEDENCE
 
-    def __deepcopy__(self, memo):
-        ans = memo[id(self)] = self.__class__(
-            [deepcopy(x, memo) for x in self._args],
-            deepcopy(self._strict, memo),
-            deepcopy(self._cloned_from, memo) )
-        return ans
-
     def _apply_operation(self, values):
         """Method that defines the less-than-or-equal operation"""
         arg1 = next(values)
@@ -521,11 +485,6 @@ class _EqualityExpression(_LinearExpression):
             raise ValueError("%s() takes exactly 2 arguments (%d given)" % \
                 ( self.cname(), len(args) ))
         _LinearExpression.__init__(self, args)
-
-    def __deepcopy__(self, memo):
-        ans = memo[id(self)] = self.__class__(
-            tuple(deepcopy(x, memo) for x in self._args) )
-        return ans
 
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
@@ -679,14 +638,6 @@ class _ProductExpression(_ExpressionBase):
         elif precedence and _my_precedence > precedence:
             ostream.write(" )")
 
-    def __deepcopy__(self, memo):
-        """Clone this object using the specified arguments"""
-        tmp = memo[id(self)] = self.__class__()
-        tmp._numerator = [deepcopy(x, memo) for x in self._numerator]
-        tmp._denominator = [deepcopy(x, memo) for x in self._denominator]
-        tmp._coef = deepcopy(self._coef, memo)
-        return tmp
-
     def __call__(self, exception=True):
         """Evaluate the expression"""
         try:
@@ -731,14 +682,6 @@ class _SumExpression(_LinearExpression):
         for i in _SumExpression.__slots__:
             result[i] = getattr(self, i)
         return result
-
-    def __deepcopy__(self, memo):
-        """Clone this object using the specified arguments"""
-        tmp = memo[id(self)] = self.__class__()
-        tmp._args = [deepcopy(x, memo) for x in self._args]
-        tmp._coef = deepcopy(self._coef, memo)
-        tmp._const = deepcopy(self._const, memo)
-        return tmp
 
     def _precedence(self):
         return _SumExpression.PRECEDENCE
@@ -867,14 +810,6 @@ class Expr_if(_ExpressionBase):
         self._else.to_string( ostream=ostream, verbose=verbose, 
                               precedence=self._precedence())
         ostream.write(" ) )")
-
-    def __deepcopy__(self, memo):
-        """Clone this object using the specified arguments"""
-        ans = memo[id(self)] = self.__class__(
-            IF=deepcopy(self._if, memo),
-            THEN=deepcopy(self._then, memo),
-            ELSE=deepcopy(self._else, memo))
-        return ans
 
     def __call__(self, exception=True):
         """Evaluate the expression"""
