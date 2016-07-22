@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import sys
 import re
 import os
 from os.path import join, dirname, abspath
@@ -203,7 +202,6 @@ class _SMPSTesterBase(object):
             subprocess.check_call(cmd,
                                   stdout=f,
                                   stderr=subprocess.STDOUT)
-        sys.stderr.write(str(sorted(dir()))+"\n")
 
     def _cleanup(self):
         for fname in self._tempfiles:
@@ -247,17 +245,15 @@ class _SMPSTesterBase(object):
 
     def _diff(self, baselinedir, outputdir, dc=None):
         if dc is None:
-            sys.stderr.write(str(os.listdir(thisdir))+"\n")
-            sys.stderr.write(str(os.listdir(baselinedir))+"\n")
-            sys.stderr.write(str(os.listdir(outputdir))+"\n")
-            dc = filecmp.dircmp(baselinedir, outputdir, ['.svn'])
+            dc = filecmp.dircmp(baselinedir,
+                                outputdir,
+                                ['.svn'])
         if dc.left_only:
             self.fail("Files or subdirectories missing from output: "
                       +str(dc.left_only))
         if dc.right_only:
             self.fail("Files or subdirectories missing from baseline: "
                       +str(dc.right_only))
-        sys.stderr.write(repr(dc.diff_files)+"\n")
         for name in dc.diff_files:
             fromfile = join(dc.left, name)
             tofile = join(dc.right, name)
@@ -268,11 +264,17 @@ class _SMPSTesterBase(object):
                     diff = difflib.context_diff(fromlines, tolines,
                                                 fromfile+" (baseline)",
                                                 tofile+" (output)")
-                    out = StringIO()
-                    out.write("Output file does not match baseline:\n")
-                    for line in diff:
-                        out.write(line)
-                    self.fail(out.getvalue())
+                    diff = list(diff)
+                    # The filecmp.dircmp function does a weaker
+                    # comparison that can sometimes lead to false
+                    # positives. Make sure the true diff is not empty
+                    # before we call this a failure.
+                    if len(diff) > 0:
+                        out = StringIO()
+                        out.write("Output file does not match baseline:\n")
+                        for line in diff:
+                            out.write(line)
+                        self.fail(out.getvalue())
         for subdir in dc.subdirs:
             self._diff(join(baselinedir, subdir),
                        join(outputdir, subdir),
