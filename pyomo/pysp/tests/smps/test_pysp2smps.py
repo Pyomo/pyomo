@@ -29,7 +29,6 @@ from pyomo.environ import *
 from six import StringIO
 
 thisdir = dirname(abspath(__file__))
-baselineDir = join(thisdir, "baselines")
 pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
@@ -248,6 +247,9 @@ class _SMPSTesterBase(object):
 
     def _diff(self, baselinedir, outputdir, dc=None):
         if dc is None:
+            sys.stderr.write(os.listdir(thisdir)+"\n")
+            sys.stderr.write(os.listdir(baselinedir)+"\n")
+            sys.stderr.write(os.listdir(outputdir)+"\n")
             dc = filecmp.dircmp(baselinedir, outputdir, ['.svn'])
         if dc.left_only:
             self.fail("Files or subdirectories missing from output: "
@@ -268,7 +270,6 @@ class _SMPSTesterBase(object):
                                                 tofile+" (output)")
                     out = StringIO()
                     out.write("Output file does not match baseline:\n")
-                    sys.stderr.write(repr(list(diff))+"\n")
                     for line in diff:
                         out.write(line)
                     self.fail(out.getvalue())
