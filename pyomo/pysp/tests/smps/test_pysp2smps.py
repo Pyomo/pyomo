@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import sys
 import re
 import os
 from os.path import join, dirname, abspath
@@ -29,7 +28,6 @@ from pyomo.environ import *
 from six import StringIO
 
 thisdir = dirname(abspath(__file__))
-baselineDir = join(thisdir, "baselines")
 pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
@@ -247,7 +245,9 @@ class _SMPSTesterBase(object):
 
     def _diff(self, baselinedir, outputdir, dc=None):
         if dc is None:
-            dc = filecmp.dircmp(baselinedir, outputdir, ['.svn'])
+            dc = filecmp.dircmp(baselinedir,
+                                outputdir,
+                                ['.svn'])
         if dc.left_only:
             self.fail("Files or subdirectories missing from output: "
                       +str(dc.left_only))
@@ -264,11 +264,17 @@ class _SMPSTesterBase(object):
                     diff = difflib.context_diff(fromlines, tolines,
                                                 fromfile+" (baseline)",
                                                 tofile+" (output)")
-                    out = StringIO()
-                    out.write("Output file does not match baseline:\n")
-                    for line in diff:
-                        out.write(line)
-                    self.fail(out.getvalue())
+                    diff = list(diff)
+                    # The filecmp.dircmp function does a weaker
+                    # comparison that can sometimes lead to false
+                    # positives. Make sure the true diff is not empty
+                    # before we call this a failure.
+                    if len(diff) > 0:
+                        out = StringIO()
+                        out.write("Output file does not match baseline:\n")
+                        for line in diff:
+                            out.write(line)
+                        self.fail(out.getvalue())
         for subdir in dc.subdirs:
             self._diff(join(baselinedir, subdir),
                        join(outputdir, subdir),
