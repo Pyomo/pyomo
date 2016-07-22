@@ -269,7 +269,9 @@ class _SMPSTesterBase(object):
                     for line in diff:
                         out.write(line)
                     sys.stderr.write(out.getvalue())
+                    sys.stderr.write(str(out.getvalue().splitlines())+"\n")
                     sys.stdout.write(out.getvalue())
+                    sys.stdout.write(str(out.getvalue().splitlines())+"\n")
                     self.fail(out.getvalue())
         for subdir in dc.subdirs:
             self._diff(join(baselinedir, subdir),
