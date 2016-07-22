@@ -14,7 +14,6 @@ from __future__ import division
 #            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh', 
 #            'atanh', 'ceil', 'floor' )
 
-import copy
 import logging
 import math
 import sys
@@ -44,7 +43,7 @@ from pyomo.core.base.expr_common import \
     ensure_independent_trees as safe_mode, bypass_backreference, \
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
     _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq
+    _lt, _le, _eq, clone_expression
 
 _stack = []
 
@@ -52,20 +51,6 @@ _stack = []
 def _const_to_string(*args):
     args[1].write("%s" % args[0])
 
-
-def clone_expression(exp):
-    if exp.__class__ in native_numeric_types:
-        return exp
-    if exp.is_expression():
-        # It is important that this function calls the clone method not
-        # __copy__.  __copy__ and clone are the same for all classes
-        # that advertise "is_expression = True" except the
-        # _ExpressionData class (in which case clone does nothing so
-        # that the object remains persistent when generating
-        # expressions)
-        return exp.clone()
-    else:
-        return exp
 
 class EntangledExpressionError(Exception):
     pass
@@ -134,11 +119,6 @@ class _ExpressionBase(NumericValue):
             self._parent_expr = None
         self._args = args
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( self._args.__class__(
-            (clone_expression(a) for a in self._args) ))
-
     def __getstate__(self):
         state = super(_ExpressionBase, self).__getstate__()
         for i in _ExpressionBase.__pickle_slots__:
@@ -146,9 +126,7 @@ class _ExpressionBase(NumericValue):
         if safe_mode:
             state['_parent_expr'] = None
             if self._parent_expr is not None:
-                _parent_expr = self._parent_expr()
-                if _parent_expr is not None:
-                    state['_parent_expr'] = _parent_expr
+                state['_parent_expr'] = self._parent_expr()
         return state
 
     def __setstate__(self, state):
@@ -212,11 +190,8 @@ class _ExpressionBase(NumericValue):
         assert(len(_result)==1)
         return _result[0]
 
-
-    def clone(self):
-        ans = copy.copy(self)
-        ans._parent_expr = None
-        return ans
+    def clone(self, substitute=None):
+        return clone_expression(self, substitute)
 
     def cname(self):
         """The text name of this Expression function"""
@@ -436,13 +411,6 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._fcn = fcn
         self._name = name
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( self._args.__class__(
-            (clone_expression(a) for a in self._args) ),
-                               self._name,
-                               self._fcn )
-
     def __getstate__(self):
         result = super(_UnaryFunctionExpression, self).__getstate__()
         for i in _UnaryFunctionExpression.__slots__:
@@ -496,11 +464,6 @@ class _AbsExpression(_UnaryFunctionExpression):
 
     def __init__(self, arg):
         super(_AbsExpression, self).__init__(arg, 'abs', abs)
-
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( self._args.__class__(
-            (clone_expression(a) for a in self._args) ) )
 
 
 class _PowExpression(_ExpressionBase):
@@ -576,12 +539,6 @@ class _InequalityExpression(_ExpressionBase):
         super(_InequalityExpression,self).__init__(args)
         self._strict = strict
         self._cloned_from = cloned_from
-
-    def __copy__(self):
-        return self.__class__( self._args.__class__(
-            (clone_expression(a) for a in self._args) ),
-                               copy.copy(self._strict),
-                               copy.copy(self._cloned_from) )
 
     def __getstate__(self):
         result = super(_InequalityExpression, self).__getstate__()
@@ -891,17 +848,11 @@ class Expr_if(_ExpressionBase):
         self._else = as_numeric(ELSE)
         self._args = (self._if, self._then, self._else)
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__(IF=clone_expression(self._if),
-                              THEN=clone_expression(self._then),
-                              ELSE=clone_expression(self._else))
-
     def __getstate__(self):
         state = super(Expr_if, self).__getstate__()
         for i in Expr_if.__slots__:
-            result[i] = getattr(self, i)
-        return result
+            state[i] = getattr(self, i)
+        return state
 
     def _arguments(self):
         return ( self._if, self._then, self._else )
@@ -1003,15 +954,6 @@ class _LinearExpression(_ExpressionBase):
             self._const = 0
             self._args = []
             self._coef = {}
-
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( 
-            copy.copy(self._const),
-            self._args.__class__(
-                (clone_expression(a) for a in self._args) ),
-            tuple( (clone_expression(self._coef[id(v)]) for v in self._args) )
-        )
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()

@@ -10,14 +10,12 @@
 import logging
 logger = logging.getLogger('pyomo.core')
 
-import itertools
-
 from six import iteritems, iterkeys, itervalues
 
 from pyomo.core.base.plugin import alias
-from pyomo.core.base import Transformation, Connector, Constraint, ConstraintList, VarList
+from pyomo.core.base import Transformation, Connector, Constraint, ConstraintList, VarList, TraversalStrategy
 from pyomo.core.base.connector import _ConnectorData
-
+from pyomo.core.base.expr import clone_expression
 
 class ExpandConnectors(Transformation):
     alias('core.expand_connectors', 
@@ -30,9 +28,8 @@ class ExpandConnectors(Transformation):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             logger.debug("Calling ConnectorExpander")
                 
-        blockList = list(instance.block_data_objects(active=True))
         noConnectors = True
-        for b in blockList:
+        for b in instance.block_data_objects(active=True):
             if b.component_map(Connector):
                 noConnectors = False
                 break
@@ -51,20 +48,22 @@ class ExpandConnectors(Transformation):
 
         # In general, blocks should be relatively self-contained, so we
         # should build the connectors from the "bottom up":
-        blockList.reverse()
+        blockList = list(instance.block_data_objects(
+            active=True, 
+            descent_order=TraversalStrategy.PostfixDepthFirstSearch ))
 
         # Expand each constraint involving a connector
         for block in blockList:
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
+            if __debug__ and logger.isEnabledFor(logging.DEBUG): #pragma:nocover
                 logger.debug("   block: " + block.cname())
 
-            CCC = {}
-            for name, constraint in itertools.chain\
-                    ( iteritems(block.component_map(Constraint)), 
-                      iteritems(block.component_map(ConstraintList)) ):
+            CCC = []
+            for constraint in block.component_objects(
+                    (Constraint, ConstraintList)):
+                name = constraint.name
                 cList = []
-                CCC[name+'.expanded'] = cList
-                for idx, c in iteritems(constraint._data):
+                CCC.append((name+'.expanded', cList))
+                for idx, c in iteritems(constraint):
                     if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
                         logger.debug("   (looking at constraint %s[%s])", name, idx)
                     connectors = []
@@ -102,13 +101,15 @@ class ExpandConnectors(Transformation):
                             v.construct()
                     
                     # OK - expand this constraint
-                    self._expand_constraint(block, name, idx, c, ref, skip, cList)
+                    self._expand_constraint(block, name, idx, c, ref, skip, cList, connectors)
                     # Now deactivate the original constraint
                     c.deactivate()
-            for name, exprs in iteritems(CCC):
+            for name, exprs in CCC:
+                if not exprs:
+                    continue
                 cList = ConstraintList()
                 block.add_component( name, cList )
-                cList.construct()
+                #cList.construct()
                 for expr in exprs:
                     cList.add(expr)
                 
@@ -174,7 +175,7 @@ class ExpandConnectors(Transformation):
                     ( ref.cname(), var, tmp.cname() ) )
         return errors, ref, skip
 
-    def _expand_constraint(self, block, name, idx, constraint, ref, skip, cList):
+    def _expand_constraint(self, block, name, idx, constraint, ref, skip, cList, connectors):
         def _substitute_var(arg, var):
             if arg.is_expression():
                 if arg.__class__ is _ProductExpression:
@@ -208,9 +209,19 @@ class ExpandConnectors(Transformation):
                 elif isinstance(arg, VarList):
                     args[idx] = arg.add()
 
-        for var in ref.vars.iterkeys():
+        for var in sorted(ref.vars.iterkeys()):
             if var in skip:
                 continue
+            #vMap = dict((id(c),var) for c in connectors)
+            #if constraint.equality:
+            #    cList.append( ( clone_expression(constraint.body, substitute=vMap),
+            #                    constraint.upper ) )
+            #else:
+            #    cList.append( ( constraint.lower,
+            #                    clone_expression(constraint.body, substitute=vMap),
+            #                    constraint.upper ) )
+            #return
+
             if constraint.body.is_expression():
                 c = _substitute_var(constraint.body.clone(), var)
             else:

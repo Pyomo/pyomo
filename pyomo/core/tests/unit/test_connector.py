@@ -141,9 +141,22 @@ class TestConnector(unittest.TestCase):
         m.CON = Connector()
         m.CON.add(m.x, "x")
 
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
         m.c = Constraint(expr= m.CON == 1)
+        m.nocon = Constraint(expr = m.x == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
         TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
 
         os = StringIO()
         m.component('c.expanded').pprint(ostream=os)
@@ -151,6 +164,41 @@ class TestConnector(unittest.TestCase):
 """c.expanded : Size=1, Index=c.expanded_index, Active=True
     Key : Lower : Body : Upper : Active
       1 :   1.0 :    x :   1.0 :   True
+""")
+
+
+    def test_multiple_scalar_expand(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.CON = Connector()
+        m.CON.add(m.x, "x")
+        m.CON.add(m.y)
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == 1)
+        m.nocon = Constraint(expr = m.x == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+    Key : Lower : Body : Upper : Active
+      1 :   1.0 :    x :   1.0 :   True
+      2 :   1.0 :    y :   1.0 :   True
 """)
 
 

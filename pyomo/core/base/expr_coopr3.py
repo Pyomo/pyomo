@@ -49,14 +49,7 @@ import pyomo.core.base.expr_common
 from pyomo.core.base.expr_common import \
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
     _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq
-
-
-def clone_expression(exp, substitute=None):
-    _scope = { id(None): False }
-    if substitute:
-        _scope.update(substitute)
-    return deepcopy(exp, {'__block_scope__': {id(None): False}})
+    _lt, _le, _eq, clone_expression
 
 
 def chainedInequalityErrorMessage(msg=None):
