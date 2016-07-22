@@ -84,6 +84,9 @@ class Test(unittest.TestCase):
     def tearDownClass(cls):
         os.chdir(cls.oldpwd)
 
+    def setUp(self):
+        os.chdir(thisdir)
+
     def test_noexe(self):
         with SystemCallSolver(type='test') as opt:
             self.assertEqual(id(opt._user_executable), id(None))
