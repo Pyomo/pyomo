@@ -268,6 +268,8 @@ class _SMPSTesterBase(object):
                     out.write("Output file does not match baseline:\n")
                     for line in diff:
                         out.write(line)
+                    sys.stderr.write(out.getvalue())
+                    sys.stdout.write(out.getvalue())
                     self.fail(out.getvalue())
         for subdir in dc.subdirs:
             self._diff(join(baselinedir, subdir),
