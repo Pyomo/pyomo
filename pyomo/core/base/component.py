@@ -487,27 +487,35 @@ class ComponentData(object):
         #    print("DANGLING ComponentData: %s on %s" % (
         #        type(self),self.parent_component()))
 
-        if '__block_scope__' in memo:
+        # Note: there is an edge case when cloning a block: the initial
+        # call to deepcopy (on the target block) has __block_scope__
+        # defined, however, the parent block of self is either None, or
+        # is (by definition) out of scope.  So we will check that
+        # id(self) is not in __block_scope__: if it is, then this is the
+        # top-level block and we need to do the normal deepcopy.
+        if '__block_scope__' in memo and \
+                id(self) not in memo['__block_scope__']:
             _known = memo['__block_scope__']
-            _newComponent = False
-            tmp = self.parent_component()
-            while id(tmp) not in _known:
-                if tmp is None:
-                    # Out of the __top_block__ scope... shallow copy only
-                    #print("   ...out of scope")
-                    ans = memo[id(self)] = self
-                    return ans
-                _newComponent = True
+            _new = []
+            tmp = self.parent_block()
+            tmpId = id(tmp)
+            # Note: normally we would need to check that tmp does not
+            # end up being None.  However, since clone() inserts
+            # id(None) into the __block_scope__ dictionary, we are safe
+            while tmpId not in _known:
+                _new.append(tmpId)
                 tmp = tmp.parent_block()
+                tmpId = id(tmp)
 
-            if _newComponent:
-                # Add this block to the list of known blocks
-                tmp = self.parent_component()
-                while id(tmp) not in _known:
-                    #print("   ...NEW: %s" % (tmp,))
-                    _known.add( id(tmp) )
-                    tmp = tmp.parent_block()
+            # Remember whether all newly-encountered blocks are in or
+            # out of scope (prevent duplicate work)
+            for _id in _new:
+                _known[_id] = _known[tmpId]
 
+            if not _known[tmpId]:
+                # component is out-of-scope.  shallow copy only
+                ans = memo[id(self)] = self
+                return ans
 
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
         # We can't do the "obvious", since this is a (partially)

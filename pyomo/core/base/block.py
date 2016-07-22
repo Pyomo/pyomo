@@ -989,9 +989,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # preserved as references (anything outside this block
         # hierarchy).  We must always go through this effort to prevent
         # copying certain "reserved" components (like Any,
-        # NonNegativeReals, etc).
+        # NonNegativeReals, etc) that are not "owned" by any blocks and
+        # should be preserved as singletons.
         #
-        new_block = copy.deepcopy(self, {'__block_scope__': set( (id(self),) )})
+        new_block = copy.deepcopy(
+            self, {'__block_scope__': {id(self):True, id(None):False}} )
         new_block._parent = None
         return new_block
 
