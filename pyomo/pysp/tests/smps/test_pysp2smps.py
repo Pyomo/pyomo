@@ -204,6 +204,8 @@ class _SMPSTesterBase(object):
             subprocess.check_call(cmd,
                                   stdout=f,
                                   stderr=subprocess.STDOUT)
+        with open(outname) as f:
+            sys.stderr.write(f.read())
 
     def _cleanup(self):
         for fname in self._tempfiles:
