@@ -56,7 +56,6 @@ def configure_cbc():
     if _cbc_version is not None:
         _cbc_old_version = _cbc_version < (2,7,0,0)
 
-
 class CBC(OptSolver):
     """The CBC LP/MIP solver
     """

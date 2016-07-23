@@ -26,22 +26,18 @@ from six import iteritems, string_types
 
 logger = logging.getLogger('pyomo.solvers')
 
-glpk_file_flag=None
 _glpk_version = None
 def configure_glpk():
-    global glpk_file_flag
     global _glpk_version
-    if glpk_file_flag is not None:
+    if _glpk_version is not None:
         return
-    glpk_file_flag = False
+    _glpk_version = _extract_version("")
     if registered_executable("glpsol") is None:
         return
     errcode, results = pyutilib.subprocess.run(
         [registered_executable('glpsol').get_path(), "--version"], timelimit=2)
     if errcode == 0:
         _glpk_version = _extract_version(results)
-        glpk_file_flag = _glpk_version >= (4,58,0,0)
-
 
 # Not sure how better to get these constants, but pulled from GLPK
 # documentation and source code (include/glpk.h)
@@ -76,20 +72,16 @@ class GLPK(OptSolver):
             mode = 'lp'
         #
         if mode  == 'lp':
-            if _glpk_version is None:
-                logger.error('GLPK solver is not installed')
-                return 
-            elif glpk_file_flag:
+            if (_glpk_version is None) or \
+               (_glpk_version >= (4,58,0,0)):
                 return SolverFactory('_glpk_shell', **kwds)
             elif _glpk_version >= (4,42,0,0):
                 return SolverFactory('_glpk_shell_4_42', **kwds)
             else:
                 return SolverFactory('_glpk_shell_old', **kwds)
         if mode == 'mps':
-            if _glpk_version is None:
-                logger.error('GLPK solver is not installed')
-                return 
-            elif glpk_file_flag:
+            if (_glpk_version is None) or \
+               (_glpk_version >= (4,58,0,0)):
                 opt = SolverFactory('_glpk_shell', **kwds)
             elif _glpk_version >= (4,42,0,0):
                 opt = SolverFactory('_glpk_shell_4_42', **kwds)
