@@ -181,6 +181,8 @@ def __solver_call__(self, _name=None, args=[], **kwds):
             if mode is None:
                 mode = 'nl'
             _implicit_solvers = {'nl': 'asl', 'os': '_ossolver' }
+            if "executable" not in kwds:
+                kwds["executable"] = _name
             if mode in _implicit_solvers:
                 if _implicit_solvers[mode] not in IOptSolver._factory_cls:
                     raise RuntimeError(
