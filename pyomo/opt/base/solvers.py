@@ -178,8 +178,9 @@ def __solver_call__(self, _name=None, args=[], **kwds):
         mode = kwds.get('solver_io', 'nl')
         if mode is None:
             mode = 'nl'
-        pyutilib.services.register_executable(name=_name)
-        if pyutilib.services.registered_executable(_name):
+        _exe = kwds.get("executable", _name)
+        pyutilib.services.register_executable(name=_exe)
+        if pyutilib.services.registered_executable(_exe):
             _implicit_solvers = {'nl': 'asl', 'os': '_ossolver' }
             if mode in _implicit_solvers:
                 if _implicit_solvers[mode] not in IOptSolver._factory_cls:
