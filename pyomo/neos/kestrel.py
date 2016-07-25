@@ -23,7 +23,10 @@ import gzip
 import base64
 import tempfile
 import logging
-import httplib
+try:
+    import httplib
+except:
+    import http.client as httplib
 try:
     import xmlrpclib
 except:                                 #pragma:nocover
@@ -51,10 +54,13 @@ class ProxiedTransport(xmlrpclib.Transport):
 class kestrelAMPL:
 
     def __init__(self):
-        try:
-            self.setup_connection('3333')
-        except httplib.BadStatusLine:
-            self.setup_connection('3332')
+        #try:
+            #self.setup_connection('3333')
+        #except httplib.BadStatusLine:
+        #
+        # It looks like port 3333 isn't supported yet.
+        #
+        self.setup_connection('3332')
 
     def setup_connection(self, port):
         if 'HTTP_PROXY' in os.environ:
