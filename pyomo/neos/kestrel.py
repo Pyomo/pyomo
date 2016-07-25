@@ -23,6 +23,7 @@ import gzip
 import base64
 import tempfile
 import logging
+import httplib
 try:
     import xmlrpclib
 except:                                 #pragma:nocover
@@ -50,12 +51,18 @@ class ProxiedTransport(xmlrpclib.Transport):
 class kestrelAMPL:
 
     def __init__(self):
+        try:
+            self.setup_connection('3333')
+        except httplib.BadStatusLine:
+            self.setup_connection('3332')
+
+    def setup_connection(self, port):
         if 'HTTP_PROXY' in os.environ:
             p = ProxiedTransport()
             p.set_proxy(os.environ['HTTP_PROXY'])
-            self.neos = xmlrpclib.ServerProxy("http://www.neos-server.org:3332",transport=p)
+            self.neos = xmlrpclib.ServerProxy("http://www.neos-server.org:"+port,transport=p)
         else:
-            self.neos = xmlrpclib.ServerProxy("http://www.neos-server.org:3332")
+            self.neos = xmlrpclib.ServerProxy("http://www.neos-server.org:"+port)
         logger.info("Connecting to the NEOS server ... ")
         try:
             result = self.neos.ping()
