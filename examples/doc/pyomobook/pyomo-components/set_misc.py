@@ -17,10 +17,10 @@ print(type(model.A.data()))     # set
 print(type(model.B.data()))     # set
 print(type(model.C.data()))     # dict
 print(sorted(model.A.data()))   # [1,2,3]
-# [1]
-# [1,2]
 for index in sorted(model.C.data().keys()):
   print(sorted(model.C.data()[index]))
+# [1]
+# [1,2]
 # @:data
 
 model = ConcreteModel()
@@ -36,7 +36,7 @@ print([1,2] == model.A)     # False
 # Test if sets are not equal
 print([1,2] != model.A)     # True
 
-# Test if a set is a subset or equal of the set
+# Test if a set is a subset of or equal to the set
 print([1,2] <= model.A)     # True
 
 # Test if a set is a subset of the set
@@ -55,10 +55,10 @@ model.A = Set(initialize=[1,2,3])
 model.C = Set(model.A, initialize={1:[1], 2:[1,2]})
 
 print(sorted(e for e in model.A))   # [1,2,3]
-# [1]
-# [1,2]
 for index in model.C:
     print(sorted(e for e in model.C[index]))
+# [1]
+# [1,2]
 # @:iter
 
 model = ConcreteModel()

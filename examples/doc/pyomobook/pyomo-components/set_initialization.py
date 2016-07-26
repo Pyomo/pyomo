@@ -23,8 +23,9 @@ model.J = Set(model.B,model.B, initialize=J_init)
 
 # @decl12:
 model.P = Set(initialize=[1,2,3,5,7])
-model.Q = Set(initialize=range(1,10),
-             filter=lambda model, x : x not in model.P)
+def filter_rule(model, x):
+    return x not in model.P
+model.Q = Set(initialize=range(1,10), filter=filter_rule)
 # @:decl12
 
 # @decl20:

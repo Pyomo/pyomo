@@ -23,8 +23,8 @@ model.x = Var(model.A, within=NonNegativeReals)
 
 model.o = Objective(expr=summation(model.p, model.x))
 
-model.p[2] = 1
-model.p[3] = 1
+model.p[2] = 4.2
+model.p[3] = 3.14
 # @:mutable2
 model.pprint()
 
