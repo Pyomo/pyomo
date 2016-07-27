@@ -4,7 +4,7 @@ model = ConcreteModel()
 
 # @decl1:
 model.x = Var([1,2], initialize=1.0)
-model.diff= Constraint(expr=model.x[2]-model.x[1] <= 7.5)
+model.diff = Constraint(expr=model.x[2]-model.x[1] <= 7.5)
 # @:decl1
 
 model.pprint()
@@ -32,7 +32,7 @@ model.y = Var(N, within=NonNegativeReals, initialize=0.0)
 
 def CoverConstr_rule(model, i):
     return a[i] * model.y[i] >= b[i]
-model.CoverConstr= Constraint(N, rule=CoverConstr_rule)
+model.CoverConstr = Constraint(N, rule=CoverConstr_rule)
 # @:decl3
 
 model.pprint()
