@@ -848,7 +848,7 @@ def runef(options,
         print("")
         print("Running the EF solver for "
               "stochastic programming problems.")
-        ef = EFSolvers(options)
+        ef = EFSolver(options)
         results = ef.solve(manager,
                            output_solver_log=True)
         print(results)
