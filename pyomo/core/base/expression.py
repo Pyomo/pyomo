@@ -243,6 +243,9 @@ class Expression(IndexedComponent):
         rule        A rule function used to initialize this object.
     """
 
+    NoConstraint    = (1000,)
+    Skip            = (1000,)
+
     def __new__(cls, *args, **kwds):
         if cls != Expression:
             return super(Expression, cls).__new__(cls)
@@ -321,13 +324,16 @@ class Expression(IndexedComponent):
 
         if (self.is_indexed() is False) and \
            (not None in new_values):
-            raise RuntimeError(
+            raise KeyError(
                 "Cannot store value for scalar Expression"
                 "="+self.cname(True)+"; no value with index "
                 "None in input new values map.")
 
         for index, new_value in iteritems(new_values):
             self._data[index].set_value(new_value)
+
+    def _default(self, index):
+        raise KeyError(str(index))
 
     def __setitem__(self, ndx, val):
         #
@@ -371,48 +377,34 @@ class Expression(IndexedComponent):
         # Utilities like DAE assume this stays around
         #self._init_rule = None
 
-        #
-        # Construct _GeneralExpressionData objects for all index values
-        #
         if not self.is_indexed():
             self._data[None] = self
 
-            self._data.update(
-                (key, _GeneralExpressionData(None, component=self))
-                for key in self._index)
-
         #
-        # Initialize members
+        # Construct and initialize members
         #
-        if _init_expr is not None:
-            #
-            # Initialize values with a value
-            #
+        if _init_rule is not None:
+            # construct and initialize with a rule
+            if self.is_indexed():
+                for key in self._index:
+                    self.add(key,
+                             apply_indexed_rule(
+                                 self,
+                                 _init_rule,
+                                 self._parent(),
+                                 key))
+            else:
+                self.add(None, _init_rule(self._parent()))
+        else:
+            # construct and initialize with a value
             if _init_expr.__class__ is dict:
                 for key in self._index:
-                    # Skip indices that are not in the dictionary
-                    if not key in _init_expr:
+                    if key not in _init_expr:
                         continue
                     self.add(key, _init_expr[key])
-                    #self._data[key].set_value(_init_expr[key])
             else:
                 for key in self._index:
                     self.add(key, _init_expr)
-                    #self._data[key].set_value(_init_expr)
-
-        elif _init_rule is not None:
-            #
-            # Initialize values with a rule
-            #
-            if self.is_indexed():
-                for key in self._index:
-                    self.add(key, apply_indexed_rule(self,
-                                           _init_rule,
-                                           self._parent(),
-                                           key))
-            else:
-                self.add(None, _init_rule(self._parent()))
-
 
 class SimpleExpression(_GeneralExpressionData, Expression):
 
@@ -501,13 +493,18 @@ class SimpleExpression(_GeneralExpressionData, Expression):
     def add(self, index, expr):
         """Add an expression with a given index."""
         if index is not None:
-            raise ValueError(
+            raise KeyError(
                 "SimpleExpression object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
                 % (self.cname(True), index))
+        if (type(expr) is tuple) and \
+           (expr == Expression.Skip):
+            raise ValueError(
+                "Expression.Skip can not be assigned "
+                "to an Expression that is not indexed: %s"
+                % (self.cname(True)))
         self.set_value(expr)
         return self
-
 
 class IndexedExpression(Expression):
 
@@ -520,6 +517,9 @@ class IndexedExpression(Expression):
     #
     def add(self, index, expr):
         """Add an expression with a given index."""
+        if (type(expr) is tuple) and \
+           (expr == Expression.Skip):
+            return None
         cdata = _GeneralExpressionData(expr, component=self)
         self._data[index] = cdata
         return cdata
