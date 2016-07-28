@@ -54,54 +54,166 @@ documentation found at: http://myweb.dal.ca/gassmann/smps2.htm#StochIndep
 
 import random
 import math
-class NormalDistribution(object):
-    def __init__(self, mu, sigma):
-        self.mu = mu
-        self.sigma = sigma
-    def sample(self):
-        return random.normalvariate(self.mu, self.sigma)
 
-"""
-class PySPDistribution(object):
+class Distribution(object):
+    def expectation(self, *args, **kwds):
+        raise NotImplementedError
     def sample(self, *args, **kwds):
         raise NotImplementedError
 
-class TableDistribution(PySPDistribution):
+class TableDistribution(Distribution):
+    """
+    Table distribution.
+
+    A probability weighted table of discrete values. If no
+    weights are provided, the probability of each value is
+    considered uniform.
+    """
+
     def __init__(self, values, weights=None):
-        if weights is None:
-            weights = [1.0/len(values)]*len(values)
-        else:
-            assert len(weights) == len(values)
-            assert abs(sum(weights) - 1) < 1e-6
-        super(DiscreteDistribution, self).__init__(values, weights, "DISCRETE")
+        assert len(values) > 0
+        self.values = values
+        self.weights = weights
+        if self.weights is None:
+            self.weights = [1.0/len(self.values)]*len(self.values)
+        assert len(self.values) == len(self.weights)
+        assert abs(sum(self.weights) - 1) < 1e-6
 
-class NormalDistribution(PySPDistribution):
-    def __init__(self, mean, variance):
-        assert variance >= 0
-        super(NormalDistribution, self).__init__(mean, variance, "NORMAL")
+    def expectation(self):
+        return sum(value * weight for value, weight
+                   in zip(self.values, self.weights))
 
-class UniformDistribution(PySPDistribution):
+    def sample(self):
+        x = random.uniform(0, 1)
+        cumm = 0.0
+        for value, weight in zip(self.values, self.weights):
+            cumm += weight
+            if x < cumm:
+                break
+        return value
+
+class UniformDistribution(Distribution):
+    """
+    Uniform distribution.
+
+    A random number in the range [a, b) or [a, b] depending on rounding.
+    """
+
     def __init__(self, a, b):
         assert a <= b
-        super(UniformDistribution, self).__init__(a, b, "UNIFORM")
+        self.a = a
+        self.b = b
 
-class GammaDistribution(PySPDistribution):
-    def __init__(self, scale, shape):
-        assert scale >= 0
-        assert shape >= 0
-        super(GammaDistribution, self).__init__(scale, shape, "GAMMA")
+    def expectation(self):
+        return (self.b - self.a)/2.0
 
-class BetaDistribution(PySPDistribution):
-    def __init__(self, alpha, beta):
+    def sample(self):
+        return random.uniform(self.a, self.b)
+
+class NormalDistribution(Distribution):
+    """
+    Normal distribution.
+
+    The parameters represent the mean (mu) and the standard
+    deviation (sigma).
+
+    The probability density function is:
+
+               e^((x-mu)^2 / -2(sigma^2))
+    pdf(x) =  ----------------------------
+                sqrt(2 * pi * sigma^2)
+    """
+
+    def __init__(self, mu, sigma, sampler=random.normalvariate):
+        self.mu = mu
+        self.sigma = sigma
+        self._sampler = sampler
+
+    def expectation(self):
+        return self.mu
+
+    def sample(self):
+        return self._sampler(self.mu, self.sigma)
+
+class LogNormalDistribution(Distribution):
+    """
+    Log normal distribution.
+
+    A variable x has a log-normal distribution if log(x) is
+    normally distributed. The parameters represent the mean
+    (mu) and the standard deviation (sigma > 0) of the
+    underlying normal distribution.
+
+    The probability density function is:
+
+               e^((ln(x)-mu)^2 / -2(sigma^2))
+    pdf(x) =  ----------------------------
+                sigma * x * sqrt(2 * pi)
+    """
+
+    def __init__(self, mu, sigma, sampler=random.lognormvariate):
+        assert sigma > 0
+        self.mu = mu
+        self.sigma = sigma
+        self._sampler = sampler
+
+    def expectation(self):
+        return math.exp(self.mu + ((self.sigma**2)/2.0))
+
+    def sample(self):
+        return self._sampler(self.mu, self.sigma)
+
+class GammaDistribution(Distribution):
+    """
+    Gamma distribution.
+
+    Conditions on the parameters shape > 0 and scale > 0.
+
+    The probability density function is:
+
+               x^(shape-1) * e^(-x/scale)
+    pdf(x) =  ----------------------------
+              scale^shape * GammaFn(shape)
+    """
+
+    def __init__(self, scale, shape, sampler=random.gammavariate):
+        assert scale > 0
+        assert shape > 0
+        self.shape = shape
+        self.scale = scale
+        self._sampler = sampler
+
+    def expectation(self):
+        return self.shape * self.scale
+
+    def sample(self):
+        return self._sampler(self.shape, self.scale)
+
+class BetaDistribution(Distribution):
+    """
+    Beta distribution.
+
+    Conditions on the parameters alpha > 0 and beta > 0.
+
+    The probability density function is:
+
+               x^(alpha-1) * (1-x)^(beta-1)
+    pdf(x) =  -----------------------------
+                  BetaFn(alpha, beta)
+    """
+
+    def __init__(self, alpha, beta, sampler=random.betavariate):
         assert alpha > 0
-        assert beta > 0
-        super(BetaDistribution, self).__init__(alpha, beta, "BETA")
+        assert alpha > 0
+        self.alpha = alpha
+        self.beta = beta
+        self._sampler = sampler
 
-class LogNormalDistribution(PySPDistribution):
-    def __init__(self, mean, variance):
-        assert variance >= 0
-        super(LogNormalDistribution, self).__init__(mean, variance, "LOGNORM")
-"""
+    def expectation(self):
+        return self.alpha / float(self.alpha + self.beta)
+
+    def sample(self):
+        return self._sampler(self.alpha, self.beta)
 
 def _map_variable_stages(model):
 
@@ -413,13 +525,14 @@ class EmbeddedSP(object):
             #       code also fails to detect that mutable
             #       "constant" expressions might fall out
             #       of the body and into the bounds.
-            if len(body_params) > 0:
+            if len(body_params):
                 sto_conbody.declare(con)
-            if (len(lower_params) > 0) or \
-               (len(upper_params) > 0):
+            if len(body_params) or \
+               len(lower_params) or \
+               len(upper_params):
                 sto_conbounds.declare(con,
-                                      lb=bool(len(lower_params) > 0),
-                                      ub=bool(len(upper_params) > 0))
+                                      lb=bool(len(lower_params) or len(body_params)),
+                                      ub=bool(len(upper_params) or len(body_params)))
 
             all_stochastic_params = {}
             for param in itertools.chain(lower_params,
@@ -691,5 +804,11 @@ class EmbeddedSP(object):
     def sample(self, return_copy=False):
         for param, dist in self.stochastic_data.items():
             param.value = dist.sample()
+        if return_copy:
+            return self.reference_model.clone()
+
+    def set_expected_value(self, return_copy=False):
+        for param, dist in self.stochastic_data.items():
+            param.value = dist.expectation()
         if return_copy:
             return self.reference_model.clone()
