@@ -17,6 +17,7 @@ import logging
 from pyomo.opt import undefined
 
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
+from pyomo.pysp.util.config import PySPConfigBlock
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -103,11 +104,11 @@ class SPSolver(PySPConfiguredObject):
     def _solve_impl(self, *args, **kwds):
         raise NotImplementedError
 
-def SPSolverFactory(solver_name, options=None, **kwds):
+def SPSolverFactory(solver_name, **kwds):
     if solver_name in SPSolverFactory._registered_solvers:
         type_ = SPSolverFactory._registered_solvers[solver_name]
-        if options is None:
-            options = type_.register_options()
+        options = PySPConfigBlock(implicit=True)
+        type_.register_options(options)
         return type_(options, **kwds)
     else:
         raise ValueError(

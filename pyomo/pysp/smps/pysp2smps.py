@@ -201,7 +201,7 @@ def run_pysp2smps(options):
     with manager_class(options) as scenario_tree_manager:
         scenario_tree_manager.initialize()
         pyomo.pysp.smps.smpsutils.\
-            convert_explicit(
+            convert_external(
                 options.output_directory,
                 options.basename,
                 scenario_tree_manager,

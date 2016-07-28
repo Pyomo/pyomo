@@ -9,3 +9,4 @@
 
 import pyomo.pysp.smps.pysp2smps
 import pyomo.pysp.smps.smpsutils
+import pyomo.pysp.smps.ddsiputils

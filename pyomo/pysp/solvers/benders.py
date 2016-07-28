@@ -1347,8 +1347,7 @@ def runbenders(options):
     with the Benders solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerFactory(options) \
-         as manager:
+    with ScenarioTreeManagerFactory(options) as manager:
         manager.initialize()
 
         # This is hard to do without a general option for

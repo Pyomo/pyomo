@@ -43,9 +43,11 @@ from pyomo.pysp.scenariotree.manager_solver import \
      ScenarioTreeManagerFactory)
 import pyomo.pysp.smps.smpsutils
 from pyomo.pysp.embeddedsp import EmbeddedSP
-from pyomo.pysp.solvers.spsolver import (SPSolver,
-                                         SPSolverResults,
+from pyomo.pysp.solvers.spsolver import (SPSolverResults,
                                          SPSolverFactory)
+from pyomo.pysp.solvers.spsolvershellcommand import \
+    SPSolverShellCommand
+
 
 _sd_group_label = "SD Options"
 
@@ -186,28 +188,12 @@ _domain_sd_tolerance._values = ('loose','nominal','tight')
 _domain_sd_tolerance.doc = \
     "<domain: %s>" % (str(_domain_sd_tolerance._values))
 
-class SDSolver(SPSolver, PySPConfiguredObject):
+class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
 
     @classmethod
     def _declare_options(cls, options=None):
         if options is None:
             options = PySPConfigBlock()
-        safe_register_unique_option(
-            options,
-            "executable",
-            PySPConfigValue(
-                "sd",
-                domain=_domain_must_be_str,
-                description=(
-                    "Name of the executable used when launching the "
-                    "SD solver. The default is 'sd'. This "
-                    "option can be set to an absolute or relative path. "
-                    "Otherwise, it is assumed that the named executable "
-                    "will be found in the shell's search path."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_sd_group_label)
         safe_register_unique_option(
             options,
             "stopping_rule_tolerance",
@@ -351,12 +337,12 @@ class SDSolver(SPSolver, PySPConfiguredObject):
     def __init__(self, *args, **kwds):
         super(SDSolver, self).__init__(*args, **kwds)
         self._name = "sd"
+        self._executable = "sd"
 
     def _solve_impl(self,
                     sp,
-                    keep_solver_files=False,
                     output_solver_log=False,
-                    symbolic_solver_labels=False):
+                    **kwds):
 
         if len(sp.scenario_tree.stages) > 2:
             raise ValueError("SD solver does not handle more "
@@ -366,107 +352,88 @@ class SDSolver(SPSolver, PySPConfiguredObject):
             raise ValueError("SD solver does not yet handle "
                              "maximization problems")
 
-        pyutilib.services.TempfileManager.push()
-        try:
+        #
+        # Setup the SD working directory
+        #
 
-            #
-            # Setup the SD working directory
-            #
+        working_directory = self._create_tempdir("workdir")
+        config_filename = self._files["configfile"] = \
+                          os.path.join(working_directory,
+                                       "config.sd")
+        sdinput_directory = os.path.join(working_directory,
+                                         "sdinput",
+                                         "pysp_model")
+        sdoutput_directory = os.path.join(working_directory,
+                                          "sdoutput",
+                                          "pysp_model")
+        logfile = self._files["logfile"] = \
+                  os.path.join(working_directory, "sd.log")
 
-            working_directory = pyutilib.services.\
-                                TempfileManager.create_tempdir()
-            config_filename = os.path.join(working_directory,
-                                           "config.sd")
-            sdinput_directory = os.path.join(working_directory,
-                                             "sdinput",
-                                             "pysp_model")
-            sdoutput_directory = os.path.join(working_directory,
-                                              "sdoutput",
-                                              "pysp_model")
-            logfile = os.path.join(working_directory, "sd.log")
+        os.makedirs(sdinput_directory)
+        assert os.path.exists(sdinput_directory)
+        assert not os.path.exists(sdoutput_directory)
+        self._write_config(config_filename)
 
-            os.makedirs(sdinput_directory)
-            assert os.path.exists(sdinput_directory)
-            assert not os.path.exists(sdoutput_directory)
-            self._write_config(config_filename)
+        if self.get_option('single_replication'):
+            solution_filename = os.path.join(
+                sdoutput_directory,
+                "pysp_model.detailed_rep_soln.out")
+        else:
+            solution_filename = os.path.join(
+                sdoutput_directory,
+                "pysp_model.detailed_soln.out")
 
-            if self.get_option('single_replication'):
-                solution_filename = os.path.join(
-                    sdoutput_directory,
-                    "pysp_model.detailed_rep_soln.out")
-            else:
-                solution_filename = os.path.join(
-                    sdoutput_directory,
-                    "pysp_model.detailed_soln.out")
+        #
+        # Create the SD input files
+        #
 
-            #
-            # Create the SD input files
-            #
+        symbol_map = None
+        if isinstance(sp, EmbeddedSP):
+            symbol_map = pyomo.pysp.smps.smpsutils.\
+                         convert_embedded(
+                             sdinput_directory,
+                             "pysp_model",
+                             sp,
+                             core_format='mps',
+                             io_options=kwds)
+        else:
+            pyomo.pysp.smps.smpsutils.\
+                convert_external(
+                    sdinput_directory,
+                    "pysp_model",
+                    sp,
+                    core_format='mps',
+                    io_options=kwds)
 
-            io_options = {'symbolic_solver_labels':
-                          symbolic_solver_labels}
+        #
+        # Launch SD
+        #
 
-            symbol_map = None
-            if isinstance(sp, EmbeddedSP):
-                symbol_map = pyomo.pysp.smps.smpsutils.\
-                             convert_embedded(
-                                 sdinput_directory,
-                                 "pysp_model",
-                                 sp,
-                                 core_format='mps',
-                                 io_options=io_options)
-            else:
-                pyomo.pysp.smps.smpsutils.\
-                    convert_explicit(
-                        sdinput_directory,
-                        "pysp_model",
-                        sp,
-                        core_format='mps',
-                        io_options=io_options)
+        start = time.time()
+        rc, log = pyutilib.subprocess.run(
+            self.executable,
+            cwd=working_directory,
+            stdin="pysp_model",
+            outfile=logfile,
+            tee=output_solver_log)
+        stop = time.time()
+        assert os.path.exists(sdoutput_directory)
 
-            #
-            # Launch SD
-            #
+        #
+        # Parse the SD solution
+        #
 
-            if keep_solver_files:
-                print("Solver working directory: '%s'"
-                      % (working_directory))
-                print("Solver log file: '%s'"
-                      % (logfile))
+        xhat, results = self._read_solution(solution_filename)
 
-            start = time.time()
-            rc, log = pyutilib.subprocess.run(
-                self.get_option("executable"),
-                cwd=working_directory,
-                stdin="pysp_model",
-                outfile=logfile,
-                tee=output_solver_log)
-            stop = time.time()
-            assert os.path.exists(sdoutput_directory)
+        results.solver_time = stop - start
 
-            #
-            # Parse the SD solution
-            #
-
-            xhat, results = self._read_solution(solution_filename)
-
-            results.solver_time = stop - start
-
-            if symbol_map is not None:
-                # load the first stage variable solution into
-                # the reference model
-                for symbol, varvalue in xhat.items():
-                    symbol_map.bySymbol[symbol]().value = varvalue
-            else:
-                results.xhat = xhat
-
-        finally:
-
-            #
-            # cleanup
-            #
-            pyutilib.services.TempfileManager.pop(
-                remove=not keep_solver_files)
+        if symbol_map is not None:
+            # load the first stage variable solution into
+            # the reference model
+            for symbol, varvalue in xhat.items():
+                symbol_map.bySymbol[symbol]().value = varvalue
+        else:
+            results.xhat = {sp.scenario_tree.findRootNode().name: xhat}
 
         return results
 
@@ -620,8 +587,7 @@ def runsd(options):
     with the SD solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerFactory(options) \
-         as manager:
+    with ScenarioTreeManagerFactory(options) as manager:
         manager.initialize()
         print("")
         print("Running SD solver for stochastic "

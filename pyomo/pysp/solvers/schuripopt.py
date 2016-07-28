@@ -46,9 +46,10 @@ from pyomo.pysp.scenariotree.manager_solver import \
      ScenarioTreeManagerSolverResults,
      ScenarioTreeManagerFactory)
 from pyomo.pysp.phutils import indexToString
-from pyomo.pysp.solvers.spsolver import (SPSolver,
-                                         SPSolverResults,
+from pyomo.pysp.solvers.spsolver import (SPSolverResults,
                                          SPSolverFactory)
+from pyomo.pysp.solvers.spsolvershellcommand import \
+    SPSolverShellCommand
 
 from six.moves import xrange
 # use fast version of pickle (python 2 or 3)
@@ -70,7 +71,7 @@ _schuripopt_group_label = "SchurIpoptSolver Options"
 def _write_bundle_nl(worker,
                      bundle,
                      output_directory,
-                     symbolic_solver_labels):
+                     io_options):
 
     assert os.path.exists(output_directory)
 
@@ -123,8 +124,6 @@ def _write_bundle_nl(worker,
 
     output_filename = os.path.join(output_directory,
                                    str(bundle.name)+".nl")
-    io_options = {'symbolic_solver_labels':
-                  symbolic_solver_labels}
     # write the model and obtain the symbol_map
     _, smap_id = bundle_instance.write(
         output_filename,
@@ -145,7 +144,7 @@ def _write_bundle_nl(worker,
 def _write_scenario_nl(worker,
                        scenario,
                        output_directory,
-                       symbolic_solver_labels):
+                       io_options):
 
     assert os.path.exists(output_directory)
     instance = scenario._instance
@@ -191,8 +190,7 @@ def _write_scenario_nl(worker,
 
     output_filename = os.path.join(output_directory,
                                    str(scenario.name)+".nl")
-    io_options = {'symbolic_solver_labels':
-                  symbolic_solver_labels}
+
     # write the model and obtain the symbol_map
     _, smap_id = instance.write(
         output_filename,
@@ -217,7 +215,7 @@ def EXTERNAL_invoke_solve(worker,
                           problem_list_filename,
                           executable,
                           output_solver_log,
-                          symbolic_solver_labels,
+                          io_options,
                           suffixes=None):
     assert os.path.exists(working_directory)
     import mpi4py.MPI
@@ -242,7 +240,7 @@ def EXTERNAL_invoke_solve(worker,
                 worker,
                 bundle,
                 working_directory,
-                symbolic_solver_labels)
+                io_options)
             stop = time.time()
             write_time[bundle.name] = stop - start
     else:
@@ -254,7 +252,7 @@ def EXTERNAL_invoke_solve(worker,
                 worker,
                 scenario,
                 working_directory,
-                symbolic_solver_labels)
+                io_options)
             stop = time.time()
             write_time[scenario.name] = stop - start
     assert load_function is not None
@@ -327,7 +325,7 @@ def EXTERNAL_invoke_solve(worker,
 
     return worker_results
 
-class SchurIpoptSolver(SPSolver, PySPConfiguredObject):
+class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
 
     @classmethod
     def _declare_options(cls, options=None):
@@ -358,6 +356,7 @@ class SchurIpoptSolver(SPSolver, PySPConfiguredObject):
     def __init__(self, *args, **kwds):
         super(SchurIpoptSolver, self).__init__(*args, **kwds)
         self._name = "schuripopt"
+        self._executable = "schuripopt"
 
     def _launch_solver(self,
                        manager,
@@ -365,7 +364,7 @@ class SchurIpoptSolver(SPSolver, PySPConfiguredObject):
                        logfile,
                        ignore_bundles=False,
                        output_solver_log=False,
-                       symbolic_solver_labels=False):
+                       io_options=None):
 
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
@@ -405,9 +404,9 @@ class SchurIpoptSolver(SPSolver, PySPConfiguredObject):
                            subproblem_type,
                            logfile,
                            problem_list_filename,
-                           self.get_option("executable"),
+                           self.executable,
                            output_solver_log,
-                           symbolic_solver_labels))
+                           io_options))
 
         results = ScenarioTreeManagerSolverResults(subproblem_type)
         for worker_name in worker_results:
@@ -419,75 +418,58 @@ class SchurIpoptSolver(SPSolver, PySPConfiguredObject):
 
     def _solve_impl(self,
                     sp,
-                    symbolic_solver_labels=False,
-                    keep_solver_files=False,
-                    output_solver_log=False):
+                    output_solver_log=False,
+                    **kwds):
 
         if not _mpi4py_available:
             raise RuntimeError(
                 "The 'mpi4py' module is not available, but it "
                 "is required by the %s solver" % (self.name))
 
-        pyutilib.services.TempfileManager.push()
-        try:
+        #
+        # Setup the SchurIpopt working directory
+        #
 
-            #
-            # Setup the SchurIpopt working directory
-            #
+        problem_list_filename = "PySP_Subproblems.txt"
+        working_directory = self._create_tempdir("workdir")
+        logfile = self._files["logfile"] = \
+            os.path.join(working_directory,
+                         "schuripopt.log")
 
-            problem_list_filename = "PySP_Subproblems.txt"
-            working_directory = pyutilib.services.TempfileManager.\
-                                create_tempdir(suffix="_schuripopt")
-            logfile = os.path.join(working_directory, "schuripopt.log")
+        #
+        # Launch SchurIpopt from the worker processes
+        # (assumed to be launched together using mpirun)
+        #
+        solve_results = self._launch_solver(
+            sp,
+            working_directory,
+            logfile=logfile,
+            output_solver_log=output_solver_log,
+            io_options=kwds)
 
-            if keep_solver_files:
-                print("Solver working directory: '%s'"
-                      % (working_directory))
-                print("Solver log file: '%s'"
-                      % (logfile))
+        objective = 0.0
+        if solve_results.solve_type == "bundles":
+            assert sp.scenario_tree.contains_bundles()
+            assert len(solve_results.objective) == \
+                len(sp.scenario_tree.bundles)
+            for bundle in sp.scenario_tree.bundles:
+                objective += bundle.probability * \
+                             solve_results.objective[bundle.name]
+        else:
+            assert solve_results.solve_type == "scenarios"
+            assert len(solve_results.objective) == \
+                len(sp.scenario_tree.scenarios)
+            for scenario in sp.scenario_tree.scenarios:
+                objective += scenario.probability * \
+                             solve_results.objective[scenario.name]
 
-            #
-            # Launch SchurIpopt from the worker processes
-            # (assumed to be launched together using mpirun)
-            #
-            solve_results = self._launch_solver(
-                sp,
-                working_directory,
-                logfile=logfile,
-                output_solver_log=output_solver_log,
-                symbolic_solver_labels=symbolic_solver_labels)
-
-            objective = 0.0
-            if solve_results.solve_type == "bundles":
-                assert sp.scenario_tree.contains_bundles()
-                assert len(solve_results.objective) == \
-                    len(sp.scenario_tree.bundles)
-                for bundle in sp.scenario_tree.bundles:
-                    objective += bundle.probability * \
-                                 solve_results.objective[bundle.name]
-            else:
-                assert solve_results.solve_type == "scenarios"
-                assert len(solve_results.objective) == \
-                    len(sp.scenario_tree.scenarios)
-                for scenario in sp.scenario_tree.scenarios:
-                    objective += scenario.probability * \
-                                 solve_results.objective[scenario.name]
-
-            results = SPSolverResults()
-            results.objective = objective
-            results.solver_time = max(solve_results.solve_time.values())
-            results.pyomo_solve_time = \
-                max(solve_results.pyomo_solve_time.values())
-            # TODO
-            results.xhat = dict(sp.scenario_tree.scenarios[0]._x)
-
-        finally:
-
-            #
-            # cleanup
-            #
-            pyutilib.services.TempfileManager.pop(
-                remove=not keep_solver_files)
+        results = SPSolverResults()
+        results.objective = objective
+        results.solver_time = max(solve_results.solve_time.values())
+        results.pyomo_solve_time = \
+            max(solve_results.pyomo_solve_time.values())
+        # TODO
+        results.xhat = dict(sp.scenario_tree.scenarios[0]._x)
 
         return results
 
@@ -517,8 +499,7 @@ def runschuripopt(options):
     with the SD solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerFactory(options) \
-         as manager:
+    with ScenarioTreeManagerFactory(options) as manager:
         manager.initialize()
         print("")
         print("Running SchurIpopt solver for stochastic "

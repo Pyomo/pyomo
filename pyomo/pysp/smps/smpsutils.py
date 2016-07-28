@@ -11,9 +11,9 @@ import os
 import operator
 import shutil
 import filecmp
-import copy
 import logging
 import itertools
+from collections import namedtuple
 
 from pyomo.opt import WriterFactory
 from pyomo.core.base.numvalue import value
@@ -21,16 +21,11 @@ from pyomo.core.base.block import (Block,
                                    _BlockData,
                                    SortComponents)
 from pyomo.core.base.var import Var, _VarData
-from pyomo.core.base.expression import Expression
-from pyomo.core.base.objective import Objective
 from pyomo.core.base.constraint import Constraint, _ConstraintData
 from pyomo.core.base.sos import SOSConstraint
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.piecewise import Piecewise, _PiecewiseData
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.repn import LinearCanonicalRepn
 from pyomo.repn import generate_canonical_repn
-from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.embeddedsp import EmbeddedSP
 from pyomo.pysp.annotations import (locate_annotations,
@@ -52,6 +47,8 @@ logger = logging.getLogger('pyomo.pysp')
 #     - For variables with both linear and quadratic terms, how
 #       to distinguish between the two with model annotations?
 
+_deterministic_check_value = -99999999
+
 def _safe_remove_file(filename):
     """Try to remove a file, ignoring failure."""
     try:
@@ -64,6 +61,16 @@ def _no_negative_zero(val):
     if val == 0:
         return 0
     return val
+
+ProblemStats = namedtuple("ProblemStats",
+                          ["firststage_variable_count",
+                           "secondstage_variable_count",
+                           "firststage_constraint_count",
+                           "secondstage_constraint_count",
+                           "stochastic_cost_count",
+                           "stochastic_rhs_count",
+                           "stochastic_matrix_count",
+                           "scenario_count"])
 
 def map_constraint_stages(scenario,
                           scenario_tree,
@@ -117,8 +124,8 @@ def map_constraint_stages(scenario,
                 SOSConstraint,
                 active=True,
                 descend_into=False):
-            raise TypeError("SOSConstraints are not allowed with the "
-                            "SMPS format. Invalid constraint: %s"
+            raise TypeError("SOSConstraints are not allowed with this format. "
+                            "Invalid constraint: %s"
                             % (con.cname(True)))
 
         block_canonical_repn = getattr(block, "_canonical_repn", None)
@@ -198,12 +205,6 @@ def map_variable_stages(scenario,
         if id(var) not in symbolmap_byObject:
             continue
         symbol = symbolmap_byObject[id(var)]
-        if symbol == "RHS":
-            raise RuntimeError(
-                "Congratulations! You have hit an edge case. The "
-                "SMPS input format forbids variables from using "
-                "the symbol 'RHS'. Please rename it or use a "
-                "different symbol in the output file.")
         scenario_tree_id = scenariotree_byObject.get(id(var), None)
         if scenario_tree_id in firststage_standard_variables:
             FirstStageVars[symbol] = (var, scenario_tree_id)
@@ -232,7 +233,7 @@ def map_variable_stages(scenario,
 
     return StageToVariableMap
 
-def _convert_explicit_setup(worker, scenario, *args, **kwds):
+def _convert_external_setup(worker, scenario, *args, **kwds):
     reference_model = scenario._instance
     #
     # We will be tweaking the canonical_repn objects on objectives
@@ -260,7 +261,7 @@ def _convert_explicit_setup(worker, scenario, *args, **kwds):
         cached_attrs.append((block, block_cached_attrs))
 
     try:
-        return _convert_explicit_setup_without_cleanup(
+        return _convert_external_setup_without_cleanup(
             worker, scenario, *args, **kwds)
     except:
         logger.error("Failed to complete partial SMPS conversion "
@@ -271,7 +272,7 @@ def _convert_explicit_setup(worker, scenario, *args, **kwds):
             for name in block_cached_attrs:
                 setattr(block, name, block_cached_attrs[name])
 
-def _convert_explicit_setup_without_cleanup(
+def _convert_external_setup_without_cleanup(
         worker,
         scenario,
         output_directory,
@@ -461,37 +462,6 @@ def _convert_explicit_setup_without_cleanup(
     assert objective_object is not None
     objective_block = objective_object.parent_block()
     objective_repn = canonical_repn_cache[id(objective_block)][objective_object]
-    """
-    original_objective_repn = copy.deepcopy(objective_repn)
-    first_stage_varname_list = \
-        [item[0] for item in StageToVariableMap[firststage.name]]
-    if isinstance(objective_repn, LinearCanonicalRepn) and \
-       (objective_repn.linear is not None):
-        referenced_var_names = set([symbol_map.byObject[id(var)]
-                                    for var in objective_repn.variables])
-        obj_vars = list(objective_repn.variables)
-        obj_coefs = list(objective_repn.linear)
-        # add the first-stage variables (if not present)
-        for symbol in first_stage_varname_list:
-            if symbol not in referenced_var_names:
-                obj_vars.append(symbol_map.bySymbol[symbol]())
-                obj_coefs.append(0.0)
-        # add the first second-stage variable (if not present),
-        # this will make sure the ONE_VAR_CONSTANT variable
-        # is not identified as the first second-stage variable
-        # (but don't assume there is always a second stage variable)
-        if len(StageToVariableMap[secondstage.name]) > 0:
-            if StageToVariableMap[secondstage.name][0][0] not in \
-               referenced_var_names:
-                obj_vars.append(StageToVariableMap[secondstage.name][0][1])
-                obj_coefs.append(0.0)
-        objective_repn.variables = tuple(obj_vars)
-        objective_repn.linear = tuple(obj_coefs)
-
-    else:
-        raise RuntimeError("A linear objective is required for "
-                           "conversion to SMPS format.")
-    """
 
     #
     # Create column (variable) ordering maps for LP/MPS files
@@ -501,11 +471,23 @@ def _convert_explicit_setup_without_cleanup(
     for column_index, (symbol, var, scenario_tree_id) \
         in enumerate(StageToVariableMap[firststage.name]):
         column_order[var] = column_index
+        if symbol == "RHS":
+            raise RuntimeError(
+                "Congratulations! You have hit an edge case. The "
+                "SMPS input format forbids variables from using "
+                "the symbol 'RHS'. Please rename it or use a "
+                "different symbol in the output file.")
     # second-stage variables
     for column_index, (symbol, var, scenario_tree_id) \
         in enumerate(StageToVariableMap[secondstage.name],
                      len(column_order)):
         column_order[var] = column_index
+        if symbol == "RHS":
+            raise RuntimeError(
+                "Congratulations! You have hit an edge case. The "
+                "SMPS input format forbids variables from using "
+                "the symbol 'RHS'. Please rename it or use a "
+                "different symbol in the output file.")
 
     #
     # Create row (constraint) ordering maps for LP/MPS files
@@ -564,28 +546,27 @@ def _convert_explicit_setup_without_cleanup(
     # Write the explicit column ordering (variables) used
     # for the ordered LP/MPS file
     #
-    firststage_col_count = 0
-    col_count = 0
+    firststage_variable_count = 0
+    secondstage_variable_count = 0
     with open(os.path.join(output_directory,
                            basename+".col."+scenario.name),'w') as f_col:
         # first-stage variables
         for (symbol, _, _) in StageToVariableMap[firststage.name]:
-            firststage_col_count += 1
-            col_count += 1
             f_col.write(symbol+"\n")
+            firststage_variable_count += 1
         # second-stage variables
         for (symbol, _, _) in StageToVariableMap[secondstage.name]:
-            col_count += 1
             f_col.write(symbol+"\n")
-        col_count += 1
+            secondstage_variable_count += 1
         f_col.write("ONE_VAR_CONSTANT\n")
+        secondstage_variable_count += 1
 
     #
     # Write the explicit row ordering (constraints) used
     # for the ordered LP/MPS file
     #
-    firststage_row_count = 0
-    row_count = 0
+    firststage_constraint_count = 0
+    secondstage_constraint_count = 0
     with open(os.path.join(output_directory,
                            basename+".row."+scenario.name),'w') as f_row:
         # the objective is always the first row in SMPS format
@@ -596,9 +577,8 @@ def _convert_explicit_setup_without_cleanup(
             # constraints (hopefully our ordering of the r_l_
             # and r_u_ forms is the same as the LP/MPS file!)
             for symbol in symbols:
-                firststage_row_count += 1
-                row_count += 1
                 f_row.write(symbol+"\n")
+                firststage_constraint_count += 1
         # second-stage constraints
         for (symbols, _) in StageToConstraintMap[secondstage.name]:
             # because range constraints are split into two
@@ -606,8 +586,9 @@ def _convert_explicit_setup_without_cleanup(
             # and r_u_ forms is the same as the LP/MPS file!)
             for symbol in symbols:
                 f_row.write(symbol+"\n")
-                row_count += 1
+                secondstage_constraint_count += 1
         f_row.write("c_e_ONE_VAR_CONSTANT")
+        secondstage_constraint_count += 1
 
     #
     # Write the .tim file
@@ -692,6 +673,9 @@ def _convert_explicit_setup_without_cleanup(
     #
     modified_constraint_lb = ComponentMap()
     modified_constraint_ub = ComponentMap()
+    stochastic_rhs_count = 0
+    stochastic_matrix_count = 0
+    stochastic_cost_count = 0
     with open(os.path.join(output_directory,
                            basename+".sto.struct."+scenario.name),'w') as f_coords:
         with open(os.path.join(output_directory,
@@ -744,8 +728,7 @@ def _convert_explicit_setup_without_cleanup(
                            con_label.startswith('c_l_'):
                             assert (include_bound is True) or \
                                    (include_bound[0] is True)
-                            stochastic_lp_labels.add(con_label)
-                            stochastic_secondstage_rhs_count += 1
+                            stochastic_rhs_count += 1
                             f_sto.write(rhs_template %
                                         (con_label,
                                          _no_negative_zero(
@@ -756,15 +739,14 @@ def _convert_explicit_setup_without_cleanup(
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
                             modified_constraint_lb[con] = con.lower
-                            con._lower = 0
+                            con._lower = _deterministic_check_value
                             if con_label.startswith('c_e_'):
                                 modified_constraint_ub[con] = con.upper
-                                con._upper = 0
+                                con._upper = _deterministic_check_value
                         elif con_label.startswith('r_l_') :
                             if (include_bound is True) or \
                                (include_bound[0] is True):
-                                stochastic_lp_labels.add(con_label)
-                                stochastic_secondstage_rhs_count += 1
+                                stochastic_rhs_count += 1
                                 f_sto.write(rhs_template %
                                             (con_label,
                                              _no_negative_zero(
@@ -775,12 +757,11 @@ def _convert_explicit_setup_without_cleanup(
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
                                 modified_constraint_lb[con] = con.lower
-                                con._lower = 0
+                                con._lower = _deterministic_check_value
                         elif con_label.startswith('c_u_'):
                             assert (include_bound is True) or \
                                    (include_bound[1] is True)
-                            stochastic_lp_labels.add(con_label)
-                            stochastic_secondstage_rhs_count += 1
+                            stochastic_rhs_count += 1
                             f_sto.write(rhs_template %
                                         (con_label,
                                          _no_negative_zero(
@@ -791,12 +772,11 @@ def _convert_explicit_setup_without_cleanup(
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
                             modified_constraint_ub[con] = con.upper
-                            con._upper = 0
+                            con._upper = _deterministic_check_value
                         elif con_label.startswith('r_u_'):
                             if (include_bound is True) or \
                                (include_bound[1] is True):
-                                stochastic_lp_labels.add(con_label)
-                                stochastic_secondstage_rhs_count += 1
+                                stochastic_rhs_count += 1
                                 f_sto.write(rhs_template %
                                             (con_label,
                                              _no_negative_zero(
@@ -807,7 +787,7 @@ def _convert_explicit_setup_without_cleanup(
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
                                 modified_constraint_ub[con] = con.upper
-                                con._upper = 0
+                                con._upper = _deterministic_check_value
                         else:
                             assert False
 
@@ -844,7 +824,6 @@ def _convert_explicit_setup_without_cleanup(
                         var_list = constraint_repn.variables
                     assert len(var_list) > 0
                     symbols = constraint_symbols[con]
-                    stochastic_constraint_count += len(symbols)
                     # sort the variable list by the column ordering
                     # so that we have deterministic output
                     var_list = list(var_list)
@@ -861,7 +840,7 @@ def _convert_explicit_setup_without_cleanup(
                                 # We are going to rewrite with core problem file
                                 # with all stochastic values set to zero. This will
                                 # allow an easy test for missing user annotations.
-                                new_coefs[i] = 0
+                                new_coefs[i] = _deterministic_check_value
                                 break
                         if var_coef is None:
                             raise RuntimeError(
@@ -874,11 +853,7 @@ def _convert_explicit_setup_without_cleanup(
                                    StochasticConstraintBodyAnnotation.__name__))
                         var_label = symbol_map.byObject[id(var)]
                         for con_label in symbols:
-                            if id(var) in firststage_variable_ids:
-                                stochastic_firststagevar_constraint_count += 1
-                            else:
-                                stochastic_secondstagevar_constraint_count += 1
-                            stochastic_lp_labels.add(con_label)
+                            stochastic_matrix_count += 1
                             f_sto.write(matrix_template
                                         % (var_label,
                                            con_label,
@@ -887,7 +862,6 @@ def _convert_explicit_setup_without_cleanup(
 
                     constraint_repn.linear = tuple(new_coefs)
 
-            stochastic_constraint_count = len(stochastic_lp_labels)
 
             #
             # Stochastic Objective
@@ -922,7 +896,6 @@ def _convert_explicit_setup_without_cleanup(
                 # so that we have deterministic output
                 objective_variables = list(objective_variables)
                 objective_variables.sort(key=lambda _v: column_order[_v])
-                stochastic_lp_labels.add(stochastic_objective_label)
                 assert (len(objective_variables) > 0) or include_constant
                 new_coefs = list(objective_repn.linear)
                 for var in objective_variables:
@@ -935,7 +908,7 @@ def _convert_explicit_setup_without_cleanup(
                             # We are going to rewrite the core problem file
                             # with all stochastic values set to zero. This will
                             # allow an easy test for missing user annotations.
-                            new_coefs[i] = 0
+                            new_coefs[i] = _deterministic_check_value
                             break
                     if var_coef is None:
                         raise RuntimeError(
@@ -947,10 +920,7 @@ def _convert_explicit_setup_without_cleanup(
                                objective_object.cname(True),
                                StochasticObjectiveAnnotation.__name__))
                     var_label = symbol_map.byObject[id(var)]
-                    if id(var) in firststage_variable_ids:
-                        stochastic_firststagevar_objective_count += 1
-                    else:
-                        stochastic_secondstagevar_objective_count += 1
+                    stochastic_cost_count += 1
                     f_sto.write(obj_template
                                 % (var_label,
                                    stochastic_objective_label,
@@ -968,7 +938,7 @@ def _convert_explicit_setup_without_cleanup(
                     objective_repn.constant = 0
                     if obj_constant is None:
                         obj_constant = 0.0
-                    stochastic_secondstagevar_objective_count += 1
+                    stochastic_cost_count += 1
                     f_sto.write(obj_template % ("ONE_VAR_CONSTANT",
                                                 stochastic_objective_label,
                                                 _no_negative_zero(obj_constant)))
@@ -999,18 +969,15 @@ def _convert_explicit_setup_without_cleanup(
     for con, upper in iteritems(modified_constraint_ub):
         con._upper = upper
 
-    return (firststage_row_count,
-            row_count,
-            firststage_col_count,
-            col_count,
-            stochastic_constraint_count,
-            stochastic_secondstage_rhs_count,
-            stochastic_firststagevar_constraint_count,
-            stochastic_secondstagevar_constraint_count,
-            stochastic_firststagevar_objective_count,
-            stochastic_secondstagevar_objective_count)
+    return (firststage_variable_count,
+            secondstage_variable_count,
+            firststage_constraint_count,
+            secondstage_constraint_count,
+            stochastic_cost_count,
+            stochastic_rhs_count,
+            stochastic_matrix_count)
 
-def convert_explicit(output_directory,
+def convert_external(output_directory,
                      basename,
                      scenario_tree_manager,
                      core_format='mps',
@@ -1041,7 +1008,7 @@ def convert_explicit(output_directory,
         os.mkdir(scenario_directory)
 
     counts = scenario_tree_manager.invoke_function(
-        "_convert_explicit_setup",
+        "_convert_external_setup",
         thisfile,
         invocation_type=InvocationType.PerScenario,
         function_args=(scenario_directory,
@@ -1053,9 +1020,13 @@ def convert_explicit(output_directory,
     reference_scenario = scenario_tree.scenarios[0]
     reference_scenario_name = reference_scenario.name
 
-    # TODO: Out of laziness we are making shell calls to
-    #       tools like 'cp' and 'cat'. Update the code to
-    #       work on Windows.
+    (firststage_variable_count,
+     secondstage_variable_count,
+     firststage_constraint_count,
+     secondstage_constraint_count,
+     stochastic_cost_count,
+     stochastic_rhs_count,
+     stochastic_matrix_count) = counts[reference_scenario_name]
 
     #
     # Copy the reference scenario's core, row, col, and tim
@@ -1132,47 +1103,23 @@ def convert_explicit(output_directory,
         print("\nSMPS Conversion Complete")
         print("Output Saved To: "+os.path.relpath(output_directory))
         print("Basic Problem Information:")
-        (firststage_row_count,
-         row_count,
-         firststage_col_count,
-         col_count,
-         stochastic_constraint_count,
-         stochastic_secondstage_rhs_count,
-         stochastic_firststagevar_constraint_count,
-         stochastic_secondstagevar_constraint_count,
-         stochastic_firststagevar_objective_count,
-         stochastic_secondstagevar_objective_count) = \
-            counts[reference_scenario_name]
+        print(" - Variables:")
+        print("   - First Stage: %d"
+              % (firststage_variable_count))
+        print("   - Second Stage: %d"
+              % (secondstage_variable_count))
+        print(" - Constraints:")
+        print("   - First Stage: %d"
+              % (firststage_constraint_count))
+        print("   - Second Stage: %d"
+              % (secondstage_constraint_count))
+        print("   - Stoch. RHS Entries: %d"
+              % (stochastic_rhs_count))
+        print("   - Stoch. Matrix Entries: %d"
+              % (stochastic_matrix_count))
         print(" - Objective:")
-        print("    - Stochastic Variable Coefficients: %d"
-              % (stochastic_firststagevar_objective_count + \
-                 stochastic_secondstagevar_objective_count))
-        print("        - First-Stage:  %d"
-              % (stochastic_firststagevar_objective_count))
-        print("        - Second-Stage: %d"
-              % (stochastic_secondstagevar_objective_count))
-        print(" - Constraint Matrix:")
-        print("    - Columns: %d" % (col_count))
-        print("        - First-Stage:  %d"
-              % (firststage_col_count))
-        print("        - Second-Stage: %d"
-              % (col_count - firststage_col_count))
-        print("    - Rows:    %d" % (row_count))
-        print("        - First-Stage:  %d"
-              % (firststage_row_count))
-        print("        - Second-Stage: %d"
-              % (row_count - firststage_row_count))
-        print("    - Stochastic Second-Stage Rows: %d"
-              % (stochastic_constraint_count))
-        print("        - Stochastic Right-Hand-Sides:      %d"
-              % (stochastic_secondstage_rhs_count))
-        print("        - Stochastic Variable Coefficients: %d"
-              % (stochastic_firststagevar_constraint_count + \
-                 stochastic_secondstagevar_constraint_count))
-        print("            - First-Stage:  %d"
-              % (stochastic_firststagevar_constraint_count))
-        print("            - Second-Stage: %d"
-              % (stochastic_secondstagevar_constraint_count))
+        print("    - Stoch. Cost Entries: %d"
+              % (stochastic_cost_count))
 
     if not disable_consistency_checks:
         if verbose:
@@ -1388,7 +1335,14 @@ def convert_explicit(output_directory,
                   "scenario_files subdirectory")
         pass
 
-    return None
+    return ProblemStats(firststage_variable_count=firststage_variable_count,
+                        secondstage_variable_count=secondstage_variable_count,
+                        firststage_constraint_count=firststage_constraint_count,
+                        secondstage_constraint_count=secondstage_constraint_count,
+                        stochastic_cost_count=stochastic_cost_count,
+                        stochastic_rhs_count=stochastic_rhs_count,
+                        stochastic_matrix_count=stochastic_matrix_count,
+                        scenario_count=len(scenario_tree.scenarios))
 
 def convert_embedded(output_directory,
                      basename,
@@ -1414,7 +1368,9 @@ def convert_embedded(output_directory,
     #
     # Reinterpret the stage-ness of variables on the sp by
     # pushing derived first-stage variables into the second
-    # stage.
+    # stage, or keeping them as first-stage variables with
+    # non-anticipativity enforced. There is no concept of
+    # derived variables in SMPS output.
     #
     first_stage_variables = []
     first_stage_variable_ids = set()

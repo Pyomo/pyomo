@@ -842,8 +842,7 @@ def runef(options,
     with the Extensive Form solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerClientSerial(options) \
-         as manager:
+    with ScenarioTreeManagerClientSerial(options) as manager:
         manager.initialize()
 
         print("")

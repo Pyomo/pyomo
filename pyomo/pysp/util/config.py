@@ -361,6 +361,23 @@ def _domain_positive_integer(val):
 _domain_positive_integer.doc = \
     "<domain: positive integer>"
 
+class _domain_integer_interval(object):
+    def __init__(self, start, stop):
+        assert start <= stop
+        assert int(start) == start
+        assert int(stop) == stop
+        self.start = int(start)
+        self.stop = int(stop)
+        self.doc = ("<domain: integer interval [%d, %d]"
+                    % (self.start, self.stop))
+    def __call__(self, val):
+        val = int(val)
+        if not (self.start <= val <= self.stop):
+            raise ValueError(
+                "Value %s is not in integer interval [%d, %d]."
+                % (val, self.start, self.stop))
+        return val
+
 def _domain_nonnegative(val):
     val = float(val)
     if val < 0:

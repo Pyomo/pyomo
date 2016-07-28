@@ -915,8 +915,7 @@ def runadmm(options):
     with the ADMM solver.
     """
     start_time = time.time()
-    with ScenarioTreeManagerFactory(options) \
-         as manager:
+    with ScenarioTreeManagerFactory(options) as manager:
         manager.initialize()
         print("")
         print("Running ADMM solver for stochastic "
