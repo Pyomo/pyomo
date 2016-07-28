@@ -2,9 +2,9 @@
 
 min 
 o:
-+0 fx
-+0 fz
-+0 r
+-9876543210 fx
+-9876543210 fz
+-9876543210 r
 +0 ONE_VAR_CONSTANT
 
 s.t.
@@ -58,62 +58,62 @@ c_u_p_first_stage_INC_constraint4(3)_:
 <= 0
 
 c_e_p_second_stage(1)_INC_constraint1_:
-+0 p_second_stage(1)_INC_delta(1)
-+0 p_second_stage(1)_INC_delta(2)
-+0 p_second_stage(1)_INC_delta(3)
-+0 p_second_stage(1)_INC_delta(4)
-+0 z
-= 0
+-9876543210 p_second_stage(1)_INC_delta(1)
+-9876543210 p_second_stage(1)_INC_delta(2)
+-9876543210 p_second_stage(1)_INC_delta(3)
+-9876543210 p_second_stage(1)_INC_delta(4)
+-9876543210 z
+= -9876543210
 
 c_e_p_second_stage(1)_INC_constraint2_:
-+0 p_second_stage(1)_INC_delta(2)
-+0 p_second_stage(1)_INC_delta(3)
-+0 p_second_stage(1)_INC_delta(4)
-+0 fz
-= 0
+-9876543210 p_second_stage(1)_INC_delta(2)
+-9876543210 p_second_stage(1)_INC_delta(3)
+-9876543210 p_second_stage(1)_INC_delta(4)
+-9876543210 fz
+= -9876543210
 
 c_l_c_second_stage_:
 +1 x
-+0 r
+-9876543210 r
 >= -100
 
 c_u_p_second_stage(1)_INC_constraint3(1)_:
-+0 p_second_stage(1)_INC_bin_y(1)
-+0 p_second_stage(1)_INC_delta(2)
-<= 0
+-9876543210 p_second_stage(1)_INC_bin_y(1)
+-9876543210 p_second_stage(1)_INC_delta(2)
+<= -9876543210
 
 c_u_p_second_stage(1)_INC_constraint3(2)_:
-+0 p_second_stage(1)_INC_bin_y(2)
-+0 p_second_stage(1)_INC_delta(3)
-<= 0
+-9876543210 p_second_stage(1)_INC_bin_y(2)
+-9876543210 p_second_stage(1)_INC_delta(3)
+<= -9876543210
 
 c_u_p_second_stage(1)_INC_constraint3(3)_:
-+0 p_second_stage(1)_INC_bin_y(3)
-+0 p_second_stage(1)_INC_delta(4)
-<= 0
+-9876543210 p_second_stage(1)_INC_bin_y(3)
+-9876543210 p_second_stage(1)_INC_delta(4)
+<= -9876543210
 
 c_u_p_second_stage(1)_INC_constraint4(1)_:
-+0 p_second_stage(1)_INC_bin_y(1)
-+0 p_second_stage(1)_INC_delta(1)
-<= 0
+-9876543210 p_second_stage(1)_INC_bin_y(1)
+-9876543210 p_second_stage(1)_INC_delta(1)
+<= -9876543210
 
 c_u_p_second_stage(1)_INC_constraint4(2)_:
-+0 p_second_stage(1)_INC_bin_y(2)
-+0 p_second_stage(1)_INC_delta(2)
-<= 0
+-9876543210 p_second_stage(1)_INC_bin_y(2)
+-9876543210 p_second_stage(1)_INC_delta(2)
+<= -9876543210
 
 c_u_p_second_stage(1)_INC_constraint4(3)_:
-+0 p_second_stage(1)_INC_bin_y(3)
-+0 p_second_stage(1)_INC_delta(3)
-<= 0
+-9876543210 p_second_stage(1)_INC_bin_y(3)
+-9876543210 p_second_stage(1)_INC_delta(3)
+<= -9876543210
 
 r_l_r_second_stage_:
 +1 r
->= 0
+>= -9876543210
 
 r_u_r_second_stage_:
 +1 r
-<= 0
+<= -9876543210
 
 c_e_ONE_VAR_CONSTANT: 
 ONE_VAR_CONSTANT = 1.0

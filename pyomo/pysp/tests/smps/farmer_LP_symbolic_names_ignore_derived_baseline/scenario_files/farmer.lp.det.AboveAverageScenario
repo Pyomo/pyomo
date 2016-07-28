@@ -23,40 +23,40 @@ c_u_ConstrainTotalAcreage_:
 <= 500
 
 c_l_EnforceCattleFeedRequirement(CORN)_:
-+0 DevotedAcreage(CORN)
+-9876543210 DevotedAcreage(CORN)
 +1 QuantityPurchased(CORN)
 -1 QuantitySubQuotaSold(CORN)
 -1 QuantitySuperQuotaSold(CORN)
 >= 240
 
 c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_:
-+0 DevotedAcreage(SUGAR_BEETS)
+-9876543210 DevotedAcreage(SUGAR_BEETS)
 +1 QuantityPurchased(SUGAR_BEETS)
 -1 QuantitySubQuotaSold(SUGAR_BEETS)
 -1 QuantitySuperQuotaSold(SUGAR_BEETS)
 >= 0
 
 c_l_EnforceCattleFeedRequirement(WHEAT)_:
-+0 DevotedAcreage(WHEAT)
+-9876543210 DevotedAcreage(WHEAT)
 +1 QuantityPurchased(WHEAT)
 -1 QuantitySubQuotaSold(WHEAT)
 -1 QuantitySuperQuotaSold(WHEAT)
 >= 200
 
 c_u_LimitAmountSold(CORN)_:
-+0 DevotedAcreage(CORN)
+-9876543210 DevotedAcreage(CORN)
 +1 QuantitySubQuotaSold(CORN)
 +1 QuantitySuperQuotaSold(CORN)
 <= 0
 
 c_u_LimitAmountSold(SUGAR_BEETS)_:
-+0 DevotedAcreage(SUGAR_BEETS)
+-9876543210 DevotedAcreage(SUGAR_BEETS)
 +1 QuantitySubQuotaSold(SUGAR_BEETS)
 +1 QuantitySuperQuotaSold(SUGAR_BEETS)
 <= 0
 
 c_u_LimitAmountSold(WHEAT)_:
-+0 DevotedAcreage(WHEAT)
+-9876543210 DevotedAcreage(WHEAT)
 +1 QuantitySubQuotaSold(WHEAT)
 +1 QuantitySuperQuotaSold(WHEAT)
 <= 0

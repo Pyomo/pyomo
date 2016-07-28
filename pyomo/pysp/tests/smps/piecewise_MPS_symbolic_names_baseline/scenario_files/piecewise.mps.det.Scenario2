@@ -31,10 +31,10 @@ COLUMNS
      x c_l_c_first_stage_ 1
      x c_e_p_first_stage_INC_constraint1_ 1
      x c_l_c_second_stage_ 1
-     fx o 0
+     fx o -9876543210
      fx c_e_p_first_stage_INC_constraint2_ 1
-     fz o 0
-     fz c_e_p_second_stage(1)_INC_constraint2_ 0
+     fz o -9876543210
+     fz c_e_p_second_stage(1)_INC_constraint2_ -9876543210
      p_first_stage_INC_bin_y(1) c_u_p_first_stage_INC_constraint3(1)_ -1
      p_first_stage_INC_bin_y(1) c_u_p_first_stage_INC_constraint4(1)_ 1
      p_first_stage_INC_bin_y(2) c_u_p_first_stage_INC_constraint3(2)_ -1
@@ -53,38 +53,38 @@ COLUMNS
      p_first_stage_INC_delta(3) c_u_p_first_stage_INC_constraint4(3)_ -1
      p_first_stage_INC_delta(4) c_e_p_first_stage_INC_constraint1_ -3
      p_first_stage_INC_delta(4) c_u_p_first_stage_INC_constraint3(3)_ 1
-     p_second_stage(1)_INC_bin_y(1) c_u_p_second_stage(1)_INC_constraint3(1)_ 0
-     p_second_stage(1)_INC_bin_y(1) c_u_p_second_stage(1)_INC_constraint4(1)_ 0
-     p_second_stage(1)_INC_bin_y(2) c_u_p_second_stage(1)_INC_constraint3(2)_ 0
-     p_second_stage(1)_INC_bin_y(2) c_u_p_second_stage(1)_INC_constraint4(2)_ 0
-     p_second_stage(1)_INC_bin_y(3) c_u_p_second_stage(1)_INC_constraint3(3)_ 0
-     p_second_stage(1)_INC_bin_y(3) c_u_p_second_stage(1)_INC_constraint4(3)_ 0
-     p_second_stage(1)_INC_delta(1) c_e_p_second_stage(1)_INC_constraint1_ 0
-     p_second_stage(1)_INC_delta(1) c_u_p_second_stage(1)_INC_constraint4(1)_ 0
-     p_second_stage(1)_INC_delta(2) c_e_p_second_stage(1)_INC_constraint1_ 0
-     p_second_stage(1)_INC_delta(2) c_e_p_second_stage(1)_INC_constraint2_ 0
-     p_second_stage(1)_INC_delta(2) c_u_p_second_stage(1)_INC_constraint3(1)_ 0
-     p_second_stage(1)_INC_delta(2) c_u_p_second_stage(1)_INC_constraint4(2)_ 0
-     p_second_stage(1)_INC_delta(3) c_e_p_second_stage(1)_INC_constraint1_ 0
-     p_second_stage(1)_INC_delta(3) c_e_p_second_stage(1)_INC_constraint2_ 0
-     p_second_stage(1)_INC_delta(3) c_u_p_second_stage(1)_INC_constraint3(2)_ 0
-     p_second_stage(1)_INC_delta(3) c_u_p_second_stage(1)_INC_constraint4(3)_ 0
-     p_second_stage(1)_INC_delta(4) c_e_p_second_stage(1)_INC_constraint1_ 0
-     p_second_stage(1)_INC_delta(4) c_e_p_second_stage(1)_INC_constraint2_ 0
-     p_second_stage(1)_INC_delta(4) c_u_p_second_stage(1)_INC_constraint3(3)_ 0
-     r o 0
-     r c_l_c_second_stage_ 0
+     p_second_stage(1)_INC_bin_y(1) c_u_p_second_stage(1)_INC_constraint3(1)_ -9876543210
+     p_second_stage(1)_INC_bin_y(1) c_u_p_second_stage(1)_INC_constraint4(1)_ -9876543210
+     p_second_stage(1)_INC_bin_y(2) c_u_p_second_stage(1)_INC_constraint3(2)_ -9876543210
+     p_second_stage(1)_INC_bin_y(2) c_u_p_second_stage(1)_INC_constraint4(2)_ -9876543210
+     p_second_stage(1)_INC_bin_y(3) c_u_p_second_stage(1)_INC_constraint3(3)_ -9876543210
+     p_second_stage(1)_INC_bin_y(3) c_u_p_second_stage(1)_INC_constraint4(3)_ -9876543210
+     p_second_stage(1)_INC_delta(1) c_e_p_second_stage(1)_INC_constraint1_ -9876543210
+     p_second_stage(1)_INC_delta(1) c_u_p_second_stage(1)_INC_constraint4(1)_ -9876543210
+     p_second_stage(1)_INC_delta(2) c_e_p_second_stage(1)_INC_constraint1_ -9876543210
+     p_second_stage(1)_INC_delta(2) c_e_p_second_stage(1)_INC_constraint2_ -9876543210
+     p_second_stage(1)_INC_delta(2) c_u_p_second_stage(1)_INC_constraint3(1)_ -9876543210
+     p_second_stage(1)_INC_delta(2) c_u_p_second_stage(1)_INC_constraint4(2)_ -9876543210
+     p_second_stage(1)_INC_delta(3) c_e_p_second_stage(1)_INC_constraint1_ -9876543210
+     p_second_stage(1)_INC_delta(3) c_e_p_second_stage(1)_INC_constraint2_ -9876543210
+     p_second_stage(1)_INC_delta(3) c_u_p_second_stage(1)_INC_constraint3(2)_ -9876543210
+     p_second_stage(1)_INC_delta(3) c_u_p_second_stage(1)_INC_constraint4(3)_ -9876543210
+     p_second_stage(1)_INC_delta(4) c_e_p_second_stage(1)_INC_constraint1_ -9876543210
+     p_second_stage(1)_INC_delta(4) c_e_p_second_stage(1)_INC_constraint2_ -9876543210
+     p_second_stage(1)_INC_delta(4) c_u_p_second_stage(1)_INC_constraint3(3)_ -9876543210
+     r o -9876543210
+     r c_l_c_second_stage_ -9876543210
      r r_l_r_second_stage_ 1
      r r_u_r_second_stage_ 1
-     z c_e_p_second_stage(1)_INC_constraint1_ 0
+     z c_e_p_second_stage(1)_INC_constraint1_ -9876543210
      ONE_VAR_CONSTANT o 0
      ONE_VAR_CONSTANT c_e_ONE_VAR_CONSTANT 1
 RHS
      RHS c_l_c_first_stage_ 0
      RHS c_e_p_first_stage_INC_constraint1_ 0
      RHS c_e_p_first_stage_INC_constraint2_ 10
-     RHS c_e_p_second_stage(1)_INC_constraint1_ 0
-     RHS c_e_p_second_stage(1)_INC_constraint2_ 0
+     RHS c_e_p_second_stage(1)_INC_constraint1_ -9876543210
+     RHS c_e_p_second_stage(1)_INC_constraint2_ -9876543210
      RHS c_l_c_second_stage_ -100
      RHS c_u_p_first_stage_INC_constraint3(1)_ 0
      RHS c_u_p_first_stage_INC_constraint3(2)_ 0
@@ -92,14 +92,14 @@ RHS
      RHS c_u_p_first_stage_INC_constraint4(1)_ 0
      RHS c_u_p_first_stage_INC_constraint4(2)_ 0
      RHS c_u_p_first_stage_INC_constraint4(3)_ 0
-     RHS c_u_p_second_stage(1)_INC_constraint3(1)_ 0
-     RHS c_u_p_second_stage(1)_INC_constraint3(2)_ 0
-     RHS c_u_p_second_stage(1)_INC_constraint3(3)_ 0
-     RHS c_u_p_second_stage(1)_INC_constraint4(1)_ 0
-     RHS c_u_p_second_stage(1)_INC_constraint4(2)_ 0
-     RHS c_u_p_second_stage(1)_INC_constraint4(3)_ 0
-     RHS r_l_r_second_stage_ 0
-     RHS r_u_r_second_stage_ 0
+     RHS c_u_p_second_stage(1)_INC_constraint3(1)_ -9876543210
+     RHS c_u_p_second_stage(1)_INC_constraint3(2)_ -9876543210
+     RHS c_u_p_second_stage(1)_INC_constraint3(3)_ -9876543210
+     RHS c_u_p_second_stage(1)_INC_constraint4(1)_ -9876543210
+     RHS c_u_p_second_stage(1)_INC_constraint4(2)_ -9876543210
+     RHS c_u_p_second_stage(1)_INC_constraint4(3)_ -9876543210
+     RHS r_l_r_second_stage_ -9876543210
+     RHS r_u_r_second_stage_ -9876543210
      RHS c_e_ONE_VAR_CONSTANT 1
 BOUNDS
  LO BOUND x 0

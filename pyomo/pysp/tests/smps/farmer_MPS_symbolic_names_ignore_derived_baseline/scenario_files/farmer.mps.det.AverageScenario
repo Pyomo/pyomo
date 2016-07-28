@@ -23,16 +23,16 @@ ROWS
 COLUMNS
      DevotedAcreage(CORN) Total_Cost_Objective 230
      DevotedAcreage(CORN) c_u_ConstrainTotalAcreage_ 1
-     DevotedAcreage(CORN) c_l_EnforceCattleFeedRequirement(CORN)_ 0
-     DevotedAcreage(CORN) c_u_LimitAmountSold(CORN)_ 0
+     DevotedAcreage(CORN) c_l_EnforceCattleFeedRequirement(CORN)_ -9876543210
+     DevotedAcreage(CORN) c_u_LimitAmountSold(CORN)_ -9876543210
      DevotedAcreage(SUGAR_BEETS) Total_Cost_Objective 260
      DevotedAcreage(SUGAR_BEETS) c_u_ConstrainTotalAcreage_ 1
-     DevotedAcreage(SUGAR_BEETS) c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_ 0
-     DevotedAcreage(SUGAR_BEETS) c_u_LimitAmountSold(SUGAR_BEETS)_ 0
+     DevotedAcreage(SUGAR_BEETS) c_l_EnforceCattleFeedRequirement(SUGAR_BEETS)_ -9876543210
+     DevotedAcreage(SUGAR_BEETS) c_u_LimitAmountSold(SUGAR_BEETS)_ -9876543210
      DevotedAcreage(WHEAT) Total_Cost_Objective 150
      DevotedAcreage(WHEAT) c_u_ConstrainTotalAcreage_ 1
-     DevotedAcreage(WHEAT) c_l_EnforceCattleFeedRequirement(WHEAT)_ 0
-     DevotedAcreage(WHEAT) c_u_LimitAmountSold(WHEAT)_ 0
+     DevotedAcreage(WHEAT) c_l_EnforceCattleFeedRequirement(WHEAT)_ -9876543210
+     DevotedAcreage(WHEAT) c_u_LimitAmountSold(WHEAT)_ -9876543210
      QuantityPurchased(CORN) Total_Cost_Objective 210
      QuantityPurchased(CORN) c_l_EnforceCattleFeedRequirement(CORN)_ 1
      QuantityPurchased(SUGAR_BEETS) Total_Cost_Objective 100000

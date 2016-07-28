@@ -47,7 +47,7 @@ logger = logging.getLogger('pyomo.pysp')
 #     - For variables with both linear and quadratic terms, how
 #       to distinguish between the two with model annotations?
 
-_deterministic_check_value = -99999999
+_deterministic_check_value = -9876543210
 
 def _safe_remove_file(filename):
     """Try to remove a file, ignoring failure."""
