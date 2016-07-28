@@ -600,16 +600,11 @@ class _GeneralConstraintData(_ConstraintData):
         # constraint with 'infinite' RHS
         #
         if self._equality:
-            if self._lower != self._upper: #pragma:nocover
-                raise RuntimeError(
-                    "Equality constraint '%s' has non-equal lower "
-                    "and upper bounds (this is indicitive of a "
-                    "SERIOUS internal error in Pyomo)."
-                    % (self.cname(True)))
             if self._lower is None:
                 raise ValueError(
                     "Equality constraint '%s' defined with "
                     "non-finite term." % (self.cname(True)))
+            assert self._lower is self._upper
 
 class Constraint(ActiveIndexedComponent):
     """
