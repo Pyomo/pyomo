@@ -43,17 +43,18 @@ testing_solvers['cplex','nl'] = False
 #testing_solvers['ipopt','nl'] = False
 #testing_solvers['cplex','python'] = False
 #testing_solvers['_cplex_persistent','python'] = False
-testCases_copy = list(testCases)
-#testCases_copy.append( SolverTestCase(name='_cplex_persistent',
-#                                 io='python'))
-for test_case in testCases_copy:
+for test_case in testCases:
     if ((test_case.name,test_case.io) in testing_solvers) and \
-       (test_case.available):
+       test_case.available:
         testing_solvers[(test_case.name,test_case.io)] = True
 
 def createTestMethod(pName,problem,solver,writer,kwds):
 
     def testMethod(obj):
+
+        if not testing_solvers[solver, writer]:
+            obj.skipTest("Solver %s (interface=%s) is not available"
+                         % (solver, writer))
 
         m = pyutilib.misc.import_file(os.path.join(thisDir,
                                                    'problems',
