@@ -34,6 +34,13 @@ except:                                 #pragma:nocover
 
 logger = logging.getLogger('pyomo.solvers')
 
+if True:
+    urlscheme = 'https'
+    port = '3333'
+else:
+    urlscheme = 'http'
+    port = '3332'
+
 #
 # Proxy Transport class provided by NoboNobo.
 # See: http://www.python.org/doc/2.5.2/lib/xmlrpc-client-example.html
@@ -46,7 +53,7 @@ class ProxiedTransport(xmlrpclib.Transport):
         h = six.moves.http_client.HTTP(self.proxy)
         return h
     def send_request(self, connection, handler, request_body):
-        connection.putrequest("POST", 'http://%s%s' % (self.realhost, handler))
+        connection.putrequest("POST", '%s://%s%s' % (urlscheme, self.realhost, handler))
     def send_host(self, connection, host):
         connection.putheader('Host', self.realhost)
 
@@ -54,21 +61,15 @@ class ProxiedTransport(xmlrpclib.Transport):
 class kestrelAMPL:
 
     def __init__(self):
-        #try:
-            #self.setup_connection('3333')
-        #except httplib.BadStatusLine:
-        #
-        # It looks like port 3333 isn't supported yet.
-        #
-        self.setup_connection('3332')
+        self.setup_connection()
 
-    def setup_connection(self, port):
+    def setup_connection(self):
         if 'HTTP_PROXY' in os.environ:
             p = ProxiedTransport()
             p.set_proxy(os.environ['HTTP_PROXY'])
-            self.neos = xmlrpclib.ServerProxy("http://www.neos-server.org:"+port,transport=p)
+            self.neos = xmlrpclib.ServerProxy(urlscheme+"://www.neos-server.org:"+port,transport=p)
         else:
-            self.neos = xmlrpclib.ServerProxy("http://www.neos-server.org:"+port)
+            self.neos = xmlrpclib.ServerProxy(urlscheme+"://www.neos-server.org:"+port)
         logger.info("Connecting to the NEOS server ... ")
         try:
             result = self.neos.ping()
@@ -113,7 +114,7 @@ class kestrelAMPL:
         sys.stdout.write("Job %d submitted to NEOS, password='%s'\n" %
                          (jobNumber,password))
         sys.stdout.write("Check the following URL for progress report :\n")
-        sys.stdout.write("http://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi?admin=results&jobnumber=%d&pass=%s\n" % (jobNumber,password))
+        sys.stdout.write(urlscheme+"://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi?admin=results&jobnumber=%d&pass=%s\n" % (jobNumber,password))
         return (jobNumber,password)
 
     def getJobAndPassword(self):
