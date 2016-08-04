@@ -25,25 +25,14 @@ class SPSolverResults(object):
 
     def __init__(self):
         self.objective = undefined
-        self.objective_interval = undefined
         self.bound = undefined
-        self.bound_interval = undefined
         self.solver_name = undefined
         self.solver_time = undefined
         self.solver_status = undefined
 
     def __str__(self):
         attrs = vars(self)
-        order = ['objective',
-                 'objective_interval',
-                 'bound',
-                 'bound_interval',
-                 'solver_name',
-                 'solver_status',
-                 'solver_time']
-        # sort by order above, then by name
-        names = sorted(list(attrs.keys()),
-                       key=lambda x: order.index(x) if (x in order) else x)
+        names = sorted(list(attrs.keys()))
         out =  "SPSolverResults:\n"
         for name in names:
             out += "  %s: %s\n" % (name, attrs[name])
