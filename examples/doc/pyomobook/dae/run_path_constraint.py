@@ -1,27 +1,17 @@
-#  _________________________________________________________________________
-#
-#  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
-
 from pyomo.environ import *
 from pyomo.dae import *
 from path_constraint import m
 
-# Discretize model using Finite Difference Method
-# discretizer = TransformationFactory('dae.finite_difference')
-# discretizer.apply_to(m,nfe=20,scheme='BACKWARD')
-
 # Discretize model using Orthogonal Collocation
+# @disc:
 discretizer = TransformationFactory('dae.collocation')
 discretizer.apply_to(m,nfe=7,ncp=6,scheme='LAGRANGE-RADAU')
+# @:disc
+# @reduce:
 discretizer.reduce_collocation_points(m,var=m.u,ncp=1,contset=m.t)
+# @:reduce
 
 solver=SolverFactory('ipopt')
-
 results = solver.solve(m, tee=True)
 
 def plotter(subplot, x, *y, **kwds):
@@ -36,5 +26,5 @@ def plotter(subplot, x, *y, **kwds):
 
 import matplotlib.pyplot as plt
 plotter(121, m.t, m.x1, m.x2, title='Differential Variables')
-plotter(122, m.t, m.u, title='Control Variables', points=True)
+plotter(122, m.t, m.u, title='Control Variable', points=True)
 plt.show()
