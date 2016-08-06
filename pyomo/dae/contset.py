@@ -147,6 +147,12 @@ class ContinuousSet(OrderedSimpleSet):
         if self._bounds is None:
             raise ValueError("ContinuousSet '%s' must have at least two values indicating "\
                 "the range over which a differential equation is to be discretized" % (self.name))
+
+        # If bounds were set using pyomo parameters, get their values
+        lb = value(self._bounds[0])
+        ub = value(self._bounds[1])
+        self._bounds = (lb,ub)
+
         if self._bounds[0].__class__ not in native_numeric_types:
             raise ValueError("Bounds on ContinuousSet must be numeric values")
         if self._bounds[1].__class__ not in native_numeric_types:
