@@ -281,10 +281,11 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
     #
     # Install Conda
     #
-    if options.verbose:
-        print("\n************* Installing Conda in %s *******************" % options.venv)
-    call_subprocess([pip, 'install', 'auxlib'], options)
-    call_subprocess([pip, 'install', 'conda'], options)
+    if not options.venvony:
+        if options.verbose:
+            print("\n************* Installing Conda in %s *******************" % options.venv)
+        call_subprocess([pip, 'install', 'auxlib'], options)
+        call_subprocess([pip, 'install', 'conda'], options)
     #
     return pip, python_dir
 
