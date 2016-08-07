@@ -46,10 +46,10 @@ class ComponentDict(collections.MutableMapping):
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
+            logger.debug(   #pragma:nocover
                 "Constructing ComponentDict object, name=%s, from data=%s"
                 % (self.cname(True), str(data)))
-        if self._constructed:
+        if self._constructed:   #pragma:nocover
             return
         self._constructed = True
 
@@ -106,6 +106,14 @@ class ComponentDict(collections.MutableMapping):
                     self._data[key]._component = None
                 self._data[key] = val
                 return
+            elif (key in self._data) and (self._data[key] is val):
+                # a very special case that makes sense to handle
+                # because the implied order should be: (1) delete
+                # the object at the current index, (2) insert the
+                # the new object. This performs both without any
+                # actions, but it is an extremely rare case, so
+                # it should go last.
+                return
             # see note about allowing components to live in more than
             # one container
             raise ValueError(
@@ -144,18 +152,19 @@ class ComponentDict(collections.MutableMapping):
     # Override a few default implementations on MutableMapping
     #
 
-    # We want to avoid generating Pyomo expressions by comparing
-    # values (we could perhaps just return id(self)). Whatever the
-    # case, limiting this functionality at first does not take away
-    # much from this objects utility.
+    # We want to avoid generating Pyomo expressions due to
+    # comparison of values; thus, we convert this to a plain
+    # dictionary mapping key->(type(val), id(val)) and
+    # compare that instead.
     def __eq__(self, other):
-        raise NotImplementedError(
-            "ComponentDict: undefined operation __eq__")
-
-    # The default implementation is slow
-    def clear(self):
-        'D.clear() -> None.  Remove all items from D.'
-        self._data.clear()
+        if not isinstance(other, collections.Mapping):
+            return False
+        return dict((key, (type(val), id(val)))
+                    for key,val in self.items()) == \
+               dict((key, (type(val), id(val)))
+                    for key,val in other.items())
+    def __ne__(self, other):
+        return not (self == other)
 
 #
 # ComponentDict needs to come before IndexedComponent
