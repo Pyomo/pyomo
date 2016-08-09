@@ -547,10 +547,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                  % (self.external_byFcn[exp._fcn._function][1],
                                     len(exp._args)))
                 else:
+                    # Note: exp.cname(True) fails
                     OUTPUT.write(fun_str
                                  % (self.external_byFcn[exp._fcn._function][1],
                                     len(exp._args),
-                                    exp.cname(True)))
+                                    exp.cname()))
                 for arg in exp._args:
                     if isinstance(arg, basestring):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
