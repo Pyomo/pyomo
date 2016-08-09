@@ -760,13 +760,16 @@ def convert_external(output_directory,
             # Note: DDSIP requires that the RHS files always
             #       exists because it contains the scenario
             #       probabilities
-            pass
 
         dst = os.path.join(output_directory, basename)
         input_files.append(dst)
         _safe_remove_file(dst)
         with open(dst, "w") as fdst:
-            fdst.write("Names\n")
+            # Note: If the RHS file is going to be empty
+            #       then we must leave out the "Names" line
+            if not ((basename == "rhs.sc") and
+                    (stochastic_rhs_count == 0)):
+                fdst.write("Names\n")
             assert reference_scenario is scenario_tree.scenarios[0]
             src = os.path.join(scenario_directory,
                                reference_scenario.name+"."+basename+".struct")

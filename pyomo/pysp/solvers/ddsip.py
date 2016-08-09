@@ -437,7 +437,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             f.write("EPSILON 1e-10 * Branch epsilon for cont. var.\n")
             f.write("ACCURACY 1e-13 * Accuracy\n")
             f.write("BOUSTRATEGY 1 * Bounding strategy in DD\n")
-            f.write("NULLDISP 1e-16\n")
+            f.write("NULLDISP 5e-10\n")
             f.write("RELAXF 0\n")
             f.write("INTFIRST 0 * Branch first on integer\n")
 
@@ -546,6 +546,10 @@ def runddsip_register_options(options=None):
                                "traceback")
     safe_register_common_option(options,
                                 "output_scenario_tree_solution")
+    safe_register_common_option(options,
+                                "keep_solver_files")
+    safe_register_common_option(options,
+                                "symbolic_solver_labels")
     ScenarioTreeManagerFactory.register_options(options)
     DDSIPSolver.register_options(options)
 
@@ -564,7 +568,9 @@ def runddsip(options):
               "programming problems")
         ddsip = DDSIPSolver(options)
         results = ddsip.solve(manager,
-                              output_solver_log=True)
+                              output_solver_log=True,
+                              keep_solver_files=options.keep_solver_files,
+                              symbolic_solver_labels=options.symbolic_solver_labels)
         print(results)
 
         if options.output_scenario_tree_solution:

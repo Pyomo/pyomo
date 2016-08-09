@@ -2,12 +2,12 @@
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
 [    0.00] Applying solver
-[    0.11] Processing results
+[    0.02] Processing results
     Number of solutions: 1
     Solution Information
       Gap: None
       Status: optimal
-      Function Value: 7.01364595134e-25
+      Function Value: 7.013645951336496e-25
     Solver results file: results.yml
 
 ==========================================================
@@ -17,20 +17,20 @@ Solution Summary
 Model unknown
 
   Variables:
-    x : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :  None :   1.0 :  None : False : False
-    y : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :  None :   1.0 :  None : False : False
+    x : Size=1, Index=None
+        Key  : Lower : Value              : Upper : Fixed : Stale : Domain
+        None :  None : 1.0000000000008233 :  None : False : False :  Reals
+    y : Size=1, Index=None
+        Key  : Lower : Value              : Upper : Fixed : Stale : Domain
+        None :  None : 1.0000000000016314 :  None : False : False :  Reals
 
   Objectives:
     obj : Size=1, Index=None, Active=True
         Key  : Active : Value
-        None :   True : 7.01364595134e-25
+        None :   True : 7.013645951336496e-25
 
   Constraints:
     None
 
-[    0.11] Applying Pyomo postprocessing actions
-[    0.11] Pyomo Finished
+[    0.02] Applying Pyomo postprocessing actions
+[    0.02] Pyomo Finished

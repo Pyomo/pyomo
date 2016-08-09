@@ -1,8 +1,4 @@
-import pyomo.environ
-from pyomo.util import PyomoAPIData
-from pyomo.core import *
-import pyomo.scripting
-from pyutilib.misc import Options
+from pyomo.environ import *
 
 # create the concrete model
 model = ConcreteModel()
@@ -37,26 +33,13 @@ model.cc_bal = Constraint(expr=(0 == -model.sv * model.cc \
 model.cd_bal = Constraint(expr=(0 == -model.sv * model.cd \
                  + k3 * model.ca ** 2.0))
 
-# setup the solver options
-data = PyomoAPIData()
-data.options = Options()
-data.options.runtime = Options()
-data.options.solvers = [Options()]
-data.options.solvers[0]['solver_name'] = 'ipopt'
-data.options.solvers[0]['suffixes'] = []
-data.options.solvers[0]['options'] = Options()
-data.options.postsolve = Options()
-data.options.model = Options()
-data.options.quiet = True
-
 # run the sequence of square problems
-instance = model
-instance.sv.fixed = True
+solver = SolverFactory('ipopt')
+model.sv.fixed = True
 sv_values = [1.0 + v * 0.05 for v in range(1, 20)]
 print("   %s %s" % (str('sv'.rjust(10)), str('cb'.rjust(10))))
 for sv_value in sv_values:
-    instance.sv = sv_value
-    output = pyomo.scripting.util.apply_optimizer(data, instance=instance)
-    #instance.load(output.results)
-    print("    %s %s" %(str(instance.sv.value).rjust(10),\
-        str(instance.cb.value).rjust(15)))
+    model.sv = sv_value
+    solver.solve(model)
+    print("    %s %s" %(str(model.sv.value).rjust(10),\
+        str(model.cb.value).rjust(15)))
