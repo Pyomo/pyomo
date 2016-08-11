@@ -14,7 +14,7 @@ from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.dae import *
 
-from six import iterkeys
+from six import iterkeys, itervalues
 
 logger = logging.getLogger('pyomo.core')
 
@@ -259,7 +259,7 @@ def block_fully_discretized(b):
     Checks to see if all ContinuousSets in a block have been discretized
     """
 
-    for i in b.component_map(ContinuousSet).itervalues():
+    for i in itervalues(b.component_map(ContinuousSet)):
         if 'scheme' not in i.get_discretization_info():
             return False
     return True

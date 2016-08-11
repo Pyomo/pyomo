@@ -8,6 +8,8 @@
 #  _________________________________________________________________________
 
 import logging
+from six import itervalues
+from six.moves import xrange
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
@@ -375,7 +377,7 @@ class Collocation_Discretization_Transformation(Transformation):
     def _transformBlock(self, block, currentds):
         
         self._fe = {}
-        for ds in block.component_map(ContinuousSet).itervalues():
+        for ds in itervalues(block.component_map(ContinuousSet)):
             if currentds is None or currentds == ds.cname(True):
                 generate_finite_elements(ds,self._nfe[currentds])
                 if not ds.get_changed():
@@ -398,10 +400,10 @@ class Collocation_Discretization_Transformation(Transformation):
                 disc_info['afinal'] = self._afinal[currentds]
                 disc_info['scheme'] = self._scheme_name          
         
-        for c in block.component_map().itervalues():
+        for c in itervalues(block.component_map()):
             update_contset_indexed_component(c)
 
-        for d in block.component_map(DerivativeVar).itervalues():
+        for d in itervalues(block.component_map(DerivativeVar)):
             dsets = d.get_continuousset_list()
             for i in set(dsets):
                 if currentds is None or i.cname(True) == currentds:
@@ -414,7 +416,7 @@ class Collocation_Discretization_Transformation(Transformation):
                             "only allows for taking the first or second derivative with respect to "\
                             "a particular ContinuousSet" %s(d.cname(True),i.cname(True)))
                     scheme = self._scheme[count-1]
-                    # print i.name, scheme.__name__
+                    # print("%s %s" % (i.name, scheme.__name__))
                     newexpr = create_partial_expression(scheme,oldexpr,i,loc)
                     d.set_derivative_expression(newexpr)
                     if self._scheme_name == 'LAGRANGE-LEGENDRE':
@@ -429,12 +431,12 @@ class Collocation_Discretization_Transformation(Transformation):
         if block_fully_discretized(block):
             
             if block.contains_component(Integral):
-                for i in block.component_map(Integral).itervalues():  
+                for i in itervalues(block.component_map(Integral)):
                     i.reconstruct()
                     block.reclassify_component_type(i,Expression)
                 # If a model contains integrals they are most likely to appear in the objective
                 # function which will need to be reconstructed after the model is discretized.
-                for k in block.component_map(Objective).itervalues():
+                for k in itervalues(block.component_map(Objective)):
                     k.reconstruct()
 
     def _get_idx(self,l,t,n,i,k):
