@@ -32,7 +32,7 @@ class ExternalFunction(Component):
                 type(kwds['function']) is types.FunctionType:
             return PythonCallbackFunction.__new__(PythonCallbackFunction)
         else:
-            return BasicExternalFunction.__new__(BasicExternalFunction)
+            return AMPLExternalFunction.__new__(AMPLExternalFunction)
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', ExternalFunction)
@@ -68,11 +68,11 @@ class ExternalFunction(Component):
             "General external functions can not be evaluated within Python." )
 
 
-class BasicExternalFunction(ExternalFunction):
+class AMPLExternalFunction(ExternalFunction):
     def __init__(self, *args, **kwds):
         if args:
             raise ValueError(
-                "BasicExternalFunction constructor does not support "
+                "AMPLExternalFunction constructor does not support "
                 "positional arguments" )
         self._library = kwds.pop('library', None)
         self._function = kwds.pop('function', None)
