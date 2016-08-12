@@ -15,6 +15,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 
 from six import PY3, itervalues, iteritems, advance_iterator
+import sys
 
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -433,89 +434,58 @@ You can silence this warning by one of three ways:
         This method returns the data corresponding to the given index.
         """
         try:
-            if ndx in self._data:
-                # Return the data from the dictionary
-                if ndx is None and not self.is_indexed():
-                    return self
-                else:
-                    return self._data[ndx]
-            elif not self._constructed:
-                # Generate an error because the component is not constructed
-                if not self.is_indexed():
-                    idx_str = ''
-                elif ndx.__class__ is tuple:
-                    idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
-                else:
-                    idx_str = "[" + str(ndx) + "]"
-                raise ValueError(
-                    "Error retrieving component %s%s: The component has "
-                    "not been constructed." % ( self.cname(True), idx_str,) )
-            elif ndx is None and not self.is_indexed():
-                self._data[ndx] = self  # FIXME: should this be a weakref?!?
+            _validIndex = ndx in self._data
+        except TypeError:
+            # Process alternatives
+            return self._processUnhashableIndex(ndx, sys.exc_info()[1])
+
+        if _validIndex:
+            # Return the data from the dictionary
+            if ndx is None and not self.is_indexed():
                 return self
+            else:
+                return self._data[ndx]
+        elif not self._constructed:
+            # Generate an error because the component is not constructed
+            if not self.is_indexed():
+                idx_str = ''
+            elif ndx.__class__ is tuple:
+                idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
+            else:
+                idx_str = "[" + str(ndx) + "]"
+            raise ValueError(
+                "Error retrieving component %s%s: The component has "
+                "not been constructed." % ( self.cname(True), idx_str,) )
+        elif ndx is None and not self.is_indexed():
+            self._data[ndx] = self  # FIXME: should this be a weakref?!?
+            return self
+        elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
+            # Return the default value if the global flag dictates
+            # that we should bypass all index checking and domain
+            # validation
+            return self._default(ndx)
+        elif ndx in self._index:
+            # After checking that the index is valid, return the
+            # default value.
+            # Note: This check is potentially expensive (e.g., when
+            # the indexing set is a complex set operation)!
+            return self._default(ndx)
+        elif normalize_index.flatten:
+            # Now we normalize the index and check again.  Usually,
+            # indices will be already be normalized, so we defer the
+            # "automatic" call to normalize_index until now for the
+            # sake of efficiency.  Also note that we cannot get here
+            # unless the component *is* indexed, so we do not need
+            # any special traps for None or is_indexed().
+            ndx = normalize_index(ndx)
+            if ndx in self._data:
+                # Note that ndx != None at this point
+                return self._data[ndx]
             elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-                # Return the default value if the global flag dictates
-                # that we should bypass all index checking and domain
-                # validation
                 return self._default(ndx)
             elif ndx in self._index:
-                # After checking that the index is valid, return the
-                # default value.
-                # Note: This check is potentially expensive (e.g., when
-                # the indexing set is a complex set operation)!
                 return self._default(ndx)
-            elif normalize_index.flatten:
-                # Now we normalize the index and check again.  Usually,
-                # indices will be already be normalized, so we defer the
-                # "automatic" call to normalize_index until now for the
-                # sake of efficiency.  Also note that we cannot get here
-                # unless the component *is* indexed, so we do not need
-                # any special traps for None or is_indexed().
-                ndx = normalize_index(ndx)
-                if ndx in self._data:
-                    # Note that ndx != None at this point
-                    return self._data[ndx]
-                elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-                    return self._default(ndx)
-                elif ndx in self._index:
-                    return self._default(ndx)
-        except TypeError:
-            #
-            # Iterate through a slice
-            #
-            fixed = {}
-            sliced = {}
-            #
-            # Setup the slice template (in fixed)
-            #
-            if type(ndx) is slice:
-                ndx = [ndx]
 
-            for i,val in enumerate(ndx):
-                if type(val) is slice:
-                    if val.start is not None or val.stop is not None:
-                        raise IndexError(
-                            "Indexed components can only indexed with simple "
-                            "slices: start and stop values are not allowed.")
-                    if val.step is not None and i < len(ndx)-1:
-                        raise IndexError(
-                            "Indexed components can only indexed with simple "
-                            "slices: the Pyomo wildcard slice (non-None step; "
-                            "e.g., '::0') can only appear as the last index")
-                    sliced[i] = val
-                else:
-                    fixed[i] = val
-
-            if sliced:
-                return _IndexedComponent_slicer(self, fixed, sliced)
-            else:
-                # The index isn't sliced, so simply re-raise the
-                # TypeError that occurred in the previous 'try' block.
-                raise
-        except Exception:
-            # Re-raise the other exceptions that occurred in the
-            # previous 'try' block.
-            raise
         #
         # Generate different errors, depending on the state of the index.
         #
@@ -531,6 +501,76 @@ You can silence this warning by one of three ways:
                   "Index '%s' is not valid for array component '%s'" \
                   % ( ndx, self.cname(True), )
         raise KeyError(msg)
+
+
+    def _processUnhashableIndex(self, ndx, _exception):
+        """Process a call to __getitem__ with unhashable elements
+
+        There are two basic ways to get here:
+          1) the index constains one or more slices
+          2) the index contains a Pyomo (Simple)COmponent
+        """
+        #
+        # Iterate through the index and look for slices and constant
+        # components
+        #
+        fixed = {}
+        sliced = {}
+        _found_numeric = False
+        #
+        # Setup the slice template (in fixed)
+        #
+        if type(ndx) not in (tuple, list):
+            ndx = [ndx]
+
+        for i,val in enumerate(ndx):
+            if type(val) is slice:
+                if val.start is not None or val.stop is not None:
+                    raise IndexError(
+                        "Indexed components can only be indexed with simple "
+                        "slices: start and stop values are not allowed.")
+                if val.step is not None and i < len(ndx)-1:
+                    raise IndexError(
+                        "Indexed components can only be indexed with simple "
+                        "slices: the Pyomo wildcard slice (non-None step; "
+                        "e.g., '::0') can only appear as the last index")
+                sliced[i] = val
+            else:
+                try:
+                    _num_val = val.as_numeric()
+                    if _num_val.is_constant():
+                        _found_numeric = True
+                        val = _num_val()
+                    elif _num_val.is_fixed():
+                        raise RuntimeError(
+"""Error retrieving the value of an indexed item %s:
+index %s is a fixed but not constant value.  This is likely not what you
+meant to do, as if you later change the fixed value of the object this
+lookup will not change.  If you understand the implications of using
+fixed but not constant values, you can get the current value using the
+value() function.""" % ( self.cname(True), i ))
+                    else:
+                        raise RuntimeError(
+"""Error retrieving the value of an indexed item %s:
+index %s is not a constant value.  This is likely not what you meant to
+do, as if you later change the fixed value of the object this lookup
+will not change.  If you understand the implications of using
+non-constant values, you can get the current value of the object using
+the value() function.""" % ( self.cname(True), i ))
+                except AttributeError:
+                    pass
+                fixed[i] = val
+
+        if sliced:
+            return _IndexedComponent_slicer(self, fixed, sliced)
+        elif _found_numeric:
+            new_ndx = tuple( fixed[i] for i in range(len(ndx)) )
+            return self[ new_ndx ]
+        else:
+            raise TypeError(
+                "%s found when trying to retrieve index for component %s"
+                % (_exception, self.cname(True)) )
+
 
     def _default(self, index):
         """Returns the default component data value"""
