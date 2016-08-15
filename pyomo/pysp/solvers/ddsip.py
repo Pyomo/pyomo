@@ -259,6 +259,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
     def _solve_impl(self,
                     sp,
                     output_solver_log=False,
+                    verbose=False,
                     **kwds):
 
         if len(sp.scenario_tree.stages) > 2:
@@ -297,6 +298,10 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         # Create the DDSIP input files
         #
 
+        if verbose:
+            print("Writing solver files in directory: %s"
+                  % (working_directory))
+
         # TODO: symbol_map
         symbol_map = None
         stats, input_files = pyomo.pysp.smps.ddsiputils.\
@@ -316,15 +321,21 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             sipstdin = f.read()
         assert sipstdin is not None
 
-        if not os.path.exists(self.executable):
-            raise ValueError("Solver executable does not exist: '%s'. "
-                             "(Note that the default executable generated "
-                             "by the DDSIP build system does not have this name)"
-                             % (self.executable))
+        # TODO
+        #print(self.executable)
+        #if not os.path.exists(self.executable):
+        #    raise ValueError("Solver executable does not exist: '%s'. "
+        #                     "(Note that the default executable generated "
+        #                     "by the DDSIP build system does not have this name)"
+        #                     % (self.executable))
 
         #
         # Launch DDSIP
         #
+
+        if verbose:
+            print("Launching DDSIP solver with command: %s"
+                  % (self.executable+" < "+sipstdin))
 
         start = time.time()
         rc, log = pyutilib.subprocess.run(
@@ -334,11 +345,16 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             outfile=logfile,
             tee=output_solver_log)
         stop = time.time()
-        assert os.path.exists(output_directory)
 
         #
         # Parse the DDSIP solution
         #
+
+        if verbose:
+            print("Reading DDSIP solution from file: %s"
+                  % (solution_filename))
+        assert os.path.exists(output_directory)
+
         async_xhat = None
         async_responses = []
         for scenario_id, scenario in enumerate(sp.scenario_tree.scenarios, 1):
@@ -576,7 +592,8 @@ def runddsip(options):
         results = ddsip.solve(manager,
                               output_solver_log=True,
                               keep_solver_files=options.keep_solver_files,
-                              symbolic_solver_labels=options.symbolic_solver_labels)
+                              symbolic_solver_labels=options.symbolic_solver_labels,
+                              verbose=options.verbose)
         print(results)
 
         if options.output_scenario_tree_solution:
