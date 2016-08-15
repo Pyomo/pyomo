@@ -316,6 +316,12 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             sipstdin = f.read()
         assert sipstdin is not None
 
+        if not os.path.exists(self.executable):
+            raise ValueError("Solver executable does not exist: '%s'. "
+                             "(Note that the default executable generated "
+                             "by the DDSIP build system does not have this name)"
+                             % (self.executable))
+
         #
         # Launch DDSIP
         #
