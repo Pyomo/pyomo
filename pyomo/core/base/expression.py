@@ -527,3 +527,12 @@ class IndexedExpression(Expression):
 register_component(
     Expression,
     "Named expressions that can be used in other expressions.")
+
+# Setting these properties here avoids a circular import.
+# This is temporary.
+from pyomo.core.base.component_expression import (expression,
+                                                  expression_list,
+                                                  expression_dict)
+expression._ctype = Expression
+expression_list._ctype = Expression
+expression_dict._ctype = Expression

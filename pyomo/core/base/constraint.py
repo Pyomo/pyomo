@@ -1181,3 +1181,12 @@ class ConstraintList(IndexedConstraint):
 
 register_component(Constraint, "General constraint expressions.")
 register_component(ConstraintList, "A list of constraint expressions.")
+
+# Setting these properties here avoids a circular import.
+# This is temporary.
+from pyomo.core.base.component_constraint import (constraint,
+                                                  constraint_list,
+                                                  constraint_dict)
+constraint._ctype = Constraint
+constraint_list._ctype = Constraint
+constraint_dict._ctype = Constraint

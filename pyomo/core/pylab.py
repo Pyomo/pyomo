@@ -7,13 +7,11 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.util.plugin import PluginGlobals
-PluginGlobals.add_env("pyomo")
-
-from pyomo.core.base import *
-import pyomo.core.base._pyomo
-import pyomo.core.data
-import pyomo.core.preprocess
-import pyomo.core.pylab
-
-PluginGlobals.pop_env()
+from pyomo.core.base.component_block import (block,
+                                             block_list,
+                                             block_dict)
+from pyomo.core.base.component_variable import *
+from pyomo.core.base.component_constraint import *
+from pyomo.core.base.component_objective import *
+from pyomo.core.base.component_expression import *
+from pyomo.core.base.component_suffix import *

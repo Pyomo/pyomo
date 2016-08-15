@@ -29,14 +29,11 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
+from pyomo.core.base import minimize, maximize
 
 from six import iteritems
 
 logger = logging.getLogger('pyomo.core')
-
-# Constants used to define the optimization sense
-minimize=1
-maximize=-1
 
 def simple_objective_rule(fn):
     """
@@ -699,3 +696,12 @@ register_component(Objective,
                    "Expressions that are minimized or maximized.")
 register_component(ObjectiveList,
                    "A list of objective expressions.")
+
+# Setting these properties here avoids a circular import.
+# This is temporary.
+from pyomo.core.base.component_objective import (objective,
+                                                 objective_list,
+                                                 objective_dict)
+objective._ctype = Objective
+objective_list._ctype = Objective
+objective_dict._ctype = Objective

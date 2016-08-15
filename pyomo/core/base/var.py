@@ -928,3 +928,11 @@ class VarList(IndexedVar):
 register_component(Var, "Decision variables.")
 register_component(VarList, "List of decision variables.")
 
+# Setting these properties here avoids a circular import.
+# This is temporary.
+from pyomo.core.base.component_variable import (variable,
+                                                variable_list,
+                                                variable_dict)
+variable._ctype = Var
+variable_list._ctype = Var
+variable_dict._ctype = Var
