@@ -511,15 +511,17 @@ class OptSolver(Plugin):
         # constructed! Collect suffix names to try and import from solution.
         #
         from pyomo.core.base import Block
+        from pyomo.core.base.component_interface import IBlockStorage
         from pyomo.core.base.suffix import active_import_suffix_generator
         _model = None
         for arg in args:
-            if isinstance(arg, Block):
-                if not arg.is_constructed():
-                    raise RuntimeError(
-                        "Attempting to solve model=%s with unconstructed "
-                        "component(s)" % (arg.name,) )
-                _model = arg
+            if isinstance(arg, (Block, IBlockStorage)):
+                if isinstance(arg, Block):
+                    if not arg.is_constructed():
+                        raise RuntimeError(
+                            "Attempting to solve model=%s with unconstructed "
+                            "component(s)" % (arg.name))
+                    _model = arg
 
                 model_suffixes = list(name for (name,comp) \
                                       in active_import_suffix_generator(arg))

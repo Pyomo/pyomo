@@ -29,6 +29,9 @@ from pyomo.core.base.var import SimpleVar, Var, _GeneralVarData, _VarData
 
 from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper
 
+from pyomo.core.base.component_expression import IExpression
+from pyomo.core.base.component_variable import IVariable
+
 import six
 from six import iterkeys, itervalues, iteritems, StringIO
 from six.moves import xrange, reduce
@@ -760,7 +763,17 @@ def _collect_identity(exp, idMap, multiplier, coef, varmap, compute_values):
         else:
             coef[None] += multiplier * exp
     else:
-        _linear_collectors[exp.__class__](exp, idMap, multiplier, coef, varmap, compute_values)
+        try:
+            _linear_collectors[exp.__class__](exp, idMap, multiplier, coef, varmap, compute_values)
+        except KeyError:
+            if isinstance(exp, (_VarData, IVariable)):
+                _collect_linear_var(exp, idMap, 1, coef, varmap, compute_values)
+            elif isinstance(exp, (_ExpressionData, IExpression)):
+                _collect_identity(exp, idMap, 1, coef, varmap, compute_values)
+            else:
+                raise ValueError("Unexpected expression (type %s): %s" %
+                                 (type(exp).__name__, str(exp)) )
+
 
 
 _linear_collectors = {
@@ -790,9 +803,9 @@ def collect_linear_canonical_repn(exp, idMap, compute_values=True):
     try:
         _linear_collectors[exp.__class__](exp, idMap, 1, coef, varmap, compute_values)
     except KeyError:
-        if isinstance(exp, _VarData):
+        if isinstance(exp, (_VarData, IVariable)):
             _collect_linear_var(exp, idMap, 1, coef, varmap, compute_values)
-        elif isinstance(exp, _ExpressionData):
+        elif isinstance(exp, (_ExpressionData, IExpression)):
             _collect_identity(exp, idMap, 1, coef, varmap, compute_values)
         else:
             raise ValueError( "Unexpected expression (type %s): %s" %

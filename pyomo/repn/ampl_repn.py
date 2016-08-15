@@ -24,6 +24,9 @@ from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
                                        generate_canonical_repn)
 import pyomo.core.base.expr_common
 
+from pyomo.core.base.component_expression import IExpression
+from pyomo.core.base.component_variable import IVariable
+
 import six
 from six import itervalues, iteritems, StringIO
 from six.moves import xrange, zip
@@ -689,7 +692,7 @@ def _generate_ampl_repn(exp):
         #
         # Expression (the component)
         #
-        elif isinstance(exp, _ExpressionData):
+        elif isinstance(exp, (_ExpressionData, IExpression)):
             ampl_repn = _generate_ampl_repn(exp.expr)
             return ampl_repn
 
@@ -713,7 +716,7 @@ def _generate_ampl_repn(exp):
     #
     # Variable
     #
-    elif isinstance(exp, _VarData):
+    elif isinstance(exp, (_VarData, IVariable)):
         if exp.fixed:
             ampl_repn._constant = exp.value
             return ampl_repn

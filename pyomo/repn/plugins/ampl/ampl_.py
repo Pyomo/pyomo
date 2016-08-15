@@ -36,6 +36,9 @@ from pyomo.core.base import param
 from pyomo.core.base.suffix import active_export_suffix_generator
 from pyomo.repn.ampl_repn import generate_ampl_repn
 
+from pyomo.core.base.component_expression import IExpression
+from pyomo.core.base.component_variable import IVariable
+
 from six import itervalues, iteritems
 from six.moves import xrange, zip
 
@@ -602,14 +605,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write(self._op_string[expr._EqualityExpression])
                 self._print_nonlinear_terms_NL(exp._args[0])
                 self._print_nonlinear_terms_NL(exp._args[1])
-            elif isinstance(exp, _ExpressionData):
+            elif isinstance(exp, (_ExpressionData, IExpression)):
                 self._print_nonlinear_terms_NL(exp.expr)
             else:
                 raise ValueError(
                     "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
                     % (exp_type))
 
-        elif isinstance(exp,var._VarData) and (not exp.is_fixed()):
+        elif isinstance(exp, (var._VarData, IVariable)) and \
+             (not exp.is_fixed()):
             #(self._output_fixed_variable_bounds or
             if not self._symbolic_solver_labels:
                 OUTPUT.write(self._op_string[var._VarData]

@@ -138,6 +138,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         self._referenced_variable_ids.clear()
 
         if output_filename is None:
+            assert hasattr(model, "name")
             output_filename = model.name + ".lp"
 
         # when sorting, there are a non-trivial number of
@@ -484,8 +485,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # NOTE: this *must* use the "\* ... *\" comment format: the GLPK
         # LP parser does not correctly handle other formats (notably, "%").
-        output_file.write(
-            "\\* Source Pyomo model name=%s *\\\n\n" % (model.name,) )
+        if hasattr(model, "name"):
+            output_file.write(
+                "\\* Source Pyomo model name=%s *\\\n\n"
+                % (model.name))
 
         #
         # Objective
@@ -570,8 +573,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         if numObj == 0:
             raise ValueError(
-                "ERROR: No objectives defined for input model '%s'; "
-                " cannot write legal LP file" % str(model.name))
+                "ERROR: No objectives defined for input model. "
+                "Cannot write legal LP file.")
 
         # Constraints
         #
