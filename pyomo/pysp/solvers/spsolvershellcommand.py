@@ -51,24 +51,24 @@ class SPSolverShellCommand(SPSolver):
         set to True."""
         return self._files
 
-    def set_executable(self, validate=True):
+    def set_executable(self, name, validate=True):
         """
         Set the executable for this solver.
 
-        The 'name' keyword can be assigned a relative,
-        absolute, or base filename. If it is unset (None),
-        the executable will be reset to the default value
-        associated with the solver interface.
-
-        When 'validate' is True (default) extra checks take
-        place that ensure an executable file with that name
-        exists, and then 'name' is converted to an absolute
-        path. On Windows platforms, a '.exe' extension will
-        be appended if necessary when validating 'name'. If
-        a file named 'name' does not appear to be a relative
-        or absolute path, the search will be performed
-        within the directories assigned to the PATH
-        environment variable.
+        Args:
+            name (str): A relative, absolute, or base
+                executable name.
+            validate (bool): When set to True (default)
+                extra checks take place that ensure an
+                executable file with that name exists, and
+                then 'name' is converted to an absolute
+                path. On Windows platforms, a '.exe'
+                extension will be appended if necessary when
+                validating 'name'. If a file named 'name'
+                does not appear to be a relative or absolute
+                path, the search will be performed within
+                the directories assigned to the PATH
+                environment variable.
         """
         if not validate:
             self._executable = name
@@ -105,7 +105,15 @@ class SPSolverShellCommand(SPSolver):
     def available(self):
         """Returns whether this solver is available by checking
         if the currently assigned executable exists."""
-        return os.path.exists(self.executable)
+        exe = self._executable
+        try:
+            self.set_executable(exe, validate=True)
+        except ValueError:
+            return False
+        else:
+            return True
+        finally:
+            self._executable = exe
 
     def solve(self, sp, *args, **kwds):
         self._files.clear()

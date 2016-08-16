@@ -321,21 +321,14 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             sipstdin = f.read()
         assert sipstdin is not None
 
-        # TODO
-        #print(self.executable)
-        #if not os.path.exists(self.executable):
-        #    raise ValueError("Solver executable does not exist: '%s'. "
-        #                     "(Note that the default executable generated "
-        #                     "by the DDSIP build system does not have this name)"
-        #                     % (self.executable))
-
         #
         # Launch DDSIP
         #
 
+        _cmd_string = self.executable+" < "+sipstdin_filename
         if verbose:
             print("Launching DDSIP solver with command: %s"
-                  % (self.executable+" < "+sipstdin))
+                  % (_cmd_string))
 
         start = time.time()
         rc, log = pyutilib.subprocess.run(
@@ -345,6 +338,18 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             outfile=logfile,
             tee=output_solver_log)
         stop = time.time()
+
+        if rc:
+            if not self.available():
+                raise ValueError("Solver executable does not exist: '%s'. "
+                                 "(note that the default executable generated "
+                                 "by the DDSIP build system does not have this name)"
+                                 % (self.executable))
+            else:
+                raise RuntimeError("A nonzero return code (%s) was encountered after "
+                                   "launching the command: %s. Check the solver log file "
+                                   "for more information: %s"
+                                   % (rc, _cmd_string, logfile))
 
         #
         # Parse the DDSIP solution
