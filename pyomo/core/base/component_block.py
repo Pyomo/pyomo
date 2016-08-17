@@ -337,39 +337,3 @@ class StaticBlock(IBlockStorage):
 
     def write(self, *args, **kwds):
         return block.write(self, *args, **kwds)
-
-if __name__ == "__main__":
-    def _fmt(num, suffix='B'):
-        for unit in ['','K','M','G','T','P','E','Z']:
-            if abs(num) < 1000.0:
-                return "%3.1f %s%s" % (num, unit, suffix)
-            num /= 1000.0
-        return "%.1f %s%s" % (num, 'Yi', suffix)
-    import pympler.asizeof
-    from pyomo.core.base.block import Block
-    from pyomo.core.base import RangeSet
-
-    block_bytes = pympler.asizeof.asizeof(block())
-    Block_bytes = pympler.asizeof.asizeof(Block())
-    print("block: %s" % (_fmt(block_bytes)))
-    print("Block: %s (%.2fx)"
-          % (_fmt(Block_bytes), Block_bytes/float(block_bytes)))
-
-    N = 1000
-    block_list_bytes = pympler.asizeof.asizeof(
-        block_list(block() for i in range(N)))
-    block_dict_bytes = pympler.asizeof.asizeof(
-        block_dict((i, block()) for i in range(N)))
-    def _indexed_block_rule(b, i):
-        return b
-    index = RangeSet(N)
-    index.construct()
-    indexed_Block = Block(index, rule=_indexed_block_rule)
-    indexed_Block.construct()
-    indexed_Block_bytes = pympler.asizeof.asizeof(indexed_Block) 
-    print("")
-    print("block_list{1000}: %s" % (_fmt(block_list_bytes)))
-    print("block_dict{1000}: %s" % (_fmt(block_dict_bytes)))
-    print("Indexed Block{1000}: %s (%.2fx)"
-          % (_fmt(indexed_Block_bytes),
-             indexed_Block_bytes/float(block_list_bytes)))
