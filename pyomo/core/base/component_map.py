@@ -11,6 +11,9 @@ __all__ = ('ComponentMap',)
 
 import collections
 
+import six
+from six import itervalues
+
 class ComponentMap(collections.MutableMapping):
     """
     This class acts as replacement for dict that allows

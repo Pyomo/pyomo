@@ -174,7 +174,7 @@ class _TestComponentDictBase(object):
             self.assertEqual(len(model.c), len(index))
             self.assertTrue(i in model.c)
             self.assertNotEqual(id(cdata), id(model.c[i]))
-            self.assertEqual(cdata.parent_component(), None)
+            self.assertEqual(cdata.parent, None)
 
     def test_delitem(self):
         model = self.model
@@ -185,12 +185,12 @@ class _TestComponentDictBase(object):
         for cnt, i in enumerate(index, 1):
             self.assertTrue(i in model.c)
             cdata = model.c[i]
-            self.assertEqual(id(cdata.parent_component()),
+            self.assertEqual(id(cdata.parent),
                              id(model.c))
             del model.c[i]
             self.assertEqual(len(model.c), len(index)-cnt)
             self.assertTrue(i not in model.c)
-            self.assertEqual(cdata.parent_component(), None)
+            self.assertEqual(cdata.parent, None)
 
     def test_iter(self):
         model = self.model

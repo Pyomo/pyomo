@@ -185,12 +185,12 @@ class _TestComponentListBase(object):
         self.assertEqual(len(model.c), len(index))
         for i in index:
             cdata = model.c[i]
-            self.assertEqual(id(cdata.parent_component()),
+            self.assertEqual(id(cdata.parent),
                              id(model.c))
             model.c[i] = self._ctype_factory()
             self.assertEqual(len(model.c), len(index))
             self.assertNotEqual(id(cdata), id(model.c[i]))
-            self.assertEqual(cdata.parent_component(), None)
+            self.assertEqual(cdata.parent, None)
 
     def test_delitem(self):
         model = self.model
@@ -200,11 +200,11 @@ class _TestComponentListBase(object):
         self.assertEqual(len(model.c), len(index))
         for i in index:
             cdata = model.c[0]
-            self.assertEqual(id(cdata.parent_component()),
+            self.assertEqual(id(cdata.parent),
                              id(model.c))
             del model.c[0]
             self.assertEqual(len(model.c), len(index)-(i+1))
-            self.assertEqual(cdata.parent_component(), None)
+            self.assertEqual(cdata.parent, None)
 
     def test_iter(self):
         model = self.model
@@ -304,10 +304,10 @@ class _TestComponentListBase(object):
         self.assertEqual(len(model.c), len(index))
         self.assertTrue(len(c_more_list) > 0)
         for cdata in c_more_list:
-            self.assertEqual(cdata.parent_component(), None)
+            self.assertEqual(cdata.parent, None)
         model.c.extend(c_more_list)
         for cdata in c_more_list:
-            self.assertEqual(id(cdata.parent_component()),
+            self.assertEqual(id(cdata.parent),
                              id(model.c))
 
     def test_count(self):
