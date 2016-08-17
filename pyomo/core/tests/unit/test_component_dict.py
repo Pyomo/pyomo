@@ -280,33 +280,7 @@ class _TestComponentDictBase(object):
                                 key=str),
                          sorted(list(model.c.keys()), key=str))
 
-    def test_cname(self):
-        model = self.model
-        index = ['a', 1, None, (1,), (1,2)]
-        c = self._container_type((i, self._ctype_factory())
-                                 for i in index)
-        self.assertEqual(c.cname(False), None)
-        self.assertEqual(c.cname(True), None)
-        model.c = c
-        self.assertEqual(c.cname(False), "c")
-        self.assertEqual(c.cname(True), "c")
-        index_to_string = {}
-        index_to_string['a'] = '[a]'
-        index_to_string[1] = '[1]'
-        index_to_string[None] = '[None]'
-        # I don't like that (1,) looks the same as 1, but oh well
-        index_to_string[(1,)] = '[1]'
-        index_to_string[(1,2)] = '[1,2]'
-        prefix = "c"
-        for i in index:
-            cdata = model.c[i]
-            self.assertEqual(cdata.cname(False),
-                             cdata.cname(True))
-            cname = prefix + index_to_string[i]
-            self.assertEqual(cdata.cname(False),
-                             cname)
-
-    def test_cname(self):
+    def test_name(self):
         model = self.model
         components = {}
         components['a'] = self._ctype_factory()
@@ -318,82 +292,82 @@ class _TestComponentDictBase(object):
 
         for key, c in components.items():
             self.assertTrue(c.parent is None)
-            self.assertEqual(c.cname(False), None)
-            self.assertEqual(c.cname(True), None)
+            self.assertEqual(c.name(False), None)
+            self.assertEqual(c.name(True), None)
 
         cdict = self._container_type()
         self.assertTrue(cdict.parent is None)
-        self.assertEqual(cdict.cname(False), None)
-        self.assertEqual(cdict.cname(True), None)
+        self.assertEqual(cdict.name(False), None)
+        self.assertEqual(cdict.name(True), None)
         cdict.update(components)
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
-            self.assertEqual(c.cname(False, convert=str),
+            self.assertEqual(c.name(False, convert=str),
                              "[%s]" % (str(key)))
-            self.assertEqual(c.cname(False, convert=repr),
+            self.assertEqual(c.name(False, convert=repr),
                              "[%s]" % (repr(key)))
-            self.assertEqual(c.cname(True, convert=str),
+            self.assertEqual(c.name(True, convert=str),
                              "[%s]" % (str(key)))
-            self.assertEqual(c.cname(True, convert=repr),
+            self.assertEqual(c.name(True, convert=repr),
                              "[%s]" % (repr(key)))
 
         model.cdict = cdict
         self.assertTrue(cdict.parent is model)
-        self.assertEqual(cdict.cname(False), "cdict")
-        self.assertEqual(cdict.cname(True), "cdict")
+        self.assertEqual(cdict.name(False), "cdict")
+        self.assertEqual(cdict.name(True), "cdict")
         for key, c in components.items():
-            self.assertEqual(c.cname(False, convert=str),
+            self.assertEqual(c.name(False, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.cname(False, convert=repr),
+            self.assertEqual(c.name(False, convert=repr),
                              "cdict[%s]" % (repr(key)))
-            self.assertEqual(c.cname(True, convert=str),
+            self.assertEqual(c.name(True, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.cname(True, convert=repr),
+            self.assertEqual(c.name(True, convert=repr),
                              "cdict[%s]" % (repr(key)))
 
         b = block()
         b.model = model
         self.assertTrue(model.parent is b)
-        self.assertEqual(cdict.cname(False), "cdict")
-        self.assertEqual(cdict.cname(True), "model.cdict")
+        self.assertEqual(cdict.name(False), "cdict")
+        self.assertEqual(cdict.name(True), "model.cdict")
         for key, c in components.items():
-            self.assertEqual(c.cname(False, convert=str),
+            self.assertEqual(c.name(False, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.cname(False, convert=repr),
+            self.assertEqual(c.name(False, convert=repr),
                              "cdict[%s]" % (repr(key)))
-            self.assertEqual(c.cname(True, convert=str),
+            self.assertEqual(c.name(True, convert=str),
                              "model.cdict[%s]" % (str(key)))
-            self.assertEqual(c.cname(True, convert=repr),
+            self.assertEqual(c.name(True, convert=repr),
                              "model.cdict[%s]" % (repr(key)))
 
         bdict = block_dict()
         bdict[0] = b
         self.assertTrue(b.parent is bdict)
-        self.assertEqual(cdict.cname(False), "cdict")
-        self.assertEqual(cdict.cname(True), "[0].model.cdict")
+        self.assertEqual(cdict.name(False), "cdict")
+        self.assertEqual(cdict.name(True), "[0].model.cdict")
         for key, c in components.items():
-            self.assertEqual(c.cname(False, convert=str),
+            self.assertEqual(c.name(False, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.cname(False, convert=repr),
+            self.assertEqual(c.name(False, convert=repr),
                              "cdict[%s]" % (repr(key)))
-            self.assertEqual(c.cname(True, convert=str),
+            self.assertEqual(c.name(True, convert=str),
                              "[0].model.cdict[%s]" % (str(key)))
-            self.assertEqual(c.cname(True, convert=repr),
+            self.assertEqual(c.name(True, convert=repr),
                              "[0].model.cdict[%s]" % (repr(key)))
 
         m = block()
         m.bdict = bdict
         self.assertTrue(bdict.parent is m)
-        self.assertEqual(cdict.cname(False), "cdict")
-        self.assertEqual(cdict.cname(True), "bdict[0].model.cdict")
+        self.assertEqual(cdict.name(False), "cdict")
+        self.assertEqual(cdict.name(True), "bdict[0].model.cdict")
         for key, c in components.items():
-            self.assertEqual(c.cname(False, convert=str),
+            self.assertEqual(c.name(False, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.cname(False, convert=repr),
+            self.assertEqual(c.name(False, convert=repr),
                              "cdict[%s]" % (repr(key)))
-            self.assertEqual(c.cname(True, convert=str),
+            self.assertEqual(c.name(True, convert=str),
                              "bdict[0].model.cdict[%s]" % (str(key)))
-            self.assertEqual(c.cname(True, convert=repr),
+            self.assertEqual(c.name(True, convert=repr),
                              "bdict[0].model.cdict[%s]" % (repr(key)))
 
     def test_clear(self):

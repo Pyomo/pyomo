@@ -55,12 +55,12 @@ class block(IBlockStorage):
     #def components(self):
     #    pass
 
-    def component_entry_key(self, component):
-        for key, val in iteritems(self.__byctype[component.ctype]):
-            if val is component:
+    def child_key(self, child):
+        for key, val in iteritems(self.__byctype[child.ctype]):
+            if val is child:
                 return key
-        raise ValueError("No component entry: %s"
-                         % (component))
+        raise ValueError("No child entry: %s"
+                         % (child))
 
     #
     # Define the IBlockStorage abstract methods
@@ -83,6 +83,20 @@ class block(IBlockStorage):
                         yield component
                 else:
                     yield component
+
+    def children(self,
+                 ctype,
+                 active=None,
+                 sort=False,
+                 descend_into=True,
+                 descent_order=None):
+            # TODO
+#            assert descent_order is None
+#            assert active is None
+#            assert sort is False
+#            assert descend_into is True
+            for child in itervalues(self.__byctype.get(ctype, {})):
+                yield child
 
     def blocks(self,
                active=None,
@@ -157,9 +171,9 @@ class block(IBlockStorage):
                     "been assigned to the component being "
                     "inserted: %s"
                     % (self.__class__.__name__,
-                       self.cname(True),
+                       self.name(True),
                        name,
-                       component.parent.cname(True)))
+                       component.parent.name(True)))
         super(block, self).__setattr__(name, component)
     add_component = __setattr__
 
@@ -259,12 +273,16 @@ class StaticBlock(IBlockStorage):
     #def components(self):
     #    pass
 
-    def component_entry_key(self, component):
+    def child_key(self, child):
         for key in self.__slots__:
-            if getattr(self, key) is component:
+            if getattr(self, key) is child:
                 return key
-        raise ValueError("No component entry: %s"
-                         % (component))
+        raise ValueError("No child entry: %s"
+                         % (child))
+
+    # overridden by the IBlockStorage interface
+    #def children(self):
+    #    pass
 
     #
     # Define the IBlockStorage abstract methods
@@ -281,11 +299,34 @@ class StaticBlock(IBlockStorage):
 #       assert active is None
 #       assert sort is False
 #       assert descend_into is True
+        for child in self.children(
+                ctype,
+                active=active,
+                sort=sort,
+                descend_into=descend_into,
+                descent_order=descent_order):
+            if isinstance(child, IComponentContainer):
+                for component in component.components():
+                    yield component
+            else:
+                yield child
+
+    def children(self,
+                 ctype,
+                 active=None,
+                 sort=False,
+                 descend_into=True,
+                 descent_order=None):
+        # TODO
+#       assert descent_order is None
+#       assert active is None
+#       assert sort is False
+#       assert descend_into is True
         for name in self.__slots__:
-            obj = getattr(self, name)
-            if hasattr(obj, "ctype") and \
-               obj.ctype == ctype:
-                yield component
+            child = getattr(self, name)
+            if hasattr(child, "ctype") and \
+               child.ctype == ctype:
+                yield child
 
     def blocks(self, *args, **kwds):
         return block.blocks(self, *args, **kwds)

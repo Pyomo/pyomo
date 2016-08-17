@@ -346,60 +346,60 @@ class _TestComponentListBase(object):
             self.assertTrue(pickled_clist[i].parent is clist)
             self.assertTrue(clist[i].parent is clist)
 
-    def test_cname(self):
+    def test_name(self):
         model = self.model
         components = [self._ctype_factory() for i in range(5)]
 
         for c in components:
             self.assertTrue(c.parent is None)
-            self.assertEqual(c.cname(False), None)
-            self.assertEqual(c.cname(True), None)
+            self.assertEqual(c.name(False), None)
+            self.assertEqual(c.name(True), None)
 
         clist = self._container_type()
         self.assertTrue(clist.parent is None)
-        self.assertEqual(clist.cname(False), None)
-        self.assertEqual(clist.cname(True), None)
+        self.assertEqual(clist.name(False), None)
+        self.assertEqual(clist.name(True), None)
         clist.extend(components)
         for i, c in enumerate(components):
             self.assertTrue(c.parent is clist)
-            self.assertEqual(c.cname(False), "[%s]" % (i))
-            self.assertEqual(c.cname(True), "[%s]" % (i))
+            self.assertEqual(c.name(False), "[%s]" % (i))
+            self.assertEqual(c.name(True), "[%s]" % (i))
 
         model.clist = clist
         self.assertTrue(clist.parent is model)
-        self.assertEqual(clist.cname(False), "clist")
-        self.assertEqual(clist.cname(True), "clist")
+        self.assertEqual(clist.name(False), "clist")
+        self.assertEqual(clist.name(True), "clist")
         for i, c in enumerate(components):
-            self.assertEqual(c.cname(False), "clist[%s]" % (i))
-            self.assertEqual(c.cname(True), "clist[%s]" % (i))
+            self.assertEqual(c.name(False), "clist[%s]" % (i))
+            self.assertEqual(c.name(True), "clist[%s]" % (i))
 
         b = block()
         b.model = model
         self.assertTrue(model.parent is b)
-        self.assertEqual(clist.cname(False), "clist")
-        self.assertEqual(clist.cname(True), "model.clist")
+        self.assertEqual(clist.name(False), "clist")
+        self.assertEqual(clist.name(True), "model.clist")
         for i, c in enumerate(components):
-            self.assertEqual(c.cname(False), "clist[%s]" % (i))
-            self.assertEqual(c.cname(True), "model.clist[%s]" % (i))
+            self.assertEqual(c.name(False), "clist[%s]" % (i))
+            self.assertEqual(c.name(True), "model.clist[%s]" % (i))
 
         blist = block_list()
         blist.append(b)
         self.assertTrue(b.parent is blist)
-        self.assertEqual(clist.cname(False), "clist")
-        self.assertEqual(clist.cname(True), "[0].model.clist")
+        self.assertEqual(clist.name(False), "clist")
+        self.assertEqual(clist.name(True), "[0].model.clist")
         for i, c in enumerate(components):
-            self.assertEqual(c.cname(False), "clist[%s]" % (i))
-            self.assertEqual(c.cname(True),
+            self.assertEqual(c.name(False), "clist[%s]" % (i))
+            self.assertEqual(c.name(True),
                              "[0].model.clist[%s]" % (i))
 
         m = block()
         m.blist = blist
         self.assertTrue(blist.parent is m)
-        self.assertEqual(clist.cname(False), "clist")
-        self.assertEqual(clist.cname(True), "blist[0].model.clist")
+        self.assertEqual(clist.name(False), "clist")
+        self.assertEqual(clist.name(True), "blist[0].model.clist")
         for i, c in enumerate(components):
-            self.assertEqual(c.cname(False), "clist[%s]" % (i))
-            self.assertEqual(c.cname(True),
+            self.assertEqual(c.name(False), "clist[%s]" % (i))
+            self.assertEqual(c.name(True),
                              "blist[0].model.clist[%s]" % (i))
 
 class _TestActiveComponentListBase(_TestComponentListBase):

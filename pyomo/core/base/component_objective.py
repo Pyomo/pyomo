@@ -45,6 +45,13 @@ class IObjective(IExpression):
     sense = _abstract_readwrite_property(
         doc="The optimization direction for the objective.")
 
+    #
+    # Interface
+    #
+
+    def is_minimizing(self):
+        return self.sense == minimize
+
 class objective(IObjective):
     """An optimization objective."""
     # To avoid a circular import, for the time being, this

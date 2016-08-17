@@ -58,10 +58,11 @@ class ComponentDict(IComponentContainer,
 
     def components(self):
         return itervalues(self._data)
+    children = components
 
-    def component_entry_key(self, component):
+    def child_key(self, child):
         for key, val in iteritems(self._data):
-            if val is component:
+            if val is child:
                 return key
         raise ValueError
 
@@ -96,9 +97,9 @@ class ComponentDict(IComponentContainer,
                 "at key %s. A parent container has already been "
                 "assigned to the component being inserted: %s"
                 % (self.__class__.__name__,
-                   self.cname(True),
+                   self.name(True),
                    key,
-                   item.parent.cname(True)))
+                   item.parent.name(True)))
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "

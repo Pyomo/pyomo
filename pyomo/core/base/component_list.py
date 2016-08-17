@@ -48,9 +48,10 @@ class ComponentList(IComponentContainer,
 
     def components(self):
         return self._data.__iter__()
+    children = components
 
-    def component_entry_key(self, component):
-        return self.index(component)
+    def child_key(self, child):
+        return self.index(child)
 
     #
     # Define the MutableSequence abstract methods
@@ -82,9 +83,9 @@ class ComponentList(IComponentContainer,
                 "at index %s. A parent container has already been "
                 "assigned to the component being inserted: %s"
                 % (self.__class__.__name__,
-                   self.cname(True),
+                   self.name(True),
                    i,
-                   item.parent.cname(True)))
+                   item.parent.name(True)))
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "
@@ -110,7 +111,7 @@ class ComponentList(IComponentContainer,
                 "assigned to the component being inserted: %s"
                 % (self.__class__.__name__,
                    i,
-                   item.parent.cname(True)))
+                   item.parent.name(True)))
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "

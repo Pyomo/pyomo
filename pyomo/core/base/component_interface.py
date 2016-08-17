@@ -75,7 +75,7 @@ class IParentPointerObject(six.with_metaclass(abc.ABCMeta, object)):
             root = self
         return root
 
-    def cname(self,
+    def name(self,
               fully_qualified=False,
               name_buffer=None,
               convert=str):
@@ -102,7 +102,7 @@ class IParentPointerObject(six.with_metaclass(abc.ABCMeta, object)):
         if parent is None:
             return None
 
-        key = parent.component_entry_key(self)
+        key = parent.child_key(self)
         if isinstance(parent, IBlockStorage):
             name = "%s" % (convert(key))
             prefix = "."
@@ -117,8 +117,8 @@ class IParentPointerObject(six.with_metaclass(abc.ABCMeta, object)):
            parent_is_block:
             return name
         else:
-            parent_name = parent.cname(fully_qualified=fully_qualified,
-                                       name_buffer=name_buffer)
+            parent_name = parent.name(fully_qualified=fully_qualified,
+                                      name_buffer=name_buffer)
             if parent_name is not None:
                 return parent_name + prefix + name
             else:
@@ -192,7 +192,7 @@ class _IActiveComponent(object):
         """Set the active attribute to False"""
         self._active = False
 
-class IComponentContainer(IComponent):
+class IComponentContainer(IParentPointerObject):
     """A container of modeling components."""
     __slots__ = ()
 
@@ -210,15 +210,24 @@ class IComponentContainer(IComponent):
 
     @property
     def ctype(self):
-        """Returns the component type"""
+        """The component type."""
         return self._ctype
 
     @abc.abstractmethod
     def components(self):
+        """A generator over the set of components stored
+        under this container."""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def component_entry_key(self, component):
+    def child_key(self, component):
+        """The lookup key associated with a child of this
+        container."""
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def children(self):
+        """A generator over the children of this container."""
         raise NotImplementedError
 
 class _IActiveComponentContainer(object):
@@ -255,14 +264,14 @@ class _IActiveComponentContainer(object):
     def activate(self):
         """Set the active attribute to True"""
         self._active = True
-        for component in self.components():
-            component.activate()
+        for child in self.children():
+            child.activate()
 
     def deactivate(self):
         """Set the active attribute to False"""
         self._active = False
-        for component in self.components():
-            component.deactivate()
+        for child in self.children():
+            children.deactivate()
 
 class IBlockStorage(IComponentContainer, _IActiveComponent):
     __slots__ = ()
@@ -272,20 +281,15 @@ class IBlockStorage(IComponentContainer, _IActiveComponent):
     #
 
     @abc.abstractmethod
-    def components(self,
-                   ctype,
-                   active=None,
-                   sort=False,
-                   descend_into=True,
-                   descent_order=None):
+    def components(self, ctype):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def blocks(self,
-               active=None,
-               sort=False,
-               descend_into=True,
-               descent_order=None):
+    def children(self, ctype):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def blocks(self):
         raise NotImplementedError
 
 if __name__ == "__main__":
@@ -303,7 +307,7 @@ if __name__ == "__main__":
             self._active = True
             self._d = {}
             self._inv_d = {}
-        def component_entry_key(self, component):
+        def child_key(self, component):
             return self._inv_d[id(component)]
         def components(self,
                        ctype,
@@ -316,13 +320,14 @@ if __name__ == "__main__":
             assert active is None
             assert sort is False
             assert descend_into is True
-            if ctype is not None:
-                ctypes = (ctype,)
-            else:
-                ctypes = self._d.keys()
             for ctype in ctypes:
                 for component in itervalues(self._d.get(ctype, {})):
                     yield component
+        def children(self):
+            for ctype in self._d:
+                for child in self._d.get(ctype, {}):
+                    yield child
+
         def insert(self, key, component):
             if component._parent is not None:
                 raise ValueError(
@@ -371,10 +376,11 @@ if __name__ == "__main__":
             self._d = {}
             self._inv_d = {}
             self._names = set()
-        def component_entry_key(self, component):
+        def child_key(self, component):
             return self._inv_d[id(component)]
         def components(self):
             return list(self._d.values())
+        children = components
         def blocks(self):
             raise NotImplementedError
         def insert(self, key, component):
@@ -406,8 +412,8 @@ if __name__ == "__main__":
 
     print("\nCreating c")
     c = C1()
-    print(c.cname())
-    print(c.cname(fully_qualified=True))
+    print(c.name())
+    print(c.name(fully_qualified=True))
     assert c.active
     c.deactivate()
     assert not c.active
@@ -417,8 +423,8 @@ if __name__ == "__main__":
 
     print("\nCreating C")
     C = Cont("Variable")
-    print(C.cname())
-    print(C.cname(fully_qualified=True))
+    print(C.name())
+    print(C.name(fully_qualified=True))
     assert C.active
     C.deactivate()
     assert not C.active
@@ -433,8 +439,8 @@ if __name__ == "__main__":
     assert C.root_block is None
     C.insert("c", c)
     assert C.active
-    print(c.cname())
-    print(c.cname(fully_qualified=True))
+    print(c.name())
+    print(c.name(fully_qualified=True))
     assert c.active
     assert c.parent is C
     assert c.parent_block is None
@@ -442,75 +448,75 @@ if __name__ == "__main__":
 
     print("\nCreating b")
     b = Block()
-    print(b.cname())
-    print(b.cname(fully_qualified=True))
+    print(b.name())
+    print(b.name(fully_qualified=True))
     assert b.active
     assert b.parent is None
     assert b.parent_block is None
     assert b.root_block is b
     b.insert("C", C)
-    print(C.cname())
-    print(C.cname(fully_qualified=True))
+    print(C.name())
+    print(C.name(fully_qualified=True))
     assert C.parent is b
     assert C.parent_block is b
     assert C.root_block is b
-    print(c.cname())
-    print(c.cname(fully_qualified=True))
+    print(c.name())
+    print(c.name(fully_qualified=True))
     assert c.parent is C
     assert c.parent_block is b
     assert c.root_block is b
 
     print("\nCreating B")
     B = Cont("Block")
-    print(B.cname())
-    print(B.cname(fully_qualified=True))
+    print(B.name())
+    print(B.name(fully_qualified=True))
     assert B.active
     assert B.parent is None
     assert B.parent_block is None
     assert B.root_block is None
     B.insert("b", b)
-    print(b.cname())
-    print(b.cname(fully_qualified=True))
+    print(b.name())
+    print(b.name(fully_qualified=True))
     assert b.parent is B
     assert b.parent_block is None
     assert b.root_block is b
-    print(C.cname())
-    print(C.cname(fully_qualified=True))
+    print(C.name())
+    print(C.name(fully_qualified=True))
     assert C.parent is b
     assert C.parent_block is b
     assert C.root_block is b
-    print(c.cname())
-    print(c.cname(fully_qualified=True))
+    print(c.name())
+    print(c.name(fully_qualified=True))
     assert c.parent is C
     assert c.parent_block is b
     assert c.root_block is b
 
     print("\nCreating M")
     M = Block()
-    print(M.cname())
-    print(M.cname(fully_qualified=True))
+    print(M.name())
+    print(M.name(fully_qualified=True))
     assert M.active
     assert M.parent is None
     assert M.parent_block is None
     assert M.root_block is M
     M.insert("B", B)
-    print(B.cname())
-    print(B.cname(fully_qualified=True))
+    print(B.name())
+    print(B.name(fully_qualified=True))
     assert B.parent is M
     assert B.parent_block is M
     assert B.root_block is M
-    print(b.cname())
-    print(b.cname(fully_qualified=True))
+    print(b.name())
+    print(b.name(fully_qualified=True))
     assert b.parent is B
     assert b.parent_block is M
     assert b.root_block is M
-    print(C.cname())
-    print(C.cname(fully_qualified=True))
+    print(C.name())
+    print(C.name(fully_qualified=True))
     assert C.parent is b
     assert C.parent_block is b
     assert C.root_block is M
-    print(c.cname())
-    print(c.cname(fully_qualified=True))
+    print(c.name())
+    print(c.name(fully_qualified=True))
     assert c.parent is C
     assert c.parent_block is b
     assert c.root_block is M
@@ -523,18 +529,18 @@ if __name__ == "__main__":
     print("\nRelocating b")
     B.remove(b)
     M.insert("b", b)
-    print(b.cname())
-    print(b.cname(fully_qualified=True))
+    print(b.name())
+    print(b.name(fully_qualified=True))
     assert b.parent is M
     assert b.parent_block is M
     assert b.root_block is M
-    print(C.cname())
-    print(C.cname(fully_qualified=True))
+    print(C.name())
+    print(C.name(fully_qualified=True))
     assert C.parent is b
     assert C.parent_block is b
     assert C.root_block is M
-    print(c.cname())
-    print(c.cname(fully_qualified=True))
+    print(c.name())
+    print(c.name(fully_qualified=True))
     assert c.parent is C
     assert c.parent_block is b
     assert c.root_block is M

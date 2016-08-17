@@ -56,6 +56,12 @@ class ComponentMap(collections.MutableMapping):
             dict((id_func(component), (component,val)) \
                  for component, val in itervalues(state['_dict']))
 
+    def __getstate__(self):
+        state = super(ComponentMap, self).__getstate__()
+        for i in ComponentMap.__slots__:
+            state[i] = getattr(self, i)
+        return state
+
     def __str__(self):
         """String representation of the mapping."""
         tmp = '{' + \
