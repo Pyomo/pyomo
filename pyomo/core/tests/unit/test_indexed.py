@@ -260,6 +260,10 @@ class TestComponentSlices(unittest.TestCase):
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
+        self.assertRaisesRegexp(
+            IndexError, 'wildcard slice .* can only appear once',
+            self.m.b.__getitem__, (Ellipsis,Ellipsis) )
+
 
     def test_nonterminal_slice(self):
         _slicer = self.m.b[:,4].x
