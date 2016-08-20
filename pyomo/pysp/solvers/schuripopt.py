@@ -28,7 +28,6 @@ from pyomo.core import (SymbolMap,
 from pyomo.opt import (ReaderFactory,
                        ResultsFormat,
                        ProblemFormat)
-from pyomo.util import pyomo_command
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
@@ -560,11 +559,7 @@ def main(args=None):
                           profile_count=options.profile,
                           traceback=options.traceback)
 
-@pyomo_command('runschuripopt', 'Run the SchurIpopt solver')
-def RunSchurIpopt_main(args=None):
-    return main(args=args)
-
 SPSolverFactory.register_solver("schuripopt", SchurIpoptSolver)
 
 if __name__ == "__main__":
-    sys.exit(RunSchurIpopt_main())
+    sys.exit(main())

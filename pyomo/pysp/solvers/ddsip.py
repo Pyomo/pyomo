@@ -18,7 +18,6 @@ import time
 import pyutilib.subprocess
 import pyutilib.services
 
-from pyomo.util import pyomo_command
 from pyomo.core import maximize
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
@@ -649,11 +648,7 @@ def main(args=None):
                           profile_count=options.profile,
                           traceback=options.traceback)
 
-@pyomo_command('runddsip', 'Run the DDSIP solver')
-def RunDDSIP_main(args=None):
-    return main(args=args)
-
 SPSolverFactory.register_solver("ddsip", DDSIPSolver)
 
 if __name__ == "__main__":
-    sys.exit(RunDDSIP_main())
+    sys.exit(main())

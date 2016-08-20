@@ -23,7 +23,6 @@ import pyutilib.misc
 from pyutilib.pyro import shutdown_pyro_components
 
 import pyomo.solvers
-from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        PersistentSolver,
@@ -914,11 +913,7 @@ def main(args=None):
                           profile_count=options.profile,
                           traceback=options.traceback)
 
-@pyomo_command('runef', 'Run the Extensive Form solver')
-def RunEF_main(args=None):
-    return main(args=args)
-
 SPSolverFactory.register_solver("ef", EFSolver)
 
 if __name__ == "__main__":
-    sys.exit(RunEF_main())
+    sys.exit(main())

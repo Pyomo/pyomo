@@ -23,7 +23,6 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyomo.util import pyomo_command
 from pyomo.core import (Block, Set, Expression, Param, maximize)
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
@@ -975,11 +974,7 @@ Method of Multipliers (ADMM) solver."""
                           profile_count=options.profile,
                           traceback=options.traceback)
 
-@pyomo_command('runadmm', 'Run the ADMM solver')
-def RunADMM_main(args=None):
-    return main(args=args)
-
 SPSolverFactory.register_solver("admm", ADMMSolver)
 
 if __name__ == "__main__":
-    sys.exit(RunADMM_main())
+    sys.exit(main())

@@ -23,7 +23,6 @@ import time
 import pyutilib.subprocess
 import pyutilib.services
 
-from pyomo.util import pyomo_command
 from pyomo.core import maximize
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
@@ -645,11 +644,7 @@ def main(args=None):
                           profile_count=options.profile,
                           traceback=options.traceback)
 
-@pyomo_command('runsd', 'Run the SD solver')
-def RunSD_main(args=None):
-    return main(args=args)
-
 SPSolverFactory.register_solver("sd", SDSolver)
 
 if __name__ == "__main__":
-    sys.exit(RunSD_main())
+    sys.exit(main())
