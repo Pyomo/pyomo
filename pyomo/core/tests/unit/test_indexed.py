@@ -148,12 +148,16 @@ class TestComponentSlices(unittest.TestCase):
         def _b(b, i, j):
             _c(b,i,j)
             b.c = Block(b.model().I, b.model().J, rule=_c)
+        def _bb(b, i, j, k):
+            _c(b,i,j)
+            b.c = Block(b.model().I, b.model().J, rule=_c)
 
         self.m = m = ConcreteModel()
         m.I = RangeSet(1,3)
         m.J = RangeSet(4,6)
         m.K = RangeSet(7,9)
         m.b = Block(m.I, m.J, rule=_b)
+        m.bb = Block(m.I, m.J, m.K, rule=_bb)
 
     def tearDown(self):
         self.m = None
@@ -194,6 +198,49 @@ class TestComponentSlices(unittest.TestCase):
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
             ans, [ 'b[1,4]', 'b[1,5]', 'b[1,6]',
+               ] )
+
+        _slicer = self.m.b[...,5]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual(
+            ans, [ 'b[1,5]',
+                   'b[2,5]',
+                   'b[3,5]',
+               ] )
+
+        _slicer = self.m.bb[2,...,8]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual(
+            ans, [ 'bb[2,4,8]', 'bb[2,5,8]', 'bb[2,6,8]',
+               ] )
+
+        _slicer = self.m.bb[:,...,8]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual(
+            ans, [ 'bb[1,4,8]', 'bb[1,5,8]', 'bb[1,6,8]',
+                   'bb[2,4,8]', 'bb[2,5,8]', 'bb[2,6,8]',
+                   'bb[3,4,8]', 'bb[3,5,8]', 'bb[3,6,8]',
+               ] )
+
+        _slicer = self.m.bb[:,:,...,8]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual(
+            ans, [ 'bb[1,4,8]', 'bb[1,5,8]', 'bb[1,6,8]',
+                   'bb[2,4,8]', 'bb[2,5,8]', 'bb[2,6,8]',
+                   'bb[3,4,8]', 'bb[3,5,8]', 'bb[3,6,8]',
+               ] )
+
+        _slicer = self.m.bb[:,...,:,8]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual(
+            ans, [ 'bb[1,4,8]', 'bb[1,5,8]', 'bb[1,6,8]',
+                   'bb[2,4,8]', 'bb[2,5,8]', 'bb[2,6,8]',
+                   'bb[3,4,8]', 'bb[3,5,8]', 'bb[3,6,8]',
                ] )
 
         _slicer = self.m.b[1,4,...]

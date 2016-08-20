@@ -163,10 +163,9 @@ class _IndexedComponent_slicer(object):
         values that match the slice template.
         """
         # Handle the Ellipsis that can match any number of indices
-        if ellipsis is None:
-            index_count = len(fixed) + len(sliced)
-        else:
-            index_count = None
+        explicit_index_count = len(fixed) + len(sliced)
+        if ellipsis is not None:
+            explicit_index_count = -1 - explicit_index_count
 
         max_fixed = 0 if not fixed else max(fixed)
 
@@ -178,10 +177,10 @@ class _IndexedComponent_slicer(object):
             # slice, then there must be enough indices to at least match
             # the fixed indices.  Without the wildcard slice, the number
             # of indices must match exactly.
-            if index_count is None:
-                if max_fixed >= len(_idx):
+            if explicit_index_count < 0:
+                if -explicit_index_count - 1 > len(_idx):
                     continue
-            elif len(_idx) != index_count:
+            elif len(_idx) != explicit_index_count:
                 continue
 
             flag = True
@@ -541,7 +540,10 @@ You can silence this warning by one of three ways:
                         "to indicate '0 or more' indices")
                     val = Ellipsis
                 else:
-                    sliced[i] = val
+                    if ellipsis is None:
+                        sliced[i] = val
+                    else:
+                        sliced[i-len(ndx)] = val
                     continue
 
             if val is Ellipsis:
@@ -550,11 +552,6 @@ You can silence this warning by one of three ways:
                         "Indexed components can only be indexed with simple "
                         "slices: the Pyomo wildcard slice (Ellipsis; "
                         "e.g., '...') can only appear once")
-                if i < len(ndx)-1:
-                    raise IndexError(
-                        "Indexed components can only be indexed with simple "
-                        "slices: the Pyomo wildcard slice (Ellipsis; "
-                        "e.g., '...') can only appear as the last index")
                 ellipsis = i
                 continue
 
@@ -581,7 +578,10 @@ non-constant values, you can get the current value of the object using
 the value() function.""" % ( self.cname(True), i ))
             except AttributeError:
                 pass
-            fixed[i] = val
+            if ellipsis is None:
+                fixed[i] = val
+            else:
+                fixed[i - len(ndx)] = val
 
         if sliced or ellipsis is not None:
             return _IndexedComponent_slicer(self, fixed, sliced, ellipsis)
