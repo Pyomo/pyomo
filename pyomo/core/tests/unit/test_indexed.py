@@ -180,7 +180,7 @@ class TestComponentSlices(unittest.TestCase):
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )
 
-        _slicer = self.m.b[::0]
+        _slicer = self.m.b[...]
         self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
         ans = [ str(x) for x in _slicer ]
         self.assertEqual(
@@ -189,7 +189,21 @@ class TestComponentSlices(unittest.TestCase):
                    'b[3,4]', 'b[3,5]', 'b[3,6]',
                ] )
 
-        _slicer = self.m.b[1,2,3,::0]
+        _slicer = self.m.b[1,...]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual(
+            ans, [ 'b[1,4]', 'b[1,5]', 'b[1,6]',
+               ] )
+
+        _slicer = self.m.b[1,4,...]
+        self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
+        ans = [ str(x) for x in _slicer ]
+        self.assertEqual(
+            ans, [ 'b[1,4]',
+               ] )
+
+        _slicer = self.m.b[1,2,3,...]
         self.assertTrue(isinstance(_slicer, _IndexedComponent_slicer))
         ans = [ str(x) for x in _slicer ]
         self.assertEqual( ans, [] )

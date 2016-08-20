@@ -54,11 +54,12 @@ class _IndexedComponent_slicer(object):
     getitem = 2
     call = 3
 
-    def __init__(self, component, fixed, sliced):
+    def __init__(self, component, fixed, sliced, ellipsis):
         # _iter_stack holds either an iterator (if this devel in the
         # hierarchy is a slice) or None (if this level is either a
         # SimpleComponent or is explicitly indexed).
-        self._iter_stack = [ self._slice_generator(component, fixed, sliced) ]
+        self._iter_stack = [
+            self._slice_generator(component, fixed, sliced, ellipsis) ]
         self._call_stack = [ (0,None) ]
         # Since this is an object, users may change these flags between
         # where they declare the slice and iterate over it.
@@ -155,18 +156,19 @@ class _IndexedComponent_slicer(object):
                 # We have a concrete object at the end of the chain. Return it
                 return _comp
 
-    def _slice_generator(self, component, fixed, sliced):
+    def _slice_generator(self, component, fixed, sliced, ellipsis):
         """Utility method (generator) for generating the elements of one slice
 
         Iterate through the component index and yield the component data
         values that match the slice template.
         """
-        index_count = len(fixed) + len(sliced)
-        max_fixed = 0 if not fixed else max(fixed)
-        # Handle the "special" wildcard slice that can match any number
-        # of indices
-        if index_count-1 in sliced and sliced[index_count-1].step is not None:
+        # Handle the Ellipsis that can match any number of indices
+        if ellipsis is None:
+            index_count = len(fixed) + len(sliced)
+        else:
             index_count = None
+
+        max_fixed = 0 if not fixed else max(fixed)
 
         for index in component.__iter__():
             # We want a tuple of indices, so convert scalard to tuples
@@ -445,7 +447,7 @@ You can silence this warning by one of three ways:
                 return self
             else:
                 return self._data[ndx]
-        elif not self._constructed:
+        if not self._constructed:
             # Generate an error because the component is not constructed
             if not self.is_indexed():
                 idx_str = ''
@@ -456,21 +458,23 @@ You can silence this warning by one of three ways:
             raise ValueError(
                 "Error retrieving component %s%s: The component has "
                 "not been constructed." % ( self.cname(True), idx_str,) )
-        elif ndx is None and not self.is_indexed():
+        if ndx is None and not self.is_indexed():
             self._data[ndx] = self  # FIXME: should this be a weakref?!?
             return self
-        elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
+        if ndx is Ellipsis or ndx.__class__ is tuple and Ellipsis in ndx:
+            return self._processUnhashableIndex(ndx, sys.exc_info()[1])
+        if not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
             # Return the default value if the global flag dictates
             # that we should bypass all index checking and domain
             # validation
             return self._default(ndx)
-        elif ndx in self._index:
+        if ndx in self._index:
             # After checking that the index is valid, return the
             # default value.
             # Note: This check is potentially expensive (e.g., when
             # the indexing set is a complex set operation)!
             return self._default(ndx)
-        elif normalize_index.flatten:
+        if normalize_index.flatten:
             # Now we normalize the index and check again.  Usually,
             # indices will be already be normalized, so we defer the
             # "automatic" call to normalize_index until now for the
@@ -516,6 +520,7 @@ You can silence this warning by one of three ways:
         #
         fixed = {}
         sliced = {}
+        ellipsis = None
         _found_numeric = False
         #
         # Setup the slice template (in fixed)
@@ -529,40 +534,57 @@ You can silence this warning by one of three ways:
                     raise IndexError(
                         "Indexed components can only be indexed with simple "
                         "slices: start and stop values are not allowed.")
-                if val.step is not None and i < len(ndx)-1:
+                if val.step is not None:
+                    logger.warning(
+                        "DEPRECATION WARNING: The special wildcard slice "
+                        "(::0) is deprecated.  Please use an ellipsis (...) "
+                        "to indicate '0 or more' indices")
+                    val = Ellipsis
+                else:
+                    sliced[i] = val
+                    continue
+
+            if val is Ellipsis:
+                if ellipsis is not None:
                     raise IndexError(
                         "Indexed components can only be indexed with simple "
-                        "slices: the Pyomo wildcard slice (non-None step; "
-                        "e.g., '::0') can only appear as the last index")
-                sliced[i] = val
-            else:
-                try:
-                    _num_val = val.as_numeric()
-                    if _num_val.is_constant():
-                        _found_numeric = True
-                        val = _num_val()
-                    elif _num_val.is_fixed():
-                        raise RuntimeError(
+                        "slices: the Pyomo wildcard slice (Ellipsis; "
+                        "e.g., '...') can only appear once")
+                if i < len(ndx)-1:
+                    raise IndexError(
+                        "Indexed components can only be indexed with simple "
+                        "slices: the Pyomo wildcard slice (Ellipsis; "
+                        "e.g., '...') can only appear as the last index")
+                ellipsis = i
+                continue
+
+            try:
+                _num_val = val.as_numeric()
+                if _num_val.is_constant():
+                    _found_numeric = True
+                    val = _num_val()
+                elif _num_val.is_fixed():
+                    raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
 index %s is a fixed but not constant value.  This is likely not what you
 meant to do, as if you later change the fixed value of the object this
 lookup will not change.  If you understand the implications of using
 fixed but not constant values, you can get the current value using the
 value() function.""" % ( self.cname(True), i ))
-                    else:
-                        raise RuntimeError(
+                else:
+                    raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
 index %s is not a constant value.  This is likely not what you meant to
 do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
 the value() function.""" % ( self.cname(True), i ))
-                except AttributeError:
-                    pass
-                fixed[i] = val
+            except AttributeError:
+                pass
+            fixed[i] = val
 
-        if sliced:
-            return _IndexedComponent_slicer(self, fixed, sliced)
+        if sliced or ellipsis is not None:
+            return _IndexedComponent_slicer(self, fixed, sliced, ellipsis)
         elif _found_numeric:
             new_ndx = tuple( fixed[i] for i in range(len(ndx)) )
             return self[ new_ndx ]
