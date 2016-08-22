@@ -26,6 +26,13 @@ from pyomo.environ import *
 
 from six import StringIO
 
+networkx_available = False
+try:
+    import networkx
+    networkx_available = True
+except:
+    networkx_available = False
+
 thisdir = dirname(abspath(__file__))
 baselineDir = join(thisdir, "baselines")
 pysp_examples_dir = \
@@ -326,7 +333,7 @@ def create_test_classes(basename,
         (TestEvalXHAT_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
         {})
 
-    return tuple(globals()[name] for name in class_names)
+    return class_names
 
 #
 # create the actual testing classes
@@ -383,12 +390,15 @@ for solver_name, solver_io in [('ipopt','nl')]:
     networkx_examples_dir = join(pysp_examples_dir, "networkx_scenariotree")
     networkx_model_dir = join(networkx_examples_dir, "ReferenceModel.py")
     networkx_data_dir = None
-    create_test_classes('networkx',
-                        networkx_model_dir,
-                        networkx_data_dir,
-                        solver_name,
-                        solver_io,
-                        ('nightly','expensive'))
+    class_names = create_test_classes('networkx',
+                                      networkx_model_dir,
+                                      networkx_data_dir,
+                                      solver_name,
+                                      solver_io,
+                                      ('nightly','expensive'))
+    for name in class_names:
+        globals()[name] = unittest.skipIf(not networkx_available,
+                                          "networkx module is not available")(globals()[name])
 
 # this example is big
 for solver_name, solver_io in [('cplex','lp')]:
