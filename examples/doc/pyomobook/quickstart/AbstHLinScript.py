@@ -1,8 +1,7 @@
 # AbstHLinScript.py - Script for a simple linear version of (H)
 from pyomo.environ import *
 
-model = AbstractModel()
-model.name = "Simple Linear (H)"
+model = AbstractModel(name="Simple Linear (H)")
 
 model.A = Set()
 

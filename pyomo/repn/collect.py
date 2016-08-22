@@ -44,7 +44,7 @@ def collect_linear_terms(block, unfixed):
                 o_terms = generate_canonical_repn(odata[ndx].expr, compute_values=False)
                 d_sense = maximize
             for i in range(len(o_terms.variables)):
-                c_rhs[ o_terms.variables[i].parent_component().name, o_terms.variables[i].index() ] = o_terms.linear[i]
+                c_rhs[ o_terms.variables[i].parent_component().name(), o_terms.variables[i].index() ] = o_terms.linear[i]
         # Stop after the first objective
         break
     #
@@ -65,10 +65,10 @@ def collect_linear_terms(block, unfixed):
                 raise(RuntimeError, "Error during dualization:  Constraint '%s' has an upper bound that is non-constant")
             #
             for i in range(len(body_terms.variables)):
-                varname = body_terms.variables[i].parent_component().name
+                varname = body_terms.variables[i].parent_component().name()
                 varndx = body_terms.variables[i].index()
-                A.setdefault(body_terms.variables[i].parent_component().name, {}).setdefault(varndx,[]).append( Bunch(coef=body_terms.linear[i], var=name, ndx=ndx) )
-                
+                A.setdefault(body_terms.variables[i].parent_component().name(), {}).setdefault(varndx,[]).append( Bunch(coef=body_terms.linear[i], var=name, ndx=ndx) )
+
             #
             if not con.equality:
                 #
@@ -143,7 +143,7 @@ def collect_linear_terms(block, unfixed):
                     # Add constraint that defines the upper bound
                     #
                     name_ = name + "_upper_"
-                    varname = data.parent_component().name
+                    varname = data.parent_component().name()
                     varndx = data[ndx].index()
                     A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                     #
@@ -158,7 +158,7 @@ def collect_linear_terms(block, unfixed):
                     # Add constraint that defines the lower bound
                     #
                     name_ = name + "_lower_"
-                    varname = data.parent_component().name
+                    varname = data.parent_component().name()
                     varndx = data[ndx].index()
                     A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                     #
@@ -171,7 +171,7 @@ def collect_linear_terms(block, unfixed):
                 # Add constraint that defines the upper bound
                 #
                 name_ = name + "_upper_"
-                varname = data.parent_component().name
+                varname = data.parent_component().name()
                 varndx = data[ndx].index()
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                 #
@@ -181,7 +181,7 @@ def collect_linear_terms(block, unfixed):
                 # Add constraint that defines the lower bound
                 #
                 name_ = name + "_lower_"
-                varname = data.parent_component().name
+                varname = data.parent_component().name()
                 varndx = data[ndx].index()
                 A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=1.0, var=name_, ndx=ndx) )
                 #
@@ -189,4 +189,3 @@ def collect_linear_terms(block, unfixed):
                 b_coef[name_,ndx] = bounds[0]
     #
     return (A, b_coef, c_rhs, c_sense, d_sense, vnames, cnames, v_domain)
-

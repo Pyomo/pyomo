@@ -714,7 +714,7 @@ class MiscObjTests(unittest.TestCase):
 
     def test_constructor(self):
         a = Objective(name="b")
-        self.assertEqual(a.name,"b")
+        self.assertEqual(a.name(), "b")
         try:
             a = Objective(foo="bar")
             self.fail("Can't specify an unexpected constructor option")

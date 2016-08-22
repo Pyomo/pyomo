@@ -27,7 +27,7 @@ from pyomo.opt import SolverFactory
 solver = 'gurobi_ampl'
 solver_io = 'nl'
 stream_solver = False     # True prints solver output to screen
-keepfiles =     False     # True prints intermediate file names (.nl,.sol,...) 
+keepfiles =     False     # True prints intermediate file names (.nl,.sol,...)
 opt = SolverFactory(solver,solver_io=solver_io)
 
 if opt is None:
@@ -38,7 +38,7 @@ if opt is None:
     exit(1)
 
 # tell gurobi to be verbose with output
-opt.options['outlev'] = 1 
+opt.options['outlev'] = 1
 
 # tell gurobi to find an iis table for the infeasible model
 opt.options['iisfind'] = 1 # tell gurobi to be verbose with output
@@ -64,4 +64,4 @@ results = opt.solve(model,
 print("")
 print("IIS Results")
 for component, value in model.iis.items():
-    print(component.cname()+" "+str(value))
+    print(component.name()+" "+str(value))

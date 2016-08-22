@@ -11,4 +11,4 @@ instance = model.create_instance('ABCD2.dat')
 print('Z '+str(sorted(list(instance.Z.data()))))
 print('D')
 for key in sorted(instance.D.keys()):
-    print(cname(instance.D,key)+" "+str(value(instance.D[key])))
+    print(name(instance.D,key)+" "+str(value(instance.D[key])))

@@ -65,7 +65,7 @@ class Integral(Expression):
             if len(args) != 1:
                 raise ValueError(
                     "The Integral %s is indexed by multiple ContinuousSets. The desired "
-                    "ContinuousSet must be specified using the keyword argument 'wrt'" % (self.cname(True)))
+                    "ContinuousSet must be specified using the keyword argument 'wrt'" % (self.name(True)))
             wrt = args[0]
 
         if type(wrt) is not ContinuousSet:
@@ -83,7 +83,7 @@ class Integral(Expression):
         if loc is None:
             raise ValueError(
                 "The ContinuousSet '%s' was not found in the indexing sets of the "
-                "Integral '%s'" %(wrt.cname(True),self.cname(True)))
+                "Integral '%s'" %(wrt.name(True),self.name(True)))
         self.loc = loc
 
         # Remove the index that the integral is being expanded over
@@ -146,7 +146,7 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             "Accessing the expression of integral '%s' "
             "before the Integral has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name(True)))
 
     def set_value(self, expr):
         """Set the expression on this expression."""
@@ -156,7 +156,7 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             "Setting the expression of integral '%s' "
             "before the Integral has been constructed (there "
             "is currently no object to set)."
-            % (self.cname(True)))
+            % (self.name(True)))
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
@@ -166,7 +166,7 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             "Accessing the is_constant flag of integral '%s' "
             "before the Integral has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name(True)))
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
@@ -176,7 +176,7 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             "Accessing the is_fixed flag of integral '%s' "
             "before the Integral has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name(True)))
 
 class IndexedIntegral(Integral):
 

@@ -167,9 +167,9 @@ or that there is a bug in the ODBC connector.
         #
         if type(tmp) in (int,long,float):
             if not self.options.param is None:
-                self._info = ["param",self.options.param.name,":=",tmp]
+                self._info = ["param", self.options.param.name(), ":=", tmp]
             elif len(self.options.symbol_map) == 1:
-                self._info = ["param",self.options.symbol_map[self.options.symbol_map.keys()[0]],":=",tmp]
+                self._info = ["param", self.options.symbol_map[self.options.symbol_map.keys()[0]], ":=", tmp]
             else:
                 raise IOError("Data looks like a scalar parameter, but multiple parameter names have been specified: %s" % str(self.options.symbol_map))
         elif len(tmp) == 0:

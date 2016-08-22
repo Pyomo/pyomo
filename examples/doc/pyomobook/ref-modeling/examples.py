@@ -68,9 +68,9 @@ model = ConcreteModel()
 model.b = Block()
 model.b.x = Var()
 
-print(model.b.x.cname())                        # 'x'
-print(model.b.x.cname(True))                    # 'b.x'
-print(model.b.x.cname(fully_qualified=True))    # 'b.x'
+print(model.b.x.name())                        # 'x'
+print(model.b.x.name(True))                    # 'b.x'
+print(model.b.x.name(fully_qualified=True))    # 'b.x'
 # @:nested1
 
 print("special1")
@@ -191,8 +191,8 @@ print("numvalue1")
 # --------------------------------------------------
 # @numvalue1:
 model = ConcreteModel()
-# A single parameter is a subclass of NumericValue 
-model.p = Param(initialize=3)   
+# A single parameter is a subclass of NumericValue
+model.p = Param(initialize=3)
 
 model.p + 2             # Calls __add__
 model.p - 2             # Calls __sub__
@@ -221,7 +221,7 @@ print("numvalue2")
 # --------------------------------------------------
 # @numvalue2:
 model = ConcreteModel()
-# A single parameter is a subclass of NumericConstant 
+# A single parameter is a subclass of NumericConstant
 model.p = Param(initialize=-3)
 
 abs(model.p)            # Calls __abs__

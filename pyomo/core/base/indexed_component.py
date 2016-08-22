@@ -15,6 +15,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 
 from six import PY3, itervalues, iteritems, advance_iterator
+import sys
 
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -53,11 +54,12 @@ class _IndexedComponent_slicer(object):
     getitem = 2
     call = 3
 
-    def __init__(self, component, fixed, sliced):
+    def __init__(self, component, fixed, sliced, ellipsis):
         # _iter_stack holds either an iterator (if this devel in the
         # hierarchy is a slice) or None (if this level is either a
         # SimpleComponent or is explicitly indexed).
-        self._iter_stack = [ self._slice_generator(component, fixed, sliced) ]
+        self._iter_stack = [
+            self._slice_generator(component, fixed, sliced, ellipsis) ]
         self._call_stack = [ (0,None) ]
         # Since this is an object, users may change these flags between
         # where they declare the slice and iterate over it.
@@ -154,18 +156,18 @@ class _IndexedComponent_slicer(object):
                 # We have a concrete object at the end of the chain. Return it
                 return _comp
 
-    def _slice_generator(self, component, fixed, sliced):
+    def _slice_generator(self, component, fixed, sliced, ellipsis):
         """Utility method (generator) for generating the elements of one slice
 
         Iterate through the component index and yield the component data
         values that match the slice template.
         """
-        index_count = len(fixed) + len(sliced)
+        # Handle the Ellipsis that can match any number of indices
+        explicit_index_count = len(fixed) + len(sliced)
+        if ellipsis is not None:
+            explicit_index_count = -1 - explicit_index_count
+
         max_fixed = 0 if not fixed else max(fixed)
-        # Handle the "special" wildcard slice that can match any number
-        # of indices
-        if index_count-1 in sliced and sliced[index_count-1].step is not None:
-            index_count = None
 
         for index in component.__iter__():
             # We want a tuple of indices, so convert scalard to tuples
@@ -175,10 +177,10 @@ class _IndexedComponent_slicer(object):
             # slice, then there must be enough indices to at least match
             # the fixed indices.  Without the wildcard slice, the number
             # of indices must match exactly.
-            if index_count is None:
-                if max_fixed >= len(_idx):
+            if explicit_index_count < 0:
+                if -explicit_index_count - 1 > len(_idx):
                     continue
-            elif len(_idx) != index_count:
+            elif len(_idx) != explicit_index_count:
                 continue
 
             flag = True
@@ -378,7 +380,7 @@ You can silence this warning by one of three ways:
     3) If you intend to iterate over a component that may be empty, test
        if the component is empty first and avoid iteration in the case
        where it is empty.
-""" % (self.cname(True),) )
+""" % (self.name(True),) )
 
             if not hasattr(self._index, 'ordered') or not self._index.ordered:
                 #
@@ -433,104 +435,164 @@ You can silence this warning by one of three ways:
         This method returns the data corresponding to the given index.
         """
         try:
-            if ndx in self._data:
-                # Return the data from the dictionary
-                if ndx is None and not self.is_indexed():
-                    return self
-                else:
-                    return self._data[ndx]
-            elif not self._constructed:
-                # Generate an error because the component is not constructed
-                if not self.is_indexed():
-                    idx_str = ''
-                elif ndx.__class__ is tuple:
-                    idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
-                else:
-                    idx_str = "[" + str(ndx) + "]"
-                raise ValueError(
-                    "Error retrieving component %s%s: The component has "
-                    "not been constructed." % ( self.cname(True), idx_str,) )
-            elif ndx is None and not self.is_indexed():
-                self._data[ndx] = self  # FIXME: should this be a weakref?!?
+            _validIndex = ndx in self._data
+        except TypeError:
+            # Process alternatives
+            return self._processUnhashableIndex(ndx, sys.exc_info()[1])
+
+        if _validIndex:
+            # Return the data from the dictionary
+            if ndx is None and not self.is_indexed():
                 return self
+            else:
+                return self._data[ndx]
+        if not self._constructed:
+            # Generate an error because the component is not constructed
+            if not self.is_indexed():
+                idx_str = ''
+            elif ndx.__class__ is tuple:
+                idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
+            else:
+                idx_str = "[" + str(ndx) + "]"
+            raise ValueError(
+                "Error retrieving component %s%s: The component has "
+                "not been constructed." % ( self.name(True), idx_str,) )
+        if ndx is None and not self.is_indexed():
+            self._data[ndx] = self  # FIXME: should this be a weakref?!?
+            return self
+        if ndx is Ellipsis or ndx.__class__ is tuple and Ellipsis in ndx:
+            return self._processUnhashableIndex(ndx, sys.exc_info()[1])
+        if not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
+            # Return the default value if the global flag dictates
+            # that we should bypass all index checking and domain
+            # validation
+            return self._default(ndx)
+        if ndx in self._index:
+            # After checking that the index is valid, return the
+            # default value.
+            # Note: This check is potentially expensive (e.g., when
+            # the indexing set is a complex set operation)!
+            return self._default(ndx)
+        if normalize_index.flatten:
+            # Now we normalize the index and check again.  Usually,
+            # indices will be already be normalized, so we defer the
+            # "automatic" call to normalize_index until now for the
+            # sake of efficiency.  Also note that we cannot get here
+            # unless the component *is* indexed, so we do not need
+            # any special traps for None or is_indexed().
+            ndx = normalize_index(ndx)
+            if ndx in self._data:
+                # Note that ndx != None at this point
+                return self._data[ndx]
             elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-                # Return the default value if the global flag dictates
-                # that we should bypass all index checking and domain
-                # validation
                 return self._default(ndx)
             elif ndx in self._index:
-                # After checking that the index is valid, return the
-                # default value.
-                # Note: This check is potentially expensive (e.g., when
-                # the indexing set is a complex set operation)!
                 return self._default(ndx)
-            elif normalize_index.flatten:
-                # Now we normalize the index and check again.  Usually,
-                # indices will be already be normalized, so we defer the
-                # "automatic" call to normalize_index until now for the
-                # sake of efficiency.  Also note that we cannot get here
-                # unless the component *is* indexed, so we do not need
-                # any special traps for None or is_indexed().
-                ndx = normalize_index(ndx)
-                if ndx in self._data:
-                    # Note that ndx != None at this point
-                    return self._data[ndx]
-                elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-                    return self._default(ndx)
-                elif ndx in self._index:
-                    return self._default(ndx)
-        except TypeError:
-            #
-            # Iterate through a slice
-            #
-            fixed = {}
-            sliced = {}
-            #
-            # Setup the slice template (in fixed)
-            #
-            if type(ndx) is slice:
-                ndx = [ndx]
 
-            for i,val in enumerate(ndx):
-                if type(val) is slice:
-                    if val.start is not None or val.stop is not None:
-                        raise IndexError(
-                            "Indexed components can only indexed with simple "
-                            "slices: start and stop values are not allowed.")
-                    if val.step is not None and i < len(ndx)-1:
-                        raise IndexError(
-                            "Indexed components can only indexed with simple "
-                            "slices: the Pyomo wildcard slice (non-None step; "
-                            "e.g., '::0') can only appear as the last index")
-                    sliced[i] = val
-                else:
-                    fixed[i] = val
-
-            if sliced:
-                return _IndexedComponent_slicer(self, fixed, sliced)
-            else:
-                # The index isn't sliced, so simply re-raise the
-                # TypeError that occurred in the previous 'try' block.
-                raise
-        except Exception:
-            # Re-raise the other exceptions that occurred in the
-            # previous 'try' block.
-            raise
         #
         # Generate different errors, depending on the state of the index.
         #
         if not self.is_indexed():
             msg = "Error accessing indexed component: " \
                   "Cannot treat the scalar component '%s' as an array" \
-                  % ( self.cname(True), )
+                  % ( self.name(True), )
             raise KeyError(msg)
         #
         # Raise an exception
         #
         msg = "Error accessing indexed component: " \
                   "Index '%s' is not valid for array component '%s'" \
-                  % ( ndx, self.cname(True), )
+                  % ( ndx, self.name(True), )
         raise KeyError(msg)
+
+
+    def _processUnhashableIndex(self, ndx, _exception):
+        """Process a call to __getitem__ with unhashable elements
+
+        There are two basic ways to get here:
+          1) the index constains one or more slices
+          2) the index contains a Pyomo (Simple)COmponent
+        """
+        #
+        # Iterate through the index and look for slices and constant
+        # components
+        #
+        fixed = {}
+        sliced = {}
+        ellipsis = None
+        _found_numeric = False
+        #
+        # Setup the slice template (in fixed)
+        #
+        if type(ndx) not in (tuple, list):
+            ndx = [ndx]
+
+        for i,val in enumerate(ndx):
+            if type(val) is slice:
+                if val.start is not None or val.stop is not None:
+                    raise IndexError(
+                        "Indexed components can only be indexed with simple "
+                        "slices: start and stop values are not allowed.")
+                if val.step is not None:
+                    logger.warning(
+                        "DEPRECATION WARNING: The special wildcard slice "
+                        "(::0) is deprecated.  Please use an ellipsis (...) "
+                        "to indicate '0 or more' indices")
+                    val = Ellipsis
+                else:
+                    if ellipsis is None:
+                        sliced[i] = val
+                    else:
+                        sliced[i-len(ndx)] = val
+                    continue
+
+            if val is Ellipsis:
+                if ellipsis is not None:
+                    raise IndexError(
+                        "Indexed components can only be indexed with simple "
+                        "slices: the Pyomo wildcard slice (Ellipsis; "
+                        "e.g., '...') can only appear once")
+                ellipsis = i
+                continue
+
+            try:
+                _num_val = val.as_numeric()
+                if _num_val.is_constant():
+                    _found_numeric = True
+                    val = _num_val()
+                elif _num_val.is_fixed():
+                    raise RuntimeError(
+"""Error retrieving the value of an indexed item %s:
+index %s is a fixed but not constant value.  This is likely not what you
+meant to do, as if you later change the fixed value of the object this
+lookup will not change.  If you understand the implications of using
+fixed but not constant values, you can get the current value using the
+value() function.""" % ( self.name(True), i ))
+                else:
+                    raise RuntimeError(
+"""Error retrieving the value of an indexed item %s:
+index %s is not a constant value.  This is likely not what you meant to
+do, as if you later change the fixed value of the object this lookup
+will not change.  If you understand the implications of using
+non-constant values, you can get the current value of the object using
+the value() function.""" % ( self.name(True), i ))
+            except AttributeError:
+                pass
+            if ellipsis is None:
+                fixed[i] = val
+            else:
+                fixed[i - len(ndx)] = val
+
+        if sliced or ellipsis is not None:
+            return _IndexedComponent_slicer(self, fixed, sliced, ellipsis)
+        elif _found_numeric:
+            new_ndx = tuple( fixed[i] for i in range(len(ndx)) )
+            return self[ new_ndx ]
+        else:
+            raise TypeError(
+                "%s found when trying to retrieve index for component %s"
+                % (_exception, self.name(True)) )
+
 
     def _default(self, index):
         """Returns the default component data value"""
@@ -546,7 +608,7 @@ You can silence this warning by one of three ways:
                 "Cannot set the value for the indexed component '%s' "
                 "without specifying an index value.\n"
                 "\tFor example, model.%s[i] = value"
-                % (self.name, self.name))
+                % (self.name(), self.name()))
         else:
             raise NotImplementedError(
                 "Derived component %s failed to define set_value() "

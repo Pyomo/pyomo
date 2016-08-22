@@ -139,7 +139,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         if output_filename is None:
             assert hasattr(model, "name")
-            output_filename = model.name + ".lp"
+            output_filename = model.name() + ".lp"
 
         # when sorting, there are a non-trivial number of
         # temporary objects created. these all yield
@@ -406,7 +406,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
                     "currently not supported. Deactive this constraint in order to "
-                    "proceed." % (soscondata.cname(True), vardata.cname(True)))
+                    "proceed." % (soscondata.name(True), vardata.name(True)))
             self._referenced_variable_ids[id(vardata)] = vardata
             output_file.write(sos_template_string
                               % (variable_symbol_map.getSymbol(vardata),
@@ -488,7 +488,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         if hasattr(model, "name"):
             output_file.write(
                 "\\* Source Pyomo model name=%s *\\\n\n"
-                % (model.name))
+                % (model.name()))
 
         #
         # Objective
@@ -516,12 +516,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     descend_into=False):
 
                 numObj += 1
-                onames.append(objective_data.cname())
+                onames.append(objective_data.name())
                 if numObj > 1:
                     raise ValueError(
                         "More than one active objective defined for input "
                         "model '%s'; Cannot write legal LP file\n"
-                        "Objectives: %s" % (model.cname(True), ' '.join(onames)))
+                        "Objectives: %s" % (model.name(True), ' '.join(onames)))
 
                 create_symbol_func(symbol_map,
                                    objective_data,
@@ -552,12 +552,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             "Selected solver is unable to handle "
                             "objective functions with quadratic terms. "
                             "Objective at issue: %s."
-                            % objective_data.cname())
+                            % objective_data.name())
                 elif degree != 1:
                     raise RuntimeError(
                         "Cannot write legal LP file.  Objective '%s' "
                         "has nonlinear terms that are not quadratic."
-                        % objective_data.cname(True))
+                        % objective_data.name(True))
 
                 output_file.write(
                     object_symbol_dictionary[id(objective_data)]+':\n')
@@ -655,11 +655,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 if not supports_quadratic_constraint:
                     raise ValueError(
                         "Solver unable to handle quadratic expressions. Constraint"
-                        " at issue: '%s'" % (constraint_data.cname(True)))
+                        " at issue: '%s'" % (constraint_data.name(True)))
             elif degree != 1:
                 raise ValueError(
                     "Cannot write legal LP file.  Constraint '%s' has a body "
-                    "with nonlinear terms." % (constraint_data.cname(True)))
+                    "with nonlinear terms." % (constraint_data.name(True)))
 
             # Create symbol
             con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
@@ -812,7 +812,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         "usually indicative of a preprocessing error. Use the "
                         "IO-option 'output_fixed_variable_bounds=True' to suppress "
                         "this error and fix the variable by overwriting its bounds "
-                        "in the LP file." % (vardata.cname(True), model.cname(True)))
+                        "in the LP file." % (vardata.name(True), model.name(True)))
                 if vardata.value is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
                 vardata_lb = value(vardata.value)
@@ -832,7 +832,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             elif not vardata.is_continuous():
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary."
-                                % (vardata.cname(True)))
+                                % (vardata.name(True)))
 
             # in the CPLEX LP file format, the default variable
             # bounds are 0 and +inf.  These bounds are in

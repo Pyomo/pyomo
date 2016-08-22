@@ -217,7 +217,7 @@ class ModelSOS(object):
         else:
             raise ValueError("SOSContraint '%s' has sos type='%s', "
                              "which is not supported by the NL file interface" \
-                                 % (soscondata.cname(True), level))
+                                 % (soscondata.name(True), level))
 
         for vardata, weight in soscondata.get_items():
             if vardata.fixed:
@@ -225,7 +225,7 @@ class ModelSOS(object):
                     "SOSConstraint '%s' includes a fixed Variable '%s'. "
                     "This is currently not supported. Deactivate this constraint "
                     "in order to proceed"
-                    % (soscondata.cname(True), vardata.cname(True)))
+                    % (soscondata.name(True), vardata.name(True)))
 
             ID = ampl_var_id[varID_map[id(vardata)]]
             self.sosno.add(ID,self.block_cntr*sign_tag)
@@ -309,7 +309,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
 
         if filename is None:
-            filename = model.cname() + ".nl"
+            filename = model.name() + ".nl"
 
         # Generate the operator strings templates. The value of
         # symbolic_solver_labels determines whether or not to
@@ -337,7 +337,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # passed into _print_nonlinear_terms_NL
         self._symbolic_solver_labels = symbolic_solver_labels
         self._output_fixed_variable_bounds = output_fixed_variable_bounds
-        # Speeds up calling cname on every component when
+        # Speeds up calling name on every component when
         # writing .row and .col files (when symbolic_solver_labels is True)
         self._name_labeler = NameLabeler()
 
@@ -550,10 +550,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                  % (self.external_byFcn[exp._fcn._function][1],
                                     len(exp._args)))
                 else:
+                    # Note: exp.name(True) fails
                     OUTPUT.write(fun_str
                                  % (self.external_byFcn[exp._fcn._function][1],
                                     len(exp._args),
-                                    exp.cname(True)))
+                                    exp.name()))
                 for arg in exp._args:
                     if isinstance(arg, basestring):
                         OUTPUT.write(string_arg_str % (len(arg), arg))
@@ -561,14 +562,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         self._print_nonlinear_terms_NL(arg)
             elif (exp_type is expr._PowExpression) or \
                  isinstance(exp, expr._IntrinsicFunctionExpression):
-                intr_expr_str = self._op_string.get(exp.cname())
+                intr_expr_str = self._op_string.get(exp.name())
                 if intr_expr_str is not None:
                     OUTPUT.write(intr_expr_str)
                 else:
                     logger.error("Unsupported intrinsic function ({0})",
-                                 exp.cname(True))
+                                 exp.name(True))
                     raise TypeError("ASL writer does not support '%s' expressions"
-                                    % (exp.cname(True)))
+                                    % (exp.name(True)))
 
                 for child_exp in exp._args:
                     self._print_nonlinear_terms_NL(child_exp)
@@ -702,9 +703,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     "correctly." %
                     (fcn._function,
                      self.external_byFcn[fcn._function]._library,
-                     self.external_byFcn[fcn._function]._library.cname(True),
+                     self.external_byFcn[fcn._function]._library.name(True),
                      fcn._library,
-                     fcn.cname(True)))
+                     fcn.name(True)))
             self.external_byFcn[fcn._function] = (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
@@ -790,7 +791,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             raise ValueError(
                 "The NL writer has detected multiple active objective functions "
                 "on model %s, but currently only handles a single objective."
-                % (model.cname(True)))
+                % (model.name(True)))
         elif n_objs == 1:
             symbol_map.alias(symbol_map.bySymbol["o0"](),"__default_objective__")
 
@@ -978,7 +979,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 L = var.lb
                 U = var.ub
                 if L is None or U is None:
-                    raise ValueError("Variable " + str(var.cname(True)) +\
+                    raise ValueError("Variable " + str(var.name(True)) +\
                                      "is binary, but does not have lb and ub set")
                 LinearVarsBool.add(var_ID)
             elif not var.is_continuous():
@@ -1121,7 +1122,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # LINE 1
         #
-        OUTPUT.write("g3 1 1 0\t# problem {0}\n".format(model.cname()))
+        OUTPUT.write("g3 1 1 0\t# problem {0}\n".format(model.name()))
         #
         # LINE 2
         #
@@ -1362,7 +1363,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     logger.warning(
                         "ProblemWriter_nl: Collected multiple values for Suffix %s "
                         "referencing model %s. This is likely a bug."
-                        % (suffix_name, model.cname(True)))
+                        % (suffix_name, model.name(True)))
                 OUTPUT.write(suffix_header_line.format(prob_tag | float_tag,
                                                        len(mod_s_lines),
                                                        suffix_name))
@@ -1499,7 +1500,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         "indicative of a preprocessing error. Use the IO-option "
                         "'output_fixed_variable_bounds=True' to suppress this error "
                         "and fix the variable by overwriting its bounds in the NL "
-                        "file." % (var.cname(True), model.cname(True)))
+                        "file." % (var.name(True), model.name(True)))
                 if var.value is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
                 L = var.value

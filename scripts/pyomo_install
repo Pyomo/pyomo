@@ -270,7 +270,7 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         call_subprocess([
                 os.path.join( os.path.abspath(options.venv),
                               'bin', python_executable ),
-                '-m', 'ensurepip'], options)
+                '-m', 'ensurepip', '--default-pip'], options)
         #
         # Find the pip that is installed with the virtual environment
         #

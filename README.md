@@ -20,7 +20,7 @@ Pyomo is available under the BSD License.
 
 #### PyPI [![PyPI](https://img.shields.io/pypi/v/pyomo.svg?maxAge=2592000)]() [![PyPI](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=2592000)]()
 
-    pip install pyutilib
+    pip install pyomo
     
 #### BinStar [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/version.svg)](https://anaconda.org/conda-forge/pyomo) [![Binstar Badge](https://anaconda.org/conda-forge/pyomo/badges/downloads.svg)](https://anaconda.org/conda-forge/pyomo)
 
