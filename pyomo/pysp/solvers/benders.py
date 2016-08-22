@@ -36,7 +36,8 @@ except ImportError:                         #pragma:nocover
 from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
-                       PersistentSolver)
+                       PersistentSolver,
+                       undefined)
 from pyomo.core import (value, minimize, Set,
                         Objective, SOSConstraint,
                         Constraint, Var, RangeSet,
@@ -1167,6 +1168,7 @@ class BendersAlgorithm(PySPConfiguredObject):
         self.optimality_gap = float('inf')
         self.iterations = 0
 
+        output_no_gap_warning = True
         for i in xrange(1, max_iterations + 1):
 
             if (i == 1) and (len(self.cut_pool) == 0):
@@ -1205,11 +1207,18 @@ class BendersAlgorithm(PySPConfiguredObject):
                 # account for any optimality gap
                 solution0 = results_master.solution(0)
                 if hasattr(solution0, "gap") and \
-                   (solution0.gap is not None):
+                   (solution0.gap is not None) and \
+                   (solution0.gap is not undefined):
                     if objective_sense == minimize:
                         current_master_bound -= solution0.gap
                     else:
                         current_master_bound += solution0.gap
+                else:
+                    if output_no_gap_warning:
+                        output_no_gap_warning = False
+                        print("WARNING: Solver interface does not "
+                              "report an optimality gap. Master bound "
+                              "may be invalid.")
 
             self.master_bound_history[i] = current_master_bound
 
