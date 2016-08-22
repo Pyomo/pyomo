@@ -248,9 +248,9 @@ class ImplicitSP(object):
                                      "not supported in implicit stochastic programs. The "
                                      "SOS constraint component '%s' has a weight term for "
                                      "variable '%s' that references stochastic parameter '%s'"
-                                     % (soscondata.cname(True),
-                                        vardata.cname(True),
-                                        paramdata.cname(True)))
+                                     % (soscondata.name(True),
+                                        vardata.name(True),
+                                        paramdata.name(True)))
                 self.variable_to_constraints_map.\
                     setdefault(vardata, []).append(condata)
                 self.constraint_to_variables_map.\
@@ -306,7 +306,7 @@ class ImplicitSP(object):
                 raise ValueError(
                     "Stochastic data entry with name '%s' is not mutable. "
                     "All stochastic data parameters must be initialized with "
-                    "the mutable keyword set to True." % (paramdata.cname(True)))
+                    "the mutable keyword set to True." % (paramdata.name(True)))
         return stochastic_data
 
     def _map_variable_stages(self, model):
@@ -338,7 +338,7 @@ class ImplicitSP(object):
                     raise ValueError(
                         "Implicit stochastic programs must be two-stage, "
                         "but variable with name '%s' has been annotated with "
-                        "stage number: %s" % (vardata.cname(True), stagenum))
+                        "stage number: %s" % (vardata.name(True), stagenum))
 
         stage_to_variables_map = {}
         stage_to_variables_map[1] = []
@@ -353,7 +353,7 @@ class ImplicitSP(object):
                 raise ValueError("Invalid stage annotation for variable with "
                                  "name '%s'. Stage assignment must be 1 or 2. "
                                  "Current value: %s"
-                                 % (vardata.cname(True), stagenumber))
+                                 % (vardata.name(True), stagenumber))
             if (stagenumber == 1):
                 stage_to_variables_map[1].append((vardata, derived))
             else:
@@ -416,14 +416,14 @@ class ImplicitSP(object):
         stm.ConditionalProbability['LeafNode'] = 1.0
         stm.ScenarioLeafNode['ReferenceScenario'] = 'LeafNode'
 
-        stm.StageCost['Stage1'] = stage1_cost.cname(True)
-        stm.StageCost['Stage2'] = stage2_cost.cname(True)
+        stm.StageCost['Stage1'] = stage1_cost.name(True)
+        stm.StageCost['Stage2'] = stage2_cost.name(True)
         for var, (stagenum, derived) in variable_stage_assignments.items():
             stagelabel = 'Stage'+str(stagenum)
             if not derived:
-                stm.StageVariables[stagelabel].add(var.cname(True))
+                stm.StageVariables[stagelabel].add(var.name(True))
             else:
-                stm.StageDerivedVariables[second_stage].add(var.cname(True))
+                stm.StageDerivedVariables[second_stage].add(var.name(True))
 
         scenario_tree = ScenarioTree(scenariotreeinstance=stm)
         scenario_tree.linkInInstances(

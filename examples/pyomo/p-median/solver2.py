@@ -32,7 +32,7 @@ class MySolver(object):
         n = value(instance.N)
         # Setup results
         results = SolverResults()
-        results.problem.name = instance.name
+        results.problem.name = instance.name()
         results.problem.sense = ProblemSense.minimize
         results.problem.num_constraints = 1
         results.problem.num_variables = n
@@ -42,7 +42,7 @@ class MySolver(object):
         soln.value = val
         soln.status = SolutionStatus.feasible
         for j in sequence(n):
-            soln.variable[instance.y[j].name] = {"Value" : sol[j-1], "Id" : j}
+            soln.variable[instance.y[j].name()] = {"Value" : sol[j-1], "Id" : j}
         # Return results
         return results
 

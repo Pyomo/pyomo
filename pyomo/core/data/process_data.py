@@ -87,7 +87,7 @@ def _process_set(cmd, _model, _data):
     #
     # Process a set
     #
-    if "[" in cmd[1]: 
+    if "[" in cmd[1]:
         # the set is indexed
         tokens = re.split("[\[\]]",cmd[1])
         ndx=tokens[1]
@@ -399,7 +399,7 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
             #print "TMP", tmp, ncolumns-nparams+1
             if not ncolumns is None:
                 nc = ncolumns-nparams+1
-            else: 
+            else:
                 nc = None
             _process_param(tmp, _model, _data, _default, index=index, param=param[j-jstart], ncolumns=nc)
             j += 1
@@ -658,7 +658,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
             tmp.append(cmap[col])
         cmap[sname] = tmp
         cols = tmp
-        # 
+        #
         _cmd = ['set', sname, ':=']
         i = 0
         while i < Ldata:
@@ -699,7 +699,6 @@ def _process_table(cmd, _model, _data, _default, options=None):
                 _cmd.append( data[i+col] )
             i += ncolumns
         _process_param(_cmd, _model, _data, None, ncolumns=len(cols))
-            
 
 def _process_load(cmd, _model, _data, _default, options=None):
     if len(cmd) < 2:

@@ -29,7 +29,7 @@ def locate_annotations(model, annotation_type, max_allowed=None):
         raise ValueError("Too many annotations of type %s found on "
                          "model %s. The maximum allowed is %s."
                          % (annotation_type.__name__,
-                            model.cname(True),
+                            model.name(True),
                             max_allowed))
     return annotations
 
@@ -86,7 +86,7 @@ class PySP_Annotation(object):
                     "in annotation type %s. To correct this issue, ensure that "
                     "multiple container components under which the component might "
                     "be stored (such as a Block and an indexed Constraint) are not "
-                    "simultaneously set in this annotation." % (component.cname(True),
+                    "simultaneously set in this annotation." % (component.name(True),
                                                                 self.__class__.__name__))
             component_ids.add(id(component))
 

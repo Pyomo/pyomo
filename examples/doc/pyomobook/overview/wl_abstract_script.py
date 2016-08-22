@@ -1,8 +1,7 @@
 # wl_abstract_script.py: Scripting using an AbstractModel
 from pyomo.environ import *
 
-model = AbstractModel()
-model.name = "(WL)"
+model = AbstractModel(name="(WL)")
 
 model.N = Set()
 model.M = Set()

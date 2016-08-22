@@ -45,7 +45,7 @@ class BuildCheck(IndexedComponent):
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
-                logger.debug("Constructing Check, name="+self.name)
+                logger.debug("Constructing Check, name="+self.name())
         #
         if self._constructed:                                       #pragma:nocover
             return
@@ -55,12 +55,12 @@ class BuildCheck(IndexedComponent):
             # Scalar component
             res = self._rule(self._parent())
             if not res:
-                raise ValueError("BuildCheck %r identified error" % self.name)
+                raise ValueError("BuildCheck %r identified error" % self.name())
         else:
             # Indexed component
             for index in self._index:
                 res = apply_indexed_rule(self, self._rule, self._parent(), index)
                 if not res:
-                    raise ValueError("BuildCheck %r identified error with index %r" % (self.name, str(index)))
+                    raise ValueError("BuildCheck %r identified error with index %r" % (self.name(), str(index)))
 
 register_component(BuildCheck, "A component that performs tests during model construction.  The action rule is applied to every index value.")

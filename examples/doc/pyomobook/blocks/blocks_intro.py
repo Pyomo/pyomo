@@ -12,12 +12,10 @@ model.b.b.x = Var()
 # @:hierarchy
 
 # @hierarchyprint:
-print(model.x.cname(fully_qualified=False))     # x
-print(model.x.cname(fully_qualified=True))      # x
-print(model.b.x.cname(fully_qualified=False))   # x
-print(model.b.x.cname(fully_qualified=True))    # b.x
-print(model.b.b.x.cname(fully_qualified=False)) # x
-print(model.b.b.x.cname(fully_qualified=True))  # b.b.x
+print(model.x.name(fully_qualified=False))     # x
+print(model.x.name(fully_qualified=True))      # x
+print(model.b.x.name(fully_qualified=False))   # x
+print(model.b.x.name(fully_qualified=True))    # b.x
+print(model.b.b.x.name(fully_qualified=False)) # x
+print(model.b.b.x.name(fully_qualified=True))  # b.b.x
 # @:hierarchyprint
-
-

@@ -108,7 +108,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
         #
         self._instance.compute_statistics()
         prob = results.problem
-        prob.name = self._instance.name
+        prob.name = self._instance.name()
         prob.number_of_constraints = self._instance.statistics.number_of_constraints
         prob.number_of_variables = self._instance.statistics.number_of_variables
         prob.number_of_binary_variables = self._instance.statistics.number_of_binary_variables

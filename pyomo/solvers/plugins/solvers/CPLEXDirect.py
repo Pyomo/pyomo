@@ -108,7 +108,7 @@ class ModelSOS(object):
             if vardata.fixed:
                 raise RuntimeError("SOSConstraint '%s' includes a fixed variable '%s'. "
                                    "This is currently not supported. Deactivate this constraint "
-                                   "in order to proceed" % (soscondata.cname(True), vardata.cname(True)))
+                                   "in order to proceed" % (soscondata.name(True), vardata.name(True)))
             varids.append(id(vardata))
             varnames.append(variable_symbol_map.getSymbol(vardata))
             weights.append(weight)
@@ -483,7 +483,7 @@ class CPLEXDirect(OptSolver):
                     raise ValueError(
                         "Multiple active objectives found on Pyomo instance '%s'. "
                         "Solver '%s' will only handle a single active objective" \
-                        % (pyomo_instance.cname(True), self.type))
+                        % (pyomo_instance.name(True), self.type))
 
                 if obj_data.is_minimizing():
                     cplex_instance.objective.\
@@ -558,7 +558,7 @@ class CPLEXDirect(OptSolver):
                             raise ValueError(
                                 "CPLEXDirect plugin does not support general nonlinear "
                                 "objective expressions (only linear or quadratic).\n"
-                                "Objective: %s" % (obj_data.cname(True)))
+                                "Objective: %s" % (obj_data.name(True)))
 
             # Constraint
             for con in block.component_data_objects(Constraint,
@@ -610,7 +610,7 @@ class CPLEXDirect(OptSolver):
                         raise ValueError(
                             "CPLEXDirect plugin does not support general nonlinear "
                             "constraint expressions (only linear or quadratic).\n"
-                            "Constraint: %s" % (con.cname(True)))
+                            "Constraint: %s" % (con.name(True)))
                     expr, offset = self._encode_constraint_body_linear(con_repn,
                                                                        labeler)
 
@@ -695,7 +695,7 @@ class CPLEXDirect(OptSolver):
                         "indicative of a preprocessing error. Use the IO-option "
                         "'output_fixed_variable_bounds=True' to suppress this error "
                         "and fix the variable by overwriting its bounds in the Cplex "
-                        "instance." % (vardata.cname(True),pyomo_instance.cname(True)))
+                        "instance." % (vardata.name(True),pyomo_instance.name(True)))
 
                 fixed_lower_bounds.append((varname,vardata.value))
                 fixed_upper_bounds.append((varname,vardata.value))
