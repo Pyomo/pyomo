@@ -270,7 +270,7 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         call_subprocess([
                 os.path.join( os.path.abspath(options.venv),
                               'bin', python_executable ),
-                '-m', 'ensurepip'], options)
+                '-m', 'ensurepip', '--default-pip'], options)
         #
         # Find the pip that is installed with the virtual environment
         #
@@ -281,10 +281,11 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
     #
     # Install Conda
     #
-    if options.verbose:
-        print("\n************* Installing Conda in %s *******************" % options.venv)
-    call_subprocess([pip, 'install', 'auxlib'], options)
-    call_subprocess([pip, 'install', 'conda'], options)
+    if not options.venvonly:
+        if options.verbose:
+            print("\n************* Installing Conda in %s *******************" % options.venv)
+        call_subprocess([pip, 'install', 'auxlib'], options)
+        call_subprocess([pip, 'install', 'conda'], options)
     #
     return pip, python_dir
 

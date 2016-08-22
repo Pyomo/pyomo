@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import logging
+from six import itervalues
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
@@ -95,7 +96,9 @@ class Finite_Difference_Transformation(Transformation):
     DAE, ODE, or PDE models. 
     
     """
-    alias('dae.finite_difference', doc="TODO")
+    alias('dae.finite_difference', doc="Discretizes a DAE model using "\
+          "a finite difference method transforming the model into an NLP.")
+
 
     def __init__(self):
         super(Finite_Difference_Transformation, self).__init__()
@@ -172,7 +175,7 @@ class Finite_Difference_Transformation(Transformation):
     def _transformBlock(self, block, currentds):
 
         self._fe = {}
-        for ds in block.component_map(ContinuousSet).itervalues():
+        for ds in itervalues(block.component_map(ContinuousSet)):
             if currentds is None or currentds == ds.cname(True):
                 generate_finite_elements(ds,self._nfe[currentds])
                 if not ds.get_changed():
@@ -193,10 +196,10 @@ class Finite_Difference_Transformation(Transformation):
         # if they haven't then the model components need not be updated
         # or even iterated through
 
-        for c in block.component_map().itervalues():
+        for c in itervalues(block.component_map()):
             update_contset_indexed_component(c)
 
-        for d in block.component_map(DerivativeVar).itervalues():
+        for d in itervalues(block.component_map(DerivativeVar)):
             dsets = d.get_continuousset_list()
             for i in set(dsets):
                 if currentds is None or i.cname(True) == currentds:
@@ -221,10 +224,10 @@ class Finite_Difference_Transformation(Transformation):
         if block_fully_discretized(block):
             
             if block.contains_component(Integral):
-                for i in block.component_map(Integral).itervalues():  
+                for i in itervalues(block.component_map(Integral)):
                     i.reconstruct()
                     block.reclassify_component_type(i,Expression)
                 # If a model contains integrals they are most likely to appear in the objective
                 # function which will need to be reconstructed after the model is discretized.
-                for k in block.component_map(Objective).itervalues():
+                for k in itervalues(block.component_map(Objective)):
                     k.reconstruct()

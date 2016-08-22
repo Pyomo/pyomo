@@ -54,14 +54,20 @@ def obj_rule(m):
 instance.obj = Objective(rule=obj_rule)
 
 endTime = time.time()-start
-print 'model creation time = ',endTime
+print('model creation time = %s' % (endTime,))
 
 for i in instance.SCEN:
-    print "Scenario ", i , "= ", sum(sum(0.5*value(instance.pow[i,j,k]) for j in instance.LINK_A) for k in instance.TIME.get_finite_elements())
+    print("Scenario %s = %s" % (
+        i, sum(sum(0.5*value(instance.pow[i,j,k])
+                   for j in instance.LINK_A)
+               for k in instance.TIME.get_finite_elements()) ))
 
 
 solver=SolverFactory('ipopt')
 results = solver.solve(instance,tee=True)
 
 for i in instance.SCEN:
-    print "Scenario ", i , "= ", sum(sum(0.5*value(instance.pow[i,j,k]) for j in instance.LINK_A) for k in instance.TIME.get_finite_elements())
+    print("Scenario %s = %s" % (
+        i, sum(sum(0.5*value(instance.pow[i,j,k])
+                   for j in instance.LINK_A)
+               for k in instance.TIME.get_finite_elements()) ))
