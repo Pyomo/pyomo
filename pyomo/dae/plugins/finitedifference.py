@@ -96,7 +96,9 @@ class Finite_Difference_Transformation(Transformation):
     DAE, ODE, or PDE models. 
     
     """
-    alias('dae.finite_difference', doc="TODO")
+    alias('dae.finite_difference', doc="Discretizes a DAE model using "\
+          "a finite difference method transforming the model into an NLP.")
+
 
     def __init__(self):
         super(Finite_Difference_Transformation, self).__init__()

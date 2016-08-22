@@ -216,7 +216,9 @@ def calc_afinal(cp):
 
 class Collocation_Discretization_Transformation(Transformation):
 
-    alias('dae.collocation', doc="TODO")
+    alias('dae.collocation', doc="Discretizes a DAE model using "\
+          "orthogonal collocation over finite elements transforming "\
+          "the model into an NLP.")
 
     def __init__(self):
         super(Collocation_Discretization_Transformation, self).__init__()
