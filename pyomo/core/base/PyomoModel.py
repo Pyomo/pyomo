@@ -210,7 +210,8 @@ class ModelSolutions(object):
         #
         if (results.solver.status == pyomo.opt.SolverStatus.warning):
             print('WARNING - Loading a SolverResults object with a ' \
-                  'warning status into model=%s; message from solver=%s' % (instance.name, results.solver.Message))
+                  'warning status into model=%s; message from solver=%s' % (instance.name(),
+                                                                            results.solver.Message))
         #
         # If the solver status not one of either OK or Warning, then generate an error.
         #
@@ -363,7 +364,8 @@ class ModelSolutions(object):
                         if obj is None:
                             if ignore_invalid_labels:
                                 continue
-                            raise RuntimeError("CUID %s is missing from model %s" % (str(cuid), instance.name))
+                            raise RuntimeError("CUID %s is missing from model %s"
+                                               % (str(cuid), instance.name()))
                         tmp[id(obj)] = (weakref_ref(obj), val)
             else:
                 #
@@ -371,11 +373,11 @@ class ModelSolutions(object):
                 #
                 if len(cache) == 0:
                     for obj in instance.component_data_objects(Var):
-                        cache[obj.cname(True)] = obj
+                        cache[obj.name(True)] = obj
                     for obj in instance.component_data_objects(Objective, active=True):
-                        cache[obj.cname(True)] = obj
+                        cache[obj.name(True)] = obj
                     for obj in instance.component_data_objects(Constraint, active=True):
-                        cache[obj.cname(True)] = obj
+                        cache[obj.name(True)] = obj
 
                 for name in ['problem', 'objective', 'variable', 'constraint']:
                     tmp = soln._entry[name]
@@ -384,7 +386,8 @@ class ModelSolutions(object):
                         if obj is None:
                             if ignore_invalid_labels:
                                 continue
-                            raise RuntimeError("Symbol %s is missing from model %s" % (symb, instance.name))
+                            raise RuntimeError("Symbol %s is missing from model %s"
+                                               % (symb, instance.name()))
                         tmp[id(obj)] = (weakref_ref(obj), val)
         else:
             #
@@ -407,7 +410,7 @@ class ModelSolutions(object):
                         raise RuntimeError(
                             "ERROR: Symbol %s is missing from "
                             "model %s when loading with a symbol map!"
-                            % (symb, instance.name))
+                            % (symb, instance.name()))
 
                     tmp[id(obj())] = (obj, val)
             #
@@ -504,14 +507,14 @@ class ModelSolutions(object):
                 if not allow_consistent_values_for_fixed_vars:
                     msg = "Variable '%s' in model '%s' is currently fixed - new" \
                           ' value is not expected in solution'
-                    raise TypeError(msg % ( vdata.cname(), instance.name ))
+                    raise TypeError(msg % ( vdata.name(), instance.name() ))
                 if math.fabs(val - vdata.value) > comparison_tolerance_for_fixed_vars:
                     raise TypeError("Variable '%s' in model '%s' is currently "
                                     "fixed - a value of '%s' in solution is "
                                     "not within tolerance=%s of the current "
                                     "value of '%s'"
-                                    % (vdata.cname(),
-                                       instance.name,
+                                    % (vdata.name(),
+                                       instance.name(),
                                        str(val),
                                        str(comparison_tolerance_for_fixed_vars),
                                        str(vdata.value)))
@@ -563,7 +566,7 @@ use the AbstractModel or ConcreteModel class instead.""")
         # the requirement to import PyomoModel.py in the block.py file.
         #
         SimpleBlock.__init__(self, **kwargs)
-        self.name = name
+        self._name = name
         self.statistics = Container()
         self.config = PyomoConfig()
         self.solutions = ModelSolutions(self)
@@ -659,7 +662,7 @@ constructed model; returning a clone of the current model instance.""")
 
 
         if name is None:
-            name = self.name
+            name = self.name()
         if filename is not None:
             if data is not None:
                 logger.warning("Model.create_instance() passed both 'filename' "
@@ -675,7 +678,7 @@ constructed model; returning a clone of the current model instance.""")
         instance = self.clone()
 
         if name is not None:
-            instance.name = name
+            instance._name = name
 
         # If someone passed a rule for creating the instance, fire the
         # rule before constructing the components.
@@ -782,7 +785,7 @@ from solvers are immediately loaded into the original model instance.""")
         for key in data:
             if type(data[key][0]) is tuple:
                 return data
-            ans[key] = tuplize(data[key], setobj.dimen, setobj.name)
+            ans[key] = tuplize(data[key], setobj.dimen, setobj.name())
         return ans
 
     def _load_model_data(self, modeldata, namespaces, **kwds):
@@ -880,7 +883,7 @@ from solvers are immediately loaded into the original model instance.""")
 
             if report_timing is True:
                 total_construction_time = time.time() - construction_start_time
-                print("      %6.2f seconds required to construct instance=%s" % (total_construction_time, self.name))
+                print("      %6.2f seconds required to construct instance=%s" % (total_construction_time, self.name()))
 
             if (pympler_available is True) and (profile_memory >= 2):
                 print("")
@@ -909,17 +912,17 @@ from solvers are immediately loaded into the original model instance.""")
 
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             _blockName = "Model" if self.parent_block() is None \
-                else "Block '%s'" % self.cname(True)
+                else "Block '%s'" % self.name(True)
             logger.debug( "Constructing %s '%s' on %s from data=%s",
                           declaration.__class__.__name__,
-                          declaration.cname(), _blockName, str(data) )
+                          declaration.name(), _blockName, str(data) )
         try:
             declaration.construct(data)
         except:
             err = sys.exc_info()[1]
             logger.error(
                 "Constructing component '%s' from data=%s failed:\n%s: %s",
-                str(declaration.cname(True)), str(data).strip(),
+                str(declaration.name(True)), str(data).strip(),
                 type(err).__name__, err )
             raise
 
@@ -927,7 +930,7 @@ from solvers are immediately loaded into the original model instance.""")
                 _out = StringIO()
                 declaration.pprint(ostream=_out)
                 logger.debug("Constructed component '%s':\n%s"
-                             % ( declaration.cname(True), _out.getvalue()))
+                             % ( declaration.name(True), _out.getvalue()))
 
         if (pympler_available is True) and (profile_memory >= 2):
             mem_used = muppy.get_size(muppy.get_objects())
@@ -978,7 +981,7 @@ from solvers are immediately loaded into the original model instance.""")
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
                 "Writing model '%s' to file '%s' with format %s",
-                self.name,
+                self.name(),
                 str(filename),
                 str(format))
         return filename, smap_id

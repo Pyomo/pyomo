@@ -161,7 +161,7 @@ class ComponentMap(MutableMapping):
         String representation of the mapping
         """
         tmp = '{' + \
-              (', '.join(component.cname(True)+": "+str(val) \
+              (', '.join(component.name(True)+": "+str(val) \
                         for component, val \
                         in itervalues(self._dict))) + \
               '}'
@@ -172,11 +172,11 @@ class ComponentMap(MutableMapping):
         Pretty-print a Python object to a stream [default is sys.stdout].
         """
         if verbose:
-            tmp = dict((repr(component.cname(True))+" (id="+str(id(component))+")", val)
+            tmp = dict((repr(component.name(True))+" (id="+str(id(component))+")", val)
                            for component, val \
                            in itervalues(self._dict))
         else:
-            tmp = dict((repr(component.cname(True))+" (id="+str(id(component))+")", val)
+            tmp = dict((repr(component.name(True))+" (id="+str(id(component))+")", val)
                            for component, val \
                            in itervalues(self._dict))
         pprint.pprint(tmp,
@@ -193,7 +193,7 @@ class ComponentMap(MutableMapping):
         try:
             return self._dict[id(component)][1]
         except KeyError:
-            cname = component.cname(True)
+            cname = component.name(True)
             raise KeyError("Component with name: "
                            +cname+
                            " (id=%s)" % id(component))
@@ -205,7 +205,7 @@ class ComponentMap(MutableMapping):
         try:
             del self._dict[id(component)]
         except KeyError:
-            cname = component.cname(True)
+            cname = component.name(True)
             raise KeyError("Component with name: "
                            +cname+
                            " (id=%s)" % id(component))
@@ -339,7 +339,7 @@ class Suffix(ComponentMap, ActiveComponent):
         Constructs this component, applying rule if it exists.
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Constructing suffix %s",self.cname())
+            logger.debug("Constructing suffix %s",self.name())
 
         if self._constructed is True:
             return
@@ -524,7 +524,7 @@ class Suffix(ComponentMap, ActiveComponent):
         Return a string representation of the suffix.  If the name
         attribute is None, then return ''
         """
-        return self.cname()
+        return self.name()
 
     def _pprint(self):
         return (

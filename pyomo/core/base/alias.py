@@ -80,7 +80,7 @@ class Alias(Component):
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             try:
-                name = str(self.cname(True))
+                name = str(self.name(True))
             except:
                 name = type(self)
                 if logger.isEnabledFor(logging.DEBUG):
@@ -94,7 +94,7 @@ class Alias(Component):
         if self.aliased_object is None:
             return ([("Proxy","None")], (), (), ())
         else:
-            return ([("Proxy", self.aliased_object.cname(True))], (), (), ())
+            return ([("Proxy", self.aliased_object.name(True))], (), (), ())
 
     # Dereference so we can point to a constructed object
     # after model cloning / construction

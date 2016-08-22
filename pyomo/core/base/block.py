@@ -231,7 +231,7 @@ class _BlockData(ActiveComponentData):
                     types = sorted(x.__name__ for x in self._ctypes)
                     msg += '%s or %s ' % (', '.join(types[:-1]), types[-1])
             raise KeyError("%scomponent '%s' not found in block %s"
-                           % (msg, key, self._block.cname(True)))
+                           % (msg, key, self._block.name(True)))
 
         def __nonzero__(self):
             """
@@ -324,7 +324,7 @@ class _BlockData(ActiveComponentData):
             # can (efficiently) iterate over in decl_order.  iterkeys
             # just wraps itervalues.
             for obj in self.itervalues():
-                yield obj.name
+                yield obj._name
 
         def itervalues(self):
             """
@@ -357,7 +357,7 @@ class _BlockData(ActiveComponentData):
             # list (so we can sort it) and then iterate over the sorted
             # temporary list
             if self._sorted:
-                return ( obj for obj in sorted(walker, key=attrgetter('name')) )
+                return (obj for obj in sorted(walker, key=lambda _x: _x.name()))
             else:
                 return walker
 
@@ -369,7 +369,7 @@ class _BlockData(ActiveComponentData):
             # can (efficiently) iterate over in decl_order.  iteritems
             # just wraps itervalues.
             for obj in self.itervalues():
-                yield (obj.name, obj)
+                yield (obj._name, obj)
 
         def keys(self):
             """
@@ -505,7 +505,7 @@ class _BlockData(ActiveComponentData):
                     "\nThis is usually indicative of a modelling error.\n"
                     "To avoid this warning, use block.del_component() and "
                     "block.add_component()."
-                    % (name, type(self.component(name)), self.cname(True),
+                    % (name, type(self.component(name)), self.name(True),
                        type(val)))
                 self.del_component(name)
                 self.add_component(name, val)
@@ -527,7 +527,7 @@ class _BlockData(ActiveComponentData):
                         "Expected component %s (type=%s) on block %s to have a "
                         "'set_value' method, but none was found." %
                         (name, type(self.component(name)),
-                         self.cname(True)))
+                         self.name(True)))
                     raise
                 #
                 # Call the set_value method.
@@ -562,7 +562,7 @@ class _BlockData(ActiveComponentData):
                         "Cannot set the '_parent' attribute of Block '%s' "
                         "to a non-Block object (with type=%s); Did you "
                         "try to create a model component named '_parent'?"
-                        % (self.cname(), type(val)) )
+                        % (self.name(), type(val)) )
                 super(_BlockData, self).__setattr__(name, val)
             elif name == '_component':
                 if val is not None and not isinstance(val(), _BlockData):
@@ -570,7 +570,7 @@ class _BlockData(ActiveComponentData):
                         "Cannot set the '_component' attribute of Block '%s' "
                         "to a non-Block object (with type=%s); Did you "
                         "try to create a model component named '_component'?"
-                        % (self.cname(), type(val)) )
+                        % (self.name(), type(val)) )
                 super(_BlockData, self).__setattr__(name, val)
             #
             # At this point, we should only be seeing non-component data
@@ -582,7 +582,7 @@ class _BlockData(ActiveComponentData):
                     "Reassigning the non-component attribute %s "
                     "on block %s with a new Component with type %s."
                     "\nThis is usually indicative of a modelling error."
-                    % (name, self.cname(True), type(val)) )
+                    % (name, self.name(True), type(val)) )
                 delattr(self, name)
                 self.add_component(name, val)
             else:
@@ -622,19 +622,19 @@ class _BlockData(ActiveComponentData):
         #
         if _component_sets is not None:
             for ctr, tset in enumerate(_component_sets):
-                if tset.name == "_unknown_":
+                if tset._name == "_unknown_":
                     self._construct_temporary_set(
                       tset,
-                      val.cname()+"_index_"+str(ctr)
+                      val.name()+"_index_"+str(ctr)
                     )
         if isinstance(val._index, _SetDataBase) and \
-                val._index.parent_component().cname() == "_unknown_":
-            self._construct_temporary_set(val._index,val.cname()+"_index")
+                val._index.parent_component().name() == "_unknown_":
+            self._construct_temporary_set(val._index,val.name()+"_index")
         if isinstance(getattr(val,'initialize',None), _SetDataBase) and \
-                val.initialize.parent_component().cname() == "_unknown_":
-            self._construct_temporary_set(val.initialize, val.cname()+"_index_init")
-        if getattr(val,'domain',None) is not None and val.domain.cname() == "_unknown_":
-            self._construct_temporary_set(val.domain,val.cname()+"_domain")
+                val.initialize.parent_component().name() == "_unknown_":
+            self._construct_temporary_set(val.initialize, val.name()+"_index_init")
+        if getattr(val,'domain',None) is not None and val.domain.name() == "_unknown_":
+            self._construct_temporary_set(val.domain,val.name()+"_domain")
 
     def _construct_temporary_set(self, obj, name):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -643,7 +643,7 @@ class _BlockData(ActiveComponentData):
             if len(obj) == 1:                #pragma:nocover
                 raise Exception(
                     "Unexpected temporary set construction for set "
-                    "%s on block %s" % ( name, self.cname()) )
+                    "%s on block %s" % ( name, self.name()) )
             else:
                 tobj = obj[0]
                 for t in obj[1:]:
@@ -700,7 +700,7 @@ class _BlockData(ActiveComponentData):
             raise RuntimeError(
                 "Cannot add component '%s' (type %s) to block '%s': a "
                 "component by that name (type %s) is already defined."
-                % (name, type(val), self.cname(), type(getattr(self, name))))
+                % (name, type(val), self.name(), type(getattr(self, name))))
         #
         # Skip the add_component() logic if this is a
         # component type that is suppressed.
@@ -716,12 +716,12 @@ class _BlockData(ActiveComponentData):
             if val._parent() is self:
                 msg = """
 Attempting to re-assign the component '%s' to the same
-block under a different name (%s).""" % (val.name, name)
+block under a different name (%s).""" % (val.name(), name)
             else:
                 msg = """
 Re-assigning the component '%s' from block '%s' to
-block '%s' as '%s'.""" % ( val.name, val._parent().cname(True),
-                           self.cname(True), name )
+block '%s' as '%s'.""" % ( val._name, val._parent().name(True),
+                           self.name(True), name )
 
             raise RuntimeError("""%s
 
@@ -733,7 +733,7 @@ component, use the block del_component() and add_component() methods.
         #
         # Set the name and parent pointer of this component.
         #
-        val.name = name
+        val._name = name
         val._parent = weakref.ref(self)
         #
         # We want to add the temporary / implicit sets first so that
@@ -785,7 +785,7 @@ component, use the block del_component() and add_component() methods.
         if '_rule' in val.__dict__ and val._rule is None:
             _found = False
             try:
-                _test = val.cname()+'_rule'
+                _test = val.name()+'_rule'
                 for i in (1,2):
                     frame = sys._getframe(i)
                     _found |= _test in frame.f_locals
@@ -793,7 +793,7 @@ component, use the block del_component() and add_component() methods.
                 pass
             if _found:
                 # JDS: Do not blindly reformat this message.  The
-                # formatter inserts arbitrarily-long cnames(), which can
+                # formatter inserts arbitrarily-long names(), which can
                 # cause the resulting logged message to be very poorly
                 # formatted due to long lines.
                 logger.warning(
@@ -801,7 +801,7 @@ component, use the block del_component() and add_component() methods.
 You defined a component (%s) that appears
 to rely on an implicit rule (%s).
 Components must now specify their rules explicitly using 'rule=' keywords.""" %
-                    (val.cname(True), _test) )
+                    (val.name(True), _test) )
         #
         # Don't reconstruct if this component has already been constructed.
         # This allows a user to move a component from one block to
@@ -830,20 +830,20 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 # constructing an indexed block, the block component
                 # already has _constructed=True.  Now, if the
                 # _BlockData.__init__() defines any local variables
-                # (like pyomo.gdp.Disjunct's indicator_var), cname(True)
+                # (like pyomo.gdp.Disjunct's indicator_var), name(True)
                 # will fail: this block data exists and has a parent(),
                 # but it has not yet been added to the parent's _data
-                # (so the idx lookup will fail in cname()).
+                # (so the idx lookup will fail in name()).
                 if self.parent_block() is None:
                     _blockName = "[Model]"
                 else:
                     try:
-                        _blockName = "Block '%s'" % self.cname(True)
+                        _blockName = "Block '%s'" % self.name(True)
                     except:
                         _blockName = "Block '%s[...]'" \
-                            % self.parent_component().cname(True)
+                            % self.parent_component().name(True)
                 logger.debug( "Constructing %s '%s' on %s from data=%s",
-                              val.__class__.__name__, val.cname(),
+                              val.__class__.__name__, val.name(),
                               _blockName, str(data) )
             try:
                 val.construct(data)
@@ -851,14 +851,14 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 err = sys.exc_info()[1]
                 logger.error(
                     "Constructing component '%s' from data=%s failed:\n%s: %s",
-                    str(val.cname(True)), str(data).strip(),
+                    str(val.name(True)), str(data).strip(),
                     type(err).__name__, err )
                 raise
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 if _blockName[-1] == "'":
-                    _blockName = _blockName[:-1] + '.' + val.cname() + "'"
+                    _blockName = _blockName[:-1] + '.' + val.name() + "'"
                 else:
-                    _blockName = "'" + _blockName + '.' + val.cname() + "'"
+                    _blockName = "'" + _blockName + '.' + val.name() + "'"
                 _out = StringIO()
                 val.pprint(ostream=_out)
                 logger.debug( "Constructed component '%s':\n%s"
@@ -877,7 +877,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #if name not in self._decl:
         #    return
 
-        name = obj.cname()
+        name = obj.name()
 
         # Replace the component in the master list with a None placeholder
         idx = self._decl[name]
@@ -916,7 +916,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if obj._type is new_ctype:
             return
 
-        name = obj.cname()
+        name = obj.name()
         if not preserve_declaration_order:
             # if we don't have to preserve the decl order, then the
             # easiest (and fastest) thing to do is just delete it and
@@ -1125,9 +1125,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
     def component_objects(self, ctype=None, active=None, sort=False,
                     descend_into=True, descent_order=None ):
         """
-	    Return a generator that iterates through
-	    the component objects in a block.  By default, the
-	    generator recursively descends into sub-blocks.
+        Return a generator that iterates through the
+        component objects in a block.  By default, the
+        generator recursively descends into sub-blocks.
         """
         if not descend_into:
             for x in self.component_map( ctype, active, sort ).itervalues():
@@ -1144,10 +1144,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                                descend_into=True,
                                descent_order=None):
         """
-	    Return a generator that iterates through
-	    the component data objects for all components in a
-	    block.  By default, this generator recursively descends
-	    into sub-blocks.
+        Return a generator that iterates through the
+        component data objects for all components in a
+        block.  By default, this generator recursively
+        descends into sub-blocks.
         """
         if not descend_into:
             for x in self._component_data_iter(ctype=ctype,
@@ -1171,11 +1171,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                                  descend_into=True,
                                  descent_order=None):
         """
-	    Return a generator that returns a tuple
-	    for each component data object in a block.  By default,
-	    this generator recursively descends into sub-blocks.
-	    The tuple is
-
+        Return a generator that returns a tuple for each
+        component data object in a block.  By default, this
+        generator recursively descends into sub-blocks.  The
+        tuple is
             ((component name, index value), _ComponentData)
         """
         if not descend_into:
@@ -1209,11 +1208,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                            descent_order=None):
 
         """
-	    This method returns a generator that iterates through the current block and
-	    recursively all sub-blocks.  This is semantically
-	    equivalent to
-
-	        component_data_objects(Block, ...)
+        This method returns a generator that iterates
+        through the current block and recursively all
+        sub-blocks.  This is semantically equivalent to
+            component_data_objects(Block, ...)
         """
         if descend_into is False:
             if active is not None and self.active != active:
@@ -1235,7 +1233,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                        sort=None,
                        traversal=None):
 
-        
         # TODO: merge into block_data_objects
         if ctype is None:
             ctype = Block
@@ -1288,13 +1285,13 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
     def _postfix_dfs_iterator(self, ctype, active, sort):
         """
-	    Helper function implementing a non-recursive postfix
-	    order depth-first search.  That is, the parent is
-	    returned after its children.
+        Helper function implementing a non-recursive postfix
+        order depth-first search.  That is, the parent is
+        returned after its children.
 
-	    Note: this method assumes it is called ONLY by the
-	    _tree_iterator method, which centralizes certain error
-	    checking and preliminaries.
+        Note: this method assumes it is called ONLY by the
+        _tree_iterator method, which centralizes certain
+        error checking and preliminaries.
         """
         _stack = [ (self, self.component_data_iterindex(ctype, active, sort, False)) ]
         while _stack:
@@ -1440,9 +1437,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if ostream is None:
             ostream = sys.stdout
         if self.parent_block() is not None:
-            ostream.write(prefix+"Block "+self.cname()+'\n')
+            ostream.write(prefix+"Block "+self.name()+'\n')
         else:
-            ostream.write(prefix+"Model "+self.cname()+'\n')
+            ostream.write(prefix+"Model "+self.name()+'\n')
         #
         # FIXME: We should change the display order (to Obj, Var, Con,
         # Block) and change the printer to only display sections with
@@ -1509,15 +1506,17 @@ class Block(ActiveIndexedComponent):
 
     def _flag_vars_as_stale(self):
         """
-	Configure *all* variables (on active blocks) and their
-	composite _VarData objects as stale. This method is used prior
-	to loading solver results. Variable that did not particpate in
-	the solution are flagged as stale.  E.g., it most cases fixed
-	variables will be flagged as stale since they are compiled
-	out of expressions; however, many solver plugins support
-	including fixed variables in the output problem by overriding
-	bounds in order to minimize preprocessing requirements,
-	meaning fixed variables are not necessarily always stale.
+        Configure *all* variables (on active blocks) and
+        their composite _VarData objects as stale. This
+        method is used prior to loading solver
+        results. Variable that did not particpate in the
+        solution are flagged as stale.  E.g., it most cases
+        fixed variables will be flagged as stale since they
+        are compiled out of expressions; however, many
+        solver plugins support including fixed variables in
+        the output problem by overriding bounds in order to
+        minimize preprocessing requirements, meaning fixed
+        variables are not necessarily always stale.
         """
         for variable in self.component_objects(Var, active=True):
             variable.flag_as_stale()
@@ -1534,7 +1533,7 @@ class Block(ActiveIndexedComponent):
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug( "Constructing %s '%s', from data=%s",
-                          self.__class__.__name__, self.cname(), str(data) )
+                          self.__class__.__name__, self.name(), str(data) )
         if self._constructed:
             return
         self._constructed = True
@@ -1583,7 +1582,7 @@ class Block(ActiveIndexedComponent):
                 # of the empty one we just created.
                 for c in list(obj.component_objects(descend_into=False)):
                     obj.del_component(c)
-                    _block.add_component(c.cname(), c)
+                    _block.add_component(c.name(), c)
                 # transfer over any other attributes that are not components
                 for name, val in iteritems(obj.__dict__):
                     if not hasattr(_block, name) and not hasattr(self, name):
@@ -1617,7 +1616,7 @@ class Block(ActiveIndexedComponent):
             b = self[key]
             if subblock and self.is_indexed():
                 ostream.write("%s%s : Active=%s\n" %
-                              (prefix, b.cname(True), b.active))
+                              (prefix, b.name(True), b.active))
             _BlockData.pprint(b, ostream=ostream, verbose=verbose,
                               prefix=prefix+'    ' if subblock else prefix)
 

@@ -1,8 +1,7 @@
-# AbstractH.py - Implement model (H) 
+# AbstractH.py - Implement model (H)
 from pyomo.environ import *
 
-model = AbstractModel()
-model.name = "(H)"
+model = AbstractModel(name="(H)")
 
 model.A = Set()
 

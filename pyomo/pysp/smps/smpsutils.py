@@ -126,13 +126,13 @@ def map_constraint_stages(scenario,
                 descend_into=False):
             raise TypeError("SOSConstraints are not allowed with this format. "
                             "Invalid constraint: %s"
-                            % (con.cname(True)))
+                            % (con.name(True)))
 
         block_canonical_repn = getattr(block, "_canonical_repn", None)
         if block_canonical_repn is None:
             raise ValueError(
                 "Unable to find _canonical_repn ComponentMap "
-                "on block %s" % (block.cname(True)))
+                "on block %s" % (block.name(True)))
 
         for con in block.component_data_objects(
                 Constraint,
@@ -204,6 +204,7 @@ def map_variable_stages(scenario,
             descend_into=True):
         if id(var) not in symbolmap_byObject:
             continue
+
         symbol = symbolmap_byObject[id(var)]
         scenario_tree_id = scenariotree_byObject.get(id(var), None)
         if scenario_tree_id in firststage_standard_variables:
@@ -215,6 +216,7 @@ def map_variable_stages(scenario,
              (scenario_tree_id in secondstage_variables) or \
              (scenario_tree_id is None):
             SecondStageVars[symbol] = (var, scenario_tree_id)
+
         else:
             # More than two stages?
             assert False
@@ -317,7 +319,7 @@ def _convert_external_setup_without_cleanup(
             empty_rhs_annotation = False
             stochastic_rhs_entries = stochastic_rhs.expand_entries()
             stochastic_rhs_entries.sort(
-                key=lambda x: x[0].cname(True, constraint_name_buffer))
+                key=lambda x: x[0].name(True, constraint_name_buffer))
             if len(stochastic_rhs_entries) == 0:
                 raise RuntimeError(
                     "The %s annotation was declared "
@@ -345,7 +347,7 @@ def _convert_external_setup_without_cleanup(
             empty_matrix_annotation = False
             stochastic_matrix_entries = stochastic_matrix.expand_entries()
             stochastic_matrix_entries.sort(
-                key=lambda x: x[0].cname(True, constraint_name_buffer))
+                key=lambda x: x[0].name(True, constraint_name_buffer))
             if len(stochastic_matrix_entries) == 0:
                 raise RuntimeError(
                     "The %s annotation was declared "
@@ -702,7 +704,7 @@ def _convert_external_setup_without_cleanup(
                                 "either remove the constraint from this annotation "
                                 "or manually declare it as second-stage using the "
                                 "%s annotation."
-                                % (con.cname(True),
+                                % (con.name(True),
                                    StochasticConstraintBoundsAnnotation.__name__,
                                    ConstraintStageAnnotation.__name__))
 
@@ -712,7 +714,7 @@ def _convert_external_setup_without_cleanup(
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
-                                           % (con.cname(True)))
+                                           % (con.name(True)))
 
                     body_constant = constraint_repn.constant
                     # We are going to rewrite the core problem file
@@ -809,16 +811,18 @@ def _convert_external_setup_without_cleanup(
                                 "either remove the constraint from this annotation "
                                 "or manually declare it as second-stage using the "
                                 "%s annotation."
-                                % (con.cname(True),
+                                % (con.name(True),
                                    StochasticConstraintBodyAnnotation.__name__,
                                    ConstraintStageAnnotation.__name__))
+
                     constraint_repn = \
                         canonical_repn_cache[id(con.parent_block())][con]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
-                                           % (con.cname(True)))
+                                           % (con.name(True)))
+
                     assert len(constraint_repn.variables) > 0
                     if var_list is None:
                         var_list = constraint_repn.variables
@@ -848,10 +852,11 @@ def _convert_external_setup_without_cleanup(
                                 "been marked as stochastic in constraint %s using "
                                 "the %s annotation, but the variable does not appear"
                                 " in the canonical constraint expression."
-                                % (var.cname(True),
-                                   con.cname(True),
+                                % (var.name(True),
+                                   con.name(True),
                                    StochasticConstraintBodyAnnotation.__name__))
                         var_label = symbol_map.byObject[id(var)]
+
                         for con_label in symbols:
                             stochastic_matrix_count += 1
                             f_sto.write(matrix_template
@@ -888,7 +893,8 @@ def _convert_external_setup_without_cleanup(
                     raise RuntimeError("Only linear stochastic objectives are "
                                        "accepted for conversion to SMPS format. "
                                        "Objective %s is not linear."
-                                       % (objective_object.cname(True)))
+                                       % (objective_object.name(True)))
+
                 if objective_variables is None:
                     objective_variables = objective_repn.variables
                 stochastic_objective_label = symbol_map.byObject[id(objective_object)]
@@ -916,11 +922,12 @@ def _convert_external_setup_without_cleanup(
                             "been marked as stochastic in objective %s using "
                             "the %s annotation, but the variable does not appear"
                             " in the canonical objective expression."
-                            % (var.cname(True),
-                               objective_object.cname(True),
+                            % (var.name(True),
+                               objective_object.name(True),
                                StochasticObjectiveAnnotation.__name__))
                     var_label = symbol_map.byObject[id(var)]
                     stochastic_cost_count += 1
+
                     f_sto.write(obj_template
                                 % (var_label,
                                    stochastic_objective_label,
@@ -950,8 +957,8 @@ def _convert_external_setup_without_cleanup(
     # Write the deterministic part of the LP/MPS-file to its own
     # file for debugging purposes
     #
-    reference_model_name = reference_model.name
-    reference_model.name = "ZeroStochasticData"
+    reference_model_name = reference_model.name()
+    reference_model._name = "ZeroStochasticData"
     det_output_filename = \
         os.path.join(output_directory,
                      basename+"."+file_format+".det."+scenario.name)
@@ -961,7 +968,7 @@ def _convert_external_setup_without_cleanup(
                                           lambda x: True,
                                           io_options)
         assert output_fname == det_output_filename
-    reference_model.name = reference_model_name
+    reference_model._name = reference_model_name
 
     # reset bounds on any constraints that were modified
     for con, lower in iteritems(modified_constraint_lb):
@@ -1391,10 +1398,10 @@ def convert_embedded(output_directory,
         second_stage_variables.append(var)
         second_stage_variable_ids.add(id(var))
     # sort things to keep file output deterministic
-    cname_buffer = {}
-    first_stage_variables.sort(key=lambda x: x.cname(True, cname_buffer))
-    cname_buffer = {}
-    second_stage_variables.sort(key=lambda x: x.cname(True, cname_buffer))
+    name_buffer = {}
+    first_stage_variables.sort(key=lambda x: x.name(True, name_buffer))
+    name_buffer = {}
+    second_stage_variables.sort(key=lambda x: x.name(True, name_buffer))
 
     assert len(first_stage_variables) == \
         len(first_stage_variable_ids)
@@ -1426,10 +1433,10 @@ def convert_embedded(output_directory,
             second_stage_constraints.append(con)
             second_stage_constraint_ids.add(id(con))
     # sort things to keep file output deterministic
-    cname_buffer = {}
-    first_stage_constraints.sort(key=lambda x: x.cname(True, cname_buffer))
-    cname_buffer = {}
-    second_stage_constraints.sort(key=lambda x: x.cname(True, cname_buffer))
+    name_buffer = {}
+    first_stage_constraints.sort(key=lambda x: x.name(True, name_buffer))
+    name_buffer = {}
+    second_stage_constraints.sort(key=lambda x: x.name(True, name_buffer))
 
     #
     # Create column (variable) ordering maps for LP/MPS files
@@ -1673,7 +1680,7 @@ def convert_embedded(output_directory,
                     "Cannot output embedded SP representation for component "
                     "'%s'. The embedded SMPS writer does not yet handle "
                     "stochastic constraints within nonlinear expressions."
-                    % (con.cname(True)))
+                    % (con.name(True)))
 
             # sort the variable list by the column ordering
             # so that we have deterministic output
@@ -1701,10 +1708,11 @@ def convert_embedded(output_directory,
                             "parameter '%s' appearing in component '%s' was "
                             "previously encountered in another location in "
                             "component %s."
-                            % (sp.objective.cname(True),
-                               param.cname(True),
-                               sp.objective.cname(True),
-                               stochastic_data_seen[param].cname(True)))
+                            % (sp.objective.name(True),
+                               param.name(True),
+                               sp.objective.name(True),
+                               stochastic_data_seen[param].name(True)))
+
                     else:
                         stochastic_data_seen[param] = sp.objective
 
@@ -1722,9 +1730,9 @@ def convert_embedded(output_directory,
                             "in an expression that defines a single variable's "
                             "coefficient. The coefficient for variable '%s' must be "
                             "exactly set to parameters '%s' in the expression."
-                            % (sp.objective.cname(True),
-                               (var.cname(True) if var != "ONE_VAR_CONSTANT" else "ONE_VAR_CONSTANT"),
-                               paramdata.cname(True)))
+                            % (sp.objective.name(True),
+                               (var.name(True) if var != "ONE_VAR_CONSTANT" else "ONE_VAR_CONSTANT"),
+                               paramdata.name(True)))
 
                     # output the parameter's distribution (provided by the user)
                     distribution = sp.stochastic_data[paramdata]
@@ -1767,9 +1775,9 @@ def convert_embedded(output_directory,
                         "in an expression that defines a single variable's "
                         "coefficient. The coefficient for variable '%s' involves "
                         "stochastic parameters: %s"
-                        % (sp.objective.cname(True),
-                           var.cname(True),
-                           [p.cname(True) for p in stochastic_params]))
+                        % (sp.objective.name(True),
+                           var.name(True),
+                           [p.name(True) for p in stochastic_params]))
 
         #
         # Stochastic constraint matrix and rhs elements
@@ -1789,7 +1797,7 @@ def convert_embedded(output_directory,
                     "Cannot output embedded SP representation for component "
                     "'%s'. The embedded SMPS writer does not yet handle "
                     "stochastic constraints within nonlinear expressions."
-                    % (con.cname(True)))
+                    % (con.name(True)))
 
             # sort the variable list by the column ordering
             # so that we have deterministic output
@@ -1817,8 +1825,8 @@ def convert_embedded(output_directory,
                             "constraint expression that must be moved to the bounds. "
                             "The constraint must be written so that the stochastic "
                             "element '%s' is a simple bound or a simple variable "
-                            "coefficient." % (con.cname(True),
-                                              param.cname(True)))
+                            "coefficient." % (con.name(True),
+                                              param.name(True)))
 
             symbols = constraint_symbols[con]
             if len(symbols) == 2:
@@ -1829,7 +1837,7 @@ def convert_embedded(output_directory,
                     "Cannot output embedded SP representation for component "
                     "'%s'. The embedded SMPS writer does not yet handle range "
                     "constraints that have stochastic data."
-                    % (con.cname(True)))
+                    % (con.name(True)))
 
             # fix this later, for now we assume it is not a range constraint
             assert len(symbols) == 1
@@ -1857,10 +1865,11 @@ def convert_embedded(output_directory,
                             "parameter '%s' appearing in component '%s' was "
                             "previously encountered in another location in "
                             "component %s."
-                            % (con.cname(True),
-                               param.cname(True),
-                               con.cname(True),
-                               stochastic_data_seen[param].cname(True)))
+                            % (con.name(True),
+                               param.name(True),
+                               con.name(True),
+                               stochastic_data_seen[param].name(True)))
+
                     else:
                         stochastic_data_seen[param] = con
 
@@ -1878,9 +1887,9 @@ def convert_embedded(output_directory,
                             "in an expression that defines a single variable's "
                             "coefficient. The coefficient for variable '%s' must be "
                             "exactly set to parameters '%s' in the expression."
-                            % (con.cname(True),
-                               (var.cname(True) if var != "RHS" else "RHS"),
-                               paramdata.cname(True)))
+                            % (con.name(True),
+                               (var.name(True) if var != "RHS" else "RHS"),
+                               paramdata.name(True)))
 
                     # output the parameter's distribution (provided by the user)
                     distribution = sp.stochastic_data[paramdata]
@@ -1918,9 +1927,10 @@ def convert_embedded(output_directory,
                         "in an expression that defines a single variable's "
                         "coefficient. The coefficient for variable '%s' involves "
                         "stochastic parameters: %s"
-                        % (con.cname(True),
-                           var.cname(True),
-                           [param.cname(True) for param in stochastic_params]))
+                        % (con.name(True),
+                           var.name(True),
+                           [param.name(True) for param in stochastic_params]))
+
         f_sto.write("ENDATA\n")
 
     return symbol_map

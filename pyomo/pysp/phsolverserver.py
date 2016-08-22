@@ -660,7 +660,7 @@ class _PHSolverServer(_PHBase):
                             this_constraint_suffix_map = {}
                             for index, constraint_data in iteritems(constraint):
                                 this_constraint_suffix_map[index] = suffix.get(constraint_data)
-                            this_suffix_map[constraint.name] = this_constraint_suffix_map
+                            this_suffix_map[constraint.name()] = this_constraint_suffix_map
                         this_scenario_suffix_values[suffix_name] = this_suffix_map
                     suffix_values[scenario._name] = this_scenario_suffix_values
 
