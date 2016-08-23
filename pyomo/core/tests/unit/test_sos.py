@@ -104,8 +104,7 @@ class TestSimple(unittest.TestCase):
         # Test that you get the correct variables
         self.M.x = Var([1,2,3])
         self.M.c = SOSConstraint(var=self.M.x, sos=1)
-        self.assertEqual(set(id(v) for v in self.M.c.get_variables()),
-                         set(id(v) for v in self.M.x.values()))
+        self.assertEqual(set(id(v) for v in self.M.c.get_variables()), set(id(v) for v in self.M.x.values()))
 
 
 class TestExamples(unittest.TestCase):
@@ -114,16 +113,14 @@ class TestExamples(unittest.TestCase):
         M = ConcreteModel()
         M.x = Var(xrange(20))
         M.c = SOSConstraint(var=M.x, sos=1)
-        self.assertEqual(set((v.name(True),w) for v,w in M.c.get_items()),
-                         set((M.x[i].name(True), i+1) for i in xrange(20)))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), i+1) for i in xrange(20)))
 
     def test2(self):
         # Use an index set, which is a subset of M.x.index_set()
         M = ConcreteModel()
         M.x = Var(xrange(20))
         M.c = SOSConstraint(var=M.x, index=list(xrange(10)), sos=1)
-        self.assertEqual(set((v.name(True),w) for v,w in M.c.get_items()),
-                         set((M.x[i].name(True), i+1) for i in xrange(10)))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), i+1) for i in xrange(10)))
 
     def test3(self):
         # User-specified weights
@@ -131,8 +128,7 @@ class TestExamples(unittest.TestCase):
         M = ConcreteModel()
         M.x = Var([1,2,3])
         M.c = SOSConstraint(var=M.x, weights=w, sos=1)
-        self.assertEqual(set((v.name(True),w) for v,w in M.c.get_items()),
-                         set((M.x[i].name(True), w[i]) for i in [1,2,3]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), w[i]) for i in [1,2,3]))
 
     def test4(self):
         # User-specified weights
@@ -142,27 +138,22 @@ class TestExamples(unittest.TestCase):
         M = ConcreteModel()
         M.x = Var([1,2,3], dense=True)
         M.c = SOSConstraint(rule=rule, sos=1)
-        self.assertEqual(set((v.name(True),w) for v,w in M.c.get_items()),
-                         set((M.x[i].name(True), w[i]) for i in [1,2,3]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c.get_items()), set((M.x[i].cname(True), w[i]) for i in [1,2,3]))
 
     def test10(self):
         M = ConcreteModel()
         M.x = Var([1,2,3])
         M.c = SOSConstraint([0,1], var=M.x, sos=1, index={0:[1,2], 1:[2,3]})
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[0].get_items()),
-                         set((M.x[i].name(True), i) for i in [1,2]))
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[1].get_items()),
-                         set((M.x[i].name(True), i-1) for i in [2,3]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[0].get_items()), set((M.x[i].cname(True), i) for i in [1,2]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), i-1) for i in [2,3]))
 
     def test11(self):
         w = {1:10, 2:2, 3:30}
         M = ConcreteModel()
         M.x = Var([1,2,3], dense=True)
         M.c = SOSConstraint([0,1], var=M.x, weights=w, sos=1, index={0:[1,2], 1:[2,3]})
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[0].get_items()),
-                         set((M.x[i].name(True), w[i]) for i in [1,2]))
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[1].get_items()),
-                         set((M.x[i].name(True), w[i]) for i in [2,3]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[0].get_items()), set((M.x[i].cname(True), w[i]) for i in [1,2]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), w[i]) for i in [2,3]))
 
     def test12(self):
         def rule(model, i):
@@ -174,20 +165,16 @@ class TestExamples(unittest.TestCase):
         M = ConcreteModel()
         M.x = Var([1,2,3], dense=True)
         M.c = SOSConstraint([0,1], rule=rule, sos=1)
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[0].get_items()),
-                         set((M.x[i].name(True), w[0][i]) for i in [1,2,3]))
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[1].get_items()),
-                         set((M.x[i].name(True), w[1][i]) for i in [1,2,3]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[0].get_items()), set((M.x[i].cname(True), w[0][i]) for i in [1,2,3]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), w[1][i]) for i in [1,2,3]))
 
     def test13(self):
         I = {0:[1,2], 1:[2,3]}
         M = ConcreteModel()
         M.x = Var([1,2,3], dense=True)
         M.c = SOSConstraint([0,1], var=M.x, index=I, sos=1)
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[0].get_items()),
-                         set((M.x[i].name(True), i) for i in I[0]))
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[1].get_items()),
-                         set((M.x[i].name(True), i-1) for i in I[1]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[0].get_items()), set((M.x[i].cname(True), i) for i in I[0]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), i-1) for i in I[1]))
 
     def test14(self):
         def rule(model, i):
@@ -200,8 +187,7 @@ class TestExamples(unittest.TestCase):
         M.x = Var([1,2,3], dense=True)
         M.c = SOSConstraint([0,1], rule=rule, sos=1)
         self.assertEqual(list(M.c.keys()), [1])
-        self.assertEqual(set((v.name(True),w) for v,w in M.c[1].get_items()),
-                         set((M.x[i].name(True), w[1][i]) for i in [1,2,3]))
+        self.assertEqual(set((v.cname(True),w) for v,w in M.c[1].get_items()), set((M.x[i].cname(True), w[1][i]) for i in [1,2,3]))
 
 
 if __name__ == "__main__":

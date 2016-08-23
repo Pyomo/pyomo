@@ -31,7 +31,7 @@ def preprocess_block_objectives(block, idMap=None):
 
         if objective_data.expr is None:
             raise ValueError("No expression has been defined for objective %s"
-                             % (objective_data.name(True)))
+                             % (objective_data.cname(True)))
 
         try:
             objective_data_repn = generate_canonical_repn(objective_data.expr, idMap=idMap)
@@ -39,7 +39,7 @@ def preprocess_block_objectives(block, idMap=None):
             err = sys.exc_info()[1]
             logging.getLogger('pyomo.core').error(
                 "exception generating a canonical representation for objective %s: %s"
-                % (objective_data.name(True), str(err)))
+                % (objective_data.cname(True), str(err)))
             raise
 
         block_canonical_repn[objective_data] = objective_data_repn
@@ -129,7 +129,7 @@ def preprocess_constraint_data(block,
     if constraint_data.body is None:
         raise ValueError("No expression has been defined for "
                          "the body of constraint %s"
-                         % (constraint_data.name(True)))
+                         % (constraint_data.cname(True)))
 
     # FIXME: This is a huge hack to keep canonical_repn from trying to generate representations
     #        representations of Constraints with Connectors (which will be deactivated once they
@@ -149,7 +149,7 @@ def preprocess_constraint_data(block,
     except Exception:
         logging.getLogger('pyomo.core').error \
             ( "exception generating a canonical representation for constraint %s" \
-              % (constraint_data.name(True)))
+              % (constraint_data.cname(True)))
         raise
 
     block_canonical_repn[constraint_data] = canonical_repn

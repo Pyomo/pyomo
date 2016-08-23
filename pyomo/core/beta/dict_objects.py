@@ -48,7 +48,7 @@ class ComponentDict(collections.MutableMapping):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug(   #pragma:nocover
                 "Constructing ComponentDict object, name=%s, from data=%s"
-                % (self.name(True), str(data)))
+                % (self.cname(True), str(data)))
         if self._constructed:   #pragma:nocover
             return
         self._constructed = True
@@ -120,9 +120,9 @@ class ComponentDict(collections.MutableMapping):
                 "Invalid component object assignment to ComponentDict "
                 "%s at key %s. A parent component has already been "
                 "assigned the object: %s"
-                % (self.name(True),
+                % (self.cname(True),
                    key,
-                   val.parent_component().name(True)))
+                   val.parent_component().cname(True)))
         # see note about implicit assignment and update
         raise TypeError(
             "ComponentDict must be assigned objects "

@@ -12,7 +12,8 @@
 
 from pyomo.core import *
 
-model = AbstractModel(name="SubProblem")
+model = AbstractModel()
+model.name = "SubProblem"
 
 # Declare suffixes
 model.rc = Suffix(direction=Suffix.IMPORT)

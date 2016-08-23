@@ -80,7 +80,7 @@ class RangeSet(OrderedSimpleSet):
         self._end_val = value(self._end)
         self._step_val = value(self._step)
         #
-        # The set generates integer values if the starting value,
+        # The set generates integer values if the starting value, 
         # step and end value are all integers.  Otherwise, the set
         # generates real values.
         #
@@ -93,7 +93,7 @@ class RangeSet(OrderedSimpleSet):
         #
         if self.filter is None and self.validate is None:
             #
-            # Directly compute the number of elements in the set, from
+            # Directly compute the number of elements in the set, from 
             # which the upper-bound is computed.
             #
             self._len = int(math.floor((self._end_val-self._start_val+self._step_val+1e-7)//self._step_val))
@@ -124,7 +124,7 @@ class RangeSet(OrderedSimpleSet):
         if not self._constructed:
             raise RuntimeError(
                 "Cannot iterate over abstract RangeSet '%s' before it has "
-                "been constructed (initialized)." % (self.name(True),) )
+                "been constructed (initialized)." % (self.cname(True),) )
         if self.filter is None and self.validate is None:
             #
             # Iterate through all set elements
@@ -133,7 +133,7 @@ class RangeSet(OrderedSimpleSet):
                 yield self._start_val + i*self._step_val
         else:
             #
-            # Iterate through all set elements and filter
+            # Iterate through all set elements and filter 
             # and/or validate the element values.
             #
             for i in xrange(int((self._end_val-self._start_val+self._step_val+1e-7)//self._step_val)):

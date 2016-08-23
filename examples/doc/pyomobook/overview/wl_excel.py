@@ -11,7 +11,8 @@ d = {(r, c):df.at[r,c] for r in N for c in M}
 P = int(sys.argv[2])
 
 # create the model (could be imported)
-model = ConcreteModel(name="(WL)")
+model = ConcreteModel()
+model.name = "(WL)"
 
 model.x = Var(N, M, bounds=(0,1))
 model.y = Var(N, within=Binary)

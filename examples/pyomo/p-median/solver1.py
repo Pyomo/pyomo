@@ -29,7 +29,7 @@ class MySolver(object):
         n = value(instance.N)
         # Setup results
         results = SolverResults()
-        results.problem.name = instance.name()
+        results.problem.name = instance.name
         results.problem.sense = ProblemSense.minimize
         results.problem.num_constraints = 1
         results.problem.num_variables = n
@@ -40,7 +40,7 @@ class MySolver(object):
         soln.status = SolutionStatus.feasible
         for j in sequence(n):
             if instance.y[j].value is 1:
-                soln.variable[instance.y[j].name()] = {"Value" : 1, "Id" : j}
+                soln.variable[instance.y[j].name] = {"Value" : 1, "Id" : j}
         return results
 
     # Perform a greedy search

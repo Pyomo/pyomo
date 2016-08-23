@@ -407,12 +407,12 @@ class Test(unittest.TestCase):
         idMap_1 = {}
         rep_A = generate_canonical_repn(exprA, idMap_1)
         rep_B = generate_canonical_repn(exprB, idMap_1)
-        self.assertEqual(set(map(lambda x: x.name(), rep_A.variables)), set(map(lambda x: x.name(), rep_B.variables)))
+        self.assertEqual(set(map(lambda x:x.name, rep_A.variables)), set(map(lambda x:x.name, rep_B.variables)))
 
         idMap_2 = {}
         rep_B = generate_canonical_repn(exprB, idMap_2)
         rep_A = generate_canonical_repn(exprA, idMap_2)
-        self.assertEqual(set(map(lambda x: x.name(), rep_A.variables)), set(map(lambda x: x.name(), rep_B.variables)))
+        self.assertEqual(set(map(lambda x:x.name, rep_A.variables)), set(map(lambda x:x.name, rep_B.variables)))
 
         self.assertNotEqual( idMap_1, idMap_2 )
 

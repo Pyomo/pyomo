@@ -14,4 +14,4 @@ print('I '+str(sorted(list(instance.I.data()))))
 print('A '+str(sorted(list(instance.A.data()))))
 print('U')
 for key in sorted(instance.U.keys()):
-    print(name(instance.U,key)+" "+str(value(instance.U[key])))
+    print(cname(instance.U,key)+" "+str(value(instance.U[key])))

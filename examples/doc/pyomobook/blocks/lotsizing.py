@@ -46,4 +46,5 @@ solver.solve(model)
 
 ### print the results
 for v in model.y[:]:
-    print(v.name(), value(v))
+    print(v.cname(), value(v))
+    

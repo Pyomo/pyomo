@@ -47,7 +47,7 @@ def process_setarg(arg):
     elif isinstance(arg,Component):
         # Argument is some other component
         raise TypeError("Cannot index a component with a non-set "
-                        "component: %s" % (arg.name(True)))
+                        "component: %s" % (arg.cname(True)))
     else:
         try:
             #
@@ -154,7 +154,7 @@ class _SetData(_SetDataBase):
 
         This method generates an exception because the set is unordered.
         """
-        raise ValueError("Cannot index an unordered set '%s'" % self._component().name())
+        raise ValueError("Cannot index an unordered set '%s'" % self._component().cname())
 
     def bounds(self):
         """
@@ -406,78 +406,73 @@ class _OrderedSetData(_SetDataBase):
         try:
             return self.order_dict[match_element] + 1
         except IndexError:
-            raise IndexError("Unknown input element="+str(match_element)+" provided as input to ord() method for set="+self.name(True))
+            raise IndexError("Unknown input element="+str(match_element)+" provided as input to ord() method for set="+self.cname(True))
 
     def next(self, match_element, k=1):
         """
-        Return the next element in the set. The default
-        behavior is to return the very next element. The k
-        option can specify how many steps are taken to get
-        the next element.
+        Return the next element in the set.  The default behavior is to
+        return the very next element.  The k option can specify how many
+        steps are taken to get the next element.
 
-        If the next element is beyond the end of the set,
-        then an exception is raised.
+	    If the next element is beyond the end of the set, then an
+	    exception is raised.
         """
         try:
             element_position = self.ord(match_element)
         except IndexError:
-            raise KeyError("Cannot obtain next() member of set="+self.name(True)+"; input element="+str(match_element)+" is not a member of the set!")
+            raise KeyError("Cannot obtain next() member of set="+self.cname(True)+"; input element="+str(match_element)+" is not a member of the set!")
         #
         try:
             return self[element_position+k]
         except KeyError:
-            raise KeyError("Cannot obtain next() member of set="+self.name(True)+"; failed to access item in position="+str(element_position+k))
+            raise KeyError("Cannot obtain next() member of set="+self.cname(True)+"; failed to access item in position="+str(element_position+k))
 
     def nextw(self, match_element, k=1):
         """
-        Return the next element in the set.  The default
-        behavior is to return the very next element.  The k
-        option can specify how many steps are taken to get
-        the next element.
+        Return the next element in the set.  The default behavior is to
+        return the very next element.  The k option can specify how many
+        steps are taken to get the next element.
 
-        If the next element goes beyond the end of the list
-        of elements in the set, then this wraps around to
-        the beginning of the list.
+        If the next element goes beyond the end of the list of elements
+        in the set, then this wraps around to the beginning of the list.
         """
         try:
             element_position = self.ord(match_element)
         except KeyError:
-            raise KeyError("Cannot obtain nextw() member of set="+self.name(True)+"; input element="+str(match_element)+" is not a member of the set!")
+            raise KeyError("Cannot obtain nextw() member of set="+self.cname(True)+"; input element="+str(match_element)+" is not a member of the set!")
         #
         return self[(element_position+k-1) % len(self.value) + 1]
 
     def prev(self, match_element, k=1):
         """
-        Return the previous element in the set. The default
-        behavior is to return the element immediately prior
-        to the specified element.  The k option can specify
-        how many steps are taken to get the previous
+        Return the previous element in the set.  The default behavior is to
+        return the element immediately prior to the specified element.
+        The k option can specify how many steps are taken to get the previous
         element.
 
-        If the previous element is before the start of the
-        set, then an exception is raised.
+	    If the previous element is before the start of the set,
+	    then an exception is raised.
         """
         return self.next(match_element, k=-k)
 
     def prevw(self, match_element, k=1):
         """
-        Return the previous element in the set. The default
-        behavior is to return the element immediately prior
-        to the specified element.  The k option can specify
-        how many steps are taken to get the previous
+        Return the previous element in the set.  The default behavior is to
+        return the element immediately prior to the specified element.
+        The k option can specify how many steps are taken to get the previous
         element.
 
-        If the previous element is before the start of the
-        set, then this wraps around to the end of the list.
+        If the previous element is before the start of the set,
+        then this wraps around to the end of the list.
         """
         return self.nextw(match_element, k=-k)
 
+
 class _IndexedSetData(_SetData):
     """
-    This class adds the __call__ method, which is expected
-    for indexed component data. But we omit this from
-    _SetData because we do not want to treat scalar sets as
-    functors.
+    This class adds the __call__ method, which is expected for
+    indexed component data.  But we omit this from _SetData because
+    we do not want to treat scalar sets as functors.
     """
 
     __slots__ = tuple()
@@ -509,10 +504,9 @@ class _IndexedSetData(_SetData):
 
 class _IndexedOrderedSetData(_OrderedSetData):
     """
-    This class adds the __call__ method, which is expected
-    for indexed component data. But we omit this from
-    _OrderedSetData because we do not want to treat scalar
-    sets as functors.
+    This class adds the __call__ method, which is expected for
+    indexed component data.  But we omit this from _OrderedSetData because
+    we do not want to treat scalar sets as functors.
     """
 
     __slots__ = tuple()
@@ -548,7 +542,7 @@ class Set(IndexedComponent):
 
     This class has a similar look-and-feel as a Python set class.
     However, the set operations defined in this class return another
-    abstract Set object. This class contains a concrete set, which
+    abstract Set object.  This class contains a concrete set, which
     can be initialized by the load() method.
 
     Constructor Arguments:
@@ -560,7 +554,7 @@ class Set(IndexedComponent):
                             be contained in this set
         initialize      A dictionary or rule for setting up this set
                             with existing model data
-        validate        A rule for validating membership in this set. This has
+        validate        A rule for validating membership in this set.  This has
                             the functional form:
                                 f: data -> bool
                             and returns true if the data belongs in the set
@@ -568,7 +562,7 @@ class Set(IndexedComponent):
         virtual         If true, then this is a virtual set that does not
                             store data using the class dictionary
         bounds          A 2-tuple that specifies the range of possible set values.
-        ordered         Specifies whether the set is ordered. Possible values are:
+        ordered         Specifies whether the set is ordered.  Possible values are:
                             False           Unordered
                             True            Ordered by insertion order
                             InsertionOrder  Ordered by insertion order
@@ -577,7 +571,7 @@ class Set(IndexedComponent):
         filter          A function that is used to filter set entries.
 
     Public class attributes:
-        concrete        If True, then this set contains elements.(TODO)
+        concrete        If True, then this set contains elements. (TODO)
         dimen           The dimension of the data in this set.
         doc             A text string describing this component
         domain          A set that defines the type of values that can
@@ -585,6 +579,7 @@ class Set(IndexedComponent):
         filter          A function that is used to filter set entries.
         initialize      A dictionary or rule for setting up this set
                             with existing model data
+        name            A name for this component
         ordered         Specifies whether the set is ordered.
         validate        A rule for validating membership in this set.
         virtual         If True, then this set does not store data using the class
@@ -639,7 +634,7 @@ class Set(IndexedComponent):
                 raise ValueError(\
                       ("Value of keyword 'dimen', %s, differs from the " + \
                        "dimension of the superset '%s', %s") % \
-                       (str(kwd_dimen), str(self.domain.name()), str(tmp_dimen)))
+                       (str(kwd_dimen), str(self.domain.name), str(tmp_dimen)))
             else:
                 tmp_dimen = kwd_dimen
 
@@ -682,7 +677,7 @@ class Set(IndexedComponent):
             raise ValueError(
                 "The value=%s is not valid for set=%s\n"
                 "because it is not within the domain=%s"
-                % ( element, self.name(True), self.domain.name(True) ) )
+                % ( element, self.cname(True), self.domain.cname(True) ) )
         if self.validate is not None:
             flag = False
             try:
@@ -693,15 +688,15 @@ class Set(IndexedComponent):
             except:
                 pass
             if not flag:
-                raise ValueError("The value="+str(element)+" violates the validation rule of set="+self.name(True))
+                raise ValueError("The value="+str(element)+" violates the validation rule of set="+self.cname(True))
         if not self.dimen is None:
             if self.dimen > 1 and type(element) is not tuple:
 
-                raise ValueError("The value="+str(element)+" is not a tuple for set="+self.name(True)+", which has dimen="+str(self.dimen))
+                raise ValueError("The value="+str(element)+" is not a tuple for set="+self.cname(True)+", which has dimen="+str(self.dimen))
             elif self.dimen == 1 and type(element) is tuple:
-                raise ValueError("The value="+str(element)+" is a tuple for set="+self.name(True)+", which has dimen="+str(self.dimen))
+                raise ValueError("The value="+str(element)+" is a tuple for set="+self.cname(True)+", which has dimen="+str(self.dimen))
             elif type(element) is tuple and len(element) != self.dimen:
-                raise ValueError("The value="+str(element)+" does not have dimension="+str(self.dimen)+", which is needed for set="+self.name(True))
+                raise ValueError("The value="+str(element)+" does not have dimension="+str(self.dimen)+", which is needed for set="+self.cname(True))
         return True
 
 
@@ -728,7 +723,7 @@ class SimpleSetBase(Set):
         Clear that data in this component.
         """
         if self.virtual:
-            raise TypeError("Cannot clear virtual set object `"+self.name(True)+"'")
+            raise TypeError("Cannot clear virtual set object `"+self.cname(True)+"'")
         self._clear()
 
     def check_values(self):
@@ -745,7 +740,7 @@ class SimpleSetBase(Set):
         Add one or more elements to a set.
         """
         if self.virtual:
-            raise TypeError("Cannot add elements to virtual set `"+self.name(True)+"'")
+            raise TypeError("Cannot add elements to virtual set `"+self.cname(True)+"'")
         for val in args:
             tmp = pyutilib_misc_flatten_tuple(val)
             self._verify(tmp)
@@ -755,11 +750,11 @@ class SimpleSetBase(Set):
                     # Generate a warning, since we expect that users will not plan to
                     # re-add the same element to a set.
                     #
-                    logger.warning("Element "+str(tmp)+" already exists in set "+self.name(True)+"; no action taken.")
+                    logger.warning("Element "+str(tmp)+" already exists in set "+self.cname(True)+"; no action taken.")
                     continue
                 self._add(tmp, False)
             except TypeError:
-                raise TypeError("Problem inserting "+str(tmp)+" into set "+self.name(True))
+                raise TypeError("Problem inserting "+str(tmp)+" into set "+self.cname(True))
 
     def remove(self, element):
         """
@@ -768,9 +763,9 @@ class SimpleSetBase(Set):
         If the element is not a member, raise an error.
         """
         if self.virtual:
-            raise KeyError("Cannot remove element `"+str(element)+"' from virtual set "+self.name(True))
+            raise KeyError("Cannot remove element `"+str(element)+"' from virtual set "+self.cname(True))
         if element not in self:
-            raise KeyError("Cannot remove element `"+str(element)+"' from set "+self.name(True))
+            raise KeyError("Cannot remove element `"+str(element)+"' from set "+self.cname(True))
         self._discard(element)
 
     def discard(self, element):
@@ -780,7 +775,7 @@ class SimpleSetBase(Set):
         If the element is not a member, do nothing.
         """
         if self.virtual:
-            raise KeyError("Cannot discard element `"+str(element)+"' from virtual set "+self.name(True))
+            raise KeyError("Cannot discard element `"+str(element)+"' from virtual set "+self.cname(True))
         self._discard(element)
 
     def _pprint(self):
@@ -800,7 +795,7 @@ class SimpleSetBase(Set):
             [("Dim", self.dim()),
              ("Dimen", self.dimen),
              ("Size", len(self)),
-             ("Domain", None if self.domain is None else self.domain.name()),
+             ("Domain", None if self.domain is None else self.domain.name),
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
             iteritems( {None: self} ),
@@ -835,9 +830,9 @@ class SimpleSetBase(Set):
         if not self._constructed:
             raise RuntimeError(
                 "Cannot iterate over abstract Set '%s' before it has "
-                "been constructed (initialized)." % (self.name(True),) )
+                "been constructed (initialized)." % (self.cname(True),) )
         if not self.concrete:
-            raise TypeError("Cannot iterate over a non-concrete set '%s'" % self.name(True))
+            raise TypeError("Cannot iterate over a non-concrete set '%s'" % self.cname(True))
         return self.value.__iter__()
 
     def __reversed__(self):
@@ -962,7 +957,7 @@ class SimpleSetBase(Set):
             raise TypeError("ERROR: cannot perform \"issubset\" test because the current set is not a concrete set.")
         other = self._set_repn(other)
         if self.dimen != other.dimen:
-            raise ValueError("Cannot perform set operation with sets "+self.name(True)+" and "+other.name(True)+" that have different element dimensions: "+str(self.dimen)+" "+str(other.dimen))
+            raise ValueError("Cannot perform set operation with sets "+self.cname(True)+" and "+other.cname(True)+" that have different element dimensions: "+str(self.dimen)+" "+str(other.dimen))
         for val in self:
             if val not in other:
                 return False
@@ -977,7 +972,7 @@ class SimpleSetBase(Set):
         """
         other = self._set_repn(other)
         if self.dimen != other.dimen:
-            raise ValueError("Cannot perform set operation with sets "+self.name(True)+" and "+other.name(True)+" that have different element dimensions: "+str(self.dimen)+" "+str(other.dimen))
+            raise ValueError("Cannot perform set operation with sets "+self.cname(True)+" and "+other.cname(True)+" that have different element dimensions: "+str(self.dimen)+" "+str(other.dimen))
         if not other.concrete:
             raise TypeError("ERROR: cannot perform \"issuperset\" test because the target set is not a concrete set.")
         for val in other:
@@ -1069,7 +1064,7 @@ class SimpleSetBase(Set):
         TODO: rework to avoid redundant code
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Constructing SimpleSet, name="+self.name(True)+", from data="+repr(values))
+                logger.debug("Constructing SimpleSet, name="+self.cname(True)+", from data="+repr(values))
         if self._constructed:
             return
         self._constructed=True
@@ -1077,7 +1072,7 @@ class SimpleSetBase(Set):
         if self.initialize is None:                             # TODO: deprecate this functionality
             self.initialize = getattr(self,'rule',None)
             if not self.initialize is None:
-                logger.warning("DEPRECATED: The set 'rule' attribute cannot be used to initialize component "+self.name(True)+". Use the 'initialize' attribute")
+                logger.warning("DEPRECATED: The set 'rule' attribute cannot be used to initialize component "+self.cname(True)+".  Use the 'initialize' attribute")
         #
         # Construct using the input values list
         #
@@ -1179,7 +1174,7 @@ class SimpleSetBase(Set):
         #
         elif self.initialize is not None:
             if type(self.initialize) is dict:
-                raise ValueError("Cannot initialize set "+self.name(True)+" with dictionary data")
+                raise ValueError("Cannot initialize set "+self.cname(True)+" with dictionary data")
             if type(self._bounds) is tuple:
                 first=self._bounds[0]
                 last=self._bounds[1]
@@ -1349,15 +1344,15 @@ class _SetOperator(SimpleSet):
         #
         self._setA = args[0]
         if not self._setA.concrete:
-            raise TypeError("Cannot perform set operations with non-concrete set '"+self._setA.name(True)+"'")
+            raise TypeError("Cannot perform set operations with non-concrete set '"+self._setA.cname(True)+"'")
         if isinstance(args[1],Set):
             self._setB = args[1]
         else:
             self._setB = SetOf(args[1])
         if not self._setB.concrete:
-            raise TypeError("Cannot perform set operations with non-concrete set '"+self._setB.name(True)+"'")
+            raise TypeError("Cannot perform set operations with non-concrete set '"+self._setB.cname(True)+"'")
         if dimen_test and self._setA.dimen != self._setB.dimen:
-            raise ValueError("Cannot perform set operation with sets "+self._setA.name(True)+" and "+self._setB.name(True)+" that have different element dimensions: "+str(self._setA.dimen)+" "+str(self._setB.dimen))
+            raise ValueError("Cannot perform set operation with sets "+self._setA.cname(True)+" and "+self._setB.cname(True)+" that have different element dimensions: "+str(self._setA.dimen)+" "+str(self._setB.dimen))
         self.dimen = self._setA.dimen
         #
         self.ordered = self._setA.ordered and self._setB.ordered
@@ -1458,7 +1453,7 @@ class _SetProduct(_SetOperator):
         # every input argument in a set product must be iterable.
         for arg in args:
             # obviouslly, if the object has an '__iter__' method, then
-            # it is iterable. Checking for this prevents us from trying
+            # it is iterable.  Checking for this prevents us from trying
             # to iterate over unconstructed Sets (which would result in
             # an exception)
             if not hasattr(arg, '__iter__'):
@@ -1539,7 +1534,7 @@ class _SetProduct(_SetOperator):
     def is_flat_product(self):
         """
         a simple utility to determine if each of the composite sets is
-        of dimension one. Knowing this can significantly reduce the
+        of dimension one. knowing this can significantly reduce the
         cost of iteration, as you don't have to call flatten_tuple.
         """
 
@@ -1630,7 +1625,7 @@ class IndexedSet(Set):
         Add a set to the index.
         """
         if key not in self._index:
-            raise KeyError("Cannot set index "+str(key)+" in array set "+self.name(True))
+            raise KeyError("Cannot set index "+str(key)+" in array set "+self.cname(True))
         #
         # Create a _SetData object if one doesn't already exist
         #
@@ -1672,7 +1667,7 @@ class IndexedSet(Set):
             [("Dim", self.dim()),
              ("Dimen", self.dimen),
              ("Size", self.size()),
-             ("Domain", None if self.domain is None else self.domain.name()),
+             ("Domain", None if self.domain is None else self.domain.name),
              ("ArraySize", len(self._data)),
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
@@ -1687,7 +1682,7 @@ class IndexedSet(Set):
         Apply the rule to construct values in each set
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                logger.debug("Constructing IndexedSet, name="+self.name(True)+", from data="+repr(values))
+                logger.debug("Constructing IndexedSet, name="+self.cname(True)+", from data="+repr(values))
         if self._constructed:
             return
         self._constructed=True
@@ -1695,7 +1690,7 @@ class IndexedSet(Set):
         if self.initialize is None:             # TODO: deprecate this functionality
             self.initialize = getattr(self,'rule',None)
             if not self.initialize is None:
-                logger.warning("DEPRECATED: The set 'rule' attribute cannot be used to initialize component "+self.name(True)+". Use the 'initialize' attribute")
+                logger.warning("DEPRECATED: The set 'rule' attribute cannot be used to initialize component "+self.cname(True)+".  Use the 'initialize' attribute")
         #
         # Construct using the values dictionary
         #
@@ -1706,7 +1701,7 @@ class IndexedSet(Set):
                 else:
                     tmpkey=key
                 if tmpkey not in self._index:
-                    raise KeyError("Cannot construct index "+str(tmpkey)+" in array set "+self.name(True))
+                    raise KeyError("Cannot construct index "+str(tmpkey)+" in array set "+self.cname(True))
                 tmp = self._SetData(self, self._bounds)
                 for val in values[key]:
                     tmp._add(val)

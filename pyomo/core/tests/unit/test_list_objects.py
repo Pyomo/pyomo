@@ -302,17 +302,17 @@ class _TestComponentListBase(object):
         for i in index:
             self.assertNotEqual(id(inst.c[i]), id(model.c[i]))
 
-    def test_name(self):
+    def test_cname(self):
         model = self.model
         index = range(5)
         model.c = self._ctype(self._cdatatype(self._arg) for i in index)
         prefix = "c"
         for i in index:
             cdata = model.c[i]
-            self.assertEqual(cdata.name(False),
-                             cdata.name(True))
+            self.assertEqual(cdata.cname(False),
+                             cdata.cname(True))
             cname = prefix + "["+str(i)+"]"
-            self.assertEqual(cdata.name(False),
+            self.assertEqual(cdata.cname(False),
                              cname)
 
 class _TestActiveComponentListBase(_TestComponentListBase):

@@ -214,9 +214,9 @@ def add_discretization_equations(block,d):
             return Constraint.Skip
 
     if d.dim() == 1:
-        block.add_component(d.name()+'_disc_eq',Constraint(d._index,rule=_disc_eq))
+        block.add_component(d.name+'_disc_eq',Constraint(d._index,rule=_disc_eq))
     else:
-        block.add_component(d.name()+'_disc_eq',Constraint(*d._implicit_subsets,rule=_disc_eq))
+        block.add_component(d.name+'_disc_eq',Constraint(*d._implicit_subsets,rule=_disc_eq))
 
 def add_continuity_equations(block,d,i,loc):
     """
@@ -224,7 +224,7 @@ def add_continuity_equations(block,d,i,loc):
     does not have a root at the finite element boundary
     """
     svar = d.get_state_var()
-    nme = svar.name()+'_'+i.name()+'_cont_eq'
+    nme = svar.name+'_'+i.name+'_cont_eq'
     if block.find_component(nme) is not None:
         return
     

@@ -417,7 +417,7 @@ class _PHBase(object):
 
             scenario_instance = scenario._instance
 
-            assert scenario_instance.name() == scenario.name
+            assert scenario_instance.name == scenario._name
 
             if scenario_instance is None:
                 raise RuntimeError("ScenarioTree has not been linked "

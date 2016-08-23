@@ -19,8 +19,8 @@ from pyomo.core import *
 #
 # Create the model
 #
-model = AbstractModel(name="elec3")
-
+model = AbstractModel()
+model.name="elec3"
 #
 # Create sets used to define parameters
 #
@@ -130,3 +130,4 @@ model.fcfe= Constraint(rule=fcfe_rule)
 def total_cost_rule(model):
     return summation(model.StageCost)
 model.Objective_rule = Objective(rule=total_cost_rule, sense=minimize)
+

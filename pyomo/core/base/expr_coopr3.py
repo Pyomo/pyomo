@@ -131,7 +131,7 @@ class _ExpressionBase(NumericValue):
             ostream = sys.stdout
         _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
-        ostream.write(self.name() + "( ")
+        ostream.write(self.cname() + "( ")
         first = True
         for arg in self._args:
             if first:
@@ -248,12 +248,8 @@ class _ExternalFunctionExpression(_ExpressionBase):
         return self.__class__( self._fcn,
                                tuple(clone_expression(x) for x in self._args) )
 
-    def name(self):
-        return self._fcn.name()
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+    def cname(self):
+        return self._fcn.cname()
 
     def polynomial_degree(self):
         return None
@@ -285,7 +281,7 @@ class _IntrinsicFunctionExpression(_ExpressionBase):
         """Construct an expression with an operation and a set of arguments"""
         if nargs and nargs != len(args):
             raise ValueError("%s() takes exactly %d arguments (%d given)" % \
-                ( self.name(), nargs, len(args) ))
+                ( self.cname(), nargs, len(args) ))
         _ExpressionBase.__init__(self, args)
         self._operator = operator
         self._name = name
@@ -305,12 +301,8 @@ class _IntrinsicFunctionExpression(_ExpressionBase):
     def _apply_operation(self, values):
         return self._operator(*tuple(values))
 
-    def name(self):
+    def cname(self):
         return self._name
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
 
     def polynomial_degree(self):
         if self.is_fixed():
@@ -520,7 +512,7 @@ class _EqualityExpression(_LinearExpression):
         """Constructor"""
         if 2 != len(args):
             raise ValueError("%s() takes exactly 2 arguments (%d given)" % \
-                ( self.name(), len(args) ))
+                ( self.cname(), len(args) ))
         _LinearExpression.__init__(self, args)
 
     def __copy__(self):
@@ -821,12 +813,8 @@ class Expr_if(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def name(self):
+    def cname(self):
         return "Expr_if"
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
 
     def is_constant(self):
         if self._if.is_constant():
@@ -945,7 +933,7 @@ def generate_expression(etype, _self, other):
         raise TypeError("Argument for expression '%s' is an indexed "\
               "numeric value specified without an index: %s\n    Is "\
               "variable or parameter '%s' defined over an index that "\
-              "you did not specify?" % (etype, _self.name(), _self.name()))
+              "you did not specify?" % (etype, _self.cname(), _self.cname()))
 
     self_type = _self.__class__
     # In-place operators should only clone `self` if someone else (other
@@ -1004,7 +992,7 @@ def generate_expression(etype, _self, other):
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
                 "value defined over an index that you did not specify?"
-                % (etype, other.name(), ) )
+                % (etype, other.cname(), ) )
         if other.is_expression():
             other = _generate_expression__clone_if_needed(other, 0)
         elif other.is_constant():
@@ -1352,7 +1340,7 @@ def generate_relational_expression(etype, lhs, rhs):
             "specified without an index: %s\n    Is variable or parameter "
             "'%s' defined over an index that you did not specify?"
             % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
-               lhs.name(), lhs.name()))
+               lhs.cname(), lhs.cname()))
     elif lhs.is_expression():
         lhs = _generate_relational_expression__clone_if_needed(lhs)
         if lhs.is_relational():
@@ -1365,7 +1353,7 @@ def generate_relational_expression(etype, lhs, rhs):
             "specified without an index: %s\n    Is variable or parameter "
             "'%s' defined over an index that you did not specify?"
             % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
-               rhs.name(), rhs.name()))
+               rhs.cname(), rhs.cname()))
     elif rhs.is_expression():
         rhs = _generate_relational_expression__clone_if_needed(rhs)
         if rhs.is_relational():
@@ -1536,7 +1524,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     elif new_arg.is_indexed():
         raise ValueError("Argument for intrinsic function '%s' is an "\
             "n-ary numeric value: %s\n    Have you given variable or "\
-            "parameter '%s' an index?" % (name, new_arg.name(), new_arg.name()))
+            "parameter '%s' an index?" % (name, new_arg.name, new_arg.name))
     return _IntrinsicFunctionExpression(name, 1, (new_arg,), fcn)
 
 # [debugging] clone_counter is a count of the number of calls to
