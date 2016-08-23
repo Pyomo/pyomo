@@ -68,12 +68,11 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                     A2*x + B2*y <= b2
 
         NOTE THE VARIABLE BOUNDS!
-        """
+        """ 
         #
-        # Populate the block with the linear constraints.
-        # Note that we don't simply clone the current block.
-        # We need to collect a single set of equations that
-        # can be easily expressed.
+        # Populate the block with the linear constraints.  Note that we don't simply clone the
+        # current block.  We need to collect a single set of equations that can be easily 
+        # expressed.
         #
         d2 = {}
         B2 = {}
@@ -119,7 +118,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             # Stop after the first objective
             break
         #
-        # Iterate through all lower level variables, adding dual variables
+        # Iterate through all lower level variables, adding dual variables 
         # and complementarity slackness conditions for y bound constraints
         #
         for vcomponent in instance.component_objects(Var, active=True):
@@ -161,7 +160,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                         sids_set.add(id_)
                         sids_list.append(id_)
         #
-        # Iterate through all constraints, adding dual variables and
+        # Iterate through all constraints, adding dual variables and 
         # complementary slackness conditions (for inequality constraints)
         #
         for cdata in submodel.component_data_objects(Constraint, active=True):
@@ -218,7 +217,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             B2_ = B2.get(vid,{})
             utmp_keys = list(utmp.keys())
             if self._deterministic:
-                utmp_keys.sort(key=lambda x:utmp[x][0].name() if utmp[x][1] is None else utmp[x][1].name())
+                utmp_keys.sort(key=lambda x:utmp[x][0].cname() if utmp[x][1] is None else utmp[x][1].cname())
             for uid in utmp_keys:
                 if uid in B2_:
                     lb_dual, ub_dual = utmp[uid]

@@ -416,7 +416,7 @@ class GLPKSHELL(SystemCallSolver):
                     if not extract_duals:
                         continue
                     # NOTE: we are not using the row status (rst) value right now
-                    rtype, rid, rst, rprim, rdual = row
+                    rtype, rid, rst, rprim, rdual = row 
                     cname = constraint_names[int(rid)]
                     if 'ONE_VAR_CONSTANT' == cname[-16:]:
                         continue
@@ -430,7 +430,7 @@ class GLPKSHELL(SystemCallSolver):
 
                 elif rtype == 'j':
                     # NOTE: we are not using the column status (cst) value right now
-                    rtype, cid, cst, cprim, cdual = row
+                    rtype, cid, cst, cprim, cdual = row 
                     vname = variable_names[int(cid)]
                     if 'ONE_VAR_CONSTANT' == vname:
                         continue
@@ -506,7 +506,7 @@ class GLPKSHELL(SystemCallSolver):
                     continue
 
                 elif rtype == 'j':
-                    rtype, cid, cval = row
+                    rtype, cid, cval = row 
                     vname = variable_names[int(cid)]
                     if 'ONE_VAR_CONSTANT' == vname:
                         continue

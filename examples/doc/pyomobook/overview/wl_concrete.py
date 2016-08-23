@@ -1,7 +1,8 @@
 # wl_concrete.py: ConcreteModel version of warehouse location determination problem
 from pyomo.environ import *
 
-model = ConcreteModel(name="(WL)")
+model = ConcreteModel()
+model.name = "(WL)"
 
 N = ['Harlingen', 'Memphis', 'Ashland']
 M = ['NYC', 'LA', 'Chicago', 'Houston']

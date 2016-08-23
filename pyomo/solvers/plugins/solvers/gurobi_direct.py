@@ -97,8 +97,8 @@ class ModelSOS(object):
                 raise RuntimeError("SOSConstraint '%s' includes a fixed variable "
                                    "'%s'. This is currently not supported. "
                                    "Deactivate this constraint in order to "
-                                   "proceed." % (soscondata.name(True),
-                                                 vardata.name(True)))
+                                   "proceed." % (soscondata.cname(True),
+                                                 vardata.cname(True)))
             varids.append(id(vardata))
             varnames.append(gurobi_var_map[variable_symbol_map.getSymbol(vardata)])
             weights.append(weight)
@@ -203,7 +203,7 @@ class gurobi_direct ( OptSolver ):
         from pyomo.repn import LinearCanonicalRepn, canonical_degree
 
         try:
-            grbmodel = Model(name=pyomo_instance.name())
+            grbmodel = Model(name=pyomo_instance.name)
         except Exception:
             e = sys.exc_info()[1]
             msg = 'Unable to create Gurobi model.  Have you installed the Python'\
@@ -318,7 +318,7 @@ class gurobi_direct ( OptSolver ):
                     raise ValueError(
                         "Multiple active objectives found on Pyomo instance '%s'. "
                         "Solver '%s' will only handle a single active objective" \
-                        % (pyomo_instance.name(True), self.type))
+                        % (pyomo_instance.cname(True), self.type))
 
                 sense = GRB_MIN if (obj_data.is_minimizing()) else GRB_MAX
                 grbmodel.ModelSense = sense
@@ -379,7 +379,7 @@ class gurobi_direct ( OptSolver ):
                         raise ValueError(
                             "gurobi_direct plugin does not support general nonlinear "
                             "objective expressions (only linear or quadratic).\n"
-                            "Objective: %s" % (obj_data.name(True)))
+                            "Objective: %s" % (obj_data.cname(True)))
 
                 # need to cache the objective label, because the
                 # GUROBI python interface doesn't track this.
@@ -498,7 +498,7 @@ class gurobi_direct ( OptSolver ):
                         raise ValueError(
                             "gurobi_direct plugin does not support general nonlinear "
                             "constraint expressions (only linear or quadratic).\n"
-                            "Constraint: %s" % (constraint_data.name(True)))
+                            "Constraint: %s" % (constraint_data.cname(True)))
 
                 if (not trivial) or (not self._skip_trivial_constraints):
 
@@ -558,7 +558,7 @@ class gurobi_direct ( OptSolver ):
                                      "a preprocessing error. Use the IO-option 'output_fixed_variable_bounds=True' "
                                      "to suppress this error and fix the variable by overwriting its bounds in "
                                      "the Gurobi instance."
-                                     % (vardata.name(True),pyomo_instance.name(True),))
+                                     % (vardata.cname(True),pyomo_instance.cname(True),))
 
                 grbvar = pyomo_gurobi_variable_map[varname]
                 grbvar.setAttr(GRB.Attr.UB, vardata.value)

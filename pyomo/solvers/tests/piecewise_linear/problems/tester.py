@@ -37,19 +37,19 @@ problem_names = ['convex_var']
 
 for problem_name in problem_names:
     p = __import__(problem_name)
-
+    
     model = p.define_model(**kwds)
     inst = model.create()
 
     results = opt.solve(inst,tee=True)
 
     inst.load(results)
-
+    
     res = dict()
     for block in inst.block_data_objects(active=True):
         for variable in itervalues(block.component_map(Var, active=True)):
             for var in itervalues(variable):
-                name = var.name(True)
+                name = var.cname(True)
                 if (name[:2] == 'Fx') or (name[:1] == 'x'):
                     res[name] = value(var)
     print(res)

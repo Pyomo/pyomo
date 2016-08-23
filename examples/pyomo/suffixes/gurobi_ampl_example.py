@@ -28,7 +28,7 @@ from pyomo.opt import SolverFactory
 solver = 'gurobi_ampl'
 solver_io = 'nl'
 stream_solver = False     # True prints solver output to screen
-keepfiles =     False     # True prints intermediate file names (.nl,.sol,...)
+keepfiles =     False     # True prints intermediate file names (.nl,.sol,...) 
 opt = SolverFactory(solver,solver_io=solver_io)
 
 if opt is None:
@@ -59,7 +59,7 @@ sstatus_table={'bas':1,   # basic
                'equ':5,   # nonbasic at equal lower and upper bounds
                'btw':6}   # nonbasic between bounds
 model.sstatus = Suffix(direction=Suffix.IMPORT_EXPORT,
-                       datatype=Suffix.INT)
+                       datatype=Suffix.INT)                       
 model.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
 
 # Report the best known bound on the objective function
@@ -90,22 +90,22 @@ def print_model_suffixes(model):
             six.print_("%10s" % (name),end='')
     six.print_("")
     for i in model.s:
-        six.print_(model.x[i].name()+"\t",end='')
+        six.print_(model.x[i].cname()+"\t",end='')
         for name,suffix in active_import_suffix_generator(model):
             six.print_("%10s" % (suffix.get(model.x[i])),end='')
         six.print_("")
     for i in model.s:
-        six.print_(model.con[i].name()+"\t",end='')
+        six.print_(model.con[i].cname()+"\t",end='')
         for name,suffix in active_import_suffix_generator(model):
             six.print_("%10s" % (suffix.get(model.con[i])),end='')
         six.print_("")
-    six.print_(model.obj.name()+"\t",end='')
+    six.print_(model.obj.cname()+"\t",end='')
     for name,suffix in active_import_suffix_generator(model):
         six.print_("%10s" % (suffix.get(model.obj)),end='')
     print("")
     print("")
 
-print("")
+print("") 
 print("Suffixes Before Solve:")
 print_model_suffixes(model)
 

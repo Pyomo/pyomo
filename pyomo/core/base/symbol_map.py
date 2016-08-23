@@ -145,14 +145,14 @@ class SymbolMap(object):
         if labeler is None:
             raise RuntimeError("Object %s is not in the symbol map. "
                                "Cannot create a new symbol without "
-                               "a labeler." % obj.name(True))
+                               "a labeler." % obj.cname(True))
         symb = labeler(obj)
         if symb in self.bySymbol:
             if self.bySymbol[symb]() is not obj:
                 raise RuntimeError(
                     "Duplicate symbol '%s' already associated with "
                     "component '%s' (conflicting component: '%s')"
-                    % (symb, self.bySymbol[symb]().name(True), obj.name(True)) )
+                    % (symb, self.bySymbol[symb]().cname(True), obj.cname(True)) )
         self.bySymbol[symb] = weakref_ref(obj)
         self.byObject[obj_id] = symb
         return symb
@@ -174,7 +174,7 @@ class SymbolMap(object):
                 raise RuntimeError(
                     "Duplicate alias '%s' already associated with "
                     "component '%s' (conflicting component: '%s')"
-                    % (name, "UNKNOWN" if obj_object is None else old_object.name(True), obj.name(True)) )
+                    % (name, "UNKNOWN" if obj_object is None else old_object.cname(True), obj.cname(True)) )
         else:
             #
             # Add the alias

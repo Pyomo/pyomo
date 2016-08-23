@@ -60,7 +60,8 @@ def create_ef_instance(scenario_tree,
                 "with name: %s" % (scenario.name))
         scenario_instances[scenario.name] = scenario._instance
 
-    binding_instance = ConcreteModel(name=ef_instance_name)
+    binding_instance = ConcreteModel()
+    binding_instance.name = ef_instance_name
     root_node = scenario_tree.findRootNode()
 
     opt_sense = minimize \

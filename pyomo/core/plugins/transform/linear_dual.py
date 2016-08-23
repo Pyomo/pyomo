@@ -33,7 +33,7 @@ logger = logging.getLogger('pyomo.core')
 
 #
 # This transformation creates a new block that
-# is the dual of the specified block.  If no block is
+# is the dual of the specified block.  If no block is 
 # specified, then the entire model is dualized.
 # This returns a new Block object.
 #
@@ -77,7 +77,7 @@ class LinearDual_PyomoTransformation(Transformation):
     def _dualize(self, block, unfixed=[]):
         """
         Generate the dual of a block
-        """
+        """ 
         #
         # Collect linear terms from the block
         #
@@ -114,7 +114,7 @@ class LinearDual_PyomoTransformation(Transformation):
         for name, ndx in b_coef:
             v = getattr(dual, name)
             if not ndx in v:
-                v._default(ndx)
+                v._default(ndx)    
         #
         # Construct the objective
         #

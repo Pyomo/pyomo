@@ -1,7 +1,8 @@
 # AbstractHLinear.py - A simple linear version of (H)
 from pyomo.environ import *
 
-model = AbstractModel(name="Simple Linear (H)")
+model = AbstractModel()
+model.name = "Simple Linear (H)"
 
 model.A = Set()
 

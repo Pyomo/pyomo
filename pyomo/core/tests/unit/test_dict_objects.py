@@ -254,7 +254,7 @@ class _TestComponentDictBase(object):
         self.assertEqual(sorted(list(raw_constraint_dict.keys()), key=str),
                          sorted(list(model.c.keys()), key=str))
 
-    def test_name(self):
+    def test_cname(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
         model.c = self._ctype((i, self._cdatatype(self._arg))
@@ -269,10 +269,10 @@ class _TestComponentDictBase(object):
         prefix = "c"
         for i in index:
             cdata = model.c[i]
-            self.assertEqual(cdata.name(False),
-                             cdata.name(True))
+            self.assertEqual(cdata.cname(False),
+                             cdata.cname(True))
             cname = prefix + index_to_string[i]
-            self.assertEqual(cdata.name(False),
+            self.assertEqual(cdata.cname(False),
                              cname)
 
     def test_clear(self):

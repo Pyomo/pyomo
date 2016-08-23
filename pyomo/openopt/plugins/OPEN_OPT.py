@@ -98,7 +98,7 @@ class OpenOptSolver(OptSolver):
     def _postsolve(self):
         results = SolverResults()
 
-        #print 'ANS', dir(self._ans),
+        #print 'ANS', dir(self._ans), 
         #print self._ans.evals
         #print self._ans.ff
         #print self._ans.rf
@@ -193,7 +193,7 @@ class OpenOptSolver(OptSolver):
             raise ApplicationError("Unexpected OpenOpt termination code: '%d'" % istop)
 
         prob = results.problem
-        prob.name = self._instance.name()
+        prob.name = self._instance.name
         prob.number_of_constraints = self._instance.statistics.number_of_constraints
         prob.number_of_variables = self._instance.statistics.number_of_variables
         prob.number_of_binary_variables = self._instance.statistics.number_of_binary_variables
@@ -217,7 +217,7 @@ class OpenOptSolver(OptSolver):
                 oval = float(self._ans.ff)
             if self._problem.sense == maximize:
                 soln.objective[self._problem._f_name[0]] = {'Value': - oval}
-            else:
+            else: 
                 soln.objective[self._problem._f_name[0]] = {'Value': oval}
 
             for var_label in self._ans.xf.keys():

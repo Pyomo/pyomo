@@ -1,7 +1,8 @@
 # wl_list.py: Warehouse location problem using constraint lists
 from pyomo.environ import *
 
-model = ConcreteModel(name="(PM)")
+model = ConcreteModel()
+model.name = "(PM)"
 
 # @data:
 N = ['Harlingen', 'Memphis', 'Ashland']

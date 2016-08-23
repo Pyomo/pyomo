@@ -13,7 +13,7 @@ def predefined_sets():
     from pyomo.core.base.set_types import _virtual_sets
     ans = []
     for item in _virtual_sets:
-        ans.append( (item.name(), item.doc) )
+        ans.append( (item.name,item.doc) )
     return ans
 
 

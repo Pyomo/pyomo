@@ -190,13 +190,13 @@ class SimpleDisjunction(_GeneralConstraintData, Disjunction):
                     "Accessing the body of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.name(True)))
+                    "nothing to access." % (self.cname(True)))
             return _GeneralConstraintData.body.fget(self)
         raise ValueError(
             "Accessing the body of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.cname(True)))
 
     @property
     def lower(self):
@@ -207,13 +207,13 @@ class SimpleDisjunction(_GeneralConstraintData, Disjunction):
                     "Accessing the lower bound of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.name(True)))
+                    "nothing to access." % (self.cname(True)))
             return _GeneralConstraintData.lower.fget(self)
         raise ValueError(
             "Accessing the lower bound of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.cname(True)))
 
     @property
     def upper(self):
@@ -224,13 +224,13 @@ class SimpleDisjunction(_GeneralConstraintData, Disjunction):
                     "Accessing the upper bound of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.name(True)))
+                    "nothing to access." % (self.cname(True)))
             return _GeneralConstraintData.upper.fget(self)
         raise ValueError(
             "Accessing the upper bound of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.cname(True)))
 
     @property
     def equality(self):
@@ -241,13 +241,13 @@ class SimpleDisjunction(_GeneralConstraintData, Disjunction):
                     "Accessing the equality flag of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.name(True)))
+                    "nothing to access." % (self.cname(True)))
             return _GeneralConstraintData.equality.fget(self)
         raise ValueError(
             "Accessing the equality flag of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.cname(True)))
 
     @property
     def strict_lower(self):
@@ -258,13 +258,13 @@ class SimpleDisjunction(_GeneralConstraintData, Disjunction):
                     "Accessing the strict_lower flag of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.name(True)))
+                    "nothing to access." % (self.cname(True)))
             return _GeneralConstraintData.strict_lower.fget(self)
         raise ValueError(
             "Accessing the strict_lower flag of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.cname(True)))
 
     @property
     def strict_upper(self):
@@ -275,13 +275,13 @@ class SimpleDisjunction(_GeneralConstraintData, Disjunction):
                     "Accessing the strict_upper flag of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.name(True)))
+                    "nothing to access." % (self.cname(True)))
             return _GeneralConstraintData.strict_upper.fget(self)
         raise ValueError(
             "Accessing the strict_upper flag of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.cname(True)))
 
     #
     # Singleton constraints are strange in that we want them to be
@@ -304,7 +304,7 @@ class SimpleDisjunction(_GeneralConstraintData, Disjunction):
             "Setting the value of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no object to set)."
-            % (self.name(True)))
+            % (self.cname(True)))
 
 class IndexedDisjunction(Disjunction):
     pass

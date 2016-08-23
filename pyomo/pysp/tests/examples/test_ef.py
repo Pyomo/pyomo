@@ -91,7 +91,7 @@ class EFTester(object):
         assert self.instance_directory is not None
         assert (self.solver_name,self.solver_io) in testing_solvers
         assert self.base_command_options is not None
-
+        
     @staticmethod
     def safe_delete(filename):
         try:
@@ -175,7 +175,7 @@ class EFTester(object):
             # passed if we are here
             self.safe_delete(join(thisDir,prefix+".ef_solution.json.out"))
         self.safe_delete(join(thisDir,prefix+".out"))
-
+    
     def test1(self):
         self._baseline_test()
 
@@ -376,7 +376,7 @@ if __name__ == "__main__":
 
     print("Including all tests matching wildcard: '%s'" % _test_name_wildcard_include)
     print("Excluding all tests matching wildcard: '%s'" % _test_name_wildcard_exclude)
-
+        
     tester = unittest.main(exit=False)
     if len(tester.result.failures) or len(tester.result.skipped) or len(tester.result.errors):
         with open('UnitTestNoPass.txt','w') as f:

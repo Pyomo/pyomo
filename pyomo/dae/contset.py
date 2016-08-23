@@ -102,7 +102,7 @@ class ContinuousSet(OrderedSimpleSet):
             return value
         elif value > max(self._fe):
             print("****WARNING: The value '%s' exceeds the upper bound "\
-                  "of the ContinuousSet '%s'. Returning the upper bound" %(str(value),self.name()))
+                "of the ContinuousSet '%s'. Returning the upper bound" %(str(value),self.name))
             return max(self._fe)
         else :
             for i in self._fe:
@@ -126,7 +126,7 @@ class ContinuousSet(OrderedSimpleSet):
             return value 
         elif value < min(self._fe):
             print("****WARNING: The value '%s' is less than the lower bound "\
-                  "of the ContinuousSet '%s'. Returning the lower bound" %(str(value),self.name()))
+                "of the ContinuousSet '%s'. Returning the lower bound" %(str(value),self.name))
             return min(self._fe)
         else:
             rev_fe = list(self._fe)
@@ -146,7 +146,7 @@ class ContinuousSet(OrderedSimpleSet):
 
         if self._bounds is None:
             raise ValueError("ContinuousSet '%s' must have at least two values indicating "\
-                             "the range over which a differential equation is to be discretized" % (self.name()))
+                "the range over which a differential equation is to be discretized" % (self.name))
 
         # If bounds were set using pyomo parameters, get their values
         lb = value(self._bounds[0])
@@ -173,7 +173,7 @@ class ContinuousSet(OrderedSimpleSet):
         
         if len(self) < 2:
             raise ValueError("ContinuousSet '%s' must have at least two values indicating "\
-                             "the range over which a differential equation is to be discretized" % (self.name()))
+                "the range over which a differential equation is to be discretized" % (self.name))
         self._fe = sorted(self)
 
 register_component(ContinuousSet, "A bounded continuous numerical range optionally containing discrete points of interest.")

@@ -1,7 +1,8 @@
 # wl_abstract.py: AbstractModel version of warehouse location determination problem
 from pyomo.environ import *
 
-model = AbstractModel(name="(WL)")
+model = AbstractModel()
+model.name = "(WL)"
 # @setdecl:
 model.N = Set()
 model.M = Set()

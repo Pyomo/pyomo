@@ -380,7 +380,7 @@ You can silence this warning by one of three ways:
     3) If you intend to iterate over a component that may be empty, test
        if the component is empty first and avoid iteration in the case
        where it is empty.
-""" % (self.name(True),) )
+""" % (self.cname(True),) )
 
             if not hasattr(self._index, 'ordered') or not self._index.ordered:
                 #
@@ -456,7 +456,7 @@ You can silence this warning by one of three ways:
                 idx_str = "[" + str(ndx) + "]"
             raise ValueError(
                 "Error retrieving component %s%s: The component has "
-                "not been constructed." % ( self.name(True), idx_str,) )
+                "not been constructed." % ( self.cname(True), idx_str,) )
         if ndx is None and not self.is_indexed():
             self._data[ndx] = self  # FIXME: should this be a weakref?!?
             return self
@@ -495,14 +495,14 @@ You can silence this warning by one of three ways:
         if not self.is_indexed():
             msg = "Error accessing indexed component: " \
                   "Cannot treat the scalar component '%s' as an array" \
-                  % ( self.name(True), )
+                  % ( self.cname(True), )
             raise KeyError(msg)
         #
         # Raise an exception
         #
         msg = "Error accessing indexed component: " \
                   "Index '%s' is not valid for array component '%s'" \
-                  % ( ndx, self.name(True), )
+                  % ( ndx, self.cname(True), )
         raise KeyError(msg)
 
 
@@ -567,7 +567,7 @@ index %s is a fixed but not constant value.  This is likely not what you
 meant to do, as if you later change the fixed value of the object this
 lookup will not change.  If you understand the implications of using
 fixed but not constant values, you can get the current value using the
-value() function.""" % ( self.name(True), i ))
+value() function.""" % ( self.cname(True), i ))
                 else:
                     raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
@@ -575,7 +575,7 @@ index %s is not a constant value.  This is likely not what you meant to
 do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
-the value() function.""" % ( self.name(True), i ))
+the value() function.""" % ( self.cname(True), i ))
             except AttributeError:
                 pass
             if ellipsis is None:
@@ -591,7 +591,7 @@ the value() function.""" % ( self.name(True), i ))
         else:
             raise TypeError(
                 "%s found when trying to retrieve index for component %s"
-                % (_exception, self.name(True)) )
+                % (_exception, self.cname(True)) )
 
 
     def _default(self, index):
@@ -608,7 +608,7 @@ the value() function.""" % ( self.name(True), i ))
                 "Cannot set the value for the indexed component '%s' "
                 "without specifying an index value.\n"
                 "\tFor example, model.%s[i] = value"
-                % (self.name(), self.name()))
+                % (self.name, self.name))
         else:
             raise NotImplementedError(
                 "Derived component %s failed to define set_value() "
