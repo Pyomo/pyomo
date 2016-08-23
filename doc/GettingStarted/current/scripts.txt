@@ -453,7 +453,7 @@ Another way to access all of the variables (particularly if there are blocks) is
 ----
 include::examples/block_iter_example@compprintloop.py[]
 ----
-The use of +True+ as an argument to +cname+ indicates that the full name is desired. 
+The use of +True+ as an argument to +name+ indicates that the full name is desired.
 
 ==== All Variables from Workflow Callbacks ====
 

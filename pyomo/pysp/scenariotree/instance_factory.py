@@ -600,7 +600,7 @@ class ScenarioTreeInstanceFactory(object):
                                    "is defined.")
 
             # name each instance with the scenario name
-            scenario_instance.name = scenario_name
+            scenario_instance._name = scenario_name
 
             # apply each of the post-instance creation plugins. this
             # really shouldn't be associated (in terms of naming) with the
@@ -671,7 +671,7 @@ class ScenarioTreeInstanceFactory(object):
                         verbose=verbose)
 
             scenario_instances[scenario._name] = scenario_instance
-            assert scenario_instance.name == scenario._name
+            assert scenario_instance.name() == scenario.name
 
         return scenario_instances
 

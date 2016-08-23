@@ -85,7 +85,7 @@ class DualTransformation(IsomorphicTransformation):
         for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
             for con in (con_array[ndx] for ndx in con_array._index):
                 # The qualified constraint name
-                cname = "%s%s" % (variable_prefix, con.name)
+                cname = "%s%s" % (variable_prefix, con.name())
 
                 # Process the body of the constraint
                 body_terms = process_canonical_repn(
@@ -136,15 +136,15 @@ class DualTransformation(IsomorphicTransformation):
         for (var_name, var_array) in sf.component_map(Var, active=True).items():
             for var in (var_array[ndx] for ndx in var_array._index):
                 constraint_set_init.append("%s%s" %
-                                           (var.name, constraint_suffix))
+                                           (var.name(), constraint_suffix))
 
         # Make variable index set
         variable_set_init = []
         dual_variable_roots = []
         for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
             for con in (con_array[ndx] for ndx in con_array._index):
-                dual_variable_roots.append(con.name)
-                variable_set_init.append("%s%s" % (variable_prefix, con.name))
+                dual_variable_roots.append(con.name())
+                variable_set_init.append("%s%s" % (variable_prefix, con.name()))
 
         # Create the dual Set and Var objects
         dual.var_set = Set(initialize=variable_set_init)

@@ -16,4 +16,4 @@ except pyutilib.common.ApplicationError:
 print('Z '+str(sorted(list(instance.Z.data()))))
 print('Y')
 for key in sorted(instance.Y.keys()):
-    print(cname(instance.Y,key)+" "+str(value(instance.Y[key])))
+    print(name(instance.Y,key)+" "+str(value(instance.Y[key])))

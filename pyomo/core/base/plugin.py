@@ -170,7 +170,7 @@ class ExpressionRegistration(Plugin):
 def ExpressionFactory(name=None, args=[]):
     ep = ExpressionFactory.ep
     if name is None:
-        return map(lambda x:x.name, ep())
+        return map(lambda x: x.name(), ep())
     return ep.service(name).create(args)
 ExpressionFactory.ep = ExtensionPoint(IPyomoExpression)
 

@@ -145,7 +145,7 @@ class GLPKDirect ( OptSolver ):
         for soscondata in model.component_data_objects(SOSConstraint, active=True):
             raise Exception("Solver: glpk_direct does not support SOSConstraint declarations")
 
-        glp_set_prob_name( lp, model.name )
+        glp_set_prob_name(lp, model.name())
 
         glp_set_obj_dir( lp, sense )
         glp_add_rows( lp, num_constraints )
@@ -205,7 +205,7 @@ class GLPKDirect ( OptSolver ):
         if model_canonical_repn is None:
             raise ValueError("No _canonical_repn ComponentMap was found on "
                              "block with name %s. Did you forget to preprocess?"
-                             % (model.cname(True)))
+                             % (model.name(True)))
 
         for name in constraint_list:
             constraint_set = constraint_list[ name ]
@@ -221,7 +221,7 @@ class GLPKDirect ( OptSolver ):
                     raise ValueError("No entry found in _canonical_repn ComponentMap on "
                                      "block %s for active constraint with name %s. "
                                      "Did you forget to preprocess?"
-                                     % (model.cname(True), constraint.cname(True)))
+                                     % (model.name(True), constraint.name(True)))
 
                 offset = 0.0
                 if 0 in expression:
@@ -273,7 +273,7 @@ class GLPKDirect ( OptSolver ):
                 raise ValueError("No entry found in _canonical_repn ComponentMap on "
                                  "block %s for active objective with name %s. "
                                  "Did you forget to preprocess?"
-                                 % (model.cname(True), objective[key].cname(True)))
+                                 % (model.name(True), objective[key].name(True)))
 
             if expression.is_constant():
                 msg = "Ignoring objective '%s[%s]' which is constant"
