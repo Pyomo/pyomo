@@ -3,6 +3,37 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 4.4 (4.4.X)
+-------------------------------------------------------------------------------
+
+- Output a warning in benders when the solver interface used to solve the 
+  master problem does not report a solution gap
+- Document DAE transformations (#28)
+- Allow use of ellipsis in the middle of the indices when slicing
+- The Component slicing logic now uses simple slices (`:`) for matching a
+  single index and the Ellipsis (`...`) for matching zero or more indices.
+- Fixing Python 3 compatibility problems in pyomo.dae & dae examples.
+- Support evaluating external functions in AMPL-stype shared libraries.
+- Renaming "BasicExternalFunction" to "AMPLExternalFunction"
+- Allowing Params to be used in setting bounds on a ContinuousSet.
+- Use HTTPS with NEOS
+- Allow a mutable Parameter that has not been initialized with a value to 
+  be used in the rhs of an equality constraint. (#13)
+- Updates to SolverFactor to better support functionality offered by the 
+  'executable' keyword for SystemCallSolver.
+- Updates to writers to enforce consistent output ordering in quadratic 
+  expressions.
+- Improving the error message for Constraint rules that return None
+- Adding PySP solver interface to the SD solver
+- Adding an implicit SP representation to PySP that uses annotations
+  for declaring mutable parameters as stochastic data and providing
+  a distribution (only tables supported for now).
+- Partial fix for infinite recursion reported (#6). This will support
+  creating scalar (simple) components by passing a set([None]) in
+  as the index.
+- Extending component slicing ability to nested (hierarchical) slices. 
+
+-------------------------------------------------------------------------------
 Pyomo 4.3 (4.3.11381)
 -------------------------------------------------------------------------------
 
