@@ -114,32 +114,25 @@ class IVariable(IComponent, NumericValue):
             return 0
         return 1
 
-    def __nonzero__(self):
-        """
-        Return True if the value is defined and non-zero.
-        """
-        if self.value:
-            return True
-        if self.value is None:
-            raise ValueError("Var value is undefined")
-        return False
-
     def __call__(self, exception=True):
         """Compute the value of this variable."""
         return self.value
-
-    __bool__ = __nonzero__
 
     def fix(self, *val):
         """
         Set the fixed indicator to True. Value argument is optional,
         indicating the variable should be fixed at its current value.
         """
-        raise NotImplementedError
+        if len(val) == 1:
+            self.value = val[0]
+        elif len(val) > 1:
+            raise TypeError("fix expected at most 1 arguments, "
+                            "got %d" % (len(val)))
+        self.fixed = True
 
     def unfix(self):
         """Sets the fixed indicator to False."""
-        raise NotImplementedError
+        self.fixed = False
 
     free=unfix
 

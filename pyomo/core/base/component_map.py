@@ -64,30 +64,10 @@ class ComponentMap(collections.MutableMapping):
 
     def __str__(self):
         """String representation of the mapping."""
-        tmp = '{' + \
-              (', '.join(component.cname(True)+": "+str(val) \
-                        for component, val \
-                        in itervalues(self._dict))) + \
-              '}'
-        return tmp
-
-    def pprint(self, stream=None, indent=1, width=80, depth=None, verbose=False):
-        """
-        Pretty-print a Python object to a stream [default is sys.stdout].
-        """
-        if verbose:
-            tmp = dict((repr(component.cname(True))+" (id="+str(id(component))+")", val)
-                           for component, val \
-                           in itervalues(self._dict))
-        else:
-            tmp = dict((repr(component.cname(True))+" (id="+str(id(component))+")", val)
-                           for component, val \
-                           in itervalues(self._dict))
-        pprint.pprint(tmp,
-                      stream=stream,
-                      indent=indent,
-                      width=width,
-                      depth=depth)
+        tmp = dict()
+        for c,v in self.items():
+            tmp[str(c)+" (id="+str(id(c))+")"] = v
+        return str(tmp)
 
     #
     # Implement MutableMapping abstract methods
@@ -97,10 +77,8 @@ class ComponentMap(collections.MutableMapping):
         try:
             return self._dict[id(component)][1]
         except KeyError:
-            cname = component.cname(True)
-            raise KeyError("Component with name: "
-                           +cname+
-                           " (id=%s)" % id(component))
+            raise KeyError("Component with id: %s"
+                           % (id(component)))
 
     def __setitem__(self, component, value):
         self._dict[id(component)] = (component,value)
@@ -109,10 +87,8 @@ class ComponentMap(collections.MutableMapping):
         try:
             del self._dict[id(component)]
         except KeyError:
-            cname = component.cname(True)
-            raise KeyError("Component with name: "
-                           +cname+
-                           " (id=%s)" % id(component))
+            raise KeyError("Component with id: %s"
+                            % (id(component)))
 
     def __iter__(self):
         return (component \

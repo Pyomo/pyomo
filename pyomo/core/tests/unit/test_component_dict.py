@@ -8,8 +8,17 @@
 #  _________________________________________________________________________
 
 import pickle
+import collections
 
 import pyutilib.th as unittest
+from pyomo.core.base.component_interface import (IObjectWithParent,
+                                                 IActiveObject,
+                                                 IComponent,
+                                                 _IActiveComponent,
+                                                 IComponentContainer,
+                                                 _IActiveComponentContainer,
+                                                 IBlockStorage)
+from pyomo.core.base.component_interface import IBlockStorage
 from pyomo.core.base.component_block import (block,
                                              block_dict)
 
@@ -35,184 +44,152 @@ class _TestComponentDictBase(object):
     _container_type = None
     _ctype_factory = None
 
-    def setUp(self):
-        self.model = block()
-
-    def tearDown(self):
-        self.model = None
-        self._arg = None
-
     def test_init1(self):
-        model = self.model
-        model.c = self._container_type()
+        cdict = self._container_type()
 
     def test_init2(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._ctype_factory())
-                              for i in index)
+        cdict = self._container_type((i, self._ctype_factory())
+                                 for i in index)
         with self.assertRaises(TypeError):
-            model.d = \
-                self._container_type(*tuple((i, self._ctype_factory())
-                                   for i in index))
+            self._container_type(*tuple((i, self._ctype_factory())
+                                        for i in index))
+
+    def test_type(self):
+        cdict = self._container_type()
+        self.assertTrue(isinstance(cdict, IObjectWithParent))
+        self.assertTrue(isinstance(cdict, IComponentContainer))
+        self.assertFalse(isinstance(cdict, IComponent))
+        self.assertTrue(isinstance(cdict, collections.Mapping))
+        self.assertTrue(isinstance(cdict, collections.MutableMapping))
+        self.assertTrue(issubclass(type(cdict), collections.Mapping))
+        self.assertTrue(issubclass(type(cdict), collections.MutableMapping))
 
     def test_len1(self):
-        model = self.model
-        model = block()
-        model.c = self._container_type()
-        self.assertEqual(len(model.c), 0)
+        cdict = self._container_type()
+        self.assertEqual(len(cdict), 0)
 
     def test_len2(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._ctype_factory())
-                              for i in index)
-        self.assertEqual(len(model.c), len(index))
+        cdict = self._container_type((i, self._ctype_factory())
+                                     for i in index)
+        self.assertEqual(len(cdict), len(index))
 
     def test_setitem(self):
-        model = self.model
-        model = block()
-        model.c = self._container_type()
+        cdict = self._container_type()
         index = ['a', 1, None, (1,), (1,2)]
         for i in index:
-            self.assertTrue(i not in model.c)
+            self.assertTrue(i not in cdict)
         for cnt, i in enumerate(index, 1):
-            model.c[i] = self._ctype_factory()
-            self.assertEqual(len(model.c), cnt)
-            self.assertTrue(i in model.c)
+            cdict[i] = self._ctype_factory()
+            self.assertEqual(len(cdict), cnt)
+            self.assertTrue(i in cdict)
 
     # The immediately following this one was originally written when
     # implicit assignment for update was supported. This should be
     # examined more carefully before supporting it.
     # For now just test that implicit assignment raises an exception
     def test_wrong_type_init(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
         with self.assertRaises(TypeError):
-            model.c = self._container_type(
+            c = self._container_type(
                 (i, _bad_ctype()) for i in index)
 
     def test_wrong_type_update(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type()
+        c = self._container_type()
         with self.assertRaises(TypeError):
-            model.c.update((i, _bad_ctype()) for i in index)
+            c.update((i, _bad_ctype()) for i in index)
 
     def test_wrong_type_setitem(self):
-        model = self.model
-        model.c = self._container_type()
+        c = self._container_type()
         with self.assertRaises(TypeError):
-            model.c[1] = _bad_ctype()
-        model.c[1] = self._ctype_factory()
+            c[1] = _bad_ctype()
+        c[1] = self._ctype_factory()
         with self.assertRaises(TypeError):
-            model.c[1] = _bad_ctype()
+            c[1] = _bad_ctype()
 
     def test_has_parent_init(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c[1] = self._ctype_factory()
+        c = self._container_type()
+        c[1] = self._ctype_factory()
         with self.assertRaises(ValueError):
-            model.d = self._container_type(model.c)
+            d = self._container_type(c)
         with self.assertRaises(ValueError):
-            model.d = self._container_type(dict(model.c))
+            d = self._container_type(dict(c))
 
     def test_has_parent_update(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c[1] = self._ctype_factory()
-        model.c.update(model.c)
-        self.assertEqual(len(model.c), 1)
-        model.c.update(dict(model.c))
-        self.assertEqual(len(model.c), 1)
-        model.d = self._container_type()
+        c = self._container_type()
+        c[1] = self._ctype_factory()
+        c.update(c)
+        self.assertEqual(len(c), 1)
+        c.update(dict(c))
+        self.assertEqual(len(c), 1)
+        d = self._container_type()
         with self.assertRaises(ValueError):
-            model.d.update(model.c)
+            d.update(c)
         with self.assertRaises(ValueError):
-            model.d.update(dict(model.c))
+            d.update(dict(c))
 
     def test_has_parent_setitem(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c[1] = self._ctype_factory()
-        model.c[1] = model.c[1]
+        c = self._container_type()
+        c[1] = self._ctype_factory()
+        c[1] = c[1]
         with self.assertRaises(ValueError):
-            model.c[2] = model.c[1]
-        model.d = self._container_type()
+            c[2] = c[1]
+        d = self._container_type()
         with self.assertRaises(ValueError):
-            model.d[None] = model.c[1]
-
-    """
-    # make sure an existing Data object is NOT replaced
-    # by a call to setitem but simply updated.
-    def test_setitem_exists(self):
-        model = self.model
-        index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._arg) for i in index)
-        self.assertEqual(len(model.c), len(index))
-        for i in index:
-            self.assertTrue(i in model.c)
-            cdata = model.c[i]
-            model.c[i] = self._arg
-            self.assertEqual(len(model.c), len(index))
-            self.assertTrue(i in model.c)
-            self.assertEqual(id(cdata), id(model.c[i]))
-    """
+            d[None] = c[1]
 
     # make sure an existing Data object IS replaced
     # by a call to setitem and not simply updated.
     def test_setitem_exists_overwrite(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._ctype_factory())
+        c = self._container_type((i, self._ctype_factory())
                               for i in index)
-        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(len(c), len(index))
         for i in index:
-            self.assertTrue(i in model.c)
-            cdata = model.c[i]
-            model.c[i] = self._ctype_factory()
-            self.assertEqual(len(model.c), len(index))
-            self.assertTrue(i in model.c)
-            self.assertNotEqual(id(cdata), id(model.c[i]))
+            self.assertTrue(i in c)
+            cdata = c[i]
+            c[i] = self._ctype_factory()
+            self.assertEqual(len(c), len(index))
+            self.assertTrue(i in c)
+            self.assertNotEqual(id(cdata), id(c[i]))
             self.assertEqual(cdata.parent, None)
 
     def test_delitem(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._ctype_factory())
+        c = self._container_type((i, self._ctype_factory())
                               for i in index)
-        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(len(c), len(index))
         for cnt, i in enumerate(index, 1):
-            self.assertTrue(i in model.c)
-            cdata = model.c[i]
+            self.assertTrue(i in c)
+            cdata = c[i]
             self.assertEqual(id(cdata.parent),
-                             id(model.c))
-            del model.c[i]
-            self.assertEqual(len(model.c), len(index)-cnt)
-            self.assertTrue(i not in model.c)
+                             id(c))
+            del c[i]
+            self.assertEqual(len(c), len(index)-cnt)
+            self.assertTrue(i not in c)
             self.assertEqual(cdata.parent, None)
 
     def test_iter(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._ctype_factory())
+        c = self._container_type((i, self._ctype_factory())
                               for i in index)
-        self.assertEqual(len(model.c), len(index))
-        comp_index = [i for i in model.c]
+        self.assertEqual(len(c), len(index))
+        comp_index = [i for i in c]
         self.assertEqual(len(comp_index), len(index))
         for idx in comp_index:
             self.assertTrue(idx in index)
 
     # TODO
     def Xtest_clone(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._ctype_factory())
+        c = self._container_type((i, self._ctype_factory())
                               for i in index)
-        inst = model.clone()
-        self.assertNotEqual(id(inst.c), id(model.c))
+        inst = clone()
+        self.assertNotEqual(id(inst.c), id(c))
         for i in index:
-            self.assertNotEqual(id(inst.c[i]), id(model.c[i]))
+            self.assertNotEqual(id(inst.c[i]), id(c[i]))
 
     # TODO
     def Xtest_pickle(self):
@@ -232,56 +209,112 @@ class _TestComponentDictBase(object):
             self.assertTrue(cdict[i].parent is cdict)
 
     def test_keys(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
         raw_constraint_dict = dict((i, self._ctype_factory())
                                    for i in index)
-        model.c = self._container_type(raw_constraint_dict)
+        c = self._container_type(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()),
                                 key=str),
-                         sorted(list(model.c.keys()), key=str))
+                         sorted(list(c.keys()), key=str))
 
     def test_values(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
         raw_constraint_dict = dict((i, self._ctype_factory())
                                    for i in index)
-        model.c = self._container_type(raw_constraint_dict)
+        c = self._container_type(raw_constraint_dict)
         self.assertEqual(
             sorted(list(id(_v)
                         for _v in raw_constraint_dict.values()),
                    key=str),
             sorted(list(id(_v)
-                        for _v in model.c.values()),
+                        for _v in c.values()),
                    key=str))
 
     def test_items(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
         raw_constraint_dict = dict((i, self._ctype_factory())
                                    for i in index)
-        model.c = self._container_type(raw_constraint_dict)
+        c = self._container_type(raw_constraint_dict)
         self.assertEqual(
             sorted(list((_i, id(_v))
                         for _i,_v in raw_constraint_dict.items()),
                    key=str),
             sorted(list((_i, id(_v))
-                        for _i,_v in model.c.items()),
+                        for _i,_v in c.items()),
                    key=str))
 
     def test_update(self):
-        model = self.model
         index = ['a', 1, None, (1,), (1,2)]
         raw_constraint_dict = dict((i, self._ctype_factory())
                                    for i in index)
-        model.c = self._container_type()
-        model.c.update(raw_constraint_dict)
+        c = self._container_type()
+        c.update(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()),
                                 key=str),
-                         sorted(list(model.c.keys()), key=str))
+                         sorted(list(c.keys()), key=str))
+
+    def test_clear(self):
+        c = self._container_type()
+        c[1] = self._ctype_factory()
+        c1 = c[1]
+        with self.assertRaises(ValueError):
+            c[None] = c1
+        d = self._container_type()
+        with self.assertRaises(ValueError):
+            d[1] = c1
+        c.clear()
+        d[1] = c1
+
+    def test_eq(self):
+        cdict1 = self._container_type()
+        cdict1[1] = self._ctype_factory()
+        cdict2 = self._container_type()
+        cdict2[1] = self._ctype_factory()
+
+        self.assertNotEqual(cdict1, set())
+        self.assertFalse(cdict1 == set())
+        self.assertNotEqual(cdict1, list())
+        self.assertFalse(cdict1 == list())
+        self.assertNotEqual(cdict1, tuple())
+        self.assertFalse(cdict1 == tuple())
+        self.assertNotEqual(cdict1, dict())
+        self.assertFalse(cdict1 == dict())
+
+        self.assertTrue(cdict1 == cdict1)
+        self.assertEqual(cdict1, cdict1)
+        self.assertTrue(cdict1 == dict(cdict1))
+        self.assertEqual(cdict1, dict(cdict1))
+        self.assertTrue(dict(cdict1) == cdict1)
+        self.assertEqual(dict(cdict1), cdict1)
+
+        self.assertFalse(cdict2 == cdict1)
+        self.assertTrue(cdict2 != cdict1)
+        self.assertNotEqual(cdict2, cdict1)
+
+        self.assertFalse(cdict1 == cdict2)
+        self.assertTrue(cdict1 != cdict2)
+        self.assertNotEqual(cdict1, cdict2)
+
+        cdict1.clear()
+
+        self.assertNotEqual(cdict1, set())
+        self.assertFalse(cdict1 == set())
+        self.assertNotEqual(cdict1, list())
+        self.assertFalse(cdict1 == list())
+        self.assertNotEqual(cdict1, tuple())
+        self.assertFalse(cdict1 == tuple())
+        self.assertEqual(cdict1, dict())
+        self.assertTrue(cdict1 == dict())
+
+    def test_child_key(self):
+        cdict = self._container_type()
+        c = self._ctype_factory()
+        with self.assertRaises(ValueError):
+            cdict.child_key(c)
+        cdict[1] = c
+        self.assertEqual(cdict.child_key(c), 1)
 
     def test_name(self):
-        model = self.model
         components = {}
         components['a'] = self._ctype_factory()
         components[1] = self._ctype_factory()
@@ -292,16 +325,28 @@ class _TestComponentDictBase(object):
 
         for key, c in components.items():
             self.assertTrue(c.parent is None)
+            self.assertTrue(c.parent_block is None)
+            if isinstance(c, IBlockStorage):
+                self.assertTrue(c.root_block is c)
+            else:
+                self.assertTrue(c.root_block is None)
             self.assertEqual(c.name(False), None)
             self.assertEqual(c.name(True), None)
 
         cdict = self._container_type()
         self.assertTrue(cdict.parent is None)
+        self.assertTrue(cdict.parent_block is None)
+        self.assertTrue(cdict.root_block is None)
         self.assertEqual(cdict.name(False), None)
         self.assertEqual(cdict.name(True), None)
         cdict.update(components)
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
+            self.assertTrue(c.parent_block is None)
+            if isinstance(c, IBlockStorage):
+                self.assertTrue(c.root_block is c)
+            else:
+                self.assertTrue(c.root_block is None)
             self.assertEqual(c.name(False, convert=str),
                              "[%s]" % (str(key)))
             self.assertEqual(c.name(False, convert=repr),
@@ -311,11 +356,20 @@ class _TestComponentDictBase(object):
             self.assertEqual(c.name(True, convert=repr),
                              "[%s]" % (repr(key)))
 
+        model = block()
         model.cdict = cdict
+        self.assertTrue(model.parent is None)
+        self.assertTrue(model.parent_block is None)
+        self.assertTrue(model.root_block is model)
         self.assertTrue(cdict.parent is model)
+        self.assertTrue(cdict.parent_block is model)
+        self.assertTrue(cdict.root_block is model)
         self.assertEqual(cdict.name(False), "cdict")
         self.assertEqual(cdict.name(True), "cdict")
         for key, c in components.items():
+            self.assertTrue(c.parent is cdict)
+            self.assertTrue(c.parent_block is model)
+            self.assertTrue(c.root_block is model)
             self.assertEqual(c.name(False, convert=str),
                              "cdict[%s]" % (str(key)))
             self.assertEqual(c.name(False, convert=repr),
@@ -327,10 +381,21 @@ class _TestComponentDictBase(object):
 
         b = block()
         b.model = model
+        self.assertTrue(b.parent is None)
+        self.assertTrue(b.parent_block is None)
+        self.assertTrue(b.root_block is b)
         self.assertTrue(model.parent is b)
+        self.assertTrue(model.parent_block is b)
+        self.assertTrue(model.root_block is b)
+        self.assertTrue(cdict.parent is model)
+        self.assertTrue(cdict.parent_block is model)
+        self.assertTrue(cdict.root_block is b)
         self.assertEqual(cdict.name(False), "cdict")
         self.assertEqual(cdict.name(True), "model.cdict")
         for key, c in components.items():
+            self.assertTrue(c.parent is cdict)
+            self.assertTrue(c.parent_block is model)
+            self.assertTrue(c.root_block is b)
             self.assertEqual(c.name(False, convert=str),
                              "cdict[%s]" % (str(key)))
             self.assertEqual(c.name(False, convert=repr),
@@ -342,10 +407,24 @@ class _TestComponentDictBase(object):
 
         bdict = block_dict()
         bdict[0] = b
+        self.assertTrue(bdict.parent is None)
+        self.assertTrue(bdict.parent_block is None)
+        self.assertTrue(bdict.root_block is None)
         self.assertTrue(b.parent is bdict)
+        self.assertTrue(b.parent_block is None)
+        self.assertTrue(b.root_block is b)
+        self.assertTrue(model.parent is b)
+        self.assertTrue(model.parent_block is b)
+        self.assertTrue(model.root_block is b)
+        self.assertTrue(cdict.parent is model)
+        self.assertTrue(cdict.parent_block is model)
+        self.assertTrue(cdict.root_block is b)
         self.assertEqual(cdict.name(False), "cdict")
         self.assertEqual(cdict.name(True), "[0].model.cdict")
         for key, c in components.items():
+            self.assertTrue(c.parent is cdict)
+            self.assertTrue(c.parent_block is model)
+            self.assertTrue(c.root_block is b)
             self.assertEqual(c.name(False, convert=str),
                              "cdict[%s]" % (str(key)))
             self.assertEqual(c.name(False, convert=repr),
@@ -357,10 +436,27 @@ class _TestComponentDictBase(object):
 
         m = block()
         m.bdict = bdict
+        self.assertTrue(m.parent is None)
+        self.assertTrue(m.parent_block is None)
+        self.assertTrue(m.root_block is m)
         self.assertTrue(bdict.parent is m)
+        self.assertTrue(bdict.parent_block is m)
+        self.assertTrue(bdict.root_block is m)
+        self.assertTrue(b.parent is bdict)
+        self.assertTrue(b.parent_block is m)
+        self.assertTrue(b.root_block is m)
+        self.assertTrue(model.parent is b)
+        self.assertTrue(model.parent_block is b)
+        self.assertTrue(model.root_block is m)
+        self.assertTrue(cdict.parent is model)
+        self.assertTrue(cdict.parent_block is model)
+        self.assertTrue(cdict.root_block is m)
         self.assertEqual(cdict.name(False), "cdict")
         self.assertEqual(cdict.name(True), "bdict[0].model.cdict")
         for key, c in components.items():
+            self.assertTrue(c.parent is cdict)
+            self.assertTrue(c.parent_block is model)
+            self.assertTrue(c.root_block is m)
             self.assertEqual(c.name(False, convert=str),
                              "cdict[%s]" % (str(key)))
             self.assertEqual(c.name(False, convert=repr),
@@ -370,119 +466,103 @@ class _TestComponentDictBase(object):
             self.assertEqual(c.name(True, convert=repr),
                              "bdict[0].model.cdict[%s]" % (repr(key)))
 
-    def test_clear(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c[1] = self._ctype_factory()
-        c1 = model.c[1]
-        with self.assertRaises(ValueError):
-            model.c[None] = c1
-        model.d = self._container_type()
-        with self.assertRaises(ValueError):
-            model.d[1] = c1
-        model.c.clear()
-        model.d[1] = c1
-
-    def test_eq(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c[1] = self._ctype_factory()
-        model.d = self._container_type()
-        model.d[1] = self._ctype_factory()
-
-        self.assertNotEqual(model.c, [])
-        self.assertFalse(model.c == [])
-
-        self.assertTrue(model.c == model.c)
-        self.assertEqual(model.c, model.c)
-        self.assertTrue(model.c == dict(model.c))
-        self.assertEqual(model.c, dict(model.c))
-        self.assertTrue(dict(model.c) == model.c)
-        self.assertEqual(dict(model.c), model.c)
-
-        self.assertFalse(model.d == model.c)
-        self.assertTrue(model.d != model.c)
-        self.assertNotEqual(model.d, model.c)
-
-        self.assertFalse(model.c == model.d)
-        self.assertTrue(model.c != model.d)
-        self.assertNotEqual(model.c, model.d)
-
 class _TestActiveComponentDictBase(_TestComponentDictBase):
 
-    def test_activate(self):
-        model = self.model
-        index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._ctype_factory())
-                              for i in index)
-        self.assertEqual(len(model.c), len(index))
-        self.assertEqual(model.c.active, True)
-        model.c._active = False
-        for i in index:
-            model.c[i]._active = False
-        self.assertEqual(model.c.active, False)
-        for i in index:
-            self.assertEqual(model.c[i].active, False)
-        model.c.activate()
-        self.assertEqual(model.c.active, True)
+    def test_active_type(self):
+        cdict = self._container_type()
+        self.assertTrue(isinstance(cdict, IComponentContainer))
+        self.assertTrue(isinstance(cdict, _IActiveComponentContainer))
+        self.assertTrue(isinstance(cdict, IObjectWithParent))
+        self.assertFalse(isinstance(cdict, IComponent))
+        self.assertFalse(isinstance(cdict, _IActiveComponent))
 
-    def test_activate(self):
-        model = self.model
-        index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._container_type((i, self._ctype_factory())
-                              for i in index)
-        self.assertEqual(len(model.c), len(index))
-        self.assertEqual(model.c.active, True)
-        for i in index:
-            self.assertEqual(model.c[i].active, True)
-        model.c.deactivate()
-        self.assertEqual(model.c.active, False)
-        for i in index:
-            self.assertEqual(model.c[i].active, False)
-
-    # Befault, assigning a new component to a dict container makes it
-    # active (unless the default active state for the container
-    # datatype is False, which is not the case for any currently
-    # existing implementations).
     def test_active(self):
-        model = self.model
-        model.c = self._container_type()
-        self.assertEqual(model.c.active, True)
-        model.c.deactivate()
-        self.assertEqual(model.c.active, False)
-        model.c[1] = self._ctype_factory()
-        self.assertEqual(model.c.active, True)
+        components = {}
+        components['a'] = self._ctype_factory()
+        components[1] = self._ctype_factory()
+        components[None] = self._ctype_factory()
+        components[(1,)] = self._ctype_factory()
+        components[(1,2)] = self._ctype_factory()
+        components['(1,2)'] = self._ctype_factory()
 
-"""
-class TestExpressionDict(_TestComponentDictBase,
-                         unittest.TestCase):
-    _container_type = expression_dict
-    _ctype_factory = lambda self: expression(self.model.x**3)
-    def setUp(self):
-        _TestComponentDictBase.setUp(self)
-        self.model.x = variable()
+        cdict = self._container_type()
+        cdict.update(components)
+        with self.assertRaises(AttributeError):
+            cdict.active = False
+        for c in cdict.values():
+            with self.assertRaises(AttributeError):
+                c.active = False
 
-#
-# Test components that include activate/deactivate
-# functionality.
-#
+        model = block()
+        model.cdict = cdict
+        b = block()
+        b.model = model
+        bdict = block_dict()
+        bdict[0] = b
+        bdict[None] = block()
+        m = block()
+        m.bdict = bdict
 
-class TestConstraintDict(_TestActiveComponentDictBase,
-                         unittest.TestCase):
-    _container_type = constraint_dict
-    _ctype_factory = lambda self: constraint(self.model.x >= 1)
-    def setUp(self):
-        _TestComponentDictBase.setUp(self)
-        self.model.x = variable()
+        self.assertEqual(m.active, True)
+        self.assertEqual(bdict.active, True)
+        self.assertEqual(bdict[None].active, True)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(cdict.active, True)
+        for c in cdict.values():
+            self.assertEqual(c.active, True)
 
-class TestObjectiveDict(_TestActiveComponentDictBase,
-                        unittest.TestCase):
-    _container_type = objective_dict
-    _ctype_factory = lambda self: objective(self.model.x**2)
-    def setUp(self):
-        _TestComponentDictBase.setUp(self)
-        self.model.x = variable()
-"""
+        m.deactivate()
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(bdict.active, False)
+        self.assertEqual(bdict[None].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(cdict.active, False)
+        for c in cdict.values():
+            self.assertEqual(c.active, False)
+
+        test_key = list(components.keys())[0]
+        del cdict[test_key]
+        cdict[test_key] = components[test_key]
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(bdict.active, False)
+        self.assertEqual(bdict[None].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(cdict.active, False)
+        for c in cdict.values():
+            self.assertEqual(c.active, False)
+
+        del cdict[test_key]
+        components[test_key].activate()
+        self.assertEqual(components[test_key].active, True)
+        cdict[test_key] = components[test_key]
+
+        self.assertEqual(m.active, True)
+        self.assertEqual(bdict.active, True)
+        self.assertEqual(bdict[None].active, False)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(cdict.active, True)
+        for key, c in cdict.items():
+            if key == test_key:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+
+        m.activate()
+
+        self.assertEqual(m.active, True)
+        self.assertEqual(bdict.active, True)
+        self.assertEqual(bdict[None].active, True)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(cdict.active, True)
+        for c in cdict.values():
+            self.assertEqual(c.active, True)
 
 if __name__ == "__main__":
     unittest.main()

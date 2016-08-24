@@ -7,9 +7,19 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import random
 import pickle
+import collections
 
 import pyutilib.th as unittest
+from pyomo.core.base.component_interface import (IObjectWithParent,
+                                                 IActiveObject,
+                                                 IComponent,
+                                                 _IActiveComponent,
+                                                 IComponentContainer,
+                                                 _IActiveComponentContainer,
+                                                 IBlockStorage)
+from pyomo.core.base.component_interface import IBlockStorage
 from pyomo.core.base.component_block import (block,
                                              block_list)
 
@@ -35,299 +45,275 @@ class _TestComponentListBase(object):
     _container_type = None
     _ctype_factory = None
 
-    def setUp(self):
-        self.model = block()
-
-    def tearDown(self):
-        self.model = None
-
     def test_init1(self):
-        model = self.model
-        model.c = self._container_type()
+        clist = self._container_type()
 
     def test_init2(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
         with self.assertRaises(TypeError):
-            model.d = self._container_type(
+            d = self._container_type(
                 *tuple(self._ctype_factory() for i in index))
 
+    def test_type(self):
+        clist = self._container_type()
+        self.assertTrue(isinstance(clist, IObjectWithParent))
+        self.assertTrue(isinstance(clist, IComponentContainer))
+        self.assertFalse(isinstance(clist, IComponent))
+        self.assertTrue(isinstance(clist, collections.Sequence))
+        self.assertTrue(issubclass(type(clist), collections.Sequence))
+
+
     def test_len1(self):
-        model = self.model
-        model.c = self._container_type()
-        self.assertEqual(len(model.c), 0)
+        c = self._container_type()
+        self.assertEqual(len(c), 0)
 
     def test_len2(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
-        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(len(c), len(index))
 
     def test_append(self):
-        model = self.model
-        model.c = self._container_type()
+        c = self._container_type()
         index = range(5)
-        self.assertEqual(len(model.c), 0)
+        self.assertEqual(len(c), 0)
         for i in index:
             c_new = self._ctype_factory()
-            model.c.append(c_new)
-            self.assertEqual(id(model.c[-1]), id(c_new))
-            self.assertEqual(len(model.c), i+1)
+            c.append(c_new)
+            self.assertEqual(id(c[-1]), id(c_new))
+            self.assertEqual(len(c), i+1)
 
     def test_insert(self):
-        model = self.model
-        model.c = self._container_type()
+        c = self._container_type()
         index = range(5)
-        self.assertEqual(len(model.c), 0)
+        self.assertEqual(len(c), 0)
         for i in index:
             c_new = self._ctype_factory()
-            model.c.insert(0, c_new)
-            self.assertEqual(id(model.c[0]), id(c_new))
-            self.assertEqual(len(model.c), i+1)
+            c.insert(0, c_new)
+            self.assertEqual(id(c[0]), id(c_new))
+            self.assertEqual(len(c), i+1)
 
     def test_setitem(self):
-        model = self.model
-        model.c = self._container_type()
+        c = self._container_type()
         index = range(5)
         for i in index:
-            model.c.append(self._ctype_factory())
+            c.append(self._ctype_factory())
         for i in index:
             c_new = self._ctype_factory()
-            self.assertNotEqual(id(c_new), id(model.c[i]))
-            model.c[i] = c_new
-            self.assertEqual(len(model.c), len(index))
-            self.assertEqual(id(c_new), id(model.c[i]))
+            self.assertNotEqual(id(c_new), id(c[i]))
+            c[i] = c_new
+            self.assertEqual(len(c), len(index))
+            self.assertEqual(id(c_new), id(c[i]))
 
     def test_wrong_type_init(self):
-        model = self.model
         index = range(5)
         with self.assertRaises(TypeError):
-            model.c = self._container_type(
+            c = self._container_type(
                 _bad_ctype() for i in index)
 
     def test_wrong_type_append(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c.append(self._ctype_factory())
+        c = self._container_type()
+        c.append(self._ctype_factory())
         with self.assertRaises(TypeError):
-            model.c.append(_bad_ctype())
+            c.append(_bad_ctype())
 
     def test_wrong_type_insert(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c.append(self._ctype_factory())
-        model.c.insert(0, self._ctype_factory())
+        c = self._container_type()
+        c.append(self._ctype_factory())
+        c.insert(0, self._ctype_factory())
         with self.assertRaises(TypeError):
-            model.c.insert(0, _bad_ctype())
+            c.insert(0, _bad_ctype())
 
     def test_wrong_type_setitem(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c.append(self._ctype_factory())
-        model.c[0] = self._ctype_factory()
+        c = self._container_type()
+        c.append(self._ctype_factory())
+        c[0] = self._ctype_factory()
         with self.assertRaises(TypeError):
-            model.c[0] = _bad_ctype()
+            c[0] = _bad_ctype()
 
     def test_has_parent_init(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c.append(self._ctype_factory())
+        c = self._container_type()
+        c.append(self._ctype_factory())
         with self.assertRaises(ValueError):
-            model.c.append(model.c[0])
+            c.append(c[0])
         with self.assertRaises(ValueError):
-            model.d = self._container_type(model.c)
+            d = self._container_type(c)
 
     def test_has_parent_append(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c.append(self._ctype_factory())
+        c = self._container_type()
+        c.append(self._ctype_factory())
         with self.assertRaises(ValueError):
-            model.c.append(model.c[0])
+            c.append(c[0])
         d = []
-        d.append(model.c[0])
-        model.d = self._container_type()
+        d.append(c[0])
+        d = self._container_type()
         with self.assertRaises(ValueError):
-            model.d.append(model.c[0])
+            d.append(c[0])
 
     def test_has_parent_insert(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c.append(self._ctype_factory())
-        model.c.insert(0, self._ctype_factory())
+        c = self._container_type()
+        c.append(self._ctype_factory())
+        c.insert(0, self._ctype_factory())
         with self.assertRaises(ValueError):
-            model.c.insert(0, model.c[0])
+            c.insert(0, c[0])
         d = []
-        d.insert(0, model.c[0])
-        model.d = self._container_type()
+        d.insert(0, c[0])
+        d = self._container_type()
         with self.assertRaises(ValueError):
-            model.d.insert(0, model.c[0])
+            d.insert(0, c[0])
 
     def test_has_parent_setitem(self):
-        model = self.model
-        model.c = self._container_type()
-        model.c.append(self._ctype_factory())
-        model.c[0] = self._ctype_factory()
-        model.c[0] = model.c[0]
-        model.c.append(self._ctype_factory())
+        c = self._container_type()
+        c.append(self._ctype_factory())
+        c[0] = self._ctype_factory()
+        c[0] = c[0]
+        c.append(self._ctype_factory())
         with self.assertRaises(ValueError):
-            model.c[0] = model.c[1]
+            c[0] = c[1]
 
-    # make sure an existing Data object IS replaced
-    # by a call to setitem and not simply updated.
     def test_setitem_exists_overwrite(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
-        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(len(c), len(index))
         for i in index:
-            cdata = model.c[i]
+            cdata = c[i]
             self.assertEqual(id(cdata.parent),
-                             id(model.c))
-            model.c[i] = self._ctype_factory()
-            self.assertEqual(len(model.c), len(index))
-            self.assertNotEqual(id(cdata), id(model.c[i]))
+                             id(c))
+            c[i] = self._ctype_factory()
+            self.assertEqual(len(c), len(index))
+            self.assertNotEqual(id(cdata), id(c[i]))
             self.assertEqual(cdata.parent, None)
 
     def test_delitem(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
-        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(len(c), len(index))
         for i in index:
-            cdata = model.c[0]
+            cdata = c[0]
             self.assertEqual(id(cdata.parent),
-                             id(model.c))
-            del model.c[0]
-            self.assertEqual(len(model.c), len(index)-(i+1))
+                             id(c))
+            del c[0]
+            self.assertEqual(len(c), len(index)-(i+1))
             self.assertEqual(cdata.parent, None)
 
     def test_iter(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
-        self.assertEqual(len(model.c), len(index))
-        raw_list = model.c[:]
+        self.assertEqual(len(c), len(index))
+        raw_list = c[:]
         self.assertEqual(type(raw_list), list)
-        for c1, c2 in zip(raw_list, model.c):
+        for c1, c2 in zip(raw_list, c):
             self.assertEqual(id(c1), id(c2))
 
     def test_reverse(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
-        raw_list = model.c[:]
+        raw_list = c[:]
         self.assertEqual(type(raw_list), list)
-        model.c.reverse()
+        c.reverse()
         raw_list.reverse()
-        for c1, c2 in zip(model.c, raw_list):
+        for c1, c2 in zip(c, raw_list):
             self.assertEqual(id(c1), id(c2))
 
     def test_remove(self):
-        model = self.model
         model = block()
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
         for i in index:
-            cdata = model.c[0]
-            self.assertEqual(cdata in model.c, True)
-            model.c.remove(cdata)
-            self.assertEqual(cdata in model.c, False)
+            cdata = c[0]
+            self.assertEqual(cdata in c, True)
+            c.remove(cdata)
+            self.assertEqual(cdata in c, False)
 
     def test_pop(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
         for i in index:
-            cdata = model.c[-1]
-            self.assertEqual(cdata in model.c, True)
-            last = model.c.pop()
-            self.assertEqual(cdata in model.c, False)
+            cdata = c[-1]
+            self.assertEqual(cdata in c, True)
+            last = c.pop()
+            self.assertEqual(cdata in c, False)
             self.assertEqual(id(cdata), id(last))
 
     def test_index(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
         for i in index:
-            cdata = model.c[i]
-            self.assertEqual(model.c.index(cdata), i)
-            self.assertEqual(model.c.index(cdata, start=i), i)
+            cdata = c[i]
+            self.assertEqual(c.index(cdata), i)
+            self.assertEqual(c.index(cdata, start=i), i)
             with self.assertRaises(ValueError):
-                model.c.index(cdata, start=i+1)
+                c.index(cdata, start=i+1)
             with self.assertRaises(ValueError):
-                model.c.index(cdata, start=i, stop=i)
+                c.index(cdata, start=i, stop=i)
             with self.assertRaises(ValueError):
-                model.c.index(cdata, stop=i)
+                c.index(cdata, stop=i)
             self.assertEqual(
-                model.c.index(cdata, start=i, stop=i+1), i)
+                c.index(cdata, start=i, stop=i+1), i)
             with self.assertRaises(ValueError):
-                model.c.index(cdata, start=i+1, stop=i+1)
+                c.index(cdata, start=i+1, stop=i+1)
             self.assertEqual(
-                model.c.index(cdata, start=-len(index)+i), i)
+                c.index(cdata, start=-len(index)+i), i)
             if i == index[-1]:
                 self.assertEqual(
-                    model.c.index(cdata, start=-len(index)+i+1), i)
+                    c.index(cdata, start=-len(index)+i+1), i)
             else:
                 with self.assertRaises(ValueError):
                     self.assertEqual(
-                        model.c.index(cdata, start=-len(index)+i+1),
+                        c.index(cdata, start=-len(index)+i+1),
                         i)
             if i == index[-1]:
                 with self.assertRaises(ValueError):
                     self.assertEqual(
-                        model.c.index(cdata, stop=-len(index)+i+1), i)
+                        c.index(cdata, stop=-len(index)+i+1), i)
             else:
                 self.assertEqual(
-                    model.c.index(cdata, stop=-len(index)+i+1), i)
+                    c.index(cdata, stop=-len(index)+i+1), i)
         tmp = self._ctype_factory()
         with self.assertRaises(ValueError):
-            model.c.index(tmp)
+            c.index(tmp)
         with self.assertRaises(ValueError):
-            model.c.index(tmp, stop=len(model.c)+1)
+            c.index(tmp, stop=len(c)+1)
 
     def test_extend(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
         c_more_list = [self._ctype_factory() for i in index]
-        self.assertEqual(len(model.c), len(index))
+        self.assertEqual(len(c), len(index))
         self.assertTrue(len(c_more_list) > 0)
         for cdata in c_more_list:
             self.assertEqual(cdata.parent, None)
-        model.c.extend(c_more_list)
+        c.extend(c_more_list)
         for cdata in c_more_list:
             self.assertEqual(id(cdata.parent),
-                             id(model.c))
+                             id(c))
 
     def test_count(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
         for i in index:
-            self.assertEqual(model.c.count(model.c[i]), 1)
+            self.assertEqual(c.count(c[i]), 1)
 
     # TODO
     def Xtest_clone(self):
-        model = self.model
         index = range(5)
-        model.c = self._container_type(
+        c = self._container_type(
             self._ctype_factory() for i in index)
-        model_clone = model.clone()
-        self.assertNotEqual(id(model_clone.c), id(model.c))
+        model_clone = clone()
+        self.assertNotEqual(id(model_clone.c), id(c))
         for i in index:
-            self.assertNotEqual(id(model_clone.c[i]), id(model.c[i]))
+            self.assertNotEqual(id(model_clone.c[i]), id(c[i]))
 
     # TODO
     def Xtest_pickle(self):
@@ -346,142 +332,293 @@ class _TestComponentListBase(object):
             self.assertTrue(pickled_clist[i].parent is clist)
             self.assertTrue(clist[i].parent is clist)
 
+    def test_eq(self):
+        clist1 = self._container_type()
+        clist1.append(self._ctype_factory())
+        clist2 = self._container_type()
+        clist2.append(self._ctype_factory())
+
+        self.assertNotEqual(clist1, set())
+        self.assertFalse(clist1 == set())
+        self.assertNotEqual(clist1, list())
+        self.assertFalse(clist1 == list())
+        self.assertNotEqual(clist1, tuple())
+        self.assertFalse(clist1 == tuple())
+        self.assertNotEqual(clist1, dict())
+        self.assertFalse(clist1 == dict())
+
+        self.assertTrue(clist1 == clist1)
+        self.assertEqual(clist1, clist1)
+        self.assertTrue(clist1 == list(clist1))
+        self.assertEqual(clist1, list(clist1))
+        self.assertTrue(clist1 == tuple(clist1))
+        self.assertEqual(clist1, tuple(clist1))
+        self.assertTrue(list(clist1) == clist1)
+        self.assertEqual(list(clist1), clist1)
+        self.assertTrue(tuple(clist1) == clist1)
+        self.assertEqual(tuple(clist1), clist1)
+
+        self.assertFalse(clist2 == clist1)
+        self.assertTrue(clist2 != clist1)
+        self.assertNotEqual(clist2, clist1)
+
+        self.assertFalse(clist1 == clist2)
+        self.assertTrue(clist1 != clist2)
+        self.assertNotEqual(clist1, clist2)
+
+        clist1 = self._container_type()
+
+        self.assertEqual(clist1, set())
+        self.assertTrue(clist1 == set())
+        self.assertEqual(clist1, list())
+        self.assertTrue(clist1 == list())
+        self.assertEqual(clist1, tuple())
+        self.assertTrue(clist1 == tuple())
+        self.assertNotEqual(clist1, dict())
+        self.assertFalse(clist1 == dict())
+
+    def test_child_key(self):
+        clist = self._container_type()
+        c = self._ctype_factory()
+        with self.assertRaises(ValueError):
+            clist.child_key(c)
+        clist.append(c)
+        self.assertEqual(clist.child_key(c), 0)
+
     def test_name(self):
-        model = self.model
         components = [self._ctype_factory() for i in range(5)]
 
         for c in components:
             self.assertTrue(c.parent is None)
+            self.assertTrue(c.parent_block is None)
+            if isinstance(c, IBlockStorage):
+                self.assertTrue(c.root_block is c)
+            else:
+                self.assertTrue(c.root_block is None)
             self.assertEqual(c.name(False), None)
             self.assertEqual(c.name(True), None)
 
         clist = self._container_type()
         self.assertTrue(clist.parent is None)
+        self.assertTrue(clist.parent_block is None)
+        self.assertTrue(clist.root_block is None)
         self.assertEqual(clist.name(False), None)
         self.assertEqual(clist.name(True), None)
         clist.extend(components)
         for i, c in enumerate(components):
             self.assertTrue(c.parent is clist)
+            self.assertTrue(c.parent_block is None)
+            if isinstance(c, IBlockStorage):
+                self.assertTrue(c.root_block is c)
+            else:
+                self.assertTrue(c.root_block is None)
             self.assertEqual(c.name(False), "[%s]" % (i))
             self.assertEqual(c.name(True), "[%s]" % (i))
 
+        model = block()
         model.clist = clist
+        self.assertTrue(model.parent is None)
+        self.assertTrue(model.parent_block is None)
+        self.assertTrue(model.root_block is model)
         self.assertTrue(clist.parent is model)
+        self.assertTrue(clist.parent_block is model)
+        self.assertTrue(clist.root_block is model)
         self.assertEqual(clist.name(False), "clist")
         self.assertEqual(clist.name(True), "clist")
         for i, c in enumerate(components):
+            self.assertTrue(c.parent is clist)
+            self.assertTrue(c.parent_block is model)
+            self.assertTrue(c.root_block is model)
             self.assertEqual(c.name(False), "clist[%s]" % (i))
             self.assertEqual(c.name(True), "clist[%s]" % (i))
 
         b = block()
         b.model = model
+        self.assertTrue(b.parent is None)
+        self.assertTrue(b.parent_block is None)
+        self.assertTrue(b.root_block is b)
         self.assertTrue(model.parent is b)
+        self.assertTrue(model.parent_block is b)
+        self.assertTrue(model.root_block is b)
+        self.assertTrue(clist.parent is model)
+        self.assertTrue(clist.parent_block is model)
+        self.assertTrue(clist.root_block is b)
         self.assertEqual(clist.name(False), "clist")
         self.assertEqual(clist.name(True), "model.clist")
         for i, c in enumerate(components):
+            self.assertTrue(c.parent is clist)
+            self.assertTrue(c.parent_block is model)
+            self.assertTrue(c.root_block is b)
             self.assertEqual(c.name(False), "clist[%s]" % (i))
             self.assertEqual(c.name(True), "model.clist[%s]" % (i))
 
         blist = block_list()
         blist.append(b)
+        self.assertTrue(blist.parent is None)
+        self.assertTrue(blist.parent_block is None)
+        self.assertTrue(blist.root_block is None)
         self.assertTrue(b.parent is blist)
+        self.assertTrue(b.parent_block is None)
+        self.assertTrue(b.root_block is b)
+        self.assertTrue(model.parent is b)
+        self.assertTrue(model.parent_block is b)
+        self.assertTrue(model.root_block is b)
+        self.assertTrue(clist.parent is model)
+        self.assertTrue(clist.parent_block is model)
+        self.assertTrue(clist.root_block is b)
         self.assertEqual(clist.name(False), "clist")
         self.assertEqual(clist.name(True), "[0].model.clist")
         for i, c in enumerate(components):
+            self.assertTrue(c.parent is clist)
+            self.assertTrue(c.parent_block is model)
+            self.assertTrue(c.root_block is b)
             self.assertEqual(c.name(False), "clist[%s]" % (i))
             self.assertEqual(c.name(True),
                              "[0].model.clist[%s]" % (i))
 
         m = block()
         m.blist = blist
+        self.assertTrue(m.parent is None)
+        self.assertTrue(m.parent_block is None)
+        self.assertTrue(m.root_block is m)
         self.assertTrue(blist.parent is m)
+        self.assertTrue(blist.parent_block is m)
+        self.assertTrue(blist.root_block is m)
+        self.assertTrue(b.parent is blist)
+        self.assertTrue(b.parent_block is m)
+        self.assertTrue(b.root_block is m)
+        self.assertTrue(model.parent is b)
+        self.assertTrue(model.parent_block is b)
+        self.assertTrue(model.root_block is m)
+        self.assertTrue(clist.parent is model)
+        self.assertTrue(clist.parent_block is model)
+        self.assertTrue(clist.root_block is m)
         self.assertEqual(clist.name(False), "clist")
         self.assertEqual(clist.name(True), "blist[0].model.clist")
         for i, c in enumerate(components):
+            self.assertTrue(c.parent is clist)
+            self.assertTrue(c.parent_block is model)
+            self.assertTrue(c.root_block is m)
             self.assertEqual(c.name(False), "clist[%s]" % (i))
             self.assertEqual(c.name(True),
                              "blist[0].model.clist[%s]" % (i))
 
 class _TestActiveComponentListBase(_TestComponentListBase):
 
-    def test_activate(self):
-        model = self.model
-        index = list(range(4))
-        model.c = self._container_type(self._ctype_factory()
-                              for i in index)
-        self.assertEqual(len(model.c), len(index))
-        self.assertEqual(model.c.active, True)
-        model.c._active = False
-        for i in index:
-            model.c[i]._active = False
-        self.assertEqual(model.c.active, False)
-        for i in index:
-            self.assertEqual(model.c[i].active, False)
-        model.c.activate()
-        self.assertEqual(model.c.active, True)
+    def test_active_type(self):
+        clist = self._container_type()
+        self.assertTrue(isinstance(clist, IComponentContainer))
+        self.assertTrue(isinstance(clist, _IActiveComponentContainer))
+        self.assertTrue(isinstance(clist, IObjectWithParent))
+        self.assertFalse(isinstance(clist, IComponent))
+        self.assertFalse(isinstance(clist, _IActiveComponent))
 
-    def test_activate(self):
-        model = self.model
-        index = list(range(4))
-        model.c = self._container_type(self._ctype_factory()
-                              for i in index)
-        self.assertEqual(len(model.c), len(index))
-        self.assertEqual(model.c.active, True)
-        for i in index:
-            self.assertEqual(model.c[i].active, True)
-        model.c.deactivate()
-        self.assertEqual(model.c.active, False)
-        for i in index:
-            self.assertEqual(model.c[i].active, False)
-
-    # Befault, assigning a new component to a dict container makes it
-    # active (unless the default active state for the container
-    # datatype is False, which is not the case for any currently
-    # existing implementations).
     def test_active(self):
-        model = self.model
+        index = list(range(4))
+        clist = self._container_type(self._ctype_factory()
+                                     for i in index)
+        with self.assertRaises(AttributeError):
+            clist.active = False
+        for c in clist:
+            with self.assertRaises(AttributeError):
+                c.active = False
+
         model = block()
-        model.c = self._container_type()
-        self.assertEqual(model.c.active, True)
-        model.c.deactivate()
-        self.assertEqual(model.c.active, False)
-        model.c.append(self._ctype_factory())
-        self.assertEqual(model.c.active, True)
-        model.c.deactivate()
-        self.assertEqual(model.c.active, False)
-        model.c.insert(0, self._ctype_factory())
-        self.assertEqual(model.c.active, True)
+        model.clist = clist
+        b = block()
+        b.model = model
+        blist = block_list()
+        blist.append(b)
+        blist.append(block())
+        m = block()
+        m.blist = blist
 
-"""
-class TestExpressionList(_TestComponentListBase,
-                         unittest.TestCase):
-    _container_type = expression_list
-    _ctype_factory = lambda self: expression(self.model.x**3)
-    def setUp(self):
-        _TestComponentListBase.setUp(self)
-        self.model.x = variable()
+        self.assertEqual(m.active, True)
+        self.assertEqual(blist.active, True)
+        self.assertEqual(blist[1].active, True)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(clist.active, True)
+        for c in clist:
+            self.assertEqual(c.active, True)
 
-#
-# Test components that include activate/deactivate
-# functionality.
-#
+        m.deactivate()
 
-class TestConstraintList(_TestActiveComponentListBase,
-                         unittest.TestCase):
-    _container_type = constraint_list
-    _ctype_factory = lambda self: constraint(self.model.x >= 1)
-    def setUp(self):
-        _TestComponentListBase.setUp(self)
-        self.model.x = variable()
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(clist.active, False)
+        for c in clist:
+            self.assertEqual(c.active, False)
 
-class TestObjectiveList(_TestActiveComponentListBase,
-                        unittest.TestCase):
-    _container_type = objective_list
-    _ctype_factory = lambda self: objective(self.model.x**2)
-    def setUp(self):
-        _TestComponentListBase.setUp(self)
-        self.model.x = variable()
-"""
+        test_c = clist[0]
+        clist.remove(test_c)
+        clist.append(test_c)
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(clist.active, False)
+        for c in clist:
+            self.assertEqual(c.active, False)
+
+        clist.remove(test_c)
+        test_c.activate()
+        self.assertEqual(test_c.active, True)
+        self.assertEqual(clist.active, False)
+        clist.append(test_c)
+
+        self.assertEqual(m.active, True)
+        self.assertEqual(blist.active, True)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(clist.active, True)
+        for c in clist:
+            if c is test_c:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+
+        m.activate()
+
+        self.assertEqual(m.active, True)
+        self.assertEqual(blist.active, True)
+        self.assertEqual(blist[1].active, True)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(clist.active, True)
+        for c in clist:
+            self.assertEqual(c.active, True)
+
+        m.deactivate()
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(clist.active, False)
+        for c in clist:
+            self.assertEqual(c.active, False)
+
+        clist[len(clist)-1] = self._ctype_factory()
+
+        self.assertEqual(m.active, True)
+        self.assertEqual(blist.active, True)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(clist.active, True)
+        for i, c in enumerate(clist):
+            if i == len(clist)-1:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
 
 if __name__ == "__main__":
     unittest.main()

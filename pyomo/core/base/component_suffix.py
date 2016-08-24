@@ -9,6 +9,7 @@
 
 __all__ = ("suffix",)
 
+import logging
 import abc
 
 import pyutilib.math
@@ -19,8 +20,6 @@ from pyomo.core.base.component_interface import \
      _IActiveComponentContainer,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.base.component_dict import ComponentDict
-from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.set_types import (RealSet,
                                        IntegerSet)
@@ -28,8 +27,7 @@ from pyomo.core.base.component_map import ComponentMap
 
 import six
 
-_infinity = pyutilib.math.infinity
-_negative_infinity = -pyutilib.math.infinity
+logger = logging.getLogger('pyomo.core')
 
 class suffix(IComponent, _IActiveComponent, ComponentMap):
     """A container for storing extranious model data that
@@ -38,6 +36,7 @@ class suffix(IComponent, _IActiveComponent, ComponentMap):
     # property will be set in suffix.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_direction",
                  "_datatype")
     if six.PY3:
@@ -66,13 +65,13 @@ class suffix(IComponent, _IActiveComponent, ComponentMap):
 
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._active = True
         self._direction = None
         self._datatype = None
 
         # call the setters
         self.direction = kwds.pop('direction', suffix.LOCAL)
-        self.datatype = kwds.pop('direction', suffix.FLOAT)
-
+        self.datatype = kwds.pop('datatype', suffix.FLOAT)
         super(suffix, self).__init__(*args, **kwds)
 
     def export_enabled(self):
@@ -129,21 +128,14 @@ class suffix(IComponent, _IActiveComponent, ComponentMap):
         for ndx in self:
             self[ndx] = value
 
-    def clear_value(self, component, expand=True):
+    def clear_value(self, component):
         logger.warning("DEPRECATION WARNING: suffix.clear_value "
                        "will be removed in the future. Use "
                        "'del suffix[key]' instead.")
-        if expand and component.is_indexed():
-            for component_ in itervalues(component):
-                try:
-                    del self[component_]
-                except KeyError:
-                    pass
-        else:
-            try:
-                del self[component]
-            except KeyError:
-                pass
+        try:
+            del self[component]
+        except KeyError:
+            pass
 
     def clear_all_values(self):
         logger.warning(

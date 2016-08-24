@@ -64,9 +64,12 @@ class ComponentList(IComponentContainer,
                 # item by resetting its ._parent
                 self._data[i]._parent = None
                 item._parent = weakref.ref(self)
-                if hasattr(self, "_active"):
-                    self._active |= getattr(item, '_active', True)
                 self._data[i] = item
+                if (not getattr(self, "_active", True)) and \
+                   getattr(item, "_active", False):
+                    # this will notify all inactive
+                    # ancestors that they are now active
+                    item.activate()
                 return
             elif self._data[i] is item:
                 # a very special case that makes sense to handle
@@ -99,9 +102,12 @@ class ComponentList(IComponentContainer,
         if item.ctype == self.ctype:
             if item._parent is None:
                 item._parent = weakref.ref(self)
-                if hasattr(self, "_active"):
-                    self._active |= getattr(item, '_active', True)
                 self._data.insert(i, item)
+                if (not getattr(self, "_active", True)) and \
+                   getattr(item, "_active", False):
+                    # this will notify all inactive
+                    # ancestors that they are now active
+                    item.activate()
                 return
             # see note about allowing components to live
             # in more than one container
@@ -133,17 +139,36 @@ class ComponentList(IComponentContainer,
         return self._data.__len__()
 
     #
+    # Extend the interface to allow for equality comparison
+    #
+    # We want to avoid generating Pyomo expressions due to
+    # comparison of values.
+
+    # Convert both objects to a plain list of (type(val),
+    # id(val)) tuples and compare that instead.
+    def __eq__(self, other):
+        if not isinstance(other, (collections.Set,
+                                  collections.Sequence)):
+            return False
+        return tuple((type(val), id(val))
+                     for val in self) == \
+               tuple((type(val), id(val))
+                     for val in other)
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+    #
     # Override a few default implementations on MutableSequence
     #
+    # We want to avoid generating Pyomo expressions due to
+    # comparison of values.
 
-    # We want to avoid generating Pyomo expressions by
-    # comparing values
     def __contains__(self, item):
         item_id = id(item)
         return any(item_id == id(_v) for _v in self._data)
 
-    # We want to avoid generating Pyomo expressions by
-    # comparing values
     def index(self, item, start=0, stop=None):
         """S.index(value, [start, [stop]]) -> integer -- return first index of value.
 
@@ -164,8 +189,6 @@ class ComponentList(IComponentContainer,
             i += 1
         raise ValueError
 
-    # We want to avoid generating Pyomo expressions by
-    # comparing values
     def count(self, item):
         'S.count(value) -> integer -- return number of occurrences of value'
         item_id = id(item)
@@ -173,32 +196,9 @@ class ComponentList(IComponentContainer,
         assert cnt == 1
         return cnt
 
-    # Avoid errors related to calling __setitem__
-    # with a component that is already owned
     def reverse(self):
         'S.reverse() -- reverse *IN PLACE*'
         n = len(self)
         data = self._data
         for i in range(n//2):
             data[i], data[n-i-1] = data[n-i-1], data[i]
-
-if __name__ == "__main__":
-
-    class VarList(ComponentList):
-        __slots__ = ("_ctype",
-                     "_parent",
-                     "_data")
-        def __init__(self, *args, **kwds):
-            self._ctype = "Var"
-            self._parent = None
-            self._data = {}
-            super(VarList, self).__init__(*args, **kwds)
-
-    v = VarList()
-    print("issubclass: "+str(issubclass(ComponentList,
-                                        collections.MutableMapping)))
-    print("issubclass: "+str(issubclass(VarList,
-                                        collections.MutableMapping)))
-    print("isinstance: "+str(isinstance(v,
-                                        collections.MutableMapping)))
-    print(v)

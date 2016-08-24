@@ -16,7 +16,9 @@ import weakref
 
 from pyomo.core.base.component_interface import (IComponent,
                                                  IComponentContainer,
-                                                 IBlockStorage)
+                                                 _IActiveComponentContainer,
+                                                 IBlockStorage,
+                                                 _no_ctype)
 from pyomo.core.base.component_dict import ComponentDict
 from pyomo.core.base.component_list import ComponentList
 import pyomo.opt
@@ -47,6 +49,7 @@ class block(IBlockStorage):
     @_active.setter
     def _active(self, active):
         self.__active = active
+
     #
     # Define the IComponentContainer abstract methods
     #
@@ -67,7 +70,7 @@ class block(IBlockStorage):
     #
 
     def components(self,
-                   ctype,
+                   ctype=_no_ctype,
                    active=None,
                    sort=False,
                    descend_into=True,
@@ -77,26 +80,26 @@ class block(IBlockStorage):
 #            assert active is None
 #            assert sort is False
 #            assert descend_into is True
-            for component in itervalues(self.__byctype.get(ctype, {})):
-                if isinstance(component, IComponentContainer):
-                    for component in component.components():
-                        yield component
-                else:
+        for child in self.children(ctype=ctype,
+                                   active=active):
+            if isinstance(child, IComponentContainer):
+                for component in child.components():
                     yield component
+            else:
+                yield child
 
     def children(self,
-                 ctype,
-                 active=None,
-                 sort=False,
-                 descend_into=True,
-                 descent_order=None):
-            # TODO
-#            assert descent_order is None
-#            assert active is None
-#            assert sort is False
-#            assert descend_into is True
+                 ctype=_no_ctype,
+                 active=None):
+        if ctype is _no_ctype:
+            ctypes = self.__byctype.keys()
+        else:
+            # we assume a single ctype was given
+            ctypes = (ctype,)
+        for ctype in ctypes:
             for child in itervalues(self.__byctype.get(ctype, {})):
-                yield child
+                if (active is None) or (child.active == active):
+                    yield child
 
     def blocks(self,
                active=None,
@@ -213,30 +216,36 @@ class block(IBlockStorage):
         assert filename_ == filename
         return filename, symbol_map
 
-class block_list(ComponentList):
+class block_list(ComponentList,
+                 _IActiveComponentContainer):
     """A list-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_data")
     if six.PY3:
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._active = True
         super(block_list, self).__init__(*args, **kwds)
 
-class block_dict(ComponentDict):
+class block_dict(ComponentDict,
+                 _IActiveComponentContainer):
     """A dict-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_data")
     if six.PY3:
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._active = True
         super(block_dict, self).__init__(*args, **kwds)
 
 class StaticBlock(IBlockStorage):

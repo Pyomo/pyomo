@@ -30,7 +30,7 @@ from pyomo.core.base import minimize, maximize
 
 import six
 
-class IObjective(IExpression):
+class IObjective(IExpression, _IActiveComponent):
     """
     The interface for optimization objectives.
     """
@@ -58,11 +58,13 @@ class objective(IObjective):
     # property will be set in objective.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_expr",
                  "_sense",
                  "__weakref__")
     def __init__(self, expr=None, sense=minimize):
         self._parent = None
+        self._active = True
         self._expr = None
         self._sense = None
 
@@ -99,28 +101,32 @@ class objective(IObjective):
                              "[minimize (%s), maximize (%s)]. Invalid "
                              "value: %s'" % (minimize, maximize, sense))
 
-class objective_list(ComponentList):
+class objective_list(ComponentList, _IActiveComponentContainer):
     """A list-style container for objectives."""
     # To avoid a circular import, for the time being, this
     # property will be set in objective.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_data")
     if six.PY3:
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._active = True
         super(objective_list, self).__init__(*args, **kwds)
 
-class objective_dict(ComponentDict):
+class objective_dict(ComponentDict, _IActiveComponentContainer):
     """A dict-style container for objectives."""
     # To avoid a circular import, for the time being, this
     # property will be set in objective.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_data")
     if six.PY3:
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._active = True
         super(objective_dict, self).__init__(*args, **kwds)

@@ -74,13 +74,16 @@ class ComponentDict(IComponentContainer,
         if item.ctype == self.ctype:
             if item._parent is None:
                 item._parent = weakref.ref(self)
-                if hasattr(self, "_active"):
-                    self._active |= getattr(item, '_active', True)
                 if key in self._data:
                     # release the current component
                     # * see __delitem__ for explanation
                     self._data[key]._parent = None
                 self._data[key] = item
+                if (not getattr(self, "_active", True)) and \
+                   getattr(item, "_active", False):
+                    # this will notify all inactive
+                    # ancestors that they are now active
+                    item.activate()
                 return
             elif (key in self._data) and (self._data[key] is item):
                 # a very special case that makes sense to handle
@@ -142,24 +145,3 @@ class ComponentDict(IComponentContainer,
 
     def __ne__(self, other):
         return not (self == other)
-
-if __name__ == "__main__":
-
-    class VarDict(ComponentDict):
-        __slots__ = ("_ctype",
-                     "_parent",
-                     "_data")
-        def __init__(self, *args, **kwds):
-            self._ctype = "Var"
-            self._parent = None
-            self._data = {}
-            super(VarDict, self).__init__(*args, **kwds)
-
-    v = VarDict()
-    print("issubclass: "+str(issubclass(ComponentDict,
-                                        collections.MutableMapping)))
-    print("issubclass: "+str(issubclass(VarDict,
-                                        collections.MutableMapping)))
-    print("isinstance: "+str(isinstance(v,
-                                        collections.MutableMapping)))
-    print(v.keys())

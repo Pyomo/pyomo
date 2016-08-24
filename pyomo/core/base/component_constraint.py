@@ -34,7 +34,7 @@ from pyomo.core.base import expr as EXPR
 
 import six
 
-class IConstraint(IComponent):
+class IConstraint(IComponent, _IActiveComponent):
     """
     The interface for optimization constraints.
     """
@@ -81,12 +81,12 @@ class IConstraint(IComponent):
             L <= f(x) (<= U)
             (U >=) f(x) >= L
         """
-        if self.lower is None:
+        if self.body is None:
+            return None
+        elif self.lower is None:
             return float('-inf')
         else:
             return value(self.lower)-value(self.body)
-
-        raise NotImplementedError
 
     def uslack(self):
         """
@@ -94,7 +94,9 @@ class IConstraint(IComponent):
             (L <=) f(x) <= U
             U >= f(x) (>= L)
         """
-        if self.upper is None:
+        if self.body is None:
+            return None
+        elif self.upper is None:
             return float('inf')
         else:
             return value(self.upper)-value(self.body)
@@ -105,6 +107,7 @@ class constraint(IConstraint):
     # property will be set in constraint.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_body",
                  "_lower",
                  "_upper",
@@ -112,6 +115,7 @@ class constraint(IConstraint):
                  "__weakref__")
     def __init__(self, expr=None):
         self._parent = None
+        self._active = True
         self._body = None
         self._lower = None
         self._upper = None
@@ -161,10 +165,9 @@ class constraint(IConstraint):
                     arg0 = as_numeric(arg0)
                     if not arg0.is_fixed():
                         raise ValueError(
-                            "Constraint '%s' found a 3-tuple (lower,"
+                            "Constraint expression is a 3-tuple (lower,"
                             " expression, upper) but the lower "
-                            "value was non-constant."
-                            % (self.cname(True)))
+                            "value was non-constant.")
 
                 arg1 = expr[1]
                 if arg1 is not None:
@@ -175,22 +178,21 @@ class constraint(IConstraint):
                     arg2 = as_numeric(arg2)
                     if not arg2.is_fixed():
                         raise ValueError(
-                            "Constraint '%s' found a 3-tuple (lower,"
+                            "Constraint expression is a 3-tuple (lower,"
                             " expression, upper) but the upper "
-                            "value was non-constant."
-                            % (self.cname(True)))
+                            "value was non-constant.")
 
                 self._lower = arg0
                 self._body  = arg1
                 self._upper = arg2
             else:
                 raise ValueError(
-                    "Constructor rule for constraint '%s' returned "
+                    "Can not set constraint expression using "
                     "a tuple of length %d. Expecting a tuple of "
                     "length 2 or 3:\n"
                     "Equality:   (left, right)\n"
                     "Inequality: (lower, expression, upper)"
-                    % (self.cname(True), len(expr)))
+                    % (len(expr)))
 
             relational_expr = False
         else:
@@ -198,19 +200,19 @@ class constraint(IConstraint):
                 relational_expr = expr.is_relational()
                 if not relational_expr:
                     raise ValueError(
-                        "Constraint '%s' does not have a proper "
+                        "Constraint expression does not have a proper "
                         "value. Found '%s'\nExpecting a tuple or "
                         "equation. Examples:"
                         "\n   summation(model.costs) == model.income"
                         "\n   (0, model.price[item], 50)"
-                        % (self.cname(True), str(expr)))
+                        % (str(expr)))
             except AttributeError:
-                msg = ("Constraint '%s' does not have a proper "
+                msg = ("Constraint expression does not have a proper "
                        "value. Found '%s'\nExpecting a tuple or "
                        "equation. Examples:"
                        "\n   summation(model.costs) == model.income"
                        "\n   (0, model.price[item], 50)"
-                       % (self.cname(True), str(expr)))
+                       % (str(expr)))
                 if type(expr) is bool:
                     msg += ("\nNote: constant Boolean expressions "
                             "are not valid constraint expressions. "
@@ -278,11 +280,10 @@ class constraint(IConstraint):
                         #       warning
                         #
                         raise ValueError(
-                            "Constraint '%s' encountered a strict "
+                            "Constraint expression is a strict "
                             "inequality expression ('>' or '<'). All"
                             " constraints must be formulated using "
-                            "using '<=', '>=', or '=='."
-                            % (self.cname(True)))
+                            "using '<=', '>=', or '=='.")
 
                 try:
                     _args = (expr._lhs, expr._rhs)
@@ -303,19 +304,16 @@ class constraint(IConstraint):
 
                     if not _args[0].is_fixed():
                         raise ValueError(
-                            "Constraint '%s' found a double-sided "
+                            "Constraint expression is a double-sided "
                             "inequality expression (lower <= "
                             "expression <= upper) but the lower "
-                            "bound was non-constant."
-                            % (self.cname(True)))
+                            "bound was non-constant.")
                     if not _args[2].is_fixed():
                         raise ValueError(
-                            "Constraint '%s' found a double-sided "\
+                            "Constraint expression is a double-sided "\
                             "inequality expression (lower <= "
                             "expression <= upper) but the upper "
-                            "bound was non-constant."
-                            % (self.cname(True)))
-
+                            "bound was non-constant.")
                     self._lower = _args[0]
                     self._body  = _args[1]
                     self._upper = _args[2]
@@ -350,13 +348,13 @@ class constraint(IConstraint):
             if not pyutilib.math.is_finite(val):
                 if val > 0:
                     raise ValueError(
-                        "Constraint '%s' created with a +Inf lower "
-                        "bound." % (self.cname(True)))
+                        "Constraint expression has a +Inf lower "
+                        "bound.")
                 self._lower = None
             elif bool(val > 0) == bool(val <= 0):
                 raise ValueError(
-                    "Constraint '%s' created with a non-numeric "
-                    "lower bound." % (self.cname(True)))
+                    "Constraint expression has a non-numeric "
+                    "lower bound.")
 
         if (self._upper is not None) and \
            is_constant(self._upper):
@@ -364,13 +362,13 @@ class constraint(IConstraint):
             if not pyutilib.math.is_finite(val):
                 if val < 0:
                     raise ValueError(
-                        "Constraint '%s' created with a -Inf upper "
-                        "bound." % (self.cname(True)))
+                        "Constraint expression has a -Inf upper "
+                        "bound.")
                 self._upper = None
             elif bool(val > 0) == bool(val <= 0):
                 raise ValueError(
-                    "Constraint '%s' created with a non-numeric "
-                    "upper bound." % (self.cname(True)))
+                    "Constraint expression has a non-numeric "
+                    "upper bound.")
 
         #
         # Error check, to ensure that we don't have a constraint that
@@ -382,8 +380,8 @@ class constraint(IConstraint):
         if self._equality:
             if self._lower is None:
                 raise ValueError(
-                    "Equality constraint '%s' defined with "
-                    "non-finite term." % (self.cname(True)))
+                    "Equality constraint expression defined with "
+                    "non-finite term.")
             assert self._lower is self._upper
 
     #
@@ -409,28 +407,34 @@ class constraint(IConstraint):
     def strict_upper(self):
         return False
 
-class constraint_list(ComponentList):
+class constraint_list(ComponentList,
+                      _IActiveComponentContainer):
     """A list-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_data")
     if six.PY3:
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._active = True
         super(constraint_list, self).__init__(*args, **kwds)
 
-class constraint_dict(ComponentDict):
+class constraint_dict(ComponentDict,
+                      _IActiveComponentContainer):
     """A dict-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py
     _ctype = None
     __slots__ = ("_parent",
+                 "_active",
                  "_data")
     if six.PY3:
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
+        self._active = True
         super(constraint_dict, self).__init__(*args, **kwds)

@@ -903,3 +903,11 @@ class IndexedParam(Param):
 
 register_component(Param, "Parameter data that is used to define a model instance.")
 
+# Setting these properties here avoids a circular import.
+# This is temporary.
+from pyomo.core.base.component_parameter import (parameter,
+                                                 parameter_list,
+                                                 parameter_dict)
+parameter._ctype = Param
+parameter_list._ctype = Param
+parameter_dict._ctype = Param

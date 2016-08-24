@@ -12,10 +12,12 @@ __all__ = ("IExpression",
            "expression_list",
            "expression_dict")
 
+import sys
 import abc
 
 import pyutilib.math
 
+import pyomo.core.base.expr_common
 from pyomo.core.base.component_interface import \
     (IComponent,
      _IActiveComponent,
@@ -102,8 +104,9 @@ class IExpression(IComponent, NumericValue):
         if self.expr is None:
             ostream.write("Undefined")
         else:
-            self.expr.to_string( ostream=ostream, verbose=verbose,
-                                   precedence=precedence )
+            self.expr.to_string(ostream=ostream,
+                                verbose=verbose,
+                                precedence=precedence)
         if _verbose:
             ostream.write("}")
 

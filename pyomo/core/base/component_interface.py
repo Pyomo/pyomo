@@ -7,12 +7,15 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ('IComponent',
+__all__ = ('IObjectWithParent',
+           'IActiveObject',
+           'IComponent',
            '_IActiveComponent',
            'IComponentContainer',
            '_IActiveComponentContainer',
            'IBlockStorage')
 
+import sys
 import abc
 import copy
 import weakref
@@ -21,7 +24,7 @@ import six
 from six.moves import xrange
 
 def _not_implemented(*args, **kwds):
-    raise NotImplementedError
+    raise NotImplementedError     #pragma:nocover
 
 def _abstract_readwrite_property(**kwds):
     return abc.abstractproperty(fget=_not_implemented,
@@ -32,8 +35,10 @@ def _abstract_readonly_property(**kwds):
     return abc.abstractproperty(fget=_not_implemented,
                                 **kwds)
 
-class IParentPointerObject(six.with_metaclass(abc.ABCMeta, object)):
-    """Interface Objects that maintain a weak reference to a parent
+_no_ctype = object()
+
+class IObjectWithParent(six.with_metaclass(abc.ABCMeta, object)):
+    """Interface for objects that maintain a weak reference to a parent
     storage object."""
     __slots__ = ()
 
@@ -43,7 +48,9 @@ class IParentPointerObject(six.with_metaclass(abc.ABCMeta, object)):
     # by overriding the @property method
     #
 
-    _parent = _abstract_readwrite_property()
+    _parent = _abstract_readwrite_property(
+        doc=("A weak reference to parent object of "
+             "type IComponentContainer or None."))
 
     @property
     def parent(self):
@@ -65,15 +72,14 @@ class IParentPointerObject(six.with_metaclass(abc.ABCMeta, object)):
     @property
     def root_block(self):
         """Returns the root storage block above this component"""
-        parent = self.parent_block
-        root = parent
-        while parent is not None:
-            root = parent
-            parent = parent.parent_block
-        if (root is None) and \
-           isinstance(self, IBlockStorage):
-            root = self
-        return root
+        root_block = None
+        if isinstance(self, IBlockStorage):
+            root_block = self
+        parent_block = self.parent_block
+        while parent_block is not None:
+            root_block = parent_block
+            parent_block = parent_block.parent_block
+        return root_block
 
     def name(self,
               fully_qualified=False,
@@ -124,11 +130,9 @@ class IParentPointerObject(six.with_metaclass(abc.ABCMeta, object)):
             else:
                 return name
 
-class IComponent(IParentPointerObject):
-    """
-    Interface for components that can be stored on a
-    component block or inside a component container.
-    """
+class IActiveObject(six.with_metaclass(abc.ABCMeta, object)):
+    """Interface for objects that support activate/deactivate
+    semantics."""
     __slots__ = ()
 
     #
@@ -137,7 +141,40 @@ class IComponent(IParentPointerObject):
     # by overriding the @property method
     #
 
-    _ctype = _abstract_readonly_property()
+    active = _abstract_readonly_property(
+        doc=("A boolean indicating whether or "
+             "not this object is active."))
+
+    #
+    # Interface
+    #
+
+    @abc.abstractmethod
+    def activate(self):
+        """Set the active attribute to True"""
+        raise NotImplementedError     #pragma:nocover
+
+    @abc.abstractmethod
+    def deactivate(self):
+        """Set the active attribute to False"""
+        raise NotImplementedError     #pragma:nocover
+
+class IComponent(IObjectWithParent):
+    """
+    Interface for components that can be stored inside
+    objects of type IComponentContainer."""
+
+    __slots__ = ()
+
+    #
+    # Implementations can choose to define these
+    # properties as using __slots__, __dict__, or
+    # by overriding the @property method
+    #
+
+    _ctype = _abstract_readonly_property(
+        doc=("The component type. Used by a parent "
+             "container to categorize this component."))
 
     #
     # Interface
@@ -148,11 +185,24 @@ class IComponent(IParentPointerObject):
         """Returns the component type"""
         return self._ctype
 
-class _IActiveComponent(object):
+    def to_string(self, ostream=None, verbose=None, precedence=0):
+        """Write the component to a buffer"""
+        if ostream is None:
+            ostream = sys.stdout
+        ostream.write(self.__str__())
+
+    def __str__(self):
+        name = self.name(True)
+        if name is None:
+            return "<"+self.__class__.__name__+">"
+        else:
+            return name
+
+class _IActiveComponent(IActiveObject):
     """
     To be used as an additional base class in IComponent
     implementations to add fuctionality for activating and
-    deactivating the component on a model.
+    deactivating the component.
     """
     __slots__ = ()
 
@@ -162,7 +212,10 @@ class _IActiveComponent(object):
     # by overriding the @property method
     #
 
-    _active = _abstract_readwrite_property()
+    _active = _abstract_readwrite_property(
+        doc=("A boolean indicating whethor or not any "
+             "components stored below this container "
+             "are active."))
 
     #
     # Interface
@@ -170,29 +223,31 @@ class _IActiveComponent(object):
 
     @property
     def active(self):
-        """Return the active attribute"""
+        """The active status of this container."""
         return self._active
 
     @active.setter
     def active(self, value):
-        """Set the active attribute to a specified value."""
-        raise AttributeError("Assignment not allowed. Use the "
-                             "(de)activate method")
+        raise AttributeError(
+            "Assignment not allowed. Use the "
+            "(de)activate method")
 
     def activate(self):
-        """Set the active attribute to True"""
+        """Activate this component. The active flag on the
+        parent container (if one exists) is set to True."""
         self._active = True
+        # the parent must also become active
         parent = self.parent
-        # if a component becomes active, the parent
-        # must also become active
-        if parent is not None:
-            self.parent._active = True
+        while (parent is not None) and \
+              (not parent._active):
+            parent._active = True
+            parent = parent.parent
 
     def deactivate(self):
-        """Set the active attribute to False"""
+        """Deactivate this component."""
         self._active = False
 
-class IComponentContainer(IParentPointerObject):
+class IComponentContainer(IObjectWithParent):
     """A container of modeling components."""
     __slots__ = ()
 
@@ -202,7 +257,9 @@ class IComponentContainer(IParentPointerObject):
     # by overriding the @property method
     #
 
-    _ctype = _abstract_readonly_property()
+    _ctype = _abstract_readonly_property(
+        doc=("The component container type. Used by a parent "
+             "container to categorize this container."))
 
     #
     # Interface
@@ -217,24 +274,24 @@ class IComponentContainer(IParentPointerObject):
     def components(self):
         """A generator over the set of components stored
         under this container."""
-        raise NotImplementedError
+        raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
     def child_key(self, component):
         """The lookup key associated with a child of this
         container."""
-        raise NotImplementedError
+        raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
     def children(self):
         """A generator over the children of this container."""
-        raise NotImplementedError
+        raise NotImplementedError     #pragma:nocover
 
-class _IActiveComponentContainer(object):
+class _IActiveComponentContainer(IActiveObject):
     """
-    To be used as an additional base class in Component
+    To be used as an additional base class in ComponentContainer
     implementations to add fuctionality for activating and
-    deactivating the component on a model.
+    deactivating the container and its children.
     """
     __slots__ = ()
 
@@ -252,28 +309,43 @@ class _IActiveComponentContainer(object):
 
     @property
     def active(self):
-        """Return the active attribute"""
+        """The active status of this container."""
         return self._active
 
     @active.setter
     def active(self, value):
         raise AttributeError(
             "Assignment not allowed. Use the "
-            "(de)activate methods.")
+            "(de)activate method.")
 
     def activate(self):
-        """Set the active attribute to True"""
+        """Activate this container. All children of this
+        container will be activated and the active flag on
+        all ancestors of this container will be set to
+        True."""
         self._active = True
+        # all of ancestors must also become active
+        parent = self.parent
+        while (parent is not None) and \
+              (not parent._active):
+            parent._active = True
+            parent = parent.parent
+        # all children must be activated
         for child in self.children():
-            child.activate()
+            if isinstance(child, IActiveObject):
+                child.activate()
 
     def deactivate(self):
-        """Set the active attribute to False"""
+        """Deactivate this container and all its children."""
         self._active = False
+        # all children must be deactivated
         for child in self.children():
-            children.deactivate()
+            if isinstance(child, IActiveObject):
+                child.deactivate()
 
-class IBlockStorage(IComponentContainer, _IActiveComponent):
+class IBlockStorage(IComponentContainer,
+                    _IActiveComponentContainer):
+    """A container that stores multiple types."""
     __slots__ = ()
 
     #
@@ -281,266 +353,19 @@ class IBlockStorage(IComponentContainer, _IActiveComponent):
     #
 
     @abc.abstractmethod
-    def components(self, ctype):
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def children(self, ctype):
-        raise NotImplementedError
-
-    @abc.abstractmethod
     def blocks(self):
-        raise NotImplementedError
+        raise NotImplementedError     #pragma:nocover
 
-if __name__ == "__main__":
+    #
+    # These methods are already declared abstract on
+    # IComponentContainer, but we redeclare them here to
+    # point out that the can accept a ctype
+    #
 
-    class Cont(IComponentContainer, _IActiveComponentContainer):
-        __slots__ = ("_parent",
-                     "_ctype",
-                     "_active",
-                     "_d",
-                     "_inv_d",
-                     "__weakref__")
-        def __init__(self, ctype):
-            self._parent = None
-            self._ctype = ctype
-            self._active = True
-            self._d = {}
-            self._inv_d = {}
-        def child_key(self, component):
-            return self._inv_d[id(component)]
-        def components(self,
-                       ctype,
-                       active=None,
-                       sort=False,
-                       descend_into=True,
-                       descent_order=None):
-            # TODO
-            assert descent_order is None
-            assert active is None
-            assert sort is False
-            assert descend_into is True
-            for ctype in ctypes:
-                for component in itervalues(self._d.get(ctype, {})):
-                    yield component
-        def children(self):
-            for ctype in self._d:
-                for child in self._d.get(ctype, {}):
-                    yield child
+    @abc.abstractmethod
+    def components(self, ctype=_no_ctype):
+        raise NotImplementedError     #pragma:nocover
 
-        def insert(self, key, component):
-            if component._parent is not None:
-                raise ValueError(
-                    "Can not store a component that has already "
-                    "been assigned a parent")
-            if component.ctype != self.ctype:
-                raise TypeError(
-                    "Component must have ctype=%s"
-                    % (str(self.ctype)))
-            self._d[key] = component
-            self._inv_d[id(component)] = key
-            component._parent = weakref.ref(self)
-            self._active |= component.active
-        def remove(self, component=None, key=None):
-            if component is not None:
-                assert key is None
-                key = self._inv_d[id(component)]
-            else:
-                assert key is not None
-                component = self._d[key]
-            del self._d[key]
-            del self._inv_d[id(component)]
-            component._parent = None
-
-    class C1(IComponent, _IActiveComponent):
-        __slots__ = ("_parent",
-                     "_ctype",
-                     "_active")
-        def __init__(self):
-            self._parent = None
-            self._ctype = "Variable"
-            self._active = True
-
-    class Block(IBlockStorage):
-        __slots__ = ("_parent",
-                     "_ctype",
-                     "_active",
-                     "_d",
-                     "_inv_d",
-                     "_names",
-                     "__weakref__")
-        def __init__(self):
-            self._parent = None
-            self._ctype = "Block"
-            self._active = True
-            self._d = {}
-            self._inv_d = {}
-            self._names = set()
-        def child_key(self, component):
-            return self._inv_d[id(component)]
-        def components(self):
-            return list(self._d.values())
-        children = components
-        def blocks(self):
-            raise NotImplementedError
-        def insert(self, key, component):
-            if component._parent is not None:
-                raise ValueError(
-                    "Can not store a component that has already "
-                    "been assigned a parent")
-            if key in self._names:
-                # TODO
-                print("WARNING: Overwriting existing component!")
-                self.remove(key=key)
-            if component.ctype not in self._d:
-                self._d[component.ctype] = {}
-            self._d[component.ctype][key] = component
-            self._inv_d[id(component)] = key
-            self._names.add(key)
-            component._parent = weakref.ref(self)
-        def remove(self, component=None, key=None):
-            if component is not None:
-                assert key is None
-                key = self._inv_d[id(component)]
-            else:
-                assert key is not None
-                component = self._d[component.ctype][key]
-            del self._d[component.ctype][key]
-            del self._inv_d[id(component)]
-            self._names.remove(key)
-            component._parent = None
-
-    print("\nCreating c")
-    c = C1()
-    print(c.name())
-    print(c.name(fully_qualified=True))
-    assert c.active
-    c.deactivate()
-    assert not c.active
-    assert c.parent is None
-    assert c.parent_block is None
-    assert c.root_block is None
-
-    print("\nCreating C")
-    C = Cont("Variable")
-    print(C.name())
-    print(C.name(fully_qualified=True))
-    assert C.active
-    C.deactivate()
-    assert not C.active
-    assert C.parent is None
-    assert C.parent_block is None
-    assert C.root_block is None
-    c.activate()
-    assert c.active
-    assert not C.active
-    assert C.parent is None
-    assert C.parent_block is None
-    assert C.root_block is None
-    C.insert("c", c)
-    assert C.active
-    print(c.name())
-    print(c.name(fully_qualified=True))
-    assert c.active
-    assert c.parent is C
-    assert c.parent_block is None
-    assert c.root_block is None
-
-    print("\nCreating b")
-    b = Block()
-    print(b.name())
-    print(b.name(fully_qualified=True))
-    assert b.active
-    assert b.parent is None
-    assert b.parent_block is None
-    assert b.root_block is b
-    b.insert("C", C)
-    print(C.name())
-    print(C.name(fully_qualified=True))
-    assert C.parent is b
-    assert C.parent_block is b
-    assert C.root_block is b
-    print(c.name())
-    print(c.name(fully_qualified=True))
-    assert c.parent is C
-    assert c.parent_block is b
-    assert c.root_block is b
-
-    print("\nCreating B")
-    B = Cont("Block")
-    print(B.name())
-    print(B.name(fully_qualified=True))
-    assert B.active
-    assert B.parent is None
-    assert B.parent_block is None
-    assert B.root_block is None
-    B.insert("b", b)
-    print(b.name())
-    print(b.name(fully_qualified=True))
-    assert b.parent is B
-    assert b.parent_block is None
-    assert b.root_block is b
-    print(C.name())
-    print(C.name(fully_qualified=True))
-    assert C.parent is b
-    assert C.parent_block is b
-    assert C.root_block is b
-    print(c.name())
-    print(c.name(fully_qualified=True))
-    assert c.parent is C
-    assert c.parent_block is b
-    assert c.root_block is b
-
-    print("\nCreating M")
-    M = Block()
-    print(M.name())
-    print(M.name(fully_qualified=True))
-    assert M.active
-    assert M.parent is None
-    assert M.parent_block is None
-    assert M.root_block is M
-    M.insert("B", B)
-    print(B.name())
-    print(B.name(fully_qualified=True))
-    assert B.parent is M
-    assert B.parent_block is M
-    assert B.root_block is M
-    print(b.name())
-    print(b.name(fully_qualified=True))
-    assert b.parent is B
-    assert b.parent_block is M
-    assert b.root_block is M
-    print(C.name())
-    print(C.name(fully_qualified=True))
-    assert C.parent is b
-    assert C.parent_block is b
-    assert C.root_block is M
-    print(c.name())
-    print(c.name(fully_qualified=True))
-    assert c.parent is C
-    assert c.parent_block is b
-    assert c.root_block is M
-    try:
-        M.insert("b", b)
-    except ValueError:
-        pass
-    else:
-        assert False
-    print("\nRelocating b")
-    B.remove(b)
-    M.insert("b", b)
-    print(b.name())
-    print(b.name(fully_qualified=True))
-    assert b.parent is M
-    assert b.parent_block is M
-    assert b.root_block is M
-    print(C.name())
-    print(C.name(fully_qualified=True))
-    assert C.parent is b
-    assert C.parent_block is b
-    assert C.root_block is M
-    print(c.name())
-    print(c.name(fully_qualified=True))
-    assert c.parent is C
-    assert c.parent_block is b
-    assert c.root_block is M
+    @abc.abstractmethod
+    def children(self, ctype=_no_ctype):
+        raise NotImplementedError     #pragma:nocover
