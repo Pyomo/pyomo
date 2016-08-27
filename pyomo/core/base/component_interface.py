@@ -271,6 +271,13 @@ class IComponentContainer(ICategorizedObject):
         """A generator over the children of this container."""
         raise NotImplementedError     #pragma:nocover
 
+    def __str__(self):
+        name = self.name(True)
+        if name is None:
+            return "<"+self.__class__.__name__+">"
+        else:
+            return name
+
 class _IActiveComponentContainer(IActiveObject):
     """
     To be used as an additional base class in ComponentContainer
