@@ -340,23 +340,23 @@ class IBlockStorage(IComponentContainer,
     __slots__ = ()
 
     #
-    # Interface
-    #
-
-    @abc.abstractmethod
-    def blocks(self):
-        raise NotImplementedError     #pragma:nocover
-
-    #
     # These methods are already declared abstract on
     # IComponentContainer, but we redeclare them here to
     # point out that the can accept a ctype
     #
 
     @abc.abstractmethod
-    def components(self, ctype=_no_ctype):
+    def children(self, ctype=_no_ctype):
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
-    def children(self, ctype=_no_ctype):
+    def components(self, ctype=_no_ctype):
+        raise NotImplementedError     #pragma:nocover
+
+    #
+    # Interface
+    #
+
+    @abc.abstractmethod
+    def blocks(self):
         raise NotImplementedError     #pragma:nocover

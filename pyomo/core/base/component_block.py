@@ -12,6 +12,9 @@ __all__ = ("block",
            "block_dict",
            "StaticBlock")
 
+import logging
+from collections import (OrderedDict,
+                         defaultdict)
 import weakref
 
 from pyomo.core.base.component_interface import (ICategorizedObject,
@@ -27,6 +30,8 @@ import pyomo.opt
 import six
 from six import itervalues, iteritems
 
+logger = logging.getLogger('pyomo.core')
+
 class block(IBlockStorage):
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
@@ -35,7 +40,7 @@ class block(IBlockStorage):
     def __init__(self):
         self.__parent = None
         self.__active = True
-        self.__byctype = {}
+        self.__byctype = defaultdict(OrderedDict)
 
     @property
     def _parent(self):
@@ -60,9 +65,10 @@ class block(IBlockStorage):
     #    pass
 
     def child_key(self, child):
-        for key, val in iteritems(self.__byctype[child.ctype]):
-            if val is child:
-                return key
+        if child.ctype in self.__byctype:
+            for key, val in iteritems(self.__byctype[child.ctype]):
+                if val is child:
+                    return key
         raise ValueError("No child entry: %s"
                          % (child))
 
@@ -70,79 +76,94 @@ class block(IBlockStorage):
     # Define the IBlockStorage abstract methods
     #
 
+    def children(self, *args):
+        """Iterate over the children of this block. At most one
+        argument can be provided which specifies the ctype of
+        the children to iterate over. Otherwise, all children
+        will be included."""
+        if len(args) == 0:
+            ctypes = self.__byctype.keys()
+        elif len(args) == 1:
+            ctypes = args
+        else:
+            raise TypeError("children expected at most 1 arguments, "
+                            "got %d" % (len(args)))
+        for ctype in ctypes:
+            if ctype in self.__byctype:
+                for child in itervalues(self.__byctype[ctype]):
+                    yield child
+
     def components(self,
                    ctype=_no_ctype,
                    active=None,
-                   sort=False,
-                   descend_into=True,
-                   descent_order=None):
-            # TODO
-#            assert descent_order is None
-#            assert active is None
-#            assert sort is False
-#            assert descend_into is True
-        for child in self.children(ctype=ctype,
-                                   active=active):
-            if isinstance(child, IComponentContainer):
-                for component in child.components():
-                    yield component
-            else:
-                yield child
-
-    def children(self,
-                 ctype=_no_ctype,
-                 active=None):
+                   descend_into=True):
+        # TODO
+        from pyomo.core.base.block import Block
         if ctype is _no_ctype:
-            ctypes = self.__byctype.keys()
+            args = ()
         else:
-            # we assume a single ctype was given
-            ctypes = (ctype,)
-        for ctype in ctypes:
-            for child in itervalues(self.__byctype.get(ctype, {})):
-                if (active is None) or (child.active == active):
+            args = (ctype,)
+        _active_flag_name = "active"
+        for child in self.children(*args):
+            if (active is None) or \
+               (getattr(child,
+                        _active_flag_name,
+                        active) == active):
+                if isinstance(child, IBlockStorage):
+                    # child is a block
                     yield child
+                elif isinstance(child, IComponentContainer):
+                    # child is a container that is not a block
+                    for component in child.components():
+                        if (active is None) or \
+                           (getattr(component,
+                                    _active_flag_name,
+                                    active) == active):
+                            yield component
+                else:
+                    # child is not a container
+                    yield child
+
+        if descend_into:
+            for child in self.children(Block):
+                if (active is None) or \
+                   (not active) or \
+                   getattr(child,
+                           _active_flag_name,
+                           True):
+                    if isinstance(child, IBlockStorage):
+                        # child is a block
+                        for component in child.components(
+                                ctype=ctype,
+                                active=active,
+                                descend_into=descend_into):
+                            yield component
+                    else:
+                        # child is a container of _only_ blocks
+                        for _comp in child.components():
+                            if (active is None) or \
+                               (not active) or \
+                               getattr(_comp,
+                                       _active_flag_name,
+                                       True):
+                                for component in _comp.components(
+                                        ctype=ctype,
+                                        active=active,
+                                        descend_into=descend_into):
+                                    yield component
 
     def blocks(self,
                active=None,
-               sort=False,
-               descend_into=True,
-               descent_order=None):
+               descend_into=True):
+        # TODO
         from pyomo.core.base.block import Block
-        assert descent_order is None
-        if active is None:
+        if (active is None) or \
+           self.active == active:
             yield self
-            for block in self.components(Block,
-                                         active=None,
-                                         sort=sort,
-                                         descend_into=descend_into,
-                                         descent_order=descent_order):
-                yield block
-        elif active:
-            if not self.active:
-                return
-            yield self
-            for block in self.components(Block,
-                                         active=True,
-                                         sort=sort,
-                                         descend_into=descend_into,
-                                         descent_order=descent_order):
-                yield block
-        else:
-            all_active_ids = set()
-            all_active_ids.update(
-                id(block) for block in self.components(
-                    Block,
-                    active=True,
-                    descend_into=descend_into))
-            if not self.active:
-                yield self
-            for block in self.components(Block,
-                                         active=None,
-                                         sort=sort,
-                                         descend_into=descend_into,
-                                         descent_order=descent_order):
-                if id(block) not in all_active_ids:
-                    yield block
+        for component in self.components(ctype=Block,
+                                         active=active,
+                                         descend_into=descend_into):
+            yield component
 
     #
     # Interface
@@ -152,14 +173,20 @@ class block(IBlockStorage):
         if isinstance(component, (IComponent, IComponentContainer)):
             if component._parent is None:
                 if name in self.__dict__:
-                    # TODO
-                    print("WARNING: Overwriting existing component!")
-                    self.del_component(name=name)
-                if component.ctype not in self.__byctype:
-                    self.__byctype[component.ctype] = {}
+                    logger.warning(
+                        "Implicitly replacing the component attribute "
+                        "%s (type=%s) on block with a new Component "
+                        "(type=%s).\nThis is usually indicative of a "
+                        "modelling error.\nTo avoid this warning, delete "
+                        "the original component from the block before "
+                        "assigning a new component with the same name."
+                        % (name,
+                           type(getattr(self, name)),
+                           type(component)))
+                    delattr(self, name)
                 self.__byctype[component.ctype][name] = component
                 component._parent = weakref.ref(self)
-            elif (name in self.__byctype.get(component.ctype, {})) and \
+            elif (name in self.__byctype[component.ctype]) and \
                  (self.__byctype[component.ctype][name] is component):
                 # a very special case that makes sense to handle
                 # because the implied order should be: (1) delete
@@ -179,43 +206,19 @@ class block(IBlockStorage):
                        name,
                        component.parent.name(True)))
         super(block, self).__setattr__(name, component)
-    add_component = __setattr__
 
     def __delattr__(self, name):
         component = self.__dict__[name]
         if isinstance(component, (IComponent, IComponentContainer)):
             del self.__byctype[component.ctype][name]
+            if len(self.__byctype[component.ctype]) == 0:
+                del self.__byctype[component.ctype]
             component._parent = None
         super(block, self).__delattr__(name)
-    del_component = __delattr__
 
-    def write(self,
-              filename,
-              format=None,
-              solver_capability=None,
-              io_options=None):
-        """
-        Write the optimization block to a file, with a given format.
-        """
-        # Guess the format if none is specified
-        if format is None:
-            format = guess_format(filename)
-        with pyomo.opt.WriterFactory(format) as writer:
-            if writer is None:
-                raise ValueError(
-                    "Cannot write model in format '%s': no model "
-                    "writer registered for that format"
-                    % str(format))
-            if solver_capability is None:
-                solver_capability = lambda x: True
-            if io_options is None:
-                io_options = {}
-            filename_, symbol_map = writer(self,
-                                           filename,
-                                           solver_capability,
-                                           io_options)
-        assert filename_ == filename
-        return filename, symbol_map
+    # TODO
+    #def write(self, ...):
+    #def clone(self, ...):
 
 class block_list(ComponentList,
                  _IActiveComponentContainer):
@@ -253,10 +256,14 @@ class StaticBlock(IBlockStorage):
     """
     A helper class for implementing blocks with a static
     set of components using __slots__. Derived classes
-    should assign a static set of component to the instance
+    should assign a static set of components to the instance
     in the __init__ method before calling this base class's
     __init__ method. The set of components should be
     identified using __slots__.
+
+    Note that this implementation is not designed for
+    class hierarchies that extend more than one level
+    beyond this class.
     """
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
@@ -298,52 +305,29 @@ class StaticBlock(IBlockStorage):
     # Define the IBlockStorage abstract methods
     #
 
-    def components(self,
-                   ctype,
-                   active=None,
-                   sort=False,
-                   descend_into=True,
-                   descent_order=None):
-        # TODO
-#       assert descent_order is None
-#       assert active is None
-#       assert sort is False
-#       assert descend_into is True
-        for child in self.children(
-                ctype,
-                active=active,
-                sort=sort,
-                descend_into=descend_into,
-                descent_order=descent_order):
-            if isinstance(child, IComponentContainer):
-                for component in component.components():
-                    yield component
-            else:
-                yield child
+    def children(self, *args):
+        """Iterate over the children of this block. At most one
+        argument can be provided which specifies the ctype of
+        the children to iterate over. Otherwise, all children
+        will be included."""
+        if len(args) == 0:
+            for name in self.__slots__:
+                child = getattr(self, name)
+                if isinstance(child, ICategorizedObject):
+                    yield child
+        elif len(args) == 1:
+            ctype = args[0]
+            for name in self.__slots__:
+                child = getattr(self, name)
+                if isinstance(child, ICategorizedObject) and \
+                   child.ctype == ctype:
+                    yield child
+        else:
+            raise TypeError("children expected at most 1 arguments, "
+                            "got %d" % (len(args)))
 
-    def children(self,
-                 ctype,
-                 active=None,
-                 sort=False,
-                 descend_into=True,
-                 descent_order=None):
-        # TODO
-#       assert descent_order is None
-#       assert active is None
-#       assert sort is False
-#       assert descend_into is True
-        for name in self.__slots__:
-            child = getattr(self, name)
-            if hasattr(child, "ctype") and \
-               child.ctype == ctype:
-                yield child
+    def components(self, *args, **kwds):
+        return block.components(self, *args, **kwds)
 
     def blocks(self, *args, **kwds):
         return block.blocks(self, *args, **kwds)
-
-    #
-    # Interface
-    #
-
-    def write(self, *args, **kwds):
-        return block.write(self, *args, **kwds)
