@@ -13,9 +13,11 @@ __all__ = ("block",
            "StaticBlock")
 
 import logging
-from collections import (OrderedDict,
-                         defaultdict)
 import weakref
+try:
+    from collections import OrderedDict
+except ImportError:                         #pragma:nocover
+    from ordereddict import OrderedDict
 
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponent,
