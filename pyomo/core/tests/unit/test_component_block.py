@@ -1,5 +1,5 @@
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (IObjectWithParent,
+from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
                                                  _IActiveComponent,

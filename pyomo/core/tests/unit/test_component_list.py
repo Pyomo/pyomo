@@ -12,7 +12,7 @@ import pickle
 import collections
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (IObjectWithParent,
+from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
                                                  _IActiveComponent,
@@ -58,7 +58,7 @@ class _TestComponentListBase(object):
 
     def test_type(self):
         clist = self._container_type()
-        self.assertTrue(isinstance(clist, IObjectWithParent))
+        self.assertTrue(isinstance(clist, ICategorizedObject))
         self.assertTrue(isinstance(clist, IComponentContainer))
         self.assertFalse(isinstance(clist, IComponent))
         self.assertTrue(isinstance(clist, collections.Sequence))
@@ -509,7 +509,7 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         clist = self._container_type()
         self.assertTrue(isinstance(clist, IComponentContainer))
         self.assertTrue(isinstance(clist, _IActiveComponentContainer))
-        self.assertTrue(isinstance(clist, IObjectWithParent))
+        self.assertTrue(isinstance(clist, ICategorizedObject))
         self.assertFalse(isinstance(clist, IComponent))
         self.assertFalse(isinstance(clist, _IActiveComponent))
 

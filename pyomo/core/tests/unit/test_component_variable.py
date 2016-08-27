@@ -1,7 +1,7 @@
 import sys
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (IObjectWithParent,
+from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
                                                  _IActiveComponent,
@@ -59,7 +59,7 @@ class Test_variable(unittest.TestCase):
 
     def test_type(self):
         v = variable()
-        self.assertTrue(isinstance(v, IObjectWithParent))
+        self.assertTrue(isinstance(v, ICategorizedObject))
         self.assertTrue(isinstance(v, IComponent))
         self.assertTrue(isinstance(v, IVariable))
         self.assertTrue(isinstance(v, NumericValue))

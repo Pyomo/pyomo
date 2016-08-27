@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ('IObjectWithParent',
+__all__ = ('ICategorizedObject',
            'IActiveObject',
            'IComponent',
            '_IActiveComponent',
@@ -37,9 +37,9 @@ def _abstract_readonly_property(**kwds):
 
 _no_ctype = object()
 
-class IObjectWithParent(six.with_metaclass(abc.ABCMeta, object)):
+class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
     """Interface for objects that maintain a weak reference to a parent
-    storage object."""
+    storage object and have a category type."""
     __slots__ = ()
 
     #
@@ -48,9 +48,18 @@ class IObjectWithParent(six.with_metaclass(abc.ABCMeta, object)):
     # by overriding the @property method
     #
 
+    _ctype = _abstract_readonly_property(
+        doc=("A category type. Used by the parent of "
+             "this component to categorize it."))
+
     _parent = _abstract_readwrite_property(
         doc=("A weak reference to parent object of "
              "type IComponentContainer or None."))
+
+    @property
+    def ctype(self):
+        """The component category."""
+        return self._ctype
 
     @property
     def parent(self):
@@ -159,31 +168,15 @@ class IActiveObject(six.with_metaclass(abc.ABCMeta, object)):
         """Set the active attribute to False"""
         raise NotImplementedError     #pragma:nocover
 
-class IComponent(IObjectWithParent):
+class IComponent(ICategorizedObject):
     """
     Interface for components that can be stored inside
     objects of type IComponentContainer."""
-
     __slots__ = ()
-
-    #
-    # Implementations can choose to define these
-    # properties as using __slots__, __dict__, or
-    # by overriding the @property method
-    #
-
-    _ctype = _abstract_readonly_property(
-        doc=("The component type. Used by a parent "
-             "container to categorize this component."))
 
     #
     # Interface
     #
-
-    @property
-    def ctype(self):
-        """Returns the component type"""
-        return self._ctype
 
     def to_string(self, ostream=None, verbose=None, precedence=0):
         """Write the component to a buffer"""
@@ -247,7 +240,7 @@ class _IActiveComponent(IActiveObject):
         """Deactivate this component."""
         self._active = False
 
-class IComponentContainer(IObjectWithParent):
+class IComponentContainer(ICategorizedObject):
     """A container of modeling components."""
     __slots__ = ()
 
@@ -257,18 +250,9 @@ class IComponentContainer(IObjectWithParent):
     # by overriding the @property method
     #
 
-    _ctype = _abstract_readonly_property(
-        doc=("The component container type. Used by a parent "
-             "container to categorize this container."))
-
     #
     # Interface
     #
-
-    @property
-    def ctype(self):
-        """The component type."""
-        return self._ctype
 
     @abc.abstractmethod
     def components(self):

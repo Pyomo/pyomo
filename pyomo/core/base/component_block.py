@@ -14,7 +14,8 @@ __all__ = ("block",
 
 import weakref
 
-from pyomo.core.base.component_interface import (IComponent,
+from pyomo.core.base.component_interface import (ICategorizedObject,
+                                                 IComponent,
                                                  IComponentContainer,
                                                  _IActiveComponentContainer,
                                                  IBlockStorage,

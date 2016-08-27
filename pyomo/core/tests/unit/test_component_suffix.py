@@ -3,7 +3,7 @@ import collections
 
 import pyutilib.th as unittest
 
-from pyomo.core.base.component_interface import (IObjectWithParent,
+from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
                                                  _IActiveComponent,
@@ -37,7 +37,7 @@ class Test_suffix(unittest.TestCase):
 
     def test_type(self):
         s = suffix()
-        self.assertTrue(isinstance(s, IObjectWithParent))
+        self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IActiveObject))
         self.assertTrue(isinstance(s, IComponent))
         self.assertTrue(isinstance(s, _IActiveComponent))
