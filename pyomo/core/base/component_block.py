@@ -14,6 +14,7 @@ __all__ = ("block",
 
 import logging
 import weakref
+from collections import defaultdict
 try:
     from collections import OrderedDict
 except ImportError:                         #pragma:nocover
@@ -34,66 +35,10 @@ from six import itervalues, iteritems
 
 logger = logging.getLogger('pyomo.core')
 
-class block(IBlockStorage):
-    # To avoid a circular import, for the time being, this
-    # property will be set in block.py
-    _ctype = None
-    """An implementation of the IBlockStorage interface."""
-    def __init__(self):
-        self.__parent = None
-        self.__active = True
-        self.__byctype = defaultdict(OrderedDict)
-
-    @property
-    def _parent(self):
-        return self.__parent
-    @_parent.setter
-    def _parent(self, parent):
-        self.__parent = parent
-
-    @property
-    def _active(self):
-        return self.__active
-    @_active.setter
-    def _active(self, active):
-        self.__active = active
-
-    #
-    # Define the IComponentContainer abstract methods
-    #
-
-    # overridden by the IBlockStorage interface
-    #def components(self):
-    #    pass
-
-    def child_key(self, child):
-        if child.ctype in self.__byctype:
-            for key, val in iteritems(self.__byctype[child.ctype]):
-                if val is child:
-                    return key
-        raise ValueError("No child entry: %s"
-                         % (child))
-
-    #
-    # Define the IBlockStorage abstract methods
-    #
-
-    def children(self, *args):
-        """Iterate over the children of this block. At most one
-        argument can be provided which specifies the ctype of
-        the children to iterate over. Otherwise, all children
-        will be included."""
-        if len(args) == 0:
-            ctypes = self.__byctype.keys()
-        elif len(args) == 1:
-            ctypes = args
-        else:
-            raise TypeError("children expected at most 1 arguments, "
-                            "got %d" % (len(args)))
-        for ctype in ctypes:
-            if ctype in self.__byctype:
-                for child in itervalues(self.__byctype[ctype]):
-                    yield child
+class _block_base(object):
+    """A base class shared by 'block' and StaticBlock
+    that implements a few methods."""
+    __slots__ = ()
 
     def components(self,
                    ctype=_no_ctype,
@@ -166,6 +111,67 @@ class block(IBlockStorage):
                                          active=active,
                                          descend_into=descend_into):
             yield component
+
+class block(_block_base, IBlockStorage):
+    # To avoid a circular import, for the time being, this
+    # property will be set in block.py
+    _ctype = None
+    """An implementation of the IBlockStorage interface."""
+    def __init__(self):
+        self.__parent = None
+        self.__active = True
+        self.__byctype = defaultdict(OrderedDict)
+
+    @property
+    def _parent(self):
+        return self.__parent
+    @_parent.setter
+    def _parent(self, parent):
+        self.__parent = parent
+
+    @property
+    def _active(self):
+        return self.__active
+    @_active.setter
+    def _active(self, active):
+        self.__active = active
+
+    #
+    # Define the IComponentContainer abstract methods
+    #
+
+    # overridden by the IBlockStorage interface
+    #def components(self):
+    #    pass
+
+    def child_key(self, child):
+        if child.ctype in self.__byctype:
+            for key, val in iteritems(self.__byctype[child.ctype]):
+                if val is child:
+                    return key
+        raise ValueError("No child entry: %s"
+                         % (child))
+
+    #
+    # Define the IBlockStorage abstract methods
+    #
+
+    def children(self, *args):
+        """Iterate over the children of this block. At most one
+        argument can be provided which specifies the ctype of
+        the children to iterate over. Otherwise, all children
+        will be included."""
+        if len(args) == 0:
+            ctypes = self.__byctype.keys()
+        elif len(args) == 1:
+            ctypes = args
+        else:
+            raise TypeError("children expected at most 1 arguments, "
+                            "got %d" % (len(args)))
+        for ctype in ctypes:
+            if ctype in self.__byctype:
+                for child in itervalues(self.__byctype[ctype]):
+                    yield child
 
     #
     # Interface
@@ -254,7 +260,7 @@ class block_dict(ComponentDict,
         self._active = True
         super(block_dict, self).__init__(*args, **kwds)
 
-class StaticBlock(IBlockStorage):
+class StaticBlock(_block_base, IBlockStorage):
     """
     A helper class for implementing blocks with a static
     set of components using __slots__. Derived classes
@@ -289,8 +295,7 @@ class StaticBlock(IBlockStorage):
     #
 
     # overridden by the IBlockStorage interface
-    #def components(self):
-    #    pass
+    #def components(...)
 
     def child_key(self, child):
         for key in self.__slots__:
@@ -300,8 +305,7 @@ class StaticBlock(IBlockStorage):
                          % (child))
 
     # overridden by the IBlockStorage interface
-    #def children(self):
-    #    pass
+    #def children(...)
 
     #
     # Define the IBlockStorage abstract methods
@@ -328,8 +332,8 @@ class StaticBlock(IBlockStorage):
             raise TypeError("children expected at most 1 arguments, "
                             "got %d" % (len(args)))
 
-    def components(self, *args, **kwds):
-        return block.components(self, *args, **kwds)
+    # implemented by _block_base
+    # def components(...)
 
-    def blocks(self, *args, **kwds):
-        return block.blocks(self, *args, **kwds)
+    # implemented by _block_base
+    # def blocks(...)
