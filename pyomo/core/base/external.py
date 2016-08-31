@@ -7,6 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import logging
 import os
 import six
 import types
@@ -27,6 +28,8 @@ try:
     basestring
 except:
     basestring = str
+
+logger = logging.getLogger('pyomo.core')
 
 class ExternalFunction(Component):
     def __new__(cls, *args, **kwds):
@@ -62,13 +65,17 @@ class ExternalFunction(Component):
                 else as_numeric(x)
                 for x in args ) )
 
-    def cname(self, fully_qualified=False, name_buffer=None):
+    def name(self, fully_qualified=False, name_buffer=None):
         if self.name:
-            return super(ExternalFunction, self).cname(
+            return super(ExternalFunction, self).name(
                 fully_qualified, name_buffer )
         else:
             return str(self._library) + ":" + str(self._function)
-        
+
+    def cname(self, *args, **kwds):
+        logger.warning("DEPRECATED: The cname() function has been renamed to name()")
+        return self.name(*args, **kwds)
+
     def evaluate(self, args):
         raise NotImplementedError(
             "General external functions can not be evaluated within Python." )
@@ -154,12 +161,16 @@ class PythonCallbackFunction(ExternalFunction):
     def __call__(self, *args):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
 
-    def cname(self, fully_qualified=False, name_buffer=None):
+    def name(self, fully_qualified=False, name_buffer=None):
         if self.name:
-            return super(ExternalFunction, self).cname(
+            return super(ExternalFunction, self).name(
                 fully_qualified, name_buffer )
         else:
             return "PythonCallback(%s)" % str(self._fcn)
+
+    def cname(self, *args, **kwds):
+        logger.warning("DEPRECATED: The cname() function has been renamed to name()")
+        return self.name(*args, **kwds)
 
     def evaluate(self, args):
         # Skip the library name and function name

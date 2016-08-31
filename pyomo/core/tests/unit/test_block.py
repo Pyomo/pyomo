@@ -36,7 +36,7 @@ class DerivedBlock(SimpleBlock):
 
 
 class TestGenerators(unittest.TestCase):
-    
+
     @ unittest.nottest
     def generate_model(self):
         #
@@ -62,7 +62,6 @@ class TestGenerators(unittest.TestCase):
         model.SOS = SOSConstraint(model.q, var=model.X, index=model.Q, sos=1)
         model.s = Suffix()
 
-        
         model.b = Block()
         model.b.q = Set(initialize=[1,2])
         model.b.Q = Set(model.b.q,initialize=[1,2])
@@ -137,7 +136,7 @@ class TestGenerators(unittest.TestCase):
             block.component_lists[Block] = []
             block.component_data_lists[Block] = []
         model.B = Block(model.q,rule=B_rule)
-        
+
         model.component_lists = {}
         model.component_data_lists = {}
         model.component_lists[Set] = [model.q, model.Q]
@@ -158,7 +157,7 @@ class TestGenerators(unittest.TestCase):
         model.component_data_lists[Suffix] = [model.s]
         model.component_lists[Block] = [model.b, model.B]
         model.component_data_lists[Block] = [model.b, model.B[1], model.B[2]]
-        
+
         return model
 
     @unittest.nottest
@@ -182,8 +181,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.cname(True) for comp in generator],
-                                 [comp.cname(True) for comp in block.component_lists[ctype]])
+                self.assertEqual([comp.name(True) for comp in generator],
+                                 [comp.name(True) for comp in block.component_lists[ctype]])
                 self.assertEqual([id(comp) for comp in generator],
                                  [id(comp) for comp in block.component_lists[ctype]])
 
@@ -201,8 +200,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.cname(True) for comp in generator],
-                                 [comp.cname(True) for comp in block.component_lists[ctype]])
+                self.assertEqual([comp.name(True) for comp in generator],
+                                 [comp.name(True) for comp in block.component_lists[ctype]])
                 self.assertEqual([id(comp) for comp in generator],
                                  [id(comp) for comp in block.component_lists[ctype]])
 
@@ -220,8 +219,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.cname(True) for name, comp in generator],
-                                 [comp.cname(True) for comp in block.component_data_lists[ctype]])
+                self.assertEqual([comp.name(True) for name, comp in generator],
+                                 [comp.name(True) for comp in block.component_data_lists[ctype]])
                 self.assertEqual([id(comp) for name, comp in generator],
                                  [id(comp) for comp in block.component_data_lists[ctype]])
 
@@ -239,8 +238,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual(sorted([comp.cname(True) for name, comp in generator]),
-                                 sorted([comp.cname(True) for comp in block.component_data_lists[ctype]]))
+                self.assertEqual(sorted([comp.name(True) for name, comp in generator]),
+                                 sorted([comp.name(True) for comp in block.component_data_lists[ctype]]))
                 self.assertEqual(sorted([id(comp) for name, comp in generator]),
                                  sorted([id(comp) for comp in block.component_data_lists[ctype]]))
 
@@ -258,8 +257,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.cname(True) for name, comp in generator],
-                                 [comp.cname(True) for comp in block.component_data_lists[ctype]])
+                self.assertEqual([comp.name(True) for name, comp in generator],
+                                 [comp.name(True) for comp in block.component_data_lists[ctype]])
                 self.assertEqual([id(comp) for name, comp in generator],
                                  [id(comp) for comp in block.component_data_lists[ctype]])
 
@@ -277,8 +276,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual(sorted([comp.cname(True) for name, comp in generator]),
-                                 sorted([comp.cname(True) for comp in block.component_data_lists[ctype]]))
+                self.assertEqual(sorted([comp.name(True) for name, comp in generator]),
+                                 sorted([comp.name(True) for comp in block.component_data_lists[ctype]]))
                 self.assertEqual(sorted([id(comp) for name, comp in generator]),
                                  sorted([id(comp) for comp in block.component_data_lists[ctype]]))
 
@@ -340,106 +339,106 @@ class HierarchicalModel(object):
         m.a = Block([1,2,3], rule=a)
         m.b = Block()
 
-        self.PrefixDFS = [ 
-            'unknown', 
-            'c', 
-            'a[1]', 'a[1].d', 'a[1].c[5]', 'a[1].c[4]', 
-            'a[2]', 
+        self.PrefixDFS = [
+            'unknown',
+            'c',
+            'a[1]', 'a[1].d', 'a[1].c[5]', 'a[1].c[4]',
+            'a[2]',
             'a[3]', 'a[3].e', 'a[3].f[6]', 'a[3].f[7]',
             'b',
         ]
 
-        self.PrefixDFS_sortIdx = [ 
-            'unknown', 
-            'c', 
-            'a[1]', 'a[1].d', 'a[1].c[4]', 'a[1].c[5]', 
-            'a[2]', 
+        self.PrefixDFS_sortIdx = [
+            'unknown',
+            'c',
+            'a[1]', 'a[1].d', 'a[1].c[4]', 'a[1].c[5]',
+            'a[2]',
             'a[3]', 'a[3].e', 'a[3].f[6]', 'a[3].f[7]',
             'b',
         ]
-        self.PrefixDFS_sortName = [ 
-            'unknown', 
-            'a[1]', 'a[1].c[5]', 'a[1].c[4]', 'a[1].d', 
-            'a[2]', 
+        self.PrefixDFS_sortName = [
+            'unknown',
+            'a[1]', 'a[1].c[5]', 'a[1].c[4]', 'a[1].d',
+            'a[2]',
             'a[3]', 'a[3].e', 'a[3].f[6]', 'a[3].f[7]',
             'b',
-            'c', 
+            'c',
         ]
-        self.PrefixDFS_sort = [ 
-            'unknown', 
-            'a[1]', 'a[1].c[4]', 'a[1].c[5]', 'a[1].d', 
-            'a[2]', 
+        self.PrefixDFS_sort = [
+            'unknown',
+            'a[1]', 'a[1].c[4]', 'a[1].c[5]', 'a[1].d',
+            'a[2]',
             'a[3]', 'a[3].e', 'a[3].f[6]', 'a[3].f[7]',
             'b',
-            'c', 
+            'c',
         ]
 
 
-        self.PostfixDFS = [ 
-            'c', 
-            'a[1].d', 'a[1].c[5]', 'a[1].c[4]', 'a[1]', 
-            'a[2]', 
-            'a[3].e', 'a[3].f[6]', 'a[3].f[7]', 'a[3]', 
+        self.PostfixDFS = [
+            'c',
+            'a[1].d', 'a[1].c[5]', 'a[1].c[4]', 'a[1]',
+            'a[2]',
+            'a[3].e', 'a[3].f[6]', 'a[3].f[7]', 'a[3]',
             'b',
             'unknown',
         ]
 
-        self.PostfixDFS_sortIdx = [ 
-            'c', 
-            'a[1].d', 'a[1].c[4]', 'a[1].c[5]', 'a[1]', 
-            'a[2]', 
-            'a[3].e', 'a[3].f[6]', 'a[3].f[7]', 'a[3]', 
+        self.PostfixDFS_sortIdx = [
+            'c',
+            'a[1].d', 'a[1].c[4]', 'a[1].c[5]', 'a[1]',
+            'a[2]',
+            'a[3].e', 'a[3].f[6]', 'a[3].f[7]', 'a[3]',
             'b',
             'unknown',
         ]
-        self.PostfixDFS_sortName = [ 
-            'a[1].c[5]', 'a[1].c[4]', 'a[1].d', 'a[1]', 
-            'a[2]', 
-            'a[3].e', 'a[3].f[6]', 'a[3].f[7]', 'a[3]', 
+        self.PostfixDFS_sortName = [
+            'a[1].c[5]', 'a[1].c[4]', 'a[1].d', 'a[1]',
+            'a[2]',
+            'a[3].e', 'a[3].f[6]', 'a[3].f[7]', 'a[3]',
             'b',
-            'c', 
+            'c',
             'unknown',
         ]
-        self.PostfixDFS_sort = [ 
-            'a[1].c[4]', 'a[1].c[5]', 'a[1].d', 'a[1]', 
-            'a[2]', 
-            'a[3].e', 'a[3].f[6]', 'a[3].f[7]', 'a[3]', 
+        self.PostfixDFS_sort = [
+            'a[1].c[4]', 'a[1].c[5]', 'a[1].d', 'a[1]',
+            'a[2]',
+            'a[3].e', 'a[3].f[6]', 'a[3].f[7]', 'a[3]',
             'b',
-            'c', 
+            'c',
             'unknown',
         ]
 
-        self.BFS = [ 
-            'unknown', 
-            'c', 
-            'a[1]', 'a[2]', 'a[3]', 
+        self.BFS = [
+            'unknown',
+            'c',
+            'a[1]', 'a[2]', 'a[3]',
             'b',
-            'a[1].d', 'a[1].c[5]', 'a[1].c[4]', 
+            'a[1].d', 'a[1].c[5]', 'a[1].c[4]',
             'a[3].e', 'a[3].f[6]', 'a[3].f[7]',
         ]
 
-        self.BFS_sortIdx = [ 
-            'unknown', 
-            'c', 
-            'a[1]', 'a[2]', 'a[3]', 
+        self.BFS_sortIdx = [
+            'unknown',
+            'c',
+            'a[1]', 'a[2]', 'a[3]',
             'b',
-            'a[1].d', 'a[1].c[4]', 'a[1].c[5]', 
+            'a[1].d', 'a[1].c[4]', 'a[1].c[5]',
             'a[3].e', 'a[3].f[6]', 'a[3].f[7]',
         ]
-        self.BFS_sortName = [ 
-            'unknown', 
-            'a[1]', 'a[2]', 'a[3]', 
+        self.BFS_sortName = [
+            'unknown',
+            'a[1]', 'a[2]', 'a[3]',
             'b',
-            'c', 
-            'a[1].c[5]', 'a[1].c[4]', 'a[1].d', 
+            'c',
+            'a[1].c[5]', 'a[1].c[4]', 'a[1].d',
             'a[3].e', 'a[3].f[6]', 'a[3].f[7]',
         ]
-        self.BFS_sort = [ 
-            'unknown', 
-            'a[1]', 'a[2]', 'a[3]', 
+        self.BFS_sort = [
+            'unknown',
+            'a[1]', 'a[2]', 'a[3]',
             'b',
-            'c', 
-            'a[1].c[4]', 'a[1].c[5]', 'a[1].d', 
+            'c',
+            'a[1].c[4]', 'a[1].c[5]', 'a[1].d',
             'a[3].e', 'a[3].f[6]', 'a[3].f[7]',
         ]
 
@@ -453,40 +452,35 @@ class MixedHierarchicalModel(object):
         m.b.e = Block()
         m.b.e.f = DerivedBlock()
 
-        self.PrefixDFS_block = [ 
-            'unknown', 
-            'a', 
+        self.PrefixDFS_block = [
+            'unknown',
+            'a',
         ]
-        self.PostfixDFS_block = [ 
-            'a', 
-            'unknown', 
+        self.PostfixDFS_block = [
+            'a',
+            'unknown',
         ]
-        self.BFS_block = [ 
-            'unknown', 
-            'a', 
+        self.BFS_block = [
+            'unknown',
+            'a',
         ]
 
-        self.PrefixDFS_both = [ 
-            'unknown', 
+        self.PrefixDFS_both = [
+            'unknown',
             'a', 'a.c',
             'b', 'b.d', 'b.e', 'b.e.f',
         ]
-        self.PostfixDFS_both = [ 
+        self.PostfixDFS_both = [
             'a.c', 'a',
             'b.d', 'b.e.f', 'b.e', 'b',
-            'unknown', 
+            'unknown',
         ]
-        self.BFS_both = [ 
-            'unknown', 
+        self.BFS_both = [
+            'unknown',
             'a', 'b',
             'a.c', 'b.d', 'b.e', 'b.e.f',
         ]
 
-
-        
-
-
-        
 class TestBlock(unittest.TestCase):
 
     def setUp(self):
@@ -506,38 +500,38 @@ class TestBlock(unittest.TestCase):
         """ Coverage of the _clear_attribute method """
         obj = Set()
         self.block.A = obj
-        self.assertEqual(self.block.A.name,"A")
-        self.assertEqual(obj.name,"A")
+        self.assertEqual(self.block.A.name(), "A")
+        self.assertEqual(obj.name(), "A")
         self.assertIs(obj, self.block.A)
 
         obj = Var()
         self.block.A = obj
-        self.assertEqual(self.block.A.name,"A")
-        self.assertEqual(obj.name,"A")
+        self.assertEqual(self.block.A.name(), "A")
+        self.assertEqual(obj.name(), "A")
         self.assertIs(obj, self.block.A)
 
         obj = Param()
         self.block.A = obj
-        self.assertEqual(self.block.A.name,"A")
-        self.assertEqual(obj.name,"A")
+        self.assertEqual(self.block.A.name(), "A")
+        self.assertEqual(obj.name(), "A")
         self.assertIs(obj, self.block.A)
 
         obj = Objective()
         self.block.A = obj
-        self.assertEqual(self.block.A.name,"A")
-        self.assertEqual(obj.name,"A")
+        self.assertEqual(self.block.A.name(), "A")
+        self.assertEqual(obj.name(), "A")
         self.assertIs(obj, self.block.A)
 
         obj = Constraint()
         self.block.A = obj
-        self.assertEqual(self.block.A.name,"A")
-        self.assertEqual(obj.name,"A")
+        self.assertEqual(self.block.A.name(), "A")
+        self.assertEqual(obj.name(), "A")
         self.assertIs(obj, self.block.A)
 
         obj = Set()
         self.block.A = obj
-        self.assertEqual(self.block.A.name,"A")
-        self.assertEqual(obj.name,"A")
+        self.assertEqual(self.block.A.name(), "A")
+        self.assertEqual(obj.name(), "A")
         self.assertIs(obj, self.block.A)
 
     def test_set_attr(self):
@@ -553,37 +547,37 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(self.block.x.value, None)
 
     def test_iterate_hierarchy_defaults(self):
-        self.assertIs( TraversalStrategy.BFS, 
+        self.assertIs( TraversalStrategy.BFS,
                        TraversalStrategy.BreadthFirstSearch )
 
-        self.assertIs( TraversalStrategy.DFS, 
+        self.assertIs( TraversalStrategy.DFS,
                        TraversalStrategy.PrefixDepthFirstSearch )
-        self.assertIs( TraversalStrategy.DFS, 
+        self.assertIs( TraversalStrategy.DFS,
                        TraversalStrategy.PrefixDFS )
-        self.assertIs( TraversalStrategy.DFS, 
+        self.assertIs( TraversalStrategy.DFS,
                        TraversalStrategy.ParentFirstDepthFirstSearch )
 
-        self.assertIs( TraversalStrategy.PostfixDepthFirstSearch, 
+        self.assertIs( TraversalStrategy.PostfixDepthFirstSearch,
                        TraversalStrategy.PostfixDFS )
-        self.assertIs( TraversalStrategy.PostfixDepthFirstSearch, 
+        self.assertIs( TraversalStrategy.PostfixDepthFirstSearch,
                        TraversalStrategy.ParentLastDepthFirstSearch )
 
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator()]
+        result = [x.name(True) for x in m._tree_iterator()]
         self.assertEqual(HM.PrefixDFS, result)
 
     def test_iterate_hierarchy_PrefixDFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch)]
         self.assertEqual(HM.PrefixDFS, result)
 
     def test_iterate_hierarchy_PrefixDFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=SortComponents.indices,
         )]
@@ -591,7 +585,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PrefixDFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
@@ -599,7 +593,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PrefixDFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=True
         )]
@@ -609,14 +603,14 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch)]
         self.assertEqual(HM.PostfixDFS, result)
 
     def test_iterate_hierarchy_PostfixDFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=SortComponents.indices,
         )]
@@ -624,7 +618,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
@@ -632,7 +626,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=True
         )]
@@ -641,14 +635,14 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_BFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch)]
         self.assertEqual(HM.BFS, result)
 
     def test_iterate_hierarchy_BFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=SortComponents.indices,
         )]
@@ -657,7 +651,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_BFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
@@ -666,7 +660,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_BFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=True
         )]
@@ -675,7 +669,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PrefixDFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             ctype=Block,
         )]
@@ -683,16 +677,16 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PrefixDFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
-            ctype=(Block,DerivedBlock), 
+            ctype=(Block,DerivedBlock),
         )]
         self.assertEqual(HM.PrefixDFS_both, result)
 
     def test_iterate_mixed_hierarchy_PostfixDFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             ctype=Block,
         )]
@@ -700,16 +694,16 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PostfixDFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
-            ctype=(Block,DerivedBlock), 
+            ctype=(Block,DerivedBlock),
         )]
         self.assertEqual(HM.PostfixDFS_both, result)
 
     def test_iterate_mixed_hierarchy_BFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BFS,
             ctype=Block,
         )]
@@ -717,9 +711,9 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_BFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.cname(True) for x in m._tree_iterator(
+        result = [x.name(True) for x in m._tree_iterator(
             traversal=TraversalStrategy.BFS,
-            ctype=(Block,DerivedBlock), 
+            ctype=(Block,DerivedBlock),
         )]
         self.assertEqual(HM.BFS_both, result)
 
@@ -740,7 +734,7 @@ class TestBlock(unittest.TestCase):
         self.assertFalse(m.component_map(Var))
         self.assertFalse('x' in m.__dict__)
         self.assertIs(m.component('x'), None)
-        
+
     def test_add_remove_component_byref(self):
         m = Block()
         self.assertFalse(m.contains_component(Var))
@@ -757,7 +751,7 @@ class TestBlock(unittest.TestCase):
         self.assertFalse(m.component_map(Var))
         self.assertFalse('x' in m.__dict__)
         self.assertIs(m.component('x'), None)
-        
+
     def test_add_del_component(self):
         m = Block()
         self.assertFalse(m.contains_component(Var))
@@ -769,7 +763,7 @@ class TestBlock(unittest.TestCase):
         self.assertFalse(m.contains_component(Var))
         self.assertFalse('x' in m.__dict__)
         self.assertIs(m.component('x'), None)
-    
+
     def test_reclassify_component(self):
         m = Block()
         m.a = Var()
@@ -845,7 +839,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual( [], list(m.component_map(Constraint)) )
 
         # Test idnoring decl order
-        m.reclassify_component_type( 'b', Var, 
+        m.reclassify_component_type( 'b', Var,
                                         preserve_declaration_order=False )
         m.reclassify_component_type( 'c', Var,
                                         preserve_declaration_order=False )
@@ -871,7 +865,7 @@ class TestBlock(unittest.TestCase):
         m.v = Objective()
         m.y = Objective()
         m.w = Objective() # active=False
-        
+
         m.b.deactivate()
         m.z.deactivate()
         m.w.deactivate()
@@ -1032,10 +1026,10 @@ class TestBlock(unittest.TestCase):
         m.z.deactivate()
 
         def assertWorks(self, key, pm):
-            self.assertIs(pm[key.cname()], key)
+            self.assertIs(pm[key.name()], key)
         def assertFails(self, key, pm):
             if not isinstance(key, six.string_types):
-                key = key.cname()
+                key = key.name()
             self.assertRaises(KeyError, pm.__getitem__, key)
 
         pm = m.component_map()
@@ -1169,38 +1163,38 @@ class TestBlock(unittest.TestCase):
             except KeyError:
                 err = sys.exc_info()[1].args[0]
                 self.assertEqual(_str, err)
-        
+
         m = Block(name='foo')
-        tester( m.component_map(), 
+        tester( m.component_map(),
                 "component 'a' not found in block foo" )
-        tester( m.component_map(active=True), 
+        tester( m.component_map(active=True),
                 "active component 'a' not found in block foo" )
-        tester( m.component_map(active=False), 
+        tester( m.component_map(active=False),
                 "inactive component 'a' not found in block foo" )
 
-        tester( m.component_map(Var), 
+        tester( m.component_map(Var),
                 "Var component 'a' not found in block foo" )
-        tester( m.component_map(Var, active=True), 
+        tester( m.component_map(Var, active=True),
                 "active Var component 'a' not found in block foo" )
-        tester( m.component_map(Var, active=False), 
+        tester( m.component_map(Var, active=False),
                 "inactive Var component 'a' not found in block foo" )
 
-        tester( m.component_map([Var,Param]), 
+        tester( m.component_map([Var,Param]),
                 "Param or Var component 'a' not found in block foo" )
-        tester( m.component_map(set([Var,Param]), active=True), 
+        tester( m.component_map(set([Var,Param]), active=True),
                 "active Param or Var component 'a' not found in block foo" )
-        tester( m.component_map(set([Var,Param]), active=False), 
+        tester( m.component_map(set([Var,Param]), active=False),
                 "inactive Param or Var component 'a' not found in block foo" )
 
 
         tester(
-            m.component_map(set([Set,Var,Param])), 
+            m.component_map(set([Set,Var,Param])),
             "Param, Set or Var component 'a' not found in block foo" )
         tester(
-            m.component_map(set([Set,Var,Param]), active=True), 
+            m.component_map(set([Set,Var,Param]), active=True),
             "active Param, Set or Var component 'a' not found in block foo" )
-        tester( 
-            m.component_map(set([Set,Var,Param]), active=False), 
+        tester(
+            m.component_map(set([Set,Var,Param]), active=False),
             "inactive Param, Set or Var component 'a' not found in block foo" )
 
     def test_pseudomap_iteration(self):
@@ -1215,130 +1209,129 @@ class TestBlock(unittest.TestCase):
         m.c = Constraint()
         m.y = Objective()
         m.w = Objective() # active=False
-        
+
         m.b.deactivate()
         m.z.deactivate()
         m.w.deactivate()
         m.t.deactivate()
 
-        self.assertEqual( ['a','z','x','v','b','t','s','c','y','w'], 
+        self.assertEqual( ['a','z','x','v','b','t','s','c','y','w'],
                           list(m.component_map()) )
 
-        self.assertEqual( ['a','z','x','v','b','c','y','w'], 
+        self.assertEqual( ['a','z','x','v','b','c','y','w'],
                           list(m.component_map( set([Constraint,Objective]) )) )
 
         # test that the order of ctypes in the argument does not affect
         # the order in the resulting list
-        self.assertEqual( ['a','z','x','v','b','c','y','w'], 
+        self.assertEqual( ['a','z','x','v','b','c','y','w'],
                           list(m.component_map( [Constraint,Objective] )) )
 
-        self.assertEqual( ['a','z','x','v','b','c','y','w'], 
+        self.assertEqual( ['a','z','x','v','b','c','y','w'],
                           list(m.component_map( [Objective,Constraint] )) )
 
-        self.assertEqual( ['a','b','c'], 
+        self.assertEqual( ['a','b','c'],
                           list(m.component_map( Constraint )) )
 
-        self.assertEqual( ['z','x','v','y','w'], 
+        self.assertEqual( ['z','x','v','y','w'],
                           list(m.component_map( set([Objective]) )) )
-        
-        self.assertEqual( ['a','x','v','s','c','y'], 
+
+        self.assertEqual( ['a','x','v','s','c','y'],
                           list(m.component_map( active=True )) )
 
-        self.assertEqual( ['a','x','v','c','y'], 
+        self.assertEqual( ['a','x','v','c','y'],
                           list(m.component_map( set([Constraint,Objective]), active=True )) )
 
-        self.assertEqual( ['a','x','v','c','y'], 
+        self.assertEqual( ['a','x','v','c','y'],
                           list(m.component_map( [Constraint,Objective], active=True )) )
 
-        self.assertEqual( ['a','x','v','c','y'], 
+        self.assertEqual( ['a','x','v','c','y'],
                           list(m.component_map( [Objective,Constraint], active=True )) )
 
-        self.assertEqual( ['a','c'], 
+        self.assertEqual( ['a','c'],
                           list(m.component_map( Constraint, active=True )) )
 
-        self.assertEqual( ['x','v','y'], 
+        self.assertEqual( ['x','v','y'],
                           list(m.component_map( set([Objective]), active=True )) )
-        
-        self.assertEqual( ['z','b','t','w'], 
+
+        self.assertEqual( ['z','b','t','w'],
                           list(m.component_map( active=False )) )
 
-        self.assertEqual( ['z','b','w'], 
+        self.assertEqual( ['z','b','w'],
                           list(m.component_map( set([Constraint,Objective]), active=False )) )
 
-        self.assertEqual( ['z','b','w'], 
+        self.assertEqual( ['z','b','w'],
                           list(m.component_map( [Constraint,Objective], active=False )) )
 
-        self.assertEqual( ['z','b','w'], 
+        self.assertEqual( ['z','b','w'],
                           list(m.component_map( [Objective,Constraint], active=False )) )
 
-        self.assertEqual( ['b'], 
+        self.assertEqual( ['b'],
                           list(m.component_map( Constraint, active=False )) )
 
-        self.assertEqual( ['z','w'], 
+        self.assertEqual( ['z','w'],
                           list(m.component_map( set([Objective]), active=False )) )
-        
 
-        self.assertEqual( ['a','b','c','s','t','v','w','x','y','z'], 
+        self.assertEqual( ['a','b','c','s','t','v','w','x','y','z'],
                           list(m.component_map( sort=True )) )
 
-        self.assertEqual( ['a','b','c','v','w','x','y','z'], 
+        self.assertEqual( ['a','b','c','v','w','x','y','z'],
                           list(m.component_map( set([Constraint,Objective]),sort=True )) )
 
-        self.assertEqual( ['a','b','c','v','w','x','y','z'], 
+        self.assertEqual( ['a','b','c','v','w','x','y','z'],
                           list(m.component_map( [Constraint,Objective],sort=True )) )
 
-        self.assertEqual( ['a','b','c','v','w','x','y','z'], 
+        self.assertEqual( ['a','b','c','v','w','x','y','z'],
                           list(m.component_map( [Objective,Constraint],sort=True )) )
 
-        self.assertEqual( ['a','b','c'], 
+        self.assertEqual( ['a','b','c'],
                           list(m.component_map( Constraint,sort=True )) )
 
-        self.assertEqual( ['v','w','x','y','z'], 
+        self.assertEqual( ['v','w','x','y','z'],
                           list(m.component_map( set([Objective]),sort=True )) )
-        
-        self.assertEqual( ['a','c','s','v','x','y'], 
+
+        self.assertEqual( ['a','c','s','v','x','y'],
                           list(m.component_map( active=True,sort=True )) )
 
-        self.assertEqual( ['a','c','v','x','y'], 
+        self.assertEqual( ['a','c','v','x','y'],
                           list(m.component_map( set([Constraint,Objective]), active=True,
                                                 sort=True )) )
 
-        self.assertEqual( ['a','c','v','x','y'], 
+        self.assertEqual( ['a','c','v','x','y'],
                           list(m.component_map( [Constraint,Objective], active=True,
                                                 sort=True )) )
 
-        self.assertEqual( ['a','c','v','x','y'], 
+        self.assertEqual( ['a','c','v','x','y'],
                           list(m.component_map( [Objective,Constraint], active=True,
                                                 sort=True )) )
 
-        self.assertEqual( ['a','c'], 
+        self.assertEqual( ['a','c'],
                           list(m.component_map( Constraint, active=True, sort=True )) )
 
-        self.assertEqual( ['v','x','y'], 
+        self.assertEqual( ['v','x','y'],
                           list(m.component_map( set([Objective]), active=True,
                                                 sort=True )) )
-        
-        self.assertEqual( ['b','t','w','z'], 
+
+        self.assertEqual( ['b','t','w','z'],
                           list(m.component_map( active=False, sort=True )) )
 
-        self.assertEqual( ['b','w','z'], 
+        self.assertEqual( ['b','w','z'],
                           list(m.component_map( set([Constraint,Objective]), active=False,
                                                 sort=True )) )
 
-        self.assertEqual( ['b','w','z'], 
+        self.assertEqual( ['b','w','z'],
                           list(m.component_map( [Constraint,Objective], active=False,
                                                 sort=True )) )
 
-        self.assertEqual( ['b','w','z'], 
+        self.assertEqual( ['b','w','z'],
                           list(m.component_map( [Objective,Constraint], active=False,
                                                 sort=True )) )
 
-        self.assertEqual( ['b'], 
-                          list(m.component_map( Constraint, active=False, 
+        self.assertEqual( ['b'],
+                          list(m.component_map( Constraint, active=False,
                                                 sort=True )) )
 
-        self.assertEqual( ['w','z'], 
-                          list(m.component_map( set([Objective]), active=False, 
+        self.assertEqual( ['w','z'],
+                          list(m.component_map( set([Objective]), active=False,
                                                 sort=True )) )
 
 

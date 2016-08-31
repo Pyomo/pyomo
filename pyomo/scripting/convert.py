@@ -128,7 +128,7 @@ def convert_dakota(options=Options(), parser=None):
     for var in model.component_data_objects(Var, active=True):
         if id(var) in tmpDict:
             variables += 1
-            var_descriptors.append(var.cname(True))
+            var_descriptors.append(var.name(True))
 
             # apply user bound, domain bound, or infinite
             _lb, _ub = var.bounds
@@ -152,7 +152,7 @@ def convert_dakota(options=Options(), parser=None):
     obj_descriptors = []
     for obj in model.component_data_objects(Objective, active=True):
         objectives += 1
-        obj_descriptors.append(obj.cname(True))
+        obj_descriptors.append(obj.name(True))
 
     constraints = 0
     cons_descriptors = []
@@ -160,7 +160,7 @@ def convert_dakota(options=Options(), parser=None):
     cons_ub = []
     for con in model.component_data_objects(Constraint, active=True):
         constraints += 1
-        cons_descriptors.append(con.cname(True))
+        cons_descriptors.append(con.name(True))
         if con.lower is not None:
             cons_lb.append(str(con.lower))
         else:

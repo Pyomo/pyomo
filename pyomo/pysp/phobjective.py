@@ -217,7 +217,7 @@ def create_piecewise_constraint_tuple(lb, ub, instance_variable, variable_averag
 
 def add_ph_objective_weight_terms(instance_name, instance, scenario_tree):
 
-    scenario = scenario_tree.get_scenario(instance.name)
+    scenario = scenario_tree.get_scenario(instance.name())
 
     # cache for efficiency purposes.
     objective = scenario._instance_objective
@@ -262,7 +262,7 @@ def add_ph_objective_proximal_terms(instance_name,
                                     linearize_nonbinary_penalty_terms,
                                     retain_quadratic_binary_terms):
 
-    scenario = scenario_tree.get_scenario(instance.name)
+    scenario = scenario_tree.get_scenario(instance.name())
 
     # cache for efficiency purposes.
     objective = scenario._instance_objective
@@ -449,7 +449,7 @@ def form_linearized_objective_constraints(instance_name,
                               'Both lower and upper bounds required when' \
                               ' piece-wise approximating quadratic '      \
                               'penalty terms'
-                        raise ValueError(msg % instance_vardata.cname(True))
+                        raise ValueError(msg % instance_vardata.name(True))
                     lb = value(x.lb)
                     ub = value(x.ub)
 

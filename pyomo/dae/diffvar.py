@@ -19,7 +19,7 @@ from six import iterkeys
 
 def create_access_function(var):
     """
-    This method returns a function that returns a component by calling 
+    This method returns a function that returns a component by calling
     it rather than indexing it
     """
     def _fun(*args):
@@ -37,7 +37,7 @@ def derivative(self,*args):
     method is the ContinuousSet(s) that the derivative is being taken
     with respect to.
     """
-    
+
     wrt = [i for i in args]
     svar = self.parent_component()
     idx = self.index()
@@ -45,7 +45,7 @@ def derivative(self,*args):
     try:
         num_contset = len(svar._contset)
     except:
-        svar._contset = {} 
+        svar._contset = {}
         svar._derivative = {}
         if svar.dim() == 0:
             raise DAE_Error("The variable %s is not indexed by any ContinuousSets. A derivative may "
@@ -72,9 +72,9 @@ def derivative(self,*args):
     except:
         nme = '_'
         for i in args:
-            nme = nme+'d'+i.name
-        self.model().add_component('d'+svar.name+nme,DerivativeVar(svar,wrt=args))
-        deriv = svar.get_derivative(*args)      
+            nme = nme+'d'+i.name()
+        self.model().add_component('d'+svar.name()+nme,DerivativeVar(svar,wrt=args))
+        deriv = svar.get_derivative(*args)
 
     try:
         return deriv[idx]
@@ -83,10 +83,10 @@ def derivative(self,*args):
         deriv._add_members(new_indices)
         deriv._initialize_members(new_indices)
         return deriv[idx]
-    
+
 def get_derivative(self,*args):
     """
-    Returns the dictionary mapping derivatives to their DerivativeVar or 
+    Returns the dictionary mapping derivatives to their DerivativeVar or
     returns a certain DerivativeVar specified by the keyword arguments
     """
     try:
@@ -102,7 +102,7 @@ def get_derivative(self,*args):
 
 def is_fully_discretized(self):
     """
-    Checks to see if all ContinuousSets indexing this Var have been 
+    Checks to see if all ContinuousSets indexing this Var have been
     discretized
     """
     for i in self._contset:
@@ -128,15 +128,15 @@ class DerivativeVar(Var):
     Keyword Arguments:
     wrt, withrespectto     A ContinuousSet or a tuple(or list) of ContinuousSets that the
                            derivative is being taken with respect to. Higher order derivatives
-                           are represented by including the ContinuousSet multiple times in 
+                           are represented by including the ContinuousSet multiple times in
                            the tuple sent to this keyword. i.e. wrt=(m.t,m.t) would be the second
                            order derivative with respect to m.t
 
     Private Attributes:
     _stateVar     The StateVar being differentiated
-    _wrt          A list of the ContinuousSets the derivative is being taken with respect to          
+    _wrt          A list of the ContinuousSets the derivative is being taken with respect to
     _expr         An expression representing the discretization equations linking the DerivativeVar
-                  to its StateVar. 
+                  to its StateVar.
     """
 
     def __init__(self, sVar, **kwds):
@@ -155,7 +155,7 @@ class DerivativeVar(Var):
         try:
             num_contset = len(sVar._contset)
         except:
-            sVar._contset = {} 
+            sVar._contset = {}
             sVar._derivative = {}
             if sVar.dim() == 0:
                 num_contset = 0
@@ -197,13 +197,13 @@ class DerivativeVar(Var):
                 if i not in sVar._contset:
                     raise DAE_Error(
                         "Invalid derivative: The variable %s is not indexed by "
-                        "the ContinuousSet %s" %(sVar,i))           
+                        "the ContinuousSet %s" %(sVar,i))
             wrt = list(wrt)
         else:
             raise DAE_Error(
                 "Cannot take the derivative with respect to %s. "
                 "Expected a ContinuousSet or a tuple of ContinuousSets"% (i))
-        
+
         wrtkey = [str(i) for i in wrt]
         wrtkey.sort()
         wrtkey = tuple(wrtkey)
@@ -211,9 +211,9 @@ class DerivativeVar(Var):
         if wrtkey in sVar._derivative:
             raise DAE_Error(
                 "Cannot create a new derivative variable for variable "
-                "%s: derivative already defined as %s" 
-                % ( sVar.cname(True), sVar.get_derivative(*tuple(wrt)).cname(True) ) )
- 
+                "%s: derivative already defined as %s"
+                % ( sVar.name(True), sVar.get_derivative(*tuple(wrt)).name(True) ) )
+
         sVar._derivative[wrtkey] = weakref.ref(self)
         self._sVar = sVar
         self._wrt = wrt
@@ -224,12 +224,12 @@ class DerivativeVar(Var):
             arg = (sVar.index_set(),)
         else:
             arg = tuple(sVar._implicit_subsets)
-        
+
         Var.__init__(self,*arg,**kwds)
-        
+
     def get_continuousset_list(self):
         return self._wrt
-  
+
     def is_fully_discretized(self):
         """
         Check to see if all the ContinuousSets this derivative is taken with
@@ -247,7 +247,7 @@ class DerivativeVar(Var):
         """
         Returns the current discretization expression for this derivative or creates
         an access function to its StateVar the first time this method is called.
-        The expression gets built up as the discretization transformations are 
+        The expression gets built up as the discretization transformations are
         sequentially applied to each ContinuousSet in the model.
         """
         try:

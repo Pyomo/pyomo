@@ -86,7 +86,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
                 i = 0
                 for v in self._instance.bilinear_data_.vlist.itervalues():
                     #print(v)
-                    #print(v.cname())
+                    #print(v.name())
                     #print(type(v))
                     #print(v.value)
                     if abs(v.value) <= 1e-7:
@@ -195,7 +195,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
         # PROBLEM
         #
         prob = results.problem
-        prob.name = self._instance.name
+        prob.name = self._instance.name()
         prob.number_of_constraints = self._instance.statistics.number_of_constraints
         prob.number_of_variables = self._instance.statistics.number_of_variables
         prob.number_of_binary_variables = self._instance.statistics.number_of_binary_variables

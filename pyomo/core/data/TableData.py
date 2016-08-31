@@ -106,7 +106,7 @@ class TableData(Plugin):
             for i in self.options.select:
                 header_index.append( headers.index(str(i)) )
         self.options.ncolumns = len(headers)
-        
+
         if not self.options.param is None:
             if not type(self.options.param) in (list, tuple):
                 self.options.param = (self.options.param, )
@@ -114,18 +114,18 @@ class TableData(Plugin):
             for p in self.options.param:
                 if isinstance(p, Param):
                     self.options.model = p.model()
-                    _params.append( p.name )
+                    _params.append( p.name() )
                 else:
                     _params.append( p )
             self.options.param = tuple(_params)
 
         if isinstance(self.options.set, Set):
             self.options.model = self.options.set.model()
-            self.options.set = self.options.set.name
+            self.options.set = self.options.set.name()
 
         if isinstance(self.options.index, Set):
             self.options.model = self.options.index.model()
-            self.options.index = self.options.index.name
+            self.options.index = self.options.index.name()
 
         if self.options.format is None:
             if not self.options.set is None:
@@ -201,7 +201,7 @@ class TableData(Plugin):
             if self.options.columns is None:
                 cols = []
                 for i in xrange(self.options.set.dimen):
-                    cols.append(self.options.set.name+str(i))
+                    cols.append(self.options.set.name()+str(i))
                 tmp.append(cols)
             # Get rows
             if not self.options.sort is None:
@@ -237,7 +237,7 @@ class TableData(Plugin):
             if self.options.columns is None:
                 cols = []
                 for i in xrange(len(tmp[0])-len(_param)):
-                    cols.append('I'+str(i)) 
+                    cols.append('I'+str(i))
                 for param in _param:
                     cols.append( param)
                 tmp = [cols] + tmp

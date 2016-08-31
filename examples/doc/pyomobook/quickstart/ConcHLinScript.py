@@ -1,14 +1,13 @@
 # ConcHLinScript.py - Linear (H) as a script
 from pyomo.environ import *
 
-instance = ConcreteModel()
-instance.name = "Linear (H)"
+instance = ConcreteModel(name="Linear (H)")
 
 A = ['I_C_Scoops', 'Peanuts']
 h = {'I_C_Scoops': 1, 'Peanuts': 0.1}
 d = {'I_C_Scoops': 5, 'Peanuts': 27}
 c = {'I_C_Scoops': 3.14, 'Peanuts': 0.2718}
-b = 12 
+b = 12
 u = {'I_C_Scoops': 100, 'Peanuts': 40.6}
 
 def x_bounds(m, i):
