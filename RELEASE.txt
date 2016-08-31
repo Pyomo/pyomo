@@ -1,22 +1,18 @@
-We are pleased to announce the release of Pyomo 4.3 (4.3.11377). Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 4.4. Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
 The following are highlights of this release:
 
 - Modeling
-   * First documented release of pyomo.bilevel
-   * Added an MPS writer
-   * Use sparse representations for Expression and SOSConstraint components
+   * Added an SP representation that uses annotations for declaring mutable stochastic data
 
 - Solvers
-   * Significant speed-up of CPLEX solver interfaces
-   * Bug fixes for running solvers on NEOS
-   * Many fixes to the 'sol' file reader
+   * Adding PySP solver interface to the SD solver
 
 - Other
-   * Added an MPS file writer
-   * Many updates to the pyomo_install script
-   * Consolidated help information in the 'pyomo help' subcommand
-   * Added 'pyomo install-extras' to install optional Python packages
+   * Allow the use of ellipsis in indices
+   * Python 3.x compatibility updates
+   * Support evaluating external functions in AMPL-stype shared libraries
+   * Use HTTPS with NEOS
 
 See http://pyomo.org for installation options and documentation for getting started with Pyomo.
 

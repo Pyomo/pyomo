@@ -520,7 +520,7 @@ class Collocation_Discretization_Transformation(Transformation):
                     % (ds.name(), var.name(True)))
         elif ds not in var._index_set:
             raise IndexError("ContinuousSet '%s' is not an indexing set of the variable '%s'"\
-                % (ds.name(), var.name))
+                             % (ds.name(), var.name()))
 
         if var.name(True) in self._reduced_cp:
             temp = self._reduced_cp[var.name(True)]

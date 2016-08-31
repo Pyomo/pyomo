@@ -72,8 +72,8 @@ def derivative(self,*args):
     except:
         nme = '_'
         for i in args:
-            nme = nme+'d'+i.name
-        self.model().add_component('d'+svar.name+nme,DerivativeVar(svar,wrt=args))
+            nme = nme+'d'+i.name()
+        self.model().add_component('d'+svar.name()+nme,DerivativeVar(svar,wrt=args))
         deriv = svar.get_derivative(*args)
 
     try:
