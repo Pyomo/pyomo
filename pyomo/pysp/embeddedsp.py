@@ -247,7 +247,7 @@ def _map_variable_stages(model):
                     "Embedded stochastic programs must be two-stage "
                     "(for now), but variable with name '%s' has been "
                     "annotated with stage number: %s"
-                    % (var.cname(True), stagenum))
+                    % (var.name(True), stagenum))
 
     stage_to_variables_map = {}
     stage_to_variables_map[1] = []
@@ -263,7 +263,7 @@ def _map_variable_stages(model):
             raise ValueError("Invalid stage annotation for variable with "
                              "name '%s'. Stage assignment must be 1 or 2. "
                              "Current value: %s"
-                             % (var.cname(True), stagenumber))
+                             % (var.name(True), stagenumber))
         if (stagenumber == 1):
             stage_to_variables_map[1].append((var, derived))
         else:
@@ -303,7 +303,7 @@ def _extract_stochastic_data(model):
                 "Stochastic data entry with name '%s' is not mutable. "
                 "All stochastic data parameters must be initialized "
                 "with the mutable keyword set to True."
-                % (paramdata.cname(True)))
+                % (paramdata.name(True)))
     return stochastic_data
 
 class EmbeddedSP(object):
@@ -576,9 +576,9 @@ class EmbeddedSP(object):
                         "The SOSConstraint component '%s' has a weight "
                         "term for variable '%s' that references stochastic"
                         " parameter '%s'"
-                        % (soscon.cname(True),
-                           var.cname(True),
-                           param.cname(True)))
+                        % (soscon.name(True),
+                           var.name(True),
+                           param.name(True)))
                 self.variable_to_constraints_map.\
                     setdefault(var, []).append(soscon)
                 self.constraint_to_variables_map.\
@@ -692,15 +692,15 @@ class EmbeddedSP(object):
             stm.ConditionalProbability[node_name] = weight
             stm.ScenarioLeafNode[scen_name] = node_name
 
-        stm.StageCost['t1'] = self._stage1_cost.cname(True)
-        stm.StageCost['t2'] = self._stage2_cost.cname(True)
+        stm.StageCost['t1'] = self._stage1_cost.name(True)
+        stm.StageCost['t2'] = self._stage2_cost.name(True)
         for var, (stagenum, derived) in \
               self._variable_stage_assignments.items():
             stage_name = 't'+str(stagenum)
             if not derived:
-                stm.StageVariables[stage_name].add(var.cname(True))
+                stm.StageVariables[stage_name].add(var.name(True))
             else:
-                stm.StageDerivedVariables[stage_name].add(var.cname(True))
+                stm.StageDerivedVariables[stage_name].add(var.name(True))
 
         return stm
 
