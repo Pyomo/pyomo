@@ -32,8 +32,7 @@ script:
 - cd ..
 # The next three commands enable tracking of coverage
 # for any subprocesses launched by tests
-- ls -alh ${TRAVIS_BUILD_DIR}
-- export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/pyomo/.coveragerc
+- export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 - test.pyomo --cat=nightly --cov
