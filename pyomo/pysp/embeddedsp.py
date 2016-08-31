@@ -453,7 +453,7 @@ class EmbeddedSP(object):
         if stage2_cost is None:
             raise ValueError("Missing stage cost annotation "
                              "for time stage: 2")
-        assert stage1_cost != stage2_cost
+        assert stage1_cost is not stage2_cost
         self._stage1_cost = stage1_cost
         self._stage2_cost = stage2_cost
 
