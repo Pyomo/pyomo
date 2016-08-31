@@ -46,10 +46,10 @@ class _DisjunctData(_BlockData):
     def Xpprint(self, ostream=None, verbose=False, prefix=""):
         if ostream is None:
             ostream = sys.stdout
-        ostream.write("    %s :" % self.name)
+        ostream.write("    %s :" % self.name())
         ostream.write("\tSize= %s" % str(len(self._data.keys())))
         if isinstance(self._index,Set):
-            ostream.write("\tIndex= %s\n" % self._index.name)
+            ostream.write("\tIndex= %s\n" % self._index.name())
         else:
             ostream.write("\n")
         if self._M is not None:
@@ -82,7 +82,7 @@ class _DisjunctData(_BlockData):
 
     def set_M(self, M_list):
         if self._M is not None:
-            logger.warning("Discarding pre-defined M values for %s", self.name)
+            logger.warning("Discarding pre-defined M values for %s", self.name())
         self._M = M_list
 
 
@@ -347,7 +347,7 @@ class _disjunctiveRuleMapper(object):
             if not isinstance(d, _DisjunctData):
                 msg = 'Non-disjunct (type="%s") found in ' \
                     'disjunctive set for disjunction %s' % \
-                    ( type(d), self.disj.name )
+                    ( type(d), self.disj.name() )
                 raise ValueError(msg)
 
         self.disj._disjuncts[normalize_index(idx)] = disjuncts
