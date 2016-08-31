@@ -102,7 +102,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             o_terms = generate_canonical_repn(odata.expr, compute_values=False)
             for i in range(len(o_terms.variables)):
                 var = o_terms.variables[i]
-                if var.parent_component().name in self._fixed_upper_vars:
+                if var.parent_component().name() in self._fixed_upper_vars:
                     #
                     # Skip fixed upper variables
                     #
@@ -123,7 +123,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
         # and complementarity slackness conditions for y bound constraints
         #
         for vcomponent in instance.component_objects(Var, active=True):
-            if vcomponent.name in self._fixed_upper_vars:
+            if vcomponent.name() in self._fixed_upper_vars:
                 #
                 # Skip fixed upper variables
                 #
@@ -194,7 +194,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             c_terms = generate_canonical_repn(cdata.body, compute_values=False)
             for i in range(len(c_terms.variables)):
                 var = c_terms.variables[i]
-                if var.parent_component().name in self._fixed_upper_vars:
+                if var.parent_component().name() in self._fixed_upper_vars:
                     continue
                 id_ = id(var)
                 B2.setdefault(id_,{}).setdefault(id(cdata),c_terms.linear[i])
