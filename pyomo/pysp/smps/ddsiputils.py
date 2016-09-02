@@ -657,8 +657,8 @@ def _convert_external_setup_without_cleanup(
     # Write the deterministic part of the LP/MPS-file to its own
     # file for debugging purposes
     #
-    reference_model_name = reference_model.name
-    reference_model.name = "ZeroStochasticData"
+    reference_model_name = reference_model.name()
+    reference_model._name = "ZeroStochasticData"
     det_output_filename = os.path.join(output_directory,
                                        scenario.name+".pysp_model.lp.det")
     with WriterFactory("lp") as writer:
@@ -667,7 +667,7 @@ def _convert_external_setup_without_cleanup(
                                           lambda x: True,
                                           io_options)
         assert output_fname == det_output_filename
-    reference_model.name = reference_model_name
+    reference_model._name = reference_model_name
 
     # reset bounds on any constraints that were modified
     for con, lower in iteritems(modified_constraint_lb):
