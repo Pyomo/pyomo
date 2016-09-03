@@ -288,7 +288,9 @@ class ParamTester(object):
             self.assertEqual( sorted(test), sorted(self.data.keys()) )
 
     def test_values(self):
-        expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
+        expectException = False
+        #    len(self.sparse_data) < len(self.data) and \
+        #    not self.instance.A._mutable
         try:
             test = self.instance.A.values()
             #self.assertEqual( type(test), list )
@@ -297,13 +299,16 @@ class ParamTester(object):
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
-            #self.assertFalse(expectException)
+            self.assertFalse(expectException)
         except ValueError:
             if not expectException:
                 raise
 
     def test_items(self):
-        expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
+        expectException = False
+        #                  len(self.sparse_data) < len(self.data) and \
+        #                  not self.instance.A._default_val is None and \
+        #                  not self.instance.A._mutable
         try:
             test = self.instance.A.items()
             #self.assertEqual( type(test), list )
@@ -311,7 +316,7 @@ class ParamTester(object):
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
-            #self.assertFalse(expectException)
+            self.assertFalse(expectException)
         except ValueError:
             if not expectException:
                 raise
@@ -321,7 +326,10 @@ class ParamTester(object):
         self.assertEqual( sorted(test), sorted(self.instance.A.keys()) )
 
     def test_itervalues(self):
-        expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
+        expectException = False
+        #                  len(self.sparse_data) < len(self.data) and \
+        #                  not self.instance.A._default_val is None and \
+        #                  not self.instance.A._mutable
         try:
             test = itervalues(self.instance.A)
             test = zip(self.instance.A.keys(), test)
@@ -329,18 +337,23 @@ class ParamTester(object):
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
+            self.assertFalse(expectException)
         except ValueError:
             if not expectException:
                 raise
 
     def test_iteritems(self):
-        expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
+        expectException = False
+        #                  len(self.sparse_data) < len(self.data) and \
+        #                  not self.instance.A._default_val is None and \
+        #                  not self.instance.A._mutable
         try:
             test = iteritems(self.instance.A)
             if self.instance.A._default_val is None:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
+            self.assertFalse(expectException)
         except ValueError:
             if not expectException:
                 raise
