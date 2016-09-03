@@ -397,11 +397,11 @@ class Param(IndexedComponent):
         # Set the parameter
         #
         if self._mutable:
-            if idx is None:
-                self._raw_setitem(idx, val)
-            else:
+            if self.is_indexed():
                 self._data[idx] = _ParamData(self, val)
                 #self._raw_setitem(idx, _ParamData(self, val), True)
+            else:
+                self._raw_setitem(idx, val)
             return self[idx]
         else:
             #
@@ -486,7 +486,7 @@ class Param(IndexedComponent):
         #
         # Set the value depending on the type of param value.
         #
-        if ndx is None:
+        if not self.is_indexed():
             self.value = val
         elif self._mutable:
             if ndx in self._data:
