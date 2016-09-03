@@ -354,6 +354,17 @@ class Param(IndexedComponent):
                 "Error retrieving Param value (%s): This parameter has "
                 "not been constructed" % ( idx_str,) )
         if val is None:
+            # If the Param is mutable, then it is OK to create a Param
+            # implicitly ... the error will be tossed later when someone
+            # attempts to evaluate the value of the Param
+            if self._mutable:
+                if self.is_indexed():
+                    self._data[idx] = _ParamData(self, val)
+                    #self._raw_setitem(idx, _ParamData(self, val), True)
+                else:
+                    self._raw_setitem(idx, val)
+                return self[idx]
+
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name(True), idx,)
             else:

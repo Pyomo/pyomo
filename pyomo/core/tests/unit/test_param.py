@@ -407,6 +407,30 @@ class ParamTester(object):
         #"""Check the use of index"""
         self.assertEqual( len(self.instance.A.index_set()), len(list(self.data.keys())) )
 
+    def test_get_default(self):
+        if len(self.sparse_data) == len(self.data):
+            # nothing to test
+            return
+        idx = list(set(self.data) - set(self.sparse_data))[0]
+        expectException = self.instance.A._default_val is None and \
+                          not self.instance.A._mutable
+        try:
+            test = self.instance.A[idx]
+            if expectException:
+                self.fail("Expected the test to raise an exception")
+            self.assertFalse(expectException)
+            expectException = self.instance.A._default_val is None
+            try:
+                ans = value(test)
+                self.assertEquals(ans, value(self.instance.A._default_val))
+                self.assertFalse(expectException)
+            except:
+                if not expectException:
+                    raise
+        except ValueError:
+            if not expectException:
+                raise
+
 
 class ArrayParam_mutable_sparse_noDefault\
           (ParamTester, unittest.TestCase):
