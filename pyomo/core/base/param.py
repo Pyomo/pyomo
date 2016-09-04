@@ -71,6 +71,11 @@ class _ParamData(ComponentData, NumericValue):
         """
         Return the value of this object.
         """
+        if self.value is None:
+            raise ValueError(
+                "Error evaluating Param value (%s):\nThe Param value is "
+                "undefined and no default value is specified"
+                % ( self.name(True), ))
         return self.value
 
     def is_fixed(self):
@@ -370,7 +375,7 @@ class Param(IndexedComponent):
             else:
                 idx_str = '%s' % (self.name(True),)
             raise ValueError(
-                    "Error retrieving Param value (%s): The Param value is "
+                    "Error retrieving Param value (%s):\nThe Param value is "
                     "undefined and no default value is specified"
                     % ( idx_str,) )
         #
