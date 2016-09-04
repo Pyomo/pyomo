@@ -465,7 +465,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             f.write("BOUSTRATEGY 1 * Bounding strategy in DD\n")
             f.write("NULLDISP 5e-10\n")
             f.write("RELAXF 0\n")
-            f.write("INTFIRST 0 * Branch first on integer\n")
+            f.write("INTFIRST 1 * Branch first on integer\n")
 
             f.write("\n\nRISKMO 0 * Risk Model\n")
             f.write("RISKALG 1\n")

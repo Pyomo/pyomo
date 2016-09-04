@@ -1210,7 +1210,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
         sipin.write('BOUSTRATEGY 1 * Bounding strategy in DD\n')
         sipin.write('NULLDISP 1e-16\n')
         sipin.write('RELAXF 0\n')
-        sipin.write('INTFIRST 0 * Branch first on integer\n')
+        sipin.write('INTFIRST 1 * Branch first on integer\n')
         sipin.write('HOTSTART 4 * use previous solution as integer starting info\n')
 
         sipin.write('\n\nRISKMO 0 * Risk Model\n')
