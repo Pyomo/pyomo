@@ -811,8 +811,10 @@ class ScalarTester(ParamTester):
 
     def test_call(self):
         #"""Check the use of the __call__ method"""
-        if not self.sparse_data:
-            self.assertRaises(ValueError, self.instance.A)
+        if self.sparse_data.get(None,None) is None: #not self.sparse_data:
+            self.assertRaisesRegexp(
+                ValueError, ".*undefined and no default value",
+                self.instance.A.__call__ )
         else:
             self.assertEqual(self.instance.A(), self.data[None])
 
