@@ -866,7 +866,7 @@ class ScalarParam_mutable_noDefault(ScalarTester, unittest.TestCase):
         self.data = {None:None}
 
 
-class ScalarParam_mutable_floatDefault(ScalarTester, unittest.TestCase):
+class ScalarParam_mutable_init(ScalarTester, unittest.TestCase):
 
     def setUp(self, **kwds):
         #
@@ -874,6 +874,19 @@ class ScalarParam_mutable_floatDefault(ScalarTester, unittest.TestCase):
         #
         self.model = AbstractModel()
         ScalarTester.setUp(self, mutable=True, initialize=1.3, **kwds)
+
+        self.sparse_data = {None:1.3}
+        self.data = {None:1.3}
+
+
+class ScalarParam_mutable_floatDefault(ScalarTester, unittest.TestCase):
+
+    def setUp(self, **kwds):
+        #
+        # Sparse single-index Param, no default
+        #
+        self.model = AbstractModel()
+        ScalarTester.setUp(self, mutable=True, default=1.3, **kwds)
 
         self.sparse_data = {None:1.3}
         self.data = {None:1.3}
