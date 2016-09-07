@@ -1,6 +1,8 @@
 """
 produce a report of variables sorted by "bad W behavior"
+Major change Sept 2016: only the root node is processed if flag set
 """
+OnlyRootNode = True
 #  _________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
@@ -95,26 +97,28 @@ class sorgwextension(pyomo.util.plugin.SingletonPlugin):
     def post_ph_execution(self, ph):
         # note that we could keep it all in memory and not use a file
         W_Traces = self.Read_W_Traces(self.wtrace_filename)
-        self.Compute_and_Write_it_all(W_Traces)
+        self.Compute_and_Write_it_all(W_Traces, ph)
 
 #=========================
     def _w_printing(self, ofile, ph=None):
         # print the w values in a useful way to the open file ofile
         # if ph is None, just write the header
         if ph is None:
-            ofile.write("iteration; tree node; scenario; variable; W\n")
+            ofile.write("iteration; tree node; scenario; variable; ID; W\n")
         else:
+            root_node_name = ph._scenario_tree.findRootNode()._name
             for stage, tree_node, variable_id, variable_values, is_fixed, is_stale in \
                 scenario_tree_node_variables_generator_noinstances(ph._scenario_tree,
                                                                    includeDerivedVariables=False,
                                                                    includeLastStage=False):
-                if (is_stale is False):
+                if is_stale is False \
+                   and (OnlyRootNode is False or tree_node._name == root_node_name):
                     for scenario in tree_node._scenarios:
                        scen_name = scenario._name
                        weight_value = scenario._w[tree_node._name][variable_id]
                        variable_name, index = tree_node._variable_ids[variable_id]
                        full_variable_name = variable_name+indexToString(index)
-                       ofile.write(str(ph._current_iteration) + ';' + tree_node._name + ';' + scen_name + ';' + full_variable_name + ';' + str(weight_value)+'\n')
+                       ofile.write(str(ph._current_iteration) + ';' + tree_node._name + ';' + scen_name + ';' + full_variable_name + ';' + str(variable_id)+ ';' + str(weight_value) +'\n')
 
 
     #########
@@ -136,9 +140,11 @@ class sorgwextension(pyomo.util.plugin.SingletonPlugin):
             if parts[0] == 'iteration': # hack to skip header
                 continue
             iternum = int(parts[0])
+            nodename = parts[1]
             scenname = parts[2]
             varname = parts[3]
-            wval = num(parts[4])
+            varid = num(parts[4])
+            wval = num(parts[5])
             if iternum != curriter:
                 if iternum-curriter == 1:
                     curriter = iternum
@@ -146,11 +152,11 @@ class sorgwextension(pyomo.util.plugin.SingletonPlugin):
                     print ("HEY! the input in "+fname+" has iter "+str(iternum)+" after "+str(curriter)+'\n')
                     print (linein)
                     sys.exit(1)
-            if varname not in W_Traces:
-                W_Traces[varname] = {}
-            if scenname not in W_Traces[varname]:
-                W_Traces[varname][scenname] = []
-            W_Traces[varname][scenname].append(wval)
+            if varid not in W_Traces:
+                W_Traces[varid] = {}
+            if scenname not in W_Traces[varid]:
+                W_Traces[varid][scenname] = []
+            W_Traces[varid][scenname].append(wval)
         return W_Traces
 
     #####
@@ -214,31 +220,55 @@ class sorgwextension(pyomo.util.plugin.SingletonPlugin):
                DiffZeroCrossings >= self.threshDiffZeroCrossings
 
     ####
-    def Compute_and_Write_it_all(self, W_Traces):
+    def Compute_and_Write_it_all(self, W_Traces, ph):
         VarsOfInterest = set()
         fname = self.wsummary_filename
         print ("sorgw.py is writing the semi-colon separated values file "+fname)
         ofile = open(fname, "w")
         ofile.write("var; scen; WZeroCrossing; DiffsRatio; DiffZeroCrossings; w values...\n")
-        for varname in W_Traces:
-            for scenname in W_Traces[varname]:
-                WZeroCrossings, DiffsRatio, DiffZeroCrossings = self.Score_a_Trace(W_Traces[varname][scenname])
+        for varid in W_Traces:
+            assert(OnlyRootNode)
+            variable_name, index = ph._scenario_tree.findRootNode()._variable_ids[varid]
+            varname = variable_name+indexToString(index)
+
+            for scenname in W_Traces[varid]:
+                WZeroCrossings, DiffsRatio, DiffZeroCrossings = self.Score_a_Trace(W_Traces[varid][scenname])
                 if self.Of_Interest(WZeroCrossings, DiffsRatio, DiffZeroCrossings):
-                    VarsOfInterest.add(varname)
+                    VarsOfInterest.add(varid)
                 ofile.write(varname+';'+scenname+';'+str(WZeroCrossings)+';'+str(DiffsRatio)+';'+str(DiffZeroCrossings))
-                for w in W_Traces[varname][scenname]:
+                for w in W_Traces[varid][scenname]:
                     ofile.write(';'+str(w))
                 ofile.write('\n')
         ofile.close
+        # now processing interesting vars
+        BiggestLoser = None
+        LoserRange = 0
         fname = self.winterest_filename
         print ("sorgw.py is writing the semi-colon separated values file "+fname)
         ofile = open(fname, "w")
         ofile.write("var; scen; WZeroCrossing; DiffsRatio; DiffZeroCrossings; w values...\n")
-        for varname in VarsOfInterest:
-            for scenname in W_Traces[varname]:
-                WZeroCrossings, DiffsRatio, DiffZeroCrossings = self.Score_a_Trace(W_Traces[varname][scenname])
+        for varid in VarsOfInterest:
+            vwmax = vwmin = 0
+            assert(OnlyRootNode)
+            variable_name, index = ph._scenario_tree.findRootNode()._variable_ids[varid]
+            varname = variable_name+indexToString(index)
+
+            for scenname in W_Traces[varid]:
+                WZeroCrossings, DiffsRatio, DiffZeroCrossings = self.Score_a_Trace(W_Traces[varid][scenname])
                 ofile.write(varname+';'+scenname+';'+str(WZeroCrossings)+';'+str(DiffsRatio)+';'+str(DiffZeroCrossings))
-                for w in W_Traces[varname][scenname]:
+                for w in W_Traces[varid][scenname]:
                     ofile.write(';'+str(w))
+                    if w > vwmax:
+                        vwmax = w
+                    if w < vwmin:
+                        vwmin = w
                 ofile.write('\n')
+            vwrange = vwmax - vwmin
+            if vwrange > LoserRange:
+                LoserRange = vwrange
+                BiggestLoser = varid
+
         ofile.close
+        if BiggestLoser is not None:
+            ph._sorgw_BiggestLoser = BiggestLoser
+        print ("sorgw.py complete: RootNodeOnly="+str(OnlyRootNode)+" BiggestLoser="+str(BiggestLoser)+" with vwrange="+str(vwrange))
