@@ -210,9 +210,9 @@ class block(_block_base, IBlockStorage):
                     "been assigned to the component being "
                     "inserted: %s"
                     % (self.__class__.__name__,
-                       self.name(True),
+                       self.name,
                        name,
-                       component.parent.name(True)))
+                       component.parent.name))
         super(block, self).__setattr__(name, component)
 
     def __delattr__(self, name):

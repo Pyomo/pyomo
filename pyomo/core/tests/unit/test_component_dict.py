@@ -330,15 +330,15 @@ class _TestComponentDictBase(object):
                 self.assertTrue(c.root_block is c)
             else:
                 self.assertTrue(c.root_block is None)
-            self.assertEqual(c.name(False), None)
-            self.assertEqual(c.name(True), None)
+            self.assertEqual(c.local_name, None)
+            self.assertEqual(c.name, None)
 
         cdict = self._container_type()
         self.assertTrue(cdict.parent is None)
         self.assertTrue(cdict.parent_block is None)
         self.assertTrue(cdict.root_block is None)
-        self.assertEqual(cdict.name(False), None)
-        self.assertEqual(cdict.name(True), None)
+        self.assertEqual(cdict.local_name, None)
+        self.assertEqual(cdict.name, None)
         cdict.update(components)
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
@@ -347,13 +347,13 @@ class _TestComponentDictBase(object):
                 self.assertTrue(c.root_block is c)
             else:
                 self.assertTrue(c.root_block is None)
-            self.assertEqual(c.name(False, convert=str),
+            self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "[%s]" % (str(key)))
-            self.assertEqual(c.name(False, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=False, convert=repr),
                              "[%s]" % (repr(key)))
-            self.assertEqual(c.name(True, convert=str),
+            self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "[%s]" % (str(key)))
-            self.assertEqual(c.name(True, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "[%s]" % (repr(key)))
 
         model = block()
@@ -364,19 +364,19 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.parent is model)
         self.assertTrue(cdict.parent_block is model)
         self.assertTrue(cdict.root_block is model)
-        self.assertEqual(cdict.name(False), "cdict")
-        self.assertEqual(cdict.name(True), "cdict")
+        self.assertEqual(cdict.local_name, "cdict")
+        self.assertEqual(cdict.name, "cdict")
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is model)
-            self.assertEqual(c.name(False, convert=str),
+            self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.name(False, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=False, convert=repr),
                              "cdict[%s]" % (repr(key)))
-            self.assertEqual(c.name(True, convert=str),
+            self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.name(True, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "cdict[%s]" % (repr(key)))
 
         b = block()
@@ -390,19 +390,19 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.parent is model)
         self.assertTrue(cdict.parent_block is model)
         self.assertTrue(cdict.root_block is b)
-        self.assertEqual(cdict.name(False), "cdict")
-        self.assertEqual(cdict.name(True), "model.cdict")
+        self.assertEqual(cdict.local_name, "cdict")
+        self.assertEqual(cdict.name, "model.cdict")
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
-            self.assertEqual(c.name(False, convert=str),
+            self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.name(False, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=False, convert=repr),
                              "cdict[%s]" % (repr(key)))
-            self.assertEqual(c.name(True, convert=str),
+            self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "model.cdict[%s]" % (str(key)))
-            self.assertEqual(c.name(True, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "model.cdict[%s]" % (repr(key)))
 
         bdict = block_dict()
@@ -419,19 +419,19 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.parent is model)
         self.assertTrue(cdict.parent_block is model)
         self.assertTrue(cdict.root_block is b)
-        self.assertEqual(cdict.name(False), "cdict")
-        self.assertEqual(cdict.name(True), "[0].model.cdict")
+        self.assertEqual(cdict.local_name, "cdict")
+        self.assertEqual(cdict.name, "[0].model.cdict")
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
-            self.assertEqual(c.name(False, convert=str),
+            self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.name(False, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=False, convert=repr),
                              "cdict[%s]" % (repr(key)))
-            self.assertEqual(c.name(True, convert=str),
+            self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "[0].model.cdict[%s]" % (str(key)))
-            self.assertEqual(c.name(True, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "[0].model.cdict[%s]" % (repr(key)))
 
         m = block()
@@ -451,19 +451,19 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.parent is model)
         self.assertTrue(cdict.parent_block is model)
         self.assertTrue(cdict.root_block is m)
-        self.assertEqual(cdict.name(False), "cdict")
-        self.assertEqual(cdict.name(True), "bdict[0].model.cdict")
+        self.assertEqual(cdict.local_name, "cdict")
+        self.assertEqual(cdict.name, "bdict[0].model.cdict")
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is m)
-            self.assertEqual(c.name(False, convert=str),
+            self.assertEqual(c.getname(fully_qualified=False, convert=str),
                              "cdict[%s]" % (str(key)))
-            self.assertEqual(c.name(False, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=False, convert=repr),
                              "cdict[%s]" % (repr(key)))
-            self.assertEqual(c.name(True, convert=str),
+            self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "bdict[0].model.cdict[%s]" % (str(key)))
-            self.assertEqual(c.name(True, convert=repr),
+            self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "bdict[0].model.cdict[%s]" % (repr(key)))
 
 class _TestActiveComponentDictBase(_TestComponentDictBase):

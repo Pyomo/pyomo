@@ -100,9 +100,9 @@ class ComponentDict(IComponentContainer,
                 "at key %s. A parent container has already been "
                 "assigned to the component being inserted: %s"
                 % (self.__class__.__name__,
-                   self.name(True),
+                   self.name,
                    key,
-                   item.parent.name(True)))
+                   item.parent.name))
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "

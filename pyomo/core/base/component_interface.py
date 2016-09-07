@@ -90,12 +90,12 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
             parent_block = parent_block.parent_block
         return root_block
 
-    def name(self,
-              fully_qualified=False,
-              name_buffer=None,
-              convert=str):
+    def getname(self,
+                fully_qualified=False,
+                name_buffer=None,
+                convert=str):
         """
-        Generate a name for the component container.
+        Generate a name for the object.
 
         Args:
             fully_qualified (bool): Generate full name from
@@ -132,12 +132,21 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
            parent_is_block:
             return name
         else:
-            parent_name = parent.name(fully_qualified=fully_qualified,
-                                      name_buffer=name_buffer)
+            parent_name = parent.getname(fully_qualified=fully_qualified,
+                                         name_buffer=name_buffer)
             if parent_name is not None:
                 return parent_name + prefix + name
             else:
                 return name
+
+    @property
+    def name(self):
+        """Get the fully qualified object name"""
+        return self.getname(fully_qualified=True)
+    @property
+    def local_name(self):
+        """Get the object name only within the context of its parent"""
+        return self.getname(fully_qualified=False)
 
 class IActiveObject(six.with_metaclass(abc.ABCMeta, object)):
     """Interface for objects that support activate/deactivate
@@ -185,7 +194,7 @@ class IComponent(ICategorizedObject):
         ostream.write(self.__str__())
 
     def __str__(self):
-        name = self.name(True)
+        name = self.name
         if name is None:
             return "<"+self.__class__.__name__+">"
         else:
@@ -272,7 +281,7 @@ class IComponentContainer(ICategorizedObject):
         raise NotImplementedError     #pragma:nocover
 
     def __str__(self):
-        name = self.name(True)
+        name = self.name
         if name is None:
             return "<"+self.__class__.__name__+">"
         else:

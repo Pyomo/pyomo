@@ -105,8 +105,8 @@ class Test_suffix(unittest.TestCase):
         self.assertTrue(s.parent is None)
         self.assertTrue(s.parent_block is None)
         self.assertTrue(s.root_block is None)
-        self.assertEqual(s.name(False), None)
-        self.assertEqual(s.name(True), None)
+        self.assertEqual(s.local_name, None)
+        self.assertEqual(s.name, None)
 
         model = block()
         model.s = s
@@ -116,8 +116,8 @@ class Test_suffix(unittest.TestCase):
         self.assertTrue(s.parent is model)
         self.assertTrue(s.parent_block is model)
         self.assertTrue(s.root_block is model)
-        self.assertEqual(s.name(False), "s")
-        self.assertEqual(s.name(True), "s")
+        self.assertEqual(s.local_name, "s")
+        self.assertEqual(s.name, "s")
 
         b = block()
         b.model = model
@@ -130,8 +130,8 @@ class Test_suffix(unittest.TestCase):
         self.assertTrue(s.parent is model)
         self.assertTrue(s.parent_block is model)
         self.assertTrue(s.root_block is b)
-        self.assertEqual(s.name(False), "s")
-        self.assertEqual(s.name(True), "model.s")
+        self.assertEqual(s.local_name, "s")
+        self.assertEqual(s.name, "model.s")
 
         bdict = block_dict()
         bdict[0] = b
@@ -147,8 +147,8 @@ class Test_suffix(unittest.TestCase):
         self.assertTrue(s.parent is model)
         self.assertTrue(s.parent_block is model)
         self.assertTrue(s.root_block is b)
-        self.assertEqual(s.name(False), "s")
-        self.assertEqual(s.name(True), "[0].model.s")
+        self.assertEqual(s.local_name, "s")
+        self.assertEqual(s.name, "[0].model.s")
 
         m = block()
         m.bdict = bdict
@@ -167,8 +167,8 @@ class Test_suffix(unittest.TestCase):
         self.assertTrue(s.parent is model)
         self.assertTrue(s.parent_block is model)
         self.assertTrue(s.root_block is m)
-        self.assertEqual(s.name(False), "s")
-        self.assertEqual(s.name(True), "bdict[0].model.s")
+        self.assertEqual(s.local_name, "s")
+        self.assertEqual(s.name, "bdict[0].model.s")
 
     def test_active(self):
 

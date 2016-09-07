@@ -86,9 +86,9 @@ class ComponentList(IComponentContainer,
                 "at index %s. A parent container has already been "
                 "assigned to the component being inserted: %s"
                 % (self.__class__.__name__,
-                   self.name(True),
+                   self.name,
                    i,
-                   item.parent.name(True)))
+                   item.parent.name))
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "
@@ -117,7 +117,7 @@ class ComponentList(IComponentContainer,
                 "assigned to the component being inserted: %s"
                 % (self.__class__.__name__,
                    i,
-                   item.parent.name(True)))
+                   item.parent.name))
         else:
             raise TypeError(
                 "Invalid assignment to type %s with index %s. "

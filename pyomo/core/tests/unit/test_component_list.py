@@ -395,15 +395,15 @@ class _TestComponentListBase(object):
                 self.assertTrue(c.root_block is c)
             else:
                 self.assertTrue(c.root_block is None)
-            self.assertEqual(c.name(False), None)
-            self.assertEqual(c.name(True), None)
+            self.assertEqual(c.local_name, None)
+            self.assertEqual(c.name, None)
 
         clist = self._container_type()
         self.assertTrue(clist.parent is None)
         self.assertTrue(clist.parent_block is None)
         self.assertTrue(clist.root_block is None)
-        self.assertEqual(clist.name(False), None)
-        self.assertEqual(clist.name(True), None)
+        self.assertEqual(clist.local_name, None)
+        self.assertEqual(clist.name, None)
         clist.extend(components)
         for i, c in enumerate(components):
             self.assertTrue(c.parent is clist)
@@ -412,8 +412,8 @@ class _TestComponentListBase(object):
                 self.assertTrue(c.root_block is c)
             else:
                 self.assertTrue(c.root_block is None)
-            self.assertEqual(c.name(False), "[%s]" % (i))
-            self.assertEqual(c.name(True), "[%s]" % (i))
+            self.assertEqual(c.local_name, "[%s]" % (i))
+            self.assertEqual(c.name, "[%s]" % (i))
 
         model = block()
         model.clist = clist
@@ -423,14 +423,14 @@ class _TestComponentListBase(object):
         self.assertTrue(clist.parent is model)
         self.assertTrue(clist.parent_block is model)
         self.assertTrue(clist.root_block is model)
-        self.assertEqual(clist.name(False), "clist")
-        self.assertEqual(clist.name(True), "clist")
+        self.assertEqual(clist.local_name, "clist")
+        self.assertEqual(clist.name, "clist")
         for i, c in enumerate(components):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is model)
-            self.assertEqual(c.name(False), "clist[%s]" % (i))
-            self.assertEqual(c.name(True), "clist[%s]" % (i))
+            self.assertEqual(c.local_name, "clist[%s]" % (i))
+            self.assertEqual(c.name, "clist[%s]" % (i))
 
         b = block()
         b.model = model
@@ -443,14 +443,14 @@ class _TestComponentListBase(object):
         self.assertTrue(clist.parent is model)
         self.assertTrue(clist.parent_block is model)
         self.assertTrue(clist.root_block is b)
-        self.assertEqual(clist.name(False), "clist")
-        self.assertEqual(clist.name(True), "model.clist")
+        self.assertEqual(clist.local_name, "clist")
+        self.assertEqual(clist.name, "model.clist")
         for i, c in enumerate(components):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
-            self.assertEqual(c.name(False), "clist[%s]" % (i))
-            self.assertEqual(c.name(True), "model.clist[%s]" % (i))
+            self.assertEqual(c.local_name, "clist[%s]" % (i))
+            self.assertEqual(c.name, "model.clist[%s]" % (i))
 
         blist = block_list()
         blist.append(b)
@@ -466,14 +466,14 @@ class _TestComponentListBase(object):
         self.assertTrue(clist.parent is model)
         self.assertTrue(clist.parent_block is model)
         self.assertTrue(clist.root_block is b)
-        self.assertEqual(clist.name(False), "clist")
-        self.assertEqual(clist.name(True), "[0].model.clist")
+        self.assertEqual(clist.local_name, "clist")
+        self.assertEqual(clist.name, "[0].model.clist")
         for i, c in enumerate(components):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
-            self.assertEqual(c.name(False), "clist[%s]" % (i))
-            self.assertEqual(c.name(True),
+            self.assertEqual(c.local_name, "clist[%s]" % (i))
+            self.assertEqual(c.name,
                              "[0].model.clist[%s]" % (i))
 
         m = block()
@@ -493,14 +493,14 @@ class _TestComponentListBase(object):
         self.assertTrue(clist.parent is model)
         self.assertTrue(clist.parent_block is model)
         self.assertTrue(clist.root_block is m)
-        self.assertEqual(clist.name(False), "clist")
-        self.assertEqual(clist.name(True), "blist[0].model.clist")
+        self.assertEqual(clist.local_name, "clist")
+        self.assertEqual(clist.name, "blist[0].model.clist")
         for i, c in enumerate(components):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is m)
-            self.assertEqual(c.name(False), "clist[%s]" % (i))
-            self.assertEqual(c.name(True),
+            self.assertEqual(c.local_name, "clist[%s]" % (i))
+            self.assertEqual(c.name,
                              "blist[0].model.clist[%s]" % (i))
 
 class _TestActiveComponentListBase(_TestComponentListBase):
