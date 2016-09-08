@@ -335,7 +335,7 @@ class Collocation_Discretization_Transformation(Transformation):
                      "must be a differential set")
             elif 'scheme' in tmpds.get_discretization_info():
                 raise ValueError("The discretization scheme '%s' has already been applied "\
-                     "to the ContinuousSet '%s'"%s(tmpds.get_discretization_info()['scheme'],tmpds.name(True)))
+                     "to the ContinuousSet '%s'"%s(tmpds.get_discretization_info()['scheme'],tmpds.name))
 
         if tmpnfe <=0:
             raise ValueError("The number of finite elements must be at least 1")
@@ -356,9 +356,9 @@ class Collocation_Discretization_Transformation(Transformation):
             self._ncp[None] = tmpncp
             currentds = None
         else :
-            self._nfe[tmpds.name()]=tmpnfe
-            self._ncp[tmpds.name()]=tmpncp
-            currentds = tmpds.name(True)
+            self._nfe[tmpds.local_name]=tmpnfe
+            self._ncp[tmpds.local_name]=tmpncp
+            currentds = tmpds.name
 
         self._scheme = self.all_schemes.get(self._scheme_name,None)
         if self._scheme is None:
@@ -380,21 +380,21 @@ class Collocation_Discretization_Transformation(Transformation):
 
         self._fe = {}
         for ds in itervalues(block.component_map(ContinuousSet)):
-            if currentds is None or currentds == ds.name(True):
+            if currentds is None or currentds == ds.name:
                 generate_finite_elements(ds,self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds)-1 > self._nfe[currentds]:
                         print("***WARNING: More finite elements were found in differentialset "\
                             "'%s' than the number of finite elements specified in apply. "\
-                              "The larger number of finite elements will be used." % (ds.name(True),))
+                              "The larger number of finite elements will be used." % (ds.name,))
 
-                self._nfe[ds.name(True)]=len(ds)-1
-                self._fe[ds.name(True)]=sorted(ds)
+                self._nfe[ds.name]=len(ds)-1
+                self._fe[ds.name]=sorted(ds)
                 generate_colloc_points(ds,self._tau[currentds])
                 # Adding discretization information to the differentialset object itself
                 # so that it can be accessed outside of the discretization object
                 disc_info = ds.get_discretization_info()
-                disc_info['nfe']=self._nfe[ds.name(True)]
+                disc_info['nfe']=self._nfe[ds.name]
                 disc_info['ncp']=self._ncp[currentds]
                 disc_info['tau_points']=self._tau[currentds]
                 disc_info['adot'] = self._adot[currentds]
@@ -408,7 +408,7 @@ class Collocation_Discretization_Transformation(Transformation):
         for d in itervalues(block.component_map(DerivativeVar)):
             dsets = d.get_continuousset_list()
             for i in set(dsets):
-                if currentds is None or i.name(True) == currentds:
+                if currentds is None or i.name == currentds:
                     oldexpr = d.get_derivative_expression()
                     loc = d.get_state_var()._contset[i]
                     count = dsets.count(i)
@@ -416,7 +416,7 @@ class Collocation_Discretization_Transformation(Transformation):
                         raise DAE_Error(
                             "Error discretizing '%s' with respect to '%s'. Current implementation "\
                             "only allows for taking the first or second derivative with respect to "\
-                            "a particular ContinuousSet" %s(d.name(True),i.name(True)))
+                            "a particular ContinuousSet" %s(d.name,i.name))
                     scheme = self._scheme[count-1]
                     # print("%s %s" % (i.name, scheme.__name__))
                     newexpr = create_partial_expression(scheme,oldexpr,i,loc)
@@ -472,32 +472,32 @@ class Collocation_Discretization_Transformation(Transformation):
         if contset.type() is not ContinuousSet:
             raise TypeError("The component specified using the 'contset' keyword "\
                 "must be a differential set")
-        ds = instance.find_component(contset.name(True))
+        ds = instance.find_component(contset.name)
         if ds is None:
             raise ValueError("ContinuousSet '%s' is not a valid component of the discretized "\
-                "model instance" %(contset.name(True)))
+                "model instance" %(contset.name))
 
         if len(self._ncp) == 0:
             raise RuntimeError("This method should only be called after using the apply() method "\
                 "to discretize the model")
         elif None in self._ncp:
             tot_ncp = self._ncp[None]
-        elif ds.name(True) in self._ncp:
-            tot_ncp = self._ncp[ds.name(True)]
+        elif ds.name in self._ncp:
+            tot_ncp = self._ncp[ds.name]
         else:
             raise ValueError("ContinuousSet '%s' has not been discretized yet, please call "\
                 "the apply() method with this ContinuousSet to discretize it before calling "\
-                "this method" %s(ds.name(True)))
+                "this method" %s(ds.name))
 
         if var is None:
             raise TypeError("A variable must be specified")
         if var.type() is not Var:
             raise TypeError("The component specified using the 'var' keyword "\
                 "must be a variable")
-        tmpvar = instance.find_component(var.name(True))
+        tmpvar = instance.find_component(var.name)
         if tmpvar is None:
             raise ValueError("Variable '%s' is not a valid component of the discretized "\
-                "model instance" %(var.name(True)))
+                "model instance" %(var.name))
 
         var = tmpvar
 
@@ -517,22 +517,22 @@ class Collocation_Discretization_Transformation(Transformation):
         if var.dim() == 1:
             if ds not in var._index:
                 raise IndexError("ContinuousSet '%s' is not an indexing set of the variable '%s'"\
-                    % (ds.name(), var.name(True)))
+                    % (ds.name, var.name))
         elif ds not in var._index_set:
             raise IndexError("ContinuousSet '%s' is not an indexing set of the variable '%s'"\
-                             % (ds.name(), var.name()))
+                             % (ds.name, var.name))
 
-        if var.name(True) in self._reduced_cp:
-            temp = self._reduced_cp[var.name(True)]
-            if ds.name(True) in temp:
+        if var.name in self._reduced_cp:
+            temp = self._reduced_cp[var.name]
+            if ds.name in temp:
                 raise RuntimeError("Variable '%s' has already been constrained to a reduced "\
                     "number of collocation points over ContinuousSet '%s'.")
             else:
-                temp[ds.name()]=ncp
+                temp[ds.local_name]=ncp
         else:
-            self._reduced_cp[var.name()] = {ds.name(): ncp}
+            self._reduced_cp[var.local_name] = {ds.local_name: ncp}
 
-        list_name = var.name()+"_interpolation_constraints"
+        list_name = var.local_name+"_interpolation_constraints"
 
         instance.add_component(list_name,ConstraintList())
         conlist = instance.find_component(list_name)

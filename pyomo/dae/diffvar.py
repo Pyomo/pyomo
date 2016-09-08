@@ -72,8 +72,8 @@ def derivative(self,*args):
     except:
         nme = '_'
         for i in args:
-            nme = nme+'d'+i.name()
-        self.model().add_component('d'+svar.name()+nme,DerivativeVar(svar,wrt=args))
+            nme = nme+'d'+i.local_name
+        self.model().add_component('d'+svar.local_name+nme,DerivativeVar(svar,wrt=args))
         deriv = svar.get_derivative(*args)
 
     try:
@@ -212,7 +212,7 @@ class DerivativeVar(Var):
             raise DAE_Error(
                 "Cannot create a new derivative variable for variable "
                 "%s: derivative already defined as %s"
-                % ( sVar.name(True), sVar.get_derivative(*tuple(wrt)).name(True) ) )
+                % ( sVar.name, sVar.get_derivative(*tuple(wrt)).name ) )
 
         sVar._derivative[wrtkey] = weakref.ref(self)
         self._sVar = sVar

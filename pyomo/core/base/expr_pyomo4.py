@@ -218,14 +218,14 @@ class _ExpressionBase(NumericValue):
         ans._parent_expr = None
         return ans
 
-    def name(self):
+    def getname(self):
         """The text name of this Expression function"""
         raise NotImplementedError("Derived expression (%s) failed to "\
-            "implement name()" % ( str(self.__class__), ))
+            "implement getname()" % ( str(self.__class__), ))
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     #
     # this method contrast with the is_fixed() method.  This method
@@ -385,11 +385,11 @@ class _ExpressionBase(NumericValue):
         elif _sub.__class__ is NumericConstant:
             ostream.write(str(_sub()))
         else:
-            ostream.write(_sub.name(True, _name_buffer))
+            ostream.write(_sub.getname(True, _name_buffer))
 
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
-            ostream.write(self.name())
+            ostream.write(self.getname())
 
     def _to_string_infix(self, ostream, idx, verbose):
         if verbose:
@@ -403,12 +403,12 @@ class _NegationExpression(_ExpressionBase):
 
     PRECEDENCE = 4
 
-    def name(self):
+    def getname(self):
         return 'neg'
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
         return result.pop()
@@ -418,7 +418,7 @@ class _NegationExpression(_ExpressionBase):
 
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
-            ostream.write(self.name())
+            ostream.write(self.getname())
         elif not self._args[0].is_expression and _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
             ostream.write("-")
         else:
@@ -455,15 +455,15 @@ class _UnaryFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def name(self):
+    def getname(self):
         return self._name
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.name())
+        ostream.write(self.getname())
 
     def _polynomial_degree(self, result):
         if result.pop() == 0:
@@ -481,12 +481,12 @@ _IntrinsicFunctionExpression =  _UnaryFunctionExpression
 class _ExternalFunctionExpression(_ExpressionBase):
     __slots__ = ()
 
-    def name(self):
-        return self._fcn.name()
+    def getname(self):
+        return self._fcn.getname()
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
         if result.pop() == 0:
@@ -570,12 +570,12 @@ class _PowExpression(_ExpressionBase):
         _l = result.pop()
         return _l ** _r
 
-    def name(self):
+    def getname(self):
         return 'pow'
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def _inline_operator(self):
         return '**'
@@ -695,12 +695,12 @@ class _ProductExpression(_ExpressionBase):
             return a + b
 
 
-    def name(self):
+    def getname(self):
         return 'prod'
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def _inline_operator(self):
         return ' * '
@@ -730,12 +730,12 @@ class _DivisionExpression(_ExpressionBase):
             return None
 
 
-    def name(self):
+    def getname(self):
         return 'div'
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def _inline_operator(self):
         return ' / '
@@ -790,12 +790,12 @@ class _SumExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return sum(result.pop() for x in self._args)
 
-    def name(self):
+    def getname(self):
         return 'sum'
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def __iadd__(self, other):
         if safe_mode and self._parent_expr:
@@ -830,7 +830,7 @@ class _SumExpression(_ExpressionBase):
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
                 "value defined over an index that you did not specify?"
-                % (etype, other.name(True), ) )
+                % (etype, other.name, ) )
         elif other.is_constant():
             other = other()
 
@@ -882,7 +882,7 @@ class _SumExpression(_ExpressionBase):
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
                 "value defined over an index that you did not specify?"
-                % (etype, other.name(), ) )
+                % (etype, other.name, ) )
         elif other.is_constant():
             other = - ( other() )
 
@@ -936,12 +936,12 @@ class Expr_if(_ExpressionBase):
     def _arguments(self):
         return ( self._if, self._then, self._else )
 
-    def name(self):
+    def getname(self):
         return "Expr_if"
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def is_constant(self):
         if self._if.is_constant():
@@ -979,7 +979,7 @@ class Expr_if(_ExpressionBase):
         ostream.write(" )")
 
     def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.name())
+        ostream.write(self.getname())
 
     def _to_string_infix(self, ostream, idx, verbose):
         ostream.write(", ")
@@ -1080,12 +1080,12 @@ class _LinearExpression(_ExpressionBase):
             ans.extend(self._args)
             return ans
 
-    def name(self):
+    def getname(self):
         return 'linear'
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def is_constant(self):
         if self._const.__class__ not in native_numeric_types \
@@ -1109,7 +1109,7 @@ class _LinearExpression(_ExpressionBase):
                 if _idx:
                     coef = abs(coef)
                 if coef == 1:
-                    ostream.write(_sub.name(True, _name_buffer))
+                    ostream.write(_sub.getname(True, _name_buffer))
                     return
                 ostream.write(str(coef))
             elif coef.is_expression():
@@ -1117,7 +1117,7 @@ class _LinearExpression(_ExpressionBase):
                                 precedence=_ProductExpression.PRECEDENCE )
             else:
                 ostream.write(str(coef))
-            ostream.write("*%s" % (_sub.name(True, _name_buffer)))
+            ostream.write("*%s" % (_sub.getname(True, _name_buffer)))
 
     def _to_string_infix(self, ostream, idx, verbose):
         if verbose:
@@ -1444,7 +1444,7 @@ def generate_expression(etype, _self, _other):
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
                 "value defined over an index that you did not specify?"
-                % (etype, _other.name(), ) )
+                % (etype, _other.name, ) )
         elif _other.is_constant():
             _other = _other()
 
@@ -1666,7 +1666,7 @@ def generate_relational_expression(etype, lhs, rhs):
             "specified without an index: %s\n    Is variable or parameter "
             "'%s' defined over an index that you did not specify?"
             % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
-               lhs.name(), lhs.name()))
+               lhs.name, lhs.name))
     elif lhs.is_expression():
         if lhs.is_relational():
             lhs_is_relational = True
@@ -1678,7 +1678,7 @@ def generate_relational_expression(etype, lhs, rhs):
             "specified without an index: %s\n    Is variable or parameter "
             "'%s' defined over an index that you did not specify?"
             % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
-               rhs.name(), rhs.name()))
+               rhs.name, rhs.name))
     elif rhs.is_expression():
         if rhs.is_relational():
             rhs_is_relational = True
@@ -1804,7 +1804,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     if arg.is_indexed():
         raise ValueError("Argument for intrinsic function '%s' is an "\
             "n-ary numeric value: %s\n    Have you given variable or "\
-            "parameter '%s' an index?" % (name, arg.name(), arg.name()))
+            "parameter '%s' an index?" % (name, arg.name, arg.name))
     return _UnaryFunctionExpression((arg,), name, fcn)
 
 # [debugging] clone_counter is a count of the number of calls to

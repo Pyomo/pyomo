@@ -44,4 +44,4 @@ solver.solve(model)
 
 ### print the results
 for v in model.ib[:].y:
-    print(v.name(fully_qualified=True), value(v))
+    print(v.name, value(v))

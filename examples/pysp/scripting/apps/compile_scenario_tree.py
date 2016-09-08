@@ -64,13 +64,13 @@ def _pickle_compiled_scenario(worker,
     #
     scenario_instance_cost_expression = \
         scenario._instance_cost_expression
-    assert scenario_instance_cost_expression.name() in \
+    assert scenario_instance_cost_expression.local_name in \
         ("_PySP_UserCostExpression", "_PySP_CostExpression")
     scenario_instance.del_component(scenario_instance_cost_expression)
 
     scenario_instance_objective = \
         scenario._instance_objective
-    if scenario_instance_objective.name() == "_PySP_CostObjective":
+    if scenario_instance_objective.local_name == "_PySP_CostObjective":
         scenario_instance.del_component(scenario_instance_objective)
     else:
         scenario_instance_objective.expr = scenario_instance_cost_expression.expr
@@ -120,10 +120,10 @@ def _pickle_compiled_scenario(worker,
     #
     # Re-add PySP generated model components
     #
-    scenario_instance.add_component(scenario_instance_cost_expression.name(),
+    scenario_instance.add_component(scenario_instance_cost_expression.local_name,
                                     scenario_instance_cost_expression)
-    if scenario_instance_objective.name() == "_PySP_CostObjective":
-        scenario_instance.add_component(scenario_instance_objective.name(),
+    if scenario_instance_objective.local_name == "_PySP_CostObjective":
+        scenario_instance.add_component(scenario_instance_objective.local_name,
                                         scenario_instance_objective)
     scenario_instance_objective.expr = scenario_instance_cost_expression
     scenario_instance._ScenarioTreeSymbolMap = scenario_tree_symbol_map

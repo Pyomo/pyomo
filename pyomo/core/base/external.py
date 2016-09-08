@@ -65,16 +65,16 @@ class ExternalFunction(Component):
                 else as_numeric(x)
                 for x in args ) )
 
-    def name(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None):
         if self.name:
-            return super(ExternalFunction, self).name(
+            return super(ExternalFunction, self).getname(
                 fully_qualified, name_buffer )
         else:
             return str(self._library) + ":" + str(self._function)
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() function has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() function has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def evaluate(self, args):
         raise NotImplementedError(
@@ -161,16 +161,16 @@ class PythonCallbackFunction(ExternalFunction):
     def __call__(self, *args):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
 
-    def name(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None):
         if self.name:
-            return super(ExternalFunction, self).name(
-                fully_qualified, name_buffer )
+            return super(ExternalFunction, self).getname(
+                fully_qualified, name_buffer)
         else:
             return "PythonCallback(%s)" % str(self._fcn)
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() function has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() function has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def evaluate(self, args):
         # Skip the library name and function name
