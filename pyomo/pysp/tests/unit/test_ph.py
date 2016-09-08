@@ -23,6 +23,7 @@ except:
     # python 2.6
     from subprocess import check_call as _run_cmd
 
+thisdir = dirname(abspath(__file__))
 this_test_file_directory = dirname(abspath(__file__))+os.sep
 
 pysp_examples_dir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))+os.sep+"examples"+os.sep+"pysp"+os.sep
@@ -210,6 +211,9 @@ class TestPH(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         _setUpClass(cls)
+
+    def setUp(self):
+        os.chdir(thisdir)
 
     def tearDown(self):
 
@@ -1270,6 +1274,9 @@ class TestPHExpensive(unittest.TestCase):
     def setUpClass(cls):
         _setUpClass(cls)
 
+    def setUp(self):
+        os.chdir(thisdir)
+
     def tearDown(self):
 
         # IMPT: This step is key, as Python keys off the name of the module, not the location.
@@ -1733,6 +1740,7 @@ class TestPHParallel(unittest.TestCase):
         _setUpClass(cls)
 
     def setUp(self):
+        os.chdir(thisdir)
         _setUpModule()
         self._taskworker_processes = []
 
