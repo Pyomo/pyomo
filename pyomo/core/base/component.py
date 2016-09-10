@@ -284,10 +284,13 @@ class Component(object):
     # never be assigned to by user code.
     @name.setter
     def name(self, val):
-        raise ValueError(
-            "The .name attribute is now a property method "
-            "that returns the fully qualified component name. "
-            "Assignment is not allowed.")
+        if self.parent_block() is None:
+            self._name = val
+        else:
+            raise ValueError(
+                "The .name attribute is not settable when the component "
+                "is assigned to a Block.\nTriggered by attempting to set "
+                "component '%s' to name '%s'" % (self.name,val))
 
     @property
     def local_name(self):
