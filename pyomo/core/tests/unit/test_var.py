@@ -53,7 +53,7 @@ class TestSimpleVar(PyomoModel):
         self.instance.x.fixed = True
         self.assertEqual(self.instance.x.fixed, True)
 
-    def test_setlb_nondata_expression(self):
+    def Xtest_setlb_nondata_expression(self):
         model = ConcreteModel()
         model.x = Var()
         model.e = Expression()
@@ -72,7 +72,7 @@ class TestSimpleVar(PyomoModel):
         with self.assertRaises(ValueError):
             model.x.setlb(model.y + 1)
 
-    def test_setub_nondata_expression(self):
+    def Xtest_setub_nondata_expression(self):
         model = ConcreteModel()
         model.x = Var()
         model.e = Expression()
@@ -91,7 +91,7 @@ class TestSimpleVar(PyomoModel):
         with self.assertRaises(ValueError):
             model.x.setub(model.y + 1)
 
-    def test_setlb_data_expression(self):
+    def Xtest_setlb_data_expression(self):
         model = ConcreteModel()
         model.x = Var()
         model.p = Param(mutable=True)
@@ -102,7 +102,7 @@ class TestSimpleVar(PyomoModel):
         model.x.setlb(model.p**2)
         model.x.setlb(1.0)
 
-    def test_setub_data_expression(self):
+    def Xtest_setub_data_expression(self):
         model = ConcreteModel()
         model.x = Var()
         model.p = Param(mutable=True)
