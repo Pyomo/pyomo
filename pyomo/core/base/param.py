@@ -85,6 +85,12 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
+    def _is_data(self):
+        """
+        Returns True because this object stores data.
+        """
+        return True
+
     def __nonzero__(self):
         """Return True if the value is defined and non-zero."""
         if self.value:

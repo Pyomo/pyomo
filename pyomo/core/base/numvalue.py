@@ -162,8 +162,8 @@ def value(obj, exception=True):
 
 def is_constant(obj):
     """
-    A utility function that returns a boolean that indicates whether the
-    object is a constant
+    A utility function that returns a boolean that indicates
+    whether the object is a constant.
     """
     # This method is rarely, if ever, called.  Plus, since the
     # expression generation (and constraint generation) system converts
@@ -184,8 +184,8 @@ def is_constant(obj):
 
 def is_fixed(obj):
     """
-    A utility function that returns a boolean that indicates whether the
-    input object's value is fixed.
+    A utility function that returns a boolean that indicates
+    whether the input object's value is fixed.
     """
     # JDS: NB: I am not sure why we allow str to be a constant, but
     # since we have historically done so, we check for type membership
@@ -199,6 +199,22 @@ def is_fixed(obj):
         pass
     return as_numeric(obj).is_fixed()
 
+def is_data(obj):
+    """
+    A utility function that returns a boolean that indicates
+    whether the input object represents data.
+    """
+    # JDS: NB: I am not sure why we allow str to be a constant, but
+    # since we have historically done so, we check for type membership
+    # in native_types and not in native_numeric_types.
+    #
+    if obj.__class__ in native_types:
+        return True
+    try:
+        return obj._is_data()
+    except AttributeError:
+        pass
+    return as_numeric(obj)._is_data()
 
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
@@ -339,6 +355,10 @@ class NumericValue(object):
 
     def is_fixed(self):
         """Return True if this is a non-constant value that has been fixed"""
+        return False
+
+    def _is_data(self):
+        """Return True if variables can not appear in this expression"""
         return False
 
     def is_expression(self):
@@ -567,7 +587,6 @@ functions.""" % (self.name(),))
         """
         return generate_expression(_abs,self, None)
 
-
 class NumericConstant(NumericValue):
     """An object that contains a constant numeric value.
 
@@ -590,6 +609,9 @@ class NumericConstant(NumericValue):
         return True
 
     def is_fixed(self):
+        return True
+
+    def _is_data(self):
         return True
 
     def __str__(self):

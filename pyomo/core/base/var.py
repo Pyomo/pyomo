@@ -12,7 +12,7 @@ __all__ = ['Var', '_VarData', 'VarList']
 import logging
 from weakref import ref as weakref_ref
 
-from pyomo.core.base.numvalue import NumericValue, value, is_fixed
+from pyomo.core.base.numvalue import NumericValue, value, is_data
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
 from pyomo.core.base.component import ComponentData, register_component
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set, normalize_index
@@ -116,6 +116,10 @@ class _VarData(ComponentData, NumericValue):
 
     def is_constant(self):
         """Returns False because this is not a constant in an expression."""
+        return False
+
+    def _is_data(self):
+        """Returns False because a variable is not data."""
         return False
 
     def _polynomial_degree(self, result):
@@ -275,8 +279,8 @@ class _GeneralVarData(_VarData):
         self._value = None
         #
         # The type of the lower and upper bound attributes can either
-        # be atomic numeric types in Python, expressions, etc.
-        # Basically, they can be anything that passes an "is_fixed" test.
+        # be atomic numeric types in Python, data expressions, etc.
+        # Basically, they can be anything that passes an "is_data" test.
         #
         self._lb = None
         self._ub = None
@@ -370,13 +374,14 @@ class _GeneralVarData(_VarData):
         Set the lower bound for this variable after validating that
         the value is fixed (or None).
         """
-        # Note: is_fixed(None) returns True
-        if is_fixed(val):
+        # Note: is_data(None) returns True
+        if is_data(val):
             self._lb = val
         else:
             raise ValueError(
-                "Non-fixed input of type '%s' supplied as variable lower "
-                "bound - legal types must be fixed expressions or variables."
+                "Non-data input of type '%s' supplied as variable "
+                "lower bound - legal types must be expressions "
+                "consisting of data elements."
                 % (type(val),))
 
     def setub(self, val):
@@ -384,14 +389,14 @@ class _GeneralVarData(_VarData):
         Set the upper bound for this variable after validating that
         the value is fixed (or None).
         """
-        # Note: is_fixed(None) returns True
-        if is_fixed(val):
+        # Note: is_data(None) returns True
+        if is_data(val):
             self._ub = val
         else:
             raise ValueError(
-                "Non-fixed input of type '%s' supplied as variable upper "
-                "bound - legal types are fixed expressions or variables."
-                "parameters"
+                "Non-data input of type '%s' supplied as variable "
+                "upper bound - legal types must be expressions "
+                "consisting of data elements."
                 % (type(val),))
 
     def fix(self, *val):

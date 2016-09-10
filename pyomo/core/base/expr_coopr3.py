@@ -182,6 +182,12 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
                 return False
         return True
 
+    def _is_data(self):
+        for arg in self._args:
+            if not arg._is_data():
+                return False
+        return True
+
     def is_expression(self):
         return True
 
@@ -271,6 +277,14 @@ class _ExternalFunctionExpression(_ExpressionBase):
             if isinstance(arg, basestring):
                 continue
             if not arg.is_fixed():
+                return False
+        return True
+
+    def _is_data(self):
+        for arg in self._args:
+            if isinstance(arg, basestring):
+                continue
+            if not arg._is_data():
                 return False
         return True
 
@@ -378,6 +392,9 @@ class _PowExpression(_IntrinsicFunctionExpression):
         if self._args[1].is_fixed():
             return self._args[0].is_fixed() or bool(self._args[1] == 0)
         return False
+
+    # the base class implementation is fine
+    #def _is_data(self)
 
     def _precedence(self):
         return _PowExpression.PRECEDENCE
@@ -605,6 +622,15 @@ class _ProductExpression(_ExpressionBase):
                 return False
         for arg in self._denominator:
             if not arg.is_fixed():
+                return False
+        return True
+
+    def _is_data(self):
+        for arg in self._numerator:
+            if not arg._is_data():
+                return False
+        for arg in self._denominator:
+            if not arg._is_data():
                 return False
         return True
 
@@ -845,6 +871,9 @@ class Expr_if(_ExpressionBase):
                 return self._else.is_fixed()
         else:
             return False
+
+    # the base class implementation is fine
+    #def _is_data(self)
 
     def polynomial_degree(self):
         if self._if.is_fixed():

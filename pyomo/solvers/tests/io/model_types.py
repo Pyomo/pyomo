@@ -1316,9 +1316,10 @@ class compiled_LP(_ModelClassBase):
 if __name__ == "__main__":
     import pyomo.environ
     from pyomo.opt import *
+    M = simple_LP()
     #M = piecewise_LP()
     #M = compiled_LP()
-    M = trivial_constraints_LP()
+    #M = trivial_constraints_LP()
     #M = discrete_var_bounds_MILP()
     #M = simple_QCP()
     M.generateModel()
@@ -1343,8 +1344,8 @@ if __name__ == "__main__":
     #model.write(format=None,filename="junk.nl",symbolic_solver_labels=True)
     #model.pprint()
 
-    opt = SolverFactory("cbc", solver_io="mps")
-    #opt = SolverFactory("gurobi", solver_io='mps')
+    #opt = SolverFactory("cbc", solver_io="mps")
+    opt = SolverFactory("gurobi", solver_io='lp')
     #opt = SolverFactory("glpk", solver_io='mps')
     #opt = SolverFactory("pico", solver_io='nl')
     #opt = SolverFactory("cplex", solver_io='python')
@@ -1358,10 +1359,11 @@ if __name__ == "__main__":
     #opt.options['write'] = 'infeas.iis'
     #model.cccc = Constraint(expr=model.x <= -1)
 
-    results = opt.solve(model,
-                        keepfiles=True,
-#                        symbolic_solver_labels=True,
-                        tee=True)
+    model.write("junk.lp", io_options={"symbolic_solver_labels": True})
+    #results = opt.solve(model,
+    #                    keepfiles=True,
+    #                    symbolic_solver_labels=True,
+    #                    tee=True)
 #                        warmstart=True,
 #                        load_solutions=False)
 
