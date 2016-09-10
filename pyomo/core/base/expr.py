@@ -42,6 +42,7 @@ _common_module_members = [
     '_PowExpression',
     '_ExternalFunctionExpression',
     '_IntrinsicFunctionExpression',
+    '_GetItemExpression',
     'Expr_if',
 ]
 _coopr3_module_members = []

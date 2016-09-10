@@ -1021,6 +1021,54 @@ class Expr_if(_ExpressionBase):
         _i = result.pop()
         return _t if _i else _e
 
+
+class _GetItemExpression(_ExpressionBase):
+    """Expression to call "__getitem__" on the base"""
+
+    __slots__ = ('_base')
+
+    def __init__(self, base, args):
+        """Construct an expression with an operation and a set of arguments"""
+        if safe_mode:
+            self._parent_expr = None
+        self._args = args
+        self._base = base
+
+    def __copy__(self):
+        """Clone this object using the specified arguments"""
+        return self.__class__(
+            self._base,
+            self._args.__class__(
+                (clone_expression(a) for a in self._args) )
+        )
+
+    def __getstate__(self):
+        result = super(_GetItemExpression, self).__getstate__()
+        for i in _GetItemExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def name(self):
+        return _base.name()
+
+    def is_constant(self):
+        return False
+
+    def is_fixed(self):
+        return False
+
+    def _polynomial_degree(self, result):
+        return 1 if isinstance(self._base, _VarData) else 0
+
+    def _apply_operation(self, result):
+        r = result[-len(self._args):]
+        result[-len(self._args):] = []
+        return value(self._base.__getitem__(*tuple(r)))
+
+    def resolve_template(self):
+        return self._base.__getitem__(*tuple(value(i) for i in self._args))
+
+
 _LinearExpression_Pool = []
 
 class _LinearExpression(_ExpressionBase):

@@ -13,6 +13,8 @@ import pyutilib.misc
 
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
+from pyomo.core.base.template_expr import TemplateExpressionError
+
 
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
@@ -228,6 +230,7 @@ class _IndexedComponent_slicer(object):
         self._call_stack.append( (
             _IndexedComponent_slicer.call, idx ) )
         return self
+
 
 class IndexedComponent(Component):
     """
@@ -561,6 +564,21 @@ You can silence this warning by one of three ways:
                     _found_numeric = True
                     val = _num_val()
                 elif _num_val.is_fixed():
+                    # Attempt to retrieve the numeric value .. if this
+                    # is a template expression generation, then it
+                    # should raise a TemplateExpressionError
+                    try:
+                        _num_val()
+                    except TemplateExpressionError:
+                        # Not good: we have to defer this import to now
+                        # due to circular imports (expr imports _VarData
+                        # imports indexed_component, but we need expr
+                        # here
+                        from pyomo.core.base import expr as EXPR
+                        return EXPR._GetItemExpression(self, tuple(ndx))
+                    except:
+                        pass
+
                     raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
 index %s is a fixed but not constant value.  This is likely not what you

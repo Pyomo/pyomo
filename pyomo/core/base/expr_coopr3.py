@@ -53,7 +53,7 @@ from pyomo.core.base.expr_common import \
 
 
 def clone_expression(exp):
-    if exp.is_expression():
+    if type(exp) not in native_numeric_types and exp.is_expression():
         # It is important that this function calls the clone method not __copy__.
         # __copy__ and clone are the same for all classes that advertise "is_expression = True"
         # except the _ExpressionData class (in which case clone does nothing
@@ -140,8 +140,11 @@ class _ExpressionBase(NumericValue):
                 ostream.write(" , ")
             else:
                 ostream.write(", ")
-            arg.to_string( ostream=ostream, precedence=self._precedence(),
-                           verbose=verbose )
+            try:
+                arg.to_string( ostream=ostream, precedence=self._precedence(),
+                               verbose=verbose )
+            except:
+                ostream.write(str(arg))
         ostream.write(" )")
 
     def clone(self):
@@ -883,6 +886,40 @@ class Expr_if(_ExpressionBase):
             return self._then(exception=exception)
         else:
             return self._else(exception=exception)
+
+
+class _GetItemExpression(_ExpressionBase):
+    __slots__ = ('_base')
+
+    def __init__(self, base, args):
+        """Construct a call to an external function"""
+        _ExpressionBase.__init__(self, args)
+        self._base = base
+
+    def __getstate__(self):
+        result = _IndexLookupExpression.__getstate__(self)
+        for i in _IndexLookupExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def __copy__(self):
+        return self.__class__( self._base,
+                               tuple(clone_expression(x) for x in self._args) )
+
+    def name(self):
+        return self._base.name(True)
+
+    def polynomial_degree(self):
+        return 1 if isinstance(self._base, _VarData) else 0
+
+    def is_constant(self):
+        return False
+
+    def is_fixed(self):
+        return False
+
+    def _apply_operation(self, values):
+        return value(self._base[values])
 
 
 def _generate_expression__clone_if_needed(obj, target):
