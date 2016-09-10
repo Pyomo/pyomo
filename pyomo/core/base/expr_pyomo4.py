@@ -224,7 +224,8 @@ class _ExpressionBase(NumericValue):
             "implement getname()" % ( str(self.__class__), ))
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        logger.warning(
+            "DEPRECATED: The cname() method has been renamed to getname()" )
         return self.getname(*args, **kwds)
 
     #
@@ -406,10 +407,6 @@ class _NegationExpression(_ExpressionBase):
     def getname(self):
         return 'neg'
 
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
-
     def _polynomial_degree(self, result):
         return result.pop()
 
@@ -458,10 +455,6 @@ class _UnaryFunctionExpression(_ExpressionBase):
     def getname(self):
         return self._name
 
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
-
     def _to_string_prefix(self, ostream, verbose):
         ostream.write(self.getname())
 
@@ -483,10 +476,6 @@ class _ExternalFunctionExpression(_ExpressionBase):
 
     def getname(self):
         return self._fcn.getname()
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
         if result.pop() == 0:
@@ -572,10 +561,6 @@ class _PowExpression(_ExpressionBase):
 
     def getname(self):
         return 'pow'
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
 
     def _inline_operator(self):
         return '**'
@@ -698,10 +683,6 @@ class _ProductExpression(_ExpressionBase):
     def getname(self):
         return 'prod'
 
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
-
     def _inline_operator(self):
         return ' * '
 
@@ -732,10 +713,6 @@ class _DivisionExpression(_ExpressionBase):
 
     def getname(self):
         return 'div'
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
 
     def _inline_operator(self):
         return ' / '
@@ -792,10 +769,6 @@ class _SumExpression(_ExpressionBase):
 
     def getname(self):
         return 'sum'
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
 
     def __iadd__(self, other):
         if safe_mode and self._parent_expr:
@@ -939,10 +912,6 @@ class Expr_if(_ExpressionBase):
     def getname(self):
         return "Expr_if"
 
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
-
     def is_constant(self):
         if self._if.is_constant():
             if self._if():
@@ -1082,10 +1051,6 @@ class _LinearExpression(_ExpressionBase):
 
     def getname(self):
         return 'linear'
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
 
     def is_constant(self):
         if self._const.__class__ not in native_numeric_types \
