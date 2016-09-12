@@ -217,8 +217,9 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
             except Exception:
                 if exception:
                     e = sys.exc_info()[1]
-                    logger.error("evaluating expression: %s\n    (expression: %s)",
-                                 str(e), str(self))
+                    logger.error(
+                        "evaluating expression: %s\n    (expression: %s)",
+                        str(e), str(self) )
                     raise
                 yield None
 
