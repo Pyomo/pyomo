@@ -36,7 +36,7 @@ from pyomo.core.base.component import Component
 #from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.numvalue import native_numeric_types
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base import expr_common as common
 import pyomo.core.base.expr_common
@@ -1055,7 +1055,7 @@ class _GetItemExpression(_ExpressionBase):
         return False
 
     def is_fixed(self):
-        return False
+        return not isinstance(self._base, Var)
 
     def _polynomial_degree(self, result):
         return 1 if isinstance(self._base, _VarData) else 0

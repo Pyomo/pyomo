@@ -43,7 +43,7 @@ from pyomo.core.base.component import Component
 #from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.numvalue import ZeroConstant, native_numeric_types
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import _VarData, Var
 
 import pyomo.core.base.expr_common
 from pyomo.core.base.expr_common import \
@@ -916,7 +916,7 @@ class _GetItemExpression(_ExpressionBase):
         return False
 
     def is_fixed(self):
-        return False
+        return not isinstance(self._base, Var)
 
     def _apply_operation(self, values):
         return value(self._base[values])
