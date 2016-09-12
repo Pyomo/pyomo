@@ -921,6 +921,9 @@ class _GetItemExpression(_ExpressionBase):
     def _apply_operation(self, values):
         return value(self._base[values])
 
+    def resolve_template(self):
+        return self._base.__getitem__(tuple(value(i) for i in self._args))
+
 
 def _generate_expression__clone_if_needed(obj, target):
     #print(getrefcount(obj) - UNREFERENCED_EXPR_COUNT, target)

@@ -1063,10 +1063,10 @@ class _GetItemExpression(_ExpressionBase):
     def _apply_operation(self, result):
         r = result[-len(self._args):]
         result[-len(self._args):] = []
-        return value(self._base.__getitem__(*tuple(r)))
+        return value(self._base.__getitem__(tuple(r)))
 
     def resolve_template(self):
-        return self._base.__getitem__(*tuple(value(i) for i in self._args))
+        return self._base.__getitem__(tuple(value(i) for i in self._args))
 
 
 _LinearExpression_Pool = []
