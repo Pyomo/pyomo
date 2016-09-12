@@ -1058,7 +1058,7 @@ class _GetItemExpression(_ExpressionBase):
         return not isinstance(self._base, Var)
 
     def _polynomial_degree(self, result):
-        return 1 if isinstance(self._base, _VarData) else 0
+        return 0 if self.is_fixed() else 1
 
     def _apply_operation(self, result):
         r = result[-len(self._args):]

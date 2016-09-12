@@ -910,7 +910,7 @@ class _GetItemExpression(_ExpressionBase):
         return self._base.name(True)
 
     def polynomial_degree(self):
-        return 1 if isinstance(self._base, _VarData) else 0
+        return 0 if self.is_fixed() else 1
 
     def is_constant(self):
         return False
