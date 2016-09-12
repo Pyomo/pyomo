@@ -67,6 +67,12 @@ class IndexTemplate(NumericValue):
             ostream = sys.stdout
         ostream.write( self.name() )
 
+    def set_value(self, value):
+        # It might be nice to check if the value is valid for the base
+        # set, but things are tricky when the base set is not dimention
+        # 1.  So, for the time being, we will just "trust" the user.
+        self._value = value
+
 
 def substitute_template_expression(expr, substituter, *args):
     # Again, due to circular imports, we cannot import expr at the
