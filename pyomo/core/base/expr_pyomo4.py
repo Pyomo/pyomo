@@ -1026,6 +1026,10 @@ class _GetItemExpression(_ExpressionBase):
     """Expression to call "__getitem__" on the base"""
 
     __slots__ = ('_base')
+    PRECEDENCE = 1
+
+    def _precedence(self):
+        return _GetItemExpression.PRECEDENCE
 
     def __init__(self, base, args):
         """Construct an expression with an operation and a set of arguments"""
@@ -1049,7 +1053,7 @@ class _GetItemExpression(_ExpressionBase):
         return result
 
     def name(self):
-        return _base.name()
+        return self._base.name(True)
 
     def is_constant(self):
         return False
@@ -1064,6 +1068,9 @@ class _GetItemExpression(_ExpressionBase):
         r = result[-len(self._args):]
         result[-len(self._args):] = []
         return value(self._base.__getitem__(tuple(r)))
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.name())
 
     def resolve_template(self):
         return self._base.__getitem__(tuple(value(i) for i in self._args))

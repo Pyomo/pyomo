@@ -59,10 +59,13 @@ class IndexTemplate(NumericValue):
         """
         return False
 
+    def name(self, fully_qualified=False, name_buffer=None):
+        return "{"+self._set.name(True, name_buffer)+"}"
+
     def to_string(self, ostream=None, verbose=None, precedence=0):
         if ostream is None:
             ostream = sys.stdout
-        ostream.write("{"+self._set.name(True)+"}")
+        ostream.write( self.name() )
 
 
 def substitute_template_expression(expr, substituter, *args):
