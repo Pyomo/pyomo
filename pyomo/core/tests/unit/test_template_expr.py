@@ -10,7 +10,7 @@
 
 import pyutilib.th as unittest
 
-from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Set
+from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Set, value
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base import expr_common
 from pyomo.core.base.template_expr import (
@@ -275,3 +275,66 @@ class TestTemplate_expressionObjects_pyomo4\
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
+
+class TestTemplateSubstitution(unittest.TestCase):
+
+    def setUp(self):
+        self.m = m = ConcreteModel()
+        m.TRAY = Set(initialize=range(5))
+        m.TIME = Set(bounds=(0,10), initialize=range(10))
+        m.y = Var(initialize=1)
+        m.x = Var(m.TIME, m.TRAY, initialize=lambda _m,i,j: i)
+        m.dxdt = Var(m.TIME, m.TRAY, initialize=lambda _m,i,j: 2*i)
+
+    def test_simple_substitute_param(self):
+        def diffeq(m,t, i):
+            return m.dxdt[t, i] == t * m.x[t, i] ** 2 + m.y**2
+
+        m = self.m
+        t = IndexTemplate(m.TIME)
+        e = diffeq(m,t, 2)
+        t.set_value(5)
+
+        self.assertTrue( isinstance(e, EXPR._ExpressionBase) )
+        self.assertEqual((e._args[0](), e._args[1]()), (10,126))
+
+        _map = {}
+        E = substitute_template_expression(
+            e, substitute_template_with_param, _map )
+        self.assertIsNot(e,E)
+
+        self.assertEqual( len(_map), 2 )
+        self.assertIn( id(m.x), _map )
+        self.assertIn( id(m.dxdt), _map )
+
+        self.assertEqual(
+            str(E),
+            'dxdt  ==  {TIME} * x**2.0 + y**2.0' )
+        _map[id(m.x)].set_value( value(m.x[value(t), 2]) )
+        _map[id(m.dxdt)].set_value( value(m.dxdt[value(t), 2]) )
+        self.assertEqual((E._args[0](), E._args[1]()), (10,126))
+
+        _map[id(m.x)].set_value( 12 )
+        _map[id(m.dxdt)].set_value( 34 )
+        self.assertEqual((E._args[0](), E._args[1]()), (34,721))
+
+
+    def test_simple_substitute_index(self):
+        def diffeq(m,t, i):
+            return m.dxdt[t, i] == t * m.x[t, i] ** 2 + m.y**2
+
+        m = self.m
+        t = IndexTemplate(m.TIME)
+        e = diffeq(m,t, 2)
+        t.set_value(5)
+
+        self.assertTrue( isinstance(e, EXPR._ExpressionBase) )
+        self.assertEqual((e._args[0](), e._args[1]()), (10,126))
+
+        E = substitute_template_expression(
+            e, substitute_template_with_index)
+        self.assertIsNot(e,E)
+
+        self.assertEqual(
+            str(E),
+            'dxdt[5,2]  ==  5.0 * x[5,2]**2.0 + y**2.0' )
