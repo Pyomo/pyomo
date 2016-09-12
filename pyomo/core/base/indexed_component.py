@@ -560,25 +560,30 @@ You can silence this warning by one of three ways:
 
             try:
                 _num_val = val.as_numeric()
+                # Attempt to retrieve the numeric value .. if this
+                # is a template expression generation, then it
+                # should raise a TemplateExpressionError
+                try:
+                    _num_val()
+                except TemplateExpressionError:
+                    # Not good: we have to defer this import to now
+                    # due to circular imports (expr imports _VarData
+                    # imports indexed_component, but we need expr
+                    # here
+                    from pyomo.core.base import expr as EXPR
+                    return EXPR._GetItemExpression(self, tuple(ndx))
+                except:
+                    # There are other ways we could get an exception
+                    # that is not TemplateExpressionError; most notably,
+                    # evaluating a Param / Var that is not initialized.
+                    # At this point, we will silently eat that
+                    # error... it will come back again below.
+                    pass
+
                 if _num_val.is_constant():
                     _found_numeric = True
                     val = _num_val()
                 elif _num_val.is_fixed():
-                    # Attempt to retrieve the numeric value .. if this
-                    # is a template expression generation, then it
-                    # should raise a TemplateExpressionError
-                    try:
-                        _num_val()
-                    except TemplateExpressionError:
-                        # Not good: we have to defer this import to now
-                        # due to circular imports (expr imports _VarData
-                        # imports indexed_component, but we need expr
-                        # here
-                        from pyomo.core.base import expr as EXPR
-                        return EXPR._GetItemExpression(self, tuple(ndx))
-                    except:
-                        pass
-
                     raise RuntimeError(
 """Error retrieving the value of an indexed item %s:
 index %s is a fixed but not constant value.  This is likely not what you
