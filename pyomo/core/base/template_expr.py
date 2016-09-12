@@ -76,6 +76,23 @@ class IndexTemplate(NumericValue):
 
 
 def substitute_template_expression(expr, substituter, *args):
+    """Substitute IndexTemplates in an expression tree.
+
+    This is a general utility function for walking the expression tree
+    ans subtituting all occurances of IndexTemplate and
+    _GetItemExpression nodes.  The routine is a general expression
+    walker for both Coopr3 / Pyomo4 expressions.  This borrows from
+    pseudo-visitor pattern to defer the actual substitution to the
+    substituter function / arguments passed to this method.
+
+    Args:
+        substituter: method taking (expression, *args) and returning 
+           the new object
+        *args: these are passed directly to the substituter
+
+    Returns:
+        a new expression tree with all substitutions done
+    """
     # Again, due to circular imports, we cannot import expr at the
     # module scope because this module gets imported by expr
     from pyomo.core.base import expr as EXPR
@@ -128,7 +145,15 @@ def substitute_template_expression(expr, substituter, *args):
         _stack_idx -= 1
     return _stack[0][0][0]
 
+
 def substitute_template_with_param(expr, _map):
+    """A simple substituter to replace _Getitem nodes with mutable Params.
+
+    This substituter will replace all _GetItemExpression nodes with a
+    new Param.  For example, this method will create expressions
+    suitable for passing to DAE integrators
+    """
+
     if type(expr) is IndexTemplate:
         return expr
 
@@ -141,6 +166,14 @@ def substitute_template_with_param(expr, _map):
 
 
 def substitute_template_with_index(expr):
+    """A simple substituter to expand expression for current template
+
+    This substituter will replace all _GetItemExpression / IndexTemplate
+    nodes with the actual _ComponentData based on the current value of
+    the IndexTamplate(s)
+
+    """
+
     if type(expr) is IndexTemplate:
         return as_numeric(expr())
     else:
