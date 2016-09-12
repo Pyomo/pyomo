@@ -7,7 +7,8 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.core.base.numvalue import NumericValue, native_numeric_types
+from pyomo.core.base.numvalue import (
+    NumericValue, native_numeric_types, as_numeric )
 import pyomo.core.base
 
 class TemplateExpressionError(ValueError):
@@ -88,9 +89,7 @@ def substitute_template_expression(expr, substituter, *args):
             _obj = _ptr[0][_ptr[1]]
             _ptr[1] += 1            
             _subType = type(_obj)
-            if _subType in native_numeric_types or not _obj.is_expression():
-                continue
-            if _subType is EXPR._GetItemExpression:
+            if _subType is EXPR._GetItemExpression or _subType is IndexTemplate:
                 if type(_ptr[0]) is tuple:
                     _list = list(_ptr[0])
                     _list[_ptr[1]-1] = substituter(_obj, *args)
@@ -98,6 +97,8 @@ def substitute_template_expression(expr, substituter, *args):
                     _ptr[3]._args = _list
                 else:
                     _ptr[0][_ptr[1]-1] = substituter(_obj, *args)
+            elif _subType in native_numeric_types or not _obj.is_expression():
+                continue
             elif _subType is EXPR._ProductExpression:
                 # _ProductExpression is fundamentally different in
                 # Coopr3 / Pyomo4 expression systems and must be handled
@@ -128,6 +129,9 @@ def substitute_template_expression(expr, substituter, *args):
     return _stack[0][0][0]
 
 def substitute_template_with_param(expr, _map):
+    if type(expr) is IndexTemplate:
+        return expr
+
     _id = id(expr._base)
     if _id not in _map:
         _map[_id] = pyomo.core.base.param.Param(mutable=True)
@@ -136,6 +140,9 @@ def substitute_template_with_param(expr, _map):
     return _map[_id]
 
 
-def substitute_template_with_index(expr, _map):
-    return expr.resolve_template()
+def substitute_template_with_index(expr):
+    if type(expr) is IndexTemplate:
+        return as_numeric(expr())
+    else:
+        return expr.resolve_template()
     
