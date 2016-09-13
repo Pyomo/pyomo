@@ -14,6 +14,8 @@ import os
 import sys
 import six
 
+from six import StringIO
+
 from copy import deepcopy
 from os.path import abspath, dirname, join
 
@@ -21,6 +23,8 @@ currdir = dirname( abspath(__file__) )
 
 import pyutilib.th as unittest
 import pyutilib.services
+from pyutilib.misc import setup_redirect, reset_redirect
+
 from pyomo.environ import *
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.expr import identify_variables
@@ -854,6 +858,24 @@ class TestBlock(unittest.TestCase):
         self.assertEqual( ['b','c','a'], list(m.component_map(Var)) )
         self.assertEqual( [], list(m.component_map(Param)) )
         self.assertEqual( [], list(m.component_map(Constraint)) )
+
+    def test_replace_attribute_with_component(self):
+        OUTPUT = StringIO()
+        setup_redirect(OUTPUT)
+        self.block.x = 5
+        self.block.x = Var()
+        reset_redirect()
+        self.assertIn('WARNING: Reassigning the non-component attribute',
+                      OUTPUT.getvalue())
+
+    def test_replace_component_with_component(self):
+        OUTPUT = StringIO()
+        setup_redirect(OUTPUT)
+        self.block.x = Var()
+        self.block.x = Var()
+        reset_redirect()
+        self.assertIn('WARNING: Implicitly replacing the Component attribute',
+                      OUTPUT.getvalue())
 
     def test_pseudomap_len(self):
         m = Block()
