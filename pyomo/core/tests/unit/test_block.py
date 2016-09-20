@@ -862,10 +862,13 @@ class TestBlock(unittest.TestCase):
     def test_replace_attribute_with_component(self):
         OUTPUT = StringIO()
         logger = logging.getLogger('pyomo.core')
+        self.assertTrue(logger.propagate)
+        self.assertLessEqual(logger.getEffectiveLevel(),logging.WARNING)
         handler = logging.StreamHandler(OUTPUT)
+        handler.setFormatter(logging.Formatter('%(message)s'))
         handler.setLevel(logging.WARNING)
+        logger.addHandler(handler)
         try:
-            logger.addHandler(handler)
             self.block.x = 5
             self.block.x = Var()
         finally:
