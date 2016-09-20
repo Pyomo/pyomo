@@ -10,6 +10,7 @@
 # Unit Tests for Elements of a Block
 #
 
+import logging
 import os
 import sys
 import six
@@ -23,7 +24,6 @@ currdir = dirname( abspath(__file__) )
 
 import pyutilib.th as unittest
 import pyutilib.services
-from pyutilib.misc import setup_redirect, reset_redirect
 
 from pyomo.environ import *
 from pyomo.core.base.block import SimpleBlock
@@ -861,20 +861,30 @@ class TestBlock(unittest.TestCase):
 
     def test_replace_attribute_with_component(self):
         OUTPUT = StringIO()
-        setup_redirect(OUTPUT)
-        self.block.x = 5
-        self.block.x = Var()
-        reset_redirect()
-        self.assertIn('WARNING: Reassigning the non-component attribute',
+        logger = logging.getLogger('pyomo.core')
+        handler = logging.StreamHandler(OUTPUT)
+        handler.setLevel(logging.WARNING)
+        try:
+            logger.addHandler(handler)
+            self.block.x = 5
+            self.block.x = Var()
+        finally:
+            logger.removeHandler(handler)
+        self.assertIn('Reassigning the non-component attribute',
                       OUTPUT.getvalue())
 
     def test_replace_component_with_component(self):
         OUTPUT = StringIO()
-        setup_redirect(OUTPUT)
-        self.block.x = Var()
-        self.block.x = Var()
-        reset_redirect()
-        self.assertIn('WARNING: Implicitly replacing the Component attribute',
+        logger = logging.getLogger('pyomo.core')
+        handler = logging.StreamHandler(OUTPUT)
+        handler.setLevel(logging.WARNING)
+        try:
+            logger.addHandler(handler)
+            self.block.x = Var()
+            self.block.x = Var()
+        finally:
+            logger.removeHandler(handler)
+        self.assertIn('Implicitly replacing the Component attribute',
                       OUTPUT.getvalue())
 
     def test_pseudomap_len(self):
