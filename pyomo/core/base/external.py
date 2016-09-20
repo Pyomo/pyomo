@@ -54,8 +54,7 @@ class ExternalFunction(Component):
         self._index = None
 
     def __call__(self, *args):
-        idxs = range(len(args))
-        idxs.reverse()
+        idxs = reversed(six.moves.xrange(len(args)))
         for i in idxs:
             if type(args[i]) is types.GeneratorType:
                 args = args[:i] + tuple(args[i]) + args[i+1:]
