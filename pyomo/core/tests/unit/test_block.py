@@ -39,6 +39,26 @@ class DerivedBlock(SimpleBlock):
         super(DerivedBlock, self).__init__(*args, **kwargs)
 
 
+class LoggingIntercept(object):
+    def __init__(self, output, module=None, level=logging.WARNING):
+        self.handler = logging.StreamHandler(output)
+        self.handler.setFormatter(logging.Formatter('%(message)s'))
+        self.handler.setLevel(level)
+        self.level = level
+        self.module = module
+
+    def __enter__(self):
+        logger = logging.getLogger(self.module)
+        self.level = logger.level
+        logger.setLevel(self.handler.level)
+        logger.addHandler(self.handler)
+
+    def __exit__(self, et, ev, tb):
+        logger = logging.getLogger(self.module)
+        logger.removeHandler(self.handler)
+        logger.setLevel(self.level)
+
+
 class TestGenerators(unittest.TestCase):
 
     @ unittest.nottest
@@ -861,32 +881,17 @@ class TestBlock(unittest.TestCase):
 
     def test_replace_attribute_with_component(self):
         OUTPUT = StringIO()
-        logger = logging.getLogger('pyomo.core')
-        self.assertTrue(logger.propagate)
-        self.assertLessEqual(logger.getEffectiveLevel(),logging.WARNING)
-        handler = logging.StreamHandler(OUTPUT)
-        handler.setFormatter(logging.Formatter('%(message)s'))
-        handler.setLevel(logging.WARNING)
-        logger.addHandler(handler)
-        try:
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
             self.block.x = 5
             self.block.x = Var()
-        finally:
-            logger.removeHandler(handler)
         self.assertIn('Reassigning the non-component attribute',
                       OUTPUT.getvalue())
 
     def test_replace_component_with_component(self):
         OUTPUT = StringIO()
-        logger = logging.getLogger('pyomo.core')
-        handler = logging.StreamHandler(OUTPUT)
-        handler.setLevel(logging.WARNING)
-        try:
-            logger.addHandler(handler)
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
             self.block.x = Var()
             self.block.x = Var()
-        finally:
-            logger.removeHandler(handler)
         self.assertIn('Implicitly replacing the Component attribute',
                       OUTPUT.getvalue())
 
