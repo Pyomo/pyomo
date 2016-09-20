@@ -122,7 +122,11 @@ class AMPLExternalFunction(ExternalFunction):
 
         self._known_functions = {}
         def addfunc(name, f, _type, nargs, funcinfo, ae):
-            self._known_functions[name] = (f, _type, nargs, funcinfo, ae)
+            # trap for Python 3, where the name comes in as bytes() and
+            # not a string
+            if not isinstance(name, six.string_types):
+                name = name.decode()
+            self._known_functions[str(name)] = (f, _type, nargs, funcinfo, ae)
         AE = _AMPLEXPORTS()
         AE.Addfunc = _AMPLEXPORTS.ADDFUNC(addfunc)
 
