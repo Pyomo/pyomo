@@ -140,7 +140,7 @@ class _ConnectorValue(NumericValue):
             name = var.local_name
         if name in self.vars:
             raise ValueError("Cannot insert duplicate variable name "
-                             "'%s' into Connector '%s'" % (name, self.local_name))
+                             "'%s' into Connector '%s'" % (name, self.name))
         self.vars[name] = var
         if aggregate is not None:
             self.aggregators[var] = aggregate
