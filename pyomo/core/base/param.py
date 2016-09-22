@@ -71,6 +71,11 @@ class _ParamData(ComponentData, NumericValue):
         """
         Return the value of this object.
         """
+        if self.value is None:
+            raise ValueError(
+                "Error evaluating Param value (%s):\nThe Param value is "
+                "undefined and no default value is specified"
+                % ( self.name(True), ))
         return self.value
 
     def is_fixed(self):
@@ -354,12 +359,23 @@ class Param(IndexedComponent):
                 "Error retrieving Param value (%s): This parameter has "
                 "not been constructed" % ( idx_str,) )
         if val is None:
+            # If the Param is mutable, then it is OK to create a Param
+            # implicitly ... the error will be tossed later when someone
+            # attempts to evaluate the value of the Param
+            if self._mutable:
+                if self.is_indexed():
+                    self._data[idx] = _ParamData(self, val)
+                    #self._raw_setitem(idx, _ParamData(self, val), True)
+                else:
+                    self._raw_setitem(idx, val)
+                return self[idx]
+
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name(True), idx,)
             else:
                 idx_str = '%s' % (self.name(True),)
             raise ValueError(
-                    "Error retrieving Param value (%s): The Param value is "
+                    "Error retrieving Param value (%s):\nThe Param value is "
                     "undefined and no default value is specified"
                     % ( idx_str,) )
         #
@@ -397,11 +413,11 @@ class Param(IndexedComponent):
         # Set the parameter
         #
         if self._mutable:
-            if idx is None:
-                self._raw_setitem(idx, val)
-            else:
+            if self.is_indexed():
                 self._data[idx] = _ParamData(self, val)
                 #self._raw_setitem(idx, _ParamData(self, val), True)
+            else:
+                self._raw_setitem(idx, val)
             return self[idx]
         else:
             #
@@ -486,7 +502,7 @@ class Param(IndexedComponent):
         #
         # Set the value depending on the type of param value.
         #
-        if ndx is None:
+        if not self.is_indexed():
             self.value = val
         elif self._mutable:
             if ndx in self._data:
