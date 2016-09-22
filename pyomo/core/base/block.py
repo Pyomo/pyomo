@@ -579,10 +579,12 @@ class _BlockData(ActiveComponentData):
             #
             elif isinstance(val, Component):
                 logger.warning(
-                    "Reassigning the non-component attribute %s "
-                    "on block %s with a new Component with type %s."
-                    "\nThis is usually indicative of a modelling error."
-                    % (name, self.name, type(val)) )
+                    "Reassigning the non-component attribute %s\n"
+                    "on block (model).%s with a new Component\nwith type %s.\n"
+                    "This is usually indicative of a modelling error.\n"
+                    "To avoid this warning, explicitly delete the attribute:\n"
+                    "    del %s.%s" % (
+                        name, self.name, type(val), self.name, name) )
                 delattr(self, name)
                 self.add_component(name, val)
             else:

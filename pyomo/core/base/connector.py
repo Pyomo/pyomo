@@ -34,7 +34,7 @@ logger = logging.getLogger('pyomo.core')
 class _ConnectorValue(NumericValue):
     """Holds the actual connector information"""
 
-    __slots__ = ('connector','index','vars','aggregators')
+    __slots__ = ('_name','domain','connector','index','vars','aggregators')
 
     def __init__(self, name):
         """Constructor"""

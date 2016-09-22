@@ -10,9 +10,12 @@
 # Unit Tests for Elements of a Block
 #
 
+import logging
 import os
 import sys
 import six
+
+from six import StringIO
 
 from copy import deepcopy
 from os.path import abspath, dirname, join
@@ -21,6 +24,7 @@ currdir = dirname( abspath(__file__) )
 
 import pyutilib.th as unittest
 import pyutilib.services
+
 from pyomo.environ import *
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.expr import identify_variables
@@ -33,6 +37,26 @@ class DerivedBlock(SimpleBlock):
         """Constructor"""
         kwargs['ctype'] = DerivedBlock
         super(DerivedBlock, self).__init__(*args, **kwargs)
+
+
+class LoggingIntercept(object):
+    def __init__(self, output, module=None, level=logging.WARNING):
+        self.handler = logging.StreamHandler(output)
+        self.handler.setFormatter(logging.Formatter('%(message)s'))
+        self.handler.setLevel(level)
+        self.level = level
+        self.module = module
+
+    def __enter__(self):
+        logger = logging.getLogger(self.module)
+        self.level = logger.level
+        logger.setLevel(self.handler.level)
+        logger.addHandler(self.handler)
+
+    def __exit__(self, et, ev, tb):
+        logger = logging.getLogger(self.module)
+        logger.removeHandler(self.handler)
+        logger.setLevel(self.level)
 
 
 class TestGenerators(unittest.TestCase):
@@ -854,6 +878,22 @@ class TestBlock(unittest.TestCase):
         self.assertEqual( ['b','c','a'], list(m.component_map(Var)) )
         self.assertEqual( [], list(m.component_map(Param)) )
         self.assertEqual( [], list(m.component_map(Constraint)) )
+
+    def test_replace_attribute_with_component(self):
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            self.block.x = 5
+            self.block.x = Var()
+        self.assertIn('Reassigning the non-component attribute',
+                      OUTPUT.getvalue())
+
+    def test_replace_component_with_component(self):
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            self.block.x = Var()
+            self.block.x = Var()
+        self.assertIn('Implicitly replacing the Component attribute',
+                      OUTPUT.getvalue())
 
     def test_pseudomap_len(self):
         m = Block()
