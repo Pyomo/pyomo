@@ -75,7 +75,7 @@ class _ParamData(ComponentData, NumericValue):
             raise ValueError(
                 "Error evaluating Param value (%s):\nThe Param value is "
                 "undefined and no default value is specified"
-                % ( self.name(True), ))
+                % ( self.name, ))
         return self.value
 
     def is_fixed(self):

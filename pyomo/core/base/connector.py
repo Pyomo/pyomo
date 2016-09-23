@@ -198,7 +198,7 @@ class SimpleConnectorBase(IndexedComponent):
         try:
             return self._conval[ndx]
         except KeyError: # thrown if the supplied index is hashable, but not defined.
-            msg = "Unknown index '%s' in connector %s;" % (str(ndx), self.name())
+            msg = "Unknown index '%s' in connector %s;" % (str(ndx), self.name)
             if (isinstance(ndx, (tuple, list)) and len(ndx) != self.dim()):
                 msg += "    Expecting %i-dimensional indices" % self.dim()
             else:
@@ -207,19 +207,21 @@ class SimpleConnectorBase(IndexedComponent):
             raise KeyError(msg)
         except TypeError: # thrown if the supplied index is not hashable
             msg = sys.exc_info()[1]
-            msg2 = "Unable to index connector %s using supplied index with " % self.name()
+            msg2 = "Unable to index connector %s using supplied index with " \
+                % self.name
             msg2 += str(msg)
             raise TypeError(msg2)
 
     def _add_indexed_member(self, ndx):
-        new_conval = _ConnectorValue(create_name(self.name(),ndx))
+        new_conval = _ConnectorValue(create_name(self.local_name,ndx))
         new_conval.component = weakref.ref(self)
         new_conval.index = ndx
         self._conval[ndx] = new_conval
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
-            logger.debug("Constructing Connector, name=%s, from data=%s", self.name(), str(data))
+            logger.debug("Constructing Connector, name=%s, from data=%s", 
+                         self.name, str(data))
         if self._constructed:
             return
         self._constructed=True
@@ -268,12 +270,12 @@ class SimpleConnectorBase(IndexedComponent):
     def pprint(self, ostream=None, verbose=False):
         if ostream is None:
             ostream = sys.stdout
-        ostream.write("  "+self.name()+" :")
+        ostream.write("  "+self.local_name+" :")
         ostream.write("\tSize="+str(len(self)))
         if self._index_set is not None:
             ostream.write("\tIndicies: ")
             for idx in self._index_set:
-                ostream.write(str(idx.name())+", ")
+                ostream.write(str(idx.name)+", ")
             print("")
         if None in self._conval:
             ostream.write("\tName : Variable\n")
@@ -291,7 +293,7 @@ class SimpleConnectorBase(IndexedComponent):
     def display(self, prefix="", ostream=None):
         if ostream is None:
             ostream = sys.stdout
-        ostream.write(prefix+"Connector "+self.name()+" :")
+        ostream.write(prefix+"Connector "+self.local_name+" :")
         ostream.write("  Size="+str(len(self)))
         if None in self._conval:
             ostream.write(prefix+"  : {"+\
@@ -326,17 +328,19 @@ class IndexedConnector(SimpleConnectorBase):
         self._dummy_val = _ConnectorValue(kwds.get('name', None))
 
     def __float__(self):
-        raise TypeError("Cannot access the value of array connector "+self.name())
+        raise TypeError( "Cannot access the value of array connector '%s'"
+                         % (self.name,) )
 
     def __int__(self):
-        raise TypeError("Cannot access the value of array connector "+self.name())
+        raise TypeError( "Cannot access the value of array connector '%s'"
+                         % (self.name,) )
 
     def set_value(self, value):
-        msg = "Cannot specify the value of a connector '%s'"
-        raise ValueError(msg % self.name())
+        raise ValueError( "Cannot specify the value of a connector '%s'"
+                          % (self.name,) )
 
     def __str__(self):
-        return self.name()
+        return self.local_name
 
     def construct(self, data=None):
         SimpleConnectorBase.construct(self, data)
@@ -399,8 +403,8 @@ class ConnectorExpander(Plugin):
 
         # Expand each constraint involving a connector
         for block in blockList:
-            if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
-                logger.debug("   block: " + block.name())
+            if __debug__ and logger.isEnabledFor(logging.DEBUG): #pragma:nocover
+                logger.debug("   block: " + block.name)
 
             CCC = {}
             for name, constraint in itertools.chain\
@@ -441,7 +445,7 @@ class ConnectorExpander(Plugin):
                             if var in skip:
                                 continue
                             v = Var()
-                            block.add_component(conn.name() + '.auto.' + var, v)
+                            block.add_component(conn.local_name + '.auto.' + var, v)
                             conn.vars[var] = v
                             v.construct()
 
@@ -462,7 +466,7 @@ class ConnectorExpander(Plugin):
                 for var, aggregator in iteritems(conn.aggregators):
                     c = Constraint(expr=aggregator(block, var))
                     block.add_component(
-                        conn.name() + '.' + var.name() + '.aggregate', c)
+                        conn.local_name + '.' + var.local_name + '.aggregate', c)
                     c.construct()
 
     def _gather_connectors(self, expr, connectors):
@@ -509,12 +513,12 @@ class ConnectorExpander(Plugin):
                 errors.append(
                     "Connector '%s' missing variable '%s' "
                     "(appearing in reference connector '%s')" %
-                    ( tmp.name(), var, ref.name() ) )
+                    ( tmp.name, var, ref.name ) )
             for var in b - a:
                 errors.append(
                     "Reference connector '%s' missing variable '%s' "
                     "(appearing in connector '%s')" %
-                    ( ref.name(), var, tmp.name() ) )
+                    ( ref.name, var, tmp.name ) )
         return errors, ref, skip
 
     def _expand_constraint(self, block, name, idx, constraint, ref, skip, cList):
