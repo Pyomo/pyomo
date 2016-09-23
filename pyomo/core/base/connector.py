@@ -61,14 +61,10 @@ class _ConnectorValue(NumericValue):
         self.aggregators = {}
 
     def __str__(self):
-        return self.name()
+        return self.name
 
-    def name(self):
-        # the name can be None, in which case simply return "".
-        if self._name is None:
-            return ""
-        else:
-            return self.name()
+    def getname(self):
+        return self._name
 
     def __getstate__(self):
         state = super(_ConnectorValue, self).__getstate__()
@@ -85,7 +81,7 @@ class _ConnectorValue(NumericValue):
 
     def set_value(self, value):
         msg = "Cannot specify the value of a connector '%s'"
-        raise ValueError(msg % self.name())
+        raise ValueError(msg % self.name)
 
     def is_fixed(self):
         # The semantics here are not clear, and given how aggressive
@@ -141,14 +137,13 @@ class _ConnectorValue(NumericValue):
 
     def add(self, var, name=None, aggregate=None):
         if name is None:
-            name = var.name()
+            name = var.local_name
         if name in self.vars:
             raise ValueError("Cannot insert duplicate variable name "
-                             "'%s' into Connector '%s'" % ( name, self.name() ))
+                             "'%s' into Connector '%s'" % (name, self.name))
         self.vars[name] = var
         if aggregate is not None:
             self.aggregators[var] = aggregate
-
 
 class SimpleConnectorBase(IndexedComponent):
     """A collection of variables, which may be defined over a index"""

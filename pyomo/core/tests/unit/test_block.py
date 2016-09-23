@@ -205,8 +205,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.name(True) for comp in generator],
-                                 [comp.name(True) for comp in block.component_lists[ctype]])
+                self.assertEqual([comp.name for comp in generator],
+                                 [comp.name for comp in block.component_lists[ctype]])
                 self.assertEqual([id(comp) for comp in generator],
                                  [id(comp) for comp in block.component_lists[ctype]])
 
@@ -224,8 +224,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.name(True) for comp in generator],
-                                 [comp.name(True) for comp in block.component_lists[ctype]])
+                self.assertEqual([comp.name for comp in generator],
+                                 [comp.name for comp in block.component_lists[ctype]])
                 self.assertEqual([id(comp) for comp in generator],
                                  [id(comp) for comp in block.component_lists[ctype]])
 
@@ -243,8 +243,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.name(True) for name, comp in generator],
-                                 [comp.name(True) for comp in block.component_data_lists[ctype]])
+                self.assertEqual([comp.name for name, comp in generator],
+                                 [comp.name for comp in block.component_data_lists[ctype]])
                 self.assertEqual([id(comp) for name, comp in generator],
                                  [id(comp) for comp in block.component_data_lists[ctype]])
 
@@ -262,8 +262,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual(sorted([comp.name(True) for name, comp in generator]),
-                                 sorted([comp.name(True) for comp in block.component_data_lists[ctype]]))
+                self.assertEqual(sorted([comp.name for name, comp in generator]),
+                                 sorted([comp.name for comp in block.component_data_lists[ctype]]))
                 self.assertEqual(sorted([id(comp) for name, comp in generator]),
                                  sorted([id(comp) for comp in block.component_data_lists[ctype]]))
 
@@ -281,8 +281,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual([comp.name(True) for name, comp in generator],
-                                 [comp.name(True) for comp in block.component_data_lists[ctype]])
+                self.assertEqual([comp.name for name, comp in generator],
+                                 [comp.name for comp in block.component_data_lists[ctype]])
                 self.assertEqual([id(comp) for name, comp in generator],
                                  [id(comp) for comp in block.component_data_lists[ctype]])
 
@@ -300,8 +300,8 @@ class TestGenerators(unittest.TestCase):
                 # failure message. I leave comparison of ids in the
                 # second assertEqual to make sure the tests are working
                 # as expected
-                self.assertEqual(sorted([comp.name(True) for name, comp in generator]),
-                                 sorted([comp.name(True) for comp in block.component_data_lists[ctype]]))
+                self.assertEqual(sorted([comp.name for name, comp in generator]),
+                                 sorted([comp.name for comp in block.component_data_lists[ctype]]))
                 self.assertEqual(sorted([id(comp) for name, comp in generator]),
                                  sorted([id(comp) for comp in block.component_data_lists[ctype]]))
 
@@ -524,38 +524,38 @@ class TestBlock(unittest.TestCase):
         """ Coverage of the _clear_attribute method """
         obj = Set()
         self.block.A = obj
-        self.assertEqual(self.block.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(self.block.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, self.block.A)
 
         obj = Var()
         self.block.A = obj
-        self.assertEqual(self.block.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(self.block.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, self.block.A)
 
         obj = Param()
         self.block.A = obj
-        self.assertEqual(self.block.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(self.block.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, self.block.A)
 
         obj = Objective()
         self.block.A = obj
-        self.assertEqual(self.block.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(self.block.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, self.block.A)
 
         obj = Constraint()
         self.block.A = obj
-        self.assertEqual(self.block.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(self.block.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, self.block.A)
 
         obj = Set()
         self.block.A = obj
-        self.assertEqual(self.block.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(self.block.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, self.block.A)
 
     def test_set_attr(self):
@@ -588,20 +588,20 @@ class TestBlock(unittest.TestCase):
 
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator()]
+        result = [x.name for x in m._tree_iterator()]
         self.assertEqual(HM.PrefixDFS, result)
 
     def test_iterate_hierarchy_PrefixDFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch)]
         self.assertEqual(HM.PrefixDFS, result)
 
     def test_iterate_hierarchy_PrefixDFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=SortComponents.indices,
         )]
@@ -609,7 +609,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PrefixDFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
@@ -617,7 +617,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PrefixDFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             sort=True
         )]
@@ -627,14 +627,14 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch)]
         self.assertEqual(HM.PostfixDFS, result)
 
     def test_iterate_hierarchy_PostfixDFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=SortComponents.indices,
         )]
@@ -642,7 +642,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
@@ -650,7 +650,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_PostfixDFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             sort=True
         )]
@@ -659,14 +659,14 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_BFS(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch)]
         self.assertEqual(HM.BFS, result)
 
     def test_iterate_hierarchy_BFS_sortIndex(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=SortComponents.indices,
         )]
@@ -675,7 +675,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_BFS_sortName(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=SortComponents.alphaOrder,
         )]
@@ -684,7 +684,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_hierarchy_BFS_sort(self):
         HM = HierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.BreadthFirstSearch,
             sort=True
         )]
@@ -693,7 +693,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PrefixDFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             ctype=Block,
         )]
@@ -701,7 +701,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PrefixDFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PrefixDepthFirstSearch,
             ctype=(Block,DerivedBlock),
         )]
@@ -710,7 +710,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PostfixDFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             ctype=Block,
         )]
@@ -718,7 +718,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_PostfixDFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.PostfixDepthFirstSearch,
             ctype=(Block,DerivedBlock),
         )]
@@ -727,7 +727,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_BFS_block(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.BFS,
             ctype=Block,
         )]
@@ -735,7 +735,7 @@ class TestBlock(unittest.TestCase):
     def test_iterate_mixed_hierarchy_BFS_both(self):
         HM = MixedHierarchicalModel()
         m = HM.model
-        result = [x.name(True) for x in m._tree_iterator(
+        result = [x.name for x in m._tree_iterator(
             traversal=TraversalStrategy.BFS,
             ctype=(Block,DerivedBlock),
         )]
@@ -1066,10 +1066,10 @@ class TestBlock(unittest.TestCase):
         m.z.deactivate()
 
         def assertWorks(self, key, pm):
-            self.assertIs(pm[key.name()], key)
+            self.assertIs(pm[key.local_name], key)
         def assertFails(self, key, pm):
             if not isinstance(key, six.string_types):
-                key = key.name()
+                key = key.local_name
             self.assertRaises(KeyError, pm.__getitem__, key)
 
         pm = m.component_map()

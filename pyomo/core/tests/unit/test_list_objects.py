@@ -309,10 +309,10 @@ class _TestComponentListBase(object):
         prefix = "c"
         for i in index:
             cdata = model.c[i]
-            self.assertEqual(cdata.name(False),
-                             cdata.name(True))
+            self.assertEqual(cdata.local_name,
+                             cdata.name)
             cname = prefix + "["+str(i)+"]"
-            self.assertEqual(cdata.name(False),
+            self.assertEqual(cdata.local_name,
                              cname)
 
 class _TestActiveComponentListBase(_TestComponentListBase):
