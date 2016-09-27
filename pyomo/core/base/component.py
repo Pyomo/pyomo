@@ -50,13 +50,13 @@ def name(component, index=None, fully_qualified=False):
     Return a string representation of component for a specific
     index value.
     """
-    base = component.name(fully_qualified=fully_qualified)
+    base = component.getname(fully_qualified=fully_qualified)
     if index is None:
         return base
     else:
         if index not in component.index_set():
             raise KeyError( "Index %s is not valid for component %s"
-                            % (index, component.name(True)) )
+                            % (index, component.name) )
         return base + _name_index_generator( index )
 
 def cname(*args, **kwds):
@@ -193,7 +193,7 @@ class Component(object):
         if ostream is None:
             ostream = sys.stdout
         tab="    "
-        ostream.write(prefix+self.name()+" : ")
+        ostream.write(prefix+self.local_name+" : ")
         if self.doc is not None:
             ostream.write(self.doc+'\n'+prefix+tab)
 
@@ -245,7 +245,7 @@ class Component(object):
 
     def __str__(self):
         """Return the component name"""
-        return self.name(True)
+        return self.name
 
     def to_string(self, ostream=None, verbose=None, precedence=0):
         """Write the component name to a buffer"""
@@ -253,7 +253,7 @@ class Component(object):
             ostream = sys.stdout
         ostream.write(self.__str__())
 
-    def name(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None):
         """
         Returns the component name associated with this object.
 
@@ -265,7 +265,7 @@ class Component(object):
         if fully_qualified:
             pb = self.parent_block()
             if pb is not None and pb is not self.model():
-                ans = pb.name(fully_qualified, name_buffer) \
+                ans = pb.getname(fully_qualified, name_buffer) \
                       + "." + self._name
             else:
                 ans = self._name
@@ -275,16 +275,43 @@ class Component(object):
             name_buffer[id(self)] = ans
         return ans
 
+    @property
+    def name(self):
+        """Get the fully qualifed component name."""
+        return self.getname(fully_qualified=True)
+    # Adding a setter here to help users adapt to the new
+    # setting. The .name attribute is now ._name. It should
+    # never be assigned to by user code.
+    @name.setter
+    def name(self, val):
+        if self.parent_block() is None:
+            self._name = val
+        else:
+            raise ValueError(
+                "The .name attribute is not settable when the component "
+                "is assigned to a Block.\nTriggered by attempting to set "
+                "component '%s' to name '%s'" % (self.name,val))
+
+    @property
+    def local_name(self):
+        """Get the component name only within the context of
+        the immediate parent container."""
+        return self.getname(fully_qualified=False)
+
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname(). "
+                       "The preferred method of obtaining a component name is to use the "
+                       ".name property, which returns the fully qualified component name. "
+                       "The .local_name property will return the component name only within "
+                       "the context of the immediate parent container.")
+        return self.getname(*args, **kwds)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         """Print component information"""
         if ostream is None:
             ostream = sys.stdout
         tab="    "
-        ostream.write(prefix+self.name()+" : ")
+        ostream.write(prefix+self.local_name+" : ")
         if self.doc is not None:
             ostream.write(self.doc+'\n'+prefix+tab)
 
@@ -491,7 +518,7 @@ class ComponentData(object):
         # Component.
 
         #try:
-        #    print("Component: %s" % (self.name(),))
+        #    print("Component: %s" % (self.name,))
         #except:
         #    print("DANGLING ComponentData: %s on %s" % (
         #        type(self),self.parent_component()))
@@ -593,7 +620,7 @@ class ComponentData(object):
 
     def __str__(self):
         """Return a string with the component name and index"""
-        return self.name(True)
+        return self.name
 
     def to_string(self, ostream=None, verbose=None, precedence=0):
         """Write the component name and index to a buffer"""
@@ -601,7 +628,7 @@ class ComponentData(object):
             ostream = sys.stdout
         ostream.write(self.__str__())
 
-    def name(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None):
         """Return a string with the component name and index"""
         #
         # Using the buffer, which is a dictionary:  id -> string
@@ -612,12 +639,12 @@ class ComponentData(object):
 
         c = self.parent_component()
         if c is self:
-            # This is a scalar component, so call the Component.name() method
-            return super(ComponentData, self).name(fully_qualified, name_buffer)
+            # This is a scalar component, so call the Component.getname() method
+            return super(ComponentData, self).getname(fully_qualified, name_buffer)
         #
         # Get the name of the component
         #
-        base = c.name(fully_qualified, name_buffer)
+        base = c.getname(fully_qualified, name_buffer)
         if name_buffer is not None:
             # Iterate through the dictionary and generate all names in the buffer
             for idx, obj in iteritems(c):
@@ -638,9 +665,33 @@ class ComponentData(object):
         raise RuntimeError("Fatal error: cannot find the component data in "
                            "the owning component's _data dictionary.")
 
+    @property
+    def name(self):
+        """Get the fully qualifed component name."""
+        return self.getname(fully_qualified=True)
+    # Adding a setter here to help users adapt to the new
+    # setting. The .name attribute is now ._name. It should
+    # never be assigned to by user code.
+    @name.setter
+    def name(self, val):
+        raise ValueError(
+            "The .name attribute is now a property method "
+            "that returns the fully qualified component name. "
+            "Assignment is not allowed.")
+
+    @property
+    def local_name(self):
+        """Get the component name only within the context of
+        the immediate parent container."""
+        return self.getname(fully_qualified=False)
+
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() method has been renamed to getname(). "
+                       "The preferred method of obtaining a component name is to use the "
+                       ".name property, which returns the fully qualified component name. "
+                       "The .local_name property will return the component name only within "
+                       "the context of the immediate parent container.")
+        return self.getname(*args, **kwds)
 
     def is_indexed(self):
         """Return true if this component is indexed"""
@@ -904,26 +955,26 @@ class ComponentUID(object):
         orig_component = component
         tDict = ComponentUID.tDict
         if not hasattr(component, '_component'):
-            yield ( component.name(), '**', None )
+            yield ( component.local_name, '**', None )
             component = component.parent_block()
         while component is not context:
             if component is model:
                 raise ValueError("Context '%s' does not apply to component "
-                                 "'%s'" % (context.name(True),
-                                           orig_component.name(True)))
+                                 "'%s'" % (context.name,
+                                           orig_component.name))
             c = component.parent_component()
             if c is component:
-                yield ( c.name(), tuple(), '' )
+                yield ( c.local_name, tuple(), '' )
             elif cuid_buffer is not None:
                 if id(self) not in cuid_buffer:
                     for idx, obj in iteritems(c):
                         cuid_buffer[id(obj)] = \
                             self._partial_cuid_from_index(idx)
-                yield (c.name(),) + cuid_buffer[id(component)]
+                yield (c.local_name,) + cuid_buffer[id(component)]
             else:
                 for idx, obj in iteritems(c):
                     if obj is component:
-                        yield (c.name(),) + self._partial_cuid_from_index(idx)
+                        yield (c.local_name,) + self._partial_cuid_from_index(idx)
                         break
             component = component.parent_block()
 

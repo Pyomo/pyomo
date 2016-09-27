@@ -54,8 +54,7 @@ class ExternalFunction(Component):
         self._index = None
 
     def __call__(self, *args):
-        idxs = range(len(args))
-        idxs.reverse()
+        idxs = reversed(six.moves.xrange(len(args)))
         for i in idxs:
             if type(args[i]) is types.GeneratorType:
                 args = args[:i] + tuple(args[i]) + args[i+1:]
@@ -65,16 +64,16 @@ class ExternalFunction(Component):
                 else as_numeric(x)
                 for x in args ) )
 
-    def name(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None):
         if self.name:
-            return super(ExternalFunction, self).name(
+            return super(ExternalFunction, self).getname(
                 fully_qualified, name_buffer )
         else:
             return str(self._library) + ":" + str(self._function)
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() function has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() function has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def evaluate(self, args):
         raise NotImplementedError(
@@ -123,7 +122,11 @@ class AMPLExternalFunction(ExternalFunction):
 
         self._known_functions = {}
         def addfunc(name, f, _type, nargs, funcinfo, ae):
-            self._known_functions[name] = (f, _type, nargs, funcinfo, ae)
+            # trap for Python 3, where the name comes in as bytes() and
+            # not a string
+            if not isinstance(name, six.string_types):
+                name = name.decode()
+            self._known_functions[str(name)] = (f, _type, nargs, funcinfo, ae)
         AE = _AMPLEXPORTS()
         AE.Addfunc = _AMPLEXPORTS.ADDFUNC(addfunc)
 
@@ -161,16 +164,16 @@ class PythonCallbackFunction(ExternalFunction):
     def __call__(self, *args):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
 
-    def name(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None):
         if self.name:
-            return super(ExternalFunction, self).name(
-                fully_qualified, name_buffer )
+            return super(ExternalFunction, self).getname(
+                fully_qualified, name_buffer)
         else:
             return "PythonCallback(%s)" % str(self._fcn)
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() function has been renamed to name()")
-        return self.name(*args, **kwds)
+        logger.warning("DEPRECATED: The cname() function has been renamed to getname()")
+        return self.getname(*args, **kwds)
 
     def evaluate(self, args):
         # Skip the library name and function name

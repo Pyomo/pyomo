@@ -64,4 +64,4 @@ results = opt.solve(model,
 print("")
 print("IIS Results")
 for component, value in model.iis.items():
-    print(component.name()+" "+str(value))
+    print(component.name+" "+str(value))

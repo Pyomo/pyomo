@@ -271,7 +271,7 @@ class Objective(ActiveIndexedComponent):
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
-                "Constructing objective %s" % (self.name(True)))
+                "Constructing objective %s" % (self.name))
         if self._constructed:
             return
         self._constructed = True
@@ -307,7 +307,7 @@ class Objective(ActiveIndexedComponent):
                     logger.error(
                         "Rule failed when generating expression for "
                         "objective %s:\n%s: %s"
-                        % (self.name(True),
+                        % (self.name,
                            type(err).__name__,
                            err))
                     raise
@@ -345,7 +345,7 @@ class Objective(ActiveIndexedComponent):
                     logger.error(
                         "Rule failed when generating expression for"
                         " objective %s with index %s:\n%s: %s"
-                        % (self.name(True),
+                        % (self.name,
                            str(ndx),
                            type(err).__name__,
                            err))
@@ -386,7 +386,7 @@ class Objective(ActiveIndexedComponent):
         tab = "    "
         if ostream is None:
             ostream = sys.stdout
-        ostream.write(prefix+self.name()+" : ")
+        ostream.write(prefix+self.local_name+" : ")
         ostream.write(", ".join("%s=%s" % (k,v) for k,v in [
                     ("Size", len(self)),
                     ("Index", self._index \
@@ -434,7 +434,7 @@ class Objective(ActiveIndexedComponent):
                 "object or numeric value. Please modify your rule "
                 "to return Objective.Skip instead of None."
                 "\n\nError thrown for Objective '%s'"
-                % (self._data[index].name(True)))
+                % (self._data[index].name))
 
         #
         # Ignore an 'empty' objective
@@ -485,13 +485,13 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
                     "Accessing the expression of SimpleObjective "
                     "'%s' before the Objective has been assigned "
                     "a sense or expression. There is currently "
-                    "nothing to access." % (self.name(True)))
+                    "nothing to access." % (self.name))
             return _GeneralObjectiveData.expr.fget(self)
         raise ValueError(
             "Accessing the expression of objective '%s' "
             "before the Objective has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.name))
     @expr.setter
     def expr(self, expr):
         """Set the expression of this objective."""
@@ -520,13 +520,13 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
                     "Accessing the sense of SimpleObjective "
                     "'%s' before the Objective has been assigned "
                     "a sense or expression. There is currently "
-                    "nothing to access." % (self.name(True)))
+                    "nothing to access." % (self.name))
             return _GeneralObjectiveData.sense.fget(self)
         raise ValueError(
             "Accessing the sense of objective '%s' "
             "before the Objective has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.name))
     @sense.setter
     def sense(self, sense):
         """Set the sense (direction) of this objective."""
@@ -553,7 +553,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
             "Setting the value of objective '%s' "
             "before the Objective has been constructed (there "
             "is currently no object to set)."
-            % (self.name(True)))
+            % (self.name))
 
     def set_sense(self, sense):
         """Set the sense (direction) of this objective."""
@@ -565,7 +565,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
             "Setting the sense of objective '%s' "
             "before the Objective has been constructed (there "
             "is currently no object to set)."
-            % (self.name(True)))
+            % (self.name))
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -577,7 +577,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
             raise ValueError(
                 "SimpleObjective object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
-                % (self.name(True), index))
+                % (self.name, index))
         self.set_value(expr)
         return self
 
@@ -623,7 +623,7 @@ class ObjectiveList(IndexedObjective):
             __debug__ and logger.isEnabledFor(logging.DEBUG)
         if generate_debug_messages:
             logger.debug(
-                "Constructing objective %s" % (self.name(True)))
+                "Constructing objective %s" % (self.name))
 
         if self._constructed:
             return

@@ -46,7 +46,7 @@ class RadixLinearization(Transformation):
         _discretize = {}
         if user_discretize:
             for _var in user_discretize:
-                _v = M.find_component(_var.name(True))
+                _v = M.find_component(_var.name)
                 if _v.component() is _v:
                     for _vv in _v.itervalues():
                         _discretize.setdefault(id(_vv), len(_discretize))
@@ -139,7 +139,7 @@ class RadixLinearization(Transformation):
         for _id, _idx in iteritems(_discretize):
             if verbose:
                 logger.info("Discretizing variable %s as %s" %
-                            (_counts[_id][0].name(True), _idx))
+                            (_counts[_id][0].name, _idx))
             self._discretize_variable(_block, _counts[_id][0], _idx)
 
         _known_bilinear = {}
@@ -164,7 +164,7 @@ class RadixLinearization(Transformation):
         _lb, _ub = v.bounds
         if _lb is None or _ub is None:
             raise RuntimeError("Couldn't discretize variable %s: missing "
-                               "finite lower/upper bounds." % (v.name(True)))
+                               "finite lower/upper bounds." % (v.name))
         _c = Constraint(
             expr= v == _lb + (_ub-_lb) * ( b.dv[idx] +
                 sum(b.z[idx,k] * 2**-k for k in b.DISCRETIZATION) ) )
@@ -194,13 +194,13 @@ class RadixLinearization(Transformation):
         _z = b.z
         _dv = b.dv[v_idx]
         _u = Var(b.DISCRETIZATION, within=u.domain, bounds=u.bounds)
-        logger.info("Discretizing (v=%s)*(u=%s) as u%s_v%s" % (
-                v.name(True), u.name(True), u_idx, v_idx ))
+        logger.info("Discretizing (v=%s)*(u=%s) as u%s_v%s"
+                    % (v.name, u.name, u_idx, v_idx ))
         b.add_component( "u%s_v%s" % (u_idx, v_idx), _u)
         _lb, _ub = u.bounds
         if _lb is None or _ub is None:
              raise RuntimeError("Couldn't relax variable %s: missing "
-                               "finite lower/upper bounds." % (u.name(True)))
+                               "finite lower/upper bounds." % (u.name))
         _c = ConstraintList()
         b.add_component( "c_disaggregate_u%s_v%s" % (u_idx, v_idx), _c )
         for k in b.DISCRETIZATION:

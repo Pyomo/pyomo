@@ -67,7 +67,7 @@ def createTestMethod(pName,problem,solver,writer,kwds):
         results = opt.solve(model)
 
         # non-recursive
-        new_results = ((var.name(),var.value)
+        new_results = ((var.name, var.value)
                        for var in model.component_data_objects(Var,
                                                                active=True,
                                                                descend_into=False))

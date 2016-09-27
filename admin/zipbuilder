@@ -117,8 +117,9 @@ VER=VERSION.txt
 LOG=../${PACKAGE}.log
 if test -z "$MODE"; then
     # release
-    PKG_SVN=`grep -i -A1 "package ${PACKAGE}\$" $LOG | tail -1 | cut -d: -f2- \
+    PKG_SVN=`grep -i "Git switching ${PACKAGE} to tag" $LOG | cut -d: -f2- \
         | xargs basename | tr -d ' '`
+    REV=$PKG_SVN
     printf "${PACKAGE} installer for release: %s\n" $PKG_SVN > $VER
     echo "This installer includes the following component versions:" >> $VER
 
@@ -128,7 +129,7 @@ if test -z "$MODE"; then
             SVN=`grep -A1 "package ${PKG}\$" $LOG | tail -1 | cut -d: -f2- \
                 | xargs basename`
         elif test "$VCS" == 'G'; then 
-            SVN=`grep "Git switching ${PKG}" $LOG | cut -d: -f2-`
+            SVN=`grep "Git switching ${PKG} to" $LOG | cut -d: -f2-`
         else
             SVN='(unknown)'
         fi

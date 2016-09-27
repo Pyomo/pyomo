@@ -200,7 +200,7 @@ class Suffix(ComponentMap, ActiveComponent):
         Constructs this component, applying rule if it exists.
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Constructing suffix %s",self.name())
+            logger.debug("Constructing suffix %s",self.name)
 
         if self._constructed is True:
             return
@@ -385,7 +385,10 @@ class Suffix(ComponentMap, ActiveComponent):
         Return a string representation of the suffix.  If the name
         attribute is None, then return ''
         """
-        return self.name()
+        name = self.name
+        if name is None:
+            return ''
+        return name
 
     def _pprint(self):
         return (

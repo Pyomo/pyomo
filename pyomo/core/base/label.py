@@ -85,25 +85,25 @@ class CNameLabeler(object):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return obj.name(True, self.name_buffer)
+        return obj.getname(True, self.name_buffer)
 
 class TextLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return cpxlp_label_from_name(obj.name(True, self.name_buffer))
+        return cpxlp_label_from_name(obj.getname(True, self.name_buffer))
 
 class AlphaNumTextLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return alphanum_label_from_name(obj.name(True, self.name_buffer))
+        return alphanum_label_from_name(obj.getname(True, self.name_buffer))
 
 class NameLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return obj.name(True, self.name_buffer)
+        return obj.getname(True, self.name_buffer)
