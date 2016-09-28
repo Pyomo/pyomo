@@ -133,38 +133,38 @@ class Test(unittest.TestCase):
         model = ConcreteModel()
         obj = Set()
         model.A = obj
-        self.assertEqual(model.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(model.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, model.A)
 
         obj = Var()
         model.A = obj
-        self.assertEqual(model.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(model.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, model.A)
 
         obj = Param()
         model.A = obj
-        self.assertEqual(model.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(model.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, model.A)
 
         obj = Objective()
         model.A = obj
-        self.assertEqual(model.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(model.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, model.A)
 
         obj = Constraint()
         model.A = obj
-        self.assertEqual(model.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(model.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, model.A)
 
         obj = Set()
         model.A = obj
-        self.assertEqual(model.A.name(), "A")
-        self.assertEqual(obj.name(), "A")
+        self.assertEqual(model.A.local_name, "A")
+        self.assertEqual(obj.local_name, "A")
         self.assertIs(obj, model.A)
 
     def test_set_attr(self):
@@ -630,7 +630,7 @@ class Test(unittest.TestCase):
             m.x = Var(m.I)
             m.c = Constraint( expr=sum(m.x[i] for i in m.I) >= 0 )
         model = ConcreteModel(rule=make)
-        self.assertEqual( [x.name() for x in model.component_objects()],
+        self.assertEqual( [x.local_name for x in model.component_objects()],
                           ['I','x','c'] )
         self.assertEqual( len(list(identify_variables(model.c.body))), 3 )
 
@@ -653,16 +653,16 @@ class Test(unittest.TestCase):
 
         model = AbstractModel(rule=make)
         instance = model.create_instance()
-        self.assertEqual( [x.name() for x in model.component_objects()],
+        self.assertEqual( [x.local_name for x in model.component_objects()],
                           [] )
-        self.assertEqual( [x.name() for x in instance.component_objects()],
+        self.assertEqual( [x.local_name for x in instance.component_objects()],
                           ['I','x','c'] )
         self.assertEqual( len(list(identify_variables(instance.c.body))), 3 )
 
         model = AbstractModel(rule=make)
         model.y = Var()
         instance = model.create_instance()
-        self.assertEqual( [x.name() for x in instance.component_objects()],
+        self.assertEqual( [x.local_name for x in instance.component_objects()],
                           ['y','I','x','c'] )
         self.assertEqual( len(list(identify_variables(instance.c.body))), 3 )
 

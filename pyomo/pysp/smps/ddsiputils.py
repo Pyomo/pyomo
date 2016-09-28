@@ -124,7 +124,7 @@ def _convert_external_setup_without_cleanup(
             empty_rhs_annotation = False
             stochastic_rhs_entries = stochastic_rhs.expand_entries()
             stochastic_rhs_entries.sort(
-                key=lambda x: x[0].name(True, constraint_name_buffer))
+                key=lambda x: x[0].getname(True, constraint_name_buffer))
             if len(stochastic_rhs_entries) == 0:
                 raise RuntimeError(
                     "The %s annotation was declared "
@@ -152,7 +152,7 @@ def _convert_external_setup_without_cleanup(
             empty_matrix_annotation = False
             stochastic_matrix_entries = stochastic_matrix.expand_entries()
             stochastic_matrix_entries.sort(
-                key=lambda x: x[0].name(True, constraint_name_buffer))
+                key=lambda x: x[0].getname(True, constraint_name_buffer))
             if len(stochastic_matrix_entries) == 0:
                 raise RuntimeError(
                     "The %s annotation was declared "
@@ -407,7 +407,7 @@ def _convert_external_setup_without_cleanup(
                                 "either remove the constraint from this annotation "
                                 "or manually declare it as second-stage using the "
                                 "%s annotation."
-                                % (con.name(True),
+                                % (con.name,
                                    StochasticConstraintBoundsAnnotation.__name__,
                                    ConstraintStageAnnotation.__name__))
 
@@ -417,7 +417,7 @@ def _convert_external_setup_without_cleanup(
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
-                                           % (con.name(True)))
+                                           % (con.name))
 
                     body_constant = constraint_repn.constant
                     # We are going to rewrite the core problem file
@@ -518,7 +518,7 @@ def _convert_external_setup_without_cleanup(
                                 "either remove the constraint from this annotation "
                                 "or manually declare it as second-stage using the "
                                 "%s annotation."
-                                % (con.name(True),
+                                % (con.name,
                                    StochasticConstraintBodyAnnotation.__name__,
                                    ConstraintStageAnnotation.__name__))
                     constraint_repn = \
@@ -527,7 +527,7 @@ def _convert_external_setup_without_cleanup(
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
-                                           % (con.name(True)))
+                                           % (con.name))
                     assert len(constraint_repn.variables) > 0
                     if var_list is None:
                         var_list = constraint_repn.variables
@@ -557,8 +557,8 @@ def _convert_external_setup_without_cleanup(
                                 "been marked as stochastic in constraint %s using "
                                 "the %s annotation, but the variable does not appear"
                                 " in the canonical constraint expression."
-                                % (var.name(True),
-                                   con.name(True),
+                                % (var.name,
+                                   con.name,
                                    StochasticConstraintBodyAnnotation.__name__))
                         var_label = symbol_map.byObject[id(var)]
                         for con_label in symbols:
@@ -602,7 +602,7 @@ def _convert_external_setup_without_cleanup(
                     raise RuntimeError("Only linear stochastic objectives are "
                                        "accepted for conversion to SMPS format. "
                                        "Objective %s is not linear."
-                                       % (objective_object.name(True)))
+                                       % (objective_object.name))
                 if objective_variables is None:
                     objective_variables = objective_repn.variables
                 stochastic_objective_label = symbol_map.byObject[id(objective_object)]
@@ -631,8 +631,8 @@ def _convert_external_setup_without_cleanup(
                             "been marked as stochastic in objective %s using "
                             "the %s annotation, but the variable does not appear"
                             " in the canonical objective expression."
-                            % (var.name(True),
-                               objective_object.name(True),
+                            % (var.name,
+                               objective_object.name,
                                StochasticObjectiveAnnotation.__name__))
                     var_label = symbol_map.byObject[id(var)]
                     stochastic_cost_count += 1
@@ -657,7 +657,7 @@ def _convert_external_setup_without_cleanup(
     # Write the deterministic part of the LP/MPS-file to its own
     # file for debugging purposes
     #
-    reference_model_name = reference_model.name()
+    reference_model_name = reference_model.name
     reference_model._name = "ZeroStochasticData"
     det_output_filename = os.path.join(output_directory,
                                        scenario.name+".pysp_model.lp.det")

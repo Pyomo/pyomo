@@ -671,7 +671,7 @@ class ScenarioTreeInstanceFactory(object):
                         verbose=verbose)
 
             scenario_instances[scenario._name] = scenario_instance
-            assert scenario_instance.name() == scenario.name
+            assert scenario_instance.local_name == scenario.name
 
         return scenario_instances
 

@@ -90,16 +90,16 @@ def print_model_suffixes(model):
             six.print_("%10s" % (name),end='')
     six.print_("")
     for i in model.s:
-        six.print_(model.x[i].name()+"\t",end='')
+        six.print_(model.x[i].name+"\t",end='')
         for name,suffix in active_import_suffix_generator(model):
             six.print_("%10s" % (suffix.get(model.x[i])),end='')
         six.print_("")
     for i in model.s:
-        six.print_(model.con[i].name()+"\t",end='')
+        six.print_(model.con[i].name+"\t",end='')
         for name,suffix in active_import_suffix_generator(model):
             six.print_("%10s" % (suffix.get(model.con[i])),end='')
         six.print_("")
-    six.print_(model.obj.name()+"\t",end='')
+    six.print_(model.obj.name+"\t",end='')
     for name,suffix in active_import_suffix_generator(model):
         six.print_("%10s" % (suffix.get(model.obj)),end='')
     print("")

@@ -58,7 +58,7 @@ def compile_block_linear_constraints(parent_block,
     if verbose:
         print("")
         print("Compiling linear constraints on block with name: %s"
-              % (parent_block.name(True)))
+              % (parent_block.name))
 
     if not parent_block.is_constructed():
         raise RuntimeError(
@@ -649,7 +649,7 @@ class MatrixConstraint(collections.Mapping,
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Constructing constraint %s"
-                         % (self.name(True)))
+                         % (self.name))
         if self._constructed:
             return
         self._constructed=True

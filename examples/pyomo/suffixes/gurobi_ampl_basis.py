@@ -100,12 +100,12 @@ results = opt.solve(model,
 print("")
 print("Suffixes After First Solve:")
 for i in model.s:
-    print("%s.sstatus: %s" % (model.x[i].name(),
+    print("%s.sstatus: %s" % (model.x[i].name,
                               model.sstatus.get(model.x[i])))
 for i in model.s:
-    print("%s.sstatus: %s" % (model.con[i].name(),
+    print("%s.sstatus: %s" % (model.con[i].name,
                               model.sstatus.get(model.con[i])))
-    print("%s.dual: %s" % (model.con[i].name(),
+    print("%s.dual: %s" % (model.con[i].name,
                            model.dual.get(model.con[i])))
 print("")
 

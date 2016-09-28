@@ -288,7 +288,9 @@ class ParamTester(object):
             self.assertEqual( sorted(test), sorted(self.data.keys()) )
 
     def test_values(self):
-        expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
+        expectException = False
+        #    len(self.sparse_data) < len(self.data) and \
+        #    not self.instance.A._mutable
         try:
             test = self.instance.A.values()
             #self.assertEqual( type(test), list )
@@ -297,13 +299,16 @@ class ParamTester(object):
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
-            #self.assertFalse(expectException)
+            self.assertFalse(expectException)
         except ValueError:
             if not expectException:
                 raise
 
     def test_items(self):
-        expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
+        expectException = False
+        #                  len(self.sparse_data) < len(self.data) and \
+        #                  not self.instance.A._default_val is None and \
+        #                  not self.instance.A._mutable
         try:
             test = self.instance.A.items()
             #self.assertEqual( type(test), list )
@@ -311,7 +316,7 @@ class ParamTester(object):
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
-            #self.assertFalse(expectException)
+            self.assertFalse(expectException)
         except ValueError:
             if not expectException:
                 raise
@@ -321,7 +326,10 @@ class ParamTester(object):
         self.assertEqual( sorted(test), sorted(self.instance.A.keys()) )
 
     def test_itervalues(self):
-        expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
+        expectException = False
+        #                  len(self.sparse_data) < len(self.data) and \
+        #                  not self.instance.A._default_val is None and \
+        #                  not self.instance.A._mutable
         try:
             test = itervalues(self.instance.A)
             test = zip(self.instance.A.keys(), test)
@@ -329,18 +337,23 @@ class ParamTester(object):
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
+            self.assertFalse(expectException)
         except ValueError:
             if not expectException:
                 raise
 
     def test_iteritems(self):
-        expectException = len(self.sparse_data) < len(self.data) and not self.instance.A._default_val is None
+        expectException = False
+        #                  len(self.sparse_data) < len(self.data) and \
+        #                  not self.instance.A._default_val is None and \
+        #                  not self.instance.A._mutable
         try:
             test = iteritems(self.instance.A)
             if self.instance.A._default_val is None:
                 self.validateDict(self.sparse_data.items(), test)
             else:
                 self.validateDict(self.data.items(), test)
+            self.assertFalse(expectException)
         except ValueError:
             if not expectException:
                 raise
@@ -393,6 +406,30 @@ class ParamTester(object):
     def test_index(self):
         #"""Check the use of index"""
         self.assertEqual( len(self.instance.A.index_set()), len(list(self.data.keys())) )
+
+    def test_get_default(self):
+        if len(self.sparse_data) == len(self.data):
+            # nothing to test
+            return
+        idx = list(set(self.data) - set(self.sparse_data))[0]
+        expectException = self.instance.A._default_val is None and \
+                          not self.instance.A._mutable
+        try:
+            test = self.instance.A[idx]
+            if expectException:
+                self.fail("Expected the test to raise an exception")
+            self.assertFalse(expectException)
+            expectException = self.instance.A._default_val is None
+            try:
+                ans = value(test)
+                self.assertEquals(ans, value(self.instance.A._default_val))
+                self.assertFalse(expectException)
+            except:
+                if not expectException:
+                    raise
+        except ValueError:
+            if not expectException:
+                raise
 
 
 class ArrayParam_mutable_sparse_noDefault\
@@ -774,8 +811,10 @@ class ScalarTester(ParamTester):
 
     def test_call(self):
         #"""Check the use of the __call__ method"""
-        if not self.sparse_data:
-            self.assertRaises(ValueError, self.instance.A)
+        if self.sparse_data.get(None,None) is None: #not self.sparse_data:
+            self.assertRaisesRegexp(
+                ValueError, ".*undefined and no default value",
+                self.instance.A.__call__ )
         else:
             self.assertEqual(self.instance.A(), self.data[None])
 
@@ -827,7 +866,7 @@ class ScalarParam_mutable_noDefault(ScalarTester, unittest.TestCase):
         self.data = {None:None}
 
 
-class ScalarParam_mutable_floatDefault(ScalarTester, unittest.TestCase):
+class ScalarParam_mutable_init(ScalarTester, unittest.TestCase):
 
     def setUp(self, **kwds):
         #
@@ -835,6 +874,19 @@ class ScalarParam_mutable_floatDefault(ScalarTester, unittest.TestCase):
         #
         self.model = AbstractModel()
         ScalarTester.setUp(self, mutable=True, initialize=1.3, **kwds)
+
+        self.sparse_data = {None:1.3}
+        self.data = {None:1.3}
+
+
+class ScalarParam_mutable_floatDefault(ScalarTester, unittest.TestCase):
+
+    def setUp(self, **kwds):
+        #
+        # Sparse single-index Param, no default
+        #
+        self.model = AbstractModel()
+        ScalarTester.setUp(self, mutable=True, default=1.3, **kwds)
 
         self.sparse_data = {None:1.3}
         self.data = {None:1.3}
