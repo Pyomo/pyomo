@@ -103,10 +103,6 @@ def update_contset_indexed_component(comp):
     # roughly what the '_default' method in Var and Constraint should
     # do when they get reimplemented.
 
-    # This implementation also assumes that only Var and Constraint components
-    # will be explicitly indexed by a ContinuousSet and thus only checks for
-    # these two components.
-
     # Additionally, this implemenation will *NOT* check for or update
     # components which use a ContinuousSet implicitly. ex) an
     # objective function which iterates through a ContinuousSet and
@@ -126,10 +122,7 @@ def update_contset_indexed_component(comp):
                 elif comp.type() == Expression:
                     _update_expression(comp)
     elif comp.dim() > 1:
-        if isinstance(comp,IndexedComponent):
-            indexset = comp._implicit_subsets
-        else:
-            indexset = comp._index_set
+        indexset = comp._implicit_subsets
 
         for s in indexset:
             if s.type() == ContinuousSet and s.get_changed():
@@ -279,10 +272,8 @@ def get_index_information(var,ds):
     tmpds2=None
 
     if var.dim() != 1:
-        # If/when Var is changed to SparseIndexedComponent, the _index_set
-        # attribute below may need to be changed
         indCount = 0
-        for index in var._index_set:
+        for index in var._implicit_subsets:
             if isinstance(index,ContinuousSet):
                 if index ==ds:
                     dsindex = indCount
