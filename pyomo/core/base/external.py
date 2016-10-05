@@ -65,9 +65,10 @@ class ExternalFunction(Component):
                 for x in args ) )
 
     def getname(self, fully_qualified=False, name_buffer=None):
-        if self.name:
-            return super(ExternalFunction, self).getname(
-                fully_qualified, name_buffer )
+        _base = super(ExternalFunction, self)
+        if hasattr(_base,'getname'):
+            return _base.getname(fully_qualified,
+                                 name_buffer)
         else:
             return str(self._library) + ":" + str(self._function)
 
@@ -138,9 +139,9 @@ class PythonCallbackFunction(ExternalFunction):
     global_registry = {}
 
     @classmethod
-    def register_instance(instance):
-        _id = len(PythonCallbackFunction.global_registry)
-        global_registry[_id] = weakref.ref(instance)
+    def register_instance(cls, instance):
+        _id = len(cls.global_registry)
+        cls.global_registry[_id] = weakref.ref(instance)
         return _id
 
     def __init__(self, *args, **kwds):
@@ -165,9 +166,10 @@ class PythonCallbackFunction(ExternalFunction):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
 
     def getname(self, fully_qualified=False, name_buffer=None):
-        if self.name:
-            return super(ExternalFunction, self).getname(
-                fully_qualified, name_buffer)
+        _base = super(PythonCallbackFunction, self)
+        if hasattr(_base,'getname'):
+            return _base.getname(fully_qualified,
+                                 name_buffer)
         else:
             return "PythonCallback(%s)" % str(self._fcn)
 
@@ -178,9 +180,9 @@ class PythonCallbackFunction(ExternalFunction):
     def evaluate(self, args):
         # Skip the library name and function name
         # (we assume that the identifier points to this function!)
-        args.next() # library name
-        args.next() # function name
-        _id = args.next() # global callback function identifyer
+        six.next(args) # library name
+        six.next(args) # function name
+        _id = six.next(args) # global callback function identifyer
         if _id != self._fcn_id:
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
