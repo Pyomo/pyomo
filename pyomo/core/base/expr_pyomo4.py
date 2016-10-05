@@ -223,11 +223,6 @@ class _ExpressionBase(NumericValue):
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement getname()" % ( str(self.__class__), ))
 
-    def cname(self, *args, **kwds):
-        logger.warning(
-            "DEPRECATED: The cname() method has been renamed to getname()" )
-        return self.getname(*args, **kwds)
-
     #
     # this method contrast with the is_fixed() method.  This method
     # returns True if the expression is an atomic constant, that is it
