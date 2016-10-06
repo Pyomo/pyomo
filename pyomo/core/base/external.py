@@ -64,14 +64,6 @@ class ExternalFunction(Component):
                 else as_numeric(x)
                 for x in args ) )
 
-    def getname(self, fully_qualified=False, name_buffer=None):
-        _base = super(ExternalFunction, self)
-        if hasattr(_base,'getname'):
-            return _base.getname(fully_qualified,
-                                 name_buffer)
-        else:
-            return str(self._library) + ":" + str(self._function)
-
     def evaluate(self, args):
         raise NotImplementedError(
             "General external functions can not be evaluated within Python." )
@@ -160,14 +152,6 @@ class PythonCallbackFunction(ExternalFunction):
 
     def __call__(self, *args):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
-
-    def getname(self, fully_qualified=False, name_buffer=None):
-        _base = super(PythonCallbackFunction, self)
-        if hasattr(_base,'getname'):
-            return _base.getname(fully_qualified,
-                                 name_buffer)
-        else:
-            return "PythonCallback(%s)" % str(self._fcn)
 
     def evaluate(self, args):
         # Skip the library name and function name
