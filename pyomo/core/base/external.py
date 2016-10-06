@@ -154,11 +154,7 @@ class PythonCallbackFunction(ExternalFunction):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
 
     def evaluate(self, args):
-        # Skip the library name and function name
-        # (we assume that the identifier points to this function!)
-        six.next(args) # library name
-        six.next(args) # function name
-        _id = six.next(args) # global callback function identifyer
+        _id = six.next(args) # global callback function identifier
         if _id != self._fcn_id:
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
