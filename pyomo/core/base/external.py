@@ -58,11 +58,7 @@ class ExternalFunction(Component):
         for i in idxs:
             if type(args[i]) is types.GeneratorType:
                 args = args[:i] + tuple(args[i]) + args[i+1:]
-        return _ExternalFunctionExpression( self, tuple(
-                _external_fcn__clone_if_needed(x) if isinstance(x, _ExpressionBase)
-                else x if isinstance(x, basestring)
-                else as_numeric(x)
-                for x in args ) )
+        return _ExternalFunctionExpression(self, args)
 
     def evaluate(self, args):
         raise NotImplementedError(

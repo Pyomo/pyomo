@@ -467,7 +467,20 @@ _IntrinsicFunctionExpression =  _UnaryFunctionExpression
 
 
 class _ExternalFunctionExpression(_ExpressionBase):
-    __slots__ = ()
+    __slots__ = ('_fcn',)
+
+    def __init__(self, fcn, args):
+        """Construct a call to an external function"""
+        if safe_mode:
+            self._parent_expr = None
+            for x in args:
+                if isinstance(x, _ExpressionBase) and x._parent_expr:
+                    raise EntangledExpressionError(x)
+                x._parent_expr = bypass_backreference or ref(self)
+        self._args = tuple(
+            x if isinstance(x, basestring) else as_numeric(x)
+            for x in args )
+        self._fcn = fcn
 
     def getname(self):
         return self._fcn.getname()
