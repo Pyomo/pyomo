@@ -47,7 +47,8 @@ m.ode2 = Constraint(m.tau, rule=_ode2)
 def _ode3(m,i):
     if i == 0:
         return Constraint.Skip
-    return m.dtime == m.tf
+    return m.dtime[i] == m.tf
+m.ode3 = Constraint(m.tau, rule=_ode3)
 
 def _init(m):
     yield m.x[0] == 0
@@ -56,10 +57,6 @@ def _init(m):
     yield m.v[1] == 0
     yield m.time[0] == 0
 m.initcon = ConstraintList(rule=_init)
-
-def _timecon(m,i):
-    return m.time[i] == i*m.tf
-m.timecon = Constraint(m.tau,rule=_timecon)
 
 discretizer = TransformationFactory('dae.finite_difference')
 discretizer.apply_to(m,nfe=15,scheme='BACKWARD')
