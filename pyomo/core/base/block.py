@@ -658,6 +658,44 @@ class _BlockData(ActiveComponentData):
             return obj
         raise Exception("BOGUS")
 
+    def collect_ctypes(self,
+                       active=None,
+                       descend_into=True):
+        """
+        Count all component types stored on or under this
+        block.
+
+        Args:
+            active (True/None): Set to True to indicate that
+                only active components should be
+                counted. The default value of None indicates
+                that all components (including those that
+                have been deactivated) should be counted.
+            descend_into (bool): Indicates whether or not
+                component types should be counted on
+                sub-blocks. Default is True.
+
+        Returns: A set of component types.
+        """
+        assert active in (True, None)
+        ctypes = set()
+        for block in self.block_data_objects(active=active,
+                                             descend_into=descend_into,
+                                             sort=SortComponents.unsorted):
+            if active is None:
+                ctypes.update(ctype for ctype in block._ctypes)
+            else:
+                assert active is True
+                for ctype in block._ctypes:
+                    for component in block.component_data_objects(
+                            ctype=ctype,
+                            active=True,
+                            descend_into=False,
+                            sort=SortComponents.unsorted):
+                        ctypes.add(ctype)
+                        break # just need 1 or more
+        return ctypes
+
     def model(self):
         #
         # Special case: the "Model" is always the top-level _BlockData,
