@@ -126,7 +126,8 @@ class _ExpressionBase(NumericValue):
     """An object that defines a mathematical expression that can be evaluated"""
 
     __pickle_slots__ = ('_args',)
-    __slots__ =  __pickle_slots__ + (('__weakref__', '_parent_expr') if safe_mode else ())
+    __slots__ =  __pickle_slots__ + (
+        ('__weakref__', '_parent_expr') if safe_mode else () )
     PRECEDENCE = 0
 
     def __init__(self, args):
@@ -215,18 +216,14 @@ class _ExpressionBase(NumericValue):
 
     def clone(self):
         ans = copy.copy(self)
-        ans._parent_expr = None
+        if safe_mode:
+            ans._parent_expr = None
         return ans
 
     def getname(self):
         """The text name of this Expression function"""
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement getname()" % ( str(self.__class__), ))
-
-    def cname(self, *args, **kwds):
-        logger.warning(
-            "DEPRECATED: The cname() method has been renamed to getname()" )
-        return self.getname(*args, **kwds)
 
     #
     # this method contrast with the is_fixed() method.  This method
@@ -472,7 +469,20 @@ _IntrinsicFunctionExpression =  _UnaryFunctionExpression
 
 
 class _ExternalFunctionExpression(_ExpressionBase):
-    __slots__ = ()
+    __slots__ = ('_fcn',)
+
+    def __init__(self, fcn, args):
+        """Construct a call to an external function"""
+        if safe_mode:
+            self._parent_expr = None
+            for x in args:
+                if isinstance(x, _ExpressionBase) and x._parent_expr:
+                    raise EntangledExpressionError(x)
+                x._parent_expr = bypass_backreference or ref(self)
+        self._args = tuple(
+            x if isinstance(x, basestring) else as_numeric(x)
+            for x in args )
+        self._fcn = fcn
 
     def getname(self):
         return self._fcn.getname()
@@ -793,6 +803,10 @@ class _SumExpression(_ExpressionBase):
                 raise EntangledExpressionError(self, other)
             if _type is _SumExpression:
                 self._args.extend(other._args)
+                if safe_mode:
+                    for x in other._args:
+                        if x.is_expression():
+                            x._parent_expr = bypass_backreference or ref(self)
                 other._args = [] # for safety
                 return self
             if safe_mode:
@@ -842,7 +856,16 @@ class _SumExpression(_ExpressionBase):
             if safe_mode and other._parent_expr:# is not None:
                 raise EntangledExpressionError(self, other)
             if _type is _SumExpression:
-                self._args.extend(-i for i in other._args)
+                if safe_mode:
+                    for x in other._args:
+                        if x.is_expression():
+                            x._parent_expr = None
+                _other_args = tuple(-i for i in other._args)
+                self._args.extend(_other_args)
+                if safe_mode:
+                    for x in _other_args:
+                        if x.is_expression():
+                            x._parent_expr = bypass_backreference or ref(self)
                 other._args = [] # for safety
                 return self
             tmp = other

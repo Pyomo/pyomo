@@ -12,7 +12,8 @@ __all__ = ('Integral', )
 from pyomo.core.base.component import register_component
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error
-from pyomo.core.base.expression import Expression, _GeneralExpressionData
+from pyomo.core.base.expression import (Expression,
+_GeneralExpressionData, SimpleExpression)
 
 def create_access_function(var):
     """
@@ -109,8 +110,7 @@ class Integral(Expression):
                       (intexp(m,*(a[0:loc]+(ds[i+1],)+a[loc:]))+intexp(m,*(a[0:loc]+(ds[i],)+a[loc:])))
                       for i in range(len(ds)-1))
 
-        kwds['expr'] = _trap_rule
-
+        kwds['rule'] = _trap_rule    
         kwds.setdefault('ctype', Integral)
         Expression.__init__(self,*arg,**kwds)
 
@@ -178,6 +178,27 @@ class SimpleIntegral(_GeneralExpressionData, Integral):
             "is currently no value to return)."
             % (self.name))
 
+    #
+    # Like the SimpleExpression class,
+    # Leaving this method for backward compatibility reasons.
+    # (probably should be removed)
+    #
+    def add(self, index, expr):
+        """Add an expression with a given index."""
+        if index is not None:
+            raise KeyError(
+                "SimpleIntegral object '%s' does not accept "
+                "index values other than None. Invalid value: %s"
+                % (self.name, index))
+        if (type(expr) is tuple) and \
+           (expr == Expression.Skip):
+            raise ValueError(
+                "Expression.Skip can not be assigned "
+                "to an Expression that is not indexed: %s"
+                % (self.name))
+        self.set_value(expr)
+        return self
+
 class IndexedIntegral(Integral):
 
     def is_fully_discretized(self):
@@ -200,5 +221,20 @@ class IndexedIntegral(Integral):
                 if 'scheme' not in i.get_discretization_info():
                     return False
         return True
+    #
+    # Leaving this method for backward compatibility reasons
+    # Note: It allows adding members outside of self._index.
+    #       This has always been the case. Not sure there is
+    #       any reason to maintain a reference to a separate
+    #       index set if we allow this.
+    #
+    def add(self, index, expr):
+        """Add an expression with a given index."""
+        if (type(expr) is tuple) and \
+           (expr == Expression.Skip):
+            return None
+        cdata = _GeneralExpressionData(expr, component=self)
+        self._data[index] = cdata
+        return cdata
 
 register_component(Integral, "Integral Expression in a DAE model.")

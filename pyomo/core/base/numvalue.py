@@ -338,7 +338,8 @@ class NumericValue(object):
         return self.getname(fully_qualified=False)
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
+        logger.warning(
+            "DEPRECATED: The cname() method has been renamed to getname()." )
         return self.getname(*args, **kwds)
 
     def is_constant(self):

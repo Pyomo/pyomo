@@ -60,7 +60,8 @@ def name(component, index=None, fully_qualified=False):
         return base + _name_index_generator( index )
 
 def cname(*args, **kwds):
-    logger.warning("DEPRECATED: The cname() function has been renamed to name()")
+    logger.warning(
+        "DEPRECATED: The cname() function has been renamed to name()" )
     return name(*args, **kwds)
 
 class Component(object):
@@ -299,11 +300,12 @@ class Component(object):
         return self.getname(fully_qualified=False)
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname(). "
-                       "The preferred method of obtaining a component name is to use the "
-                       ".name property, which returns the fully qualified component name. "
-                       "The .local_name property will return the component name only within "
-                       "the context of the immediate parent container.")
+        logger.warning(
+            """DEPRECATED: The cname() method has been renamed to getname().
+The preferred method of obtaining a component name is to use the .name
+property, which returns the fully qualified component name.  The
+.local_name property will return the component name only within the
+context of the immediate parent container.""")
         return self.getname(*args, **kwds)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
@@ -686,11 +688,12 @@ class ComponentData(object):
         return self.getname(fully_qualified=False)
 
     def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname(). "
-                       "The preferred method of obtaining a component name is to use the "
-                       ".name property, which returns the fully qualified component name. "
-                       "The .local_name property will return the component name only within "
-                       "the context of the immediate parent container.")
+        logger.warning(
+            """DEPRECATED: The cname() method has been renamed to getname().
+The preferred method of obtaining a component name is to use the .name
+property, which returns the fully qualified component name.  The
+.local_name property will return the component name only within the
+context of the immediate parent container.""")
         return self.getname(*args, **kwds)
 
     def is_indexed(self):
