@@ -18,7 +18,7 @@ Unifying framework and Extensions (Vielma, Nemhauser 2008).
 TODO: Add regression tests for the following completed tasks
 *) user not providing floats can be an major issue for BIGM's and MC
 *) Other TODO's
-*) affine functions - BIGM_SOS1, BIGM_SOS2 ***** possible edge case bug
+*) nonconvex/nonconcave functions - BIGM_SOS1, BIGM_SOS2 ***** possible edge case bug
 
 Possible Extensions
 *) Consider another piecewise rep ("SOS2_MANUAL"?) where we manually implement
