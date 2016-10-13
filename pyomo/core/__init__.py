@@ -14,6 +14,6 @@ from pyomo.core.base import *
 import pyomo.core.base._pyomo
 import pyomo.core.data
 import pyomo.core.preprocess
-import pyomo.core.pylab
+import pyomo.core.kernel
 
 PluginGlobals.pop_env()

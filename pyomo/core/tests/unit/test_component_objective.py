@@ -4,8 +4,7 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponent,
                                                  _IActiveComponent,
                                                  IComponentContainer,
-                                                 _IActiveComponentContainer,
-                                                 IBlockStorage)
+                                                 _IActiveComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \

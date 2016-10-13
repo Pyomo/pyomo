@@ -15,6 +15,7 @@ import collections
 from pyomo.core.base.component_interface import \
     (IComponentContainer,
      _abstract_readwrite_property)
+from pyomo.core.base.component_map import ComponentMap
 
 import six
 from six import itervalues, iteritems
@@ -57,14 +58,72 @@ class ComponentDict(IComponentContainer,
     #
 
     def components(self):
-        return itervalues(self._data)
-    children = components
+        for child in self.children():
+            if child._is_component:
+                yield child
+            else:
+                for component in child.components():
+                    yield component
+
+    def children(self, return_key=False):
+        if return_key:
+            return iteritems(self._data)
+        else:
+            return itervalues(self._data)
 
     def child_key(self, child):
         for key, val in iteritems(self._data):
             if val is child:
                 return key
         raise ValueError
+
+    def generate_names(self,
+                       active=None,
+                       descend_into=True,
+                       convert=str,
+                       prefix=""):
+        """
+        Generate a container of fully qualified names (up to
+        this container) for objects stored under this
+        container.
+
+        Args:
+            active (True/None): Set to True to indicate that
+                only active components should be
+                included. The default value of None
+                indicates that all components (including
+                those that have been deactivated) should be
+                included. *Note*: This flag is ignored for
+                any objects that do not have an active flag.
+            descend_into (bool): Indicates whether or not to
+                include subcomponents of any container
+                objects that are not components. Default is
+                True.
+            convert (function): A function that converts a
+                storage key into a string
+                representation. Default is str.
+            prefix (str): A string to prefix names with.
+
+        Returns:
+            A component map that behaves as a dictionary
+            mapping component objects to names.
+        """
+        assert active in (None, True)
+        names = ComponentMap()
+        name_template = (prefix +
+                         self._child_storage_delimiter_string +
+                         self._child_storage_entry_string)
+        for key, child in self.children(return_key=True):
+            if (active is None) or child.active:
+                names[child] = name_template % convert(key)
+                if descend_into and child._is_container and \
+                   (not child._is_component):
+                    names.update(child.generate_names(
+                        active=active,
+                        descend_into=True,
+                        convert=convert,
+                        prefix=names[child]))
+        return names
 
     #
     # Define the MutableMapping abstract methods

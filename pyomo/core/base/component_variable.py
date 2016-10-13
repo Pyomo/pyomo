@@ -7,8 +7,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-__all__ = ("IVariable",
-           "variable",
+__all__ = ("variable",
            "variable_list",
            "variable_dict")
 
@@ -91,6 +90,24 @@ class IVariable(IComponent, NumericValue):
         """Returns True when the domain is an instance of RealSet."""
         return issubclass(self.domain_type, RealSet)
 
+    def fix(self, *val):
+        """
+        Sets the fixed indicator to True. An optional value argument
+        will update the variable's value before fixing.
+        """
+        if len(val) == 1:
+            self.value = val[0]
+        elif len(val) > 1:
+            raise TypeError("fix expected at most 1 arguments, "
+                            "got %d" % (len(val)))
+        self.fixed = True
+
+    def unfix(self):
+        """Sets the fixed indicator to False."""
+        self.fixed = False
+
+    free=unfix
+
     #
     # Implement the NumericValue abstract methods
     #
@@ -115,26 +132,8 @@ class IVariable(IComponent, NumericValue):
         return 1
 
     def __call__(self, exception=True):
-        """Compute the value of this variable."""
+        """Return the value of this variable."""
         return self.value
-
-    def fix(self, *val):
-        """
-        Set the fixed indicator to True. Value argument is optional,
-        indicating the variable should be fixed at its current value.
-        """
-        if len(val) == 1:
-            self.value = val[0]
-        elif len(val) > 1:
-            raise TypeError("fix expected at most 1 arguments, "
-                            "got %d" % (len(val)))
-        self.fixed = True
-
-    def unfix(self):
-        """Sets the fixed indicator to False."""
-        self.fixed = False
-
-    free=unfix
 
 class variable(IVariable):
     """A decision variable"""
@@ -171,7 +170,12 @@ class variable_list(ComponentList):
     __slots__ = ("_parent",
                  "_data")
     if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
         __slots__ = list(__slots__) + ["__weakref__"]
+
     def __init__(self, *args, **kwds):
         self._parent = None
         super(variable_list, self).__init__(*args, **kwds)
@@ -184,7 +188,12 @@ class variable_dict(ComponentDict):
     __slots__ = ("_parent",
                  "_data")
     if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
         __slots__ = list(__slots__) + ["__weakref__"]
+
     def __init__(self, *args, **kwds):
         self._parent = None
         super(variable_dict, self).__init__(*args, **kwds)

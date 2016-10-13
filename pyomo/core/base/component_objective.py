@@ -7,8 +7,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-__all__ = ("IObjective",
-           "objective",
+__all__ = ("objective",
            "objective_list",
            "objective_dict")
 
@@ -111,6 +110,11 @@ class objective_list(ComponentList, _IActiveComponentContainer):
                  "_data")
     if six.PY3:
         __slots__ = list(__slots__) + ["__weakref__"]
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+
     def __init__(self, *args, **kwds):
         self._parent = None
         self._active = True
@@ -125,7 +129,12 @@ class objective_dict(ComponentDict, _IActiveComponentContainer):
                  "_active",
                  "_data")
     if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
         __slots__ = list(__slots__) + ["__weakref__"]
+
     def __init__(self, *args, **kwds):
         self._parent = None
         self._active = True

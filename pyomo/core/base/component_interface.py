@@ -12,8 +12,7 @@ __all__ = ('ICategorizedObject',
            'IComponent',
            '_IActiveComponent',
            'IComponentContainer',
-           '_IActiveComponentContainer',
-           'IBlockStorage')
+           '_IActiveComponentContainer')
 
 import sys
 import abc
@@ -34,8 +33,6 @@ def _abstract_readwrite_property(**kwds):
 def _abstract_readonly_property(**kwds):
     return abc.abstractproperty(fget=_not_implemented,
                                 **kwds)
-
-_no_ctype = object()
 
 class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
     """Interface for objects that maintain a weak reference to a parent
@@ -74,7 +71,7 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
         """Return the parent storage block for this component"""
         parent = self.parent
         while (parent is not None) and \
-              (not isinstance(parent, IBlockStorage)):
+              (not parent._is_component):
             parent = parent.parent
         return parent
 
@@ -82,7 +79,7 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
     def root_block(self):
         """Returns the root storage block above this component"""
         root_block = None
-        if isinstance(self, IBlockStorage):
+        if self._is_component and self._is_container:
             root_block = self
         parent_block = self.parent_block
         while parent_block is not None:
@@ -92,57 +89,45 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
 
     def getname(self,
                 fully_qualified=False,
-                name_buffer=None,
                 convert=str):
         """
-        Generate a name for the object.
+        Dynamically generate a name for the object its storage
+        key in a parent. If there is no parent, the method will
+        return None.
 
         Args:
             fully_qualified (bool): Generate full name from
                 nested block names. Default is False.
-            name_buffer (dict): A temporary storage
-                dictionary that can be used to optimize
-                iterative name generation.
-            convert (function): A function that converts
-                a storage key into a string representation.
+            convert (function): A function that converts a
+                storage key into a string
+                representation. Default is repr.
 
         Returns:
             A string representing the name of the component
-            container.
+            or None.
         """
-        # TODO
-        assert name_buffer is None
-
         parent = self.parent
         if parent is None:
             return None
 
         key = parent.child_key(self)
-        if isinstance(parent, IBlockStorage):
-            name = "%s" % (convert(key))
-            prefix = "."
-            parent_is_block = True
-        else:
-            assert isinstance(parent, IComponentContainer)
-            name = "[%s]" % (convert(key))
-            prefix = ""
-            parent_is_block = False
-
-        if (not fully_qualified) and \
-           parent_is_block:
-            return name
-        else:
-            parent_name = parent.getname(fully_qualified=fully_qualified,
-                                         name_buffer=name_buffer)
+        name = parent._child_storage_entry_string % convert(key)
+        if fully_qualified:
+            parent_name = parent.getname(fully_qualified=True)
             if parent_name is not None:
-                return parent_name + prefix + name
+                return (parent_name +
+                        parent._child_storage_delimiter_string +
+                        name)
             else:
                 return name
+        else:
+            return name
 
     @property
     def name(self):
         """Get the fully qualified object name"""
         return self.getname(fully_qualified=True)
+
     @property
     def local_name(self):
         """Get the object name only within the context of its parent"""
@@ -168,20 +153,29 @@ class IActiveObject(six.with_metaclass(abc.ABCMeta, object)):
     #
 
     @abc.abstractmethod
-    def activate(self):
+    def activate(self, *args, **kwds):
         """Set the active attribute to True"""
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
-    def deactivate(self):
+    def deactivate(self, *args, **kwds):
         """Set the active attribute to False"""
         raise NotImplementedError     #pragma:nocover
 
 class IComponent(ICategorizedObject):
     """
     Interface for components that can be stored inside
-    objects of type IComponentContainer."""
+    objects of type IComponentContainer.
+    """
+    _is_component = True
+    _is_container = False
     __slots__ = ()
+
+    #
+    # Implementations can choose to define these
+    # properties as using __slots__, __dict__, or
+    # by overriding the @property method
+    #
 
     #
     # Interface
@@ -250,7 +244,14 @@ class _IActiveComponent(IActiveObject):
         self._active = False
 
 class IComponentContainer(ICategorizedObject):
-    """A container of modeling components."""
+    """
+    A container of modeling components and possibly other
+    containers.
+    """
+    _is_component = False
+    _is_container = True
+    _child_storage_delimiter_string = ""
+    _child_storage_entry_string = "[%s]"
     __slots__ = ()
 
     #
@@ -264,23 +265,28 @@ class IComponentContainer(ICategorizedObject):
     #
 
     @abc.abstractmethod
-    def components(self):
+    def components(self, *args, **kwds):
         """A generator over the set of components stored
         under this container."""
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
-    def child_key(self, component):
+    def child_key(self, *args, **kwds):
         """The lookup key associated with a child of this
         container."""
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
-    def children(self):
+    def children(self, *args, **kwds):
         """A generator over the children of this container."""
         raise NotImplementedError     #pragma:nocover
 
+    #
+    # Interface
+    #
+
     def __str__(self):
+        """Convert this object to a string."""
         name = self.name
         if name is None:
             return "<"+self.__class__.__name__+">"
@@ -289,9 +295,10 @@ class IComponentContainer(ICategorizedObject):
 
 class _IActiveComponentContainer(IActiveObject):
     """
-    To be used as an additional base class in ComponentContainer
-    implementations to add fuctionality for activating and
-    deactivating the container and its children.
+    To be used as an additional base class in
+    IComponentContainer implementations to add fuctionality
+    for activating and deactivating the container and its
+    children.
     """
     __slots__ = ()
 
@@ -336,36 +343,9 @@ class _IActiveComponentContainer(IActiveObject):
                 child.activate()
 
     def deactivate(self):
-        """Deactivate this container and all its children."""
+        """Deactivate this container and all of its children."""
         self._active = False
         # all children must be deactivated
         for child in self.children():
             if isinstance(child, IActiveObject):
                 child.deactivate()
-
-class IBlockStorage(IComponentContainer,
-                    _IActiveComponentContainer):
-    """A container that stores multiple types."""
-    __slots__ = ()
-
-    #
-    # These methods are already declared abstract on
-    # IComponentContainer, but we redeclare them here to
-    # point out that the can accept a ctype
-    #
-
-    @abc.abstractmethod
-    def children(self, ctype=_no_ctype):
-        raise NotImplementedError     #pragma:nocover
-
-    @abc.abstractmethod
-    def components(self, ctype=_no_ctype):
-        raise NotImplementedError     #pragma:nocover
-
-    #
-    # Interface
-    #
-
-    @abc.abstractmethod
-    def blocks(self):
-        raise NotImplementedError     #pragma:nocover

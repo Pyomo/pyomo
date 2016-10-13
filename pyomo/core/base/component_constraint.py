@@ -7,8 +7,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-__all__ = ("IConstraint",
-           "constraint",
+__all__ = ("constraint",
            "constraint_list",
            "constraint_dict")
 
@@ -417,6 +416,10 @@ class constraint_list(ComponentList,
                  "_active",
                  "_data")
     if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None
@@ -433,6 +436,10 @@ class constraint_dict(ComponentDict,
                  "_active",
                  "_data")
     if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
         __slots__ = list(__slots__) + ["__weakref__"]
     def __init__(self, *args, **kwds):
         self._parent = None

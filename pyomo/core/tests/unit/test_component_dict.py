@@ -16,10 +16,9 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponent,
                                                  _IActiveComponent,
                                                  IComponentContainer,
-                                                 _IActiveComponentContainer,
-                                                 IBlockStorage)
-from pyomo.core.base.component_interface import IBlockStorage
-from pyomo.core.base.component_block import (block,
+                                                 _IActiveComponentContainer)
+from pyomo.core.base.component_block import (IBlockStorage,
+                                             block,
                                              block_dict)
 
 #
@@ -340,6 +339,7 @@ class _TestComponentDictBase(object):
         self.assertEqual(cdict.local_name, None)
         self.assertEqual(cdict.name, None)
         cdict.update(components)
+        names = cdict.generate_names()
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is None)
@@ -355,6 +355,7 @@ class _TestComponentDictBase(object):
                              "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "[%s]" % (repr(key)))
+            self.assertEqual(c.name, names[c])
 
         model = block()
         model.cdict = cdict
@@ -366,18 +367,20 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.root_block is model)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "cdict")
+        names = model.generate_names()
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is model)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
-                             "cdict[%s]" % (str(key)))
+                             "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
-                             "cdict[%s]" % (repr(key)))
+                             "[%s]" % (repr(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "cdict[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "cdict[%s]" % (repr(key)))
+            self.assertEqual(c.name, names[c])
 
         b = block()
         b.model = model
@@ -392,18 +395,20 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.root_block is b)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "model.cdict")
+        names = b.generate_names()
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
-                             "cdict[%s]" % (str(key)))
+                             "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
-                             "cdict[%s]" % (repr(key)))
+                             "[%s]" % (repr(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "model.cdict[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "model.cdict[%s]" % (repr(key)))
+            self.assertEqual(c.name, names[c])
 
         bdict = block_dict()
         bdict[0] = b
@@ -426,9 +431,9 @@ class _TestComponentDictBase(object):
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
-                             "cdict[%s]" % (str(key)))
+                             "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
-                             "cdict[%s]" % (repr(key)))
+                             "[%s]" % (repr(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "[0].model.cdict[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
@@ -453,18 +458,20 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.root_block is m)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "bdict[0].model.cdict")
+        names = m.generate_names()
         for key, c in components.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is m)
             self.assertEqual(c.getname(fully_qualified=False, convert=str),
-                             "cdict[%s]" % (str(key)))
+                             "[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=False, convert=repr),
-                             "cdict[%s]" % (repr(key)))
+                             "[%s]" % (repr(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=str),
                              "bdict[0].model.cdict[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "bdict[0].model.cdict[%s]" % (repr(key)))
+            self.assertEqual(c.name, names[c])
 
 class _TestActiveComponentDictBase(_TestComponentDictBase):
 

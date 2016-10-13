@@ -7,8 +7,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-__all__ = ("IParameter",
-           "parameter",
+__all__ = ("parameter",
            "parameter_list",
            "parameter_dict")
 
@@ -92,7 +91,12 @@ class parameter_list(ComponentList):
     __slots__ = ("_parent",
                  "_data")
     if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
         __slots__ = list(__slots__) + ["__weakref__"]
+
     def __init__(self, *args, **kwds):
         self._parent = None
         super(parameter_list, self).__init__(*args, **kwds)
@@ -105,7 +109,12 @@ class parameter_dict(ComponentDict):
     __slots__ = ("_parent",
                  "_data")
     if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
         __slots__ = list(__slots__) + ["__weakref__"]
+
     def __init__(self, *args, **kwds):
         self._parent = None
         super(parameter_dict, self).__init__(*args, **kwds)
