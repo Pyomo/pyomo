@@ -34,10 +34,23 @@ sim = Simulator(m)
 tsim, profiles = sim.simulate()
 varorder = sim.get_variable_order()
 
+# Discretize model using Orthogonal Collocation
+discretizer = TransformationFactory('dae.collocation')
+discretizer.apply_to(m,nfe=8,ncp=5)
+
+# Initialize the discretized model using the simulator profiles
+sim.initialize_model()
+
 import matplotlib.pyplot as plt
+
+time = list(m.t)
+omega = [value(m.omega[t]) for t in m.t]
+theta = [value(m.theta[t]) for t in m.t]
 
 for idx,v in enumerate(varorder):
     plt.plot(tsim,profiles[:,idx],label=v)
+plt.plot(time,omega,'o',label='omega interp')
+plt.plot(time,theta,'o',label='theta interp')
 plt.xlabel('t')
 plt.legend(loc='best')
 plt.show()

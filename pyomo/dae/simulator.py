@@ -14,11 +14,12 @@ import numpy as np
 
 from pyomo.environ import Constraint, Param, value
 
-from pyomo.core.base import expr as EXPR
-from pyomo.core.base import expr_common as common
-
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
+
+from pyomo.core.base.component import register_component
+from pyomo.core.base import expr as EXPR
+from pyomo.core.base import expr_common as common
 from pyomo.core.base.template_expr import (
     IndexTemplate,
     substitute_template_expression,
@@ -292,7 +293,7 @@ class Simulator:
 
             return residual
             
-        self._conset = contset
+        self._contset = contset
         self._cstemplate = cstemplate
         self._diffvars = diffvars
         self._diffvarids = diffvarids
@@ -301,6 +302,8 @@ class Simulator:
         self._rhsdict = rhsdict
         self._rhsfun = _rhsfun   
         self._model = m
+        self._tsim = None
+        self._simsolution = None
 
     def get_variable_order(self):
         """
@@ -340,10 +343,10 @@ class Simulator:
         tsim = []
         if tstep is None:
             tsim = np.linspace(
-                self._conset.first(),self._conset.last(),numpoints)
+                self._contset.first(),self._contset.last(),numpoints)
         else:
             tsim = np.arrange(
-                self._conset.first(),self._contset.last(),tstep)
+                self._contset.first(),self._contset.last(),tstep)
 
         initcon = kwds.pop('initcon',None)
         if initcon is not None:
@@ -360,7 +363,7 @@ class Simulator:
             for nme in self._diffvars:
                 v = self._model.component(nme)
                 # This line will raise an error if no value was set
-                initcon.append(value(v[self._conset.first()]))
+                initcon.append(value(v[self._contset.first()]))
 
         try:
             from scipy.integrate import odeint
@@ -370,5 +373,28 @@ class Simulator:
         # TODO: Figure out how to get information back from integrator and
         # verify that it terminated successfully
         sol = odeint(self._rhsfun,initcon,tsim)
+
+        self._tsim = tsim
+        self._simsolution = sol
             
         return [tsim,sol]
+
+    def initialize_model(self):
+        """
+        This function will initialize the model using the profile
+        obtained from the simulating the ODE system.
+        """
+        if self._tsim is None:
+            raise DAE_Error("Tried to initialize the model without \
+            simulating it first")
+
+        tvals = list(self._contset)
+        
+        for idx,nme in enumerate(self._diffvars):
+            v = self._model.component(nme)
+            valinit = np.interp(tvals, self._tsim,
+                                self._simsolution[:,idx])
+            for i,t in enumerate(tvals):
+                v[t] = valinit[i]
+
+register_component(Simulator, "Used to simulate a system of ODEs")
