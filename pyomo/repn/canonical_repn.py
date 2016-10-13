@@ -387,7 +387,8 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
     #
     # Variable
     #
-    elif (exp.__class__ is _GeneralVarData) or isinstance(exp, _VarData):
+    elif (exp.__class__ is _GeneralVarData) or \
+         isinstance(exp, (_VarData, IVariable)):
         id_ = id(exp)
         if id_ in idMap[None]:
             key = idMap[None][id_]
