@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-# A strictly affine piecewise example
+# A non-convex / non-concave piecewise example
 #
 #        / (1/3)X - (2/3), -1 <= X <= 2
 # Z(X) = | -2X + 4       ,  2 <= X <= 6
@@ -35,7 +35,7 @@ model.n = Var(within = NonNegativeReals)
 model.con = Piecewise(model.Z,model.X, # range and domain variables
                       pw_pts=[-1.0,2.0,6.0,10.0],
                       pw_constr_type='EQ',
-                      pw_repn='DCC', 
+                      pw_repn='DCC',
                       f_rule=f)
 
 # minimize the 1-norm distance of Z to 7.0, i.e., |Z-7|
