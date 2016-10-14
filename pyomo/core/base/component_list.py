@@ -19,8 +19,18 @@ from pyomo.core.base.component_map import ComponentMap
 
 class ComponentList(IComponentContainer,
                     collections.MutableSequence):
-    """A partial implementation of the IComponentContainer
+    """
+    A partial implementation of the IComponentContainer
     interface that presents list-like storage functionality.
+
+    Complete implementations need to set the _ctype property
+    at the class level and declare the remaining required
+    abstract properties of the IComponentContainer base
+    class plus and additional _data property.
+
+    Note that this implementation allows nested storage of
+    other IComponentContainer implementations that are
+    defined with the same ctype.
     """
     __slots__ = ()
 

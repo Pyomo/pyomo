@@ -34,8 +34,22 @@ from six import itervalues, iteritems
 # storage containers are not really memory bottlenecks.
 class ComponentDict(IComponentContainer,
                     collections.MutableMapping):
-    """A partial implementation of the IComponentContainer
+    """
+    A partial implementation of the IComponentContainer
     interface that presents dict-like storage functionality.
+
+    Complete implementations need to set the _ctype property
+    at the class level and declare the remaining required
+    abstract properties of the IComponentContainer base
+    class plus and additional _data property.
+
+    Note that this implementation allows nested storage of
+    other IComponentContainer implementations that are
+    defined with the same ctype.
+
+    The optional keyword 'ordered' can be set to True to
+    indicate that an OrderedDict should be used as the
+    underlying storage dictionary.
     """
     __slots__ = ()
 
