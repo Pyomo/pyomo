@@ -645,7 +645,6 @@ class StaticBlock(_block_base, IBlockStorage):
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
-                 "_components",
                  "__weakref__")
     def __init__(self):
         self._parent = None
