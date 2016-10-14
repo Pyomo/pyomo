@@ -1151,6 +1151,8 @@ class _LinearExpression(_ExpressionBase):
             other._const = 0
             other._args = []
             other._coef = {}
+            if safe_mode:
+                other._parent_expr = None
             _LinearExpression_Pool.append(other)
             return self
         elif isinstance(other, _VarData):
@@ -1228,6 +1230,8 @@ class _LinearExpression(_ExpressionBase):
                 other._const = 0
                 other._args = []
                 other._coef = {}
+                if safe_mode:
+                    other._parent_expr = None
                 _LinearExpression_Pool.append(other)
             else:
                 return super(_LinearExpression, self).__isub__(other)
@@ -1287,6 +1291,8 @@ class _LinearExpression(_ExpressionBase):
                 for i in self._coef:
                     self._coef[i] *= other._const
                 other._const = 0
+                if safe_mode:
+                    other._parent_expr = None
                 _LinearExpression_Pool.append(other)
             else:
                 return super(_LinearExpression, self).__imul__(other)
@@ -1348,6 +1354,8 @@ class _LinearExpression(_ExpressionBase):
                 for i in self._coef:
                     self._coef[i] /= other._const
                 other._const = 0
+                if safe_mode:
+                    other._parent_expr = None
                 _LinearExpression_Pool.append(other)
             else:
                 return super(_LinearExpression, self).__imul__(other)
