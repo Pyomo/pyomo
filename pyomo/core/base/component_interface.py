@@ -35,18 +35,21 @@ def _abstract_readonly_property(**kwds):
                                 **kwds)
 
 class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
-    """Interface for objects that maintain a weak reference to a parent
-    storage object and have a category type."""
+    """
+    Interface for objects that maintain a weak reference to
+    a parent storage object and have a category type.
+    """
     __slots__ = ()
 
 
     #
-    # The following methods allow implementations to be
+    # The following two methods allow implementations to be
     # pickled. These should work whether or not the
     # implementation makes use of __slots__, and whether or
     # not non-empty __slots__ declarations appear on
     # multiple classes in the inheritance chain.
     #
+
     def __getstate__(self):
         state = getattr(self, "__dict__", {}).copy()
         # Get all slots in the inheritance chain

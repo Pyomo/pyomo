@@ -48,6 +48,54 @@ class TestComponentMap(unittest.TestCase):
                    (block_list(), "blist"),
                    (suffix(), "s")]
 
+    def test_pickle(self):
+        c = ComponentMap()
+        self.assertEqual(len(c), 0)
+        cup = pickle.loads(
+            pickle.dumps(c))
+        self.assertIsNot(cup, c)
+        self.assertEqual(len(cup), 0)
+
+        v = variable()
+        c[v] = 1.0
+        self.assertEqual(len(c), 1)
+        self.assertEqual(c[v], 1.0)
+        cup = pickle.loads(
+            pickle.dumps(c))
+        vup = list(cup.keys())[0]
+        self.assertIsNot(cup, c)
+        self.assertIsNot(vup, v)
+        self.assertEqual(len(cup), 1)
+        self.assertEqual(cup[vup], 1)
+        self.assertEqual(vup.parent, None)
+
+        b = block()
+        V = b.V = variable_list()
+        b.V.append(v)
+        b.c = c
+        self.assertEqual(len(c), 1)
+        self.assertEqual(c[v], 1.0)
+        self.assertIs(v.parent, b.V)
+        self.assertIs(V.parent, b)
+        self.assertIs(b.parent, None)
+        bup = pickle.loads(
+            pickle.dumps(b))
+        Vup = bup.V
+        vup = Vup[0]
+        cup = bup.c
+        self.assertIsNot(cup, c)
+        self.assertIsNot(vup, v)
+        self.assertIsNot(Vup, V)
+        self.assertIsNot(bup, b)
+        self.assertEqual(len(cup), 1)
+        self.assertEqual(cup[vup], 1)
+        self.assertIs(vup.parent, Vup)
+        self.assertIs(Vup.parent, bup)
+        self.assertIs(bup.parent, None)
+
+        self.assertEqual(len(c), 1)
+        self.assertEqual(c[v], 1)
+
     def test_init1(self):
         cmap = ComponentMap()
         self.assertTrue(isinstance(cmap, collections.Mapping))

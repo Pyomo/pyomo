@@ -53,12 +53,6 @@ class Test_suffix(unittest.TestCase):
             pickle.dumps(b))
         sup = bup.s
         vup = bup.v
-        print("@@@@@@@@@@@@@@@@@@\n")
-        print(list(sup.keys())[0].name)
-        print(id(list(sup.keys())))
-        print(id(vup))
-        print(id(b.v))
-        print("")
         self.assertEqual(sup[vup], 1.0)
 
     def test_init(self):

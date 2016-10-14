@@ -44,22 +44,41 @@ class ComponentMap(collections.MutableMapping):
         # handle the dict-style initialization scenarios
         self.update(*args, **kwds)
 
+    #
+    # This method must be defined for deepcopy/pickling
+    # because this class relies on Python ids.
+    #
     def __setstate__(self, state):
-        """
-        This method must be defined for deepcopy/pickling because this
-        class relies on Python ids.
-        """
-        id_func = id
-        # object id() may have changed after unpickling so we rebuild
-        # the dictionary keys
+        # *** Temporary hack to allow this class to be used
+        # *** in inheritance chains for both the old and new
+        # *** component hierarchies.
+        for cls in self.__class__.__mro__:
+            if cls.__name__ == "ICategorizedObject":
+                super(ComponentMap, self).__setstate__(state)
+                break
+
+        # object id() may have changed after unpickling,
+        # so we rebuild the dictionary keys
         self._dict = \
-            dict((id_func(component), (component,val)) \
+            dict((id(component), (component,val)) \
                  for component, val in itervalues(state['_dict']))
 
     def __getstate__(self):
-        state = super(ComponentMap, self).__getstate__()
-        for i in ComponentMap.__slots__:
-            state[i] = getattr(self, i)
+        # *** Temporary hack to allow this class to be used
+        # *** in inheritance chains for both the old and new
+        # *** component hierarchies.
+        try:
+            super(ComponentMap, self).__getstate__
+        except AttributeError:
+            state = {}
+        else:
+            state = super(ComponentMap, self).__getstate__()
+        for cls in self.__class__.__mro__:
+            if cls.__name__ == "ICategorizedObject":
+                break
+        else:
+            for i in ComponentMap.__slots__:
+                state[i] = getattr(self, i)
         return state
 
     def __str__(self):

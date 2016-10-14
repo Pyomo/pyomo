@@ -29,9 +29,11 @@ import six
 
 logger = logging.getLogger('pyomo.core')
 
-class suffix(IComponent, _IActiveComponent, ComponentMap):
-    """A container for storing extranious model data that
-    can be imported to or exported from a solver."""
+class suffix(ComponentMap, IComponent, _IActiveComponent):
+    """
+    A container for storing extranious model data that can
+    be imported to or exported from a solver.
+    """
     # To avoid a circular import, for the time being, this
     # property will be set in suffix.py
     _ctype = None
