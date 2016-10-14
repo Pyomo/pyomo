@@ -564,6 +564,13 @@ You can silence this warning by one of three ways:
                 # is a template expression generation, then it
                 # should raise a TemplateExpressionError
                 try:
+                    # Disable all logging for the time being.  We are
+                    # not keeping the result of this calculation - only
+                    # seeing if it is possible.  Any errors generated
+                    # evaluating the expression are not informative to
+                    # the user
+                    active_level = logging.root.manager.disable
+                    logging.disable(logging.CRITICAL)
                     _num_val()
                 except TemplateExpressionError:
                     # Not good: we have to defer this import to now
@@ -579,6 +586,8 @@ You can silence this warning by one of three ways:
                     # At this point, we will silently eat that
                     # error... it will come back again below.
                     pass
+                finally:
+                    logging.disable(active_level)
 
                 if _num_val.is_constant():
                     _found_numeric = True
