@@ -49,7 +49,7 @@ class ComponentList(collections.MutableSequence):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug(   #pragma:nocover
                 "Constructing ComponentList object, name=%s, from data=%s"
-                % (self.name(True), str(data)))
+                % (self.name, str(data)))
         if self._constructed:   #pragma:nocover
             return
         self._constructed = True
@@ -110,9 +110,9 @@ class ComponentList(collections.MutableSequence):
                 "Invalid component object assignment to ComponentList "
                 "%s at index %s. A parent component has already been "
                 "assigned the object: %s"
-                % (self.name(True),
+                % (self.name,
                    i,
-                   item.parent_component().name(True)))
+                   item.parent_component().name))
         # see note about implicit assignment and update
         raise TypeError(
             "ComponentList must be assigned objects "
@@ -137,9 +137,9 @@ class ComponentList(collections.MutableSequence):
                 "Invalid component object assignment to ComponentList "
                 "%s at index %s. A parent component has already been "
                 "assigned the object: %s"
-                % (self.name(True),
+                % (self.name,
                    i,
-                   item.parent_component().name(True)))
+                   item.parent_component().name))
         # see note about implicit assignment and update
         raise TypeError(
             "ComponentList must be assigned objects "

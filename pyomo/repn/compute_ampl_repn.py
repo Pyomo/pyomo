@@ -32,7 +32,7 @@ def preprocess_block_objectives(block, idMap=None):
 
         if objective_data.expr is None:
             raise ValueError("No expression has been defined for objective %s"
-                             % (objective_data.name(True)))
+                             % (objective_data.name))
 
         try:
             ampl_repn = generate_ampl_repn(objective_data.expr,
@@ -41,7 +41,7 @@ def preprocess_block_objectives(block, idMap=None):
             err = sys.exc_info()[1]
             logging.getLogger('pyomo.core').error\
                 ( "exception generating a ampl representation for objective %s: %s" \
-                      % (objective_data.name(True), str(err)) )
+                      % (objective_data.name, str(err)) )
             raise
 
         block_ampl_repn[objective_data] = ampl_repn
@@ -87,7 +87,7 @@ def preprocess_constraint(block,
         if constraint_data.body is None:
             raise ValueError(
                 "No expression has been defined for the body "
-                "of constraint %s" % (constraint_data.name(True)))
+                "of constraint %s" % (constraint_data.name))
 
         try:
             ampl_repn = generate_ampl_repn(constraint_data.body,
@@ -97,7 +97,7 @@ def preprocess_constraint(block,
             logging.getLogger('pyomo.core').error(
                 "exception generating a ampl representation for "
                 "constraint %s: %s"
-                % (constraint_data.name(True), str(err)))
+                % (constraint_data.name, str(err)))
             raise
 
         block_ampl_repn[constraint_data] = ampl_repn
@@ -118,7 +118,7 @@ def preprocess_constraint_data(block,
     if constraint_data.body is None:
         raise ValueError(
             "No expression has been defined for the body "
-            "of constraint %s" % (constraint_data.name(True)))
+            "of constraint %s" % (constraint_data.name))
 
     try:
         ampl_repn = generate_ampl_repn(constraint_data.body,
@@ -128,7 +128,7 @@ def preprocess_constraint_data(block,
         logging.getLogger('pyomo.core').error(
             "exception generating a ampl representation for "
             "constraint %s: %s"
-            % (constraint_data.name(True), str(err)))
+            % (constraint_data.name, str(err)))
         raise
 
     block_ampl_repn[constraint_data] = ampl_repn

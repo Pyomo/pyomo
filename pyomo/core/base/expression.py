@@ -298,7 +298,7 @@ class Expression(IndexedComponent):
         if ostream is None:
             ostream = sys.stdout
         tab="    "
-        ostream.write(prefix+self.name()+" : ")
+        ostream.write(prefix+self.local_name+" : ")
         ostream.write("Size="+str(len(self)))
 
         ostream.write("\n")
@@ -331,7 +331,7 @@ class Expression(IndexedComponent):
            (not None in new_values):
             raise KeyError(
                 "Cannot store value for scalar Expression"
-                "="+self.name(True)+"; no value with index "
+                "="+self.name+"; no value with index "
                 "None in input new values map.")
 
         for index, new_value in iteritems(new_values):
@@ -355,7 +355,7 @@ class Expression(IndexedComponent):
             raise KeyError(
                 "Cannot set the value of Expression '%s' with "
                 "invalid index '%s'"
-                % (self.name(True), str(ndx)))
+                % (self.name, str(ndx)))
         #
         # Set the value
         #
@@ -367,7 +367,7 @@ class Expression(IndexedComponent):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug(
                 "Constructing Expression, name=%s, from data=%s"
-                % (self.name(True), str(data)))
+                % (self.name, str(data)))
 
         if self._constructed:
             return
@@ -441,7 +441,7 @@ class SimpleExpression(_GeneralExpressionData, Expression):
             "Accessing the expression of expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.name))
     @expr.setter
     def expr(self, expr):
         """Set the expression on this expression."""
@@ -469,7 +469,7 @@ class SimpleExpression(_GeneralExpressionData, Expression):
             "Setting the expression of expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no object to set)."
-            % (self.name(True)))
+            % (self.name))
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
@@ -479,7 +479,7 @@ class SimpleExpression(_GeneralExpressionData, Expression):
             "Accessing the is_constant flag of expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.name))
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
@@ -489,7 +489,7 @@ class SimpleExpression(_GeneralExpressionData, Expression):
             "Accessing the is_fixed flag of expression '%s' "
             "before the Expression has been constructed (there "
             "is currently no value to return)."
-            % (self.name(True)))
+            % (self.name))
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -501,13 +501,13 @@ class SimpleExpression(_GeneralExpressionData, Expression):
             raise KeyError(
                 "SimpleExpression object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
-                % (self.name(True), index))
+                % (self.name, index))
         if (type(expr) is tuple) and \
            (expr == Expression.Skip):
             raise ValueError(
                 "Expression.Skip can not be assigned "
                 "to an Expression that is not indexed: %s"
-                % (self.name(True)))
+                % (self.name))
         self.set_value(expr)
         return self
 

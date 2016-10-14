@@ -1157,7 +1157,7 @@ class MiscConTests(unittest.TestCase):
 
     def test_constructor(self):
         a = Constraint(name="b")
-        self.assertEqual(a.name(), "b")
+        self.assertEqual(a.local_name, "b")
         try:
             a = Constraint(foo="bar")
             self.fail("Can't specify an unexpected constructor option")

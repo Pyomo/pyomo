@@ -248,7 +248,7 @@ class ScenarioTreeNode(object):
                     "is not present in instance=%s"
                     % (component_name,
                        self._stage._name,
-                       scenario_instance.name()))
+                       scenario_instance.name))
 
             if component_object.type() is not Block:
                 isVar = (component_object.type() is Var)
@@ -260,7 +260,7 @@ class ScenarioTreeNode(object):
                                            "but is not a variable - type=%s"
                                            % (component_name,
                                               self._stage._name,
-                                              scenario_instance.name(),
+                                              scenario_instance.name,
                                               type(component_object)))
                 else:
                     if (not isVar) and \
@@ -273,7 +273,7 @@ class ScenarioTreeNode(object):
                                            "- type=%s"
                                            % (component_name,
                                               self._stage._name,
-                                              scenario_instance.name(),
+                                              scenario_instance.name,
                                               type(component_object)))
             else:
                 tmp_match_template = ("",)
@@ -286,7 +286,7 @@ class ScenarioTreeNode(object):
                                    component_objects(Var,
                                                      descend_into=True):
                                 self.updateVariableIndicesAndValues(
-                                    variable.name(True),
+                                    variable.name,
                                     tmp_match_template,
                                     derived=derived,
                                     id_labeler=id_labeler,
@@ -413,21 +413,21 @@ class ScenarioTreeNode(object):
                                  "scenario tree construction failed"
                                  % (cost_variable_name,
                                     self._stage._name,
-                                    scenario_instance.name()))
+                                    scenario_instance.name))
             if not cost_variable.type() in [Var,Expression,Objective]:
                 raise RuntimeError("The component=%s associated with stage=%s "
                                    "is present in model=%s but is not a "
                                    "variable or expression - type=%s"
                                    % (cost_variable_name,
                                       self._stage._name,
-                                      scenario_instance.name(),
+                                      scenario_instance.name,
                                       cost_variable.type()))
             if cost_variable_index not in cost_variable:
                 raise RuntimeError("The index %s is not defined for cost "
                                    "variable=%s on model=%s"
                                    % (cost_variable_index,
                                       cost_variable_name,
-                                      scenario_instance.name()))
+                                      scenario_instance.name))
             self._cost_variable_datas.append(
                 (cost_variable[cost_variable_index],
                  scenario._probability))
@@ -552,8 +552,8 @@ class ScenarioTreeNode(object):
                     # or the scenario name The important thing is that
                     # we always have the scenario name somewhere in
                     # the variable name we print
-                    model_name = var_data.model().name(True)
-                    full_name = model_name+"."+var_data.name(True)
+                    model_name = var_data.model().name
+                    full_name = model_name+"."+var_data.name
                     if not self.is_leaf_node():
                         print("CAUTION: Encountered variable=%s "
                               "on node %s that is not in use within its "
@@ -1170,7 +1170,7 @@ class Scenario(object):
                            stage_cost_variable[0])[stage_cost_variable[1]]:
                         return this_node
 
-        raise KeyError("Variable="+str(vardata.name(True))+" does "
+        raise KeyError("Variable="+str(vardata.name)+" does "
                        "not belong to any node in the scenario tree")
 
     def variableNode_byNameIndex(self, variable_name, index):
@@ -1239,8 +1239,8 @@ class Scenario(object):
             except KeyError:
                 if assume_last_stage_if_missing:
                     return self._leaf_node
-                model_name = var_data.model().name(True)
-                full_name = model_name+"."+var_data.name(True)
+                model_name = var_data.model().name
+                full_name = model_name+"."+var_data.name
                 raise RuntimeError("Method constraintNode in class "
                                    "ScenarioTree encountered a constraint "
                                    "with variable %s "
@@ -1736,14 +1736,14 @@ class ScenarioTree(object):
                     scenario._instance_objective = user_objective
                     scenario._objective_sense = user_objective.sense
                     scenario._objective_name = \
-                        scenario._instance_objective.name(True)
+                        scenario._instance_objective.name
 
                 else:
 
                     if user_objective is not None:
                         print("*** Active Objective \'%s\' on scenario "
                               "instance \'%s\' will not be used. ***"
-                              % (user_objective.name(True), scenario_name))
+                              % (user_objective.name, scenario_name))
                         user_objective.deactivate()
 
                     cost = 0.0
@@ -1769,7 +1769,7 @@ class ScenarioTree(object):
                         user_objective
                     scenario._objective_sense = objective_sense
                     scenario._objective_name = \
-                        scenario._instance_objective.name(True)
+                        scenario._instance_objective.name
 
     #
     # compute the set of variable indices being blended at each

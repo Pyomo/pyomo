@@ -7,15 +7,21 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.core.base.plugin import *
+# An example of how to use the Piecewise component when
+# starting from a discrete set of (x,y) points.
 
-def predefined_sets():
-    from pyomo.core.base.set_types import _virtual_sets
-    ans = []
-    for item in _virtual_sets:
-        ans.append( (item.name, item.doc) )
-    return ans
+from pyomo.core import *
 
+x = [0.0, 1.5, 3.0, 5.0]
+y = [1.1, -1.1, 2.0, 1.1]
 
-def model_components():
-    return [(name,ModelComponentFactory.doc(name)) for name in ModelComponentFactory.services()]
+model = ConcreteModel()
+model.x = Var(bounds=(min(x), max(x)))
+model.y = Var()
+
+model.fx = Piecewise(model.y, model.x,
+                     pw_pts=x,
+                     pw_constr_type='EQ',
+                     f_rule=y)
+
+model.o = Objective(expr=model.y)

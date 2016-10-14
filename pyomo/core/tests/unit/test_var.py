@@ -267,7 +267,7 @@ class TestSimpleVar(PyomoModel):
         #
         self.model.x = Var()
         self.model.x._name = "foo"
-        self.assertEqual(self.model.x.name(), "foo")
+        self.assertEqual(self.model.x.name, "foo")
 
     def test_lb_attr1(self):
         """Test lb attribute"""

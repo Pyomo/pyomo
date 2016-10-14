@@ -71,6 +71,11 @@ class _ParamData(ComponentData, NumericValue):
         """
         Return the value of this object.
         """
+        if self.value is None:
+            raise ValueError(
+                "Error evaluating Param value (%s):\nThe Param value is "
+                "undefined and no default value is specified"
+                % ( self.name, ))
         return self.value
 
     def is_fixed(self):
@@ -127,7 +132,7 @@ class Param(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Param:
             return super(Param, cls).__new__(cls)
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if args == () or (type(args[0]) is set and args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleParam.__new__(SimpleParam)
         else:
             return IndexedParam.__new__(IndexedParam)
@@ -282,7 +287,7 @@ class Param(IndexedComponent):
         should only be used by developers!
         """
         if not self._mutable:
-            raise RuntimeError("Cannot call store_values method on immutable Param="+ self.name(True))
+            raise RuntimeError("Cannot call store_values method on immutable Param="+ self.name)
         #
         _srcType = type(new_values)
         _isDict = _srcType is dict or ( \
@@ -335,7 +340,7 @@ class Param(IndexedComponent):
                 if None not in new_values:
                     raise RuntimeError(
                         "Cannot store value for scalar Param="+
-                        self.name(True)+"; no value with index None "
+                        self.name+"; no value with index None "
                         "in input new values map.")
                 new_values = new_values[None]
             # scalars have to be handled differently
@@ -353,19 +358,30 @@ class Param(IndexedComponent):
         #
         if not self._constructed:
             if idx is None:
-                idx_str = '%s' % (self.name(),)
+                idx_str = '%s' % (self.local_name,)
             else:
-                idx_str = '%s[%s]' % (self.name(), idx,)
+                idx_str = '%s[%s]' % (self.local_name, idx,)
             raise ValueError(
                 "Error retrieving Param value (%s): This parameter has "
                 "not been constructed" % ( idx_str,) )
         if val is None:
+            # If the Param is mutable, then it is OK to create a Param
+            # implicitly ... the error will be tossed later when someone
+            # attempts to evaluate the value of the Param
+            if self._mutable:
+                if self.is_indexed():
+                    self._data[idx] = _ParamData(self, val)
+                    #self._raw_setitem(idx, _ParamData(self, val), True)
+                else:
+                    self._raw_setitem(idx, val)
+                return self[idx]
+
             if self.is_indexed():
-                idx_str = '%s[%s]' % (self.name(True), idx,)
+                idx_str = '%s[%s]' % (self.name, idx,)
             else:
-                idx_str = '%s' % (self.name(True),)
+                idx_str = '%s' % (self.name,)
             raise ValueError(
-                    "Error retrieving Param value (%s): The Param value is "
+                    "Error retrieving Param value (%s):\nThe Param value is "
                     "undefined and no default value is specified"
                     % ( idx_str,) )
         #
@@ -398,16 +414,16 @@ class Param(IndexedComponent):
                 raise ValueError(
                     "Invalid default parameter value: %s[%s] = '%s';"
                     " value type=%s.\n\tValue not in parameter domain %s" %
-                    (self.name(True), idx, val, type(val), self.domain.name()) )
+                    (self.name, idx, val, type(val), self.domain.name) )
         #
         # Set the parameter
         #
         if self._mutable:
-            if idx is None:
-                self._raw_setitem(idx, val)
-            else:
+            if self.is_indexed():
                 self._data[idx] = _ParamData(self, val)
                 #self._raw_setitem(idx, _ParamData(self, val), True)
+            else:
+                self._raw_setitem(idx, val)
             return self[idx]
         else:
             #
@@ -445,7 +461,7 @@ class Param(IndexedComponent):
                 and val not in self.domain:
             raise ValueError(
                 "Default value (%s) is not valid for Param domain %s" %
-                ( str(val), self.domain.name() ) )
+                (str(val), self.domain.name))
         self._default_val = val
 
     def default(self):
@@ -488,11 +504,11 @@ class Param(IndexedComponent):
             raise ValueError(
                 "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
                 "\tValue not in parameter domain %s" %
-                (self.name(True), ndx, val, type(val), self.domain.name()) )
+                (self.name, ndx, val, type(val), self.domain.name))
         #
         # Set the value depending on the type of param value.
         #
-        if ndx is None:
+        if not self.is_indexed():
             self.value = val
         elif self._mutable:
             if ndx in self._data:
@@ -515,7 +531,7 @@ class Param(IndexedComponent):
             raise ValueError(
                 "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
                 "\tValue failed parameter validation rule" %
-                ( self.name(True), ndx, val, type(val) ) )
+                ( self.name, ndx, val, type(val) ) )
 
     def __setitem__(self, ndx, val):
         """
@@ -532,7 +548,7 @@ class Param(IndexedComponent):
 """Attempting to set the value of the immutable parameter %s after the
 parameter has been constructed.  If you intend to change the value of
 this parameter dynamically, please declare the parameter as mutable
-[i.e., Param(mutable=True)]""" % (self.name(True),))
+[i.e., Param(mutable=True)]""" % (self.name,))
         #
         # Check if we have a valid index.
         # We assume that most calls to this method will send either a
@@ -551,11 +567,11 @@ this parameter dynamically, please declare the parameter as mutable
             if not self.is_indexed():
                 msg = "Error setting parameter value: " \
                       "Cannot treat the scalar Param '%s' as an array" \
-                      % ( self.name(True), )
+                      % ( self.name, )
             else:
                 msg = "Error setting parameter value: " \
                       "Index '%s' is not valid for array Param '%s'" \
-                      % ( ndx, self.name(True), )
+                      % ( ndx, self.name, )
             raise KeyError(msg)
 
         # We have a valid index, so do the actual set operation.
@@ -692,7 +708,7 @@ this parameter dynamically, please declare the parameter as mutable
                 logger.warning("""
 Initializing Param %s using a sparse mutable indexed component (%s).
 This has resulted in the conversion of the source to dense form.
-""" % ( self.name(True), _init.name() ) )
+""" % (self.name, _init.name))
             _init = tmp
             _isDict = True
 
@@ -773,7 +789,7 @@ This has resulted in the conversion of the source to dense form.
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             logger.debug("Constructing Param, name=%s, from data=%s"
-                         % ( self.name(True), str(data) ))
+                         % ( self.name, str(data) ))
         #
         if self._constructed:
             return
@@ -787,7 +803,7 @@ This has resulted in the conversion of the source to dense form.
                 and val not in self.domain:
             raise ValueError(
                 "Default value (%s) is not valid for Param domain %s" %
-                ( str(val), self.domain.name() ) )
+                (str(val), self.domain.name))
         #
         # Step #1: initialize data from rule value
         #
@@ -807,12 +823,12 @@ This has resulted in the conversion of the source to dense form.
                    raise ValueError(
                        "Attempting to initialize parameter=%s with data=%s.\n"
                        "\tData type is not a dictionary, and a dictionary is "
-                       "expected." % (self.name(True), str(data)) )
+                       "expected." % (self.name, str(data)) )
                 else:
                     raise RuntimeError(
                         "Failed to set value for param=%s, index=%s, value=%s."
                         "\n\tsource error message=%s"
-                        % (self.name(True), str(key), str(val), str(msg)) )
+                        % (self.name, str(key), str(val), str(msg)) )
 
         self._constructed = True
 
@@ -834,7 +850,7 @@ This has resulted in the conversion of the source to dense form.
         or constraints.
         """
         if not self._mutable:
-            raise RuntimeError("Cannot invoke reconstruct method of immutable param="+self.name(True))
+            raise RuntimeError("Cannot invoke reconstruct method of immutable param="+self.name)
         IndexedComponent.reconstruct(self, data=data)
 
     def _pprint(self):
@@ -844,7 +860,7 @@ This has resulted in the conversion of the source to dense form.
         return ( [("Size", len(self)),
                   ("Index", self._index \
                        if self._index != UnindexedComponent_set else None),
-                  ("Domain", self.domain.name()),
+                  ("Domain", self.domain.name),
                   ("Default", "(function)" if type(self._default_val) \
                        is types.FunctionType else self._default_val),
                   ("Mutable", self._mutable),
@@ -881,7 +897,7 @@ class SimpleParam(_ParamData, Param):
             return _ParamData.__call__(self, exception=exception)
         if exception:
             raise ValueError( """Evaluating the numeric value of parameter '%s' before the Param has been
-            constructed (there is currently no value to return).""" % self.name(True) )
+            constructed (there is currently no value to return).""" % self.name )
 
     def set_value(self, value):
         if self._constructed and not self._mutable:
@@ -889,7 +905,7 @@ class SimpleParam(_ParamData, Param):
 """Attempting to set the value of the immutable parameter %s after the
 parameter has been constructed.  If you intend to change the value of
 this parameter dynamically, please declare the parameter as mutable
-[i.e., Param(mutable=True)]""" % (self.name(True),))
+[i.e., Param(mutable=True)]""" % (self.name,))
         self[None] = value
 
     def is_constant(self):

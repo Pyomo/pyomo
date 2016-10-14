@@ -269,10 +269,10 @@ class _TestComponentDictBase(object):
         prefix = "c"
         for i in index:
             cdata = model.c[i]
-            self.assertEqual(cdata.name(False),
-                             cdata.name(True))
+            self.assertEqual(cdata.local_name,
+                             cdata.name)
             cname = prefix + index_to_string[i]
-            self.assertEqual(cdata.name(False),
+            self.assertEqual(cdata.local_name,
                              cname)
 
     def test_clear(self):
