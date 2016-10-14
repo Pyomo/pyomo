@@ -208,23 +208,15 @@ class _TestComponentDictBase(object):
         for idx in comp_index:
             self.assertTrue(idx in index)
 
-    # TODO
-    def Xtest_clone(self):
-        index = ['a', 1, None, (1,), (1,2)]
-        c = self._container_type((i, self._ctype_factory())
-                              for i in index)
-        inst = clone()
-        self.assertNotEqual(id(inst.c), id(c))
-        for i in index:
-            self.assertNotEqual(id(inst.c[i]), id(c[i]))
-
-    # TODO
-    def Xtest_pickle(self):
+    def test_pickle(self):
         index = ['a', 1, None, (1,), (1,2)]
         cdict = self._container_type((i, self._ctype_factory())
                                      for i in index)
-        pickled_cdict = pickle.loads(
-            pickle.dumps(cdict, protocol=_pickle_test_protocol))
+        cdict[0] = self._container_type()
+        index.append(0)
+        for i in index:
+            self.assertTrue(cdict[i].parent is cdict)
+        pickled_cdict = pickle.loads(pickle.dumps(cdict))
         self.assertTrue(
             isinstance(pickled_cdict, self._container_type))
         self.assertTrue(pickled_cdict.parent is None)
@@ -232,7 +224,7 @@ class _TestComponentDictBase(object):
         self.assertNotEqual(id(pickled_cdict), id(cdict))
         for i in index:
             self.assertNotEqual(id(pickled_cdict[i]), id(cdict[i]))
-            self.assertTrue(pickled_cdict[i].parent is cdict)
+            self.assertTrue(pickled_cdict[i].parent is pickled_cdict)
             self.assertTrue(cdict[i].parent is cdict)
 
     def test_keys(self):

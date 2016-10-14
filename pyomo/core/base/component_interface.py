@@ -39,6 +39,39 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
     storage object and have a category type."""
     __slots__ = ()
 
+
+    #
+    # The following methods allow implementations to be
+    # pickled. These should work whether or not the
+    # implementation makes use of __slots__, and whether or
+    # not non-empty __slots__ declarations appear on
+    # multiple classes in the inheritance chain.
+    #
+    def __getstate__(self):
+        state = getattr(self, "__dict__", {}).copy()
+        # Get all slots in the inheritance chain
+        for cls in self.__class__.__mro__:
+            for key in getattr(cls, "__slots__", ()):
+                state[key] = getattr(self, key)
+        # make sure we don't store the __dict__ in
+        # duplicate (it can be declared as a slot)
+        state.pop('__dict__', None)
+        # make sure not to pickle the __weakref__
+        # slot if it was declared
+        state.pop('__weakref__', None)
+        # make sure to dereference the parent weakref
+        state['_parent'] = self.parent
+        return state
+
+    def __setstate__(self, state):
+        for key, value in state.items():
+            # bypass a possibly overridden __setattr__
+            object.__setattr__(self, key, value)
+        # make sure _parent is a weakref
+        # if it is not None
+        if self._parent is not None:
+            self._parent = weakref.ref(self._parent)
+
     #
     # Implementations can choose to define these
     # properties as using __slots__, __dict__, or

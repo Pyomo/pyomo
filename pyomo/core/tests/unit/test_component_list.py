@@ -303,21 +303,15 @@ class _TestComponentListBase(object):
         for i in index:
             self.assertEqual(c.count(c[i]), 1)
 
-    # TODO
-    def Xtest_clone(self):
-        index = range(5)
-        c = self._container_type(
-            self._ctype_factory() for i in index)
-        model_clone = clone()
-        self.assertNotEqual(id(model_clone.c), id(c))
-        for i in index:
-            self.assertNotEqual(id(model_clone.c[i]), id(c[i]))
-
-    # TODO
-    def Xtest_pickle(self):
+    def test_pickle(self):
         index = range(5)
         clist = self._container_type(
             self._ctype_factory() for i in index)
+        clist.append(self._container_type())
+        index = list(index)
+        index = index + [len(index)]
+        for i in index:
+            self.assertTrue(clist[i].parent is clist)
         pickled_clist = pickle.loads(
             pickle.dumps(clist, protocol=_pickle_test_protocol))
         self.assertTrue(
@@ -327,7 +321,7 @@ class _TestComponentListBase(object):
         self.assertNotEqual(id(pickled_clist), id(clist))
         for i in index:
             self.assertNotEqual(id(pickled_clist[i]), id(clist[i]))
-            self.assertTrue(pickled_clist[i].parent is clist)
+            self.assertTrue(pickled_clist[i].parent is pickled_clist)
             self.assertTrue(clist[i].parent is clist)
 
     def test_eq(self):

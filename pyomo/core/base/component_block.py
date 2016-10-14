@@ -403,14 +403,25 @@ class _block_base(object):
         return names
 
 class block(_block_base, IBlockStorage):
+    """An implementation of the IBlockStorage interface."""
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
     _ctype = None
-    """An implementation of the IBlockStorage interface."""
     def __init__(self):
         self.__parent = None
         self.__active = True
         self.__byctype = defaultdict(OrderedDict)
+
+    # The base class implementation of __getstate__ handles
+    # the parent weakref assumed to be stored with the
+    # attribute name: _parent.  We need to remove the
+    # duplicate reference to the parent stored at
+    # _block__parent to avoid letting a weakref object
+    # remain in the final state dictionary.
+    def __getstate__(self):
+        state = super(block, self).__getstate__()
+        state['_block__parent'] = state.pop('_parent')
+        return state
 
     @property
     def _parent(self):
