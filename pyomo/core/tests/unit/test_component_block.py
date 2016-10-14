@@ -1,5 +1,6 @@
 import tempfile
 import os
+import pickle
 
 import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
@@ -60,6 +61,17 @@ class _Test_block_base(object):
     _blocks_no_descend = None
     _blocks = None
     _block = None
+
+    def test_pickle(self):
+        b = pickle.loads(
+            pickle.dumps(self._block))
+        self.assertEqual(len(list(b.preorder_traversal())),
+                         len(self._names)+1)
+        self.assertEqual(len(list(b.postorder_traversal())),
+                         len(self._names)+1)
+        names = b.generate_names()
+        self.assertEqual(sorted(names.values()),
+                         sorted(self._names.values()))
 
     def test_child_key(self):
         for child in self._child_key:
@@ -504,6 +516,26 @@ class Test_block(_Test_block_base, unittest.TestCase):
         # for tests in the base testing class
         #
 
+        cls._names = ComponentMap()
+        cls._names[model.v_1] = "v_1"
+        cls._names[model.vdict_1] = "vdict_1"
+        cls._names[model.vdict_1[None]] = "vdict_1[None]"
+        cls._names[model.vlist_1] = "vlist_1"
+        cls._names[model.vlist_1[0]] = "vlist_1[0]"
+        cls._names[model.vlist_1[1]] = "vlist_1[1]"
+        cls._names[model.b_1] = "b_1"
+        cls._names[model.b_1.v_2] = "b_1.v_2"
+        cls._names[model.b_1.b_2] = "b_1.b_2"
+        cls._names[model.b_1.b_2.b_3] = "b_1.b_2.b_3"
+        cls._names[model.b_1.b_2.v_3] = "b_1.b_2.v_3"
+        cls._names[model.b_1.b_2.vlist_3] = "b_1.b_2.vlist_3"
+        cls._names[model.b_1.b_2.vlist_3[0]] = "b_1.b_2.vlist_3[0]"
+        cls._names[model.bdict_1] = "bdict_1"
+        cls._names[model.blist_1] = "blist_1"
+        cls._names[model.blist_1[0]] = "blist_1[0]"
+        cls._names[model.blist_1[0].v_2] = "blist_1[0].v_2"
+        cls._names[model.blist_1[0].b_2] = "blist_1[0].b_2"
+
         cls._children = ComponentMap()
         cls._children[model] = [model.v_1,
                                 model.vdict_1,
@@ -764,29 +796,36 @@ class Test_block(_Test_block_base, unittest.TestCase):
         del b.x
         self.assertEqual(b.collect_ctypes(), set())
 
+class _MyBlock(StaticBlock):
+    __slots__ = ("b", "v", "n")
+    def __init__(self):
+        self.b = block()
+        self.b.v = variable()
+        self.b.blist = block_list()
+        self.b.blist.append(block())
+        self.v = variable()
+        self.n = 2.0
+        super(_MyBlock, self).__init__()
+
 class Test_StaticBlock(_Test_block_base, unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
 
-        class myblock(StaticBlock):
-            __slots__ = ("b", "v", "n")
-            def __init__(self):
-                self.b = block()
-                self.b.v = variable()
-                self.b.blist = block_list()
-                self.b.blist.append(block())
-                self.v = variable()
-                self.n = 2.0
-                super(myblock, self).__init__()
-
-        cls._myblock_type = myblock
-        model = cls._block = myblock()
+        cls._myblock_type = _MyBlock
+        model = cls._block = _MyBlock()
 
         #
         # Manually encode the correct output
         # for tests in the base testing class
         #
+
+        cls._names = ComponentMap()
+        cls._names[model.b] = "b"
+        cls._names[model.b.v] = "b.v"
+        cls._names[model.b.blist] = "b.blist"
+        cls._names[model.b.blist[0]] = "b.blist[0]"
+        cls._names[model.v] = "v"
 
         cls._children = ComponentMap()
         cls._children[model] = [model.b,
@@ -870,27 +909,3 @@ class Test_block_list(_TestActiveComponentListBase,
 
 if __name__ == "__main__":
     unittest.main()
-    """
-    model = block()
-    model.v_1 = variable()
-    model.vdict_1 = variable_dict()
-    model.vdict_1[None] = variable()
-    model.vlist_1 = variable_list()
-    model.vlist_1.append(variable())
-    model.vlist_1.append(variable())
-    model.b_1 = block()
-    model.b_1.v_2 = variable()
-    model.b_1.b_2 = block()
-    model.b_1.b_2.b_3 = block()
-    model.b_1.b_2.v_3 = variable()
-    model.b_1.b_2.vlist_3 = variable_list()
-    model.b_1.b_2.vlist_3.append(variable())
-    model.b_1.b_2.deactivate()
-    model.bdict_1 = block_dict()
-    model.blist_1 = block_list()
-    model.blist_1.append(block())
-    model.blist_1[0].v_2 = variable()
-    model.blist_1[0].b_2 = block()
-
-    print([x.name for x in model.blocks()])
-    """

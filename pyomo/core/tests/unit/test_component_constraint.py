@@ -1,3 +1,5 @@
+import pickle
+
 import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
@@ -21,6 +23,29 @@ from pyomo.core.base.set_types import (RealSet,
                                        IntegerSet)
 
 class Test_constraint(unittest.TestCase):
+
+    def test_pickle(self):
+        c = constraint()
+        self.assertEqual(c.lower, None)
+        self.assertEqual(c.body, None)
+        self.assertEqual(c.upper, None)
+        self.assertEqual(c.parent, None)
+        cup = pickle.loads(
+            pickle.dumps(c))
+        self.assertEqual(cup.lower, None)
+        self.assertEqual(cup.body, None)
+        self.assertEqual(cup.upper, None)
+        self.assertEqual(cup.parent, None)
+        b = block()
+        b.c = c
+        self.assertIs(c.parent, b)
+        bup = pickle.loads(
+            pickle.dumps(b))
+        cup = bup.c
+        self.assertEqual(cup.lower, None)
+        self.assertEqual(cup.body, None)
+        self.assertEqual(cup.upper, None)
+        self.assertIs(cup.parent, bup)
 
     def test_init(self):
         c = constraint()

@@ -1,4 +1,5 @@
 import sys
+import pickle
 
 import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
@@ -25,6 +26,35 @@ import six
 from six import StringIO
 
 class Test_variable(unittest.TestCase):
+
+    def test_pickle(self):
+        v = variable(lb=1,
+                     ub=2,
+                     domain_type=IntegerSet,
+                     fixed=True)
+        self.assertEqual(v.lb, 1)
+        self.assertEqual(v.ub, 2)
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.fixed, True)
+        self.assertEqual(v.parent, None)
+        vup = pickle.loads(
+            pickle.dumps(v))
+        self.assertEqual(vup.lb, 1)
+        self.assertEqual(vup.ub, 2)
+        self.assertEqual(vup.domain_type, IntegerSet)
+        self.assertEqual(vup.fixed, True)
+        self.assertEqual(vup.parent, None)
+        b = block()
+        b.v = v
+        self.assertIs(v.parent, b)
+        bup = pickle.loads(
+            pickle.dumps(b))
+        vup = bup.v
+        self.assertEqual(vup.lb, 1)
+        self.assertEqual(vup.ub, 2)
+        self.assertEqual(vup.domain_type, IntegerSet)
+        self.assertEqual(vup.fixed, True)
+        self.assertIs(vup.parent, bup)
 
     def test_init(self):
         v = variable()

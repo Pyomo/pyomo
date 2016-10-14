@@ -1,8 +1,8 @@
 import sys
 import collections
+import pickle
 
 import pyutilib.th as unittest
-
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
@@ -26,6 +26,40 @@ import six
 from six import StringIO
 
 class Test_suffix(unittest.TestCase):
+
+    def test_pickle(self):
+        s = suffix(direction=suffix.EXPORT,
+                   datatype=suffix.FLOAT)
+        self.assertEqual(s.direction, suffix.EXPORT)
+        self.assertEqual(s.datatype, suffix.FLOAT)
+        self.assertEqual(s.parent, None)
+        sup = pickle.loads(
+            pickle.dumps(s))
+        self.assertEqual(sup.direction, suffix.EXPORT)
+        self.assertEqual(sup.datatype, suffix.FLOAT)
+        self.assertEqual(sup.parent, None)
+        b = block()
+        b.s = s
+        self.assertIs(s.parent, b)
+        bup = pickle.loads(
+            pickle.dumps(b))
+        sup = bup.s
+        self.assertEqual(sup.direction, suffix.EXPORT)
+        self.assertEqual(sup.datatype, suffix.FLOAT)
+        self.assertIs(sup.parent, bup)
+        b.v = variable(lb=1)
+        b.s[b.v] = 1.0
+        bup = pickle.loads(
+            pickle.dumps(b))
+        sup = bup.s
+        vup = bup.v
+        print("@@@@@@@@@@@@@@@@@@\n")
+        print(list(sup.keys())[0].name)
+        print(id(list(sup.keys())))
+        print(id(vup))
+        print(id(b.v))
+        print("")
+        self.assertEqual(sup[vup], 1.0)
 
     def test_init(self):
         s = suffix()

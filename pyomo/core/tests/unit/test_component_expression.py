@@ -1,3 +1,5 @@
+import pickle
+
 import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
@@ -24,6 +26,23 @@ import six
 from six import StringIO
 
 class Test_expression(unittest.TestCase):
+
+    def test_pickle(self):
+        e = expression(expr=1.0)
+        self.assertEqual(e.expr, 1.0)
+        self.assertEqual(e.parent, None)
+        eup = pickle.loads(
+            pickle.dumps(e))
+        self.assertEqual(eup.expr, 1.0)
+        self.assertEqual(eup.parent, None)
+        b = block()
+        b.e = e
+        self.assertIs(e.parent, b)
+        bup = pickle.loads(
+            pickle.dumps(b))
+        eup = bup.e
+        self.assertEqual(eup.expr, 1.0)
+        self.assertIs(eup.parent, bup)
 
     def test_init_no_args(self):
         e = expression()
