@@ -53,11 +53,11 @@ def _check_productexpression(expr,i):
 
         dv = None
         # Check if there is a DerivativeVar in the numerator
-        for obj in num:
+        for idx, obj in enumerate(num):
             if type(obj) is EXPR._GetItemExpression and \
                type(obj._base) is DerivativeVar:
                 dv = obj
-                num.remove(obj)
+                num = num[0:idx]+num[idx+1:]
                 break
         if dv is not None:
             RHS = expr._args[i-1]/coef
@@ -68,11 +68,11 @@ def _check_productexpression(expr,i):
             return [dv, RHS]
         else:
             # Check if there is a DerivativeVar in the denominator
-            for obj in denom:
+            for idx, obj in enumerate(denom):
                 if type(obj) is EXPR._GetItemExpression and \
                    type(obj._base) is DerivativeVar:
                     dv = obj
-                    denom.remove(obj)
+                    denom = denom[0:idx]+denom[idx+1:]
                     break
             if dv is not None:
                 tempnum = coef
@@ -108,7 +108,7 @@ def _check_sumexpression(expr,i):
            type(item._base) is DerivativeVar:
             dv = item
             dvcoef = coefs[idx]
-            items.remove(item)
+            items = items[0:idx]+items[idx+1:]
             coefs = coefs[0:idx]+coefs[idx+1:]
             break
 
