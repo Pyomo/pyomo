@@ -220,7 +220,7 @@ class _ExpressionBase(NumericValue):
             ans._parent_expr = None
         return ans
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         """The text name of this Expression function"""
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement getname()" % ( str(self.__class__), ))
@@ -401,7 +401,7 @@ class _NegationExpression(_ExpressionBase):
 
     PRECEDENCE = 4
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'neg'
 
     def _polynomial_degree(self, result):
@@ -449,7 +449,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return self._name
 
     def _to_string_prefix(self, ostream, verbose):
@@ -484,8 +484,8 @@ class _ExternalFunctionExpression(_ExpressionBase):
             for x in args )
         self._fcn = fcn
 
-    def getname(self):
-        return self._fcn.getname()
+    def getname(self, *args, **kwds):
+        return self._fcn.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
         if result.pop() == 0:
@@ -569,7 +569,7 @@ class _PowExpression(_ExpressionBase):
         _l = result.pop()
         return _l ** _r
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'pow'
 
     def _inline_operator(self):
@@ -690,7 +690,7 @@ class _ProductExpression(_ExpressionBase):
             return a + b
 
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'prod'
 
     def _inline_operator(self):
@@ -721,7 +721,7 @@ class _DivisionExpression(_ExpressionBase):
             return None
 
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'div'
 
     def _inline_operator(self):
@@ -777,7 +777,7 @@ class _SumExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return sum(result.pop() for x in self._args)
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'sum'
 
     def __iadd__(self, other):
@@ -932,7 +932,7 @@ class Expr_if(_ExpressionBase):
     def _arguments(self):
         return ( self._if, self._then, self._else )
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return "Expr_if"
 
     def is_constant(self):
@@ -1044,8 +1044,8 @@ class _GetItemExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def name(self):
-        return self._base.name(True)
+    def getname(self, *args, **kwds):
+        return self._base.getname(*args, **kwds)
 
     def is_constant(self):
         return False
@@ -1062,7 +1062,7 @@ class _GetItemExpression(_ExpressionBase):
         return value(self._base.__getitem__(tuple(r)))
 
     def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.name())
+        ostream.write(self.name)
 
     def resolve_template(self):
         return self._base.__getitem__(tuple(value(i) for i in self._args))
@@ -1127,7 +1127,7 @@ class _LinearExpression(_ExpressionBase):
             ans.extend(self._args)
             return ans
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'linear'
 
     def is_constant(self):

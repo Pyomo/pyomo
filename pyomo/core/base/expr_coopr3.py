@@ -901,8 +901,8 @@ class _GetItemExpression(_ExpressionBase):
         return self.__class__( self._base,
                                tuple(clone_expression(x) for x in self._args) )
 
-    def name(self):
-        return self._base.name(True)
+    def getname(self, *args, **kwds):
+        return self._base.getname(*args, **kwds)
 
     def polynomial_degree(self):
         return 0 if self.is_fixed() else 1

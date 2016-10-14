@@ -60,13 +60,13 @@ class IndexTemplate(NumericValue):
         """
         return False
 
-    def name(self, fully_qualified=False, name_buffer=None):
-        return "{"+self._set.name(True, name_buffer)+"}"
+    def getname(self, fully_qualified=False, name_buffer=None):
+        return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
 
     def to_string(self, ostream=None, verbose=None, precedence=0):
         if ostream is None:
             ostream = sys.stdout
-        ostream.write( self.name() )
+        ostream.write( self.name )
 
     def set_value(self, value):
         # It might be nice to check if the value is valid for the base
@@ -161,7 +161,7 @@ def substitute_template_with_param(expr, _map):
     if _id not in _map:
         _map[_id] = pyomo.core.base.param.Param(mutable=True)
         _map[_id].construct()
-        _map[_id]._name = expr._base.name()
+        _map[_id]._name = expr._base.name
     return _map[_id]
 
 
