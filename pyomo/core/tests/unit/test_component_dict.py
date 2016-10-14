@@ -9,6 +9,10 @@
 
 import pickle
 import collections
+try:
+    from collections import OrderedDict
+except ImportError:                         #pragma:nocover
+    from ordereddict import OrderedDict
 
 import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
@@ -48,11 +52,35 @@ class _TestComponentDictBase(object):
 
     def test_init2(self):
         index = ['a', 1, None, (1,), (1,2)]
-        cdict = self._container_type((i, self._ctype_factory())
-                                 for i in index)
+        self._container_type((i, self._ctype_factory())
+                             for i in index)
+        self._container_type(((i, self._ctype_factory())
+                             for i in index))
         with self.assertRaises(TypeError):
             self._container_type(*tuple((i, self._ctype_factory())
                                         for i in index))
+        with self.assertRaises(ValueError):
+            self._container_type(((i, self._ctype_factory())
+                                  for i in index),
+                                 definately_should_not_be_a_keyword_for_this_class=True)
+
+    def test_ordered_init(self):
+        cdict = self._container_type()
+        self.assertEqual(type(cdict._data), dict)
+        cdict = self._container_type(ordered=False)
+        self.assertEqual(type(cdict._data), dict)
+        cdict = self._container_type(ordered=True)
+        self.assertNotEqual(type(cdict._data), dict)
+        self.assertEqual(type(cdict._data), OrderedDict)
+        cdict[None] = self._ctype_factory()
+        cdict[1] = self._ctype_factory()
+        cdict['a'] = self._ctype_factory()
+        cdict[2] = self._ctype_factory()
+        cdict[3] = self._ctype_factory()
+        cdict[-1] = self._ctype_factory()
+        cdict['bc'] = self._ctype_factory()
+        self.assertEqual(list(cdict.keys()),
+                         [None,1,'a',2,3,-1,'bc'])
 
     def test_type(self):
         cdict = self._container_type()

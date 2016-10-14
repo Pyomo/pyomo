@@ -11,6 +11,10 @@ __all__ = ("ComponentDict",)
 
 import weakref
 import collections
+try:
+    from collections import OrderedDict
+except ImportError:                         #pragma:nocover
+    from ordereddict import OrderedDict
 
 from pyomo.core.base.component_interface import \
     (IComponentContainer,
@@ -35,8 +39,16 @@ class ComponentDict(IComponentContainer,
     """
     __slots__ = ()
 
-    def __init__(self, *args):
-        self._data = {}
+    def __init__(self, *args, **kwds):
+        ordered = kwds.pop('ordered', False)
+        if len(kwds):
+            raise ValueError("Unexpected keywords used "
+                             "to initialize class: %s"
+                             % (str(list(kwds.keys()))))
+        if ordered:
+            self._data = OrderedDict()
+        else:
+            self._data = {}
         if len(args) > 0:
             if len(args) > 1:
                 raise TypeError(
