@@ -2523,6 +2523,16 @@ class SetErrors(PyomoModel):
         except TypeError:
             pass
 
+    def test_setargs5(self):
+        # Test that we can index a Set or RangeSet with an abstract set expression
+        model = AbstractModel()
+        model.A = Set()
+        model.B = Set()
+        model.C = model.A|model.B
+        model.Z = Set(model.C)
+        model.Y = RangeSet(model.C)
+        model.X = Param(model.C, default=0.0)
+
     def test_verify(self):
         a=Set(initialize=[1,2,3])
         b=Set(within=a)

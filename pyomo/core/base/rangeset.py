@@ -124,7 +124,7 @@ class RangeSet(OrderedSimpleSet):
         if not self._constructed:
             raise RuntimeError(
                 "Cannot iterate over abstract RangeSet '%s' before it has "
-                "been constructed (initialized)." % (self.name(True),) )
+                "been constructed (initialized)." % (self.name,) )
         if self.filter is None and self.validate is None:
             #
             # Iterate through all set elements
