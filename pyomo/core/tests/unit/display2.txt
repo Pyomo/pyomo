@@ -1,14 +1,14 @@
 Model unknown
 
   Variables:
-    x : Size=1, Index=None, Domain=Reals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :  None :     1 :  None : False : False
-    y : Size=3, Index=a, Domain=Reals
-        Key : Lower : Value : Upper : Fixed : Stale
-          1 :  None :     1 :  None : False : False
-          2 :  None :     1 :  None : False : False
-          3 :  None :     1 :  None : False : False
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :     1 :  None : False : False :  Reals
+    y : Size=3, Index=a
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :     1 :  None : False : False :  Reals
+          2 :  None :     1 :  None : False : False :  Reals
+          3 :  None :     1 :  None : False : False :  Reals
 
   Objectives:
     obj : Size=1, Index=None, Active=True
@@ -32,9 +32,9 @@ Model unknown
 obj : Size=1, Index=None, Active=True
     Key  : Active : Value
     None :   True :     2
-x : Size=1, Index=None, Domain=Reals
-    Key  : Lower : Value : Upper : Fixed : Stale
-    None :  None :     1 :  None : False : False
+x : Size=1, Index=None
+    Key  : Lower : Value : Upper : Fixed : Stale : Domain
+    None :  None :     1 :  None : False : False :  Reals
 con : Size=1
     Key  : Lower : Body : Upper
     None :   1.0 :    2 :   2.0

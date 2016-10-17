@@ -1,0 +1,35 @@
+4 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    B : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A', 'B', 'C']
+    C : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A', 'B', 'C']
+    T_index : Dim=0, Dimen=2, Size=9, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+6 Param Declarations
+    T : Size=3, Index=T_index, Domain=Any, Default=None, Mutable=False
+        Key      : Value
+        (1, 'A') :    10
+        (2, 'B') :    20
+        (3, 'C') :    30
+    U : Size=3, Index=B, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          A :    10
+          B :    20
+          C :    30
+    W : Size=1, Index=None, Domain=Boolean, Default=None, Mutable=False
+        Key  : Value
+        None :  True
+    X : Size=1, Index=None, Domain=Reals, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+    Y : Size=1, Index=None, Domain=A, Default=None, Mutable=False
+        Key  : Value
+        None :     2
+    Z : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :  1z2y
+
+10 Declarations: Z A Y X W B U C T_index T

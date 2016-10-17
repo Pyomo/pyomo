@@ -15,6 +15,7 @@ try:
 except:
     # python 2.6
     from subprocess import check_call as _run_cmd
+import driver
 
 config = sys.argv[1]
 hname = os.uname()[1]
@@ -23,7 +24,7 @@ hname = hname.split('.')[0]
 print("\nStarting jenkins.py")
 print("Configuration=%s" % config)
 
-os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/hudson/pyomo-vpy/test_tpls.ini'
+os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/src/pyomo/admin/config.ini'
 sys.path.append(os.getcwd())
 
 sys.argv = ['dummy', '--trunk', '--source', 'src', '-a', 'pyyaml']
@@ -73,16 +74,25 @@ print("\nPython version: %s" % sys.version)
 print("\nSystem PATH:\n\t%s" % os.environ['PATH'])
 print("\nPython path:\n\t%s" % sys.path)
 
-if config == "default":
-    import hudson.pyomo_cov
+coverage_omit=','.join([
+    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyomo', 'pyomo', '*', 'tests']),
+    'pyomo.*.tests',
+    os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*']),
+    'pyutilib.*',
+])
+
+if config == "notests":
+    driver.perform_install('pyomo', config='pyomo_all.ini')
+
+elif config == "default":
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
 
 elif config == "core":
-    import hudson.driver
     # Install
     print("-" * 60)
     print("Installing Pyomo")
     print("-" * 60)
-    hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
+    driver.perform_install('pyomo', config='pyomo_all.ini')
     print("-" * 60)
     print("Running 'pyomo install-extras' ...")
     print("-" * 60)
@@ -95,31 +105,27 @@ elif config == "core":
         assert False
     # Test
     os.environ['TEST_PACKAGES'] = 'checker core environ opt repn scripting solvers util version'
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
     print("-" * 60)
     print("Performing tests")
     print("-" * 60)
-    hudson.driver.perform_tests('pyomo', coverage=True, omit=pyutilib)
+    driver.perform_tests('pyomo', coverage=True, omit=coverage_omit)
 
 elif config == "nonpysp":
     os.environ['TEST_PACKAGES'] = '-e pysp'
-    import hudson.pyomo_cov
+    driver.perform_build('pyomo', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
 
 elif config == "parallel":
-    import hudson.pyomo_parallel
+    os.environ['NOSE_PROCESS_TIMEOUT'] = '1800' # 30 minutes
+    driver.perform_build('pyomo', cat='parallel', coverage=True, omit=coverage_omit, config='pyomo_all.ini')
 
 elif config == "expensive":
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
-
-    from hudson.driver import perform_build
-    perform_build('pyomo',
-        cat='expensive', coverage=True, omit=pyutilib,
+    driver.perform_build('pyomo',
+        cat='expensive', coverage=True, omit=coverage_omit,
         virtualenv_args=sys.argv[1:])
 
 elif config == "booktests" or config == "book":
-    import hudson.driver
     # Install
-    hudson.driver.perform_install('pyomo', config='pyomo_all.ini')
+    driver.perform_install('pyomo', config='pyomo_all.ini')
     print("Running 'pyomo install-extras' ...")
     if _run_cmd is subprocess.check_call:
         output = _run_cmd("python/bin/python src/pyomo/scripts/get_pyomo_extras.py -v", shell=True)
@@ -130,10 +136,9 @@ elif config == "booktests" or config == "book":
         assert False
     # Test
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
-    pyutilib=os.sep.join([os.environ['WORKSPACE'], 'src', 'pyutilib.*'])+',pyutilib.*'
-    hudson.driver.perform_tests('pyomo', cat='book')
+    driver.perform_tests('pyomo', cat='book')
 
 elif config == "perf":
     os.environ['NOSE_PROCESS_TIMEOUT'] = '1800'
-    import hudson.pyomo_perf
+    driver.perform_build('pyomo', cat='performance')
 

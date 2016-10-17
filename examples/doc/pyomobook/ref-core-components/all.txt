@@ -1,0 +1,144 @@
+20 Set Declarations
+    A : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 2)
+        [1, 2]
+    B : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(3, 4)
+        [3, 4]
+    C : Dim=2, Dimen=1, Size=0, Domain=None, ArraySize=0, Ordered=False, Bounds=None
+        Key : Members
+    C_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    b2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    b_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    ba2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    bc2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    c2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    clist1_index : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
+        []
+    comp2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    complist_index : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
+        []
+    disjunct2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    expr2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    o2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    olist1_index : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
+        []
+    sset2_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    vlist1_index : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
+        []
+    y_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    z_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+2 Param Declarations
+    a : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+    b : Size=0, Index=b_index, Domain=Any, Default=None, Mutable=False
+        Key : Value
+
+4 Var Declarations
+    vlist1 : Size=0, Index=vlist1_index, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+    x : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :  None :  None : False :  True
+    y : Size=4, Index=y_index, Domain=Reals
+        Key    : Lower : Value : Upper : Fixed : Stale
+        (1, 3) :  None :  True :  None : False : False
+        (1, 4) :  None :  True :  None : False : False
+        (2, 3) :  None :  True :  None : False : False
+        (2, 4) :  None :  True :  None : False : False
+    z : Size=4, Index=z_index, Domain=Reals
+        Key    : Lower : Value : Upper : Fixed : Stale
+        (1, 3) :  None :  True :  None : False : False
+        (1, 4) :  None :  True :  None : False : False
+        (2, 3) :  None :  True :  None : False : False
+        (2, 4) :  None :  True :  None : False : False
+
+2 Expression Declarations
+    expr1 : Size=1, Index=None
+        Key  : Expression
+        None :  Undefined
+    expr2 : Size=0, Index=expr2_index
+        Key : Expression
+
+3 Objective Declarations
+    o1 : Size=0, Index=None, Active=True
+        Key : Active : Sense : Expression
+    o2 : Size=0, Index=o2_index, Active=True
+        Key : Active : Sense : Expression
+    olist1 : Size=0, Index=olist1_index, Active=True
+        Key : Active : Sense : Expression
+
+3 Constraint Declarations
+    c1 : Size=0, Index=None, Active=True
+        Key : Lower : Body : Upper : Active
+    c2 : Size=0, Index=c2_index, Active=True
+        Key : Lower : Body : Upper : Active
+    clist1 : Size=0, Index=clist1_index, Active=True
+        Key : Lower : Body : Upper : Active
+
+2 SOSConstraint Declarations
+   sset1 : 	Size=1 
+		Type=1
+		Weight : Variable
+		1 : y[1,3]
+		2 : y[2,3]
+		3 : y[2,4]
+		4 : y[1,4]
+   sset2 : 	Size=0 	Index= sset2_index
+
+2 Block Declarations
+    b1 : Size=1, Index=None, Active=True
+        0 Declarations: 
+    b2 : Size=0, Index=b2_index, Active=True
+
+2 BuildAction Declarations
+    ba1 : Size=0, Index=None, Active=True
+    ba2 : Size=0, Index=ba2_index, Active=True
+
+2 BuildCheck Declarations
+    bc1 : 
+    bc2 : 
+
+3 Complementarity Declarations
+    comp1 : Size=1, Index=None, Active=True
+        Key : Arg0 : Arg1 : Active
+        None : None : None :   None
+    comp2 : Size=0, Index=comp2_index, Active=True
+        Key : Arg0 : Arg1 : Active
+    complist : Size=0, Index=complist_index, Active=True
+        Key : Arg0 : Arg1 : Active
+
+2 Disjunct Declarations
+    disjunct1 : Size=1, Index=None, Active=True
+        1 Var Declarations
+            indicator_var : Size=1, Index=None, Domain=Binary
+                Key  : Lower : Value : Upper : Fixed : Stale
+                None :     0 :  None :     1 : False :  True
+
+        1 Declarations: indicator_var
+    disjunct2 : Size=0, Index=disjunct2_index, Active=True
+
+2 SubModel Declarations
+    sub1 : Size=1, Index=None, Active=True
+        0 Declarations: 
+    sub2 : Size=1, Index=None, Active=True
+        1 Set Declarations
+            _index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+                Virtual
+
+        1 Declarations: _index
+
+49 Declarations: A B C_index C b1 b2_index b2 ba1 ba2_index ba2 bc1 bc2_index bc2 comp1 comp2_index comp2 complist_index complist c1 c2_index c2 clist1_index clist1 disjunct1 disjunct2_index disjunct2 expr1 expr2_index expr2 o1 o2_index o2 olist1_index olist1 a b_index b sub1 sub2 x y_index y z_index z vlist1_index vlist1 sset1 sset2_index sset2

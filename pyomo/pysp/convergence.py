@@ -350,4 +350,4 @@ class OuterBoundConvergence(ConvergenceBase):
 
     def computeMetric(self, ph, scenario_tree, instances):
 
-        return ph._reported_outer_bound
+        return ph._best_reported_outer_bound

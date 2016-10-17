@@ -1,0 +1,57 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+Job 3903498 submitted to NEOS, password='oEynZSNP'
+Check the following URL for progress report :
+http://www.neos-server.org/neos/cgi-bin/nph-neos-solver.cgi?admin=results&jobnumber=3903498&pass=oEynZSNP
+Job 3903498 dispatched
+password: oEynZSNP
+---------- Begin Solver Output -----------
+Job submitted to NEOS HTCondor pool.
+[   28.08] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: 0.8
+    Solver results file: results.yml
+[   28.09] Applying Pyomo postprocessing actions
+[   28.09] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 2
+  Number of variables: 2
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Message: CBC 2.9.4 optimal, objective 0.8; 1 iterations
+  Termination condition: optimal
+  Id: 0
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: None
+  Status: optimal
+  Message: CBC 2.9.4 optimal, objective 0.8; 1 iterations
+  Objective:
+    obj:
+      Value: 0.8
+  Variable:
+    y:
+      Value: 0.4
+  Constraint: No values

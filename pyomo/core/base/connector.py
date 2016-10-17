@@ -22,7 +22,8 @@ from pyomo.util.plugin import Plugin, implements
 from pyomo.core.base.component import Component, ComponentData, register_component
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.expr import _ProductExpression
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.core.base.indexed_component import IndexedComponent, \
+    UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, create_name
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.plugin import IPyomoScriptModifyInstance
@@ -59,7 +60,6 @@ class _ConnectorData(ComponentData, NumericValue):
     # Note: None of the slots on this class need to be edited, so we
     # don't need to implement a specialized __setstate__ method, and
     # can quietly rely on the super() class's implementation.
-
 
     def set_value(self, value):
         msg = "Cannot specify the value of a connector '%s'"
@@ -117,11 +117,10 @@ class _ConnectorData(ComponentData, NumericValue):
 
     def add(self, var, name=None, aggregate=None):
         if name is None:
-            name = var.cname()
+            name = var.local_name
         if name in self.vars:
-            raise ValueError(
-                "Cannot insert duplicate variable name "
-                "'%s' into Connector '%s'" % (name, self.cname()) )
+            raise ValueError("Cannot insert duplicate variable name "
+                             "'%s' into Connector '%s'" % (name, self.name))
         self.vars[name] = var
         if aggregate is not None:
             self.aggregators[var] = aggregate
@@ -239,7 +238,7 @@ class Connector(IndexedComponent):
     def display(self, prefix="", ostream=None):
         if ostream is None:
             ostream = sys.stdout
-        ostream.write(prefix+"Connector "+self.name+" :")
+        ostream.write(prefix+"Connector "+self.local_name+" :")
         ostream.write("  Size="+str(len(self)))
         if None in self._data:
             ostream.write(prefix+"  : {"+\

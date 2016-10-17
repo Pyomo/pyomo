@@ -30,9 +30,11 @@ from pyomo.opt import (UndefinedData,
                        ProblemFormat,
                        undefined,
                        SolverFactory,
+                       PersistentSolver,
                        SolverStatus,
                        TerminationCondition,
-                       SolutionStatus)
+                       SolutionStatus,
+                       SolverStatus)
 
 import pyomo.pysp.convergence
 from pyomo.pysp.phboundbase import (_PHBoundBase,
@@ -374,8 +376,8 @@ class _PHBase(object):
         # these probably should be the "best" values, because
         # they are used for convergence criterion, among other
         # things.
-        self._reported_inner_bound = None
-        self._reported_outer_bound = None
+        self._best_reported_inner_bound = None
+        self._best_reported_outer_bound = None
 
         # a simple boolean flag indicating whether or not this ph
         # instance has received an initialization method and has
@@ -415,7 +417,7 @@ class _PHBase(object):
 
             scenario_instance = scenario._instance
 
-            assert scenario_instance.name == scenario._name
+            assert scenario_instance.name == scenario.name
 
             if scenario_instance is None:
                 raise RuntimeError("ScenarioTree has not been linked "
@@ -1106,6 +1108,27 @@ class _PHBase(object):
         self._rho_check(tree_node, variable_id)
 
         return scenario._rho[tree_node._name][variable_id]
+
+    #
+    # keep track of the best bounds reported - dlw May 2016 - temporary
+    #
+    def _update_reported_bounds(self, inner = None, outer = None):
+        # see if a reported bound is good enough to be the best
+        # (bear in mind that for the outer bound the worse the better)
+        def isbetter(a,b):
+            if self._objective_sense == minimize:
+                return a<b
+            else:
+                return a>b
+
+        if inner is not None:
+            if self._best_reported_inner_bound is None \
+            or isbetter(inner, self._best_reported_inner_bound):
+                self._best_reported_inner_bound = inner
+        if outer is not None:
+            if self._best_reported_outer_bound is None \
+            or isbetter(self._best_reported_outer_bound, outer):
+                self._best_reported_outer_bound = outer
 
     #
     # a utility intended for folks who are brave enough to script
@@ -2158,14 +2181,19 @@ class ProgressiveHedging(_PHBase):
             self._solution_plugins = solution_plugins
 
         #
-        # Try prevent unnecessarily re-importing the model module
-        # if other callbacks are in the same location
+        # Try to prevent unnecessarily re-importing the model module
+        # if other callbacks are in the same location. Doing so might
+        # have serious consequences.
         #
         scenario_instance_factory = scenario_tree._scenario_instance_factory
-        self._modules_imported[scenario_instance_factory._model_location] = \
-            scenario_instance_factory._model_module
-        self._modules_imported[scenario_instance_factory._model_filename] = \
-            scenario_instance_factory._model_module
+        if scenario_instance_factory._model_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _model_filename] = \
+                scenario_instance_factory._model_module
+        if scenario_instance_factory._scenario_tree_module is not None:
+            self._modules_imported[scenario_instance_factory.\
+                                   _scenario_tree_filename] = \
+                scenario_instance_factory._scenario_tree_module
 
         # The first step in PH initialization is to impose an order on
         # the user-defined plugins. Invoking wwextensions and
@@ -2247,6 +2275,10 @@ class ProgressiveHedging(_PHBase):
         isPHPyro =  isinstance(self._solver_manager,
                                pyomo.solvers.plugins.\
                                smanager.phpyro.SolverManager_PHPyro)
+        if isinstance(self._solver, PersistentSolver) and \
+           (not isPHPyro):
+            raise TypeError("Persistent solvers are only supported "
+                            "when using PHPyro")
 
         initialization_action_handles = []
         if isPHPyro:
@@ -2938,8 +2970,14 @@ class ProgressiveHedging(_PHBase):
                         print("Results obtained for bundle=%s" % (bundle_name))
 
                     if (len(bundle_results.solution) == 0) or \
+                       (bundle_results.solution(0).status ==
+                        SolutionStatus.infeasible) or \
                        (bundle_results.solution(0).status == \
-                       SolutionStatus.infeasible) or \
+                        SolutionStatus.error) or \
+                       (bundle_results.solution(0).status == \
+                        SolutionStatus.unbounded) or \
+                       (bundle_results.solver.status != \
+                        SolverStatus.ok) or \
                        (bundle_results.solver.termination_condition == \
                         TerminationCondition.infeasible):
 
@@ -3105,7 +3143,13 @@ class ProgressiveHedging(_PHBase):
 
                     if (len(results.solution) == 0) or \
                        (results.solution(0).status == \
-                       SolutionStatus.infeasible) or \
+                        SolutionStatus.infeasible) or \
+                       (results.solution(0).status == \
+                        SolutionStatus.error) or \
+                       (results.solution(0).status == \
+                        SolutionStatus.unbounded) or \
+                       (results.solver.status != \
+                        SolverStatus.ok) or \
                        (results.solver.termination_condition == \
                         TerminationCondition.infeasible):
 
@@ -4215,8 +4259,8 @@ class ProgressiveHedging(_PHBase):
                       +str(self._total_fixed_continuous_vars)+" "
                       "(total="+str(self._total_continuous_vars)+")")
 
-                if self._reported_inner_bound != None or self._reported_outer_bound != None:
-                    print("Outer bound=%20s Inner bound=%20s" % (self._reported_outer_bound, self._reported_inner_bound))
+                if self._best_reported_inner_bound != None or self._best_reported_outer_bound != None:
+                    print("Outer bound=%20s Inner bound=%20s" % (self._best_reported_outer_bound, self._best_reported_inner_bound))
 
                 # update the convergence statistic - prior to the
                 # plugins callbacks; technically, computing the

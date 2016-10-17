@@ -1,0 +1,4 @@
+A        B        C         D
+Data1    Data2    1.0       1e-2
+'Data 3' 'Data 4' 2.0       1e+2
+Data100  FOO      3.0       0

@@ -1,0 +1,36 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.02] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: 3.161913011901231e-10
+    Solver results file: results.yml
+
+==========================================================
+Solution Summary
+==========================================================
+
+Model unknown
+
+  Variables:
+    x : Size=1, Index=None
+        Key  : Lower : Value               : Upper : Fixed : Stale : Domain
+        None :     0 : 0.01782217094913714 :     4 : False : False :  Reals
+    y : Size=1, Index=None
+        Key  : Lower : Value                : Upper : Fixed : Stale : Domain
+        None :     0 : 0.017822170949139994 :     4 : False : False :  Reals
+
+  Objectives:
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Value
+        None :   True : 3.161913011901231e-10
+
+  Constraints:
+    None
+
+[    0.02] Applying Pyomo postprocessing actions
+[    0.02] Pyomo Finished

@@ -73,7 +73,7 @@ class NumericLabeler(object):
 #
 # TODO: [JDS] I would like to rename TextLabeler to LPLabeler - as it
 # generated LP-file-compliant labels - and make the CNameLabeler the
-# TextLabeler.  This makes sense as the cname() is the closest thing we
+# TextLabeler.  This makes sense as the name() is the closest thing we
 # have to a human-readable canonical text naming convention (the
 # ComponentUID strings are actually unique, but not meant to be human
 # readable).  Unfortunately, the TextLabeler is used all over the place
@@ -85,25 +85,25 @@ class CNameLabeler(object):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return obj.cname(True, self.name_buffer)
+        return obj.getname(True, self.name_buffer)
 
 class TextLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return cpxlp_label_from_name(obj.cname(True, self.name_buffer))
+        return cpxlp_label_from_name(obj.getname(True, self.name_buffer))
 
 class AlphaNumTextLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return alphanum_label_from_name(obj.cname(True, self.name_buffer))
+        return alphanum_label_from_name(obj.getname(True, self.name_buffer))
 
 class NameLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 
     def __call__(self, obj):
-        return obj.cname(True, self.name_buffer)
+        return obj.getname(True, self.name_buffer)

@@ -1,0 +1,98 @@
+0.0
+-1.0
+0.0
+-1.0
+Model unknown
+
+  Variables:
+    x : Size=2, Index=x_index, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :  None :   1.0 :  None : False : False
+          2 :  None :   1.0 :  None : False : False
+    y : Size=3, Index=y_index, Domain=NonNegativeReals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :     0 :   0.0 :  None : False : False
+          2 :     0 :   0.0 :  None : False : False
+          3 :     0 :   0.0 :  None : False : False
+    StartTime : Size=5, Index=StartTime_index, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :  None :   1.0 :  None : False : False
+          2 :  None :   1.0 :  None : False : False
+          3 :  None :   1.0 :  None : False : False
+          4 :  None :   1.0 :  None : False : False
+          5 :  None :   1.0 :  None : False : False
+    z : Size=0, Index=EMPTY, Domain=Reals
+        Key : Lower : Value : Upper : Fixed : Stale
+
+  Objectives:
+    None
+
+  Constraints:
+    Diff : Size=1
+        Key  : Lower : Body : Upper
+        None :  None :  0.0 :   7.5
+    CoverConstr : Size=3
+        Key : Lower : Body : Upper
+          1 :   1.0 :  0.0 :  None
+          2 :   2.9 :  0.0 :  None
+          3 :   3.1 :  0.0 :  None
+    CapacityIneq : Size=3
+        Key : Lower : Body : Upper
+          1 :  0.25 :  0.0 :   1.0
+          2 :  0.25 :  0.0 :   1.0
+          3 :  0.25 :  0.0 :   1.0
+    CapacityEq : Size=3
+        Key : Lower : Body : Upper
+          1 :   0.0 : -1.0 :   0.0
+          2 :   0.0 : -2.9 :   0.0
+          3 :   0.0 : -3.1 :   0.0
+    Pred : Size=4
+        Key : Lower : Body : Upper
+          1 :  None :  0.0 :   0.0
+          2 :  None :  0.0 :   0.0
+          3 :  None :  0.0 :   0.0
+          4 :  None :  0.0 :   0.0
+    C2 : Size=1
+        Key : Lower : Body : Upper
+          2 :  None : None :  None
+    C1 : Size=1
+        Key : Lower : Body : Upper
+          2 :  None : None :  None
+    c1 : Size=2
+        Key : Lower : Body : Upper
+          1 :  None :  0.0 :   7.5
+          2 :  None : -1.0 :   7.5
+    c2 : Size=2
+        Key : Lower : Body : Upper
+          1 :  None :  0.0 :   7.5
+          2 :  None : -1.0 :   7.5
+0.0
+-inf
+7.5
+-2.5
+inf
+-3.0
+7.0
+Model unknown
+
+  Variables:
+    x : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :   1.0 :  None : False : False
+    y : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :  None :   1.0 :  None : False : False
+
+  Objectives:
+    None
+
+  Constraints:
+    c1 : Size=1
+        Key  : Lower : Body : Upper
+        None :  None :  0.0 :   7.5
+    c2 : Size=1
+        Key  : Lower : Body : Upper
+        None :  -2.5 :  0.0 :  None
+    c3 : Size=1
+        Key  : Lower : Body : Upper
+        None :  -3.0 :  0.0 :   7.0

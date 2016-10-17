@@ -1,0 +1,7 @@
+Revisions
+-----------------------------------------------------------------------------
+10/2011 Bjarni Kristjansson
+        Initial creation of examples for cplex, gurobi, pulp, and lpsolve.
+
+03/2011 Bill Hart
+        Misc revisions and creation of example for pyomo.

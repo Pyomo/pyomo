@@ -1,0 +1,87 @@
+2 Var Declarations
+    x_1 : Size=1, Index=None, Domain=NonNegativeReals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :  None :  None : False :  True
+    x_2 : Size=1, Index=None, Domain=NonNegativeReals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :  None :  None : False :  True
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : x_1 + 2*x_2
+
+2 Constraint Declarations
+    con1 : Size=1, Index=None, Active=True
+        Key  : Lower : Body          : Upper : Active
+        None :   1.0 : 3*x_1 + 4*x_2 :  +Inf :   True
+    con2 : Size=1, Index=None, Active=True
+        Key  : Lower : Body          : Upper : Active
+        None :   2.0 : 2*x_1 + 5*x_2 :  +Inf :   True
+
+5 Declarations: x_1 x_2 obj con1 con2
+2 Var Declarations
+    x_1 : Size=1, Index=None, Domain=NonNegativeReals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :  None :  None : False :  True
+    x_2 : Size=1, Index=None, Domain=NonNegativeReals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :  None :  None : False :  True
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : x_1 + 2*x_2
+
+2 Constraint Declarations
+    con1 : Size=1, Index=None, Active=True
+        Key  : Lower : Body          : Upper : Active
+        None :   1.0 : 3*x_1 + 4*x_2 :  +Inf :   True
+    con2 : Size=1, Index=None, Active=True
+        Key  : Lower : Body          : Upper : Active
+        None :   2.0 : 2*x_1 + 5*x_2 :  +Inf :   True
+
+5 Declarations: x_1 x_2 obj con1 con2
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: 0.8
+  Upper bound: 0.8
+  Number of objectives: 1
+  Number of constraints: 3
+  Number of variables: 3
+  Number of nonzeros: 5
+  Sense: minimize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+  Time: 0.00777578353882
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: feasible
+  Message: None
+  Objective:
+    obj:
+      Value: 0.8
+  Variable:
+    x_2:
+      Value: 0.4
+  Constraint: No values

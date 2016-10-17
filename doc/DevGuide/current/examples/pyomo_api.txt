@@ -1,0 +1,21 @@
+=================
+Pyomo Functor API
+=================
+
+---------------------
+pyomo.script Functors
+---------------------
+apply_optimizer:
+    Perform optimization with a concrete instance
+    
+apply_postprocessing:
+    Apply post-processing steps.
+    
+apply_preprocessing:
+    Execute preprocessing files
+    
+create_model:
+    Create instance of Pyomo model.
+    
+finalize:
+    Perform final actions to finish the execution of the pyomo script.

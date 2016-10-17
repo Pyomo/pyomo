@@ -1,0 +1,50 @@
+{
+"python": ["import pyomo.opt"],
+
+"driver": "pyomo.core",
+
+"solvers":
+    {
+    "glpk": {},
+    "cplex": {},
+    "pico": {},
+    "cbc": {},
+    "asl_pico": 
+        {
+        "name": "asl:PICO"
+        },
+    "gurobi": {}
+    },
+
+"problems":
+    {
+    "diet1":
+        {
+        "files": "diet1.py diet1.dat"
+        }
+    },
+
+"suites":
+    {
+    "lp_smoke":
+        {
+        "categories": 
+            ["integration", "nightly", "smoke"],
+        "solvers":
+            {
+            "glpk": {},
+            "cplex": {},
+            "pico": {},
+            "cbc": {},
+            "gurobi": {}
+            },
+        "problems":
+            {
+            "diet1":
+                {
+                "tolerance": "1e-5"
+                }
+            }
+        }
+    }
+}

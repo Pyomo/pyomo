@@ -1,0 +1,59 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: tmpvpHO18
+  Lower bound: 9
+  Upper bound: 9
+  Number of objectives: 1
+  Number of constraints: 9
+  Number of variables: 11
+  Number of nonzeros: 25
+  Sense: maximize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  User time: 0.0
+  Termination condition: optimal
+  Termination message: MIP - Integer optimal solution\x3a Objective = 9.0000000000e+00
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    obj: 
+      Value: 9
+  Variable: 
+    Fx[1]:
+      Value: 6.5
+    Fx[2]:
+      Value: 2.5
+    x[1]:
+      Value: 2.5
+    y[1,1]:
+      Value: 0.5
+    y[1,2]:
+      Value: 0.5
+    x[2]:
+      Value: 1.5
+    y[2,0]:
+      Value: 0.5
+    y[2,1]:
+      Value: 0.5

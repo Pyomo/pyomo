@@ -1,0 +1,6 @@
+# diet.mysql.dat
+
+load "Driver={MySQL};Database=diet;Server=localhost;User=pyomo;" 
+     using=pyodbc
+     query="SELECT FOOD,cost,f_min,f_max FROM Food" 
+     : [FOOD] cost f_min f_max ;

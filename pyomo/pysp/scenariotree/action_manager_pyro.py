@@ -11,10 +11,18 @@ __all__ = ("ScenarioTreeActionManagerPyro",)
 
 import time
 import itertools
+import logging
 from collections import defaultdict
+import base64
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 import pyutilib.pyro
 from pyutilib.pyro import using_pyro3, using_pyro4, TaskProcessingError
+if using_pyro4:
+    import Pyro4
 from pyutilib.pyro import Pyro as _pyro
 from pyutilib.pyro.util import _connection_problem
 from pyomo.opt.parallel.manager import ActionStatus
@@ -22,6 +30,8 @@ from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
 
 import six
 from six import advance_iterator, iteritems, itervalues
+
+logger = logging.getLogger('pyomo.pysp')
 
 #
 # a specialized asynchronous action manager for the SPPyroScenarioTreeServer
@@ -36,6 +46,9 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
         self.server_pool = []
         self._server_name_to_dispatcher_name = {}
         self._dispatcher_name_to_server_names = {}
+        # tells the action manager to ignore task errors
+        # (it will still report them, just take no action)
+        self.ignore_task_errors = False
 
     def close(self):
         """Close the manager."""
@@ -207,7 +220,19 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
         return self._server_name_to_dispatcher_name[queue_name]
 
     def _get_task_data(self, ah, **kwds):
-        return kwds
+        # Doing this serves two purposes:
+        #   (1) It avoids issues with transmitting user-defined
+        #       types over the wire that the dispatcher is not
+        #       aware of (and therefore unable to de-serialize)
+        #   (2) It improves performance on the dispatcher
+        #       because de-serialization (and
+        #       re-serialization) of raw bytes should be
+        #       about as trivial as you can get for any
+        #       serializer that Pyro/Pyro4 happens to be
+        #       configured with (pickle is the fastest,
+        #       but that is not the default in Pyro4 for
+        #       security reasons).
+        return pickle.dumps(kwds)
 
     def _download_results(self):
 
@@ -226,6 +251,23 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                 found_results = True
                 for task in results:
                     self.queued_action_counter -= 1
+
+                    # The only reason we are go through this much
+                    # effort to deal with the serpent serializer
+                    # is because it is the default in Pyro4.
+                    if using_pyro4 and \
+                       (Pyro4.config.SERIALIZER == 'serpent'):
+                        if six.PY3:
+                            assert type(task['result']) is dict
+                            assert task['result']['encoding'] == 'base64'
+                            task['result'] = base64.b64decode(task['result']['data'])
+                        else:
+                            assert type(task['result']) is unicode
+                            task['result'] = str(task['result'])
+                    # ** See note in _get_task_data about why we pickle
+                    #    all communication
+                    task['result'] = pickle.loads(task['result'])
+
                     ah = self.event_handle.get(task['id'], None)
                     if ah is None:
                         # if we are here, this is really bad news!
@@ -236,10 +278,15 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
                     if type(task['result']) is TaskProcessingError:
                         ah.status = ActionStatus.error
                         self.event_handle[ah.id].update(ah)
-                        raise RuntimeError(
-                            "SPPyroScenarioTreeServer reported a processing error "
-                            "for task with id=%s. Reason: \n%s"
-                            % (task['id'], task['result'].args[0]))
+                        msg = ("SPPyroScenarioTreeServer reported a processing "
+                               "error for task with id=%s. Reason: \n%s"
+                               % (task['id'], task['result'].args[0]))
+                        if not self.ignore_task_errors:
+                            raise RuntimeError(msg)
+                        elif self.ignore_task_errors == 1:
+                            logger.warning(msg)
+                        # any value other than 0 or 1 will
+                        # silently ignore task errors
                     else:
                         ah.status = ActionStatus.done
                         self.event_handle[ah.id].update(ah)

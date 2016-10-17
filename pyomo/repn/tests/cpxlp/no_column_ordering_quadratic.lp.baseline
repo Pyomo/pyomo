@@ -1,0 +1,40 @@
+\* Source Pyomo model name=unknown *\
+
+min 
+obj:
++1 a
++1 b
++1 c
++ [
++2 a ^ 2
++2 a * b
++2 a * c
++2 b ^ 2
++2 b * c
++2 c ^ 2
+] / 2
+
+s.t.
+
+c_u_con_:
++1 a
++1 b
++1 c
++ [
++1 a ^ 2
++1 a * b
++1 a * c
++1 b ^ 2
++1 b * c
++1 c ^ 2
+]
+<= 1
+
+c_e_ONE_VAR_CONSTANT: 
+ONE_VAR_CONSTANT = 1.0
+
+bounds
+    -inf <= a <= +inf
+    -inf <= b <= +inf
+    -inf <= c <= +inf
+end

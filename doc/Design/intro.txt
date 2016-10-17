@@ -1,0 +1,6 @@
+== Introduction  ==
+
+This document provides a mechanism for documenting Pyomo design
+conversations.
+
+// vim: set syntax=asciidoc:

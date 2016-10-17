@@ -41,7 +41,7 @@ class _VirtualSet(SimpleSet):
         SimpleSet.__init__(self, *args, **kwds)
         self.virtual=True
         self.concrete=False
-        
+
         global _virtual_sets
         _virtual_sets.append(self)
 
@@ -159,9 +159,13 @@ class RealInterval(RealSet):
 
     def __init__(self, *args, **kwds):
         """Constructor"""
-        if not 'bounds' in kwds:
+        if 'bounds' not in kwds:
             kwds['bounds'] = (None,None)
         kwds['validate'] = _validate_interval(self)
+        # GH: Assigning a name here so that var.pprint() does not
+        #     output _unknown_ in the book examples
+        if 'name' not in kwds:
+            kwds['name'] = "RealInterval"+str(kwds['bounds'])
         RealSet.__init__(self, *args, **kwds)
 
 class IntegerInterval(IntegerSet):
@@ -169,9 +173,13 @@ class IntegerInterval(IntegerSet):
 
     def __init__(self, *args, **kwds):
         """Constructor"""
-        if not 'bounds' in kwds:
+        if 'bounds' not in kwds:
             kwds['bounds'] = (None,None)
         kwds['validate'] = _validate_interval(self)
+        # GH: Assigning a name here so that var.pprint() does not
+        #     output _unknown_ in the book examples
+        if 'name' not in kwds:
+            kwds['name'] = "IntegerInterval"+str(kwds['bounds'])
         IntegerSet.__init__(self, *args, **kwds)
 
 #

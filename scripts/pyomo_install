@@ -202,6 +202,8 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
                 pyvenv = fname+'.exe'
                 break
 
+    if options.verbose:
+        print("\n************* pyvenv: %s *******************" % str(pyvenv))
     if pyvenv is None:
         #
         # Install the virtual environment with virtualenv
@@ -268,7 +270,7 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         call_subprocess([
                 os.path.join( os.path.abspath(options.venv),
                               'bin', python_executable ),
-                '-m', 'ensurepip'], options)
+                '-m', 'ensurepip', '--default-pip'], options)
         #
         # Find the pip that is installed with the virtual environment
         #
@@ -276,6 +278,14 @@ def install_virtualenv(options, srcdir=None, pip=None, pip_src=None):
         if 'PYTHONPATH' in os.environ:
             del os.environ['PYTHONPATH']
     python_dir = os.path.abspath(options.venv)
+    #
+    # Install Conda
+    #
+    if not options.venvonly:
+        if options.verbose:
+            print("\n************* Installing Conda in %s *******************" % options.venv)
+        call_subprocess([pip, 'install', 'auxlib'], options)
+        call_subprocess([pip, 'install', 'conda'], options)
     #
     return pip, python_dir
 
@@ -360,7 +370,7 @@ def install_from_trunk_jython(pip, python_dir, options):
     #
     # Checkout and install Pyomo
     #
-    cmd = [ 'svn', 'checkout', '-q', 'https://software.sandia.gov/svn/public/pyomo/pyomo/trunk', 'pyomo' ]
+    cmd = [ 'git', 'clone', '-q', 'https://github.com/Pyomo/pyomo.git']
     call_subprocess(cmd, options, cwd=srcDir)
     call_subprocess([python, 'setup.py','develop'], options, cwd=os.path.join(srcDir,'pyomo'))
 
@@ -449,7 +459,7 @@ def install_from_pypi(pip, python_dir, options):
     baseCmd.extend(options.pip_options)
     if options.user:
         baseCmd.append('--user')
-    call_subprocess(baseCmd + ['--upgrade', 'Pyomo'], options)
+    call_subprocess(baseCmd + ['--use-wheel', '--upgrade', 'Pyomo'], options)
     if options.verbose:
         print("... done.")
     #

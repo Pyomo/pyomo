@@ -533,7 +533,7 @@ class _PHBoundBase(object):
 
         print("")
         best_inner_bound = None
-        if len(self._outer_bound_history) > 0:
+        if len(self._inner_bound_history) > 0: # dlw May 2016
             if self._is_minimizing:
                 best_inner_bound = min(self._inner_bound_history.values())
             else:

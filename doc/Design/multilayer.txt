@@ -1,0 +1,576 @@
+== Rethinking Pyomo Components ==
+
+=== Using Explicit Component Data Objects ===
+
+*WEH*:: Although Gabe has proposed the use of __setitem__ to
+        initialize indexed components, I do not think that we should
+        make that a part of the generic API for all indexed
+        components.  It requires that the `initial value` of the
+        component can be specified with a single data value.  The
+        +add()+ method allows for the specification of an arbitrary
+        number of data values used to initialize a component.
+
+* *GH*:: It does not necessarily require an `initial value`, it could
+         be an explicitly constructed object (e.g., x[i] =
+         VarData(Reals)). The use of __setitem__ is a stylistic
+         preference (that I think is intuitive for an interface that
+         already supports half of the dictionary methods).  I'm
+         proposing some kind of assignment to an explicitly created
+         object be allowed, and then I'm proposing a discussion about
+         whether or not the implicit forms should be considered. We
+         already use the implicit forms for rule based definitions of
+         Objective, Constraint, and Expression, so it shouldn't be a
+         stretch to go between the list below. Once these connections
+         are obvious, __setitem__ becomes a natural setting for
+         explicit assignment.
+
+         1. return model.x >= 1 -> return ConstraintData(model.x >= 1)
+
+         2. model.c[i] = model.x >= 1 -> model.c[i] = ConstraintData(model.x >= 1)
+
+         3. model.c.add(i, model.x >= 1) -> model.c.add(i, ConstraintData(model.x >= 1))
+
+=== Concrete vs Abstract ===
+
+*WEH*:: The implicit definition of component data in these two
+        instances is problematic.  For example, simply iterating over
+        the index set and printing mutable parameter or variable values
+        will create component data objects for all indices.  However,
+        no obvious, intuitive syntax exists for constructing component
+        data for new indices.  The +add()+ method can be used, but this
+        seems burdensome for users.  (I looked at other programming
+        languages, like MOSEL, and they also employ implicit
+        initialization of variables.)
+
+* *GH*:: I agree that these behaviors are problematic.  However, there
+         does exist an intuitive way of expressing this kind of
+         behavior. One should simply replace +Var(index)+ with
+         +defaultdict(lambda: VarData(Reals))+ (ignoring the index
+         checking), and it immediately makes sense, at least, to
+         someone who knows Python, rather than to only the core Pyomo
+         developers who've yet to finish changing how it works. If you
+         were to measure the `amount of burden` placed on a user by
+         (a) requiring them to populate a dictionary (using any of the
+         dict interface methods) or (b) forcing them to spend N+ hours
+         debugging, frustrated by this implicit behavior, I would say
+         that (b) is the more burdensome of the two. I've been there,
+         but in my situation I can immediately jump into the source
+         code and figure out if I am crazy or if something needs to be
+         fixed. Most users can not do that.
+
+*GH*:: To summarize, I am *NOT* saying force everyone to use concrete
+       modeling components. I am saying give them the option of using
+       these more explicit components that don't suffer from the
+       implicit behaviors we are discussing so that they can get on
+       with finishing their work, while we and they figure out how the
+       abstract interface works. A Pyomo modeler is trying to do two
+       things (1) figure out how to use Pyomo and (2) figure out how
+       to model their problem as a mathematical program. I think
+       intuitive component containers like Dict, List, and a Singleton
+       along with a more explicit syntax for creating and storing
+       optimization objects will allow them to spend less time on (1)
+       and more time on (2).
+
+*WEH*:: FWIW, I think it's a mistake to assume that users start developing
+    with concrete models and then move to abstract models.  There are plenty
+    of contexts where this isn't true.  (For example, PySP.)
+
+* *GH*:: (a) PySP does not require abstract models. (b) One would not
+         start with a PySP model. One would start with a deterministic
+         Pyomo model.
+
+=== Concrete Component Containers  ===
+
+*WEH*:: Gabe has suggested that we have dictionary and list containers
+        that are used for concrete models.  I don't think we want to do
+        that, but I wanted to reserve some space for him to make his
+        case for that.
+
+==== Motivating Examples ====
+
+===== EXAMPLE: Index Sets are Unnecessarily Restrictive =====
+
+Consider a simple multi-commodity flow model:
+[source,python]
+----
+from pyomo.environ import *
+
+model = ConcreteModel()
+
+# Sets
+model.Nodes = [1,2,3]
+model.Edges = [(1,2), (2,1), (1,3), (3,1)]
+model.Commodities = [(1,2), (3,2)]
+
+# Variables
+model.Flow = Var(model.Commodities,
+                 model.Edges,
+                 within=NonNegativeReals)
+----
+There are a number of ways to interpret this syntax. Focusing on
+how to access a particular index, one faces the following choices:
+
+- Flow[c,e] for a commodity c and an edge e
+
+- Flow[(s,t),(u,v)] for a commodity (s,t) and an edge (u,v)
+
+- Flow[s,t,u,v] for a commodity (s,t) and an edge (u,v)
+
+A modeler that is fluent in Python knows that the first two bullets
+are equivalent from the viewpoint of the Python interpretor, and they
+know that the third bullet is _not_ interpreted the same as the first
+two. The modeler runs a quick test to determine which of the
+interpretations is correct:
+[source,python]
+----
+for c in model.Commodities:
+    (s,t) = c
+    for e in model.Edges:
+        (u,v) = e
+        print(model.Flow[c,e])
+        print(model.Flow[(s,t),(u,v)])
+        print(model.Flow[s,t,u,v])
+----
+To her surprise, all forms seem to work. She panics, and then double
+checks that she hasn't been wrong about how the built-in _dict_ type
+works. She relaxes a bit after verifying that _dict_ does not treat
+bullet 3 the same as the first two. Gratified in her knowledge that
+she actually _wasn't_ misunderstanding how basic Python data
+structures work, she moves forward on building her Pyomo model, but
+with a sense of perplexion about Pyomo variables. She decides to stick
+with the first and second bullet forms where possible, as it is much
+easier for her and her colleagues to read, and it works with Python
+dictionaries, which they are using to store data during this initial
+prototype.
+
+*WEH*:: FWIW, I have yet to hear a user panic (or otherwise raise
+        concerns) about the apparent inconsistency described here.
+        The +Flow+ object is not a dictionary, nor was it advertised
+        as such.
+* *GH*:: I guess I am her ;) a few years ago. I don't think I am alone
+         in that when I encounter something I don't expect, I question
+         what I know, which for programming may lead some to question
+         whether or not they have written broken code because of it.
+** *WEH*:: I see a consistent thread of your comments where you were
+        treating components as dictionaries, but they weren't, which you
+        found frustrating.  I'm wondering how much of your frustration
+        would be addressed by better documentation.
+
+The modeler makes her first attempt at a flow balance constraint:
+[source,python]
+----
+def FlowBalanceConstraint_rule(model, c, u):
+    out_flow = sum(model.Flow[c,e] for e in model.EdgesOutOfNode[u])
+    in_flow = sum(model.Flow[c,e] for e in model.EdgesInToNode[u])
+    ...
+    return ...
+model.FlowBalanceConstraint = Constraint(model.Commodities,
+                                         model.Nodes,
+                                         rule=FlowBalanceConstraint_rule)
+----
+To her dismay she gets the following error:
+[source,python]
+----
+TypeError: FlowBalanceConstraint_rule() takes exactly 3 arguments (4 given)
+----
+
+NOTE: The modeler's constraint rule would have worked had she
+      wrapped her set declarations in SetOf(), or had she
+      used something like collections.namedtuple as elements of the set
+      rather than a pure tuple.
+
+*GH*:: We all know what the solution to this example is. However, once
+       we flatten c to s,t in the function arguments, the rule
+       definition for this model is no longer generic. If the
+       dimension of elements in Commodities changes, so does the rule.
+       The workarounds in the note above were not apparent to me until
+       I created these examples. Do we consider them a bug or a
+       feature?  Whatever the case may be, for any user who might
+       stumble across these workarounds, it will be far from intuitive
+       why these approaches allow one to write +def
+       FlowBalanceConstraint_rule(model, c, u)+. I would be surprised
+       if any other developers knew of these workarounds as well.
+
+.Morals
+********************************************************************
+- Abstract modeling that involves flattening tuples
+  is not abstract (or generic).
+- Supporting Flow[c,e] should not be the expensive hack that it is.
+********************************************************************
+
+*WEH*:: I do not follow the conclusion that we need new modeling
+        components.  Rather, I think this motivates a reconsideration
+        of the use of argument flattening.
+
+.Motivates
+********************************************************************
+- +VarDict+: Because I shouldn't have to go through some confusing
+             tuple flattening nonsense in order to organize a
+             collection of optimization variables into a container. It
+             should be up to me whether +Flow+ should be indexed as
+             +Flow[i,j,k,l,p,s,t,o]+ or +Flow[k1, p, k2]+, and I
+             shouldn't pay an order of magnitude penalty for the more
+             concise syntax.
+- More intuitive containers for optimization modeling objects that
+  provide more flexibility over how I organize these objects, allowing
+  me to write self-documenting code. E.g., Dict (at a minimum) and
+  List objects for most, if not all, of the component types, including
+  +Block+. The important pieces are the (currently named) XData
+  objects, and we should be making less of a fuss about how users
+  organize these. There could be *extremely trivial* and *stable*
+  implementations of Singleton, Dict, and List containers that anyone
+  familiar with Python would easily understand how to use after
+  reading 20 lines of example code.  Example Documentation:
+[source,python]
+----
+model.x = VarSingleton(Reals, bounds=(0,1))
+# Behaves like dict
+model.X = VarDict()
+for i in range(5,10):
+   # using explicit instantiation
+   model.X[i] = VarData(Binary, bounds=(0,1))
+   # or
+   # using implicit instantiation
+   model.X[i] = Binary
+   model.X[i].setlb(0)
+   model.X[i].setub(1)
+
+model.c = ConstraintSingleton(model.x >= 0.5)
+# Behaves like list
+model.C = ConstraintList()
+for i in model.X:
+   # using explicit instantiation
+   model.C.append(ConstraintData(model.X[i] >= 1.0/i))
+   # or
+   # using implicit instantiation
+   model.C.append(model.X[i] >= 1.0/i)
+----
+********************************************************************
+
+===== EXAMPLE: Jagged Index Sets Are Not Intuitive =====
+
+It is not intuitive why something like this:
+[source,python]
+-----
+model.A = [1,2]
+model.B = {1: ['a','b'], 2: ['c','d']}
+
+model.C = ConstraintDict()
+for i in model.A:
+    for j in model.B[i]:
+        model.C[i,j] = ...
+        # or
+        model.C[i,j] = ConstraintData(...)
+-----
+
+*WEH*:: This example could be written without +ConstraintDict+, so
+        this isn't a motivating example for +ConstraintDict+ (as is
+        suggested below).
+
+needs to be written as:
+[source,python]
+----
+model.A = [1,2]
+model.B = {1: ['a','b'], 2: ['c','d']}
+
+def C_index_rule(model):
+   d = []
+   for i in model.A:
+       for j in model.B[i]:
+           d.append(i,j)
+   return d
+model.C_index = Set(dimen=2, initialize=C_index_rule)
+def C_rule(model, i, j):
+    return ...
+model.C = Constraint(model.C_index, rule=C_rule):
+----
+Note that the use of __setitem__[] is not the critical take home point
+from this example. +Constraint+ does have an +add()+ method, and this
+could be used to fill the constraint in a for loop. It is the
+construction of the intermediate set that should not be necessary.
+
+*WEH*:: The word 'needs' is too strong here.  The first example is for
+        a concrete model, and the second is for an abstract model.  You seem
+        be complaining that it's harder to write an abstract model.  To
+        which I respond "so what?"
+
+* *GH*:: Agreed. I approach that next. Showing the above motivates the
+         idea that even if you want to use abstract modeling, getting
+         an initial prototype working can be done in a much more
+         concise manner using a concrete approach. That is, concrete
+         modeling can be useful even to people who like abstract
+         modeling. However, the current containers are implemented in
+         such a way as to make straightforward concrete modeling
+         behaviors (such as what is shown below) susceptible to very
+         unintuitive traps brought about by implicit behaviors
+         designed to handle edge cases in the abstract setting.
+
+A more concrete approach using the +Constraint+ component might be to
+try:
+[source,python]
+----
+model.A = [1,2]
+model.B = {1: ['a','b'], 2: ['c','d']}
+model.C_index = [(i,j) for i in model.A for j in model.B[i]]
+model.C = Constraint(model.C_index)
+RuntimeError: Cannot add component 'C_index' (type <class 'pyomo.core.base.sets\
+             .SimpleSet'>) to block 'unknown': a component by that name (type <type 'list'>)\
+             is already defined.
+----
+If you are lucky, you get a response from the Pyomo forum the same day
+for this black-hole of an error, and realize you need to do the
+following (or just never do something as stupid as naming the index for
+a component '<component-name>_index'):
+[source,python]
+----
+model.A = [1,2]
+model.B = {1: ['a','b'], 2: ['c','d']}
+model.C_index = Set(initialize=[(i,j) for i in model.A for j in model.B[i]])
+model.C = Constraint(model.C_index)
+for i,j in model.C_index:
+   model.C.add((i,j), ...)
+----
+Perhaps by accident, you later realize that you can call +add()+ with
+indices that are not in +C_index+ (without error), leaving you
+wondering why you defined +C_index+ in the first place.
+
+.Morals
+********************************************************************
+- Defining an explicit index list just to fill something over that
+  index is not intuitive and it takes the fun out of being in Python.
+- The connection between `components` and their `index set` is weaker
+  than most developers think. There's not much point in requiring
+  there even be a connection outside the narrow context of rule-based
+  abstract modeling.
+- Implicit creation of index sets that occurs for Constraint and other
+  indexed components is not intuitive and leads to errors that are
+  impossible to understand.  Users have enough to think about when
+  formulating their model. They should be able to script these things
+  in a concrete setting for initial toy prototypes without having to
+  deal with errors that arise from the implicit behaviors related to Set
+  objects (including tuple flattening).
+********************************************************************
+
+*WEH*:: If the complaint is that our temporary sets get exposed to
+        users and cause errors, I agree.
+
+*WEH*:: If the complain is that our users might not want to use
+        simpler concrete modeling constructs, then I disagree.  I
+        don't think we should move to only support concrete models in
+        Pyomo.
+
+* *GH*:: I am not suggesting we only support concrete modeling in
+         Pyomo.  I am suggesting we allow concrete modeling to be done
+         separated from these issues. I don't think this separation
+         can occur without backward incompatible changes to the
+         interface. It is also not clear whether these issues will ever
+         be fully resolved with incremental changes to the current set
+         of component containers. I think the containers I am
+         prototyping and pushing for accomplish two things: (1)
+         provide users with a stable API that is, IMHO, intuitive for
+         many to understand, requires much less code, requires much
+         less documentation, and would not need to change, and (2)
+         provide a stable building block on which the abstract
+         interface can be improved over a realistic time scale.
+
+.Motivates
+********************************************************************
+- +ConstraintDict+: Because I'm just mapping a set of hashable indices
+                    to constraint objects. A MutableMapping (e.g., +dict+)
+                    is a well defined interface for doing this in Python.
+                    Why force users to learn a different interface,
+                    especially one that doesn't even exist yet (because
+                    we not can agree on what it should look like)?
+********************************************************************
+
+*WEH*:: No, I don't think this motivates the use of +ConstraintDict+.
+        I can use the +Constraint+ object in the example above.  If
+        we're concerned that we have an explicit +Set+ object in the
+        model, then let's fix that.
+
+*WEH*:: What different interface?  What interface doesn't exist?  Why
+        are you forcing me to learn the +MutableMapping+ Python
+        object? (I hadn't heard of this object before today, so I
+        don't think you can argue that this will be familiar to Python
+        users.)
+
+* *GH*:: The Constraint interface. Is there a concise way to describe
+         the Constraint interface that is well understood and
+         documented. The best I can come up with is "A singleton,
+         _dict_-like hybrid that supports a subset of the
+         functionality of _dict_ (no __setitem__), as well as a method
+         commonly associated with the built-in _set_ type (add), along
+         with various Pyomo related methods." The idea of redesigning
+         it (the non-singleton case) as a MutableMapping (whether or
+         not you have heard of that:
+         https://docs.python.org/3/library/collections.abc.html), is
+         that the set of methods it carries related to storing objects
+         is very well documented and can be succinctly described as
+         "behaving like _dict_".
+
+===== EXAMPLE: Annotating Models =====
+
+Model annotations are naturally expressed using a Suffix. Consider
+some meta-algorithm scripted with Pyomo that requests that you
+annotate constraints in your model with the type of convex relaxation
+technique to be employed. E.g., 
+[source,python]
+----
+model.convexify = Suffix()
+model.c1 = Constraint(expr=model.x**2 >= model.y)
+model.convexify[model.c1] = 'technique_a'
+----
+When you apply this approach to a real model, you are likely to
+encounter cases like the following:
+[source,python]
+----
+def c_rule(model, i, j, k, l):
+   if (i,j) >= l:
+       if k <= i:
+           return ...
+       else:
+           return ...
+   else:
+       if i+j-1 == l:
+           return ...
+       else:
+           return Constraint.Skip
+model.c = Constraint(model.index, rule=c_rule)
+----
+How does one annotate this model when only certain indices of constraint
++c+ are nonlinear? You copy and paste:
+[source,python]
+----
+def c_annotate_rule(model, i, j, k, l):
+   if (i,j) >= l:
+       if k <= i:
+           model.confexify[model.c[i,j,k,l]] = 'technique_a'
+       else:
+           pass
+   else:
+       if i+j-1 == l:
+           pass
+       else:
+           pass
+model.c_annotate = BuildAction(model.index, rule=c_annotate_rule)
+----
+It is a bug waiting to happen. It is an unfortunate result of the
+Abstract modeling framework that there is not a better way to write
+this. However, it can be written using a single for loop if doing
+Concrete modeling (or using a BuildAction) AND using a Constraint
+container that allows it (e.g., ConstraintDict using __setitem__[] or
+Constraint using +add()+. Example:
+[source,python]
+----
+model.c = ConstraintDict()
+for i,j,k,l in model.index:
+   if (i,j) >= l:
+       if k <= i:
+           model.c[i,j,k,l] = ...
+           model.confexify[model.c[i,j,k,l]] = 'technique_a'
+       else:
+           model.c[i,j,k,l] = ...
+   else:
+       if i+j-1 == l:
+           model.c[i,j,k,l] = ...
+----
+
+.Motivates
+********************************************************************
+- Explicit rather than Implicit: Because why do I need to create a set
+  and have something implicitly defined for me, when I can explicitly
+  define the thing inside a for loop and place related logic next to
+  each other (rather than in a copy-pasted identical for
+  loop). Perhaps this is necessary in the narrow scope of rule-based
+  abstract modeling, but it should not be necessary in the context of
+  concrete modeling.
+********************************************************************
+
+*WEH*:: You are implying that the concrete examples above cannot be
+        supported by Pyomo today.  I don't believe that's true.  Can
+        you confirm?
+
+* *GH*:: I can confirm that Pyomo *DOES* support this today (just use
+         Constraint.add()). But as the example prior to this one
+         points out, using Constraint in a concrete setting is
+         awkward, due to the implicit behaviors of Set as well as the
+         idea that a Constraint without an index is a singleton, but a
+         Constraint with an index can be populated with any number of
+         keys not in that index using Constraint.add() (so why do we
+         force a connection during declaration?). It is very intuitive
+         that when I say something is a _dict_, it means I'm going to
+         populate it with keys mapping to some set of objects. There
+         should not be a need to declare an index for this _dict_
+         prior to populating it.
+
+*WEH*:: This does seem to illustrate a limitation of abstract models.
+        But how does this change our design of Pyomo?
+
+* *GH*:: The take home from these examples is that concrete modeling
+         in Pyomo is being made unnecessarily awkward by trying to
+         cram both abstract and concrete behavior into a single
+         component that behaves both as a singleton and _dict_-like
+         object. Concrete modeling should be made easier and more
+         intuitive, since this is *THE* place to start for testing or
+         debugging a model. Picture firing up the python interactive
+         interpreter and typing the five lines necessary to figure out
+         the behavior for component A in some context, I'm not going
+         to create a separate file data to do this (unless the problem
+         has to do with importing data). I can't necessarily know if
+         the problem has to do with importing data unless I verify
+         that I understand the intended behavior with concrete
+         components.
+
+==== Extending to Other Components ====
+
+As of r10847, Pyomo trunk includes a Dict prototype for 
+Expression, Objective, and Constraint. Extending this functionality to
+Block and Var would not be a difficult undertaking. This would
+necessarily include:
+
+1. Deciding on a pure abstract interface for BlockData and VarData.
+2. Implementing a general purpose version of this interface.
+3. A developer discussion about implicit vs. explicit creation of
+   XData components. E.g., VarDict[i,j] = Reals vs. VarDict[i,j] =
+   VarData(Reals), and whether or not we support the implicit form
+   never, or only for some components.  For instance BlockData(),
+   shouldn't require any arguments (that I can think of), so
+   supporting implicit creation during an explicit assignment is a bit
+   goofy (e.g., BlockDict[i,j] = None?).
+
+*WEH*:: I think we need to discuss the pure abstract interface that
+        you refer to.  Although I've seen the commits you made
+        recently, I don't understand why they are required.
+
+==== A List Container ====
+
+I'm less attached to this idea. But if you support XDict, it's hard to
+think of any reason why *NOT* to provide XList.
+
+*WEH*:: I don't think we need VarDict because we already have Var, and
+        I don't think we need VarList because we already have VarList.  I'm
+        not seeing what a different component layer adds to Pyomo.
+
+*GH*:: The list of inconsistencies and awkward behaviors that have
+       been discussed throughout the document above is far from
+       complete. Drawing on my experiences as a developer that has
+       tried to make Pyomo core more intuitive in the concrete
+       setting, the only conclusion I can draw at this point is that
+       we need a cleaner separation of the concrete and abstract
+       interfaces. I know we all want to make Pyomo better, but we
+       have different ideas about these core components, and I have no
+       doubt that Pyomo core will continue to go back and forth with
+       these issues as long as an abstract and concrete interface try
+       to live in the same component container. IMHO, I think
+       designing a Concrete-only interface that we all agree upon will
+       be a trivial exercise. Additionally, I think rebuilding ALL of
+       the current abstract functionality on top of these concrete
+       building blocks is another trivial exercise (we can even
+       include the current inconsistencies). We can provide the stable
+       concrete interface now, and work on improvements and fixes to
+       the abstract interface that would necessarily take place over a
+       longer time period because of backward incompatibility concerns
+       as well as developer disagreement over what the _correct_
+       behavior is.
+
+// vim: set syntax=asciidoc:

@@ -429,7 +429,7 @@ class Var(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Var:
             return super(Var, cls).__new__(cls)
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleVar.__new__(SimpleVar)
         else:
             return IndexedVar.__new__(IndexedVar)
@@ -529,7 +529,7 @@ class Var(IndexedComponent):
                 vardata = self.add(ndx)
             else:
                 msg = "Cannot set the value of a simple variable '%s' with index '%s'"
-                raise KeyError(msg % ( self.cname(True), str(ndx) ))
+                raise KeyError(msg % (self.name, str(ndx)))
         #
         # Set the value
         #
@@ -540,7 +540,7 @@ class Var(IndexedComponent):
 
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             try:
-                name = str(self.cname(True))
+                name = str(self.name)
             except:
                 # Some Var components don't have a name yet, so just use the type
                 name = type(self)
@@ -697,18 +697,17 @@ class Var(IndexedComponent):
         return ( [("Size", len(self)),
                   ("Index", self._index \
                        if self._index != UnindexedComponent_set else None),
-                  ("Domain", None if self._domain_init_value is None else self._domain_init_value.name),
                   ],
                  iteritems(self._data),
-                 ( "Lower","Value","Upper","Fixed","Stale" ),
+                 ( "Lower","Value","Upper","Fixed","Stale","Domain"),
                  lambda k, v: [ value(v.lb),
                                 v.value,
                                 value(v.ub),
                                 v.fixed,
                                 v.stale,
+                                v.domain
                                 ]
                  )
-
 
 class SimpleVar(_GeneralVarData, Var):
     """"A single variable."""
@@ -745,7 +744,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Accessing the value of variable '%s' "
             "before the Var has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name))
     @value.setter
     def value(self, val):
         """Set the value for this variable."""
@@ -755,7 +754,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Setting the value of variable '%s' "
             "before the Var has been constructed (there "
             "is currently nothing to set."
-            % (self.cname(True)))
+            % (self.name))
 
     @property
     def domain(self):
@@ -769,7 +768,7 @@ class SimpleVar(_GeneralVarData, Var):
         #    "Accessing the domain of variable '%s' "
         #    "before the Var has been constructed (there "
         #    "is currently no domain to return)."
-        #    % (self.cname(True)))
+        #    % (self.name))
     @domain.setter
     def domain(self, domain):
         """Set the domain for this variable."""
@@ -779,7 +778,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Setting the domain of variable '%s' "
             "before the Var has been constructed (there "
             "is currently nothing to set."
-            % (self.cname(True)))
+            % (self.name))
 
     @property
     def lb(self):
@@ -790,7 +789,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Accessing the lower bound of variable '%s' "
             "before the Var has been constructed (there "
             "is currently nothing to return)."
-            % (self.cname(True)))
+            % (self.name))
     @lb.setter
     def lb(self, lb):
         raise AttributeError("Assignment not allowed. Use the setlb method")
@@ -804,7 +803,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Accessing the upper bound of variable '%s' "
             "before the Var has been constructed (there "
             "is currently nothing to return)."
-            % (self.cname(True)))
+            % (self.name))
     @ub.setter
     def ub(self, ub):
         raise AttributeError("Assignment not allowed. Use the setub method")
@@ -820,7 +819,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Setting the lower bound of variable '%s' "
             "before the Var has been constructed (there "
             "is currently nothing to set)."
-            % (self.cname(True)))
+            % (self.name))
 
     def setub(self, val):
         """
@@ -833,7 +832,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Setting the upper bound of variable '%s' "
             "before the Var has been constructed (there "
             "is currently nothing to set)."
-            % (self.cname(True)))
+            % (self.name))
 
     def fix(self, *val):
         """
@@ -846,7 +845,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Fixing variable '%s' "
             "before the Var has been constructed (there "
             "is currently nothing to set)."
-            % (self.cname(True)))
+            % (self.name))
 
     def unfix(self):
         """Sets the fixed indicator to False."""
@@ -856,7 +855,7 @@ class SimpleVar(_GeneralVarData, Var):
             "Freeing variable '%s' "
             "before the Var has been constructed (there "
             "is currently nothing to set)."
-            % (self.cname(True)))
+            % (self.name))
 
     free=unfix
 
@@ -912,7 +911,7 @@ class VarList(IndexedVar):
     def construct(self, data=None):
         """Construct this component."""
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Constructing variable list %s",self.cname(True))
+            logger.debug("Constructing variable list %s", self.name)
         IndexedVar.construct(self, data)
 
     def add(self):

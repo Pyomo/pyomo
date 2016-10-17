@@ -1,0 +1,6 @@
+# File diet.sqlite.dat
+
+load "diet.sqlite" 
+     using=sqlite3 
+     query="SELECT FOOD,cost,f_min,f_max FROM Food" 
+     : FOOD=[FOOD] cost f_min f_max ;

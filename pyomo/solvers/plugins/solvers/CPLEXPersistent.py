@@ -189,7 +189,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                     raise ValueError(
                         "Multiple active objectives found on Pyomo instance '%s'. "
                         "Solver '%s' will only handle a single active objective" \
-                        % (pyomo_instance.cname(True), self.type))
+                        % (pyomo_instance.name, self.type))
 
                 if obj_data.is_minimizing():
                     cplex_instance.objective.set_sense(
@@ -261,7 +261,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                             raise ValueError(
                                 "CPLEXPersistent plugin does not support general nonlinear "
                                 "objective expressions (only linear or quadratic).\n"
-                                "Objective: %s" % (obj_data.cname(True)))
+                                "Objective: %s" % (obj_data.name))
 
     #
     # method to populate the CPLEX problem instance (interface) from
@@ -453,7 +453,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                         raise ValueError(
                             "CPLEXPersistent plugin does not support general nonlinear "
                             "constraint expression (only linear or quadratic).\n"
-                            "Constraint: %s" % (con.cname(True)))
+                            "Constraint: %s" % (con.name))
                     expr, offset = self._encode_constraint_body_linear(con_repn,
                                                                        labeler)
 

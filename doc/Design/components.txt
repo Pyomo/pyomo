@@ -1,0 +1,238 @@
+== Component Indexing and API ==
+
+The following describes a component API design for Pyomo.  The goal
+is to document design principles, and provide room for discussion
+of these principles in this document.  This discussion focuses on
+6 core components in Pyomo: +Set+, +Var+, +Param+, +Objective+,
++Constraint+ and +Expression+.  We refer to the first three as
+`data` components, and the latter three as `standard` components.
+As we discuss below, data components are initialized and constructed
+differently than standard components.  Further, standard components 
+reflect the behavior of all other components in Pyomo.
+
+Let's restrict this discussion with the following assumptions:
+
+* We only consider the refinement of the existing Pyomo components.
+
+* We do not include explicit component data objects.
+
+
+=== Simple Components ===
+
+A simple component is declared by constructing a component without
+index.  Simple components are typically defined with initial values.
+For example:
+[source,python]
+----
+# A simple constraint is initialized with the `expr` option
+model.c = Constraint(expr=model.x >= 0)
+
+# A simple objective is initialized with the `expr` option
+model.o = Objective(expr=model.x)
+
+# A simple expression is initialized with the `expr` option
+model.e = Expression(expr=model.x)
+----
+Standard components cannot be defined without initial values:
+[source,python]
+----
+# These declarations raise exceptions
+model.c = Constraint()
+model.o = Objective()
+model.e = Expression()
+----
+
+*GH*:: *Exactly 0 of these declarations raise an exception on a
+       ConcreteModel as of Pyomo trunk r10847. I can't imagine they
+       would behave differently on an AbstractModel either.*
+
+* *WEH*:: Correct. But this is a design document. I think that they
+          should generate exceptions.
+
+The +Set+, +Param+ and +Var+ components can be constructed without initial values:
+[source,python]
+----
+# These declarations define components without initial values
+model.A = Set()
+model.p = Param()
+model.v = Var()
+
+# These declarations define components with initial values
+model.B = Set(initialize=[1])
+model.q = Param(initialize=1.0)
+model.w = Var(initialize=1.0)
+----
+The reason for this difference is that these are data components, which define
+placeholders for data that will be provided later.  Set and parameter
+data can be declared abstractly, and the values of variables is
+defined during optimization.  Hence, these components do not require
+initial values to specify a model.
+
+For consistency, all Pyomo components support the +len()+ function.
+By construction, all simple components have length one.
+
+*GH*:: *All simple components do _NOT_ have length one. See below:*
+
+[source,python]
+----
+model = ConcreteModel()
+model.c = Constraint()              # len() -> 0
+model.o = Objective()               # len() -> 0
+model.e = Expression()              # len() -> 1
+model.v = Var()                     # len() -> 1
+model.s2 = Set(initialize=[1,2])    # len() -> 2
+model.s1 = Set(initialize=[1])      # len() -> 1
+model.s0 = Set(initialize=[])       # len() -> 0
+model.q = Param()                   # len() -> 1
+----
+
+*GH*:: This is far from consistent. Perhaps more intuitive would be for
+       `simple` components to simply not have a `length` (because it
+       should be implied that it is a single element). The only
+       `simple` component that should have a `length` is a Set object.
+
+* *WEH*:: I like your suggestion of only supporting +len()+ for simple
+          +Set+ components.  I'll have think through whether this will
+          create significant backards compatibility issues.
+
+=== Indexed Components ===
+
+An indexed component is declared by constructing a component with
+one or more index sets.  Indexed components do not need to be defined
+with initial values.  For example:
+[source,python]
+----
+index = [1,2,3]
+
+# Declare a component that can contain 3 sets
+model.A = Set(index)
+
+# Declare a component that can contain 3 parameters
+model.p = Param(index)
+
+# Declare a component that can contain 3 variables
+model.v = Var(index)
+
+# Declare a component that can contain 3 constraints
+model.c = Constraint(index)
+
+# Declare a component that can contain 3 objectives
+model.o = Objective(index)
+
+# Declare a component that can contain 3 expressions
+model.e = Expression(index)
+----
+When no initial values are provided, and indexed component does not
+construct any indexed component data.  Hence, the lengths of the
+components in this example are zero.
+
+There are several standard techniques for initializing indexed
+components: (1) a rule, (2) explicit addition, and (3) data
+initialization. The first two options are always supported for
+standard components.  Data components support the last option.  For
+example:
+[source,python]
+----
+index = [1,2,3]
+
+model.x = Var(index)
+
+# Initialize with a rule
+def c_rule(model, i):
+    if i == 2:
+        return Constraint.Skip
+    return model.x[i] >= 0
+model.c = Constraint(index, rule=c_rule)
+
+# Explicitly initialize with the add() method.
+model.cc = Constraint(index)
+model.cc.add(1, model.x[1] >= 0)
+model.cc.add(3, model.x[3] >= 0)
+----
+This example further illustrates that indexed components can contain
+component data for a subset of the index set.  In this example, the
++c+ and +cc+ components have length 2, but the size of the index
+set is 3.
+
+*WEH*:: Although Gabe has proposed the use of __setitem__ to
+	initialize indexed components, I do not think that we should
+	make that a part of the generic API for all indexed components.
+	It requires that the `initial value` of the component can
+	be specified with (1) a single data value or (2) a component
+	data object.  We're not allowing (2) in this discussion,
+	and the +add()+ method allows for the specification of an
+	arbitrary number of data values used to initialize a
+	component.
+
+*WEH*:: The +BuildAction+ and +BuildCheck+ components do not currently
+        support the +add()+ method.  Hence, the `always` assertion in
+        the previous paragraph is not true.  Does it make sense to
+        `add` a build action or check?
+
+Data components, along with a variety of other components, support
+initialization with data.  For example:
+[source,python]
+----
+index = [1,2,3]
+
+model.A = Set(index, initialize={1:[2,4,6]}
+model.p = Param(index, initialize={1:1})
+model.v = Var(index, initialize={1:1.0})
+
+model.c = Constraint(index, initialize={1: model.v[1] >= 0})
+----
+The initialization data specifies the index values that are used
+to construct the component.  Thus, all of the components have length
+one in this example.
+
+The +Param+ and +Var+ can also be declared with special arguments
+to create dense configurations:
+[source,python]
+----
+index = [1,2,3]
+
+# Index '1' has value 1.0.  All other indices are implicitly
+# defined with value 0.0.
+model.p = Param(index, default=0.0, initialize={1:1.0})
+
+# Densely initialize this component
+model.v = Var(index, dense=True)
+----
+In this example, both components have length 3.  The parameter
+component is defined with a sparse data representation that has a
+single component data object.  The variable component is declared
+dense, and it uses three component data objects.
+
+The +Param+ and +Var+ components also allow special semantics for dynamically initializing component data:
+[source,python]
+----
+index = [1,2,3]
+
+# Mutable parameters allow component data to be defined with the __setitem__
+# and __getitem__ methods.
+model.p = Param(index, initialize={1:1.0}, mutable=True)
+# Here, len(model.p) is 1
+model.p[2] = 2.0
+# Here, len(model.p) is 2
+
+# Variable components allow component data to be defined with the __setitem__
+# or __getitem_ methods.
+model.v = Var(index)
+# Here, len(model.v) is 0
+model.v[1].value = 1
+# Here, len(model.v) is 1
+vdata = model.v[2]
+# Here, len(model.v) is 2
+----
+
+*WEH*:: The implicit definition of component data in these two
+        instances is problematic.  For example, simply iterating over
+        the index set and printing mutable parameter or variable values
+        will create component data objects for all indices.  However,
+        no obvious, intuitive syntax exists for constructing component
+        data for new indices.  The +add()+ method can be used, but this
+        seems burdensome for users.  (I looked at other programming
+        languages, like MOSEL, and they also employ implicit
+        initialization of variables.)
+
+// vim: set syntax=asciidoc:

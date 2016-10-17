@@ -10,12 +10,13 @@
 
 from pyomo.core import *
 
-def pipe_rule(model, pipe, id):
+def pipe_rule(pipe, i):
+    m = pipe.model()
     pipe.flow = Var()
     pipe.pIn  = Var( within=NonNegativeReals )
     pipe.pOut = Var( within=NonNegativeReals )
     pipe.pDrop = Constraint( expr=pipe.pIn - pipe.pOut ==
-        model.friction*model.pipe_length[id]*pipe.flow )
+        m.friction*m.pipe_length[i]*pipe.flow )
   
     pipe.IN = Connector()
     pipe.IN.add(-pipe.flow, "flow")
@@ -25,15 +26,15 @@ def pipe_rule(model, pipe, id):
     pipe.OUT.add(pipe.flow)
     pipe.OUT.add(pipe.pOut, "pressure")
 
-def node_rule(model, node, id):
-    def _mass_balance(model, node, flows):
-        return model.demands[id] == summation(flows)
+def node_rule(node, i):
+    def _mass_balance(node, flows):
+        return node.model().demands[i] == summation(flows)
 
     node.flow = VarList()
     node.pressure = Var( within=NonNegativeReals )
     node.port = Connector()
-    #node.port.add( node.flow, 
-    #               aggregate=lambda m,n,v: m.demands[id] == summation(v) )
+    #node.port.add(node.flow,
+    #              aggregate=lambda n,v: n.model().demands[id] == summation(v))
     node.port.add( node.flow, aggregate=_mass_balance )
     node.port.add( node.pressure )
 
@@ -53,7 +54,7 @@ model.NODES = Set()
 
 model.friction    = Param( within=NonNegativeReals )
 model.pipe_length = Param( model.PIPES, within=NonNegativeReals )
-model.pipe_links  = Param( model.PIPES, RangeSet(2) )
+model.pipe_links  = Param( model.PIPES, [0,1] )
 model.demands     = Param( model.NODES, within=Reals, default=0 )
 
 model.pipes = Block( model.PIPES, rule=pipe_rule )

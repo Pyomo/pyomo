@@ -20,6 +20,7 @@ from pyomo.core.base import expr as EXPR
 from pyomo.core.base.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
+                                      is_constant,
                                       _sub)
 from pyomo.core.base.component import (ActiveComponentData,
                                        register_component)
@@ -36,6 +37,13 @@ logger = logging.getLogger('pyomo.core')
 
 _simple_constraint_rule_types = set([ type(None), bool ])
 
+_rule_returned_none_error = """Constraint '%s': rule returned None.
+
+Constraint rules must return either a valid expression, a 2- or 3-member
+tuple, or one of Constraint.Skip, Constraint.Feasible, or
+Constraint.Infeasible.  The most common cause of this error is
+forgetting to include the "return" statement at the end of your rule.
+"""
 
 def simple_constraint_rule( fn ):
     """
@@ -376,7 +384,7 @@ class _GeneralConstraintData(_ConstraintData):
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
                             "value was non-constant."
-                            % (self.cname(True)))
+                            % (self.name))
 
                 arg1 = expr[1]
                 if arg1 is not None:
@@ -390,7 +398,7 @@ class _GeneralConstraintData(_ConstraintData):
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
                             "value was non-constant."
-                            % (self.cname(True)))
+                            % (self.name))
 
                 self._lower = arg0
                 self._body  = arg1
@@ -402,7 +410,7 @@ class _GeneralConstraintData(_ConstraintData):
                     "length 2 or 3:\n"
                     "Equality:   (left, right)\n"
                     "Inequality: (lower, expression, upper)"
-                    % (self.cname(True), len(expr)))
+                    % (self.name, len(expr)))
 
             relational_expr = False
         else:
@@ -415,14 +423,14 @@ class _GeneralConstraintData(_ConstraintData):
                         "equation. Examples:"
                         "\n   summation(model.costs) == model.income"
                         "\n   (0, model.price[item], 50)"
-                        % (self.cname(True), str(expr)))
+                        % (self.name, str(expr)))
             except AttributeError:
                 msg = ("Constraint '%s' does not have a proper "
                        "value. Found '%s'\nExpecting a tuple or "
                        "equation. Examples:"
                        "\n   summation(model.costs) == model.income"
                        "\n   (0, model.price[item], 50)"
-                       % (self.cname(True), str(expr)))
+                       % (self.name, str(expr)))
                 if type(expr) is bool:
                     msg += ("\nNote: constant Boolean expressions "
                             "are not valid constraint expressions. "
@@ -442,10 +450,8 @@ class _GeneralConstraintData(_ConstraintData):
         # user did ( var < 1 > 0 ) (which also results in a non-None
         # chainedInequality value)
         #
-        if EXPR.generate_relational_expression.\
-           chainedInequality is not None:
-            from expr import chainedInequalityErrorMessage
-            raise TypeError(chainedInequalityErrorMessage())
+        if EXPR.generate_relational_expression.chainedInequality is not None:
+            raise TypeError(EXPR.chainedInequalityErrorMessage())
         #
         # Process relational expressions
         # (i.e. explicit '==', '<', and '<=')
@@ -496,7 +502,7 @@ class _GeneralConstraintData(_ConstraintData):
                             "inequality expression ('>' or '<'). All"
                             " constraints must be formulated using "
                             "using '<=', '>=', or '=='."
-                            % (self.cname(True)))
+                            % (self.name))
 
                 try:
                     _args = (expr._lhs, expr._rhs)
@@ -521,14 +527,14 @@ class _GeneralConstraintData(_ConstraintData):
                             "inequality expression (lower <= "
                             "expression <= upper) but the lower "
                             "bound was non-constant."
-                            % (self.cname(True)))
+                            % (self.name))
                     if not _args[2].is_fixed():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "\
                             "inequality expression (lower <= "
                             "expression <= upper) but the upper "
                             "bound was non-constant."
-                            % (self.cname(True)))
+                            % (self.name))
 
                     self._lower = _args[0]
                     self._body  = _args[1]
@@ -558,31 +564,33 @@ class _GeneralConstraintData(_ConstraintData):
         # Replace numeric bound values with a NumericConstant object,
         # and reset the values to 'None' if they are 'infinite'
         #
-        if self._lower is not None:
+        if (self._lower is not None) and \
+           is_constant(self._lower):
             val = self._lower()
             if not pyutilib.math.is_finite(val):
                 if val > 0:
                     raise ValueError(
                         "Constraint '%s' created with a +Inf lower "
-                        "bound." % (self.cname(True)))
+                        "bound." % (self.name))
                 self._lower = None
             elif bool(val > 0) == bool(val <= 0):
                 raise ValueError(
                     "Constraint '%s' created with a non-numeric "
-                    "lower bound." % (self.cname(True)))
+                    "lower bound." % (self.name))
 
-        if self._upper is not None:
+        if (self._upper is not None) and \
+           is_constant(self._upper):
             val = self._upper()
             if not pyutilib.math.is_finite(val):
                 if val < 0:
                     raise ValueError(
                         "Constraint '%s' created with a -Inf upper "
-                        "bound." % (self.cname(True)))
+                        "bound." % (self.name))
                 self._upper = None
             elif bool(val > 0) == bool(val <= 0):
                 raise ValueError(
                     "Constraint '%s' created with a non-numeric "
-                    "upper bound." % (self.cname(True)))
+                    "upper bound." % (self.name))
 
         #
         # Error check, to ensure that we don't have a constraint that
@@ -592,16 +600,11 @@ class _GeneralConstraintData(_ConstraintData):
         # constraint with 'infinite' RHS
         #
         if self._equality:
-            if self._lower != self._upper: #pragma:nocover
-                raise RuntimeError(
-                    "Equality constraint '%s' has non-equal lower "
-                    "and upper bounds (this is indicitive of a "
-                    "SERIOUS internal error in Pyomo)."
-                    % (self.cname(True)))
             if self._lower is None:
                 raise ValueError(
                     "Equality constraint '%s' defined with "
-                    "non-finite term." % (self.cname(True)))
+                    "non-finite term." % (self.name))
+            assert self._lower is self._upper
 
 class Constraint(ActiveIndexedComponent):
     """
@@ -644,7 +647,7 @@ class Constraint(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleConstraint.__new__(SimpleConstraint)
         else:
             return IndexedConstraint.__new__(IndexedConstraint)
@@ -664,7 +667,7 @@ class Constraint(ActiveIndexedComponent):
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Constructing constraint %s"
-                         % (self.cname(True)))
+                         % (self.name))
         if self._constructed:
             return
         self._constructed=True
@@ -698,14 +701,13 @@ class Constraint(ActiveIndexedComponent):
                     logger.error(
                         "Rule failed when generating expression for "
                         "constraint %s:\n%s: %s"
-                        % (self.cname(True),
+                        % (self.name,
                            type(err).__name__,
                            err))
                     raise
                 if tmp is None:
                     raise ValueError(
-                        "Constraint rule returned None instead of "
-                        "Constraint.Skip")
+                        _rule_returned_none_error % (self.name,) )
 
             assert None not in self._data
             cdata = self._check_skip_add(None, tmp, condata=self)
@@ -722,8 +724,9 @@ class Constraint(ActiveIndexedComponent):
 
             if not _init_expr is None:
                 raise IndexError(
-                    "Cannot initialize multiple indices of a "
-                    "constraint with a single expression")
+                    "Constraint '%s': Cannot initialize multiple indices "
+                    "of a constraint with a single expression" %
+                    (self.name,) )
 
             for ndx in self._index:
                 try:
@@ -736,15 +739,15 @@ class Constraint(ActiveIndexedComponent):
                     logger.error(
                         "Rule failed when generating expression for "
                         "constraint %s with index %s:\n%s: %s"
-                        % (self.cname(True),
+                        % (self.name,
                            str(ndx),
                            type(err).__name__,
                            err))
                     raise
                 if tmp is None:
                     raise ValueError(
-                        "Constraint rule returned None instead of "
-                        "Constraint.Skip for index %s" % str(ndx))
+                        _rule_returned_none_error %
+                        ('%s[%s]' % (self.name, str(ndx)),) )
 
                 cdata = self._check_skip_add(ndx, tmp)
                 if cdata is not None:
@@ -780,7 +783,7 @@ class Constraint(ActiveIndexedComponent):
         if ostream is None:
             ostream = sys.stdout
         tab="    "
-        ostream.write(prefix+self.cname()+" : ")
+        ostream.write(prefix+self.local_name+" : ")
         ostream.write("Size="+str(len(self)))
 
         ostream.write("\n")
@@ -829,7 +832,7 @@ class Constraint(ActiveIndexedComponent):
                     "object. Please modify your rule to return "
                     "Constraint.Skip instead of None."
                     "\n\nError thrown for Constraint '%s'"
-                    % (self._data[index].cname(True)))
+                    % (self._data[index].name))
 
             #
             # There are cases where a user thinks they are generating
@@ -863,7 +866,7 @@ class Constraint(ActiveIndexedComponent):
                     "\n\nError thrown for Constraint '%s'"
                     "\n\nUnresolved (dangling) inequality "
                     "expression: %s"
-                    % (expr, self._data[index].cname(True), buf))
+                    % (expr, self._data[index].name, buf))
             else:
                 raise ValueError(
                     "Invalid constraint expression. The constraint "
@@ -874,7 +877,7 @@ class Constraint(ActiveIndexedComponent):
                     % (expr,
                        expr and "Feasible" or "Infeasible",
                        expr,
-                       self._data[index].cname(True)))
+                       self._data[index].name))
 
         #
         # Ignore an 'empty' constraint
@@ -887,7 +890,7 @@ class Constraint(ActiveIndexedComponent):
                 _prep_for_error()
                 raise ValueError(
                     "Constraint '%s' is always infeasible"
-                    % self._data[index].cname(True))
+                    % self._data[index].name)
 
         if condata is None:
             self._data[index] = condata = \
@@ -933,13 +936,13 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
                     "Accessing the body of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.cname(True)))
+                    "nothing to access." % (self.name))
             return _GeneralConstraintData.body.fget(self)
         raise ValueError(
             "Accessing the body of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name))
 
     @property
     def lower(self):
@@ -950,13 +953,13 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
                     "Accessing the lower bound of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.cname(True)))
+                    "nothing to access." % (self.name))
             return _GeneralConstraintData.lower.fget(self)
         raise ValueError(
             "Accessing the lower bound of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name))
 
     @property
     def upper(self):
@@ -967,13 +970,13 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
                     "Accessing the upper bound of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.cname(True)))
+                    "nothing to access." % (self.name))
             return _GeneralConstraintData.upper.fget(self)
         raise ValueError(
             "Accessing the upper bound of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name))
 
     @property
     def equality(self):
@@ -984,13 +987,13 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
                     "Accessing the equality flag of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.cname(True)))
+                    "nothing to access." % (self.name))
             return _GeneralConstraintData.equality.fget(self)
         raise ValueError(
             "Accessing the equality flag of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name))
 
     @property
     def strict_lower(self):
@@ -1001,13 +1004,13 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
                     "Accessing the strict_lower flag of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.cname(True)))
+                    "nothing to access." % (self.name))
             return _GeneralConstraintData.strict_lower.fget(self)
         raise ValueError(
             "Accessing the strict_lower flag of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name))
 
     @property
     def strict_upper(self):
@@ -1018,13 +1021,13 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
                     "Accessing the strict_upper flag of SimpleConstraint "
                     "'%s' before the Constraint has been assigned "
                     "an expression. There is currently "
-                    "nothing to access." % (self.cname(True)))
+                    "nothing to access." % (self.name))
             return _GeneralConstraintData.strict_upper.fget(self)
         raise ValueError(
             "Accessing the strict_upper flag of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no value to return)."
-            % (self.cname(True)))
+            % (self.name))
 
     #
     # Singleton constraints are strange in that we want them to be
@@ -1047,7 +1050,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
             "Setting the value of constraint '%s' "
             "before the Constraint has been constructed (there "
             "is currently no object to set)."
-            % (self.cname(True)))
+            % (self.name))
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -1059,7 +1062,7 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
             raise ValueError(
                 "SimpleConstraint object '%s' does not accept "
                 "index values other than None. Invalid value: %s"
-                % (self.cname(True), index))
+                % (self.name, index))
         self.set_value(expr)
         return self
 
@@ -1109,7 +1112,7 @@ class ConstraintList(IndexedConstraint):
             __debug__ and logger.isEnabledFor(logging.DEBUG)
         if generate_debug_messages:
             logger.debug("Constructing constraint list %s"
-                         % (self.cname(True)))
+                         % (self.name))
 
         if self._constructed:
             return
@@ -1146,8 +1149,8 @@ class ConstraintList(IndexedConstraint):
                                           val)
                 if expr is None:
                     raise ValueError(
-                        "Constraint rule returned None "
-                        "instead of ConstraintList.End")
+                        "ConstraintList '%s': rule returned None "
+                        "instead of ConstraintList.End" % (self.name,) )
                 if (expr.__class__ is tuple) and \
                    (expr == ConstraintList.End):
                     return
@@ -1158,8 +1161,8 @@ class ConstraintList(IndexedConstraint):
             for expr in _generator:
                 if expr is None:
                     raise ValueError(
-                        "Constraint generator returned None "
-                        "instead of ConstraintList.End")
+                        "ConstraintList '%s': generator returned None "
+                        "instead of ConstraintList.End" % (self.name,) )
                 if (expr.__class__ is tuple) and \
                    (expr == ConstraintList.End):
                     return

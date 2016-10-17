@@ -1,0 +1,587 @@
+%-
+%- DONE
+
+\chapter{Introduction}
+\label{chap:intro} % Always give a unique label
+\chaptermark{Introduction}
+
+%\abstract*{}
+
+\abstract{This chapter introduces and motivates Pyomo, a Python-based
+modeling tool for optimization models.  Modeling is a fundamental process
+in many aspects of scientific research, engineering and business.
+Algebraic modeling languages like Pyomo are high-level programming
+languages for simplifying the specification and solution of mathematical
+problems.  Pyomo provides a flexible, extensible modeling framework that supports the central ideas of modern algebraic modeling
+languages within a widely used programming language.}
+
+
+\section{Mathematical Modeling}
+\label{sec:intro:modeling}
+\sectionmark{Mathematical Modeling}
+
+This book describes a new tool for mathematical modeling: the Python
+Optimization Modeling Objects (Pyomo) software.  Pyomo supports
+the formulation and analysis of mathematical models for complex
+optimization applications.  This capability is commonly associated
+with algebraic modeling languages\index{algebraic modeling language} (AMLs)\index{AML|see{algebraic modeling language}}  such as AMPL~\cite{AMPL},
+AIMMS~\cite{AIMMS} and GAMS~\cite{GAMS}, but Pyomo's modeling objects are
+embedded within Python, a full-featured high-level programming language
+that contains a rich set of supporting libraries.
+
+Modeling\index{modeling} is a fundamental process in many aspects of scientific
+research, engineering and business.  Modeling involves the formulation
+of a simplified representation of a system or real-world object.
+These simplifications allow knowledge about the original system to be
+represented in a structured manner that facilitates the analysis of the
+resulting model.  Models are used to in a variety of ways~\cite{Sch04}:
+\begin{itemize}
+
+\item {\bf Explain phenomena} that arise in a system,
+
+\item {\bf Make predictions} about future states of a system,
+
+\item {\bf Assess key factors} that influence phenomena in a system,
+
+\item {\bf Identify extreme states} in a system, that might represent worst-case scenarios or
+ minimal cost plans, and
+
+\item {\bf Analyze trade-offs} to support human decision makers.
+
+\end{itemize}
+Additionally, the structured aspect of a model's representation
+facilitates communication of the knowledge associated with a model.
+For example, a key aspect of models is the level of detail needed for
+the scope of application where the model is used.  The level of detail
+in a model reflects the system knowledge that is needed to employ the
+model in an application.
+
+Mathematical models represent system knowledge with a formalized
+mathematical language.  The advantage of mathematical models is
+that they can be precisely analyzed using mathematical theory and
+computational algorithms.  This allows modelers to rigorously identify
+system limitations.  For example, planning activities can be analyzed
+to assess feasibility given limited resources and to identify bounds on
+the minimum cost for any possible plan.
+
+Mathematics has always played a fundamental role in representing and
+formulating our knowledge.  Mathematical modeling has become increasingly
+formal as new mathematical frameworks have emerged to express complex
+systems.  The following mathematical concepts are central to modern
+modeling activities:
+\begin{itemize}
+
+\item {\bf variables}:  These represent {\em unknown} or changing parts of a model (e.g. whether or not to make a decision, or the characteristic of a system outcome).\index{variable}
+
+\item {\bf parameters}:  These are symbolic representations for real-world data, which might vary for different scenarios.\index{parameter}
+
+\item {\bf relations}:  These are {\em equations}, {\em inequalities} or other mathematical relationships that define how different parts of a model are connected to each other.
+
+\end{itemize}
+Optimization models are mathematical models that include functions that
+represent goals or objectives for the system being modeled.  
+Optimization models can be analyzed to explore system
+trade-offs, to find solutions that optimize system objectives.
+Consequently, these models
+can be used for a wide-range of scientific, business and engineering
+applications. 
+
+Note that a mathematical model does not need to be defined with real-world
+data.  For example, the following equations represent a linear program
+\index{linear program}(LP)\index{LP|see{linear program}}  with parameters $n$ and $b$, and parameter vectors $a$ and $c$:
+\[
+\begin{array}{lll}
+\min & \sum_{i=1}^n c_i x_i &\\
+\st & \sum_{i=1}^n a_i x_i \geq b &\\
+    & x_i \geq 0 & \forall i = 1 \ldots n
+\end{array}
+\]
+We call this an {\em abstract} or {\em symbolic} mathematical model since it relies on 
+unspecified parameter values.\index{abstract model}\index{symbolic model|see{abstract model}}  Data values can be used to specify a {\em model instance}.\index{model!instance}\index{instance|see{model, instance}}  For example, the following LP model is an instance of the previous abstract model:
+\[
+\begin{array}{ll}
+\min & x_1 + 2 x_2\\
+\st & 3 x_1 + 4 x_2 \geq 1\\
+    & x_1, x_2 \geq 0
+\end{array}
+\]
+Note that in some contexts a mathematical model can be directly defined
+with real-world data.  We call these {\em concrete} mathematical models.\index{concrete model}
+Thus, an instance of an abstract model is a concrete model.
+
+
+\section{Modeling Languages for Optimization}
+\label{sec:intro:modlang}
+\sectionmark{Modeling Languages}
+
+The widespread availability of computing resources has made the numerical
+analysis of mathematical models a commonplace activity.  The computational
+analysis of a mathematical model involves the specification of a concrete
+model in computer data structures that are used by a solver software package to
+perform its analysis.  Without a modeling language, the process of setting up input
+files, executing a solver and extracting the final results from the
+solver output is tedious and error prone.  This difficulty is compounded
+in complex, large-scale real-world applications which are difficult to
+debug when errors occur.  Additionally, there are many different formats
+used by optimization software packages, and few formats are recognized by
+many optimizers.  Thus the application of multiple optimization solvers
+to analyze a model introduces additional complexities.
+
+AMLs\index{algebraic modeling language} are high-level programming languages for describing and
+solving mathematical problems, particularly optimization-related
+problems~\citep{Kal04}.  AMLs minimize the difficulties associated with
+analyzing mathematical models by enabling a high-level specification
+of a mathematical problem.  Furthermore, AML software provides standard
+interfaces to external solver packages that are used to analyze problems.
+
+AMLs like AIMMS~\citep{AIMMS}, AMPL~\citep{AMPL,FouGay03}, and
+GAMS~\citep{GAMS} provide programming languages with an intuitive
+mathematical syntax for defining variables and generating constraints
+with a concise mathematical representation.\index{algebraic modeling language!AIMMS}\index{algebraic modeling language!AMPL}\index{algebraic modeling language!GAMS}  Further, these AMLs support
+concepts like sparse sets, indices, and algebraic expressions, which are
+essential for large-scale, real-world problems that involve thousands
+or millions of constraints and variables.  These AMLs can represent a
+wide variety of optimization models, and they interface with a rich set
+of solver packages.
+
+AMLs are increasingly being extended to include custom scripting
+capabilities, which can describe solution algorithms alongside of model
+declarations.  Similarly, standard programming languages like Java and
+C++ have been extended to include modeling constructs.  For example,
+modeling tools like FlopC++~\citep{flopcpp} and OptimJ~\citep{OptimJ}
+support the formulation of optimization models using an object-oriented
+design.\index{algebraic modeling language!FlopC++}\index{algebraic modeling language!OptimJ}  Although these modeling libraries sacrifice some of the
+intuitive mathematical syntax of a custom AML, they allow the user to
+leverage the greater flexibility of standard programming languages.
+An advantage of these AML extensions is that they can link directly
+to high-performance optimization libraries, which can be an important
+consideration in some applications.
+
+A related strategy is to use an AML that extends a {\em standard}
+high-level programming language to formulate optimization models
+that are solved with optimizers written in low-level languages.
+This two-language approach leverages the flexibility of the high-level
+language for formulating optimization problems and the efficiency of
+the low-level language for numerical computations.  This approach is an
+increasingly common approach for scientific computing software, and the
+Matlab TOMLAB Optimization Environment~\citep{TOMLAB} is probably the
+most mature optimization software using this approach.\index{algebraic modeling language!TOMLAB}
+
+Pyomo is another example of this last approach~\cite{hartetal11}.  Pyomo is an AML
+that extends Python to include objects for mathematical modeling.
+These objects can be used to formulate optimization models which are
+then analyzed with external solvers.  Python's clean syntax allows Pyomo
+to express mathematical concepts in a reasonably intuitive and concise
+manner.  Further, Python's expressive programming environment can be used
+to formulate complex models as well as define custom high-level solvers
+that customize the execution of high-performance optimization libraries.
+Finally, Pyomo can be used within an interactive Python shell, thereby
+allowing a user to interactively interrogate Pyomo-based models.
+
+
+\section{Modeling Graph Coloring}
+
+\index{graph coloring problem}We illustrate Pyomo's modeling capabilities with a simple application:
+minimum graph coloring.\index{graph coloring problem}\index{problem!graph coloring}  Graph coloring is the assignment of colors to
+vertices of a graph such that no two adjacent vertices share the same
+color.  (This is also known as vertex coloring.)  Graph coloring has
+many practical applications, including register allocation in compilers,
+scheduling, pattern matching and recreational puzzles like Sudoku.  
+
+\if 0
+Figure~\ref{fig:intro:graph-coloring} illustrates the coloring of the 
+Peterson graph and a graph that represents neighboring countries in South America.
+
+\begin{figure}[htb]
+
+%NOTE: I want to use this later as an example of how to automatically analyze results generated by Pyomo ... so I'm not going to generate these figures by hand right now.
+
+% This figure has not been generated.  We'll leave that as an exercise for the reader... ;)
+
+\caption{\label{fig:intro:graph-coloring} An illustration of graph coloring solutions for the Peterson graph and a graph representing neighboring South America countries.}
+
+\end{figure}
+\fi
+
+Given a graph, the goal of the minimum graph coloring problem is to find
+a valid coloring that uses the minimum number of colors.  Let $G=(V,E)$
+be the graph with vertices $V$ and edges $E \subseteq V \times V$.
+For simplicity, we assume that the edges in $E$ are ordered such that if
+$(v,w) \in E$ then $v < w$.  Let $k$ be the maximum number of colors that will be considered,
+and let $C = 1 \ldots k$.  We consider the following decision variables: (1) $x_{v,c}$ is one if vertex $v$ is colored with color $c$ and zero otherwise, and (2) $y$ is the minimum number of colors that are used.
+
+We can represent the minimum graph coloring problem with the following integer program (IP):\index{integer program}\index{IP|see{integer program}}
+\begin{equation}
+\label{eqn:intro:min-graph-coloring}
+\begin{array}{lll}
+\min & y & \\
+\st & \sum_{c \in C} x_{v,c} = 1 & \forall v \in V\\
+    & x_{v,c} + x_{w,c} \leq 1 \hspace{0.25in}& \forall (v,w) \in E\\
+    & y \geq c \cdot x_{v,c} & \\
+    & x_{v,c} \in \{0,1\} & \forall v \in V, c \in C
+\end{array}
+\end{equation}
+The first constraint indicates that each vertex is colored with exactly one color.
+The second constraint indicates that vertices that are connected by an edge must have different
+colors.  The next constraint defines a lower bound on $y$ that guarantees that $y$ will be
+greater than the number of colors used in a solution.  The final constraint defines $x_{v,c}$ as
+a binary variable.
+
+As discussed earlier, this IP is an abstract model for the minimum
+graph coloring problem.  The parameter values associated with the
+graph and maximum number of colors are not defined in this model.
+Figure~\ref{fig:intro:min-graph-coloring} shows the formulation of a Pyomo
+model for this problem;  appendix~\ref{chap:python} provides Python tutorial for readers who are new to Python. This formulation consists of Python commands that
+define an \code{AbstractModel} object,\index{AbstractModel component@\code{AbstractModel} component}\index{model!AbstractModel@\code{AbstractModel} component} and then define attributes of this object for the
+sets, parameters, variables, constraints and objectives in this model.
+Note that all of these modeling components are explicitly associated
+with a particular model instance.\index{modeling component}\index{component|see{modeling component}}  This allows Pyomo to automatically
+manage the naming of modeling components, and it naturally segregates
+modeling components within different model objects\index{model!object}.
+
+\begin{figure}[htbp]
+\lstinputlisting[numbers=left, breaklines=true, breakatwhitespace=true, prebreak={\textbackslash}, xleftmargin=2em,xrightmargin=1.5em]{examples/app/graph_coloring.py}
+\caption{\label{fig:intro:min-graph-coloring}An abstract Pyomo formulation for the minimum graph coloring problem.}
+\end{figure}
+
+Line 2 is a standard Python import statement that adds
+all of the symbols in \code{pyomo.core}\index{pyomo.core
+package@\code{pyomo.core} package} to the current Python
+namespace.  Pyomo is a subpackage of Pyomo~\cite{Pyomo}, a
+collection of Python software packages for formulating and analyzing
+optimization models.\index{Pyomo}  Line 5 creates the \code{model}
+object, which is a class instance of the \code{AbstractModel}
+component\index{AbstractModel component@\code{AbstractModel}
+component}\index{model!AbstractModel@\code{AbstractModel} component}
+class.\index{class instance} Lines 8--11 define sets and parameters
+of this model using the \code{Set}\index{Set component@\code{Set}
+component}\index{set!Objective@\code{Objective} component},
+\code{Param}\index{Param component@\code{Param} component}\index{parameter!Param@\code{Param} component} and
+\code{RangeSet}\index{RangeSet component@\code{RangeSet} component}\index{set!RangeSet@\code{RangeSet} component} classes. Lines 14 and 15 define the
+decision variables in this model.  Note that $y$ is a single variable,
+while $x$ is declared as two-dimensional array of variables.
+
+The remaining lines define the constraints and objectives for this model.
+The \code{Objective}\index{Objective component@\code{Objective} component}\index{objective!Objective@\code{Objective} component} and \code{Constraint}\index{Constraint component@\code{Constraint} component}\index{constraint!Constraint@\code{Constraint} component} classes typically require a
+\code{rule} option that specifies how these expressions are constructed.
+A rule is a function that takes one or more arguments and returns an
+expression that defines the constraint or objective. The last argument
+in a rule is the model of the corresponding objective or constraint, and
+the preceding arguments are index values for the objective or constraint
+that is being defined.  As with other modeling components, the non-keyword
+arguments define the sets used to index constraint and variable objects.
+
+When compared with other AMLs, Pyomo models are clearly more verbose
+(e.g., see Hart et al~\cite{hartetal11}).  However, this example
+illustrates how Python's clean syntax allows Pyomo to express mathematical
+concepts in a reasonably intuitive and concise manner.  Aside from
+the Pyomo classes, this entire example employs standard Python syntax
+and methods.  For example, line 19 employs Python's generator syntax to
+iterate over all elements of the \code{colors} set and apply the Python
+\code{python!sum@\code{sum} function} function to the result.  Although Pyomo does include some
+utility functions to simplify the construction of expressions, Pyomo
+does not rely on sophisticated extensions of core Python functionality.
+
+
+\section{Motivating Pyomo}
+\label{sec:intro:pyomo}
+\sectionmark{Motivating Pyomo}
+
+AMLs have used to develop optimization modeling applications for
+nearly four decades~\cite{Kal04}.  This includes a variety of commercial
+and research modeling tools that are commonly used in a wide range of
+scientific and business applications.  In point of fact, these AMLs can be
+used to develop similar formulations for applications like graph coloring.
+
+The goal of Pyomo is to provide a platform for expressing 
+optimization models that supports the central ideas of modern AMLs
+within a framework that promotes flexibility, extensibility, portability
+and maintainability.  Pyomo is built within Python to leverage the rich
+capabilities of this modern programming language, and it employs open
+source license and software management to promote the distribution and
+extension of this software.  Pyomo is a software package within Pyomo,
+a COmmon Optimization Python Repository~\citep{Pyomo}.\index{Pyomo}  Pyomo supports
+a generic optimization process that can be applied to Pyomo models,
+and it defines a variety of optimization components that can be
+used to customize the optimization process (e.g. solver interfaces,
+parallelization frameworks, etc).
+
+
+\subsection{Open Source}
+
+A distinguishing feature of Pyomo is its management as an open source
+project.\index{open source} Open source is a software development methodology that promises
+better quality, higher reliability, more flexibility and lower cost
+through flexible software licenses and community-based software management.
+Although open source optimization solvers are widely available in packages
+like COIN-OR~\citep{COINOR}, surprisingly few open source tools have
+been developed to model optimization applications.\index{COIN-OR}
+
+When managed well, open source projects facilitate transparency in
+software design and implementation. Because any developer can study
+and modify the software, bugs and performance limitations can be
+identified and resolved by a wide range of developers with diverse
+software experience.  Consequently, there is growing evidence that
+managing software as open source can improve its reliability and that
+open source software exhibits similar defect evolution patterns as
+closed-source software~\citep{fedora-oss,oss-reliabilitymodel}.
+
+Open source licenses promote the use of software without commercial
+limitations, though many open source licenses allow for the integration
+of open source software in commercial applications.  Open source
+licenses also provide a mechanism for integrating contributions from a
+diverse community of developers.  Additionally, open source licenses are
+increasingly valued in government and commercial environments due to their
+flexibility~\cite{Forrester}.  For example, open source licenses support
+open standards and allow users to avoid being locked into a single vendor.
+Software with open source licenses are easier to deploy since they do not
+have complex licensing software and they avoid costly software licenses
+(which may be prohibitive for enterprise deployments).
+
+The use of an open source software development model is not a panacea;
+ensuring high reliability of the software still requires careful software
+management and a committed developer community.  Pyomo is included
+within the Pyomo software, which is managed as an open source package
+by Sandia National Laboratories~\cite{Pyomo} and within the COIN-OR
+repository~\citep{COINOR}.  Pyomo developer and user mailing lists are
+managed on Google Groups, and the Pyomo software is licensed under the
+BSD~\citep{BSD}, which has few restrictions for commercial use.
+
+
+\subsection{Customizable Capability}
+
+Few AMLs provide capabilities for customizing the modeling
+and optimization processes.  Pyomo's open source project model allows
+a diverse range of developers to prototype new capabilities.  Thus,
+developers can customize the software for specific applications, and
+can prototype capabilities that may eventually be integrated into future
+software releases.
+
+More generally, Pyomo is designed to support a ``stone soup'' development
+model in which each developer ``scratches their own itch.'' A key element
+of this design is the plugin framework that Pyomo uses to integrate
+components like optimizers, optimizer managers, and optimizer model
+format converters.  The plugin framework manages the registration of
+components, and it automates the interaction of these components through
+well-defined interfaces.  Thus, users can customize Pyomo in a modular
+manner without the risk of destabilizing core functionality.
+
+Similarly, the Pyomo software is decomposed into a variety of Python
+packages that reflect different aspects of the modeling and optimization
+process.  This decomposition leverages advanced features in Python to
+integrate these diverse package within a common \code{pyomo} namespace.
+Thus, the end-user is not exposed to this complexity.  However,
+this decomposition promotes the integration of third party packages.
+For example, the COIN-OR \code{Coin Bazaar} project hosts projects like
+\code{pyomo.neos}\index{pyomo.neos package@\code{pyomo.neos} package} that extend Pyomo's functionality to add new solver
+interfaces.\code{Coin Bazaar}
+
+
+\subsection{Solver Integration}
+
+Modeling tools can be roughly categorized into two classes based on
+how they integrate with optimization solvers. {\em Tightly coupled}
+modeling tools directly access optimization solver libraries (e.g, via
+static or dynamic linking). By contrast, {\em loosely coupled}
+modeling tools apply external optimization executables (e.g., through
+the use of system calls).  Of course, these options are not exclusive,
+and a goal of Pyomo is to support both types of solver interfaces.
+
+This design goal has led to a distinction in Pyomo between model
+formulation and optimizer execution.  Pyomo models are formulated in
+Python, a high level programming language.  Solvers can be written in
+either in Python or in compiled, low-level languages.  Thus, Pyomo
+supports a two-language approach that leverages the flexibility of
+the high-level language for formulating optimization problems and the
+efficiency of the low-level language for numerical computations.
+
+
+\subsection{Modern Programming Language}
+
+Another goal of Pyomo is to leverage a modern high-level programming
+language to support the definition of optimization models.  In this
+manner, Pyomo is similar to tools like FlopC++~\citep{flopcpp}
+and OptimJ~\citep{OptimJ}, which support modeling in C++ and Java
+respectively.  The use of a widely-used high-level programming language
+like Python has several advantages:\index{algebraic modeling language!FlopC++}\index{algebraic modeling language!OptimJ}
+
+\begin{description}
+
+\item[{\bf Extensibility and Robustness}] Python provides a robust
+foundation for developing and solving optimization models: the language
+has been well-tested in a wide variety of application contexts and
+deployed on a range of computing platforms. Further, extensions do not
+require changes to Python itself but instead involve the definition of
+additional classes and compute routines that can be immediately leveraged
+in the modeling process.
+
+\item[{\bf Software Management and Documentation}] Since Pyomo relies
+on Python, support for a domain-specific AML is not a long-term factor
+in the management of Pyomo.  Additionally, Python is well-documented
+by dozens of books, and there is a large on-line community to provide
+feedback to new users.  Thus, there are many more resources for Pyomo
+than there are with domain-specific AMLs.
+
+\item[{\bf Standard Libraries}] Python has a rich set of libraries
+for tackling just about every programming task. For example, standard
+libraries can support capabilities like data integration (e.g., working
+with spreadsheets), thereby avoiding the need to directly support such
+capabilities within Pyomo.
+
+\item[{\bf Scripting}] Python directly supports modern programming
+language features, including classes, looping and procedural constructs,
+and first-class functions.  However, modern AMLs have only gradually
+introduced these {\em scripting} features.  Thus, Python provides a
+richer environment for developing complex models.
+
+\item[{\bf Portability}] Python works on a diverse range of computing
+platforms, and in particular it supports Microsoft Windows, Mac OS
+and Linux platforms.  Thus, Pyomo can be used in most scientific and
+business applications.
+
+\end{description}
+
+\section{Book Summary}
+
+The chapters in this book are organized around a variety of overlapping themes:
+
+\begin{description}
+
+\item[{\bf Pyomo Overview}]  This chapter (Chapter~\ref{chap:intro})
+provides a broad introduction to Pyomo, and Chapter~\ref{chap:overview}
+provides an overview of modeling with Pyomo and the design philosophy
+that has guided Pyomo.  
+\if 0
+Chapter~\ref{chap:rw-apps} describes applications
+that illustrate design features of Pyomo and its potential for solving
+real-world applications.
+\fi
+Finally, Appendix~\ref{chap:pyomo} provides
+some perspective on the role of other Pyomo packages, and information on Pyomo
+resources (e.g. solver interfaces).  Table~\ref{table:intro:tables} provides a quick reference for the tables in this book that 
+enumerate the classes and functions that are defined by Pyomo.
+
+\begin{table}[tb]
+
+\begin{center}
+\begin{tabular}{r r r p{3.5in}} \hline
+Table & Page & \hspace{0.15in} & Summary \\ \hline
+\ref{table:components} & \pageref{table:components} & & Modeling components in Pyomo that are used to create models.\\
+\ref{table:components1:set:virtual} & \pageref{table:components1:set:virtual} & & Predefined virtual sets in Pyomo \\
+\ref{table:components3:utility} & \pageref{table:components3:utility} & & Pyomo utility functions that support the construction and evaluation of model expressions.\\
+\ref{table:command:callbacks} & \pageref{table:command:callbacks} & & Call-back functions that can be used in a Pyomo model file to customize the workflow in the \code{pyomo} command.\\
+\ref{table:nonlinear:expressions} & \pageref{table:nonlinear:expressions} & & Python operators that are redefined to generate Pyomo expressions.\\
+\ref{table:nonlinear:functions} & \pageref{table:nonlinear:functions} & & Functions supported by Pyomo for the definition of nonlinear expressions.\\
+\ref{table:pyomo:packages} & \pageref{table:pyomo:packages} & & The Python packages that are included in the Pyomo~\PyomoVersion\ release.\\
+\ref{table:pyomo:solvers} & \pageref{table:pyomo:solvers} & & Predefined solver interfaces supported by Pyomo.\\ \hline
+\end{tabular}
+\end{center}
+
+\caption{\label{table:intro:tables} Tables in this book that describe the key classes and functions in Pyomo.}
+\end{table}
+
+
+\item[{\bf Pyomo Modeling Components}] As with other modern AMLs,
+Pyomo models are defined with a standard set of modeling components.
+The overview in Chapter~\ref{chap:overview} includes a discussion of
+the core modeling components supported by Pyomo.  Further details on
+these components are provided in Chapter~\ref{chap:components2}, Chapter~\ref{chap:components1}, and Chapter~\ref{chap:components3}.
+
+% Chapter~\ref{chap:models}.
+
+\item[{\bf Using Pyomo}] The overview in Chapter~\ref{chap:overview}
+includes a brief description of how Pyomo models can be created and
+optimized within Python and using the \code{pyomo} command.
+Chapter~\ref{chap:scripts} provides further detail and examples
+to illustrate advanced features of Pyomo.  Chapter~\ref{chap:data}
+describes how data command files can be used to define the data
+in a model, using commands that are similar to those used by AMPL.
+\if 0
+Chapter~\ref{chap:results} provides a description of the optimization
+results object that is generated by optimizers, including a description
+of the YAML-formatted output of this results object.
+\fi
+
+\if 0
+\item[{\bf Interacting with Solvers}] Solvers can be applied to Pyomo
+models in a simple manner.  Chapter~\ref{chap:problem-structure} discusses
+details of the solver interface and how it can be leveraged by Pyomo.
+Similarly, Chapter~\ref{chap:parallel} describes how solver managers are
+used to manage the remote execution of optimizers and parallelization of
+Pyomo-based optimizers.  Chapter~\ref{chap:benders} provides a concrete
+illustration of these capabilities with a Python-based implementation
+of Bender's decomposition.
+\fi
+
+\if 0
+\item[{\bf Customizing Pyomo}] A key feature of Pyomo is the
+ability to customize the modeling and optimization process.
+Chapter~\ref{chap:callbacks} describes how callback functions can be used
+to customize solver behavior.  More generally, Chapter~\ref{chap:plugins}
+describes how Pyomo and Pyomo leverage a component architecture to
+flexibly support extensions of their core capabilities.
+\fi
+
+\item[{\bf Advanced Modeling Capabilities}] Two advanced modeling
+capabilities are highlighted to provide further detail of how they
+are managed within Pyomo.  Chapter~\ref{chap:nonlinear} describes how
+nonlinear models are managed, and how solver interfaces for nonlinear
+solvers differ from LP and IP solvers.  Chapter~\ref{chap:pysp} describes
+how stochastic programs are managed with the PySP extension package,
+including solvers like Progressive Hedging.
+
+\item[{\bf Getting Started}] Several chapters are included in
+the appendix to assist users when getting started with Pyomo and
+Pyomo. Appendix~\ref{chap:install} provides detailed installation
+instructions for Pyomo, and Appendix~\ref{chap:python} provides a brief
+tutorial of the Python scripting language.  Appendix~\ref{chap:pyomo}
+summarizes the optimization solvers that are currently supported by Pyomo,
+including solvers in commonly available extension packages.
+
+\item[{\bf Examples}] Although short Python snippets are used
+throughout the book, many chapters contain complete examples that
+illustrate features and use-cases for Pyomo.  Examples are included
+as chapter appendices to enhance the readability of the chapters.
+Additionally, these examples are also included in table of contents to
+help the reader navigate the book.
+
+\end{description}
+
+\section{Discussion}
+\label{chap:intro:discussion}
+
+Each chapter in this book ends with some discussion about the material
+that was presented.  These sections provide some perspective about each
+chapter by discussing related design decisions, missing capabilities,
+and other features that we do not have room to discuss.  We hope that these
+sections will both fill in the gaps in our presentation, as well as
+illustrate the strengths and weaknesses of Pyomo.
+
+These sections will also be used to compare and contrast Pyomo with
+other Python modeling tools.  In recent years, a variety of developers
+have realized that Python's clean syntax and rich set of supporting
+libraries make it an excellent choice for optimization modeling~\cite{hartetal11}.
+A variety of open source software package provide optimization modeling
+capabilities in Python, such as PuLP~\cite{PuLP}, APLEpy~\cite{APLEpy}
+and OpenOpt~\cite{OpenOpt}.\index{algebraic modeling language!PuLP}\index{algebraic modeling language!APLEpy}  Additionally, there are many Python-based
+solver interface packages, including open source packages like
+PyGlpk~\cite{PyGlpk} and pyipopt~\cite{pyipopt} as well as commercial
+Python interfaces for CPLEX~\cite{CPLEX}\indexsolver{CPLEX} and GUROBI~\cite{GUROBI}\indexsolver{GUROBI}.
+
+Several things distinguish Pyomo from these other Python-based
+optimization modeling tools.  First, Pyomo's integration with Pyomo
+provides mechanisms for extending the core modeling and optimization
+functionality without requiring edits to Pyomo itself.  Second,
+Pyomo supports the definition of both concrete and abstract models.
+This allows the user a lot of flexibility for determining how closely
+data is integrated with a model definition.  Finally, Pyomo can support
+a broad class of optimization models, including both standard linear
+programs as well as general nonlinear optimization models and stochastic programs.
+
+Finally, we note that the examples in this book are taken from the
+Pyomo~\PyomoVersion\ release, which includes version~\PyomoVersion\ of
+\code{pyomo.core}, which defines Pyomo.  Although the Pyomo software
+is actively developed by a variety of research groups, new software
+developments are tested with these examples to ensure the stability of
+this software.
+

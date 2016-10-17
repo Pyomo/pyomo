@@ -103,7 +103,7 @@ def total_cost_rule(model):
     return model.FirstStageCost + model.SecondStageCost
 model.Total_Cost_Objective = Objective(rule=total_cost_rule, sense=minimize)
 
-
+#@pyomobook:
 #
 # Stochastic Data
 #
@@ -121,3 +121,4 @@ def pysp_instance_creation_callback(scenario_name, node_names):
     instance.Yield.store_values(Yield[scenario_name])
 
     return instance
+#@:pyomobook

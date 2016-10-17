@@ -1,0 +1,10 @@
+[run]
+parallel = True
+
+[report]
+omit =
+    */python?.?/*
+    */site-packages/nose/*
+    *__init__*
+    */setup.py
+    */tests/*

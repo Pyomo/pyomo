@@ -1,0 +1,557 @@
+== DAE Toolbox ==
+
+The DAE toolbox allows users to incorporate differential equations in
+a Pyomo model. The modeling components in this toolbox are able to
+represent ordinary or partial differential equations. The differential
+equations do not have to be written in a particular format and the
+components are flexible enough to represent higher-order derivatives
+or mixed partial derivatives. The toolbox also includes model
+transformations which use a simultaneous discretization approach for
+transforming a DAE model into an algebraic model.
+
+=== DAE Modeling Components ===
+
+The DAE toolbox introduces three new modeling components to Pyomo:
+
+ContinuousSet:: Used to represent bounded continuous domains
+
+DerivativeVar:: Defines how a +Var+ will be differentiated or the
+derivatives to be included in the model
+
+Integral:: Defines an integral over a continous domain
+
+As will be shown later, differential equations can be declared using
+using these new DAE modeling components along with the standard Pyomo
++Var+ and +Constraint+ components.
+
+==== ContinuousSet ==== 
+
+This component is used to define continuous bounded domains (for
+example 'spatial' or 'time' domains). It is similar to a Pyomo +Set+
+component and can be used to index things like variables and
+constraints. In the current implementation, models with
++ContinuousSet+ components may not be solved until every
++ContinuousSet+ has been discretized. Minimally, a +ContinuousSet+
+must be initialized with two numeric values representing the upper and
+lower bounds of the continuous domain. A user may also specify
+additional points in the domain to be used as finite element
+points in the discretization.
+
+The following code snippet shows examples of declaring a
++ContinuousSet+ component on a concrete Pyomo model:
+
+[source,python]
+----
+# Required imports
+from pyomo.environ import *
+from pyomo.dae import *
+
+model = ConcreteModel()
+
+# declare by providing bounds
+model.t = ContinuousSet(bounds=(0,5))
+
+# declare by initializing with desired discretization points
+model.x = ContinuousSet(initialize=[0,1,2,5])
+----
+
+The following code snippet shows an example of declaring a
++ContinuousSet+ component on an abstract Pyomo model using the
+example data file.
+
+[ampl]
+----
+set t := 0 0.5 2.25 3.75 5;
+----
+
+[source,python]
+----
+# Required imports
+from pyomo.environ import *
+from pyomo.dae import *
+
+model = AbstractModel()
+
+# The ContinuousSet below will be initialized using the points
+# in the data file when a model instance is created.
+model.t = ContinuousSet()
+----
+
+NOTE: A +ContinuousSet+ may not be constructed unless two numeric
+bounding points are provided. 
+
+NOTE: If a separate data file is used to initialize a +ContinuousSet+,
+it is done using the 'set' command and not 'continuousset'
+
+Most valid ways to declare and initialize a +Set+ can be used to
+declare and initialize a +ContinuousSet+. See the documentation for
++Set+ for additional options. 
+
+WARNING: Be careful using a +ContinuousSet+ as an implicit index in an
+expression, i.e. sum(m.v[i] for i in m.myContinuousSet). The
+expression will be generated using the discretization points contained
+in the +ContinuousSet+ at the time the expression was constructed and
+will not be updated if additional points are added to the set.
+
+.Summary of +ContinuousSet+ methods
+get_finite_elements();;
+	If the ContinuousSet has been discretizaed using a collocation
+      	scheme, this method will return a list of the finite element 
+	discretization points but not the collocation points over each
+	finite element. Otherwise this method returns a list of all the 
+	discretization points in the ContinuousSet.
+  
+get_discretization_info();;
+      Returns a dictionary containing information on the discretization
+      scheme that has been applied to the ContinuousSet.
+  
+get_changed();;
+      Returns "True" if additional points were added to 
+      the ContinousSet while applying a discretization scheme
+  
+get_upper_element_boundary(value);;
+      Returns the first finite element point that is greater than or 
+      equal to the value sent to the function.
+
+get_lower_element_boundary(value);;
+      Returns the first finite element point that is less than or 
+      equal to the value sent to the function.
+ 
+==== DerivativeVar ====
+
+The +DerivativeVar+ component is used to declare a derivative of a
++Var+. A +Var+ may only be differentiated with respect to a
++ContinuousSet+ that it is indexed by. The indexing sets of a
++DerivativeVar+ are identical to those of the +Var+ it is
+differentiating.
+
+The code snippet below shows examples of declaring +DerivativeVar+
+components on a Pyomo model. In each case, the variable being
+differentiated is supplied as the only positional argument and the
+type of derivative is specified using the 'wrt' (or the more verbose
+'withrespectto') keyword argument. Any keyword argument that is valid
+for a Pyomo +Var+ component may also be specified.
+
+[source,python]
+----
+# Required imports
+from pyomo.environ import *
+from pyomo.dae import *
+
+model = ConcreteModel()
+model.s = Set(initialize=['a','b'])
+model.t = ContinuousSet(bounds=(0,5))
+model.l = ContinuousSet(bounds=(-10,10))
+
+model.x = Var(model.t)
+model.y = Var(model.s,model.t)
+model.z = Var(model.t,model.l)
+
+# Declare the first derivative of model.x with respect to model.t
+model.dxdt = DerivativeVar(model.x, withrespectto=model.t)
+
+# Declare the second derivative of model.y with respect to model.t
+# Note that this DerivativeVar will be indexed by both model.s and model.t
+model.dydt2 = DerivativeVar(model.y, wrt=(model.t,model.t))
+
+# Declare the partial derivative of model.z with respect to model.l
+# Note that this DerivativeVar will be indexed by both model.t and model.l
+model.dzdl = DerivativeVar(model.z, wrt=(model.l), initialize=0)
+
+# Declare the mixed second order partial derivative of model.z with respect
+# to model.t and model.l and set bounds
+model.dz2 = DerivativeVar(model.z, wrt=(model.t, model.l), bounds=(-10,10))
+----
+
+NOTE: The 'initialize' keyword argument will initialize the value of a
+derivative and is not the same as specifying an initial
+condition. Initial or boundary conditions should be specified using a
++Constraint+ or +ConstraintList+.
+
+Another way to use derivatives without explicitly declaring
++DerivativeVar+ components is to use the .derivative() method on a
+variable within an expression or constraint. For example:
+
+[source,python]
+----
+# Required imports
+from pyomo.environ import *
+from pyomo.dae import *
+
+model = ConcreteModel()
+model.t = ContinuousSet(bounds=(0,5))
+model.x = Var(model.t)
+
+# Create the first derivative of model.x with respect to model.t
+# within a constraint rule.
+def _diffeq_rule(m,i):
+    return m.x[i].derivative(m.t) == m.x[i]**2
+model.diffeq = Constraint(model.t,rule=_diffeq_rule)
+----
+
+In the above example a +DerivatveVar+ component representing the
+desired derivative will automatically be added to the Pyomo model when
+the constraint is constructed. The .derivative() method accepts
+positional arguments representing what the derivative is being taken
+with respect to. 
+
+NOTE: If a variable is indexed by a single +ContinuousSet+ then the
+.derivative() method with no positional arguments may be used to
+specify the first derivative of that variable with respect to the
++ContinuousSet+.
+
+=== Declaring Differential Equations ===
+
+A differential equations is declared as a standard Pyomo +Constraint+ and
+is not required to have any particular form. The following code
+snippet shows how one might declare an ordinary or partial
+differential equation. 
+
+[source,python]
+----
+# Required imports
+from pyomo.environ import *
+from pyomo.dae import *
+
+model = ConcreteModel()
+model.s = Set(initialize=['a','b'])
+model.t = ContinuousSet(bounds=(0,5))
+model.l = ContinuousSet(bounds=(-10,10))
+
+model.x = Var(model.s,model.t)
+model.y = Var(model.t,model.l)
+model.dydt = DerivativeVar(model.y, wrt=model.t)
+model.dydl2 = DerivativeVar(model.y, wrt=(model.l,model.l))
+
+# An ordinary differential equation
+def _ode_rule(m,i,j):
+    if j == 0:
+        return Constraint.Skip
+    return m.x[i].derivative(m.t) == m.x[i]**2
+model.ode = Constraint(model.s,model.t,rule=_ode_rule)
+
+# A partial differential equation
+def _pde_rule(m,i,j):
+    if i == 0 or j == -10 or j == 10:
+        return Constraint.Skip
+    return m.dydt[i,j] == m.dydl2[i,j]
+model.pde = Constraint(model.t,model.l,rule=_pde_rule)
+----
+
+NOTE: Often a modeler does not want to apply a differential equation
+at one or both boundaries of a continuous domain. This must be
+addressed explicitly in the +Constraint+ declaration using
+'Constraint.Skip' as shown above. By default, a +Constraint+ declared
+over a +ContinuousSet+ will be applied at every discretization point
+contained in the set.
+
+=== Declaring Integrals ===
+
+The +Integral+ component is still under development but some basic
+functionality is available in the current Pyomo release. Integrals
+must be taken over the entire domain of a +ContinuousSet+. Once every
++ContinuousSet+ in a model has been discretized, any integrals in
+the model will be converted to algebraic equations using the trapezoid
+rule. Future releases of this tool will include more sophisticated
+numerical integration methods.
+
+Declaring an +Integral+ component is similar to declaring an +Expression+ component. A simple example is shown below:
+
+[source,python]
+----
+def _intX(m,i):
+    return (m.X[i]-m.X_desired)**2
+model.intX = Integral(model.time,wrt=model.time,rule=_intX)
+
+def _obj(m):
+    return m.scale*m.intX
+model.obj = Objective(rule=_obj)
+----
+
+Notice that the positional arguments supplied to the +Integral+
+declaration must include all indices needed to evaluate the integral
+expression. The integral expression is defined in a function and
+supplied to the 'rule' keyword argument. Finally, a user must specify
+a +ContinuousSet+ that the integral is being evaluated over. This is
+done using the 'wrt' keyword argument.
+
+NOTE: The +ContinousSet+ specified using the 'wrt' keyword argument
+must be explicitly specified as one of the indexing sets (meaning it
+must be supplied as a positional argument)
+
+After an +Integral+ has been declared, it can be used just like a
+Pyomo +Expression+ component and can be included in constraints or the
+objective function as shown above.
+
+If an +Integral+ is specified with multiple positional arguments,
+i.e. multiple indexing sets, the final component will be indexed by
+all of those sets except for the +ContinuousSet+ that the integral was
+taken over. In other words, the +ContinuousSet+ specified with the
+'wrt' keyword argument is removed from the indexing sets of the
++Integral+ even though it must be specified as a positional
+argument. The reason for this is to keep track of the order of the
+indexing sets. This logic should become more clear with the following
+example showing a double integral over the +ContinuousSet+ components
+'t1' and 't2'. In addition, the expression is also indexed by the
++Set+ 's'.
+
+[source,python]
+----
+def _intX1(m,i,j,s):
+    return (m.X[i,j,s]-m.X_desired[j,s])**2
+model.intX1 = Integral(model.t1,model.t2,model.s,wrt=model.t1,rule=_intX1)
+
+def _intX2(m,j,s):
+    return (m.intX1[j,s]-m.X_desired[s])**2
+model.intX2 = Integral(model.t2,model.s,wrt=model.t2,rule=_intX2)
+
+def _obj(m):
+    return sum(model.intX2[k] for k in m.s)
+model.obj = Objective(rule=_obj)
+----
+
+=== Discretization Transformations ===
+
+Before a Pyomo model with DerivativeVar or Integral components can be
+sent to a solver it must first be sent through a discretization
+transformation. These transformations approximate any derivatives or
+integrals in the model by using a numerical method. The numerical
+methods currently included in this tool discretize the continuous
+domains in the problem and introduce equality constraints which
+approximate the derivatives and integrals at the discretization
+points. Two families of discretization schemes have been implemented
+in Pyomo, Finite Difference and Collocation. These schemes are
+described in more detail below.
+
+NOTE: The schemes described here are for derivatives only. All
+integrals will be transformed using the trapezoid rule.
+
+The user must write a Python script in order to use these
+discretizations, they have not been tested on the pyomo command
+line. Example scripts are shown below for each of the discretization
+schemes. The transformations are applied to Pyomo model objects which
+can be further manipulated before being sent to a solver. Examples of
+this are also shown below.
+
+==== Finite Difference Transformation ====
+
+This transformation includes implementations of several finite
+difference methods. For example, the Backward Difference method (also
+called Implicit or Backward Euler) has been implemented. The
+discretization equations for this method are shown below:
+
+[latexmath]
+++++++++++++++
+\begin{array}{l}
+\mathrm{Given } dx/dt = f(t,x) \mathrm{ and } x(t0) = x_{0} \\
+\mathrm{discretize } t \mathrm{ and } x \mathrm{ such that} \\
+x(t0+kh)= x_{k} \\
+x_{k+1}= x_{k}+h*f(t_{k+1},x_{k+1}) \\
+t_{k+1}= t_{k}+h
+\end{array}
+++++++++++++++
+
+where latexmath:[$h$] is the step size between discretization points
+or the size of each finite element. These equations are generated
+automatically as +Constraint+ components when the backward
+difference method is applied to a Pyomo model.
+
+There are several discretization options available to a
++dae.finite_difference+ transformation which can be specified as
+keyword arguments to the .apply_to() function of the transformation
+object. These keywords are summarized below:
+
+.Keyword arguments for applying a finite difference transformation.
+
+'nfe':: The desired number of finite element points to be included in the discretization. The default value is 10.
+
+'wrt':: Indicates which ContinuousSet the transformation should be applied to. If this keyword argument is not specified then the same scheme will be applied to all ContinuousSets.
+
+'scheme':: Indicates which finite difference method to apply. Options are 'BACKWARD', 'CENTRAL', or 'FORWARD'. The default scheme is the backward difference method.
+
+If the existing number of finite element points in a +ContinuousSet+
+is less than the desired number, new discretization points will be
+added to the set. If a user specifies a number of finite element
+points which is less than the number of points already included in the
++ContinuousSet+ then the transformation will ignore the specified
+number and proceed with the larger set of points. Discretization points
+will never be removed from a +ContinousSet+ during the discretization.
+
+The following code is a Python script applying the backward difference
+method. The code also shows how to add a constraint to a discretized
+model.
+
+[source,python]
+----
+from pyomo.environ import *
+from pyomo.dae import *
+
+# Import concrete Pyomo model
+from pyomoExample import model
+
+# Discretize model using Backward Difference method
+discretizer = TransformationFactory('dae.finite_difference')
+discretizer.apply_to(model,nfe=20,wrt=model.time,scheme='BACKWARD')
+
+# Add another constraint to discretized model
+def _sum_limit(m):
+    return sum(m.x1[i] for i in m.time) <= 50
+model.con_sum_limit = Constraint(rule=_sum_limit)
+
+# Solve discretized model
+solver = SolverFactory('ipopt')
+results = solver.solve(model)
+----
+
+==== Collocation Transformation ====
+
+This transformation uses orthogonal collocation to discretize the
+differential equations in the model. Currently, two types of
+collocation have been implemented. They both use Lagrange polynomials
+with either Gauss-Radau roots or Gauss-Legendre roots. For more
+information on orthogonal collocation and the discretization equations
+associated with this method please see chapter 10 of the book
+"Nonlinear Programming: Concepts, Algorithms, and Applications to
+Chemical Processes" by L.T. Biegler.
+
+The discretization options available to a
++dae.collocation+ transformation are the same as those
+described above for the +Finite_Difference_Transformation with
+different available schemes and the addition of the 'ncp' option.
+
+.Additional keyword arguments for collocation discretizations
+
+'scheme':: The desired collocation scheme, either 'LAGRANGE-RADAU' or 'LAGRANGE-LEGENDRE'. The default is 'LAGRANGE-RADAU'.
+
+'ncp':: The number of collocation points within each finite element. The default value is 3.
+
+NOTE: If the user's version of Python has access to the package Numpy
+then any number of collocation points may be specified, otherwise the
+maximum number is 10.
+
+NOTE: Any points that exist in a ContinuousSet before discretization
+will be used as finite element boundaries and not as collocation
+points. The locations of the collocation points cannot be specified
+by the user, they must be generated by the transformation.
+
+The following code is a Python script applying collocation with
+Lagrange polynomials and Radau roots. The code also shows how to add
+an objective function to a discretized model.
+
+[source,python]
+----
+from pyomo.environ import *
+from pyomo.dae import *
+
+# Import concrete Pyomo model
+from pyomoExample2 import model
+
+# Discretize model using Radau Collocation
+discretizer = TransformationFactory('dae.collocation')
+discretizer.apply_to(model,nfe=20,ncp=6,scheme='LAGRANGE-RADAU')
+
+# Add objective function after model has been discretized
+def obj_rule(m):
+    return sum((m.x[i]-m.x_ref)**2 for i in m.time)
+model.obj = Objective(rule=obj_rule)
+
+# Solve discretized model
+solver = SolverFactory('ipopt')
+results = solver.solve(model)
+----
+
+==== Applying Multiple Discretization Transformations ====
+
+Discretizations can be applied independently to each +ContinuousSet+
+in a model. This allows the user great flexibility in discretizing
+their model. For example the same numerical method can be applied with
+different resolutions:
+
+[source,python]
+----
+discretizer = TransformationFactory('dae.finite_difference')
+discretizer.apply_to(model,wrt=model.t1,nfe=10)
+discretizer.apply_to(model,wrt=model.t2,nfe=100)
+----
+
+This also allows the user to combine different methods. For example,
+applying the forward difference method to one +ContinuousSet+ and the
+central finite difference method to another +ContinuousSet+:
+
+[source,python]
+----
+discretizer = TransformationFactory('dae.finite_difference')
+discretizer.apply_to(model,wrt=model.t1,scheme='FORWARD')
+discretizer.apply_to(model,wrt=model.t2,scheme='CENTRAL')
+----
+
+In addition, the user may combine finite difference and collocation
+discretizations. For example:
+
+[source,python]
+----
+disc_fe = TransformationFactory('dae.finite_difference')
+disc_fe.apply_to(model,wrt=model.t1,nfe=10)
+disc_col = TransformationFactory('dae.collocation')
+disc_col.apply_to(model,wrt=model.t2,nfe=10,ncp=5)
+----
+
+If the user would like to apply the same discretization to all
++ContinuousSet+ components in a model, just specify the discretization
+once without the 'wrt' keyword argument. This will apply that scheme
+to all +ContinuousSet+ components in the model that haven't already been
+discretized.
+
+==== Custom Discretization Schemes ====
+
+A transformation framework along with certain utility functions has
+been created so that advanced users may easily implement custom
+discretization schemes other than those listed above. The
+trasnformation framework consists of the following steps:
+
+1. Specify Discretization Options
+2. Discretize the ContinuousSet(s)
+3. Update Model Components
+4. Add Discretization Equations
+5. Return Discretized Model
+
+If a user would like to create a custom finite difference scheme then
+they only have to worry about step (4) in the framework. The
+discretization equations for a particular scheme have been isolated
+from of the rest of the code for implementing the transformation. The
+function containing these discretization equations can be found at the
+top of the source code file for the transformation. For example, below
+is the function for the forward difference method:
+
+[source,python]
+----
+def _forward_transform(v,s):
+    """
+    Applies the Forward Difference formula of order O(h) for first derivatives
+    """
+    def _fwd_fun(i):
+        tmp = sorted(s)
+        idx = tmp.index(i)
+        return 1/(tmp[idx+1]-tmp[idx])*(v(tmp[idx+1])-v(tmp[idx]))
+    return _fwd_fun
+----
+
+In this function, 'v' represents the continuous variable or function
+that the method is being applied to. 's' represents the set of
+discrete points in the continuous domain. In order to implement a
+custom finite difference method, a user would have to copy the above
+function and just replace the equation next to the first return
+statement with their method.
+
+After implementing a custom finite difference method using the above
+function template, the only other change that must be made is to add
+the custom method to the 'all_schemes' dictionary in the
+Finite_Difference_Transformation class. 
+
+In the case of a custom collocation method, changes will have to be
+made in steps (2) and (4) of the transformation framework. In addition
+to implementing the discretization equations, the user would also have
+to ensure that the desired collocation points are added to the
+ContinuousSet being discretized.
+
+// vim: set syntax=asciidoc:

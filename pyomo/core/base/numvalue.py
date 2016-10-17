@@ -49,7 +49,7 @@ def _old_value(obj):
     tmp = obj()
     if tmp is None:
         raise ValueError("No value for uninitialized NumericValue object %s"
-                         % (obj.cname(),))
+                         % (obj.name,))
     return tmp
 
 # It is *significantly* faster to build the list of types we want to
@@ -156,7 +156,7 @@ def value(obj, exception=True):
 
     if exception and (tmp is None):
         raise ValueError("No value for uninitialized NumericValue object %s"
-                         % (obj.cname(),))
+                         % (obj.name,))
     return tmp
 
 
@@ -320,14 +320,27 @@ class NumericValue(object):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
-    def cname(self, fully_qualified=False, name_buffer=None):
+    def getname(self, fully_qualified=False, name_buffer=None):
         """If this is a component, return the component's name on the owning
         block; otherwise return the value converted to a string"""
         _base = super(NumericValue, self)
-        if hasattr(_base,'cname'):
-            return _base.cname(fully_qualified, name_buffer)
+        if hasattr(_base,'getname'):
+            return _base.getname(fully_qualified, name_buffer)
         else:
             return str(type(self))
+
+    @property
+    def name(self):
+        return self.getname(fully_qualified=True)
+
+    @property
+    def local_name(self):
+        return self.getname(fully_qualified=False)
+
+    def cname(self, *args, **kwds):
+        logger.warning(
+            "DEPRECATED: The cname() method has been renamed to getname()." )
+        return self.getname(*args, **kwds)
 
     def is_constant(self):
         """Return True if this numeric value is a constant value"""
@@ -370,7 +383,7 @@ class NumericValue(object):
 disabled. This error is often the result of using Pyomo components as
 arguments to one of the Python built-in math module functions when
 defining expressions. Avoid this error by using Pyomo-provided math
-functions.""" % (self.cname(),))
+functions.""" % (self.name,))
 
     def __int__(self):
         """Coerce the value to an integer"""
@@ -379,7 +392,7 @@ functions.""" % (self.cname(),))
 disabled. This error is often the result of using Pyomo components as
 arguments to one of the Python built-in math module functions when
 defining expressions. Avoid this error by using Pyomo-provided math
-functions.""" % (self.cname(),))
+functions.""" % (self.name,))
 
     def __lt__(self,other):
         """Less than operator

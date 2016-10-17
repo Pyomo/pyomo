@@ -1,0 +1,7 @@
+
+*.cover
+*.egg-info
+*.out
+*.pyc
+*.pyo
+*.spy

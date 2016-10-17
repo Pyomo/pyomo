@@ -194,8 +194,7 @@ def run(args=None):
 
     scenario_instance_factory = \
         ScenarioTreeInstanceFactory(options.model_directory,
-                                    options.instance_directory,
-                                    options.verbose)
+                                    options.instance_directory)
     if _OLD_OUTPUT:
         print("Loading reference model and scenario tree")
     if options.verbose or options.output_times:
@@ -210,7 +209,8 @@ def run(args=None):
                 downsample_fraction=options.scenario_tree_downsample_fraction,
                 bundles=options.scenario_bundle_specification,
                 random_bundles=options.create_random_bundles,
-                random_seed=options.scenario_tree_random_seed)
+                random_seed=options.scenario_tree_random_seed,
+                verbose=options.verbose)
 
         #
         # print the input tree for validation/information purposes.

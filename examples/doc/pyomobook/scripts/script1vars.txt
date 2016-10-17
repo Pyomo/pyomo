@@ -1,0 +1,10 @@
+x_2  value: 0.4
+x_2  value: 0.4
+x_2  value: 0.4
+x[2] value: 0.4
+x[2] value: 0.4
+x[2] value: 0.4
+x_2  object: x_2
+x[2] object: x[2]
+x_2 == x[2]
+x_2 == x[2]

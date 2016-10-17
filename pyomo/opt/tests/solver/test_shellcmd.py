@@ -16,6 +16,7 @@ import pyutilib.th as unittest
 from pyutilib.common import ApplicationError
 
 from pyomo.opt.base import UnknownSolver
+from pyomo.opt.base.solvers import SolverFactory
 from pyomo.opt.solver import SystemCallSolver
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
@@ -37,12 +38,19 @@ isexe_relpath = (os.path.curdir + os.path.sep + \
                  exedirname + os.path.sep +
                  isexe_nopath)
 
+# Names to test the "executable" functionality with through the
+# SolverFactory.  These tests are necessary due to logic that is in
+# SolverFactory that depends on whether or not a solver plugin is
+# registered.
+_test_names = ["cplex", "ipopt", "bonmin", "cbc", "glpk", "gurobi", "junk___"]
+
 is_windows = os.name == 'nt'
 
-class Test(unittest.TestCase):
+class TestSystemCallSolver(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        import pyomo.environ
 
         # make sure relative path tests will work
         cls.oldpwd = os.getcwd()
@@ -83,6 +91,9 @@ class Test(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         os.chdir(cls.oldpwd)
+
+    def setUp(self):
+        os.chdir(thisdir)
 
     def test_noexe(self):
         with SystemCallSolver(type='test') as opt:
@@ -218,6 +229,50 @@ class Test(unittest.TestCase):
             opt.set_executable(isexe_abspath_user, validate=False)
             self.assertEqual(opt._user_executable, isexe_abspath_user)
             self.assertEqual(opt.executable(), isexe_abspath_user)
+
+
+    def test_SolverFactory_executable_isexe_nopath(self):
+        for name in _test_names:
+            with SolverFactory(name, executable=isexe_nopath) as opt:
+                self.assertTrue(isinstance(opt, UnknownSolver))
+
+        # now add the exedir to the PATH
+        rm_PATH = False
+        orig_PATH = None
+        if "PATH" in os.environ:
+            orig_PATH = os.environ["PATH"]
+        else:
+            rm_PATH = True
+            os.environ["PATH"] = ""
+        os.environ["PATH"] = exedir + os.pathsep + os.environ["PATH"]
+        try:
+            for name in _test_names:
+                with SolverFactory(name, executable=isexe_nopath) as opt:
+                    self.assertEqual(opt._user_executable, isexe_abspath)
+                    self.assertEqual(opt.executable(), isexe_abspath)
+        finally:
+            if rm_PATH:
+                del os.environ["PATH"]
+            else:
+                os.environ["PATH"] = orig_PATH
+
+    def test_SolverFactory_executable_isexe_relpath(self):
+        for name in _test_names:
+            with SolverFactory(name, executable=isexe_relpath) as opt:
+                self.assertEqual(opt._user_executable, isexe_abspath)
+                self.assertEqual(opt.executable(), isexe_abspath)
+
+    def test_executable_isexe_abspath(self):
+        for name in _test_names:
+            with SolverFactory(name, executable=isexe_abspath) as opt:
+                self.assertEqual(opt._user_executable, isexe_abspath)
+                self.assertEqual(opt.executable(), isexe_abspath)
+
+    def test_executable_isexe_abspath_user(self):
+        for name in _test_names:
+            with SolverFactory(name, executable=isexe_abspath_user) as opt:
+                self.assertEqual(opt._user_executable, isexe_abspath)
+                self.assertEqual(opt.executable(), isexe_abspath)
 
 if __name__ == "__main__":
     unittest.main()

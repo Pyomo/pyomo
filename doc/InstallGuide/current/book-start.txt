@@ -1,0 +1,50 @@
+[preface]
+== Preface ==
+
+This book describes different methods for installing the Pyomo
+software.  Pyomo is a Python software package that supports a diverse
+set of optimization capabilities for formulating and analyzing
+optimization models.  This capability is commonly associated with
+algebraic modeling languages (AMLs), which support the description
+and analysis of mathematical models with a high-level language.
+
+=== Goals of the Book ===
+
+Unfortunately, Pyomo is a complex software package that can be
+difficult to install.  Pyomo is a Python package that integrates a
+variety of subpackages.  Pyomo also depends on a variety of third-party
+Python packages, some of which have very different installation
+processes on different computer operating systems.  Furthermore,
+Pyomo can execute third-party optimization solvers, whose installation
+and configuration is completely independent of Pyomo.
+
+In this book, we outline a variety of installation options for
+different computer operating systems and for different usage models.
+These installation options reflect the different ways that Pyomo
+developers and users have used Pyomo, and they account for user
+access to system resources.
+
+
+=== Comments and Questions ===
+
+Further information about Pyomo and Pyomo is available a the Pyomo home page:
+
+    http://pyomo.org
+
+The Pyomo software is developed on the following Trac site:
+
+    https://software.sandia.gov/trac/pyomo
+
+Pyomo is also hosted at COIN-OR:
+
+    https://projects.coin-or.org/pyomo
+
+We strongly encourage feedback from readers about the software on the Pyomo Forum:
+
+    pyomo-forum@googlegroups.com
+
+We hope this will include feedback on typos and errors in our examples in this book.  
+
+Good Luck!
+
+// vim: set syntax=asciidoc:

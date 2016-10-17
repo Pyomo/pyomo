@@ -31,8 +31,8 @@ def plotter(subplot, x, *y, **kwds):
         if kwds.get('points', False):
             plt.plot(list(x), [value(_y[t]) for t in x], 'o')
     plt.title(kwds.get('title',''))
-    plt.legend(tuple(_y.cname() for _y in y))
-    plt.xlabel(x.cname())
+    plt.legend(tuple(_y.name for _y in y))
+    plt.xlabel(x.name)
 
 import matplotlib.pyplot as plt
 plotter(121, m.t, m.x1, m.x2, title='Differential Variables')

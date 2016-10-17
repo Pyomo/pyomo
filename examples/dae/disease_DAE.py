@@ -5,6 +5,7 @@
 # Scaling in Continuous Set
 from pyomo.environ import *
 from pyomo.dae import *
+from six.moves import xrange
 
 years = 20
 beta_py = 26

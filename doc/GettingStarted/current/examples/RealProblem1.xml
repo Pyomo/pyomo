@@ -1,0 +1,36 @@
+<!--- RealProblem1.xml
+
+    This Coliny XML specification illustrates the execution of the
+    colin:ls solver on the RealProblem1 problem.
+--->
+
+<ColinInput>
+
+  <Problem type="MINLP0">
+     <Domain>
+        <RealVars num="4">
+          <Lower index="1" value="0.0"/>
+          <Lower index="2" value="-1.0"/>
+          <Lower index="3" value="1.0"/>
+
+          <Upper index="2" value="0.0"/>
+          <Upper index="3" value="2.0"/>
+          <Upper index="4" value="-1.0"/>
+        </RealVars>
+     </Domain>
+
+     <Driver>
+        <Command>RealProblem1.py</Command>
+     </Driver>
+  </Problem>
+
+  <Solver type="colin:ls">
+     <InitialPoint>
+       0.0 2.0 -1.0 10.0
+     </InitialPoint>
+     <Options>
+        <Option name="min_function_value">-1.0</Option>
+     </Options>
+  </Solver>
+</ColinInput>
+

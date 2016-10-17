@@ -1,0 +1,50 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: 14.0
+  Upper bound: 14.0
+  Number of objectives: 1
+  Number of constraints: 15
+  Number of variables: 13
+  Number of nonzeros: 21
+  Sense: maximize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: feasible
+  Message: None
+  Objective:
+    obj:
+      Value: 14
+  Variable:
+    x[1,2]:
+      Value: 6
+    x[1,3]:
+      Value: 7
+    x[1,4]:
+      Value: 1
+    x[2,4]:
+      Value: 6
+    x[3,4]:
+      Value: 7
+  Constraint: No values

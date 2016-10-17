@@ -83,11 +83,8 @@ def runPyomoTests():
     if len(args) > 1:
         mydirs = args[1:]
     else:
-        for root, subdirs, files in os.walk('pyomo/pyomo'):
-            mydirs = []
-            for f in subdirs:
-                mydirs.append( os.path.basename(f) )
-            break
+        mydirs = ['pyomo', 'pyomo-model-libraries']
+    #
     dirs=[]
     for dir in mydirs:
         if dir in _options.exclude:
@@ -99,14 +96,29 @@ def runPyomoTests():
                 dirs.append(dir)
             elif '.' in dir:
                 dirs.append(os.path.join('pyomo','pyomo',dir.split('.')[1]))
-            else:
-                dirs.append(os.path.join('pyomo','pyomo'))
         else:
             if os.path.exists('pyomo.'+dir):
                 dirs.append('pyomo.'+dir)
             else:
                 dirs.append(os.path.join('pyomo','pyomo',dir))
-    if len(dirs) == 0:
-        dirs = ['pyomo*']
-    pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+dirs)
-
+    #
+    excluding = set()
+    for e in _options.exclude:
+        excluding.add(os.path.join('pyomo','pyomo',e))
+    testdirs = []
+    for topdir in dirs:
+        for root, subdirs, files in os.walk(topdir):
+            if not '__init__.py' in files:
+                # Skip directories that do not contain a __init__.py file.
+                continue
+            for f in files:
+                if f.startswith("test"):
+                    skip=False
+                    for e in excluding:
+                        if root.startswith(e):
+                            skip=True
+                    if not skip:
+                        testdirs.append(root)
+                    break
+    #
+    return pyutilib.dev.runtests.run('pyomo', ['runtests']+options+['-p','pyomo']+testdirs)

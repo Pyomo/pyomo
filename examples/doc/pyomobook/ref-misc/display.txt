@@ -1,0 +1,30 @@
+# @display1:
+Model unknown
+
+  Variables:
+    x : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     0 :   1.0 :     1 : False : False
+    y : Size=1, Index=None, Domain=Reals
+        Key  : Lower : Value : Upper : Fixed : Stale
+        None :     2 :   3.0 :     4 : False : False
+
+  Objectives:
+    o : Size=1, Index=None, Active=True
+        Key  : Active : Value
+        None :   True :   4.0
+
+  Constraints:
+    None
+# @:display1
+# @display2:
+x : Size=1, Index=None, Domain=Reals
+    Key  : Lower : Value : Upper : Fixed : Stale
+    None :     0 :   1.0 :     1 : False : False
+# @:display2
+# @value1:
+4.0
+# @:value1
+# @value2:
+1.0
+# @:value2

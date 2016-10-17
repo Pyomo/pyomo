@@ -1,0 +1,400 @@
+
+== Scripts ==
+
+There are two main ways to add scripting for Pyomo models: using Python scripts and using callbacks for the +pyomo+ command
+that alter or supplement its workflow.
+
+=== Python Scripts ===
+
+==== Iterative Example ====
+
+To illustrate Python scripts for Pyomo we consider
+an example that is in the file +iterative1.py+ and is executed using the command
+----
+python iterative1.py
+----
+
+NOTE: This is a Python script that contains elements of Pyomo, so it is executed using the +python+ command. 
+The +pyomo+ command can be used, but then there will be some strange messages at the end when Pyomo finishes the script and attempts to send the results to a solver, which is what the +pyomo+ command does.
+
+This script creates a model, solves it, and then adds a constraint to preclude the solution just found. This process is
+repeated, so the script finds and prints multiple solutions. 
+The particular model it creates is just the sum of four binary variables. One does not need a computer to solve
+the problem or even to iterate over solutions. This example is provided just to illustrate some elementary aspects of scripting.
+
+NOTE: The built-in code for printing solutions prints only non-zero variable values. So if you run this code, 
+no variable values will be output for the first solution found because all of the variables are zero. However, other information about the solution, such as the objective value, will be displayed.
+
+[source,python]
+----
+include::examples/PyomoGettingStarted/iterative1.py[]
+----
+
+Let us now analyze this script. The first line is a comment that happens to give the name of the file. This is followed by
+two lines that import symbols for Pyomo:
+----
+# iterative1.py
+from pyomo.core import *
+from pyomo.opt import SolverFactory
+----
+
+An object to form optimization is created by calling +SolverFactory+ with an argument giving the name of the solver.t
+The argument would be +'gurobi'+ if, e.g., Gurobi was desired instead of glpk:
+----
+# Create a solver
+opt = SolverFactory('glpk')
+----
+
+The next lines after a comment create a model. For our discussion here, we will refer to this as the base model
+because it will be extended by adding constraints later. (The words "base model" are not reserved words, they are just
+being introduced for the discussion of this example). 
+There are no constraints in the base model, but that is just to keep it simple. 
+Constraints could be present in the base model. 
+Even though it is an abstract model, the base model
+is fully specified by these commands because it requires no external data:
+----
+model = AbstractModel()
+model.n = Param(default=4)
+model.x = Var(RangeSet(model.n), within=Binary)
+def o_rule(model):
+    return summation(model.x)
+model.o = Objective(rule=o_rule)
+----
+
+The next line is not part of the base model specification. It creates an empty constraint list that the script will use
+to add constraints.
+----
+model.c = ConstraintList()
+----
+
+The next non-comment line creates the instantiated model and refers to the instance object
+with a Python variable +instance+. 
+Models run using the +pyomo+ script do not typically contain this
+line because model instantiation is done by the +pyomo+ script. In this example, the +create+ function
+is called without arguments because none are needed; however, the name of a file with data
+commands is given as an argument in many scripts.
+----
+instance = model.create()
+----
+
+The next line invokes the solver and refers to the object contain results with the Python
+variable +results+.
+----
+results = opt.solve(instance)
+----
+
+The print method of the results object is invoked by the Python +print+ command:
+----
+print results
+----
+
+The next non-comment line is a Python iteration command that will successively
+assign the integers from 0 to 4 to the Python variable +i+, although that variable is not
+used in script. This loop is what
+causes the script to generate five more solutions:
+----
+for i in range(5):
+----
+
+The next line associates the results obtained with the instance. This then enables
+direct queries of solution values in subsequent lines using variable names contained in the instance:
+----
+    instance.load(results)
+----
+
+An expression is built up in the Python variable named +expr+. 
+The Python variable +j+ will be iteratively assigned all of the indexes of the variable +x+. For each index,
+the value of the variable (which was loaded by the +load+ method just described) is tested to see if it is zero and 
+the expression in +expr+ is augmented accordingly.
+Although +expr+ is initialized to 0 (an integer), 
+its type will change to be a Pyomo expression when it is assigned expressions involving Pyomo variable objects:
+----
+    expr = 0
+    for j in instance.x:
+        if instance.x[j].value == 0:
+            expr += instance.x[j]
+        else:
+            expr += (1-instance.x[j])
+----
+During the first iteration (when +i+ is 0), we know that all values of +x+ will be 0, so we can anticipate what the
+expression will look like. We know that +x+ is indexed by the integers from 1 to 4 so we know that +j+ will take on the
+values from 1 to 4 and we also know that all value of +x+ will be zero for all indexes 
+so we know that the value of +expr+ will be something like 
+----
+0 + instance.x[1] + instance.x[2] + instance.x[3] + instance.x[4]
+----
+The value of +j+ will be evaluated because it is a Python variable; however, because it is a Pyomo variable,
+the value of +instance.x[j]+ not be used, instead the variable object will
+appear in the expression. That is exactly what we want in
+this case. When we wanted to use the current value in the +if+ statement, we used the +value+ method to get it.
+
+The next line adds to the constaint list called +c+ 
+the requirement that the expression be greater than or equal to one:
+----
+    instance.c.add( expr >= 1 )
+----
+The proof that this precludes the last solution is left as an exerise for the reader.
+
+The final lines in the outer for loop find a solution and display it:
+----
+    results = opt.solve(instance)
+    print results
+----
+
+=== Pyomo Callbacks ===
+
+Pyomo enables altering or extending its workflow through the use of callbacks that are defined in the model file.
+Taken together, the callbacks allow for consruction of a rich set of workflows. However, many users might be interesting
+in making use of only one or two of the callbacks.
+They are executable Python functions with pre-defined names:
+
+* +pyomo_preprocess+: Preprocessing before model construction
+* +pyomo_create_model+: Constructs and returns the model object
+* +pyomo_create_modeldata+: Constructs and returns a ModelData object
+* +pyomo_print_model+: Display model information
+* +pyomo_modify_instance+: Modify the model instance
+* +pyomo_print_instance+: Display instance information
+* +pyomo_save_instance+: Write the model instance to a file
+* +pyomo_print_results+: Display the results of optimization
+* +pyomo_save_results+: Store the optimization results
+* +pyomo_postprocess+: Postprocessing after optimization
+
+Many of these functions have arguments, which must be declared when the functions are declared. This can
+be done either by listing the arguments, as we will show below, or by providing a dictionary for arbitrary keyword
+arguments in the form +**kwds+.  If the abritrary keywords are used, then the arguments are access using the get method.
+For example the preprocess function takes one argument (as will be described below) so the following two function will produce the same output:
+----
+def pyomo_preprocess(options=None):
+   if options == None:
+      print "No command line options were given."
+   else:
+      print "Command line arguments were: %s" % options
+----
+
+----
+def pyomo_preprocess(**kwds):
+   options = kwds.get('options',None)
+   if options == None:
+      print "No command line options were given."
+   else:
+      print "Command line arguments were: %s" % options
+----
+  
+To access the various arguments using the +**kwds+ argument, use the following strings:
+
+- +'options'+ for the command line arguments dictionary
+- +'model-options'+ for the +--model-options+ dictionary
+- +'model'+ for a model object
+- +'instance'+ for an instance object
+- +'results'+ for a results object
+
+==== +pyomo_preprocess+ ====
+
+This function has one argument, which is an enhanced Python dictionary containing
+the command line options given to launch Pyomo. It is called before model construction so
+it augments the workflow. It is defined in the model file as follows:
+----
+def pyomo_preprocess(options=None):
+----
+
+==== +pyomo_create_model+ ====
+
+This function is for experts who want to replace the
+model creation functionality provided by the +pyomo+ script
+with their own.  It takes two arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo and a dictionary with
+the options given in the +--model-options+ argument to the +pyomo+
+command.
+The function must return the model object that has been created.
+
+==== +pyomo_create_modeldata+ ====
+
+Users who employ ModelData objects may want to 
+give their own method for populating the object.
+This function returns returns a ModelData object that will be
+used to instantiate the model to form an instance.
+It takes two arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo and a model object.
+
+==== +pyomo_print_model+ ====
+
+This callback is executed between model creation and instance creation.
+It takes two arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo and a model object.
+
+==== +pyomo_modify_instance+ ====
+
+This callback is executed after instance creation.
+It takes three arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo, a model object,
+and an instance object.
+
+==== +pyomo_print_instance+ ====
+
+This callback is executed after instance creation (and after
+the +pyomo_modify_instance+ callback).
+It takes two arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo
+and an instance object.
+
+==== +pyomo_save_instance+ ====
+
+This callback also takes place after instance creation and takes
+It takes two arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo
+and an instance object.
+
+==== +pyomo_print_results+ ====
+
+This callback is executed after optimization.
+It takes three arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo, an instance object, and
+a results object. Note that the +--print-results+ option
+provides a way to print results; this callback is intended for 
+users who want to customize the display.
+
+==== +pyomo_save_results+ ====
+
+This callback is executed after optimization.
+It takes three arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo, an instance object, and
+a results object. Note that the +--save-results+ option
+provides a way to store results; this callback is intended for 
+users who want to customize the format or contents.
+
+==== +pyomo_postprocess+ ====
+
+This callback is also executed after optimization.
+It also takes three arguments: an enhanced Python dictionary containing
+the command line options given to launch Pyomo, an instance object, and
+a results object. 
+
+=== Accessing Variable Values ===
+
+==== Primal Variable Values ====
+
+Often, the point of optimization is to get optimal values of variables. The
++pyomo+ script automatically outputs the values to a file and optionally displays
+the non-zero values on the standard output device (usually the computer screen). Some user may want to process the values in a script. We will describe how to access a particular variable from a Python script as well as how to access all variables from a Python script and from a callback. This should enable the
+reader to understand how to get the access that they desire. The Iterative example
+given above also illustrates access to variable values.
+
+==== One Variable from a Python Script ====
+
+Assuming the model has been instantiated and solved and the results have been loded back into the instance object, then we can make
+use of the fact that the variable is a member of the instance object and its value can be accessed using its +value+ member. For example,
+suppose the model contains a variable named +quant+ that is a singleton (has no indexes) and suppose further that the name of the instance object is +instance+. Then the value of this variable can be accessed using +instance.quant.value+. Variables with indexes can be referenced by supplying the index.  
+
+Consider the following very simple example, which is similar to the iterative example. This is a very simple model and there are
+no parameter values to be read from a data file, so the +model.create()+ call does not specify a file name. In this example, the
+value of +x[2]+ is accessed.
+
+[source,python]
+----
+include::examples/PyomoGettingStarted/noiteration1.py[]
+----
+
+==== All Variables from a Python Script ====
+
+As with one variable, we assume that the model has been instantiated and solved and the results have been loded back into the instance object, then we can make
+use of the fact that the variable is a member of the instance object and its value can be accessed using its +value+ member. Assuming the
+instance object has the name +instance+, the following code snippet displays all variables and their values:
+----
+from pyomo.core import Var
+for v in instance.active_components(Var):
+    print "Variable",v
+    varobject = getattr(instance, v)
+    for index in varobject:
+        print "   ",index, varobject[index].value
+----
+
+==== All Variables from Workflow Callbacks ====
+
+The +pyomo_print_results+, +pyomo_save_results+, and +pyomo_postprocess+ callbacks from the +pyomo+ script
+take the instance as one of their arguments and the instance
+has the solver results at the time of the callback so the body of the callback
+matches the code snipped given for a Python script.
+
+For example, if the following defintion were included in the model file, then the +pyomo+ command would output all
+variables and their values (including those variables with a value of zero):
+----
+def pyomo_print_results(options, instance, results):
+    from pyomo.core import Var
+    for v in instance.active_components(Var):
+        print "Variable",v
+        varobject = getattr(instance, v)
+        for index in varobject:
+            print "   ",index, varobject[index].value
+----
+
+=== Accessing Duals ===
+
+Access to dual values in scripts is similar to accessing primal variable values, except that dual values are not captured by default so
+additional directives are needed before optimization to signal that duals are desired.
+
+To get duals without a script, use the +pyomo+ option +--solver-suffixes='.dual'+ which will cause dual values to be included in output.
+Note: In addition to duals (+.dual+) , reduced costs (+.rc+) and slack values (+.slack+) can be requested. All suffixes can be requested using the +pyomo+ option +--solver-suffixes='.*'+
+
+Warning: Some of the duals may have the value +None+, rather than +0+.
+
+==== Access Duals in a Python Script ====
+
+To signal that duals are desired, add the argument +suffixes=[’dual’]+ to the +opt.solve+ function call. After the results are obtained, duals can be accessed in a fashion analogous to access of primal variable values.
+
+----
+# display all duals
+print "Duals"
+from pyomo.core import Constraint
+for c in instance.active_components(Constraint):
+    print "   Constraint",c
+    cobject = getattr(instance, c)
+    for index in cobject:
+        print "      ", index, cobject[index].dual
+----
+
+The following snippet will only work, of course, if there is a constraint with the name
++AxbConstraint+ that has and index, which is the string +Film+.
+----
+# access (display, this case) one dual
+print "Dual for Film=", instance.AxbConstraint['Film'].dual
+----
+
+Here is a complete example that relies on the file +abstract2.py+ to 
+provide the model and the file +abstract2.dat+ to provide the data. Note
+that the model in +abstract2.py+ does contain a constraint named
++AxbConstraint+ and +abstract2.dat+ does specify an index for it named +Film+.
+
+[source,python]
+----
+include::examples/PyomoGettingStarted/driveabs2.py[]
+----
+
+==== All Duals from Workflow Callbacks ====
+
+The +pyomo+ script needs to be instructed to obtain duals, either by using a command line option such as
++--solver-suffixes='.dual'+ or by adding code in the +pyomo_preprocess+ callback to add +solver-suffixes+ to
+the list of command line arguments if it is not there and to add +'.dual'+ to its list of arguments if it
+is there, but +'.dual'+ is not.
+
+The +pyomo_print_results+, +pyomo_save_results+, and +pyomo_postprocess+ callbacks from the +pyomo+ script 
+take the instance as one of their arguments and the instance
+has the solver results at the time of the callback so the body of the callback
+matches the code snipped given for a Python script.
+
+For example, if the following defintion were included in the model file, then the +pyomo+ command would output all
+constraints and their duals. 
+----
+def pyomo_print_results(options, instance, results):
+    # display all duals
+    print "Duals"
+    from pyomo.core import Constraint
+    for c in instance.active_components(Constraint):
+        print "   Constraint",c
+        cobject = getattr(instance, c)
+        for index in cobject:
+            print "      ", index, cobject[index].dual
+----
+
+// vim:set syntax=asciidoc:
+
+

@@ -2,9 +2,9 @@ cc : Size=1, Index=None, Active=True
     Key  : Arg0                      : Arg1            : Active
     None : 1.0  <=  x1 + 2*x2 + 3*x3 : 0.0  <=  y + x1 :   True
     1 Var Declarations
-        v : Size=1, Index=None, Domain=Reals
-            Key  : Lower : Value : Upper : Fixed : Stale
-            None :     0 :  None :  None : False :  True
+        v : Size=1, Index=None
+            Key  : Lower : Value : Upper : Fixed : Stale : Domain
+            None :     0 :  None :  None : False :  True :  Reals
 
     3 Constraint Declarations
         c : Size=1, Index=None, Active=True

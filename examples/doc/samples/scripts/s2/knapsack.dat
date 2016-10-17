@@ -1,0 +1,9 @@
+set ITEMS := hammer wrench screwdriver towel ;
+
+param : v w :=
+    hammer       8 5
+    wrench       3 7
+    screwdriver  6 4
+    towel       11 3;
+
+param limit := 14;

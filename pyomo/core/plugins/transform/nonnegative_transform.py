@@ -353,15 +353,15 @@ class NonNegativeTransformation(IsomorphicTransformation):
 
         # Attempt to replace a simple variable
         if isinstance(expr, SimpleVar):
-            if expr.name in varMap:
-                return varMap[expr.name]
+            if expr.local_name in varMap:
+                return varMap[expr.local_name]
             else:
                 return expr
 
         # Attempt to replace an indexed variable
         if isinstance(expr, _VarData):
-            if expr.name in varMap:
-                return varMap[expr.name]
+            if expr.local_name in varMap:
+                return varMap[expr.local_name]
             else:
                 return expr
 

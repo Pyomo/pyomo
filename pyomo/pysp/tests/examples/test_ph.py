@@ -288,9 +288,10 @@ class PHTester(object):
                     % (_pyomo_ns_host, _pyomo_ns_port)
         else:
             raise RuntimeError("Invalid solver manager "+str(self.solver_manager))
-        #cmd += " --solver="+self.solver_name
-        #cmd += " --solver-io="+self.solver_io
+        cmd += " --solver="+self.solver_name
+        cmd += " --solver-io="+self.solver_io
         cmd += " --xhat-method=voting"
+        cmd += " --traceback"
         cmd += self.base_command_options
         return cmd
 
@@ -552,7 +553,9 @@ class PHTester(object):
                 self.safe_delete(join(thisDir,prefix+".ph_solution.json.out"))
                 self.safe_delete(join(thisDir,prefix+".postphef_solution.json.out"))
 
-        new_options_string = options_string+(" --solve-ef")
+        new_options_string = options_string+(" --solve-ef"
+                                             " --ef-solver="+self.solver_name+
+                                             " --ef-solver-io="+self.solver_io)
         self._baseline_test(options_string=new_options_string,
                             validation_options_string=validation_options_string,
                             cleanup_func=_cleanup_func,
@@ -985,7 +988,7 @@ class TestPHFarmerPyro(FarmerTester,unittest.TestCase):
         cls.model_directory = farmer_model_dir
         cls.instance_directory = farmer_data_dir
         cls.solver_manager = 'pyro'
-        cls.solver_name = 'ipopt'
+        cls.solver_name = 'cplex'
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_pyro)
         PHTester._setUpClass(cls)
@@ -1000,7 +1003,7 @@ class TestPHFarmerTrivialBundlesSerial(FarmerTester,unittest.TestCase):
         cls.model_directory = farmer_model_dir
         cls.instance_directory = farmer_trivialbundlesdata_dir
         cls.solver_manager = 'serial'
-        cls.solver_name = 'ipopt'
+        cls.solver_name = 'cplex'
         cls.solver_io = 'nl'
         cls.diff_filter = staticmethod(filter_time_and_data_dirs)
         PHTester._setUpClass(cls)
@@ -1056,7 +1059,7 @@ class TestPHFarmerSerialPersistent(FarmerTester,unittest.TestCase):
 
 @unittest.category('parallel')
 @unittest.skipUnless(using_pyro3 or using_pyro4, "Pyro or Pyro4 is not available")
-class TestPHFarmerPHPyroPersistent(FarmerTester,unittest.TestCase):
+class TestPHFarmerPHPyroDirect(FarmerTester,unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -1065,7 +1068,7 @@ class TestPHFarmerPHPyroPersistent(FarmerTester,unittest.TestCase):
         cls.model_directory = join(farmer_concrete_model_dir,'ReferenceModel.py')
         cls.instance_directory = join(farmer_data_dir,'ScenarioStructure.dat')
         cls.solver_manager = 'phpyro'
-        cls.solver_name = "_cplex_persistent"
+        cls.solver_name = "cplex"
         cls.solver_io = 'python'
         cls.diff_filter = staticmethod(filter_pyro)
         PHTester._setUpClass(cls)

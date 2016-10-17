@@ -1,0 +1,104 @@
+3 Set Declarations
+    M : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
+        Not constructed
+    N : Dim=0, Dimen=1, Size=0, Domain=None, Ordered=False, Bounds=None
+        Not constructed
+    a_index : Dim=0, Dimen=2, Size=0, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+3 Param Declarations
+    a : Size=0, Index=a_index, Domain=Any, Default=None, Mutable=False
+        Not constructed
+    b : Size=0, Index=M, Domain=Any, Default=None, Mutable=False
+        Not constructed
+    c : Size=0, Index=N, Domain=Any, Default=None, Mutable=False
+        Not constructed
+
+1 Var Declarations
+    x : Size=0, Index=N, Domain=NonNegativeReals
+        Not constructed
+
+1 Objective Declarations
+    obj : Size=0, Index=None, Active=True
+        Not constructed
+
+1 Constraint Declarations
+    con : Size=0, Index=M, Active=True
+        Not constructed
+
+9 Declarations: N M c a_index a b x obj con
+3 Set Declarations
+    M : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 2)
+        [1, 2]
+    N : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 2)
+        [1, 2]
+    a_index : Dim=0, Dimen=2, Size=4, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+3 Param Declarations
+    a : Size=4, Index=a_index, Domain=Any, Default=None, Mutable=False
+        Key    : Value
+        (1, 1) :     3
+        (1, 2) :     2
+        (2, 1) :     4
+        (2, 2) :     5
+    b : Size=2, Index=M, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :     1
+          2 :     2
+    c : Size=2, Index=N, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :     1
+          2 :     2
+
+1 Var Declarations
+    x : Size=2, Index=N, Domain=NonNegativeReals
+        Key : Lower : Value : Upper : Fixed : Stale
+          1 :     0 :  None :  None : False :  True
+          2 :     0 :  None :  None : False :  True
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : x[1] + 2*x[2]
+
+1 Constraint Declarations
+    con : Size=2, Index=M, Active=True
+        Key : Lower : Body            : Upper : Active
+          1 :   1.0 : 3*x[1] + 4*x[2] :  +Inf :   True
+          2 :   2.0 : 2*x[1] + 5*x[2] :  +Inf :   True
+
+9 Declarations: N M c a_index a b x obj con
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: 0.8
+  Upper bound: 0.8
+  Number of objectives: 1
+  Number of constraints: 3
+  Number of variables: 3
+  Number of nonzeros: 5
+  Sense: minimize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+  Time: 0.00901198387146
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 0
+  number of solutions displayed: 0

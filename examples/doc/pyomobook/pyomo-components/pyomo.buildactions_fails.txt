@@ -1,0 +1,8 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+ERROR: Constructing component 'checkPN' from data=None failed:
+	ValueError: BuildCheck 'checkPN' identified error
+[    0.01] Pyomo Finished
+ERROR: Unexpected exception while running model:
+	BuildCheck 'checkPN' identified error

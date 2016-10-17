@@ -1,0 +1,31 @@
+== Release Notes ==
+
+=== Highlights ===
+
+The following are highlights of the Pyomo 4.1 release:
+
+- Modeling
+   * API changes for model transformations
+   * Revised API for SOSConstraint, Suffix and Block components
+   * Optimization results are now loaded into models
+   * Removed explicit specification of model preprocessing
+
+- Solvers
+   * Resolved many issues with writing and solving MPECs
+   * Changes to MPEC meta-solver names
+   * The solution output for runph has been changed to 
+
+- Other
+   * Pyomo subcommands can now use configuration files (e.g. pyomo solve config.json)
+   * New JSON/YAML format for parameter data
+   * Added a script to install pyomo.extras
+
+=== Determining Your Version of Pyomo ===
+
+To determine your current version of Pyomo, use the command
+[shell]
+----
+pyomo --version
+----
+
+// vim: set syntax=asciidoc:

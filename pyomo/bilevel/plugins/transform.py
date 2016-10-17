@@ -43,7 +43,7 @@ class Base_BilevelTransformation(Transformation):
         # Fix variables
         #
         if submodel._fixed:
-            fixed = [i.name for i in submodel._fixed]
+            fixed = [i.local_name for i in submodel._fixed]
             unfixed = []
             for v in var:
                 if not v in fixed:
@@ -58,14 +58,14 @@ class Base_BilevelTransformation(Transformation):
                     fixed.append(v)
         else:
             #
-            # By default, we assume that variables are fixed if they are not part of the 
-            # local model.
+            # By default, we assume that variables are fixed
+            # if they are not part of the local model.
             #
             fixed = [v for v in var]
             unfixed = []
             for (name, data) in submodel.component_map(active=True).items():
                 if isinstance(data,Var):
-                    unfixed.append((data.cname(), data.is_indexed()))
+                    unfixed.append((data.local_name, data.is_indexed()))
         #
         self._submodel           = sub
         self._upper_vars         = var

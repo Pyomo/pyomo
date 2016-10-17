@@ -1,0 +1,105 @@
+indexed1
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+1 Var Declarations
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+
+1 Objective Declarations
+    o : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize :          x
+
+2 Constraint Declarations
+    c : Size=1, Index=None, Active=True
+        Key  : Lower : Body : Upper : Active
+        None :   0.0 :    x :  +Inf :   True
+    d : Size=3, Index=A, Active=True
+        Key : Lower : Body  : Upper : Active
+          1 :  -Inf :     x :   0.0 :   True
+          2 :  -Inf : 2 * x :   0.0 :   True
+          3 :  -Inf : 3 * x :   0.0 :   True
+
+5 Declarations: A x o c d
+active1
+True
+False
+True
+True
+False
+False
+True
+True
+False
+blocks1
+1 Var Declarations
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+
+1 Block Declarations
+    b : Size=1, Index=None, Active=True
+        2 Var Declarations
+            x : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+            y : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        2 Declarations: x y
+
+2 Declarations: x b
+nested1
+x
+b.x
+b.x
+special1
+2
+3
+False
+True
+[1, 3]
+[1, 2, 3]
+1.42
+1.42
+special2
+3
+3
+True
+True
+[1, 2, 3]
+[1, 2, 3]
+p[1]
+q[1]
+indexed2
+3
+True
+False
+[1, 2, 3]
+1.42
+[1, 2, 3]
+indexed3
+[1, 3]
+[1, 2, 3]
+[(1, 1.42), (3, 3.14)]
+[(1, 1.42), (2, 0), (3, 3.14)]
+[1.42, 3.14]
+[1.42, 0, 3.14]
+indexed4
+[1, 2]
+[(1, 3), (1, 4), (2, 3), (2, 4)]
+1
+2
+numvalue1
+numvalue2
+numvalue3
+0
+1
+1
+2
+2.0
+None

@@ -1,0 +1,2 @@
+[model::ModelAccess] bad1.py:9: Expression 'model.A' may access a model variable that is outside of the function scope
+[model::ModelArgument] bad1.py:8: Model variable 'model' is used in the rule, but this variable is not first argument in the rule argument list

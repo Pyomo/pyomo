@@ -1,0 +1,41 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: 0
+  Upper bound: 0
+  Number of objectives: 1
+  Number of constraints: 2
+  Number of variables: 3
+  Number of nonzeros: 3
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    o: 
+      Value: 0
+  Variable: 
+    x:
+      Value: 2
+    y:
+      Value: 1
+  Constraint: No nonzero values

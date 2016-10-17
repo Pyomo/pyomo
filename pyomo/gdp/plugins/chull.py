@@ -90,13 +90,13 @@ class ConvexHull_Transformation(Transformation):
                 if not _t.active:
                     continue
                 if _t.parent_component() is _t:
-                    _name = _t.cname()
+                    _name = _t.local_name
                     for _idx, _obj in _t.iteritems():
                         if _obj.active:
                             self._transformDisjunction(_name, _idx, _obj)
                 else:
                     self._transformDisjunction(
-                        _t.parent_component().cname(), _t.index(), _t )
+                        _t.parent_component().local_name, _t.index(), _t)
 
     def _transformBlock(self, block):
         # For every (active) disjunction in the block, convert it to a
@@ -136,7 +136,7 @@ class ConvexHull_Transformation(Transformation):
                 disjuncts = [ d for d in obj.parent_component()._disjuncts[idx] if d.active ]
                 localVars = {}
                 cName = _generate_name(idx)
-                cName = Disj.parent_component().cname() + (".%s"%(cName,) if cName else "")
+                cName = Disj.parent_component().local_name + (".%s"%(cName,) if cName else "")
                 for d in disjuncts:
                     for eid, e in iteritems(disaggregatedVars.get(id(d), ['',{}])[1]):
                         localVars.setdefault(eid, (e[0],[]))[1].append(e[2])
@@ -148,16 +148,16 @@ class ConvexHull_Transformation(Transformation):
                                               max(0,value(v[0].ub))))
                             disaggregatedVars[id(d)][1][eid] = (v[0], d.indicator_var, tmp)
                             v[1].append(tmp)
-                for v in sorted(localVars.values(), key=lambda x: x[0].cname(True)):
+                for v in sorted(localVars.values(), key=lambda x: x[0].name):
                     newC = Constraint( expr = v[0] == sum(v[1]) )
-                    block.add_component( "%s.%s" % (cName, v[0].cname(True)), newC )
+                    block.add_component( "%s.%s" % (cName, v[0].name), newC )
                     newC.construct()
 
         # Promote the local disaggregated variables and add BigM
         # constraints to force them to 0 when not active.
         for d_data in sorted(disaggregatedVars.values(), key=lambda x: x[0]):
-            for e in sorted(d_data[1].values(), key=lambda x: x[0].cname()):
-                v_name = "%s%s" % (d_data[0],e[0].cname())
+            for e in sorted(d_data[1].values(), key=lambda x: x[0].local_name):
+                v_name = "%s%s" % (d_data[0],e[0].local_name)
                 # add the disaggregated variable
                 block.add_component( v_name, e[2] )
                 e[2].construct()
@@ -201,7 +201,7 @@ class ConvexHull_Transformation(Transformation):
             # Since there can't be more than one Disjunction in a
             # SimpleDisjunction, then we can just reclassify the entire
             # component in place
-            obj.parent_block().del_component(obj.name)
+            obj.parent_block().del_component(obj.local_name)
             _tmp.add_component(name, obj)
             _tmp.reclassify_component_type(obj, Constraint)
         else:
@@ -216,23 +216,22 @@ class ConvexHull_Transformation(Transformation):
             # Move this disjunction over to the Constraint
             _constr._data[idx] = obj.parent_component()._data.pop(idx)
             _constr._data[idx]._component = weakref.ref(_constr)
-        
+
         # Promote the indicator variables up into the model
         for var, block, name in self._promote_vars:
-            var.parent_block().del_component(var.cname())
+            var.parent_block().del_component(var.local_name)
             block.add_component(name, var)
-            
 
     def _transform_disjunct(self, disjunct, block, disaggregatedVars):
         if not disjunct.active:
             disjunct.indicator_var.fix(0)
             return
-        if disjunct.parent_block().cname().startswith('_gdp_relax'):
+        if disjunct.parent_block().local_name.startswith('_gdp_relax'):
             # Do not transform a block more than once
             return
 
         # Calculate a unique name by concatenating all parent block names
-        fullName = disjunct.cname(True)
+        fullName = disjunct.name
 
         varMap = disaggregatedVars.setdefault(id(disjunct), [fullName,{}])[1]
 
@@ -252,11 +251,11 @@ class ConvexHull_Transformation(Transformation):
         # "Promote" the local variables up to the main model
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("GDP(cHull): Promoting local variable '%s' as '%s'",
-                         var.cname(), name)
+                         var.local_name, name)
         # This is a bit of a hack until we can re-think the chull
         # transformation in the context of Pyomo fully-supporting nested
         # block models
-        #var.parent_block().del_component(var.cname())
+        #var.parent_block().del_component(var.local_name)
         #block.add_component(name, var)
         var.construct()
         self._promote_vars.append((var,block,name))
@@ -371,7 +370,7 @@ class ConvexHull_Transformation(Transformation):
                         "Disjunct constraint referenced unbounded model "
                         "variable.\nAll variables must be bounded to use "
                         "the Convex Hull transformation.\n\t"
-                        "Variable: %s" % (expr.cname(True),) )
+                        "Variable: %s" % (expr.name,) )
                 v = Var( domain=expr.domain,
                          bounds=(min(0,value(expr.lb)),
                                  max(0,value(expr.ub))))
@@ -414,16 +413,16 @@ class ConvexHull_Transformation(Transformation):
         #
         if isinstance(expr,EXPR._ExpressionBase):
             if isinstance(expr,EXPR._ProductExpression):
-                expr._numerator = [ self._eval_at_origin(NL, e, y, varMap) 
+                expr._numerator = [ self._eval_at_origin(NL, e, y, varMap)
                                    for e in expr._numerator ]
-                expr._denominator = [ self._eval_at_origin(NL, e, y, varMap) 
+                expr._denominator = [ self._eval_at_origin(NL, e, y, varMap)
                                      for e in expr._denominator ]
             elif isinstance(expr, _ExpressionData) or \
                      isinstance(expr,EXPR._SumExpression) or \
                      isinstance(expr,EXPR._AbsExpression) or \
                      isinstance(expr,EXPR._IntrinsicFunctionExpression) or \
                      isinstance(expr,EXPR._PowExpression):
-                expr._args = [ self._eval_at_origin(NL, e, y, varMap) 
+                expr._args = [ self._eval_at_origin(NL, e, y, varMap)
                               for e in expr._args ]
             else:
                 raise ValueError("Unsupported expression type: "+str(expr))

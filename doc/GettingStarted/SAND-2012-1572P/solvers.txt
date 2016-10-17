@@ -1,0 +1,5 @@
+Pyomo Solver Interfaces
+-----------------------
+This chapter describes how Pyomo interfaces with different solvers.
+
+// vim: set syntax=asciidoc:

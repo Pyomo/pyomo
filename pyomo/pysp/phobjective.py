@@ -449,7 +449,7 @@ def form_linearized_objective_constraints(instance_name,
                               'Both lower and upper bounds required when' \
                               ' piece-wise approximating quadratic '      \
                               'penalty terms'
-                        raise ValueError(msg % instance_vardata.cname(True))
+                        raise ValueError(msg % instance_vardata.name)
                     lb = value(x.lb)
                     ub = value(x.ub)
 

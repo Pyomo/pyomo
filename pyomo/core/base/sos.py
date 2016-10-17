@@ -23,7 +23,7 @@ from pyomo.core.base.sets import Set, _IndexedOrderedSetData
 logger = logging.getLogger('pyomo.core')
 
 
-class _SOSConstraintData(ActiveComponentData): 
+class _SOSConstraintData(ActiveComponentData):
     """
     This class defines the data for a single special ordered set.
 
@@ -94,7 +94,7 @@ class _SOSConstraintData(ActiveComponentData):
             self._variables.append(v)
             if w < 0.0:
                 raise ValueError("Cannot set negative weight %f "
-                                 "for variable %s" % (w, v.cname(True)))
+                                 "for variable %s" % (w, v.name))
             self._weights.append(w)
 
 
@@ -149,7 +149,7 @@ class SOSConstraint(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != SOSConstraint:
             return super(SOSConstraint, cls).__new__(cls)
-        if args == ():
+        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleSOSConstraint.__new__(SimpleSOSConstraint)
         else:
             return IndexedSOSConstraint.__new__(IndexedSOSConstraint)
@@ -218,7 +218,7 @@ class SOSConstraint(ActiveIndexedComponent):
         generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
 
         if generate_debug_messages:     #pragma:nocover
-            logger.debug("Constructing SOSConstraint %s",self.cname(True))
+            logger.debug("Constructing SOSConstraint %s",self.name)
 
         if self._constructed is True:   #pragma:nocover
             return
@@ -227,7 +227,7 @@ class SOSConstraint(ActiveIndexedComponent):
         if self._rule is None:
             if self._sosSet is None and not None in self._index:
                 if generate_debug_messages:     #pragma:nocover
-                    logger.debug("  Cannot construct "+self.cname(True)+".  No rule is defined and no SOS sets are defined.")
+                    logger.debug("  Cannot construct "+self.name+".  No rule is defined and no SOS sets are defined.")
             else:
                 if None in self._index:
                     if self._sosSet is None:
@@ -239,10 +239,10 @@ class SOSConstraint(ActiveIndexedComponent):
                         _sosSet = {None: self._sosSet}
                 else:
                     _sosSet = self._sosSet
-                
+
                 for index, sosSet in six.iteritems(_sosSet):
                     if generate_debug_messages:     #pragma:nocover
-                        logger.debug("  Constructing "+self.cname(True)+" index "+str(index))
+                        logger.debug("  Constructing "+self.name+" index "+str(index))
 
                     if self._sosLevel == 2:
                         #
@@ -276,7 +276,7 @@ class SOSConstraint(ActiveIndexedComponent):
                     logger.error(
                         "Rule failed when generating expression for "
                         "sos constraint %s with index %s:\n%s: %s"
-                        % ( self.cname(True), str(index), type(err).__name__, err ) )
+                        % ( self.name, str(index), type(err).__name__, err ) )
                     raise
                 if tmp is None:
                     raise ValueError("SOSConstraint rule returned None instead of SOSConstraint.Skip for index %s" % str(index))
@@ -312,13 +312,13 @@ class SOSConstraint(ActiveIndexedComponent):
         """TODO"""
         if ostream is None:
             ostream = sys.stdout
-        ostream.write("   "+self.cname()+" : ")
+        ostream.write("   "+self.local_name+" : ")
         if not self.doc is None:
             ostream.write(self.doc+'\n')
             ostream.write("  ")
         ostream.write("\tSize="+str(len(self._data.keys()))+' ')
         if isinstance(self._index,Set):
-            ostream.write("\tIndex= "+self._index.cname(True)+'\n')
+            ostream.write("\tIndex= "+self._index.name+'\n')
         else:
             ostream.write("\n")
         for val in self._data:
@@ -327,7 +327,7 @@ class SOSConstraint(ActiveIndexedComponent):
             ostream.write("\t\tType="+str(self._data[val].level)+'\n')
             ostream.write("\t\tWeight : Variable\n")
             for var, weight in self._data[val].get_items():
-                ostream.write("\t\t"+str(weight)+' : '+var.cname(True)+'\n')
+                ostream.write("\t\t"+str(weight)+' : '+var.name+'\n')
 
 
 # Since this class derives from Component and Component.__getstate__

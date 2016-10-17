@@ -140,7 +140,6 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
         except TypeError:
             pass
 
-
 class Expression_EvaluateVarData(Expression_EvaluateNumericConstant):
 
     def setUp(self):
@@ -161,7 +160,6 @@ class Expression_EvaluateVarData(Expression_EvaluateNumericConstant):
         tmp.value=val
         return tmp
 
-
 class Expression_EvaluateVar(Expression_EvaluateNumericConstant):
 
     def setUp(self):
@@ -181,7 +179,6 @@ class Expression_EvaluateVar(Expression_EvaluateNumericConstant):
         tmp.construct()
         tmp.value=val
         return tmp
-
 
 class Expression_EvaluateFixedVar(Expression_EvaluateNumericConstant):
 
@@ -204,7 +201,6 @@ class Expression_EvaluateFixedVar(Expression_EvaluateNumericConstant):
         tmp.value=val
         return tmp
 
-
 class Expression_EvaluateImmutableParam(Expression_EvaluateNumericConstant):
 
     def setUp(self):
@@ -224,7 +220,6 @@ class Expression_EvaluateImmutableParam(Expression_EvaluateNumericConstant):
         tmp.construct()
         return tmp
 
-
 class Expression_EvaluateMutableParam(Expression_EvaluateNumericConstant):
 
     def setUp(self):
@@ -243,7 +238,6 @@ class Expression_EvaluateMutableParam(Expression_EvaluateNumericConstant):
         tmp=Param(default=val,mutable=True,within=domain)
         tmp.construct()
         return tmp
-
 
 class TestNumericValue(unittest.TestCase):
     def setUp(self):
@@ -295,8 +289,6 @@ class TestNumericValue(unittest.TestCase):
         self.assertEqual(abs(abs(-b())-2.2) <= 1e-7, True)
         self.assertEqual(abs(c()), 2.2)
         self.assertEqual(str(c), "-2.2")
-
-
 
 class Generate_SumExpression(unittest.TestCase):
     def setUp(self):
@@ -663,7 +655,6 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.b)], 1)
         self.assertEqual(e._coef[id(m.c)], -1)
 
-
 class Generate_ProductExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -880,7 +871,6 @@ class Generate_ProductExpression(unittest.TestCase):
         e = NumericConstant(3) / NumericConstant(2)
         self.assertIs(type(e), float)
         self.assertEqual(e, 1.5)
-
 
 class Generate_RelationalExpression(unittest.TestCase):
     def setUp(self):
@@ -1169,7 +1159,6 @@ class Generate_RelationalExpression(unittest.TestCase):
         except TypeError:
             pass
 
-
 class PrettyPrinter_oldStyle(unittest.TestCase):
     _save = None
 
@@ -1286,7 +1275,6 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
             "sum( 1 , neg( pow( div( prod( linear( a ) , a ) , a ) , b ) ) , 1"
             " ) ) ) ) ) )",
             str(expr) )
-
 
 class PrettyPrinter_newStyle(unittest.TestCase):
     _save = None
@@ -1495,7 +1483,6 @@ class PrettyPrinter_newStyle(unittest.TestCase):
         self.assertFileEqualsBaseline( currdir+"varpprint.out",
                                        currdir+"varpprint.txt" )
 
-
 class InplaceExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -1650,7 +1637,6 @@ class InplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(x._args[0]._args[1], m.a)
         #self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
-
 class GeneralExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -1735,9 +1721,6 @@ class GeneralExpressionGeneration(unittest.TestCase):
         e = -e1
         self.assertIs(type(e), EXPR._NegationExpression)
         self.assertIs(type(e._args[0]), EXPR._IntrinsicFunctionExpression)
-
-
-
 
 class ExprConditionalContext(unittest.TestCase):
     def setUp(self):
@@ -2029,7 +2012,6 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(value(1 == instance.v), True)
         self.checkCondition(value(2 == instance.v), False)
 
-
 class PolynomialDegree(unittest.TestCase):
 
     def setUp(self):
@@ -2216,7 +2198,7 @@ class PolynomialDegree(unittest.TestCase):
 
     def test_Expr_if(self):
         m = self.instance
-        
+
         expr = EXPR.Expr_if(IF=1,THEN=m.a,ELSE=m.a**2)
         self.assertEqual(expr.polynomial_degree(), 1)
         m.a.fixed = True
@@ -2235,14 +2217,13 @@ class PolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 0)
         m.a.fixed = False
 
-
 class TrapRefCount(object):
     inst = None
     def __init__(self, ref):
         self.saved_fcn = None
         self.refCount = []
         self.ref = ref
-        
+
         assert(TrapRefCount.inst == None)
         TrapRefCount.inst = self
 
@@ -2286,7 +2267,7 @@ class CloneIfNeeded(unittest.TestCase):
 
             expr1 = abs(self.model.a+self.model.a)
             self.assertEqual( TrapRefCount.inst.refCount, [0] )
-            
+
             expr2 = expr1 + self.model.a
             self.assertEqual( TrapRefCount.inst.refCount, [0,1] )
 
@@ -2532,6 +2513,7 @@ class CloneIfNeeded(unittest.TestCase):
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count + 1)
+
 class CloneExpression(unittest.TestCase):
 
     def setUp(self):
@@ -2649,11 +2631,11 @@ class CloneExpression(unittest.TestCase):
         self.assertEqual(len(expr1._args[1]._args), 1)
         self.assertEqual(len(expr2._args[1]._args), 1)
 
-        self.assertIs( expr1._args[0]._args[0], 
+        self.assertIs( expr1._args[0]._args[0],
                        expr2._args[0]._args[0] )
-        self.assertIs( expr1._args[0]._args[1], 
+        self.assertIs( expr1._args[0]._args[1],
                        expr2._args[0]._args[1] )
-        self.assertIs( expr1._args[1]._args[0], 
+        self.assertIs( expr1._args[1]._args[0],
                        expr2._args[1]._args[0] )
 
         expr1 *= self.m.b
@@ -2683,11 +2665,11 @@ class CloneExpression(unittest.TestCase):
         self.assertEqual(len(expr1._args[1]._args), 1)
         self.assertEqual(len(expr2._args[1]._args), 1)
 
-        self.assertIs( expr1._args[0]._args[0], 
+        self.assertIs( expr1._args[0]._args[0],
                        expr2._args[0]._args[0] )
-        self.assertIs( expr1._args[0]._args[1], 
+        self.assertIs( expr1._args[0]._args[1],
                        expr2._args[0]._args[1] )
-        self.assertIs( expr1._args[1]._args[0], 
+        self.assertIs( expr1._args[1]._args[0],
                        expr2._args[1]._args[0] )
 
         expr1 /= self.m.b
@@ -2739,7 +2721,7 @@ class IsFixedIsConstant(unittest.TestCase):
         expr = self.instance.c + self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-        
+
         expr = self.instance.e + self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
@@ -2809,7 +2791,7 @@ class IsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
         self.instance.a.fixed = False
-        
+
         expr = self.instance.c / self.instance.a
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
@@ -2916,7 +2898,7 @@ class IsFixedIsConstant(unittest.TestCase):
 
     def test_Expr_if(self):
         m = self.instance
-        
+
         expr = EXPR.Expr_if(IF=1,THEN=m.a,ELSE=m.e)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
@@ -2961,7 +2943,7 @@ class ExpressionUtilities(unittest.TestCase):
         self.assertEqual( list(EXPR.identify_variables(m.b[1])), [] )
         self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])), [] )
         self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1])), [] )
-        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1] + m.b[2])), 
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1] + m.b[2])),
                           [] )
 
     def test_identify_vars_vars(self):
@@ -2971,16 +2953,16 @@ class ExpressionUtilities(unittest.TestCase):
         m.b = Var(m.I, initialize=1)
         self.assertEqual( list(EXPR.identify_variables(m.a)), [m.a] )
         self.assertEqual( list(EXPR.identify_variables(m.b[1])), [m.b[1]] )
-        self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])), 
+        self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])),
                           [ m.a, m.b[1] ] )
-        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1])), 
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1])),
                           [ m.a, m.b[1] ] )
-        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1] + m.b[2])), 
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1] + m.b[2])),
                           [ m.a, m.b[1], m.b[2] ] )
 
-        self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a)), 
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a)),
                           [ m.a ] )
-        self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)), 
+        self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
                           [ m.a, m.a, m.a,  ] )
 
 if __name__ == "__main__":

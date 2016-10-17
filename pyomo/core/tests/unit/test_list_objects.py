@@ -45,6 +45,9 @@ class _TestComponentListBase(object):
         model.c = self._ctype(self._cdatatype(self._arg) for i in index)
         self.assertEqual(model.c.is_indexed(), True)
         self.assertEqual(model.c.is_constructed(), True)
+        with self.assertRaises(TypeError):
+            model.d = self._ctype(*tuple(self._cdatatype(self._arg)
+                                         for i in index))
 
     def test_len1(self):
         model = self.model
@@ -92,34 +95,78 @@ class _TestComponentListBase(object):
             self.assertEqual(len(model.c), len(index))
             self.assertEqual(id(c_new), id(model.c[i]))
 
-    # For now just test that implicit assignment raises an exception
-    # (we may reexamine allowing implicit assignment / update in the
-    # future
-    def test_setitem_implicit_failure(self):
+    def test_wrong_type_init(self):
         model = self.model
         index = range(5)
-        try:
+        with self.assertRaises(TypeError):
             model.c = self._ctype(self._arg for i in index)
-        except TypeError:
-            pass
-        else:
-            self.fail("Expected TypeError")
 
+    def test_wrong_type_append(self):
+        model = self.model
         model.c = self._ctype()
-        try:
-            model.c.append(self._arg)
-        except TypeError:
-            pass
-        else:
-            self.fail("Expected TypeError")
-
         model.c.append(self._cdatatype(self._arg))
-        try:
+        with self.assertRaises(TypeError):
+            model.c.append(self._arg)
+
+    def test_wrong_type_insert(self):
+        model = self.model
+        model.c = self._ctype()
+        model.c.append(self._cdatatype(self._arg))
+        model.c.insert(0, self._cdatatype(self._arg))
+        with self.assertRaises(TypeError):
             model.c.insert(0, self._arg)
-        except TypeError:
-            pass
-        else:
-            self.fail("Expected TypeError")
+
+    def test_wrong_type_setitem(self):
+        model = self.model
+        model.c = self._ctype()
+        model.c.append(self._cdatatype(self._arg))
+        model.c[0] = self._cdatatype(self._arg)
+        with self.assertRaises(TypeError):
+            model.c[0] = self._arg
+
+    def test_has_parent_init(self):
+        model = self.model
+        model.c = self._ctype()
+        model.c.append(self._cdatatype(self._arg))
+        with self.assertRaises(ValueError):
+            model.c.append(model.c[0])
+        with self.assertRaises(ValueError):
+            model.d = self._ctype(model.c)
+
+    def test_has_parent_append(self):
+        model = self.model
+        model.c = self._ctype()
+        model.c.append(self._cdatatype(self._arg))
+        with self.assertRaises(ValueError):
+            model.c.append(model.c[0])
+        d = []
+        d.append(model.c[0])
+        model.d = self._ctype()
+        with self.assertRaises(ValueError):
+            model.d.append(model.c[0])
+
+    def test_has_parent_insert(self):
+        model = self.model
+        model.c = self._ctype()
+        model.c.append(self._cdatatype(self._arg))
+        model.c.insert(0, self._cdatatype(self._arg))
+        with self.assertRaises(ValueError):
+            model.c.insert(0, model.c[0])
+        d = []
+        d.insert(0, model.c[0])
+        model.d = self._ctype()
+        with self.assertRaises(ValueError):
+            model.d.insert(0, model.c[0])
+
+    def test_has_parent_setitem(self):
+        model = self.model
+        model.c = self._ctype()
+        model.c.append(self._cdatatype(self._arg))
+        model.c[0] = self._cdatatype(self._arg)
+        model.c[0] = model.c[0]
+        model.c.append(self._cdatatype(self._arg))
+        with self.assertRaises(ValueError):
+            model.c[0] = model.c[1]
 
     # make sure an existing Data object IS replaced
     # by a call to setitem and not simply updated.
@@ -198,6 +245,32 @@ class _TestComponentListBase(object):
         for i in index:
             cdata = model.c[i]
             self.assertEqual(model.c.index(cdata), i)
+            self.assertEqual(model.c.index(cdata, start=i), i)
+            with self.assertRaises(ValueError):
+                model.c.index(cdata, start=i+1)
+            with self.assertRaises(ValueError):
+                model.c.index(cdata, start=i, stop=i)
+            with self.assertRaises(ValueError):
+                model.c.index(cdata, stop=i)
+            self.assertEqual(model.c.index(cdata, start=i, stop=i+1), i)
+            with self.assertRaises(ValueError):
+                model.c.index(cdata, start=i+1, stop=i+1)
+            self.assertEqual(model.c.index(cdata, start=-len(index)+i), i)
+            if i == index[-1]:
+                self.assertEqual(model.c.index(cdata, start=-len(index)+i+1), i)
+            else:
+                with self.assertRaises(ValueError):
+                    self.assertEqual(model.c.index(cdata, start=-len(index)+i+1), i)
+            if i == index[-1]:
+                with self.assertRaises(ValueError):
+                    self.assertEqual(model.c.index(cdata, stop=-len(index)+i+1), i)
+            else:
+                self.assertEqual(model.c.index(cdata, stop=-len(index)+i+1), i)
+        tmp = self._cdatatype(self._arg)
+        with self.assertRaises(ValueError):
+            model.c.index(tmp)
+        with self.assertRaises(ValueError):
+            model.c.index(tmp, stop=len(model.c)+1)
 
     def test_extend(self):
         model = self.model
@@ -229,17 +302,17 @@ class _TestComponentListBase(object):
         for i in index:
             self.assertNotEqual(id(inst.c[i]), id(model.c[i]))
 
-    def test_cname(self):
+    def test_name(self):
         model = self.model
         index = range(5)
         model.c = self._ctype(self._cdatatype(self._arg) for i in index)
         prefix = "c"
         for i in index:
             cdata = model.c[i]
-            self.assertEqual(cdata.cname(False),
-                             cdata.cname(True))
+            self.assertEqual(cdata.local_name,
+                             cdata.name)
             cname = prefix + "["+str(i)+"]"
-            self.assertEqual(cdata.cname(False),
+            self.assertEqual(cdata.local_name,
                              cname)
 
 class _TestActiveComponentListBase(_TestComponentListBase):

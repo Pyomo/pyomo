@@ -1,0 +1,63 @@
+9 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    B : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [(1, 1), (2, 2), (3, 3)]
+    v_index : Dim=0, Dimen=4, Size=9, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    v_index_0 : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [(2, 2), (4, 4), (6, 6)]
+    w_index : Dim=0, Dimen=3, Size=3, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    w_index_0 : Dim=0, Dimen=1, Size=1, Domain=None, Ordered=False, Bounds=(2, 2)
+        [2]
+    x_index : Dim=0, Dimen=3, Size=6, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    x_index_0 : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=None
+        ['a', 'b']
+    y_index : Dim=0, Dimen=3, Size=9, Domain=None, Ordered=False, Bounds=None
+        Virtual
+
+5 Var Declarations
+    v : Size=9, Index=v_index, Domain=Reals
+        Key          : Lower : Value : Upper : Fixed : Stale
+        (2, 2, 1, 1) :  None :   1.0 :  None : False : False
+        (2, 2, 2, 2) :  None :   1.0 :  None : False : False
+        (2, 2, 3, 3) :  None :   1.0 :  None : False : False
+        (4, 4, 1, 1) :  None :   1.0 :  None : False : False
+        (4, 4, 2, 2) :  None :   1.0 :  None : False : False
+        (4, 4, 3, 3) :  None :   1.0 :  None : False : False
+        (6, 6, 1, 1) :  None :   1.0 :  None : False : False
+        (6, 6, 2, 2) :  None :   1.0 :  None : False : False
+        (6, 6, 3, 3) :  None :   1.0 :  None : False : False
+    w : Size=3, Index=w_index, Domain=Reals
+        Key       : Lower : Value : Upper : Fixed : Stale
+        (2, 1, 1) :  None :   1.0 :  None : False : False
+        (2, 2, 2) :  None :   1.0 :  None : False : False
+        (2, 3, 3) :  None :   1.0 :  None : False : False
+    x : Size=6, Index=x_index, Domain=Reals
+        Key         : Lower : Value : Upper : Fixed : Stale
+        ('a', 1, 1) :  None :   1.0 :  None : False : False
+        ('a', 2, 2) :  None :   1.0 :  None : False : False
+        ('a', 3, 3) :  None :   1.0 :  None : False : False
+        ('b', 1, 1) :  None :   1.0 :  None : False : False
+        ('b', 2, 2) :  None :   1.0 :  None : False : False
+        ('b', 3, 3) :  None :   1.0 :  None : False : False
+    y : Size=9, Index=y_index, Domain=Reals
+        Key       : Lower : Value : Upper : Fixed : Stale
+        (1, 1, 1) :  None :   1.0 :  None : False : False
+        (1, 2, 2) :  None :   1.0 :  None : False : False
+        (1, 3, 3) :  None :   1.0 :  None : False : False
+        (2, 1, 1) :  None :   1.0 :  None : False : False
+        (2, 2, 2) :  None :   1.0 :  None : False : False
+        (2, 3, 3) :  None :   1.0 :  None : False : False
+        (3, 1, 1) :  None :   1.0 :  None : False : False
+        (3, 2, 2) :  None :   1.0 :  None : False : False
+        (3, 3, 3) :  None :   1.0 :  None : False : False
+    z : Size=3, Index=B, Domain=Reals
+        Key    : Lower : Value : Upper : Fixed : Stale
+        (1, 1) :  None :   1.0 :  None : False : False
+        (2, 2) :  None :   1.0 :  None : False : False
+        (3, 3) :  None :   1.0 :  None : False : False
+
+14 Declarations: A B z y_index y x_index_0 x_index x w_index_0 w_index w v_index_0 v_index v

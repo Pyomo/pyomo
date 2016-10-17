@@ -1,0 +1,1639 @@
+% pyspbody.tex
+\def\Argmax{\mathop{\rm argmax}}
+\newcommand{\xBar}{\Vector{\overline{x}}}
+\newcommand{\Bar}[1]{\overline{#1}}
+\newcommand{\Prl}{\mbox{Pr}(\ell)}
+
+\newcommand{\Vector}[1]{\mbox{{\boldmath $#1$}}}
+\newcommand{\Matrix}[1]{\mbox{{\boldmath $#1$}}}
+\newcommand{\VectLen}[1]{\mid\Vector{#1}\mid}
+\newcommand{\Rint}[1]{\int_{#1}^{\infty}}
+%\newcommand{\Size}[1]{\| #1 \|}
+\newcommand{\Size}[1]{\mid #1 \mid}
+\newcommand{\Floor}[1]{\lfloor #1 \rfloor}
+\newcommand{\Ceil}[1]{\left\lceil #1 \right\rceil}
+
+\section{Overview}
+
+The pysp package extends the pyomo modeling language to support multi-stage
+stochastic programs with enumerated scenarios. Pyomo and pysp are Python version
+2.6 or 2.7 programs. In order to specify a program, the user must provide a reference
+model and a scenario tree.
+
+Provided and the necessary paths have been communicated to the operating system,
+the command to execute the pysp package is of the form:
+
+\begin{verbatim}
+runph
+\end{verbatim}
+
+It is possible, and generally necessary, to provide command line arguments. The
+simplest argument causes the program to output help text:
+
+\begin{verbatim}
+runph --help
+\end{verbatim}
+
+but notice that there are two dashes before the word ``help.'' Command line
+arguments are summarized in Section~\ref{cmdargsec}.
+
+The underlying algorithm in pysp is based on Progressive Hedging (PH)
+\cite{RockafellarWets}, which decomposes the problem into sub-problems, one for
+each scenario. The algorithm progressively computes {\em weights} corresponding
+to each variable to force convergence and also makes use of a {\em proximal}
+term that provides a penalty for the squared deviation from the mean solution
+from the last PH iteration.
+
+An alternative to \verb|runph| is \verb|runef|, which creates the 
+{\em extensive form} of the problem.
+
+\subsection{Reference Model}
+
+The reference model describes the problem for a canonical scenario. It does not
+make use of, or describe, a scenario index or any information about uncertainty.
+Typically, it is just the model that would be used if there were only a single
+scenario. It is given as a pyomo file. Data from an arbitrary scenario is needed
+to instantiate.
+
+The objective function needs to be separated by stages. The term for each stage
+should be ``assigned'' (i.e., constrained to be equal to) a variable. These
+variable names are reported in ScenarioStructure.dat so that they can be used
+for reporting purposes.
+
+\subsection{Scenario Tree}
+
+The scenario tree provides information about the time stages and the nature of
+the uncertainties. In order to specify a tree, we must indicate the time stages
+at which information becomes available. We also specify the nodes of a tree to
+indicate which variables are associated with which realization at each stage.
+The data for each scenario is provided in separate data files, one for each
+scenario.
+
+\section{File Structure}
+
+\begin{itemize}
+\item ReferenceModel.py  (A pyomo model file)
+\item ReferenceModel.dat (data for an arbitrary scenario)
+\item ScenarioStructure.dat (among other things: the scenario names: Sname)
+\item *Sname.dat   (full data for now) one file for each scenario
+\end{itemize}
+
+In this list we use ``Sname'' as the generic scenario name. The file
+\verb|ScenarioStructure.dat| gives the names of all the scenarios and for each
+scenario there is a data file with the same name and the suffix ``.dat'' that
+contains the full specification of data for the scenario.
+
+\subsection{ScenarioStructure.dat}
+
+The file ScenarioStucture.dat contains the following data:
+
+\begin{itemize}
+  \item set Scenarios: List of the names of the scenarios. These names will
+  subsequently be used as indices in this data file and these names will also be
+  used as the root file names for the scenario data files (each of these will
+  have a .dat extension) if the parameter ScenarioBasedData is set to True,
+  which is the default.
+
+  \item set Stages: List of the names of the time stages, which must be given in
+  time order. In the sequel we will use {\sc StageName} to represent a node name
+  used as an index.
+
+  \item set Nodes: List of the names of the nodes in the scenario tree. In the
+  sequel we will use {\sc NodeName} to represent a node name used as an index.
+
+  \item param NodeStage: A list of pairs of nodes and stages to indicate the
+  stage for each node.
+
+  \item param Parent: A list of node pairs to indicate the parent of each node
+  that has a parent (the root node will not be listed).
+
+  \item set Children[{\sc NodeName}]: For each node that has children, provide
+  the list of children. No sets will be give for leaf nodes.
+
+  \item param ConditionalProbability: For each node in the scenario tree, give
+  the conditional probability. For the root node it must be given as 1 and for
+  the children of any node with children, the conditional probabilities must sum
+  to 1.
+
+  \item param ScenarioLeafNode: A list of scenario and node pairs to indicate
+  the leaf node for each scenario.
+
+  \item set StageVariables[{\sc StageName}]: For each stage, list the pyomo
+  model variables associated with that stage.
+\end{itemize}
+
+Data to instantiate these sets and parameters is provided by users in the file
+ScenarioStructure.dat, which can be given in AMPL \cite{ampl} format.
+
+The default behavior is one file per scenario and each file has the full data
+for the scenario. An alternative is to specify just the data that changes from
+the root node in one file per tree node. To select this option, add the
+following line to ScenarioStructure.dat:
+
+\verb|param ScenarioBasedData := False ;|
+
+This will set it up to want a per-node file, something along the lines of what's
+in \verb|examples/pysp/farmer/NODEDATA|.
+
+Advanced users may be interested in seeing the file
+\verb|coopr/pysp/utils/scenariomodels.py|, which defines the python sets and
+parameters needed to describe stochastic elements. This file should not be
+edited.
+
+\section{Command Line Arguments \label{cmdargsec}}
+
+The basic PH algorithm is controlled by parameters that are set as command line
+arguments. Note that options begin with a double dash.
+\begin{itemize}
+  \item \verb|-h|, \verb|--help|                                             \\
+  Show help message and exit.
+
+  \item \verb|--model-directory|=MODEL\_DIRECTORY                            \\
+  The directory in which all model (reference and scenario) definitions are
+  stored. I.e., the ``.py'' files. Default is ".".
+
+  \item \verb|--instance-directory|=INSTANCE\_DIRECTORY                      \\
+  The directory in which all instance (reference and scenario) definitions are
+  stored. I.e., the ``.dat'' files. Default is ".".
+
+  \item \verb|--verbose|                                                     \\
+  Generate verbose output for both initialization and execution. Default is
+  False.
+
+  \item \verb|--report-solutions|                                            \\
+  Always report PH solutions after each iteration. Enabled if --verbose is
+  enabled. Default is False.
+
+  \item \verb|--report-weights|                                              \\
+  Always report PH weights prior to each iteration. Enabled if --verbose is
+  enabled. Default is False.
+  
+  \item \verb|--report-only-statistics|                                      \\
+     When reporting solutions (i.e. if --report-solutions has been selected), only output per-variable statistics - not the individual scenario values. Default is False.
+
+  \item \verb|--solver|=SOLVER\_TYPE                                         \\
+  The type of solver used to solve scenario sub-problems. Default is cplex.
+
+  \item \verb|--solver-manager|=SOLVER\_MANAGER\_TYPE                        \\
+  The type of solver manager used to coordinate scenario sub-problem solves.
+  Default is serial. This option is changed in parallel applications as
+  described in Section~\ref{parallelsec}.
+
+  \item \verb|--max-iterations|=MAX\_ITERATIONS                              \\
+  The maximal number of PH iterations. Default is 100.
+
+  \item \verb|--default-rho|=DEFAULT\_RHO                                    \\
+  The default (global) rho for all blended variables. Default is 1.
+
+  \item \verb|--rho-cfgfile|=RHO\_CFGFILE                                    \\
+  The name of a configuration script to compute PH rho values. Default is None.
+
+  \item \verb|--enable-termdiff|-convergence                                 \\
+  Terminate PH based on the termdiff convergence metric. The convergcne metric
+  is the unscaled sum of differences between variable values and the mean.
+  Default is False.
+
+  \item \verb|--enable-normalized|-termdiff-convergence                      \\
+  Terminate PH based on the normalized termdiff convergence metric. Each term in
+  the termdiff sum is normalized by the average value and
+  normalized by the total number of scenarios blended variables. Default is True.
+
+  \item \verb|--termdiff-threshold|=TERMDIFF\_THRESHOLD                      \\
+  The convergence threshold used in the term-diff and normalized term-diff
+  convergence criteria. Default is 0.0001, which is too low for many problems.
+
+  \item \verb|--enable-free-discrete-count-convergence|                      \\
+  Terminate PH based on the free discrete variable count convergence metric.
+  Default is False.
+
+  \item \verb|--free-discrete-count-threshold|=FREE\_DISCRETE\_COUNT\_THRESHOLD \\
+  The convergence threshold used in the criterion based on when the free
+  discrete variable count convergence criterion. Default is 20.
+
+  \item \verb|--enable-ww-extensions|                                                                                                                                          \\
+  Enable the Watson-Woodruff PH extensions plugin. Default is False.
+
+  \item \verb|--ww-extension-cfgfile|=WW\_EXTENSION\_CFGFILE                 \\
+  The name of a configuration file for the Watson-Woodruff PH extensions plugin.
+  Default is wwph.cfg.
+
+  \item \verb|--ww-extension-suffixfile|=WW\_EXTENSION\_SUFFIXFILE           \\
+  The name of a variable suffix file for the Watson-Woodruff PH extensions
+  plugin. If the file name is not given, it defaults to wwph.suffixes. 
+Important note: this option must
+be used to enable slamming. Without it, all slamming priorities will
+be zero.
+
+  \item \verb|--user-defined-extension|=EXTENSIONFILE                        \\
+  Here, "EXTENSIONFILE" is the module name, which is in either the current
+  directory (most likely) or somewhere on your PYTHONPATH. A simple example is
+  "testphextension" plugin that simply prints a message to the screen for each
+  callback. The file testphextension.py can be found in the sources directory
+  for PySP. A test of this would be to
+  specify "-user-defined-extension=testphextension", assuming testphextension.py
+  is in your PYTHONPATH or current directory. Note that both PH extensions (WW
+  PH and your own) can co-exist; however, the WW plugin will be invoked first.
+
+  \item \verb|--scenario-solver-options|                                     \\
+  The options are specified just as in pyomo, e.g.,
+  \verb|--scenario-solver-options="mip_tolerances_mipgap=0.2"| to set the mipgap
+  for all scenario sub-problem solves to 20\% for the CPLEX solver. The options
+  are specified in a quote deliminted string that is passed to the sub-problem
+  solver. Whatever options specified are persistent across all solves.
+
+  \item \verb|--ef-solver-options|                                           \\
+  The options are specified just as in pyomo, e.g.,
+  \verb|--scenario-solver-options="mip_tolerances_mipgap=0.2"| to set the mipgap
+  for all scenario sub-problem solves to 20\% for the CPLEX solver. The options
+  are specified in a quote deliminted string that is passed to the EF problem
+  solver.
+
+  \item \verb|--write-ef|                                                    \\
+  Upon termination, write the extensive form of the model - accounting for all
+  fixed variables.
+
+  \item \verb|--solve-ef|                                                    \\
+  Following write of the extensive form model, solve it.
+
+  \item \verb|--ef-output-file|=EF\_OUTPUT\_FILE                             \\
+  The name of the extensive form output file (currently only LP format is
+  supported), if writing of the extensive form is enabled. Default is efout.lp.
+
+  \item \verb|--suppress-continuous-variable-output|                         \\
+  Eliminate PH-related output involving continuous variables. Default: no
+  output.
+
+  \item \verb|--keep-solver-files|                                           \\
+  Retain temporary input and output files for scenario sub-problem solves.
+  Default: files not kept.
+
+  \item \verb|--output-solver-logs|                                          \\
+  Output solver logs during scenario sub-problem solves. Default: no output.
+
+  \item \verb|--output-scenario-tree-solution|                                 \\
+     Report the full solution (including the leaves) in scenario tree format upon termination. Values at non-leaf nodes represent averages. Default is False.
+
+  \item \verb|--output-ef-solver-log|                                        \\
+  Output solver log during the extensive form solve. Default: no output.
+
+  \item \verb|--output-solver-results|                                       \\
+  Output solutions obtained after each scenario sub-problem solve. Default: no
+  output.
+
+  \item \verb|--output-times|                                                \\
+  Output timing statistics for various PH components. Default: no output.
+
+  \item \verb|--disable-warmstarts|                                          \\
+  Disable warm-start of scenario sub-problem solves in PH iterations >= 1.
+  Default=False (i.e., warm starts are the default).
+
+  \item \verb|--drop-proximal-terms|                                         \\
+  Eliminate proximal terms (i.e., the quadratic penalty terms) from the weighted
+  PH objective. Default=False (i.e., but default, the proximal terms are
+  included).
+
+  \item \verb|--retain-quadratic-binary-terms|                               \\
+  Do not linearize PH objective terms involving binary decision variables.
+  Default=False (i.e., the proximal term for binary variables is linearized by
+  default; this can have some impact on the relaxations during the branch and
+  bound solution process).
+
+  \item \verb|--linearize-nonbinary-penalty-terms|=BPTS                      \\
+  Approximate the PH quadratic term for non-binary variables with a piece-wise
+  linear function. The argument BPTS gives the number of breakpoints in the
+  linear approximation. The default=0. Reasonable non-zero values are usually in
+  the range of 3 to 7. Note that if a breakpoint would be very close to a
+  variable bound, then the break point is ommited. IMPORTANT: this option
+  requires that all variables have bounds that are either established in the
+  reference model or by code specfied using the bounds-cfgfile command line
+  option. See Section~\ref{LinearSec} for more information about linearizing the
+  proximal term.
+
+  \item \verb|--breakpoint-strategy|=BREAKPOINT\_STRATEGY                    \\
+  Specify the strategy to distribute breakpoints on the [lb, ub] interval of
+  each variable when linearizing. 0 indicates uniform distribution. 1 indicates
+  breakpoints at the node min and max, uniformly in- between. 2 indicates more
+  aggressive concentration of breakpoints near the observed node min/max.
+
+  \item \verb|--bounds-cfgfile|=BOUNDS\_CFGFILE                              \\
+  The argument BOUNDS\_CFGFILE specifies the name of an executable pyomo file
+  that sets bounds. The devault is that there is no file. When specified, the
+  code in this file is executed after the initialization of scenario data so the
+  bounds can be based on data from all scenarios. The config subdirectory of the
+  farmer example contains a simple example of such a file (boundsetter.cfg).
+
+  \item \verb|--ef-mipgap|=MIPGAP \\
+     Specifies the mipgap for the EF solve (if there is an ef solve).
+
+  \item \verb|--checkpoint-interval|                                         \\
+  The number of iterations between writing of a checkpoint file. Default is 0,
+  indicating never.
+
+  \item \verb|--restore-from-checkpoint|                                     \\
+  The name of the checkpoint file from which PH should be initialized. Default
+  is not to restore from a checkpoint.
+
+  \item \verb|--profile=PROFILE|                                             \\
+  Enable profiling of Python code. The value of this option is the number of
+  functions that are summarized. The default is no profiling.
+
+  \item \verb|--enable-gc|                                                   \\
+  Enable the python garbage collecter. The default is no garbage collection.
+\end{itemize}
+
+\section{Extensions via Callbacks \label{CallbackSec}}
+
+Basic PH can converge slowly, so it is usually advisable to extend it or modify
+it. In pysp, this is done via the pyomo plug-in mechanism. The basic PH
+implementation provides callbacks that enable access to the data structures used
+by the algorithm. In \S\ref{WWExtensionSec} we describe extensions that are
+provided with the release. In \S\ref{ExtensionDetailsSec}, we provide
+information to power users who may wish to modify or replace the extensions.
+
+\subsection{Watson and Woodruff Extensions \label{WWExtensionSec}}
+
+Watson and Woodruff describe innovations for accelerating PH \cite{phinnovate},
+most of which are generalized and implemented in the file \verb|wwextension.py|,
+but users generally do not need to know this file name. To invoke the program
+with these additional features, invoke the software with a command of the form:
+
+\begin{verbatim}
+runph --enable-ww-extensions
+\end{verbatim}
+
+Many of the examples described in \S\ref{ExampleSec} use this plug-in. The main
+concept is that some integer variables should be fixed as the algorithm
+progresses for two reasons:
+
+\begin{itemize}
+  \item Convergence detection: A detailed analysis of PH algorithm behavior on a
+  variety of problem indicates that individual decision variables frequently
+  converge to specific, fixed values scenarios in early PH iterations. Further,
+  despite interactions among the the variables, the value frequently does not
+  change in subsequent PH iterations. Such variable ``fixing'' behaviors lead to
+  a potentially powerful, albeit obvious, heuristic: once a particular variable
+  has been the same in all scenarios for some number of iterations, fix it to
+  that value. For problems where the constraints effectively limit $x$ from both
+  sides, these methods may result in PH encountering infeasible scenario
+  sub-problems even though the problem is ultimately feasible.
+
+  \item Cycle detection: When there are integer variables, cycling is sometimes
+  encountered, consequently, cycle detection and avoidance mechanisms are
+  required to force eventual convergence of the PH algorithm in the
+  mixed-integer case. To detect cycles, we focus on repeated occurrences of the
+  weights, implemented using a simple hashing scheme \cite{tabuhash} to minimize
+  impact on run-time. Once a cycle in the weight vectors associated with any
+  decision variable is detected, the value of that variable is fixed.
+\end{itemize}
+
+Fixing variables aggressively can result in shorter solution times, but can also
+result in solutions that are not as good. Furthermore, for some problems,
+aggressive fixing can result in infeasible sub-problems even though the problem
+is ultimately feasible. Many of the parameters discussed in the next subsections
+control fixing of variables. This is discussed in a tutorial in
+section~\ref{WWTutorialSec}.
+
+\subsubsection{Variable Specific Parameters}
+
+The plug-in makes use of parameters to control behavior at the variable level.
+Global defaults (to override the defaults stated here) should be set using
+methods described in \S\ref{ParmSec}. Values for each variable should be set
+using methods described in \S\ref{SuffixSec}. Note that for variable fixing
+based on convergence detection, iteration zero is treated separately. The
+parameters are as follows:
+
+\begin{itemize}
+  \item fix\_continuous\_variables: True or False. If true, fixing applies to
+  all variables. If false, then fixing applies only to discrete variables.
+
+  \item Iter0FixIfConvergedAtLB: 1 (True) or 0 (False). If 1, then discrete
+  variables that are at their lower bound in all scenarios after the iteration
+  zero solves will be fixed at that bound.
+
+  \item Iter0FixIfConvergedAtUB: 1 (True) or 0 (False). If 1, then discrete
+  variables that are at their upper bound in all sce<narios after the iteration
+  zero solves will be fixed at that bound.
+
+  \item Iter0FixIfConvergedAtNB: = 1 1 (True) or 0 (False). If 1, then discrete
+  variables that are at the same value in all scenarios after the iteration zero
+  solves will be fixed at that value, without regard to whether it is a bound.
+  If this is true, it takes precedence. A value of zero, on the other hand,
+  implies that variables will not be fixed at at a non-bound.
+
+  \item FixWhenItersConvergedAtLB: The number of consecutive PH iterations that
+  discrete variables must be their lower bound in all scenarios before they will
+  be fixed at that bound. A value of zero implies that variables will not be
+  fixed at the bound.
+
+  \item FixWhenItersConvergedAtUB: The number of consecutive PH iterations that
+  discrete variables must be their upper bound in all scenarios before they will
+  be fixed at that bound. A value of zero implies that variables will not be
+  fixed at the bound.
+
+  \item FixWhenItersConvergedAtNB: The number of consecutive PH iterations that
+  discrete variables must be at the same, consistent value in all scenarios
+  before they will be fixed at that value, without regard to whether it is a
+  bound. If this is true, it takes precedence. A value of zero, on the other
+  hand, implies that variables will not be fixed at at a non-bound.
+
+  \item FixWhenItersConvergedContinuous: The number of consecutive PH iterations
+  that continuous variables must be at the same, consistent value in all
+  scenarios before they will be fixed at that value. A value of zero implies
+  that continuous variables will not be fixed.
+
+  \item CanSlamToLB: True or False. If True, then slamming can be to the lower
+  bound for any variable.
+
+  \item CanSlamToMin: True or False. If True, then slamming can be to the
+  minimum across scenarios for any variable.
+
+  \item CanSlamToAnywhere: True or False. If True, then slamming can be to any
+  value.
+
+  \item CanSlamToMax: True or False. If True, then slamming can be to the
+  maximum across scenarios for any variable.
+
+  \item CanSlamToUB: True of False. If True, then slamming can be to the upper
+  bound for any variable.
+
+  \item DisableCycleDetection: True or False. If True, then cycle detection and
+  the associated slamming are completely disabled. This cannot be changed to
+  False on the fly because a value of True at startup causes creation of the
+  cycle detection storage to be bypassed.
+\end{itemize}
+
+In the event that multiple slam targets are True, then Min and Max trump LB and
+UB while Anywhere trumps all.
+
+\subsection{General Parameters}
+
+The plug-in also makes use of the following parameters, which should be set
+using methods described in \S\ref{ParmSec}.
+
+\begin{itemize}
+  \item Iteration0Mipgap: Gives the mipgap to be sent to the solver for
+  iteration zero solves. The default is zero, which causes nothing to be sent to
+  the solver (i.e., the solver uses its default mipgap).
+
+  \item InitalMipGap: Gives the mipgap to be sent to the solver for iteration
+  one solves. The default is zero, which causes nothing to be sent to the solver
+  (i.e., the solver uses its default mipgap). If not zero, then this gap will be
+  used as the starting point for the mipgap to change on each PH iteration in
+  proportion to the convergence termination criterion so that when the criterion
+  for termination is met the mipgap will be at (or near) the parameter value of
+  FinalMipGap. If the InitialMipGap is significantly higher than the
+  Iteration0MipGap parameter, the PH algorithm may perform poorly. This is
+  because the iteration k-1 solutions are used to warm start iteration k-1
+  solves. If the iteration 1 mipgap is much higher than the iteration 0 mipgap,
+  the iteration zero solution, although not optimal for the iteration one
+  objective, might be within the mipgap.
+
+  \item FinalMipGap: The target for the mipgap when PH has converged. Default:
+  0.0 (use solver defaults.)
+
+  \item PH\_Iters\_Between\_Cycle\_Slams: controls the number of iterations to
+  wait after a variable is slammed due to hash hits that suggest convergence.
+  Zero indicates unlimited slams per cycle. Default: 1
+
+  \item SlamAfterIter: Iteration number after which one variable every other
+  iteration will be slammed to force convergence. Default: the number of
+  scenarios.
+
+  \item hash\_hit\_len\_to\_slam: Ignore possible cycles for which the only
+  evidence of a cycle is less than this. Also, ignore cycles if any variables
+  have been fixed in the previous hash\_hit\_len\_to\_slam PH iterations.
+  Default: the number of scenarios. This default is often not a good choice. For
+  many problems with a lot of scenarios, a value like 10 or 20 might be a lot
+  better if rapid convergence is desired.
+
+  \item W\_hash\_history\_len: This obscure parameter controls how far back the
+  code will look to see if there is a possible cycle. Default: max(100, number
+  of scenarios).
+\end{itemize}
+
+\subsubsection{Setting Parameter Values \label{ParmSec}}
+
+The parameters of PH and of any callbacks can be changed using the file
+wwph.cfg, which is executed by the python interpreter after PH has initialized.
+This is a potentially powerful and/or dangerous procedure because it gives an
+opportunity to change anything using the full features of python and pyomo.
+
+\subsubsection{Setting Suffix Values \label{SuffixSec}}
+
+Suffixes are set using the data file named \verb|wwph.suffixes| using this
+syntax:
+
+\begin{verbatim}
+VARSPEC SUFFIX VALUE
+\end{verbatim}
+
+where VARSPEC is replaced by a variable specification, SUFFIX is replaced by a
+suffix name and VALUE is replaced by the value of the suffix for that variable
+or those variables. Here is an example:
+
+\begin{verbatim}
+   Delta CanSlamToLB False
+   Gamma[*,Ano1] SlammingPriority 10
+   Gamma[*,Ano2] SlammingPriority 20
+   ...
+\end{verbatim}
+
+
+\subsection{Callback Details \label{ExtensionDetailsSec}}
+
+Most users of pysp can skip this subsection. A callback class definition named
+iphextension is in the file iphextension.py and can be used to implement
+callbacks at a variety of points in PH. For example, the method
+post\_iteration\_0\_solves is called immediately after all iteration zero
+solves, but before averages and weights have been computed while the method
+post\_iteration\_0 is called after averages and weights based on iteration zero
+have been computed. The file iphextension is in the coopr/pysp directory and is
+not intended to be edited by users.
+
+The user defines a class derived from SingletonPlugin that implements
+iphextension. Its name is given to ph as an option. This class will be
+automatically instantiated by ph. It has access to data and methods in the PH
+class, which are defined in the file ph.py. An example of such a class is in the
+file named testphextension.py in the pysp example directory.
+
+A user defined extension file can be incorporated by using the command line
+option: \verb|--user-defined-extension=EXTENSIONFILE|. Here, "EXTENSIONFILE" is
+the module name, which is in either the current directory (most likely) or
+somewhere on your PYTHONPATH. A simple example is "testphextension" plugin that
+prints a message to the screen for callbacks. The file
+testphextension.py can be found in the sources directory. An easy test of this would be to specify
+"-user-defined-extension=testphextension" and you should note the the ``.py''
+file extension is not included on the runph command line.
+
+Both your own extension and the WWPH extensions can co-exist; however, the WW
+plugin will be invoked first at each callback point if both are included.
+
+Here are the callbacks:
+\begin{itemize}
+  \item post\_instance\_creation: called after the instances (i.e., sub-problems) are created.
+
+  \item post\_ph\_initialization: Called after PH data structures have been
+  intialized but before iteration zero solves.
+
+  \item post\_iteration\_0\_solves: Called after iteration zero solutions and
+  some statistics such as averages have been computed, but before weights are
+  updated.
+
+  \item post\_iteration\_0: Called after all processing for iteration zero is
+  complete.
+
+  \item  pre\_iteration\_k\_solves: Called just before the solves for iterations beyond 0
+
+  \item post\_iteration\_k\_solves: Called after solutions some statistics such
+  as averages have been computed, but before weights are updated for iterations
+  after iteration zero.
+
+  \item post\_iteration\_k: Called after all processing for each iteration after
+  iteration 0 is complete.
+
+  \item post\_ph\_execution: Called execution is complete.
+\end{itemize}
+
+Users interested in writing their own extensions will probably want to refer to
+the source file ph.py to get a deeper understanding of when the callback occur.
+
+\section{Examples \label{ExampleSec}}
+
+A number of examples are provided with pysp.
+
+\subsection{Farmer Example}
+
+This two-stage example is composed of models and data for the "Farmer"
+stochastic program, introduced in Section 1.1 of "Introduction to Stochastic
+Programming" by Birge and Louveaux \cite{spbook}.
+
+\begin{itemize}
+  \item ReferenceModel.py: a single-scenario model for the SP
+
+  \item ReferenceModel.dat: a single-scenario data file for the SP (any scenario
+  will do - used to flush out variable and constraint index sets)
+
+  \item ScenarioStructure.dat: data file defining the scenario tree.
+
+  \item AboveAverageScenario.dat: one of the scenario data files.
+
+  \item BelowAverageScenario.dat: one of the scenario data files.
+
+  \item AverageScenario.dat: one of the scenario data files.
+\end{itemize}
+
+The command runph executes PH, assuming the ReferenceModel.* and
+ScenarioStructure.* files are present and correct. This example is probably in a
+directory with a name something like:
+
+\begin{verbatim}
+coopr\examples\pysp\farmer
+\end{verbatim}
+
+The data is in a subdirectory called scenariodata and the model is in the models
+subdirectory. To invoke PH for this problem, connect to this farmer directory
+and use the command:
+
+\begin{verbatim}
+runph --model-directory=models --instance-directory=scenariodata
+\end{verbatim}
+
+\subsection{Sizes Example}
+
+This two-stage example is composed of models and data for the "Sizes" stochastic
+program \cite{sizes,lokwood}, which consists of the following files:
+
+\begin{itemize}
+  \item wwph.cfg: replace default algorithm parameter values for the Watson and
+  Woodruff extensions.
+
+  \item wwph.suffixes: sets algorithm parameter values at the variables level
+  for the Watson and Woodruff extensions.
+
+  \item ReferenceModel.py: a single-scenario model for the SP
+
+  \item ReferenceModel.dat: a single-scenario data file for the SP (any scenario
+  will do - used to flush out variable and constraint index sets)
+
+  \item ScenarioStructure.dat: data file defining the scenario tree.
+
+  \item Scenario1.dat: one of the scenario data files.
+
+  \item Scenario2.dat: one of the scenario data files.
+
+  \item ...
+\end{itemize}
+
+This example is probably in a directory with a name something like:
+
+\begin{verbatim}
+coopr\packages\coopr\examples\pysp\sizes
+\end{verbatim}
+
+The data for a three scenario version is in a subdirectory called SIZES3 and a
+ten scenario dataset is in SIZES10.
+
+To invoke PH for the 10 scenario problem, connect to the sizes directory and use
+the command:
+
+\begin{verbatim}
+runph --model-directory=models --instance-directory=SIZES10
+\end{verbatim}
+
+
+\subsection{Forestry Example}
+
+This four-stage example is composed of models and data for the ``forestry''
+stochastic program \cite{}, which consists of the following files:
+
+\begin{itemize}
+  \item wwph.cfg: replace default algorithm parameter values for the Watson and
+  Woodruff extensions.
+
+  \item wwph.suffixes: sets algorithm parameter values at the variables level
+  for the Watson and Woodruff extensions.
+
+  \item ReferenceModel.py: a single-scenario model for the SP
+
+  \item ReferenceModel.dat: a single-scenario data file for the SP (any scenario
+  will do - used to flush out variable and constraint index sets)
+
+  \item ScenarioStructure.dat: data file defining the scenario tree.
+
+  \item Scenario1.dat: one of the scenario data files.
+
+  \item Scenario2.dat: one of the scenario data files.
+
+  \item ...
+\end{itemize}
+
+This example is probably in a directory with a name something like:
+
+\begin{verbatim}
+coopr\packages\coopr\examples\pysp\forestry
+\end{verbatim}
+
+There are two families of instances: ``Chile'' and ``Davis,'' each with four
+stages and eighteen scenarios. This is also a small two-stage, four scenario
+instances in the subdirectory DAVIS2STAGE.
+
+This full 18 scenario problem instance takes too long without the Watson
+Woodruff extensions, but to invoke PH for this problem without them, connect to
+the forestry directory and use the command:
+
+\begin{verbatim}
+ runph --models-directory=models --instancs-directory=chile
+\end{verbatim}
+
+and to run with the extensions, use
+
+\begin{verbatim}
+runph --model-directory=models --instance-directory=davis \
+--enable-ww-extensions --ww-extension-cfgfile=config/wwph.cfg \
+--ww-extension-suffixfile=config/wwph.suffixes
+\end{verbatim}
+
+
+\section{Tutorial: Parameters for Watson and Woodruff PH Extensions
+\label{WWTutorialSec}}
+
+The parameters for the PH extensions in WWPHExtensions.py provide the user with
+considerable control over how and under what conditions variables are fixed
+during the PH algorithm execution. Often, some variables converge to consistent
+values during early iterations and can be fixed at these values without
+affecting quality very much and without affecting feasibility at all. Also, the
+algorithm may need to fix some variables during execution in order to break
+cycles. In both cases, guidance from the user concerning which classes of
+variables can and/or should be fixed under various circumstances can be very
+helpful.
+
+The overarching goal is to support industrial and government users who solve the
+same model repeatedly with different, but somewhat similar, data each time. In
+such settings, it behooves the modeler to consider tradeoffs between speed,
+solution quality and feasibility and create at least one good set of directives
+and parameters for the PH algorithm. In some cases, a user may want more than
+one set of directives and parameters depending on whether speed of execution or
+quality of solution are more important. Iteration zero is controlled separately
+because often the absence of the quadratic term results in faster solves for
+this iteration and fixing variables after the iteration has the maximum possible
+impact on speedup.
+
+In order to discuss these issues, we consider an example.
+
+\subsection{Sizes Example}
+
+The Sizes example is simple and small. In fact, the instances that we will
+consider are so small that there is really no need to use the PH algorithm since
+the extensive form can be solved directly in a few minutes. However, it serves
+as a vehicle for introducing the concepts.
+
+This description and formulation comes from the original paper by Jorjani, Scott
+and Woodruff \cite{sizes}.
+
+If demand constraints for the current period are based on firm orders but future
+demands are based on forecasts or conjecture, then they should not be treated in
+the same fashion. We must recognize that future demand constraints are
+stochastic. That is to say that they should be modeled as random variables. It
+may not be reasonable or useful to consider the entire demand probability
+distribution functions. It may not be reasonable because there may not be
+sufficient data to estimate an entire distribution. It may not be useful because
+the essence of the stochastics may be captured by specifying a small number of
+representative {\em scenarios}. We assume that scenarios are specified by giving
+a full set of random variable realizations and a corresponding probability. We
+index the scenario set, ${\cal L}$, by $\ell$ and refer to the probability of
+occurrence of $\ell$ (or, more accurately, a realization ``near'' scenario
+$\ell$) as $\Prl$. We refer to solution systems that satisfy constraints with
+probability one as {\em admissible}.
+
+In addition to modeling stochastics, we would like to model {\em recourse} as
+well. That is, we would like to model the ability of decision makers to make use
+of new information (e.g., orders) at the start of each planning period. We allow
+our solution vectors to depend on the scenario that is realized, but we do not
+want to assume prescience. We refer to a system of solution vectors as {\em
+implementable} if for all decision times $t$, the solution vector elements
+corresponding to period $1,\ldots,t$ are constant with respect to information
+that becomes available only after stage $t$. We refer to the set of
+implementable solutions as ${\cal N}_{\cal L}$. It is possible to require
+implementable solutions by adding {\em non-anticipatitivity constraints}, but we
+will instead make use of solution procedures that implicitly guarantee
+implementable solutions.
+
+In the stochastic, multi-period formulation that follows the objective is to
+minimize expected costs. We invoke the network equivalence given earlier to drop
+the explicit requirement that $\Vector{x}$ and $\Vector{y}$ be integers.
+Variables and data are subscripted with a period index $t$ that takes on values
+up to $T$. To model the idea that sleeves produced in one period can be used
+as-is or cut in subsequent periods, we use $x_{ijt}$ to indicate that sleeves of
+length index $i$ are to be used without cutting in period $t$ if $i=j$ and with
+cutting otherwise. The $\Vector{y}$ vector gives production quantities for each
+length in each period without regard to the period in which they will be used
+(and perhaps cut). The formulation is essentially an extension of ILP except
+that a capacity constraint must be added in the multiple period formulation.
+Holding costs could be added, but an additional subscript becomes necessary
+without the benefit of any additional insight. As an aside, note that the
+addition of holding costs would add a large number of continuous variables, but
+no new integers so the impact on computational performance would not be
+catastrophic.
+
+\[
+\min\sum_{\ell\in{\cal L}}\Prl
+     \sum_{t}^{T}\left[\sum_{i=1}^{N}\left(sz_{it\ell}+p_{i}y_{it\ell}\right)
+    +r\sum_{j<i}x_{ijt\ell}\right] \;\;\;\;\mbox{(SMIP)}
+\]
+subject to
+\begin{eqnarray}
+\sum_{j \geq i}x_{ijt\ell} & \geq & d_{it\ell}
+          \;\;\;\; \ell \in {\cal L}, \; i=1,\ldots,N, \; t=1,\ldots,T \label{Dconstr} \\
+\sum_{t'\leq t}\left[\sum_{j \leq i}x_{ijt'\ell} - y_{it'\ell}\right] & \leq & 0
+          \;\;\;\; \ell \in {\cal L}, \; i=1,\ldots,N, \; t=1,\ldots,T \label{Pconstr} \\
+y_{it\ell} - Mz_{it\ell} & \leq & 0
+          \;\;\;\; \ell \in {\cal L}, \;i=1,\ldots,N, \; t=1,\ldots,T \label{Mconstr} \\
+\sum_{i=1}^{N}y_{it\ell} & \leq & c_{t\ell}
+          \;\;\;\; \ell \in {\cal L}, \; t=1,\ldots,T \label{Cconstr} \\
+z_{it\ell} & \in & \{0,1\}
+          \;\;\;\; \ell \in {\cal L}, \; i=1,\ldots,N, \; t=1,\ldots,T \label{intconstr} \\
+\Vector{x}, \Vector{y}, \Vector{z} & \in & {\cal N}_{\cal L}
+\end{eqnarray}
+
+Bear in mind that solution vector elements corresponding to periods two through
+$T$ are not actually intended for use, they are computed just to see the effect
+that period 1 (the current period) decision would have on future optimal
+behavior. At the start of period 2 -- or at any other time -- the decision maker
+would run the model again with updated demands for the current period and new
+scenario estimates.
+
+\subsection{ReferenceModel.py}
+
+Here is the single scenario reference model:
+
+{\small
+\begin{verbatim}
+#
+# This is the two-period version of the SIZES optimization model.
+#
+
+from coopr.pyomo import *
+
+#
+# Model
+#
+
+model = Model()
+
+#
+# Parameters
+#
+
+# the number of product sizes.
+model.NumSizes = Param(within=NonNegativeIntegers)
+
+def product_sizes_rule(model):
+    ans = set()
+    for i in range(1, model.NumSizes()+1):
+        ans.add(i)
+    return ans
+
+# the set of sizes, labeled 1 through NumSizes.
+model.ProductSizes = Set(initialize=product_sizes_rule)
+
+# the deterministic demands for product at each size.
+model.DemandsFirstStage = Param(model.ProductSizes, within=NonNegativeIntegers)
+model.DemandsSecondStage = Param(model.ProductSizes, within=NonNegativeIntegers)
+
+# the unit production cost at each size.
+model.UnitProductionCosts = Param(model.ProductSizes, within=NonNegativeReals)
+
+# the setup cost for producing any units of size i.
+model.SetupCosts = Param(model.ProductSizes, within=NonNegativeReals)
+
+# the unit penalty cost of meeting demand for size j with larger size i.
+model.UnitPenaltyCosts = Param(model.ProductSizes, within=NonNegativeReals)
+
+# the cost to reduce a unit i to a lower unit j.
+model.UnitReductionCost = Param(within=NonNegativeReals)
+
+# a cap on the overall production within any time stage.
+model.Capacity = Param(within=PositiveReals)
+
+# a derived set to constrain the NumUnitsCut variable domain.
+def num_units_cut_domain_rule(model):
+   ans = set()
+   for i in range(1,model.NumSizes()+1):
+      for j in range(1, i+1):
+         ans.add((i,j))
+   return ans
+
+model.NumUnitsCutDomain = Set(initialize=num_units_cut_domain_rule, dimen=2)
+
+#
+# Variables
+#
+
+# are any products at size i produced?
+model.ProduceSizeFirstStage = Var(model.ProductSizes, domain=Boolean)
+model.ProduceSizeSecondStage = Var(model.ProductSizes, domain=Boolean)
+
+# NOTE: The following (num-produced and num-cut) variables are implicitly integer
+#       under the normal cost objective, but with the PH cost objective, this isn't
+#       the case.
+
+# the number of units at each size produced.
+model.NumProducedFirstStage = Var(model.ProductSizes, domain=NonNegativeIntegers)
+model.NumProducedSecondStage = Var(model.ProductSizes, domain=NonNegativeIntegers)
+
+# the number of units of size i cut (down) to meet demand for units of size j.
+model.NumUnitsCutFirstStage = Var(model.NumUnitsCutDomain, domain=NonNegativeIntegers)
+model.NumUnitsCutSecondStage = Var(model.NumUnitsCutDomain, domain=NonNegativeIntegers)
+
+# stage-specific cost variables for use in the pysp scenario tree / analysis.
+model.FirstStageCost = Var(domain=NonNegativeReals)
+model.SecondStageCost = Var(domain=NonNegativeReals)
+
+#
+# Constraints
+#
+
+# ensure that demand is satisfied in each time stage, accounting for cut-downs.
+def demand_satisfied_first_stage_rule(i, model):
+   return (0.0, \
+           sum(model.NumUnitsCutFirstStage[j,i] \
+               for j in model.ProductSizes if j >= i) - model.DemandsFirstStage[i], \
+           None)
+
+def demand_satisfied_second_stage_rule(i, model):
+   return (0.0, \
+           sum(model.NumUnitsCutSecondStage[j,i] \
+               for j in model.ProductSizes if j >= i) - model.DemandsSecondStage[i], \
+           None)
+
+model.DemandSatisfiedFirstStage = \
+                Constraint(model.ProductSizes, rule=demand_satisfied_first_stage_rule)
+model.DemandSatisfiedSecondStage = \
+                Constraint(model.ProductSizes, rule=demand_satisfied_second_stage_rule)
+
+# ensure that you don't produce any units if the decision has been made to disable production.
+def enforce_production_first_stage_rule(i, model):
+   # The production capacity per time stage serves as a simple upper bound for "M".
+   return (None, \
+           model.NumProducedFirstStage[i] - model.Capacity * model.ProduceSizeFirstStage[i], \
+           0.0)
+
+def enforce_production_second_stage_rule(i, model):
+   # The production capacity per time stage serves as a simple upper bound for "M".
+   return (None, \
+           model.NumProducedSecondStage[i] - model.Capacity * model.ProduceSizeSecondStage[i], \
+           0.0)
+
+model.EnforceProductionBinaryFirstStage = \
+                  Constraint(model.ProductSizes, rule=enforce_production_first_stage_rule)
+model.EnforceProductionBinarySecondStage = \
+                  Constraint(model.ProductSizes, rule=enforce_production_second_stage_rule)
+
+# ensure that the production capacity is not exceeded for each time stage.
+def enforce_capacity_first_stage_rule(model):
+   return (None, \
+           sum(model.NumProducedFirstStage[i] for i in model.ProductSizes) - model.Capacity, \
+           0.0)
+
+def enforce_capacity_second_stage_rule(model):
+   return (None, \
+           sum(model.NumProducedSecondStage[i] for i in model.ProductSizes) - model.Capacity, \
+           0.0)
+
+model.EnforceCapacityLimitFirstStage = Constraint(rule=enforce_capacity_first_stage_rule)
+model.EnforceCapacityLimitSecondStage = Constraint(rule=enforce_capacity_second_stage_rule)
+
+# ensure that you can't generate inventory out of thin air.
+def enforce_inventory_first_stage_rule(i, model):
+   return (None, \
+           sum(model.NumUnitsCutFirstStage[i,j] \
+               for j in model.ProductSizes if j <= i) - model.NumProducedFirstStage[i], \
+           0.0)
+
+def enforce_inventory_second_stage_rule(i, model):
+   return (None, \
+           sum(model.NumUnitsCutFirstStage[i,j] \
+               for j in model.ProductSizes \
+                  if j <= i) + sum(model.NumUnitsCutSecondStage[i,j] \
+                     for j in model.ProductSizes if j <= i) \
+               - model.NumProducedFirstStage[i] - model.NumProducedSecondStage[i], \
+           0.0)
+
+model.EnforceInventoryFirstStage = \
+               Constraint(model.ProductSizes, rule=enforce_inventory_first_stage_rule)
+model.EnforceInventorySecondStage = \
+               Constraint(model.ProductSizes, rule=enforce_inventory_second_stage_rule)
+
+# stage-specific cost computations.
+def first_stage_cost_rule(model):
+   production_costs = \
+            sum(model.SetupCosts[i] * model.ProduceSizeFirstStage[i] \
+                + model.UnitProductionCosts[i] * model.NumProducedFirstStage[i] \
+                for i in model.ProductSizes)
+   cut_costs = \
+             sum(model.UnitReductionCost * model.NumUnitsCutFirstStage[i,j] \
+                 for (i,j) in model.NumUnitsCutDomain if i != j)
+   return (model.FirstStageCost - production_costs - cut_costs) == 0.0
+
+model.ComputeFirstStageCost = Constraint(rule=first_stage_cost_rule)
+
+def second_stage_cost_rule(model):
+   production_costs = \
+                sum(model.SetupCosts[i] * model.ProduceSizeSecondStage[i] \
+                    + model.UnitProductionCosts[i] * model.NumProducedSecondStage[i] \
+                    for i in model.ProductSizes)
+   cut_costs = \
+             sum(model.UnitReductionCost * model.NumUnitsCutSecondStage[i,j] \
+                 for (i,j) in model.NumUnitsCutDomain if i != j)
+   return (model.SecondStageCost - production_costs - cut_costs) == 0.0
+
+model.ComputeSecondStageCost = Constraint(rule=second_stage_cost_rule)
+
+#
+# Objective
+#
+
+def total_cost_rule(model):
+   return (model.FirstStageCost + model.SecondStageCost)
+
+model.TotalCostObjective = Objective(rule = total_cost_rule, sense=minimize)
+\end{verbatim}
+}
+
+\subsection{ReferenceModel.dat}
+
+This file establishes the data for a representative instance. The main thing to
+notice is that the indexes for sizes happen to be given as integers, which is
+not required: they could have been strings.
+
+{\small
+\begin{verbatim}
+#ReferenceModel.dat
+param NumSizes := 10 ;
+
+param Capacity := 200000 ;
+
+param DemandsFirstStage := 1 2500 2 7500 3 12500 4 10000 5 35000
+                           6 25000 7 15000 8 12500 9 12500 10 5000 ;
+
+param DemandsSecondStage := 1 2500 2 7500 3 12500 4 10000 5 35000
+                            6 25000 7 15000 8 12500 9 12500 10 5000 ;
+
+param UnitProductionCosts := 1 0.748 2 0.7584 3 0.7688 4 0.7792 5 0.7896
+                             6 0.8 7 0.8104 8 0.8208 9 0.8312 10 0.8416 ;
+
+param SetupCosts := 1 453 2 453 3 453 4 453 5 453 6 453 7 453 8 453 9 453 10 453 ;
+
+param UnitReductionCost := 0.008 ;
+\end{verbatim}
+
+\subsection{ScenarioStucture.dat}
+
+Here is the data file that describes the stochastics:
+
+\begin{verbatim}
+# IMPORTANT - THE STAGES ARE ASSUMED TO BE IN TIME-ORDER.
+
+set Stages := FirstStage SecondStage ;
+
+set Nodes := RootNode
+             Scenario1Node
+             Scenario2Node
+             Scenario3Node
+             Scenario4Node
+             Scenario5Node
+             Scenario6Node
+             Scenario7Node
+             Scenario8Node
+             Scenario9Node
+             Scenario10Node ;
+
+param NodeStage := RootNode             FirstStage
+                   Scenario1Node        SecondStage
+                   Scenario2Node        SecondStage
+                   Scenario3Node        SecondStage
+                   Scenario4Node        SecondStage
+                   Scenario5Node        SecondStage
+                   Scenario6Node        SecondStage
+                   Scenario7Node        SecondStage
+                   Scenario8Node        SecondStage
+                   Scenario9Node        SecondStage
+                   Scenario10Node       SecondStage ;
+
+set Children[RootNode] := Scenario1Node
+                          Scenario2Node
+                          Scenario3Node
+                          Scenario4Node
+                          Scenario5Node
+                          Scenario6Node
+                          Scenario7Node
+                          Scenario8Node
+                          Scenario9Node
+                          Scenario10Node ;
+
+param ConditionalProbability := RootNode          1.0
+                                Scenario1Node     0.10
+                                Scenario2Node     0.10
+                                Scenario3Node     0.10
+                                Scenario4Node     0.10
+                                Scenario5Node     0.10
+                                Scenario6Node     0.10
+                                Scenario7Node     0.10
+                                Scenario8Node     0.10
+                                Scenario9Node     0.10
+                                Scenario10Node    0.10 ;
+
+set Scenarios := Scenario1
+                 Scenario2
+                 Scenario3
+                 Scenario4
+                 Scenario5
+                 Scenario6
+                 Scenario7
+                 Scenario8
+                 Scenario9
+                 Scenario10 ;
+
+param ScenarioLeafNode := Scenario1  Scenario1Node
+                          Scenario2  Scenario2Node
+                          Scenario3  Scenario3Node
+                          Scenario4  Scenario4Node
+                          Scenario5  Scenario5Node
+                          Scenario6  Scenario6Node
+                          Scenario7  Scenario7Node
+                          Scenario8  Scenario8Node
+                          Scenario9  Scenario9Node
+                          Scenario10 Scenario10Node ;
+
+set StageVariables[FirstStage] := ProduceSizeFirstStage[*]
+                                  NumProducedFirstStage[*]
+                                  NumUnitsCutFirstStage[*,*] ;
+set StageVariables[SecondStage] := ProduceSizeSecondStage[*]
+                                   NumProducedSecondStage[*]
+                                   NumUnitsCutSecondStage[*,*] ;
+
+param StageCostVariable := FirstStage FirstStageCost
+                           SecondStage SecondStageCost ;
+
+\end{verbatim}
+}
+
+\subsection{wwph.cfg}
+
+This file overrides default values for the suffixes used by WW PH Extension. Even when most of them will be overridden
+at the variable level, it makes sense to provide instance specific defaults. For
+this problem, it does not seem helpful or prudent to do any fixing of continuous
+variables since they only used to compute the objective function terms. The
+\verb|ProduceSizeFirstStage| variables are binary and fixing their values would
+seem to determine the value of the other values. The other first stage variables
+are general integers. The \verb|ProduceSizeFirstStage| can safely be fixed
+because provided that the largest size is not fixed at zero, there is little
+risk of infeasibility since larger sizes can be cut (at a cost) to meet demand
+for smaller sizes. Consequently, it is safe to let the algorithm slam those
+variables as needed. Slamming the other variables is riskier because they could
+get slammed to values that don't make sense given the values of the
+\verb|ProduceSizeFirstStage| variables.
+
+Fixing variables that have converged will speed the algorithm, perhaps resulting
+in a less desirable objective function value. It would make sense to tend to fix
+the \verb|ProduceSizeFirstStage| before fixing the others to avoid
+inconsistencies and because the The \verb|ProduceSizeFirstStage| variables have
+a strong tendency to imply values for the other variables.
+
+Here is a sensible and internally consistent, if a bit conservative, wwph.cfg
+file:
+
+{\small
+\begin{verbatim}
+# wwph.cfg
+# python  commands that are executed by the wwphextensions.py file
+# to set parameters and parameter defaults
+
+self.fix_continuous_variables = False
+
+self.Iteration0MipGap = 0.02
+self.InitialMipGap = 0.10
+self.FinalMipGap = 0.001
+
+# for all six of these, zero means don't do it.
+self.Iter0FixIfConvergedAtLB = 0 # 1 or 0
+self.Iter0FixIfConvergedAtUB = 0  # 1 or 0
+self.Iter0FixIfConvergedAtNB = 0  # 1 or 0 (converged to a non-bound)
+self.FixWhenItersConvergedAtLB = 0
+self.FixWhenItersConvergedAtUB = 25
+self.FixWhenItersConvergedAtNB = 0  # converged to a non-bound
+self.FixWhenItersConvergedContinuous = 0
+
+# "default" slamming parms
+# True and False are the options (case sensitive)
+self.CanSlamToLB = False
+self.CanSlamToMin = False
+self.CanSlamToAnywhere = False
+self.CanSlamToMax = True
+self.CanSlamToUB = False
+self.PH_Iters_Between_Cycle_Slams = 5
+
+# the next line will try to force at least one variable to be
+# fixed every other iteration after iteration 50
+# if anything can be slammed
+self.SlamAfterIter = 50
+
+self.hash_hit_len_to_slam = 50
+self.W_hash_history_len = 100
+\end{verbatim}
+}
+
+There are a number of things to notice about the contents of this file. Since it
+is executed as python code, the syntax matters. Users should changes values of
+numbers of change True to False, but everything else should not be edited with
+the exception of comments, which is any text after a sharp sign (sometimes
+called a pound sign). Changes to this file should be tested incrementally
+because errors are trapped by the python interpreter and may be difficult for
+non-python programmers to decipher.
+
+This particular example file allows variables to be fixed if all scenarios have
+agreed on the upper bound for five iterations in a row. Since the
+\verb|ProduceSizeFirstStage| variables are the only discrete variables in the
+first stage with an upper bound, they are the only variables affected by this.
+
+This example allows slamming, but only to the max across scenarios. This is
+different than the upper bound, even for binary variables, because a variable
+could be selected for slamming for which all scenarios have agreed on the same
+value (which could be the lower lower bound). Data providing an override for
+this default as well as control over the selection priority for variables to
+slam are provided in the wwph.suffixes file.
+
+\subsection{wwph.suffixes}
+
+{\small
+\begin{verbatim}
+# Optional suffixes to help control PH
+
+# Text triples specifying (variable/variable-index, suffix-name, suffix-value)
+# tuples.
+
+# override the defaults given in wwph.cfg as needed
+# If no scenario needs the smallest size to be produced, then just forget it
+ProduceSizeFirstStage[1] Iter0FixIfConvergedAtLB 1
+
+# if all scenarios need either of the two largest sizes, just lock them in
+ProduceSizeFirstStage[9] Iter0FixIfConvergedAtUB 1
+ProduceSizeFirstStage[10] Iter0FixIfConvergedAtUB 1
+
+# and be aggressive with the smallest size after iteration 0
+ProduceSizeFirstStage[1] FixWhenItersConvergedAtLB 8
+
+# if the production quantities have been fixed a long time, fix them
+NumProducedFirstStage[*] FixWhenItersConvergedAtNB 20
+
+# don't allow slamming of variables other than ProduceSize
+# for completeness, disallow all slamming destinations
+
+NumProducedFirstStage[*] CanSlamToLB False
+NumProducedFirstStage[*] CanSlamToMin False
+NumProducedFirstStage[*] CanSlamToAnywhere False
+NumProducedFirstStage[*] CanSlamToMax False
+NumProducedFirstStage[*] CanSlamToUB False
+
+NumUnitsCutFirstStage[*,*] CanSlamToLB False
+NumUnitsCutFirstStage[*,*] CanSlamToMin False
+NumUnitsCutFirstStage[*,*] CanSlamToAnywhere False
+NumUnitsCutFirstStage[*,*] CanSlamToMax False
+NumUnitsCutFirstStage[*,*] CanSlamToUB False
+
+# higher priority means slam these first
+ProduceSizeFirstStage[1] SlammingPriority 1
+ProduceSizeFirstStage[2] SlammingPriority 2
+ProduceSizeFirstStage[3] SlammingPriority 3
+ProduceSizeFirstStage[4] SlammingPriority 4
+ProduceSizeFirstStage[5] SlammingPriority 5
+ProduceSizeFirstStage[6] SlammingPriority 6
+ProduceSizeFirstStage[7] SlammingPriority 7
+ProduceSizeFirstStage[8] SlammingPriority 8
+ProduceSizeFirstStage[9] SlammingPriority 9
+ProduceSizeFirstStage[10] SlammingPriority 10
+
+\end{verbatim}
+}
+
+The first thing to notice is that this is a data file and not a file of Python
+comments. Consequently, simpler messages are provided if there are errors, but
+the file can be verbose and a computer program or spreadsheet might be required
+to produce this data file. The next thing to notice is that indexes can be
+specified either using valid index values, or wildcards.
+
+This file overrides the defaults to allow some fixing after iteration zero.
+Fixing the smallest size (index 1) to zero cannot result in infeasibility
+because larger sizes can be cut to satisfy demand for that size. Along the same
+lines, aggressively fixing the production indicator for larger sizes to 1 is
+also safe and perhaps not sub-optimal if all scenarios ``want'' those sizes
+anyway.
+
+\subsection{rhosetter.cfg}
+
+\begin{verbatim}
+# rhosetter.cfg
+
+# users probably want this line intact so they can use model_instance
+model_instance = self._model_instance
+
+MyRhoFactor = 0.1
+
+for i in model_instance.ProductSizes:
+   self.setRhoAllScenarios(model_instance.ProduceSizeFirstStage[i], model_instance.SetupCosts[i] * MyRhoFactor)
+   self.setRhoAllScenarios(model_instance.NumProducedFirstStage[i], model_instance.UnitProductionCosts[i] * MyRhoFactor)
+   for j in model_instance.ProductSizes:
+      if j <= i:
+         self.setRhoAllScenarios(model_instance.NumUnitsCutFirstStage[i,j], model_instance.UnitReductionCost * MyRhoFactor)
+
+
+\end{verbatim}
+
+\subsection{Execution}
+
+To run this example, connect to the sizes directory, which is something like:
+\begin{verbatim}
+coopr\examples\pysp\sizes
+\end{verbatim}
+
+Then use
+\begin{verbatim}
+runph --model-directory=models --instance-directory=SIZES10 \
+--enable-ww-extensions --ww-extension-cfgfile=config/wwph.cfg \
+--ww-extension-suffixfile=config/wwph.suffixes \
+--rho-cfgfile=config/rhosetter.cfg
+\end{verbatim}
+
+Since this instance is so small by modern standards, the enhancement are not
+needed and may even increase the total solution time. It is provided to
+illustrate the features of the extensions, not to illustrate why you might need
+them. Much larger instances are are required for that.
+
+\section{Linearizing the Proximal Term \label{LinearSec}}
+
+\subsection{Introduction}
+
+For a decision variable $x$ the proximal term added to the objective function
+for each scenario subproblem at PH iteration $k$ is
+$$
+\left(x - \bar{x}^{(k-1)}\right)^{2}
+$$
+where $\bar{x}^{(k-1)}$ is the average over the scenarios from the last
+iteration. Expanding the square reveals that the only quadratic term is $x^{2}$.
+For binary variables, this is equal to $x$, although this is not the case when a
+relaxation is solved. For binary variables, the default behaviour is to replace
+the quadratic term with $x$, but an option allows the quadratic to be retained
+because this can effect the subproblem solution time due to the use of the
+quadratic term when the relaxations are solved as part of the branch and bound
+process.
+
+For non-binary variables an option exists to replace the $x^2$ term with a
+piece-wise approximation and the number of breakpoints in the approximation is
+under user control. This can have a significant effect on CPU time required to
+solve sub-problems because the presence of the quadratic term increases the
+solution times significantly. However, linearization results in a time-quality
+tradeoff because increasing the number of breakpoints increases the fidelity but
+each breakpoint introduces another (unseen) binary variable so solution times
+are generally increased.
+
+A few strategies for placing the breakpoints are supported as command a line
+options: \verb|--breakpoint-strategy|=BREAKPOINT\_STRATEGY. A value of 0
+indicates uniform distribution. 1 indicates breakpoints at the min and max for
+the node in the scenario tree, uniformly in- between. A value of 2 indicates
+more aggressive concentration of breakpoints near the observed node min/max.
+
+Upper and lower bounds for variables must be specified when the linearization
+option is chosen. This can be done by specifying bounds in the reference model
+or by using the bounds-cfgfile command line option. It is, of course, best to
+use meaningful bounds provided in the reference model; however, the modeller
+must be careful not use estimated bounds that are too tight since that could
+preclude an optimal (or even a feasible) solution to the overall stochastic
+problem even though it might not cut off any optimal solutions for the
+particular scenario. The use of a bounds cfgfile is an advanced topic, but
+enables the modeller to use bounds that cannot create infeasibilities.
+
+\subsection{Bounds-cfgfile}
+
+Using a bounds cfgfile is an advanced topic. The modeler is writing python/pyomo
+code that will be executed by the ph.py file that is the core of the PH
+algorithm. The first executable line in a bounds file is typically:
+
+\begin{verbatim}
+model_instance = self._model_instance
+\end{verbatim}
+
+This establishes a local variable called ``model\_instance'' that can be used to
+refer to the model (of course, a different name can be used, such as MODINS).
+The object ``self'' on the right hand side of this assignment refers to the core
+PH object. The model, in turn contains the parameters and variables defined in
+the ReferenceModel.py file that can be accessed by name. For example, with the
+Farmer model, the cfg file sets the uppter bound on DevotedAcreage to be value
+of the paramter TOTAL\_ACREAGE at intialization (since this is Python, the
+parentheses after TOTAL\_ACREAGE cause the value in TOTAL\_ACREAGE to be
+assigned rather than the name of the parameter object:
+
+\begin{verbatim}
+# only need to set upper bounds on first-stage variables, i.e., those being
+# blended.
+model_instance = self._model_instance
+
+# the values supplied to the method
+upper_bound = float(model_instance.TOTAL_ACREAGE())
+
+for index in model_instance.CROPS:
+   # the lower and upper bounds are expected to be floats, and trigger an
+   # exception if not.
+   self.setVariableBoundsAllScenarios("DevotedAcreage", index, 0.0, upper_bound)
+\end{verbatim}
+
+The same thing could be accomplished by setting the upper bound in the model
+file, but it does serve as a simple example of a bounds cfg file.
+
+%\subsection{Sizes Example}
+
+
+\section{Solving sub-problems in Parallel \label{parallelsec}}
+
+Pyomo makes use of the pyro facility to enable sub-problems to easily be
+assigned to be solved in parallel. This capability is suppored by pysp. We will
+refer to a single master computer and multiple slave computers in the discussion
+here, but actually, the master computing processes can (and for synchronous
+parallel, should) be on a processor that also runs a slave process.
+
+Here are the commands in order:
+
+\begin{enumerate}
+  \item On the master: \verb|coopr_ns|
+  \item On the master: \verb|dispatch_srvr|
+  \item On each slave: \verb|pyro_mip_server|
+  \item On the master: \verb|runph ... --solver-manager=pyro ...|
+\end{enumerate}
+
+Note that the command
+argument \verb|solver-manager| has
+a dash in the middle, while the commands \verb|coopr\_ns|, \verb|dispatch\_srvr| and
+\verb|pyro_mip_server| have underscores. The first three commands launch
+processes that have no internal mechanism for termination; i.e., they will be
+terminated only if they crash or if they are killed by an external process. It
+is common to launch these processes with output redirection, such as
+\verb|coopr-ns >& cooprns.log|. The \verb|runph| command is a normal runph
+command with the usual arguments with the additional specification that
+subproblem solves should be directed to the pyro solver manager.
+
+\section{Appendix --- notes on new capabilities}
+
+\subsection{SEP $\rho$ setting}
+
+General support for the SEP method of setting rho values \cite{phinnovate}
+has been added to the wwphextension.
+
+We have an example for Farmer. We attached wwph.suffixes (put it in examples/pysp/farmer/config) and wwph.cfg (put it in the same directory). To use the farmer example with this new capability, run:
+
+runph -m models -i scenariodata --enable-ww-extensions --ww-extension-cfgfile=config/wwph.cfg --ww-extension-suffixfile=config/wwph.suffixes
+
+This should converge pretty quickly - with cplex, it converges in 7 or so iterations on our side.
+
+Now, what does this do?
+
+The wwph.cfg file just sets a flag that enables the rho-setting logic. The important problem-specific stuff is in the wwph.suffixes file. Here, you have a few options:
+1) If you know good cost factors for each variable index, you can enter lines like "foo[bar] CostForRho 1.11".
+2) if you want blanket cost factors for each grouped variable, you can enter lines like "foo[*] CostForRho 1.23".
+
+NOTE: as of 2014, the suffix file format has changed to YAML.
+
+The "only" thing you need to do is write a script to generate the wwph.suffixes file for your problem.
+
+In wwph.cfg you need
+
+self.ComputeRhosWithSEP = True
+
+and 
+
+self.RhosSEPMult=X
+
+(e.g., self.RhosSEPMult=0.1)
+
+\subsection{Chance Constraints in runef}
+
+\subsubsection{Overview}
+
+The runef scripts supports a chance constraint. On the runef command line, one
+may specify a binary variable that
+indicates that the constraint has been met for a particular scenario. The variable and the
+constraint that controls the value of the variable (a form of the chance constraint)
+are defined in the ReferenceModel.py file. The value of $\alpha$ for the constraint
+must also be given on the runef command. The runef script will add a constraint
+to the EF requiring that the expected value of the indicator variable be at least
+$1-\alpha$. The default value of $\alpha$ is zero, which effectively changes the chance
+constraint into a ``regular old'' constraint that must hold for all scenarios. The 
+relevant runef command arguments are \verb|--cc-indicator-var| and \verb|--cc-alpha|. 
+
+\subsubsection{Example}
+
+When runef is executed from the sizes directory with the command
+
+\begin{verbatim}
+runef --model-directory=models --instance-directory=SIZES10
+\end{verbatim}
+
+it will generate a file called efout.lp containing the extensive form for the sizes problem with
+ten scenarios. The sizes example has a second stage demand constraint that is given as
+
+\begin{verbatim}
+def demand_satisfied_second_stage_rule(i, model):
+   return (0.0, 
+   sum([model.NumUnitsCutSecondStage[j,i] for j in model.ProductSizes if j >= i]) - model.DemandsSecondStage[i], 
+   None)    
+
+model.DemandSatisfiedSecondStage = Constraint(model.ProductSizes, rule=demand_satisfied_second_stage_rule)
+\end{verbatim}
+
+Suppose we wish to require that this constraint only needs to hold in $1-\alpha$ of the scenarios. E.g., for
+$\alpha=0.3$ the constraint would only be required to hold in seven out of ten scenarios. We would
+need to replace the constraint with the following:
+
+\begin{verbatim}
+model.dIndicator = Var(domain=Boolean)# indicate that all demand is met (for scenario)
+model.dforsize = Var(model.ProductSizes, domain=Boolean)  # indicate that demand is met for size
+
+# The production capacity per time stage serves as a simple upper bound for "big-M".
+def establish_dforsize_rule(i,model):
+   return model.dforsize[i]-1.0 <= \
+   (sum([model.NumUnitsCutSecondStage[j,i] for j in model.ProductSizes if j >= i]) \
+    - model.DemandsSecondStage[i]) / model.Capacity
+
+model.establish_dforsize = Constraint(model.ProductSizes, rule=establish_dforsize_rule)
+
+# it "wants to be a one" so one inequality will suffice
+def establish_dIndicator_rule(model):
+   return model.dIndicator * model.NumSizes <= summation(model.dforsize)
+
+model.establish_dIndicator = Constraint(rule=establish_dIndicator_rule)
+\end{verbatim}
+
+This has been done in the ReferenceModel.py file in the sizes sub-directory call CCModels.
+To run this model with an $\alpha$ of 0.3, cd to the directory with the sizes
+example and use the command:
+
+\begin{verbatim}
+runef -i SIZES10 -m CCModels --cc-indicator-var=dIndicator --cc-alpha=0.3
+\end{verbatim}
+
+to generate efout.lp with the EF for the chance constrained problem.
+
+\subsection{Oscillation Detection}
+
+In the wwph.cfp file:
+
+self.CheckWeightOscillationAfterIter = 5
+
+self.FixIfWeightOscillationCycleLessThan = 10
+
+\subsection{Scenario Bundling}
+
+Bundling is specified in the ScenarioStructure.dat file
+
+Look at the Sizes example in the sub-directory \verb|SIZES10WithBundles| at the bottom
+of the ScenarioStructure.dat file:
+
+\begin{verbatim}
+param Bundling := True ;
+
+set Bundles := EvenBundle OddBundle ;
+
+set BundleScenarios[OddBundle] := Scenario1 Scenario3 Scenario5 Scenario7 Scenario9 ;
+
+set BundleScenarios[EvenBundle] := Scenario2 Scenario4 Scenario6 Scenario8 Scenario10 ;
+\end{verbatim}
+
+The line \verb|param Bundling := True ;| is required to signal that bundles are to be used. The rest of the lines
+will not cause bundling to occur unless this line is present. So by commenting out this line, or by changing the
+right hand side of it to \verb|false|, bundling can be toggled.
+
+The set names \verb|Bundles| and \verb|BundleScenarios| are reserved words, but the names of the bundles (and, of course,
+the names of the scenarios) are user specified.  Any string can be used as the name of a bundle. There can be any number of bundles and they need not contain the same number of scenarios; however, every scenario must be in some bundle.
+
+An alternative to adding these lines to the ScenarioStructure.dat file is to put them in another file and then give
+that file name as an argument to \verb|--scenario-bundle-specification| on the runph command line.
+If the specified name ends with a .dat suffix, the argument is interpreted as a filename. Otherwise, the name is interpreted
+as a file in the instance directory, constructed by adding the .dat suffix automatically.
+
+The option \verb|create-random-bundles=| creates random bundles, thus obviating the need for
+any file to specify the bundles. Note that the option \verb|scenario-tree-seed| allows the user to specify the random seed used
+for bundle formation so that experiments are repeatable.  For example, adding the following to the command line results in creation
+of 10 bundles using the seed 7734:
+
+\verb|create-random-bundles=10| \verb|--scenario-tree-seed=7734| 
+
+\subsection{phsolverserver}
+
+When running in parallel, instead of using  \verb|pyro_mip_server| on each slave, one can use
+\verb|phsolverserver| in its place. 
+You can get a list of arguments using \verb|pyrosolverserver --help|
+If you use the phsolversover, then use \verb|--solver-manager=phpyro| as an argument to runph rather
+than \verb|--solver-manager=pyro|.
+
+IMPORTANT: Unlike the normal pyro mip server, there must be on phsolverserver slave for each sub-problem. 
+
+\subsection{Direct Python Solver Interfaces}
+
+When solvers that have a directy python interface installed (e.g., gurobi and cplex have this option) then the command \verb|solver-io=python| causes use of the direct solver interface rather that the default operation, which is the creation of an lp file.
+
+\subsection{Fix Converged Variables on Exit}
+
+In the config file for wwphextensions:
+
+\verb|self.fix_converged_discrete_variables_at_exit = True|
+
+(wwhpextension)
+
+\subsection{Reduce Rho for Cycling}
+
+In the config file for wwphextensions:
+
+\verb|self.rho_reduction_factor = 0.5|
+
+will cause rho to be multiplied for 0.5 after a W reset to zero for
+variables for which cycling has been detected (wwphextension).
+
+

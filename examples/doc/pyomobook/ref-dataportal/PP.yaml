@@ -1,0 +1,15 @@
+A:
+    - A1
+    - A2
+    - A3
+B:
+    - B1
+    - B2
+    - B3
+PP:
+    - index: [A1, B1]
+      value: 4.3
+    - index: [A2, B2]
+      value: 4.4
+    - index: [A3, B3]
+      value: 4.5

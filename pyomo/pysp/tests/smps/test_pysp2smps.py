@@ -7,7 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import sys
 import re
 import os
 from os.path import join, dirname, abspath
@@ -16,11 +15,6 @@ import difflib
 import filecmp
 import shutil
 import subprocess
-try:
-    from subprocess import check_output as _run_cmd
-except:
-    # python 2.6
-    from subprocess import check_call as _run_cmd
 import pyutilib.subprocess
 import pyutilib.services
 import pyutilib.th as unittest
@@ -33,10 +27,9 @@ from pyomo.environ import *
 
 from six import StringIO
 
-thisDir = dirname(abspath(__file__))
-baselineDir = join(thisDir, "baselines")
+thisdir = dirname(abspath(__file__))
 pysp_examples_dir = \
-    join(dirname(dirname(dirname(dirname(thisDir)))), "examples", "pysp")
+    join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
 _run_verbose = True
 
@@ -47,9 +40,11 @@ class TestSMPSSimple(unittest.TestCase):
         with open(filename, 'rb') as f:
             fdata = f.read()
         for checkstr in checkstrs:
-            self.assertNotEqual(
-                re.search(checkstr, fdata),
-                None)
+            if re.search(checkstr, fdata) is None:
+                self.fail("File %s does not contain test string:\n%s\n"
+                          "------------------------------------------\n"
+                          "File data:\n%s\n"
+                          % (filename, checkstr, fdata))
 
     @unittest.nottest
     def _get_cmd(self,
@@ -64,25 +59,27 @@ class TestSMPSSimple(unittest.TestCase):
             options['--scenario-tree-location'] = \
                 scenario_tree_location
         if _run_verbose:
-            options['--verbose'] = ''
-        options['--output-times'] = ''
-        options['--traceback'] = ''
-        options['--keep-scenario-files'] = ''
-        options['--keep-auxiliary-files'] = ''
+            options['--verbose'] = None
+        options['--output-times'] = None
+        options['--traceback'] = None
+        options['--keep-scenario-files'] = None
+        options['--keep-auxiliary-files'] = None
         class_name, test_name = self.id().split('.')[-2:]
         options['--output-directory'] = \
-            join(thisDir, class_name+"."+test_name)
+            join(thisdir, class_name+"."+test_name)
         if os.path.exists(options['--output-directory']):
             shutil.rmtree(options['--output-directory'],
                           ignore_errors=True)
 
-        cmd = 'pysp2smps '
+        cmd = ['pysp2smps']
         for name, val in options.items():
-            cmd += name
-            if val != '':
-                cmd += "="+str(options[name])
-            cmd += ' '
-        print("Command: "+str(cmd))
+            cmd.append(name)
+            if val is not None:
+                cmd.append(str(val))
+        class_name, test_name = self.id().split('.')[-2:]
+        print("%s.%s: Testing command: %s" % (class_name,
+                                              test_name,
+                                              str(' '.join(cmd))))
         return cmd, options['--output-directory']
 
     @unittest.nottest
@@ -100,64 +97,64 @@ class TestSMPSSimple(unittest.TestCase):
 
     def test_bad_variable_bounds_MPS(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_variable_bounds.py"),
+            join(thisdir, "model_bad_variable_bounds.py"),
             options={'--core-format': 'mps'})
 
     def test_bad_variable_bounds_LP(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_variable_bounds.py"),
+            join(thisdir, "model_bad_variable_bounds.py"),
             options={'--core-format': 'lp'})
 
     def test_bad_objective_constant_MPS(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_objective_constant.py"),
+            join(thisdir, "model_bad_objective_constant.py"),
             options={'--core-format': 'mps'})
 
     def test_bad_objective_constant_LP(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_objective_constant.py"),
+            join(thisdir, "model_bad_objective_constant.py"),
             options={'--core-format': 'lp'})
 
     def test_bad_objective_var_MPS(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_objective_var.py"),
+            join(thisdir, "model_bad_objective_var.py"),
             options={'--core-format': 'mps'})
 
     def test_bad_objective_var_LP(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_objective_var.py"),
+            join(thisdir, "model_bad_objective_var.py"),
             options={'--core-format': 'lp'})
 
     def test_bad_constraint_var_MPS(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_constraint_var.py"),
+            join(thisdir, "model_bad_constraint_var.py"),
             options={'--core-format': 'mps'})
 
     def test_bad_constraint_var_LP(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_constraint_var.py"),
+            join(thisdir, "model_bad_constraint_var.py"),
             options={'--core-format': 'lp'})
 
     def test_bad_constraint_rhs_MPS(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_constraint_rhs.py"),
+            join(thisdir, "model_bad_constraint_rhs.py"),
             options={'--core-format': 'mps'})
 
     def test_bad_constraint_rhs_LP(self):
         self._run_bad_conversion_test(
-            join(thisDir, "model_bad_constraint_rhs.py"),
+            join(thisdir, "model_bad_constraint_rhs.py"),
             options={'--core-format': 'lp'})
 
     def test_too_many_declarations(self):
         cmd, output_dir = self._get_cmd(
-            join(thisDir, "model_too_many_declarations.py"),
+            join(thisdir, "model_too_many_declarations.py"),
             options={'--core-format': 'lp'})
         outfile = output_dir+".out"
         rc = pyutilib.subprocess.run(cmd, outfile=outfile)
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
-            b"RuntimeError: \(Scenario=Scenario1\): Component b.c was "
+            b"RuntimeError: Component b.c was "
             b"assigned multiple declarations in annotation type "
             b"PySP_StochasticMatrixAnnotation. To correct this "
             b"issue, ensure that multiple container components under "
@@ -170,16 +167,16 @@ class TestSMPSSimple(unittest.TestCase):
 
     def test_bad_component_type(self):
         cmd, output_dir = self._get_cmd(
-            join(thisDir, "model_bad_component_type.py"),
+            join(thisdir, "model_bad_component_type.py"),
             options={'--core-format': 'lp'})
         outfile = output_dir+".out"
         rc = pyutilib.subprocess.run(cmd, outfile=outfile)
         self.assertNotEqual(rc[0], 0)
         self._assert_contains(
             outfile,
-            b"TypeError: \(Scenario=Scenario1\): Declarations "
+            b"TypeError: Declarations "
             b"in annotation type PySP_StochasticMatrixAnnotation "
-            b"must be of type Constraint or Block. Invalid type: "
+            b"must be of types Constraint or Block. Invalid type: "
             b"<class 'pyomo.core.base.objective.SimpleObjective'>")
         shutil.rmtree(output_dir,
                       ignore_errors=True)
@@ -191,6 +188,29 @@ class _SMPSTesterBase(object):
     model_location = None
     scenario_tree_location = None
 
+    def setUp(self):
+        self._tempfiles = []
+        self.options = {}
+        self.options['--scenario-tree-manager'] = 'serial'
+
+    def _run_cmd(self, cmd):
+        class_name, test_name = self.id().split('.')[-2:]
+        outname = os.path.join(thisdir,
+                               class_name+"."+test_name+".out")
+        self._tempfiles.append(outname)
+        with open(outname, "w") as f:
+            subprocess.check_call(cmd,
+                                  stdout=f,
+                                  stderr=subprocess.STDOUT)
+
+    def _cleanup(self):
+        for fname in self._tempfiles:
+            try:
+                os.remove(fname)
+            except OSError:
+                pass
+        self._tempfiles = []
+
     def _setup(self, options):
         assert self.baseline_basename is not None
         assert self.model_location is not None
@@ -199,31 +219,35 @@ class _SMPSTesterBase(object):
         if self.scenario_tree_location is not None:
             options['--scenario-tree-location'] = self.scenario_tree_location
         if _run_verbose:
-            options['--verbose'] = ''
-        options['--output-times'] = ''
-        options['--explicit'] = ''
-        options['--traceback'] = ''
-        options['--keep-scenario-files'] = ''
-        options['--keep-auxiliary-files'] = ''
+            options['--verbose'] = None
+        options['--output-times'] = None
+        options['--explicit'] = None
+        options['--traceback'] = None
+        options['--keep-scenario-files'] = None
+        options['--keep-auxiliary-files'] = None
         class_name, test_name = self.id().split('.')[-2:]
         options['--output-directory'] = \
-            join(thisDir, class_name+"."+test_name)
+            join(thisdir, class_name+"."+test_name)
         if os.path.exists(options['--output-directory']):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = 'pysp2smps '
+        cmd = ['pysp2smps']
         for name, val in self.options.items():
-            cmd += name
-            if val != '':
-                cmd += "="+str(self.options[name])
-            cmd += ' '
-        print("Command: "+str(cmd))
+            cmd.append(name)
+            if val is not None:
+                cmd.append(str(val))
+        class_name, test_name = self.id().split('.')[-2:]
+        print("%s.%s: Testing command: %s" % (class_name,
+                                              test_name,
+                                              str(' '.join(cmd))))
         return cmd
 
     def _diff(self, baselinedir, outputdir, dc=None):
         if dc is None:
-            dc = filecmp.dircmp(baselinedir, outputdir, ['.svn'])
+            dc = filecmp.dircmp(baselinedir,
+                                outputdir,
+                                ['.svn'])
         if dc.left_only:
             self.fail("Files or subdirectories missing from output: "
                       +str(dc.left_only))
@@ -240,11 +264,17 @@ class _SMPSTesterBase(object):
                     diff = difflib.context_diff(fromlines, tolines,
                                                 fromfile+" (baseline)",
                                                 tofile+" (output)")
-                    out = StringIO()
-                    out.write("Output file does not match baseline:\n")
-                    for line in diff:
-                        out.write(line)
-                    self.fail(out.getvalue())
+                    diff = list(diff)
+                    # The filecmp.dircmp function does a weaker
+                    # comparison that can sometimes lead to false
+                    # positives. Make sure the true diff is not empty
+                    # before we call this a failure.
+                    if len(diff) > 0:
+                        out = StringIO()
+                        out.write("Output file does not match baseline:\n")
+                        for line in diff:
+                            out.write(line)
+                        self.fail(out.getvalue())
         for subdir in dc.subdirs:
             self._diff(join(baselinedir, subdir),
                        join(outputdir, subdir),
@@ -255,68 +285,46 @@ class _SMPSTesterBase(object):
         self._setup(self.options)
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_baseline'),
+        self._run_cmd(cmd)
+        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_baseline'),
                    self.options['--output-directory'])
+        self._cleanup()
 
     def test_scenarios_MPS(self):
         self._setup(self.options)
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_baseline'),
+        self._run_cmd(cmd)
+        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_baseline'),
                    self.options['--output-directory'])
+        self._cleanup()
 
     def test_scenarios_LP_symbolic_names(self):
         self._setup(self.options)
         self.options['--core-format'] = 'lp'
-        self.options['--symbolic-solver-labels'] = ''
+        self.options['--symbolic-solver-labels'] = None
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_symbolic_names_baseline'),
+        self._run_cmd(cmd)
+        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
+        self._cleanup()
 
     def test_scenarios_MPS_symbolic_names(self):
         self._setup(self.options)
         self.options['--core-format'] = 'mps'
-        self.options['--symbolic-solver-labels'] = ''
+        self.options['--symbolic-solver-labels'] = None
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
+        self._run_cmd(cmd)
+        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
+        self._cleanup()
 
 _pyomo_ns_host = '127.0.0.1'
 _pyomo_ns_port = None
 _pyomo_ns_process = None
 _dispatch_srvr_port = None
 _dispatch_srvr_process = None
-_dispatch_srvr_options = "--host localhost --daemon-host localhost"
 _taskworker_processes = []
-def _setUpModule():
-    global _pyomo_ns_port
-    global _pyomo_ns_process
-    global _dispatch_srvr_port
-    global _dispatch_srvr_process
-    global _taskworker_processes
-    if _pyomo_ns_process is None:
-        _pyomo_ns_process, _pyomo_ns_port = \
-            _get_test_nameserver(ns_host=_pyomo_ns_host)
-    assert _pyomo_ns_process is not None
-    if _dispatch_srvr_process is None:
-        _dispatch_srvr_process, _dispatch_srvr_port = \
-            _get_test_dispatcher(ns_host=_pyomo_ns_host,
-                                 ns_port=_pyomo_ns_port)
-    assert _dispatch_srvr_process is not None
-    if len(_taskworker_processes) == 0:
-        for i in range(3):
-            _taskworker_processes.append(\
-                subprocess.Popen(["scenariotreeserver", "--traceback"] + \
-                                 (["--verbose"] if _run_verbose else []) + \
-                                 ["--pyro-host="+str(_pyomo_ns_host)] + \
-                                 ["--pyro-port="+str(_pyomo_ns_port)]))
-
-        time.sleep(2)
-        [_poll(proc) for proc in _taskworker_processes]
 
 def tearDownModule():
     global _pyomo_ns_port
@@ -332,16 +340,50 @@ def tearDownModule():
     _dispatch_srvr_process = None
     [_kill(proc) for proc in _taskworker_processes]
     _taskworker_processes = []
-    if os.path.exists(join(thisDir, "Pyro_NS_URI")):
+    if os.path.exists(join(thisdir, "Pyro_NS_URI")):
         try:
-            os.remove(join(thisDir, "Pyro_NS_URI"))
+            os.remove(join(thisdir, "Pyro_NS_URI"))
         except OSError:
             pass
 
 class _SMPSPyroTesterBase(_SMPSTesterBase):
 
+    def _setUpPyro(self):
+        global _pyomo_ns_port
+        global _pyomo_ns_process
+        global _dispatch_srvr_port
+        global _dispatch_srvr_process
+        global _taskworker_processes
+        if _pyomo_ns_process is None:
+            _pyomo_ns_process, _pyomo_ns_port = \
+                _get_test_nameserver(ns_host=_pyomo_ns_host)
+        assert _pyomo_ns_process is not None
+        if _dispatch_srvr_process is None:
+            _dispatch_srvr_process, _dispatch_srvr_port = \
+                _get_test_dispatcher(ns_host=_pyomo_ns_host,
+                                     ns_port=_pyomo_ns_port)
+        assert _dispatch_srvr_process is not None
+        class_name, test_name = self.id().split('.')[-2:]
+        if len(_taskworker_processes) == 0:
+            for i in range(3):
+                outname = os.path.join(thisdir,
+                                       class_name+"."+test_name+".scenariotreeserver_"+str(i+1)+".out")
+                self._tempfiles.append(outname)
+                with open(outname, "w") as f:
+                    _taskworker_processes.append(
+                        subprocess.Popen(["scenariotreeserver", "--traceback"] + \
+                                         (["--verbose"] if _run_verbose else []) + \
+                                         ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                         ["--pyro-port="+str(_pyomo_ns_port)],
+                                         stdout=f,
+                                         stderr=subprocess.STDOUT))
+
+            time.sleep(2)
+            [_poll(proc) for proc in _taskworker_processes]
+
     def setUp(self):
-        _setUpModule()
+        self._tempfiles = []
+        self._setUpPyro()
         [_poll(proc) for proc in _taskworker_processes]
         self.options = {}
         self.options['--scenario-tree-manager'] = 'pyro'
@@ -358,35 +400,39 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self._setup(self.options, servers=1)
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_baseline'),
+        self._run_cmd(cmd)
+        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_baseline'),
                    self.options['--output-directory'])
+        self._cleanup()
 
     def test_scenarios_MPS_1server(self):
         self._setup(self.options, servers=1)
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_baseline'),
+        self._run_cmd(cmd)
+        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_baseline'),
                    self.options['--output-directory'])
+        self._cleanup()
 
     def test_scenarios_LP_symbolic_names_1server(self):
         self._setup(self.options, servers=1)
         self.options['--core-format'] = 'lp'
-        self.options['--symbolic-solver-labels'] = ''
+        self.options['--symbolic-solver-labels'] = None
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.baseline_basename+'_LP_symbolic_names_baseline'),
+        self._run_cmd(cmd)
+        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
+        self._cleanup()
 
     def test_scenarios_MPS_symbolic_names_1server(self):
         self._setup(self.options, servers=1)
         self.options['--core-format'] = 'mps'
-        self.options['--symbolic-solver-labels'] = ''
+        self.options['--symbolic-solver-labels'] = None
         cmd = self._get_cmd()
-        _run_cmd(cmd, shell=True)
-        self._diff(os.path.join(thisDir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
+        self._run_cmd(cmd)
+        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
+        self._cleanup()
 
 @unittest.nottest
 def create_test_classes(test_class_suffix,
@@ -408,9 +454,7 @@ def create_test_classes(test_class_suffix,
     @unittest.category(*categories)
     class TestPySP2SMPS_Serial(_base,
                                _SMPSTesterBase):
-        def setUp(self):
-            self.options = {}
-            self.options['--scenario-tree-manager'] = 'serial'
+        pass
     class_names.append(TestPySP2SMPS_Serial.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestPySP2SMPS_Serial, unittest.TestCase), {})
@@ -439,7 +483,7 @@ def create_test_classes(test_class_suffix,
             _SMPSPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-multiple-scenariotreeserver-workers'] = ''
+            options['--pyro-multiple-scenariotreeserver-workers'] = None
     class_names.append(TestPySP2SMPS_Pyro_MultipleWorkers.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestPySP2SMPS_Pyro_MultipleWorkers, unittest.TestCase), {})
@@ -454,7 +498,7 @@ def create_test_classes(test_class_suffix,
             _SMPSPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-handshake-at-startup'] = ''
+            options['--pyro-handshake-at-startup'] = None
     class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1], (TestPySP2SMPS_Pyro_HandshakeAtStartup, unittest.TestCase), {})
@@ -469,8 +513,8 @@ def create_test_classes(test_class_suffix,
             _SMPSPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-handshake-at-startup'] = ''
-            options['--pyro-multiple-scenariotreeserver-workers'] = ''
+            options['--pyro-handshake-at-startup'] = None
+            options['--pyro-multiple-scenariotreeserver-workers'] = None
     class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1],
@@ -493,7 +537,7 @@ create_test_classes('farmer',
                     farmer_data_dir,
                     ('nightly','expensive'))
 
-piecewise_model_dir = join(thisDir, "piecewise_model.py")
+piecewise_model_dir = join(thisdir, "piecewise_model.py")
 create_test_classes('piecewise',
                     'piecewise',
                     piecewise_model_dir,
@@ -502,7 +546,7 @@ create_test_classes('piecewise',
 
 # uses the same baselines as 'piecewise',
 # except annotations are declared differently
-piecewise_model_dir = join(thisDir, "piecewise_model_alt.py")
+piecewise_model_dir = join(thisdir, "piecewise_model_alt.py")
 create_test_classes('piecewise_alt',
                     'piecewise',
                     piecewise_model_dir,

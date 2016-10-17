@@ -1,0 +1,405 @@
+Pyomo Developer Guide 3.1
+=========================
+:doctype: book
+
+//include::book-start.txt[]
+
+== Overview ==
+
+This overview chapter outlines the book.
+
+
+== Porting Pyomo to Python 3.x ==
+
+We have begun the process of porting Pyomo to support Python 3.x.
+Specifically, we are working on support for Python 3.2 and 3.3;
+earlier version of Python 3.x were a bit buggy.
+
+We are currently trying to adapt Pyomo to simultaneously support
+both Python 2.x and Python 3.x without requiring the use of conversion
+scripts (e.g. 2to3).  This simplifies the management of the code
+base, though at the price of some additional complexity when
+developing the code.
+
+The following subsections describe various issues that developers need to
+consider while writing code to ensure portability.  Further details are
+available in the following online references:
+
+ * http://python3porting.com/[Porting to Python 3]
+ * http://docs.python.org/dev/howto/pyporting.html[Python 3.4 Porting Guide]
+ * http://www.voidspace.org.uk/python/articles/porting-mock-to-python-3.shtml[Porting Mock to Python 3]
+ * http://pypi.python.org/pypi/six/[The `six` Python Package]
+
+
+=== Different Types ===
+
+Python 3 changes some of the fundamental types in Python.  The following code provides cross-compatibility for these changes:
+[python]
+----
+try:
+    unicode
+except NameError:
+    # Python 3
+    basestring = unicode = str
+    long = int
+----
+
+
+=== Printing ===
+
+The `print` statement is a function in Python 3.  However, Python 2.6 supports this function, so simple 
+print commands can be ported easily:
+[python]
+----
+# print "Python 2 syntax"
+print("Python 3 syntax")
+----
+
+However, more advanced features of the print function are not supported in Python 3.  A common issue with printing is the redirection syntax:
+[python]
+----
+OUTPUT = open('filename','w')
+print >>OUTPUT, "This works in Python 2","More text"
+OUTPUT.close()
+----
+In Python 3, this code needs to be changed to use `sys.stdout.write()`:
+[python]
+----
+OUTPUT = open('filename','w')
+sys.stdout.write("This works in Python 2"+" "+"More text"+"\n")
+OUTPUT.close()
+----
+Note that (a) the comma used in Python 2 needs to be replaced with an explicit space in Python 3, and (b) the `write()` function needs to have an explicit end-of-line character provided.  (Note that the `six.print_` function can also be used for Python 2/3 portability, though this function does work exactly like the Python 3 `print` function.)
+
+
+=== Exception Management ===
+
+Python 3 introduces a new syntax of exceptions:
+[python]
+----
+try:
+  raise Exception()
+except Exception as exc:
+  # Current exception is 'exc'
+  pass
+----
+The Python documentation claims that this syntax should work in
+Python 2.6 or newer.  However, it is unclear that early versions of
+Python 2.6 supported this syntax (e.g. 2.6.1).  The following syntax is guaranteed to work
+with both Python 2.x and 3.x:
+[python]
+----
+try:
+  raise Exception()
+except Exception:
+  exc = sys.exc_info()[1]
+  # Current exception is 'exc'
+  pass
+----
+
+
+=== Importing ===
+
+The following import is invalid syntax in Python 3:
+[python]
+----
+def f():
+    from module import *
+----
+
+Additionally, Python 3 treats all forms of imports not starting with `.` as absolute imports.  Thus, Pyomo packages use absolute imports to ensure portability between Python 2/3.  This requires explicit importing
+of all levels of Pyomo.  For example, in `pyomo.core/base`, the `numvalue.py` file uses the import:
+[python]
+----
+from pyomo.core.base.set_types import Reals, Any
+----
+instead of the following, which works only in Python 2:
+[python]
+----
+from set_types import Reals, Any
+----
+
+
+
+=== Managing API Changes with `six` ===
+
+The `six` package provides a lot of API changes that make it very easy to translate between Python 2 and 3.  One key utility of `six` is the translation of package names.  For example, the `StringIO` class is now in the `io` module rather than the `StringIO` module.  The following syntax is portable between Python 2/3:
+[python]
+----
+from six.moves import StringIO
+
+stringio = StringIO()
+----
+Similarly, the `xrange` function is no longer supported in Python 3 (since the `range` function now returns a generator).  The following import ensures that `xrange` can be used portably in Python 2 and 3:
+[python]
+----
+from six.moves import xrange
+----
+
+Another key feature of `six` is the inclusion of functions that portably manage iteration between Python 2 and 3.  Specifically, the API of dictionaries changed substantially between Python 2 and 3.  The `dict.iteritems()` function is not available in Python 3, and instead `dict.items()` returns a generator.  This makes it difficult to have efficient code supported in all versions of Python, so `six.iteritems()` is provided to provide that portability:
+[python]
+----
+d = {1:'one', 2:'two'}
+for k, v in six.iteritems(d):
+    print("%d %s" % (k,v))
+----
+Similar functions are provide for `iterkeys` and for advancing iterators (`next`).
+
+
+== Pyomo Library API ==
+
+=== Introduction ===
+
+This chapter describes the API of Pyomo's library and functions
+and classes.  This API is focused on the functions and classes that
+support the transformation and analysis of Pyomo models.
+
+A key aspect of Pyomo's library are functors, which are function
+objects that can be executed like other functions.  Pyomo's functors
+provide a unifying interface for Pyomo's API, and they support the
+following functionality:
+
+* Functor registration standardizes function definition, which
+facilitates plug-and-play of the functions in the API.
+
+* The functor docstrings are parsed to support error checking for
+functor inputs and outputs.
+
+* Functors are globally registered, which allows functors to be created
+on the fly and enables documentation/enumeration of all functors in
+the API.
+
+* Functors can be integrated into formal workflows (using components from +pyutilib.workflow+)
+
+Thus, functor
+declarations allow the Pyomo API to be more than a simple library of function
+calls.
+
+=== Declaring Pyomo Functors ===
+
+Functors in the Pyomo API are declared using the +pyomo_api+ decorator
+with a Python function.  The following example illustrates the use
+of this decorator:
+[source,python]
+----
+include::examples/example1@main.py[]
+----
+The +f1+ function is a normal Python declaration, and the +pyomo_api+
+decorator transforms this function into a functor.  This functor can be 
+executed as if it was a function.  For example:
+[source,python]
+----
+include::examples/example1@exec.py[]
+----
+
+Pyomo functors are required to have an argument that is a container of labeled data,
+which is treated specially. The
+container is required to be a +dict+ or +PyomoAPIData+ class.  The +PyomoAPIData+ class 
+generalizes the Python +dict+ class in several ways.  Most notably,
+an attribute added to an +PyomoAPIData+ object is also added to the
+underlying dictionary.  In the previous example, the +PyomoAPIData+
+object is passed in as the first argument.  In fact, Pyomo functors
+are only allowed to have one non-keyword argument.  Alternatively,
+a functor can be declared with a +data+ keyword argument, in which
+case it has no non-keyword arguments.  For example, the functor can be 
+declared as follows
+[source,python]
+----
+include::examples/example2@main.py[]
+----
+and it is evaluated as follows
+[source,python]
+----
+include::examples/example2@exec.py[]
+----
+In fact, this functor can also be evaluated as before:
+[source,python]
+----
+include::examples/example1@exec.py[]
+----
+Although this creates a syntactic difference between the declaration and formulation of
+functors, this allows functors to be used with a common API.
+
+If a +dict+ is passed into a functor to provide the container of
+labeled data, then the functor converts it to a +PyomoAPIData+ object
+before executing the function.  Since +PyomoAPIData+ objects are subclasses
+of +dict+, this change may be transparent to the user.  However,
+this is important in contexts where features of +PyomoAPIData+ are used.
+
+The return value of a Pyomo functor is an +PyomoAPIData+ object.  However,
+the return value of the function used to declare the constructor
+may be either +None+, a +dict+ object, or an +PyomoAPIData+ object.  If the function returns
++None+ or the +data+ object is returned, then the functor creates
+an +PyomoAPIData+ object with an element with key +data+ whose value is
+the +PyomoAPIData+ object passed into the functor.  Otherwise, if an
++PyomoAPIData+ object is returned then the functor adds an element with
+key +data+ if it does not already exist.  If a +dict+ object is returned, then it is converted to an +PyomoAPIData+ object and processed in the same manner. Consequently, the return
+value of a Pyomo function is an +PyomoAPIData+ object that is guaranteed
+to contain a container of labeled data with key +data+.
+
+The docstring comments used in these examples are needed to fully
+specify the API of the Pyomo functor.  These docstrings are needed
+to properly execute Pyomo functors.  The +Required+, +PyomoAPIData+,
+and +Return+ keywords declare blocks where keyword arguments and
+return values are described.  Although all keywords are declared
+with a default value, these values are only used in a functor for
+the optional arguments.  An exception is generated if a required
+argument to a functor is omitted.  The labeled return values specify
+the possible outputs of a functor.  An exception is generated if a
+unexpected label for a return value is specified.  When a functor
+returns without defining a defined return label, then its value is
++None+.
+
+The +Required+ block can also be used to validate the existence of
+data that is nested inside of the functor arguments. Consider the
+following example, which validates the existence of values in the
++data+ and +x+ arguments:
+[source,python]
+----
+include::examples/example3@main.py[]
+----
+Note that the nested values are assumed to be simple nested attributes
+of the form +a.b.c.d+.  General purpose tests are not supported for 
+checking the validity of data, and the test for a nested value simply verifies
+that it exists and that it is not equal to +None+.
+
+These requirements on functors enforce a uniform API for the input
+and output values.  Input values consist of a container of labeled data
+along with keyword arguments, and output values have the same form.
+This consistency facilitates the use of functors in a larger
+computational workflows.  The incorporation of the container object
+into the Pyomo functor API allows keyword arguments to be added in
+an extensible manner.  For example, this feature enables the
+incorporation of data that is used by subsequent functors in the
+computation without requiring an extension of a the APIs of the
+preceding functors.
+
+Note: The +PyomoAPIData+ class supports a container for labeled data
+that generalizes the dictionary used for Python nonformal keyword
+arguments, which are specified with the syntax +**kwd+.  Nonformal
+keyword arguments are used in the APIs of other Python packages
+(e.g. MatplotLib).  The use of +PyomoAPIData+ is motivated by the use
+of functors in formal computational workflows.
+
+
+=== The Functor Registry ===
+
+Declarations of Pyomo functors automatically populate a global
+registry of the Pyomo API.  This registry allows functor objects
+to be _created_ on the fly.  For example:
+[source,python]
+----
+include::examples/example4@create.py[]
+----
+This example illustrates how the functor object +g+ can be created
+from the registered functor +f1+.  The functor +g+ acts exactly
+like +f1+, and in practice there is little difference between using
++g+ and +f1+.  However, functors can be created by name using the
+factory +PyomoAPIFactory+, and thus the user does not need to know
+the specific Pyomo library in which a functor is defined.
+
+To help organize functors, a +namespace+ option can be specified
+when declaring the functor.  This allows functors to be defined
+with the same name in different packages, while distinguishing how
+they are registered.  For example:
+[source,python]
+----
+include::examples/example5@main.py[]
+----
+The functor +f1+ is declared within the +utility+ namespace.  The +f1+ object can be used within
+the python module containing this declaration.  However, this functor is registered as +utility.f1+ in the
+registry, so the functor is created as follows:
+[source,python]
+----
+include::examples/example5@create.py[]
+----
+
+Finally, the functor registry allows for the automatic generation of documentation for the 
+Pyomo API.  The +pyomo+ command supports the +api+ subcommand, which generates a simple summary of all
+functor namespaces and their corresponding functors.  This output looks something like the following:
+
+----
+include::examples/pyomo_api.txt[]
+----
+Additionally, the +--asciidoc+ option can be specified to generate a detailed description of the Pyomo API, which is used to generate this document (see below).
+
+
+
+=== Functors and Workflow ===
+
+TODO: Pyomo functors can be tied together into formal workflows that can be executed in an arbitrary manner
+
+
+=== API Notes ===
+
+The following notes describe further action items that we've outlined for the Pyomo API:
+
+* Tasks/WF objects
+** Parallelization
+** Reuse?
+** Push/Pull input/output ports
+** Pre/Post events
+*** Global
+*** Task-specific  (extension point or events?)
+** Tasks support extension points
+*** Use 'implements()' to define the EP that is supported
+
+* API code review
+** Document code review along-side API functions?
+
+* Case studies (and tests)
+
+* Pyomo model transformations
+** In-place vs. copies
+** Need to clarify semantics
+** Active/Frozen models
+** Flattening structured models
+*** Utilities for walking a non-flattened model (iterator?)
+** EP's supported by new components (?)
+
+* Script generation
+** Record sequence of calls
+** Tracing logic OR auto-scripting
+
+// Input an auto-generated summary of the Pyomo API.
+include::pyomo_api.txt[]
+
+
+
+
+
+== How To Run Tests ==
+
+=== Running Smoke Tests ===
+
+These commands run the Python Nose utility (+nosetests+) for each package within the named argument.
+
+To test all of pyomo, use the test.pyomo script. From the pyomo directory, use the command:
+----
+bin/test.pyomo
+----
+
+Or from any sub-directory of pyomo, use
+----
+lbin test.pyomo
+----
+
+To test pyutilib, use
+----
+bin/test.pyutilib
+----
+
+To test just pyomo, from any pyomo sub-directory, use
+----
+lbin test.pyomo pyomo.core
+----
+
+There are options for tests (e.g., +--cat=all+), to see a list of options use the +-h+ or +--help+ option.
+
+=== Interpreting Output ===
+
+There are two modes of "not-pass:" FAIL and ERROR.
+FAIL is an assertion failure. ERROR is a crash.
+
+// vim: set syntax=asciidoc:
+

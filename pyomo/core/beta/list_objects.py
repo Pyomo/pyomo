@@ -47,10 +47,10 @@ class ComponentList(collections.MutableSequence):
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
+            logger.debug(   #pragma:nocover
                 "Constructing ComponentList object, name=%s, from data=%s"
-                % (self.cname(True), str(data)))
-        if self._constructed:
+                % (self.name, str(data)))
+        if self._constructed:   #pragma:nocover
             return
         self._constructed = True
 
@@ -86,15 +86,23 @@ class ComponentList(collections.MutableSequence):
     #
     def __setitem__(self, i, item):
         if isinstance(item, self._interface_datatype):
+            # release the current component (assuming we don't get
+            # an index error)
+            # * see __delitem__ for explanation
             if item._component is None:
                 item._component = weakref_ref(self)
                 if hasattr(self, "_active"):
                     self._active |= getattr(item, '_active', True)
-                # release the current component (assuming we don't get
-                # an index error)
-                # * see __delitem__ for explanation
                 self._data[i]._component = None
                 self._data[i] = item
+                return
+            elif self._data[i] is item:
+                # a very special case that makes sense to handle
+                # because the implied order should be: (1) delete
+                # the object at the current index, (2) insert the
+                # the new object. This performs both without any
+                # actions, but it is an extremely rare case, so
+                # it should go last.
                 return
             # see note about allowing components to live in more than
             # one container
@@ -102,9 +110,9 @@ class ComponentList(collections.MutableSequence):
                 "Invalid component object assignment to ComponentList "
                 "%s at index %s. A parent component has already been "
                 "assigned the object: %s"
-                % (self.cname(True),
+                % (self.name,
                    i,
-                   item.parent_component().cname(True)))
+                   item.parent_component().name))
         # see note about implicit assignment and update
         raise TypeError(
             "ComponentList must be assigned objects "
@@ -129,9 +137,9 @@ class ComponentList(collections.MutableSequence):
                 "Invalid component object assignment to ComponentList "
                 "%s at index %s. A parent component has already been "
                 "assigned the object: %s"
-                % (self.cname(True),
+                % (self.name,
                    i,
-                   item.parent_component().cname(True)))
+                   item.parent_component().name))
         # see note about implicit assignment and update
         raise TypeError(
             "ComponentList must be assigned objects "
@@ -203,11 +211,6 @@ class ComponentList(collections.MutableSequence):
         data = self._data
         for i in range(n//2):
             data[i], data[n-i-1] = data[n-i-1], data[i]
-
-    # The default implementation is slow
-    def clear(self):
-        'S.clear() -> None -- remove all items from S'
-        self._data.clear()
 
 #
 # ComponentList needs to come before IndexedComponent

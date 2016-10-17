@@ -1,0 +1,35 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: tree
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 5
+  Number of variables: 4
+  Number of nonzeros: 10
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Status: infeasible
+  Objective: 
+    o: 
+      Value: 0
+  Variable: No nonzero values

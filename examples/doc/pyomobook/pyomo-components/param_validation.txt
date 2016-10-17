@@ -1,0 +1,18 @@
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+3 Param Declarations
+    X : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+          1 :   1.1
+          2 :   2.2
+          3 :   3.3
+    Y : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+    Z : Size=1, Index=None, Domain=Reals, Default=None, Mutable=False
+        Key  : Value
+        None :   1.1
+
+4 Declarations: Z Y A X

@@ -1,0 +1,24 @@
+\* Source Pyomo model name=unknown *\
+
+min 
+obj:
++1 c
++1 b
++1 a
+
+s.t.
+
+c_u_con_:
++1 c
++1 b
++1 a
+<= 1
+
+c_e_ONE_VAR_CONSTANT: 
+ONE_VAR_CONSTANT = 1.0
+
+bounds
+    -inf <= a <= +inf
+    -inf <= b <= +inf
+    -inf <= c <= +inf
+end

@@ -199,7 +199,7 @@ def construct_ph_options_parser(usage_string):
       type=str,
       default=None)
     phOpts.add_argument('--max-iterations',
-      help="The maximal number of PH iterations. Default is 100.",
+      help="The maximum number of PH iterations. Default is 100.",
       action="store",
       dest="max_iterations",
       type=int,
@@ -588,7 +588,8 @@ def GenerateScenarioTreeForPH(options,
         downsample_fraction=options.scenario_tree_downsample_fraction,
         bundles=options.scenario_bundle_specification,
         random_bundles=options.create_random_bundles,
-        random_seed=options.scenario_tree_random_seed)
+        random_seed=options.scenario_tree_random_seed,
+        verbose=options.verbose)
 
     #
     # print the input tree for validation/information purposes.
@@ -615,7 +616,8 @@ def GenerateScenarioTreeForPH(options,
             scenario_instance_factory.construct_instances_for_scenario_tree(
                 scenario_tree,
                 output_instance_construction_time=options.output_instance_construction_time,
-                compile_scenario_instances=options.compile_scenario_instances)
+                compile_scenario_instances=options.compile_scenario_instances,
+                verbose=options.verbose)
 
         if options.verbose or options.output_times:
             print("Time to construct scenario instances=%.2f seconds"
@@ -882,8 +884,7 @@ def PHFromScratch(options):
 
     scenario_instance_factory = \
         ScenarioTreeInstanceFactory(options.model_directory,
-                                    options.instance_directory,
-                                    options.verbose)
+                                    options.instance_directory)
 
     if options.verbose or options.output_times:
         print("Time to import model and scenario tree "
@@ -1046,7 +1047,8 @@ def run_ph(options, ph):
                         construct_instances_for_scenario_tree(
                             ph._scenario_tree,
                             output_instance_construction_time=\
-                              ph._output_instance_construction_time)
+                              ph._output_instance_construction_time,
+                            verbose=options.verbose)
 
             ph._scenario_tree.linkInInstances(
                 instances,

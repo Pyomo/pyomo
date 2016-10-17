@@ -1,0 +1,1 @@
+load ABCD.tab : Z=[B] Y=D W=C;

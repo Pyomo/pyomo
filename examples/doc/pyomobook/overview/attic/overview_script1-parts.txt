@@ -1,0 +1,112 @@
+0 Set Declarations
+
+0 RangeSet Declarations
+
+0 Param Declarations
+
+2 Var Declarations
+   x_1 : 	Size=1 	Domain=NonNegativeReals
+	Initial Value : Lower Bound : Upper Bound : Current Value: Fixed: Status
+	 None : 0 : None : None : False : undefined
+   x_2 : 	Size=1 	Domain=NonNegativeReals
+	Initial Value : Lower Bound : Upper Bound : Current Value: Fixed: Status
+	 None : 0 : None : None : False : undefined
+
+1 Objective Declarations
+   obj : 	Size=1 
+	sum( x_1 , 2 *  x_2 ) 
+
+
+2 Constraint Declarations
+   con1 : 	Size=1 
+		1
+		<=
+		sum( 3 *  x_1 , 4 *  x_2 ) 
+		<=
+		Inf
+   con2 : 	Size=1 
+		2
+		<=
+		sum( 2 *  x_1 , 5 *  x_2 ) 
+		<=
+		Inf
+
+0 Block Declarations
+
+5 Declarations: x_1 x_2 obj con1 con2 
+0 Set Declarations
+
+0 RangeSet Declarations
+
+0 Param Declarations
+
+2 Var Declarations
+   x_1 : 	Size=1 	Domain=NonNegativeReals
+	Initial Value : Lower Bound : Upper Bound : Current Value: Fixed: Status
+	 None : 0 : None : None : False : used
+   x_2 : 	Size=1 	Domain=NonNegativeReals
+	Initial Value : Lower Bound : Upper Bound : Current Value: Fixed: Status
+	 None : 0 : None : None : False : used
+
+1 Objective Declarations
+   obj : 	Size=1 
+	sum( x_1 , 2 *  x_2 ) 
+
+
+2 Constraint Declarations
+   con1 : 	Size=1 
+		1
+		<=
+		sum( 3 *  x_1 , 4 *  x_2 ) 
+		<=
+		Inf
+   con2 : 	Size=1 
+		2
+		<=
+		sum( 2 *  x_1 , 5 *  x_2 ) 
+		<=
+		Inf
+
+0 Block Declarations
+
+5 Declarations: x_1 x_2 obj con1 con2 
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: 0.8
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 3
+  Number of variables: 3
+  Number of nonzeros: 5
+  Sense: minimize
+
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Error rc: 0
+
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Objective: 
+    obj: 
+      Id: 0
+      Value: 0.8
+  Variable: 
+    x_2: 
+      Id: 1
+      Value: 0.4

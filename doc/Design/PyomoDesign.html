@@ -1,0 +1,3566 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Pyomo Online Documentation 4.1</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(2);
+/*]]>*/
+</script>
+<script type="text/javascript">
+/*<![CDATA[*/
+/*
+LaTeXMathML.js
+==============
+
+This file, in this form, is due to Douglas Woodall, June 2006.
+It contains JavaScript functions to convert (most simple) LaTeX
+math notation to Presentation MathML.  It was obtained by
+downloading the file ASCIIMathML.js from
+	http://www1.chapman.edu/~jipsen/mathml/asciimathdownload/
+and modifying it so that it carries out ONLY those conversions
+that would be carried out in LaTeX.  A description of the original
+file, with examples, can be found at
+	www1.chapman.edu/~jipsen/mathml/asciimath.html
+	ASCIIMathML: Math on the web for everyone
+
+Here is the header notice from the original file:
+
+ASCIIMathML.js
+==============
+This file contains JavaScript functions to convert ASCII math notation
+to Presentation MathML. The conversion is done while the (X)HTML page
+loads, and should work with Firefox/Mozilla/Netscape 7+ and Internet
+Explorer 6+MathPlayer (http://www.dessci.com/en/products/mathplayer/).
+Just add the next line to your (X)HTML page with this file in the same folder:
+This is a convenient and inexpensive solution for authoring MathML.
+
+Version 1.4.7 Dec 15, 2005, (c) Peter Jipsen http://www.chapman.edu/~jipsen
+Latest version at http://www.chapman.edu/~jipsen/mathml/ASCIIMathML.js
+For changes see http://www.chapman.edu/~jipsen/mathml/asciimathchanges.txt
+If you use it on a webpage, please send the URL to jipsen@chapman.edu
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License (at http://www.gnu.org/copyleft/gpl.html)
+for more details.
+
+LaTeXMathML.js (ctd)
+==============
+
+The instructions for use are the same as for the original
+ASCIIMathML.js, except that of course the line you add to your
+file should be
+Or use absolute path names if the file is not in the same folder
+as your (X)HTML page.
+*/
+
+var checkForMathML = true;   // check if browser can display MathML
+var notifyIfNoMathML = true; // display note if no MathML capability
+var alertIfNoMathML = false;  // show alert box if no MathML capability
+// was "red":
+var mathcolor = "";	     // change it to "" (to inherit) or any other color
+// was "serif":
+var mathfontfamily = "";      // change to "" to inherit (works in IE)
+                              // or another family (e.g. "arial")
+var showasciiformulaonhover = true; // helps students learn ASCIIMath
+/*
+// Commented out by DRW -- not now used -- see DELIMITERS (twice) near the end
+var displaystyle = false;     // puts limits above and below large operators
+var decimalsign = ".";        // change to "," if you like, beware of `(1,2)`!
+var AMdelimiter1 = "`", AMescape1 = "\\\\`"; // can use other characters
+var AMdelimiter2 = "$", AMescape2 = "\\\\\\$", AMdelimiter2regexp = "\\$";
+var doubleblankmathdelimiter = false; // if true,  x+1  is equal to `x+1`
+                                      // for IE this works only in <!--   -->
+//var separatetokens;// has been removed (email me if this is a problem)
+*/
+var isIE = document.createElementNS==null;
+
+if (document.getElementById==null)
+  alert("This webpage requires a recent browser such as\
+\nMozilla/Netscape 7+ or Internet Explorer 6+MathPlayer")
+
+// all further global variables start with "AM"
+
+function AMcreateElementXHTML(t) {
+  if (isIE) return document.createElement(t);
+  else return document.createElementNS("http://www.w3.org/1999/xhtml",t);
+}
+
+function AMnoMathMLNote() {
+  var nd = AMcreateElementXHTML("h3");
+  nd.setAttribute("align","center")
+  nd.appendChild(AMcreateElementXHTML("p"));
+  nd.appendChild(document.createTextNode("To view the "));
+  var an = AMcreateElementXHTML("a");
+  an.appendChild(document.createTextNode("LaTeXMathML"));
+  an.setAttribute("href","http://www.maths.nott.ac.uk/personal/drw/lm.html");
+  nd.appendChild(an);
+  nd.appendChild(document.createTextNode(" notation use Internet Explorer 6+"));
+  an = AMcreateElementXHTML("a");
+  an.appendChild(document.createTextNode("MathPlayer"));
+  an.setAttribute("href","http://www.dessci.com/en/products/mathplayer/download.htm");
+  nd.appendChild(an);
+  nd.appendChild(document.createTextNode(" or Netscape/Mozilla/Firefox"));
+  nd.appendChild(AMcreateElementXHTML("p"));
+  return nd;
+}
+
+function AMisMathMLavailable() {
+  if (navigator.appName.slice(0,8)=="Netscape")
+    if (navigator.appVersion.slice(0,1)>="5") return null;
+    else return AMnoMathMLNote();
+  else if (navigator.appName.slice(0,9)=="Microsoft")
+    try {
+        var ActiveX = new ActiveXObject("MathPlayer.Factory.1");
+        return null;
+    } catch (e) {
+        return AMnoMathMLNote();
+    }
+  else return AMnoMathMLNote();
+}
+
+// character lists for Mozilla/Netscape fonts
+var AMcal = [0xEF35,0x212C,0xEF36,0xEF37,0x2130,0x2131,0xEF38,0x210B,0x2110,0xEF39,0xEF3A,0x2112,0x2133,0xEF3B,0xEF3C,0xEF3D,0xEF3E,0x211B,0xEF3F,0xEF40,0xEF41,0xEF42,0xEF43,0xEF44,0xEF45,0xEF46];
+var AMfrk = [0xEF5D,0xEF5E,0x212D,0xEF5F,0xEF60,0xEF61,0xEF62,0x210C,0x2111,0xEF63,0xEF64,0xEF65,0xEF66,0xEF67,0xEF68,0xEF69,0xEF6A,0x211C,0xEF6B,0xEF6C,0xEF6D,0xEF6E,0xEF6F,0xEF70,0xEF71,0x2128];
+var AMbbb = [0xEF8C,0xEF8D,0x2102,0xEF8E,0xEF8F,0xEF90,0xEF91,0x210D,0xEF92,0xEF93,0xEF94,0xEF95,0xEF96,0x2115,0xEF97,0x2119,0x211A,0x211D,0xEF98,0xEF99,0xEF9A,0xEF9B,0xEF9C,0xEF9D,0xEF9E,0x2124];
+
+var CONST = 0, UNARY = 1, BINARY = 2, INFIX = 3, LEFTBRACKET = 4,
+    RIGHTBRACKET = 5, SPACE = 6, UNDEROVER = 7, DEFINITION = 8,
+    TEXT = 9, BIG = 10, LONG = 11, STRETCHY = 12, MATRIX = 13; // token types
+
+var AMsqrt = {input:"\\sqrt",	tag:"msqrt", output:"sqrt",	ttype:UNARY},
+  AMroot = {input:"\\root",	tag:"mroot", output:"root",	ttype:BINARY},
+  AMfrac = {input:"\\frac",	tag:"mfrac", output:"/",	ttype:BINARY},
+  AMover = {input:"\\stackrel", tag:"mover", output:"stackrel", ttype:BINARY},
+  AMatop = {input:"\\atop",	tag:"mfrac", output:"",		ttype:INFIX},
+  AMchoose = {input:"\\choose", tag:"mfrac", output:"",		ttype:INFIX},
+  AMsub  = {input:"_",		tag:"msub",  output:"_",	ttype:INFIX},
+  AMsup  = {input:"^",		tag:"msup",  output:"^",	ttype:INFIX},
+  AMtext = {input:"\\mathrm",	tag:"mtext", output:"text",	ttype:TEXT},
+  AMmbox = {input:"\\mbox",	tag:"mtext", output:"mbox",	ttype:TEXT};
+
+// Commented out by DRW to prevent 1/2 turning into a 2-line fraction
+// AMdiv   = {input:"/",	 tag:"mfrac", output:"/",    ttype:INFIX},
+// Commented out by DRW so that " prints literally in equations
+// AMquote = {input:"\"",	 tag:"mtext", output:"mbox", ttype:TEXT};
+
+var AMsymbols = [
+//Greek letters
+{input:"\\alpha",	tag:"mi", output:"\u03B1", ttype:CONST},
+{input:"\\beta",	tag:"mi", output:"\u03B2", ttype:CONST},
+{input:"\\gamma",	tag:"mi", output:"\u03B3", ttype:CONST},
+{input:"\\delta",	tag:"mi", output:"\u03B4", ttype:CONST},
+{input:"\\epsilon",	tag:"mi", output:"\u03B5", ttype:CONST},
+{input:"\\varepsilon",  tag:"mi", output:"\u025B", ttype:CONST},
+{input:"\\zeta",	tag:"mi", output:"\u03B6", ttype:CONST},
+{input:"\\eta",		tag:"mi", output:"\u03B7", ttype:CONST},
+{input:"\\theta",	tag:"mi", output:"\u03B8", ttype:CONST},
+{input:"\\vartheta",	tag:"mi", output:"\u03D1", ttype:CONST},
+{input:"\\iota",	tag:"mi", output:"\u03B9", ttype:CONST},
+{input:"\\kappa",	tag:"mi", output:"\u03BA", ttype:CONST},
+{input:"\\lambda",	tag:"mi", output:"\u03BB", ttype:CONST},
+{input:"\\mu",		tag:"mi", output:"\u03BC", ttype:CONST},
+{input:"\\nu",		tag:"mi", output:"\u03BD", ttype:CONST},
+{input:"\\xi",		tag:"mi", output:"\u03BE", ttype:CONST},
+{input:"\\pi",		tag:"mi", output:"\u03C0", ttype:CONST},
+{input:"\\varpi",	tag:"mi", output:"\u03D6", ttype:CONST},
+{input:"\\rho",		tag:"mi", output:"\u03C1", ttype:CONST},
+{input:"\\varrho",	tag:"mi", output:"\u03F1", ttype:CONST},
+{input:"\\varsigma",	tag:"mi", output:"\u03C2", ttype:CONST},
+{input:"\\sigma",	tag:"mi", output:"\u03C3", ttype:CONST},
+{input:"\\tau",		tag:"mi", output:"\u03C4", ttype:CONST},
+{input:"\\upsilon",	tag:"mi", output:"\u03C5", ttype:CONST},
+{input:"\\phi",		tag:"mi", output:"\u03C6", ttype:CONST},
+{input:"\\varphi",	tag:"mi", output:"\u03D5", ttype:CONST},
+{input:"\\chi",		tag:"mi", output:"\u03C7", ttype:CONST},
+{input:"\\psi",		tag:"mi", output:"\u03C8", ttype:CONST},
+{input:"\\omega",	tag:"mi", output:"\u03C9", ttype:CONST},
+{input:"\\Gamma",	tag:"mo", output:"\u0393", ttype:CONST},
+{input:"\\Delta",	tag:"mo", output:"\u0394", ttype:CONST},
+{input:"\\Theta",	tag:"mo", output:"\u0398", ttype:CONST},
+{input:"\\Lambda",	tag:"mo", output:"\u039B", ttype:CONST},
+{input:"\\Xi",		tag:"mo", output:"\u039E", ttype:CONST},
+{input:"\\Pi",		tag:"mo", output:"\u03A0", ttype:CONST},
+{input:"\\Sigma",	tag:"mo", output:"\u03A3", ttype:CONST},
+{input:"\\Upsilon",	tag:"mo", output:"\u03A5", ttype:CONST},
+{input:"\\Phi",		tag:"mo", output:"\u03A6", ttype:CONST},
+{input:"\\Psi",		tag:"mo", output:"\u03A8", ttype:CONST},
+{input:"\\Omega",	tag:"mo", output:"\u03A9", ttype:CONST},
+
+//fractions
+{input:"\\frac12",	tag:"mo", output:"\u00BD", ttype:CONST},
+{input:"\\frac14",	tag:"mo", output:"\u00BC", ttype:CONST},
+{input:"\\frac34",	tag:"mo", output:"\u00BE", ttype:CONST},
+{input:"\\frac13",	tag:"mo", output:"\u2153", ttype:CONST},
+{input:"\\frac23",	tag:"mo", output:"\u2154", ttype:CONST},
+{input:"\\frac15",	tag:"mo", output:"\u2155", ttype:CONST},
+{input:"\\frac25",	tag:"mo", output:"\u2156", ttype:CONST},
+{input:"\\frac35",	tag:"mo", output:"\u2157", ttype:CONST},
+{input:"\\frac45",	tag:"mo", output:"\u2158", ttype:CONST},
+{input:"\\frac16",	tag:"mo", output:"\u2159", ttype:CONST},
+{input:"\\frac56",	tag:"mo", output:"\u215A", ttype:CONST},
+{input:"\\frac18",	tag:"mo", output:"\u215B", ttype:CONST},
+{input:"\\frac38",	tag:"mo", output:"\u215C", ttype:CONST},
+{input:"\\frac58",	tag:"mo", output:"\u215D", ttype:CONST},
+{input:"\\frac78",	tag:"mo", output:"\u215E", ttype:CONST},
+
+//binary operation symbols
+{input:"\\pm",		tag:"mo", output:"\u00B1", ttype:CONST},
+{input:"\\mp",		tag:"mo", output:"\u2213", ttype:CONST},
+{input:"\\triangleleft",tag:"mo", output:"\u22B2", ttype:CONST},
+{input:"\\triangleright",tag:"mo",output:"\u22B3", ttype:CONST},
+{input:"\\cdot",	tag:"mo", output:"\u22C5", ttype:CONST},
+{input:"\\star",	tag:"mo", output:"\u22C6", ttype:CONST},
+{input:"\\ast",		tag:"mo", output:"\u002A", ttype:CONST},
+{input:"\\times",	tag:"mo", output:"\u00D7", ttype:CONST},
+{input:"\\div",		tag:"mo", output:"\u00F7", ttype:CONST},
+{input:"\\circ",	tag:"mo", output:"\u2218", ttype:CONST},
+//{input:"\\bullet",	  tag:"mo", output:"\u2219", ttype:CONST},
+{input:"\\bullet",	tag:"mo", output:"\u2022", ttype:CONST},
+{input:"\\oplus",	tag:"mo", output:"\u2295", ttype:CONST},
+{input:"\\ominus",	tag:"mo", output:"\u2296", ttype:CONST},
+{input:"\\otimes",	tag:"mo", output:"\u2297", ttype:CONST},
+{input:"\\bigcirc",	tag:"mo", output:"\u25CB", ttype:CONST},
+{input:"\\oslash",	tag:"mo", output:"\u2298", ttype:CONST},
+{input:"\\odot",	tag:"mo", output:"\u2299", ttype:CONST},
+{input:"\\land",	tag:"mo", output:"\u2227", ttype:CONST},
+{input:"\\wedge",	tag:"mo", output:"\u2227", ttype:CONST},
+{input:"\\lor",		tag:"mo", output:"\u2228", ttype:CONST},
+{input:"\\vee",		tag:"mo", output:"\u2228", ttype:CONST},
+{input:"\\cap",		tag:"mo", output:"\u2229", ttype:CONST},
+{input:"\\cup",		tag:"mo", output:"\u222A", ttype:CONST},
+{input:"\\sqcap",	tag:"mo", output:"\u2293", ttype:CONST},
+{input:"\\sqcup",	tag:"mo", output:"\u2294", ttype:CONST},
+{input:"\\uplus",	tag:"mo", output:"\u228E", ttype:CONST},
+{input:"\\amalg",	tag:"mo", output:"\u2210", ttype:CONST},
+{input:"\\bigtriangleup",tag:"mo",output:"\u25B3", ttype:CONST},
+{input:"\\bigtriangledown",tag:"mo",output:"\u25BD", ttype:CONST},
+{input:"\\dag",		tag:"mo", output:"\u2020", ttype:CONST},
+{input:"\\dagger",	tag:"mo", output:"\u2020", ttype:CONST},
+{input:"\\ddag",	tag:"mo", output:"\u2021", ttype:CONST},
+{input:"\\ddagger",	tag:"mo", output:"\u2021", ttype:CONST},
+{input:"\\lhd",		tag:"mo", output:"\u22B2", ttype:CONST},
+{input:"\\rhd",		tag:"mo", output:"\u22B3", ttype:CONST},
+{input:"\\unlhd",	tag:"mo", output:"\u22B4", ttype:CONST},
+{input:"\\unrhd",	tag:"mo", output:"\u22B5", ttype:CONST},
+
+
+//BIG Operators
+{input:"\\sum",		tag:"mo", output:"\u2211", ttype:UNDEROVER},
+{input:"\\prod",	tag:"mo", output:"\u220F", ttype:UNDEROVER},
+{input:"\\bigcap",	tag:"mo", output:"\u22C2", ttype:UNDEROVER},
+{input:"\\bigcup",	tag:"mo", output:"\u22C3", ttype:UNDEROVER},
+{input:"\\bigwedge",	tag:"mo", output:"\u22C0", ttype:UNDEROVER},
+{input:"\\bigvee",	tag:"mo", output:"\u22C1", ttype:UNDEROVER},
+{input:"\\bigsqcap",	tag:"mo", output:"\u2A05", ttype:UNDEROVER},
+{input:"\\bigsqcup",	tag:"mo", output:"\u2A06", ttype:UNDEROVER},
+{input:"\\coprod",	tag:"mo", output:"\u2210", ttype:UNDEROVER},
+{input:"\\bigoplus",	tag:"mo", output:"\u2A01", ttype:UNDEROVER},
+{input:"\\bigotimes",	tag:"mo", output:"\u2A02", ttype:UNDEROVER},
+{input:"\\bigodot",	tag:"mo", output:"\u2A00", ttype:UNDEROVER},
+{input:"\\biguplus",	tag:"mo", output:"\u2A04", ttype:UNDEROVER},
+{input:"\\int",		tag:"mo", output:"\u222B", ttype:CONST},
+{input:"\\oint",	tag:"mo", output:"\u222E", ttype:CONST},
+
+//binary relation symbols
+{input:":=",		tag:"mo", output:":=",	   ttype:CONST},
+{input:"\\lt",		tag:"mo", output:"<",	   ttype:CONST},
+{input:"\\gt",		tag:"mo", output:">",	   ttype:CONST},
+{input:"\\ne",		tag:"mo", output:"\u2260", ttype:CONST},
+{input:"\\neq",		tag:"mo", output:"\u2260", ttype:CONST},
+{input:"\\le",		tag:"mo", output:"\u2264", ttype:CONST},
+{input:"\\leq",		tag:"mo", output:"\u2264", ttype:CONST},
+{input:"\\leqslant",	tag:"mo", output:"\u2264", ttype:CONST},
+{input:"\\ge",		tag:"mo", output:"\u2265", ttype:CONST},
+{input:"\\geq",		tag:"mo", output:"\u2265", ttype:CONST},
+{input:"\\geqslant",	tag:"mo", output:"\u2265", ttype:CONST},
+{input:"\\equiv",	tag:"mo", output:"\u2261", ttype:CONST},
+{input:"\\ll",		tag:"mo", output:"\u226A", ttype:CONST},
+{input:"\\gg",		tag:"mo", output:"\u226B", ttype:CONST},
+{input:"\\doteq",	tag:"mo", output:"\u2250", ttype:CONST},
+{input:"\\prec",	tag:"mo", output:"\u227A", ttype:CONST},
+{input:"\\succ",	tag:"mo", output:"\u227B", ttype:CONST},
+{input:"\\preceq",	tag:"mo", output:"\u227C", ttype:CONST},
+{input:"\\succeq",	tag:"mo", output:"\u227D", ttype:CONST},
+{input:"\\subset",	tag:"mo", output:"\u2282", ttype:CONST},
+{input:"\\supset",	tag:"mo", output:"\u2283", ttype:CONST},
+{input:"\\subseteq",	tag:"mo", output:"\u2286", ttype:CONST},
+{input:"\\supseteq",	tag:"mo", output:"\u2287", ttype:CONST},
+{input:"\\sqsubset",	tag:"mo", output:"\u228F", ttype:CONST},
+{input:"\\sqsupset",	tag:"mo", output:"\u2290", ttype:CONST},
+{input:"\\sqsubseteq",  tag:"mo", output:"\u2291", ttype:CONST},
+{input:"\\sqsupseteq",  tag:"mo", output:"\u2292", ttype:CONST},
+{input:"\\sim",		tag:"mo", output:"\u223C", ttype:CONST},
+{input:"\\simeq",	tag:"mo", output:"\u2243", ttype:CONST},
+{input:"\\approx",	tag:"mo", output:"\u2248", ttype:CONST},
+{input:"\\cong",	tag:"mo", output:"\u2245", ttype:CONST},
+{input:"\\Join",	tag:"mo", output:"\u22C8", ttype:CONST},
+{input:"\\bowtie",	tag:"mo", output:"\u22C8", ttype:CONST},
+{input:"\\in",		tag:"mo", output:"\u2208", ttype:CONST},
+{input:"\\ni",		tag:"mo", output:"\u220B", ttype:CONST},
+{input:"\\owns",	tag:"mo", output:"\u220B", ttype:CONST},
+{input:"\\propto",	tag:"mo", output:"\u221D", ttype:CONST},
+{input:"\\vdash",	tag:"mo", output:"\u22A2", ttype:CONST},
+{input:"\\dashv",	tag:"mo", output:"\u22A3", ttype:CONST},
+{input:"\\models",	tag:"mo", output:"\u22A8", ttype:CONST},
+{input:"\\perp",	tag:"mo", output:"\u22A5", ttype:CONST},
+{input:"\\smile",	tag:"mo", output:"\u2323", ttype:CONST},
+{input:"\\frown",	tag:"mo", output:"\u2322", ttype:CONST},
+{input:"\\asymp",	tag:"mo", output:"\u224D", ttype:CONST},
+{input:"\\notin",	tag:"mo", output:"\u2209", ttype:CONST},
+
+//matrices
+{input:"\\begin{eqnarray}",	output:"X",	ttype:MATRIX, invisible:true},
+{input:"\\begin{array}",	output:"X",	ttype:MATRIX, invisible:true},
+{input:"\\\\",			output:"}&{",	ttype:DEFINITION},
+{input:"\\end{eqnarray}",	output:"}}",	ttype:DEFINITION},
+{input:"\\end{array}",		output:"}}",	ttype:DEFINITION},
+
+//grouping and literal brackets -- ieval is for IE
+{input:"\\big",	   tag:"mo", output:"X", atval:"1.2", ieval:"2.2", ttype:BIG},
+{input:"\\Big",	   tag:"mo", output:"X", atval:"1.6", ieval:"2.6", ttype:BIG},
+{input:"\\bigg",   tag:"mo", output:"X", atval:"2.2", ieval:"3.2", ttype:BIG},
+{input:"\\Bigg",   tag:"mo", output:"X", atval:"2.9", ieval:"3.9", ttype:BIG},
+{input:"\\left",   tag:"mo", output:"X", ttype:LEFTBRACKET},
+{input:"\\right",  tag:"mo", output:"X", ttype:RIGHTBRACKET},
+{input:"{",	   output:"{", ttype:LEFTBRACKET,  invisible:true},
+{input:"}",	   output:"}", ttype:RIGHTBRACKET, invisible:true},
+
+{input:"(",	   tag:"mo", output:"(",      atval:"1", ttype:STRETCHY},
+{input:"[",	   tag:"mo", output:"[",      atval:"1", ttype:STRETCHY},
+{input:"\\lbrack", tag:"mo", output:"[",      atval:"1", ttype:STRETCHY},
+{input:"\\{",	   tag:"mo", output:"{",      atval:"1", ttype:STRETCHY},
+{input:"\\lbrace", tag:"mo", output:"{",      atval:"1", ttype:STRETCHY},
+{input:"\\langle", tag:"mo", output:"\u2329", atval:"1", ttype:STRETCHY},
+{input:"\\lfloor", tag:"mo", output:"\u230A", atval:"1", ttype:STRETCHY},
+{input:"\\lceil",  tag:"mo", output:"\u2308", atval:"1", ttype:STRETCHY},
+
+// rtag:"mi" causes space to be inserted before a following sin, cos, etc.
+// (see function AMparseExpr() )
+{input:")",	  tag:"mo",output:")",	    rtag:"mi",atval:"1",ttype:STRETCHY},
+{input:"]",	  tag:"mo",output:"]",	    rtag:"mi",atval:"1",ttype:STRETCHY},
+{input:"\\rbrack",tag:"mo",output:"]",	    rtag:"mi",atval:"1",ttype:STRETCHY},
+{input:"\\}",	  tag:"mo",output:"}",	    rtag:"mi",atval:"1",ttype:STRETCHY},
+{input:"\\rbrace",tag:"mo",output:"}",	    rtag:"mi",atval:"1",ttype:STRETCHY},
+{input:"\\rangle",tag:"mo",output:"\u232A", rtag:"mi",atval:"1",ttype:STRETCHY},
+{input:"\\rfloor",tag:"mo",output:"\u230B", rtag:"mi",atval:"1",ttype:STRETCHY},
+{input:"\\rceil", tag:"mo",output:"\u2309", rtag:"mi",atval:"1",ttype:STRETCHY},
+
+// "|", "\\|", "\\vert" and "\\Vert" modified later: lspace = rspace = 0em
+{input:"|",		tag:"mo", output:"\u2223", atval:"1", ttype:STRETCHY},
+{input:"\\|",		tag:"mo", output:"\u2225", atval:"1", ttype:STRETCHY},
+{input:"\\vert",	tag:"mo", output:"\u2223", atval:"1", ttype:STRETCHY},
+{input:"\\Vert",	tag:"mo", output:"\u2225", atval:"1", ttype:STRETCHY},
+{input:"\\mid",		tag:"mo", output:"\u2223", atval:"1", ttype:STRETCHY},
+{input:"\\parallel",	tag:"mo", output:"\u2225", atval:"1", ttype:STRETCHY},
+{input:"/",		tag:"mo", output:"/",	atval:"1.01", ttype:STRETCHY},
+{input:"\\backslash",	tag:"mo", output:"\u2216", atval:"1", ttype:STRETCHY},
+{input:"\\setminus",	tag:"mo", output:"\\",	   ttype:CONST},
+
+//miscellaneous symbols
+{input:"\\!",	  tag:"mspace", atname:"width", atval:"-0.167em", ttype:SPACE},
+{input:"\\,",	  tag:"mspace", atname:"width", atval:"0.167em", ttype:SPACE},
+{input:"\\>",	  tag:"mspace", atname:"width", atval:"0.222em", ttype:SPACE},
+{input:"\\:",	  tag:"mspace", atname:"width", atval:"0.222em", ttype:SPACE},
+{input:"\\;",	  tag:"mspace", atname:"width", atval:"0.278em", ttype:SPACE},
+{input:"~",	  tag:"mspace", atname:"width", atval:"0.333em", ttype:SPACE},
+{input:"\\quad",  tag:"mspace", atname:"width", atval:"1em", ttype:SPACE},
+{input:"\\qquad", tag:"mspace", atname:"width", atval:"2em", ttype:SPACE},
+//{input:"{}",		  tag:"mo", output:"\u200B", ttype:CONST}, // zero-width
+{input:"\\prime",	tag:"mo", output:"\u2032", ttype:CONST},
+{input:"'",		tag:"mo", output:"\u02B9", ttype:CONST},
+{input:"''",		tag:"mo", output:"\u02BA", ttype:CONST},
+{input:"'''",		tag:"mo", output:"\u2034", ttype:CONST},
+{input:"''''",		tag:"mo", output:"\u2057", ttype:CONST},
+{input:"\\ldots",	tag:"mo", output:"\u2026", ttype:CONST},
+{input:"\\cdots",	tag:"mo", output:"\u22EF", ttype:CONST},
+{input:"\\vdots",	tag:"mo", output:"\u22EE", ttype:CONST},
+{input:"\\ddots",	tag:"mo", output:"\u22F1", ttype:CONST},
+{input:"\\forall",	tag:"mo", output:"\u2200", ttype:CONST},
+{input:"\\exists",	tag:"mo", output:"\u2203", ttype:CONST},
+{input:"\\Re",		tag:"mo", output:"\u211C", ttype:CONST},
+{input:"\\Im",		tag:"mo", output:"\u2111", ttype:CONST},
+{input:"\\aleph",	tag:"mo", output:"\u2135", ttype:CONST},
+{input:"\\hbar",	tag:"mo", output:"\u210F", ttype:CONST},
+{input:"\\ell",		tag:"mo", output:"\u2113", ttype:CONST},
+{input:"\\wp",		tag:"mo", output:"\u2118", ttype:CONST},
+{input:"\\emptyset",	tag:"mo", output:"\u2205", ttype:CONST},
+{input:"\\infty",	tag:"mo", output:"\u221E", ttype:CONST},
+{input:"\\surd",	tag:"mo", output:"\\sqrt{}", ttype:DEFINITION},
+{input:"\\partial",	tag:"mo", output:"\u2202", ttype:CONST},
+{input:"\\nabla",	tag:"mo", output:"\u2207", ttype:CONST},
+{input:"\\triangle",	tag:"mo", output:"\u25B3", ttype:CONST},
+{input:"\\therefore",	tag:"mo", output:"\u2234", ttype:CONST},
+{input:"\\angle",	tag:"mo", output:"\u2220", ttype:CONST},
+//{input:"\\\\ ",	  tag:"mo", output:"\u00A0", ttype:CONST},
+{input:"\\diamond",	tag:"mo", output:"\u22C4", ttype:CONST},
+//{input:"\\Diamond",	  tag:"mo", output:"\u25CA", ttype:CONST},
+{input:"\\Diamond",	tag:"mo", output:"\u25C7", ttype:CONST},
+{input:"\\neg",		tag:"mo", output:"\u00AC", ttype:CONST},
+{input:"\\lnot",	tag:"mo", output:"\u00AC", ttype:CONST},
+{input:"\\bot",		tag:"mo", output:"\u22A5", ttype:CONST},
+{input:"\\top",		tag:"mo", output:"\u22A4", ttype:CONST},
+{input:"\\square",	tag:"mo", output:"\u25AB", ttype:CONST},
+{input:"\\Box",		tag:"mo", output:"\u25A1", ttype:CONST},
+{input:"\\wr",		tag:"mo", output:"\u2240", ttype:CONST},
+
+//standard functions
+//Note UNDEROVER *must* have tag:"mo" to work properly
+{input:"\\arccos", tag:"mi", output:"arccos", ttype:UNARY, func:true},
+{input:"\\arcsin", tag:"mi", output:"arcsin", ttype:UNARY, func:true},
+{input:"\\arctan", tag:"mi", output:"arctan", ttype:UNARY, func:true},
+{input:"\\arg",	   tag:"mi", output:"arg",    ttype:UNARY, func:true},
+{input:"\\cos",	   tag:"mi", output:"cos",    ttype:UNARY, func:true},
+{input:"\\cosh",   tag:"mi", output:"cosh",   ttype:UNARY, func:true},
+{input:"\\cot",	   tag:"mi", output:"cot",    ttype:UNARY, func:true},
+{input:"\\coth",   tag:"mi", output:"coth",   ttype:UNARY, func:true},
+{input:"\\csc",	   tag:"mi", output:"csc",    ttype:UNARY, func:true},
+{input:"\\deg",	   tag:"mi", output:"deg",    ttype:UNARY, func:true},
+{input:"\\det",	   tag:"mi", output:"det",    ttype:UNARY, func:true},
+{input:"\\dim",	   tag:"mi", output:"dim",    ttype:UNARY, func:true}, //CONST?
+{input:"\\exp",	   tag:"mi", output:"exp",    ttype:UNARY, func:true},
+{input:"\\gcd",	   tag:"mi", output:"gcd",    ttype:UNARY, func:true}, //CONST?
+{input:"\\hom",	   tag:"mi", output:"hom",    ttype:UNARY, func:true},
+{input:"\\inf",	      tag:"mo", output:"inf",	 ttype:UNDEROVER},
+{input:"\\ker",	   tag:"mi", output:"ker",    ttype:UNARY, func:true},
+{input:"\\lg",	   tag:"mi", output:"lg",     ttype:UNARY, func:true},
+{input:"\\lim",	      tag:"mo", output:"lim",	 ttype:UNDEROVER},
+{input:"\\liminf",    tag:"mo", output:"liminf", ttype:UNDEROVER},
+{input:"\\limsup",    tag:"mo", output:"limsup", ttype:UNDEROVER},
+{input:"\\ln",	   tag:"mi", output:"ln",     ttype:UNARY, func:true},
+{input:"\\log",	   tag:"mi", output:"log",    ttype:UNARY, func:true},
+{input:"\\max",	      tag:"mo", output:"max",	 ttype:UNDEROVER},
+{input:"\\min",	      tag:"mo", output:"min",	 ttype:UNDEROVER},
+{input:"\\Pr",	   tag:"mi", output:"Pr",     ttype:UNARY, func:true},
+{input:"\\sec",	   tag:"mi", output:"sec",    ttype:UNARY, func:true},
+{input:"\\sin",	   tag:"mi", output:"sin",    ttype:UNARY, func:true},
+{input:"\\sinh",   tag:"mi", output:"sinh",   ttype:UNARY, func:true},
+{input:"\\sup",	      tag:"mo", output:"sup",	 ttype:UNDEROVER},
+{input:"\\tan",	   tag:"mi", output:"tan",    ttype:UNARY, func:true},
+{input:"\\tanh",   tag:"mi", output:"tanh",   ttype:UNARY, func:true},
+
+//arrows
+{input:"\\gets",		tag:"mo", output:"\u2190", ttype:CONST},
+{input:"\\leftarrow",		tag:"mo", output:"\u2190", ttype:CONST},
+{input:"\\to",			tag:"mo", output:"\u2192", ttype:CONST},
+{input:"\\rightarrow",		tag:"mo", output:"\u2192", ttype:CONST},
+{input:"\\leftrightarrow",	tag:"mo", output:"\u2194", ttype:CONST},
+{input:"\\uparrow",		tag:"mo", output:"\u2191", ttype:CONST},
+{input:"\\downarrow",		tag:"mo", output:"\u2193", ttype:CONST},
+{input:"\\updownarrow",		tag:"mo", output:"\u2195", ttype:CONST},
+{input:"\\Leftarrow",		tag:"mo", output:"\u21D0", ttype:CONST},
+{input:"\\Rightarrow",		tag:"mo", output:"\u21D2", ttype:CONST},
+{input:"\\Leftrightarrow",	tag:"mo", output:"\u21D4", ttype:CONST},
+{input:"\\iff", tag:"mo", output:"~\\Longleftrightarrow~", ttype:DEFINITION},
+{input:"\\Uparrow",		tag:"mo", output:"\u21D1", ttype:CONST},
+{input:"\\Downarrow",		tag:"mo", output:"\u21D3", ttype:CONST},
+{input:"\\Updownarrow",		tag:"mo", output:"\u21D5", ttype:CONST},
+{input:"\\mapsto",		tag:"mo", output:"\u21A6", ttype:CONST},
+{input:"\\longleftarrow",	tag:"mo", output:"\u2190", ttype:LONG},
+{input:"\\longrightarrow",	tag:"mo", output:"\u2192", ttype:LONG},
+{input:"\\longleftrightarrow",	tag:"mo", output:"\u2194", ttype:LONG},
+{input:"\\Longleftarrow",	tag:"mo", output:"\u21D0", ttype:LONG},
+{input:"\\Longrightarrow",	tag:"mo", output:"\u21D2", ttype:LONG},
+{input:"\\Longleftrightarrow",  tag:"mo", output:"\u21D4", ttype:LONG},
+{input:"\\longmapsto",		tag:"mo", output:"\u21A6", ttype:CONST},
+							// disaster if LONG
+
+//commands with argument
+AMsqrt, AMroot, AMfrac, AMover, AMsub, AMsup, AMtext, AMmbox, AMatop, AMchoose,
+//AMdiv, AMquote,
+
+//diacritical marks
+{input:"\\acute",	tag:"mover",  output:"\u00B4", ttype:UNARY, acc:true},
+//{input:"\\acute",	  tag:"mover",  output:"\u0317", ttype:UNARY, acc:true},
+//{input:"\\acute",	  tag:"mover",  output:"\u0301", ttype:UNARY, acc:true},
+//{input:"\\grave",	  tag:"mover",  output:"\u0300", ttype:UNARY, acc:true},
+//{input:"\\grave",	  tag:"mover",  output:"\u0316", ttype:UNARY, acc:true},
+{input:"\\grave",	tag:"mover",  output:"\u0060", ttype:UNARY, acc:true},
+{input:"\\breve",	tag:"mover",  output:"\u02D8", ttype:UNARY, acc:true},
+{input:"\\check",	tag:"mover",  output:"\u02C7", ttype:UNARY, acc:true},
+{input:"\\dot",		tag:"mover",  output:".",      ttype:UNARY, acc:true},
+{input:"\\ddot",	tag:"mover",  output:"..",     ttype:UNARY, acc:true},
+//{input:"\\ddot",	  tag:"mover",  output:"\u00A8", ttype:UNARY, acc:true},
+{input:"\\mathring",	tag:"mover",  output:"\u00B0", ttype:UNARY, acc:true},
+{input:"\\vec",		tag:"mover",  output:"\u20D7", ttype:UNARY, acc:true},
+{input:"\\overrightarrow",tag:"mover",output:"\u20D7", ttype:UNARY, acc:true},
+{input:"\\overleftarrow",tag:"mover", output:"\u20D6", ttype:UNARY, acc:true},
+{input:"\\hat",		tag:"mover",  output:"\u005E", ttype:UNARY, acc:true},
+{input:"\\widehat",	tag:"mover",  output:"\u0302", ttype:UNARY, acc:true},
+{input:"\\tilde",	tag:"mover",  output:"~",      ttype:UNARY, acc:true},
+//{input:"\\tilde",	  tag:"mover",  output:"\u0303", ttype:UNARY, acc:true},
+{input:"\\widetilde",	tag:"mover",  output:"\u02DC", ttype:UNARY, acc:true},
+{input:"\\bar",		tag:"mover",  output:"\u203E", ttype:UNARY, acc:true},
+{input:"\\overbrace",	tag:"mover",  output:"\u23B4", ttype:UNARY, acc:true},
+{input:"\\overline",	tag:"mover",  output:"\u00AF", ttype:UNARY, acc:true},
+{input:"\\underbrace",  tag:"munder", output:"\u23B5", ttype:UNARY, acc:true},
+{input:"\\underline",	tag:"munder", output:"\u00AF", ttype:UNARY, acc:true},
+//{input:"underline",	tag:"munder", output:"\u0332", ttype:UNARY, acc:true},
+
+//typestyles and fonts
+{input:"\\displaystyle",tag:"mstyle",atname:"displaystyle",atval:"true", ttype:UNARY},
+{input:"\\textstyle",tag:"mstyle",atname:"displaystyle",atval:"false", ttype:UNARY},
+{input:"\\scriptstyle",tag:"mstyle",atname:"scriptlevel",atval:"1", ttype:UNARY},
+{input:"\\scriptscriptstyle",tag:"mstyle",atname:"scriptlevel",atval:"2", ttype:UNARY},
+{input:"\\textrm", tag:"mstyle", output:"\\mathrm", ttype: DEFINITION},
+{input:"\\mathbf", tag:"mstyle", atname:"mathvariant", atval:"bold", ttype:UNARY},
+{input:"\\textbf", tag:"mstyle", atname:"mathvariant", atval:"bold", ttype:UNARY},
+{input:"\\mathit", tag:"mstyle", atname:"mathvariant", atval:"italic", ttype:UNARY},
+{input:"\\textit", tag:"mstyle", atname:"mathvariant", atval:"italic", ttype:UNARY},
+{input:"\\mathtt", tag:"mstyle", atname:"mathvariant", atval:"monospace", ttype:UNARY},
+{input:"\\texttt", tag:"mstyle", atname:"mathvariant", atval:"monospace", ttype:UNARY},
+{input:"\\mathsf", tag:"mstyle", atname:"mathvariant", atval:"sans-serif", ttype:UNARY},
+{input:"\\mathbb", tag:"mstyle", atname:"mathvariant", atval:"double-struck", ttype:UNARY, codes:AMbbb},
+{input:"\\mathcal",tag:"mstyle", atname:"mathvariant", atval:"script", ttype:UNARY, codes:AMcal},
+{input:"\\mathfrak",tag:"mstyle",atname:"mathvariant", atval:"fraktur",ttype:UNARY, codes:AMfrk}
+];
+
+function compareNames(s1,s2) {
+  if (s1.input > s2.input) return 1
+  else return -1;
+}
+
+var AMnames = []; //list of input symbols
+
+function AMinitSymbols() {
+  AMsymbols.sort(compareNames);
+  for (i=0; i<AMsymbols.length; i++) AMnames[i] = AMsymbols[i].input;
+}
+
+var AMmathml = "http://www.w3.org/1998/Math/MathML";
+
+function AMcreateElementMathML(t) {
+  if (isIE) return document.createElement("m:"+t);
+  else return document.createElementNS(AMmathml,t);
+}
+
+function AMcreateMmlNode(t,frag) {
+//  var node = AMcreateElementMathML(name);
+  if (isIE) var node = document.createElement("m:"+t);
+  else var node = document.createElementNS(AMmathml,t);
+  node.appendChild(frag);
+  return node;
+}
+
+function newcommand(oldstr,newstr) {
+  AMsymbols = AMsymbols.concat([{input:oldstr, tag:"mo", output:newstr,
+                                 ttype:DEFINITION}]);
+}
+
+function AMremoveCharsAndBlanks(str,n) {
+//remove n characters and any following blanks
+  var st;
+  st = str.slice(n);
+  for (var i=0; i<st.length && st.charCodeAt(i)<=32; i=i+1);
+  return st.slice(i);
+}
+
+function AMposition(arr, str, n) {
+// return position >=n where str appears or would be inserted
+// assumes arr is sorted
+  if (n==0) {
+    var h,m;
+    n = -1;
+    h = arr.length;
+    while (n+1<h) {
+      m = (n+h) >> 1;
+      if (arr[m]<str) n = m; else h = m;
+    }
+    return h;
+  } else
+    for (var i=n; i<arr.length && arr[i]<str; i++);
+  return i; // i=arr.length || arr[i]>=str
+}
+
+function AMgetSymbol(str) {
+//return maximal initial substring of str that appears in names
+//return null if there is none
+  var k = 0; //new pos
+  var j = 0; //old pos
+  var mk; //match pos
+  var st;
+  var tagst;
+  var match = "";
+  var more = true;
+  for (var i=1; i<=str.length && more; i++) {
+    st = str.slice(0,i); //initial substring of length i
+    j = k;
+    k = AMposition(AMnames, st, j);
+    if (k<AMnames.length && str.slice(0,AMnames[k].length)==AMnames[k]){
+      match = AMnames[k];
+      mk = k;
+      i = match.length;
+    }
+    more = k<AMnames.length && str.slice(0,AMnames[k].length)>=AMnames[k];
+  }
+  AMpreviousSymbol=AMcurrentSymbol;
+  if (match!=""){
+    AMcurrentSymbol=AMsymbols[mk].ttype;
+    return AMsymbols[mk];
+  }
+  AMcurrentSymbol=CONST;
+  k = 1;
+  st = str.slice(0,1); //take 1 character
+  if ("0"<=st && st<="9") tagst = "mn";
+  else tagst = (("A">st || st>"Z") && ("a">st || st>"z")?"mo":"mi");
+/*
+// Commented out by DRW (not fully understood, but probably to do with
+// use of "/" as an INFIX version of "\\frac", which we don't want):
+//}
+//if (st=="-" && AMpreviousSymbol==INFIX) {
+//  AMcurrentSymbol = INFIX;  //trick "/" into recognizing "-" on second parse
+//  return {input:st, tag:tagst, output:st, ttype:UNARY, func:true};
+//}
+*/
+  return {input:st, tag:tagst, output:st, ttype:CONST};
+}
+
+
+/*Parsing ASCII math expressions with the following grammar
+v ::= [A-Za-z] | greek letters | numbers | other constant symbols
+u ::= sqrt | text | bb | other unary symbols for font commands
+b ::= frac | root | stackrel	binary symbols
+l ::= { | \left			left brackets
+r ::= } | \right		right brackets
+S ::= v | lEr | uS | bSS	Simple expression
+I ::= S_S | S^S | S_S^S | S	Intermediate expression
+E ::= IE | I/I			Expression
+Each terminal symbol is translated into a corresponding mathml node.*/
+
+var AMpreviousSymbol,AMcurrentSymbol;
+
+function AMparseSexpr(str) { //parses str and returns [node,tailstr,(node)tag]
+  var symbol, node, result, result2, i, st,// rightvert = false,
+    newFrag = document.createDocumentFragment();
+  str = AMremoveCharsAndBlanks(str,0);
+  symbol = AMgetSymbol(str);             //either a token or a bracket or empty
+  if (symbol == null || symbol.ttype == RIGHTBRACKET)
+    return [null,str,null];
+  if (symbol.ttype == DEFINITION) {
+    str = symbol.output+AMremoveCharsAndBlanks(str,symbol.input.length);
+    symbol = AMgetSymbol(str);
+    if (symbol == null || symbol.ttype == RIGHTBRACKET)
+      return [null,str,null];
+  }
+  str = AMremoveCharsAndBlanks(str,symbol.input.length);
+  switch (symbol.ttype) {
+  case SPACE:
+    node = AMcreateElementMathML(symbol.tag);
+    node.setAttribute(symbol.atname,symbol.atval);
+    return [node,str,symbol.tag];
+  case UNDEROVER:
+    if (isIE) {
+      if (symbol.input.substr(0,4) == "\\big") {   // botch for missing symbols
+	str = "\\"+symbol.input.substr(4)+str;	   // make \bigcup = \cup etc.
+	symbol = AMgetSymbol(str);
+	symbol.ttype = UNDEROVER;
+	str = AMremoveCharsAndBlanks(str,symbol.input.length);
+      }
+    }
+    return [AMcreateMmlNode(symbol.tag,
+			document.createTextNode(symbol.output)),str,symbol.tag];
+  case CONST:
+    var output = symbol.output;
+    if (isIE) {
+      if (symbol.input == "'")
+	output = "\u2032";
+      else if (symbol.input == "''")
+	output = "\u2033";
+      else if (symbol.input == "'''")
+	output = "\u2033\u2032";
+      else if (symbol.input == "''''")
+	output = "\u2033\u2033";
+      else if (symbol.input == "\\square")
+	output = "\u25A1";	// same as \Box
+      else if (symbol.input.substr(0,5) == "\\frac") {
+						// botch for missing fractions
+	var denom = symbol.input.substr(6,1);
+	if (denom == "5" || denom == "6") {
+	  str = symbol.input.replace(/\\frac/,"\\frac ")+str;
+	  return [node,str,symbol.tag];
+	}
+      }
+    }
+    node = AMcreateMmlNode(symbol.tag,document.createTextNode(output));
+    return [node,str,symbol.tag];
+  case LONG:  // added by DRW
+    node = AMcreateMmlNode(symbol.tag,document.createTextNode(symbol.output));
+    node.setAttribute("minsize","1.5");
+    node.setAttribute("maxsize","1.5");
+    node = AMcreateMmlNode("mover",node);
+    node.appendChild(AMcreateElementMathML("mspace"));
+    return [node,str,symbol.tag];
+  case STRETCHY:  // added by DRW
+    if (isIE && symbol.input == "\\backslash")
+	symbol.output = "\\";	// doesn't expand, but then nor does "\u2216"
+    node = AMcreateMmlNode(symbol.tag,document.createTextNode(symbol.output));
+    if (symbol.input == "|" || symbol.input == "\\vert" ||
+	symbol.input == "\\|" || symbol.input == "\\Vert") {
+	  node.setAttribute("lspace","0em");
+	  node.setAttribute("rspace","0em");
+    }
+    node.setAttribute("maxsize",symbol.atval);  // don't allow to stretch here
+    if (symbol.rtag != null)
+      return [node,str,symbol.rtag];
+    else
+      return [node,str,symbol.tag];
+  case BIG:  // added by DRW
+    var atval = symbol.atval;
+    if (isIE)
+      atval = symbol.ieval;
+    symbol = AMgetSymbol(str);
+    if (symbol == null)
+	return [null,str,null];
+    str = AMremoveCharsAndBlanks(str,symbol.input.length);
+    node = AMcreateMmlNode(symbol.tag,document.createTextNode(symbol.output));
+    if (isIE) {		// to get brackets to expand
+      var space = AMcreateElementMathML("mspace");
+      space.setAttribute("height",atval+"ex");
+      node = AMcreateMmlNode("mrow",node);
+      node.appendChild(space);
+    } else {		// ignored in IE
+      node.setAttribute("minsize",atval);
+      node.setAttribute("maxsize",atval);
+    }
+    return [node,str,symbol.tag];
+  case LEFTBRACKET:   //read (expr+)
+    if (symbol.input == "\\left") { // left what?
+      symbol = AMgetSymbol(str);
+      if (symbol != null) {
+	if (symbol.input == ".")
+	  symbol.invisible = true;
+	str = AMremoveCharsAndBlanks(str,symbol.input.length);
+      }
+    }
+    result = AMparseExpr(str,true,false);
+    if (symbol==null ||
+	(typeof symbol.invisible == "boolean" && symbol.invisible))
+      node = AMcreateMmlNode("mrow",result[0]);
+    else {
+      node = AMcreateMmlNode("mo",document.createTextNode(symbol.output));
+      node = AMcreateMmlNode("mrow",node);
+      node.appendChild(result[0]);
+    }
+    return [node,result[1],result[2]];
+  case MATRIX:	 //read (expr+)
+    if (symbol.input == "\\begin{array}") {
+      var mask = "";
+      symbol = AMgetSymbol(str);
+      str = AMremoveCharsAndBlanks(str,0);
+      if (symbol == null)
+	mask = "l";
+      else {
+	str = AMremoveCharsAndBlanks(str,symbol.input.length);
+	if (symbol.input != "{")
+	  mask = "l";
+	else do {
+	  symbol = AMgetSymbol(str);
+	  if (symbol != null) {
+	    str = AMremoveCharsAndBlanks(str,symbol.input.length);
+	    if (symbol.input != "}")
+	      mask = mask+symbol.input;
+	  }
+	} while (symbol != null && symbol.input != "" && symbol.input != "}");
+      }
+      result = AMparseExpr("{"+str,true,true);
+//    if (result[0]==null) return [AMcreateMmlNode("mo",
+//			   document.createTextNode(symbol.input)),str];
+      node = AMcreateMmlNode("mtable",result[0]);
+      mask = mask.replace(/l/g,"left ");
+      mask = mask.replace(/r/g,"right ");
+      mask = mask.replace(/c/g,"center ");
+      node.setAttribute("columnalign",mask);
+      node.setAttribute("displaystyle","false");
+      if (isIE)
+	return [node,result[1],null];
+// trying to get a *little* bit of space around the array
+// (IE already includes it)
+      var lspace = AMcreateElementMathML("mspace");
+      lspace.setAttribute("width","0.167em");
+      var rspace = AMcreateElementMathML("mspace");
+      rspace.setAttribute("width","0.167em");
+      var node1 = AMcreateMmlNode("mrow",lspace);
+      node1.appendChild(node);
+      node1.appendChild(rspace);
+      return [node1,result[1],null];
+    } else {	// eqnarray
+      result = AMparseExpr("{"+str,true,true);
+      node = AMcreateMmlNode("mtable",result[0]);
+      if (isIE)
+	node.setAttribute("columnspacing","0.25em"); // best in practice?
+      else
+	node.setAttribute("columnspacing","0.167em"); // correct (but ignored?)
+      node.setAttribute("columnalign","right center left");
+      node.setAttribute("displaystyle","true");
+      node = AMcreateMmlNode("mrow",node);
+      return [node,result[1],null];
+    }
+  case TEXT:
+      if (str.charAt(0)=="{") i=str.indexOf("}");
+      else i = 0;
+      if (i==-1)
+		 i = str.length;
+      st = str.slice(1,i);
+      if (st.charAt(0) == " ") {
+	node = AMcreateElementMathML("mspace");
+	node.setAttribute("width","0.33em");	// was 1ex
+	newFrag.appendChild(node);
+      }
+      newFrag.appendChild(
+        AMcreateMmlNode(symbol.tag,document.createTextNode(st)));
+      if (st.charAt(st.length-1) == " ") {
+	node = AMcreateElementMathML("mspace");
+	node.setAttribute("width","0.33em");	// was 1ex
+	newFrag.appendChild(node);
+      }
+      str = AMremoveCharsAndBlanks(str,i+1);
+      return [AMcreateMmlNode("mrow",newFrag),str,null];
+  case UNARY:
+      result = AMparseSexpr(str);
+      if (result[0]==null) return [AMcreateMmlNode(symbol.tag,
+                             document.createTextNode(symbol.output)),str];
+      if (typeof symbol.func == "boolean" && symbol.func) { // functions hack
+	st = str.charAt(0);
+//	if (st=="^" || st=="_" || st=="/" || st=="|" || st==",") {
+	if (st=="^" || st=="_" || st==",") {
+	  return [AMcreateMmlNode(symbol.tag,
+		    document.createTextNode(symbol.output)),str,symbol.tag];
+        } else {
+	  node = AMcreateMmlNode("mrow",
+	   AMcreateMmlNode(symbol.tag,document.createTextNode(symbol.output)));
+	  if (isIE) {
+	    var space = AMcreateElementMathML("mspace");
+	    space.setAttribute("width","0.167em");
+	    node.appendChild(space);
+	  }
+	  node.appendChild(result[0]);
+	  return [node,result[1],symbol.tag];
+        }
+      }
+      if (symbol.input == "\\sqrt") {		// sqrt
+	if (isIE) {	// set minsize, for \surd
+	  var space = AMcreateElementMathML("mspace");
+	  space.setAttribute("height","1.2ex");
+	  space.setAttribute("width","0em");	// probably no effect
+	  node = AMcreateMmlNode(symbol.tag,result[0])
+//	  node.setAttribute("minsize","1");	// ignored
+//	  node = AMcreateMmlNode("mrow",node);  // hopefully unnecessary
+	  node.appendChild(space);
+	  return [node,result[1],symbol.tag];
+	} else
+	  return [AMcreateMmlNode(symbol.tag,result[0]),result[1],symbol.tag];
+      } else if (typeof symbol.acc == "boolean" && symbol.acc) {   // accent
+        node = AMcreateMmlNode(symbol.tag,result[0]);
+	var output = symbol.output;
+	if (isIE) {
+		if (symbol.input == "\\hat")
+			output = "\u0302";
+		else if (symbol.input == "\\widehat")
+			output = "\u005E";
+		else if (symbol.input == "\\bar")
+			output = "\u00AF";
+		else if (symbol.input == "\\grave")
+			output = "\u0300";
+		else if (symbol.input == "\\tilde")
+			output = "\u0303";
+	}
+	var node1 = AMcreateMmlNode("mo",document.createTextNode(output));
+	if (symbol.input == "\\vec" || symbol.input == "\\check")
+						// don't allow to stretch
+	    node1.setAttribute("maxsize","1.2");
+		 // why doesn't "1" work?  \vec nearly disappears in firefox
+	if (isIE && symbol.input == "\\bar")
+	    node1.setAttribute("maxsize","0.5");
+	if (symbol.input == "\\underbrace" || symbol.input == "\\underline")
+	  node1.setAttribute("accentunder","true");
+	else
+	  node1.setAttribute("accent","true");
+	node.appendChild(node1);
+	if (symbol.input == "\\overbrace" || symbol.input == "\\underbrace")
+	  node.ttype = UNDEROVER;
+	return [node,result[1],symbol.tag];
+      } else {			      // font change or displaystyle command
+        if (!isIE && typeof symbol.codes != "undefined") {
+          for (i=0; i<result[0].childNodes.length; i++)
+            if (result[0].childNodes[i].nodeName=="mi" || result[0].nodeName=="mi") {
+              st = (result[0].nodeName=="mi"?result[0].firstChild.nodeValue:
+                              result[0].childNodes[i].firstChild.nodeValue);
+              var newst = [];
+              for (var j=0; j<st.length; j++)
+                if (st.charCodeAt(j)>64 && st.charCodeAt(j)<91) newst = newst +
+                  String.fromCharCode(symbol.codes[st.charCodeAt(j)-65]);
+                else newst = newst + st.charAt(j);
+              if (result[0].nodeName=="mi")
+                result[0]=AMcreateElementMathML("mo").
+                          appendChild(document.createTextNode(newst));
+              else result[0].replaceChild(AMcreateElementMathML("mo").
+          appendChild(document.createTextNode(newst)),result[0].childNodes[i]);
+            }
+        }
+        node = AMcreateMmlNode(symbol.tag,result[0]);
+        node.setAttribute(symbol.atname,symbol.atval);
+	if (symbol.input == "\\scriptstyle" ||
+	    symbol.input == "\\scriptscriptstyle")
+		node.setAttribute("displaystyle","false");
+	return [node,result[1],symbol.tag];
+      }
+  case BINARY:
+    result = AMparseSexpr(str);
+    if (result[0]==null) return [AMcreateMmlNode("mo",
+			   document.createTextNode(symbol.input)),str,null];
+    result2 = AMparseSexpr(result[1]);
+    if (result2[0]==null) return [AMcreateMmlNode("mo",
+			   document.createTextNode(symbol.input)),str,null];
+    if (symbol.input=="\\root" || symbol.input=="\\stackrel")
+      newFrag.appendChild(result2[0]);
+    newFrag.appendChild(result[0]);
+    if (symbol.input=="\\frac") newFrag.appendChild(result2[0]);
+    return [AMcreateMmlNode(symbol.tag,newFrag),result2[1],symbol.tag];
+  case INFIX:
+    str = AMremoveCharsAndBlanks(str,symbol.input.length);
+    return [AMcreateMmlNode("mo",document.createTextNode(symbol.output)),
+	str,symbol.tag];
+  default:
+    return [AMcreateMmlNode(symbol.tag,        //its a constant
+	document.createTextNode(symbol.output)),str,symbol.tag];
+  }
+}
+
+function AMparseIexpr(str) {
+  var symbol, sym1, sym2, node, result, tag, underover;
+  str = AMremoveCharsAndBlanks(str,0);
+  sym1 = AMgetSymbol(str);
+  result = AMparseSexpr(str);
+  node = result[0];
+  str = result[1];
+  tag = result[2];
+  symbol = AMgetSymbol(str);
+  if (symbol.ttype == INFIX) {
+    str = AMremoveCharsAndBlanks(str,symbol.input.length);
+    result = AMparseSexpr(str);
+    if (result[0] == null) // show box in place of missing argument
+      result[0] = AMcreateMmlNode("mo",document.createTextNode("\u25A1"));
+    str = result[1];
+    tag = result[2];
+    if (symbol.input == "_" || symbol.input == "^") {
+      sym2 = AMgetSymbol(str);
+      tag = null;	// no space between x^2 and a following sin, cos, etc.
+// This is for \underbrace and \overbrace
+      underover = ((sym1.ttype == UNDEROVER) || (node.ttype == UNDEROVER));
+//    underover = (sym1.ttype == UNDEROVER);
+      if (symbol.input == "_" && sym2.input == "^") {
+        str = AMremoveCharsAndBlanks(str,sym2.input.length);
+        var res2 = AMparseSexpr(str);
+	str = res2[1];
+	tag = res2[2];  // leave space between x_1^2 and a following sin etc.
+        node = AMcreateMmlNode((underover?"munderover":"msubsup"),node);
+        node.appendChild(result[0]);
+        node.appendChild(res2[0]);
+      } else if (symbol.input == "_") {
+	node = AMcreateMmlNode((underover?"munder":"msub"),node);
+        node.appendChild(result[0]);
+      } else {
+	node = AMcreateMmlNode((underover?"mover":"msup"),node);
+        node.appendChild(result[0]);
+      }
+      node = AMcreateMmlNode("mrow",node); // so sum does not stretch
+    } else {
+      node = AMcreateMmlNode(symbol.tag,node);
+      if (symbol.input == "\\atop" || symbol.input == "\\choose")
+	node.setAttribute("linethickness","0ex");
+      node.appendChild(result[0]);
+      if (symbol.input == "\\choose")
+	node = AMcreateMmlNode("mfenced",node);
+    }
+  }
+  return [node,str,tag];
+}
+
+function AMparseExpr(str,rightbracket,matrix) {
+  var symbol, node, result, i, tag,
+  newFrag = document.createDocumentFragment();
+  do {
+    str = AMremoveCharsAndBlanks(str,0);
+    result = AMparseIexpr(str);
+    node = result[0];
+    str = result[1];
+    tag = result[2];
+    symbol = AMgetSymbol(str);
+    if (node!=undefined) {
+      if ((tag == "mn" || tag == "mi") && symbol!=null &&
+	typeof symbol.func == "boolean" && symbol.func) {
+			// Add space before \sin in 2\sin x or x\sin x
+	  var space = AMcreateElementMathML("mspace");
+	  space.setAttribute("width","0.167em");
+	  node = AMcreateMmlNode("mrow",node);
+	  node.appendChild(space);
+      }
+      newFrag.appendChild(node);
+    }
+  } while ((symbol.ttype != RIGHTBRACKET)
+        && symbol!=null && symbol.output!="");
+  tag = null;
+  if (symbol.ttype == RIGHTBRACKET) {
+    if (symbol.input == "\\right") { // right what?
+      str = AMremoveCharsAndBlanks(str,symbol.input.length);
+      symbol = AMgetSymbol(str);
+      if (symbol != null && symbol.input == ".")
+	symbol.invisible = true;
+      if (symbol != null)
+	tag = symbol.rtag;
+    }
+    if (symbol!=null)
+      str = AMremoveCharsAndBlanks(str,symbol.input.length); // ready to return
+    var len = newFrag.childNodes.length;
+    if (matrix &&
+      len>0 && newFrag.childNodes[len-1].nodeName == "mrow" && len>1 &&
+      newFrag.childNodes[len-2].nodeName == "mo" &&
+      newFrag.childNodes[len-2].firstChild.nodeValue == "&") { //matrix
+	var pos = []; // positions of ampersands
+        var m = newFrag.childNodes.length;
+        for (i=0; matrix && i<m; i=i+2) {
+          pos[i] = [];
+          node = newFrag.childNodes[i];
+	  for (var j=0; j<node.childNodes.length; j++)
+	    if (node.childNodes[j].firstChild.nodeValue=="&")
+	      pos[i][pos[i].length]=j;
+        }
+	var row, frag, n, k, table = document.createDocumentFragment();
+	for (i=0; i<m; i=i+2) {
+	  row = document.createDocumentFragment();
+	  frag = document.createDocumentFragment();
+	  node = newFrag.firstChild; // <mrow> -&-&...&-&- </mrow>
+	  n = node.childNodes.length;
+	  k = 0;
+	  for (j=0; j<n; j++) {
+	    if (typeof pos[i][k] != "undefined" && j==pos[i][k]){
+	      node.removeChild(node.firstChild); //remove &
+	      row.appendChild(AMcreateMmlNode("mtd",frag));
+	      k++;
+	    } else frag.appendChild(node.firstChild);
+	  }
+	  row.appendChild(AMcreateMmlNode("mtd",frag));
+	  if (newFrag.childNodes.length>2) {
+	    newFrag.removeChild(newFrag.firstChild); //remove <mrow> </mrow>
+	    newFrag.removeChild(newFrag.firstChild); //remove <mo>&</mo>
+	  }
+	  table.appendChild(AMcreateMmlNode("mtr",row));
+	}
+	return [table,str];
+    }
+    if (typeof symbol.invisible != "boolean" || !symbol.invisible) {
+      node = AMcreateMmlNode("mo",document.createTextNode(symbol.output));
+      newFrag.appendChild(node);
+    }
+  }
+  return [newFrag,str,tag];
+}
+
+function AMparseMath(str) {
+  var result, node = AMcreateElementMathML("mstyle");
+  if (mathcolor != "") node.setAttribute("mathcolor",mathcolor);
+  if (mathfontfamily != "") node.setAttribute("fontfamily",mathfontfamily);
+  node.appendChild(AMparseExpr(str.replace(/^\s+/g,""),false,false)[0]);
+  node = AMcreateMmlNode("math",node);
+  if (showasciiformulaonhover)                      //fixed by djhsu so newline
+    node.setAttribute("title",str.replace(/\s+/g," "));//does not show in Gecko
+  if (mathfontfamily != "" && (isIE || mathfontfamily != "serif")) {
+    var fnode = AMcreateElementXHTML("font");
+    fnode.setAttribute("face",mathfontfamily);
+    fnode.appendChild(node);
+    return fnode;
+  }
+  return node;
+}
+
+function AMstrarr2docFrag(arr, linebreaks) {
+  var newFrag=document.createDocumentFragment();
+  var expr = false;
+  for (var i=0; i<arr.length; i++) {
+    if (expr) newFrag.appendChild(AMparseMath(arr[i]));
+    else {
+      var arri = (linebreaks ? arr[i].split("\n\n") : [arr[i]]);
+      newFrag.appendChild(AMcreateElementXHTML("span").
+      appendChild(document.createTextNode(arri[0])));
+      for (var j=1; j<arri.length; j++) {
+        newFrag.appendChild(AMcreateElementXHTML("p"));
+        newFrag.appendChild(AMcreateElementXHTML("span").
+        appendChild(document.createTextNode(arri[j])));
+      }
+    }
+    expr = !expr;
+  }
+  return newFrag;
+}
+
+function AMprocessNodeR(n, linebreaks) {
+  var mtch, str, arr, frg, i;
+  if (n.childNodes.length == 0) {
+   if ((n.nodeType!=8 || linebreaks) &&
+    n.parentNode.nodeName!="form" && n.parentNode.nodeName!="FORM" &&
+    n.parentNode.nodeName!="textarea" && n.parentNode.nodeName!="TEXTAREA" &&
+    n.parentNode.nodeName!="pre" && n.parentNode.nodeName!="PRE") {
+    str = n.nodeValue;
+    if (!(str == null)) {
+      str = str.replace(/\r\n\r\n/g,"\n\n");
+      str = str.replace(/\x20+/g," ");
+      str = str.replace(/\s*\r\n/g," ");
+// DELIMITERS:
+      mtch = (str.indexOf("\$")==-1 ? false : true);
+      str = str.replace(/([^\\])\$/g,"$1 \$");
+      str = str.replace(/^\$/," \$");	// in case \$ at start of string
+      arr = str.split(" \$");
+      for (i=0; i<arr.length; i++)
+	arr[i]=arr[i].replace(/\\\$/g,"\$");
+      if (arr.length>1 || mtch) {
+        if (checkForMathML) {
+          checkForMathML = false;
+          var nd = AMisMathMLavailable();
+          AMnoMathML = nd != null;
+          if (AMnoMathML && notifyIfNoMathML)
+            if (alertIfNoMathML)
+              alert("To view the ASCIIMathML notation use Internet Explorer 6 +\nMathPlayer (free from www.dessci.com)\n\
+                or Firefox/Mozilla/Netscape");
+            else AMbody.insertBefore(nd,AMbody.childNodes[0]);
+        }
+        if (!AMnoMathML) {
+          frg = AMstrarr2docFrag(arr,n.nodeType==8);
+          var len = frg.childNodes.length;
+          n.parentNode.replaceChild(frg,n);
+          return len-1;
+        } else return 0;
+      }
+    }
+   } else return 0;
+  } else if (n.nodeName!="math") {
+    for (i=0; i<n.childNodes.length; i++)
+      i += AMprocessNodeR(n.childNodes[i], linebreaks);
+  }
+  return 0;
+}
+
+function AMprocessNode(n, linebreaks, spanclassAM) {
+  var frag,st;
+  if (spanclassAM!=null) {
+    frag = document.getElementsByTagName("span")
+    for (var i=0;i<frag.length;i++)
+      if (frag[i].className == "AM")
+        AMprocessNodeR(frag[i],linebreaks);
+  } else {
+    try {
+      st = n.innerHTML;
+    } catch(err) {}
+// DELIMITERS:
+    if (st==null || st.indexOf("\$")!=-1)
+      AMprocessNodeR(n,linebreaks);
+  }
+  if (isIE) { //needed to match size and font of formula to surrounding text
+    frag = document.getElementsByTagName('math');
+    for (var i=0;i<frag.length;i++) frag[i].update()
+  }
+}
+
+var AMbody;
+var AMnoMathML = false, AMtranslated = false;
+
+function translate(spanclassAM) {
+  if (!AMtranslated) { // run this only once
+    AMtranslated = true;
+    AMinitSymbols();
+    AMbody = document.getElementsByTagName("body")[0];
+    AMprocessNode(AMbody, false, spanclassAM);
+  }
+}
+
+if (isIE) { // avoid adding MathPlayer info explicitly to each webpage
+  document.write("<object id=\"mathplayer\"\
+  classid=\"clsid:32F66A20-7614-11D4-BD11-00104BD3F987\"></object>");
+  document.write("<?import namespace=\"m\" implementation=\"#mathplayer\"?>");
+}
+
+// GO1.1 Generic onload by Brothercake
+// http://www.brothercake.com/
+//onload function (replaces the onload="translate()" in the <body> tag)
+function generic()
+{
+  translate();
+};
+//setup onload function
+if(typeof window.addEventListener != 'undefined')
+{
+  //.. gecko, safari, konqueror and standard
+  window.addEventListener('load', generic, false);
+}
+else if(typeof document.addEventListener != 'undefined')
+{
+  //.. opera 7
+  document.addEventListener('load', generic, false);
+}
+else if(typeof window.attachEvent != 'undefined')
+{
+  //.. win/ie
+  window.attachEvent('onload', generic);
+}
+//** remove this condition to degrade older browsers
+else
+{
+  //.. mac/ie5 and anything else that gets this far
+  //if there's an existing onload function
+  if(typeof window.onload == 'function')
+  {
+    //store it
+    var existing = onload;
+    //add new onload handler
+    window.onload = function()
+    {
+      //call existing onload function
+      existing();
+      //call generic onload function
+      generic();
+    };
+  }
+  else
+  {
+    //setup onload function
+    window.onload = generic;
+  }
+}
+/*]]>*/
+</script>
+</head>
+<body class="book">
+<div id="header">
+<h1>Pyomo Online Documentation 4.1</h1>
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_introduction">1. Introduction</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This document provides a mechanism for documenting Pyomo design
+conversations.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_component_indexing_and_api">2. Component Indexing and API</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The following describes a component API design for Pyomo.  The goal
+is to document design principles, and provide room for discussion
+of these principles in this document.  This discussion focuses on
+6 core components in Pyomo: <code>Set</code>, <code>Var</code>, <code>Param</code>, <code>Objective</code>,
+<code>Constraint</code> and <code>Expression</code>.  We refer to the first three as
+<code>data</code> components, and the latter three as <code>standard</code> components.
+As we discuss below, data components are initialized and constructed
+differently than standard components.  Further, standard components
+reflect the behavior of all other components in Pyomo.</p></div>
+<div class="paragraph"><p>Let&#8217;s restrict this discussion with the following assumptions:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+We only consider the refinement of the existing Pyomo components.
+</p>
+</li>
+<li>
+<p>
+We do not include explicit component data objects.
+</p>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_simple_components">2.1. Simple Components</h3>
+<div class="paragraph"><p>A simple component is declared by constructing a component without
+index.  Simple components are typically defined with initial values.
+For example:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-style: italic"><span style="color: #9A1900"># A simple constraint is initialized with the `expr` option</span></span>
+model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>expr<span style="color: #990000">=</span>model<span style="color: #990000">.</span>x <span style="color: #990000">&gt;=</span> <span style="color: #993399">0</span><span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># A simple objective is initialized with the `expr` option</span></span>
+model<span style="color: #990000">.</span>o <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Objective</span></span><span style="color: #990000">(</span>expr<span style="color: #990000">=</span>model<span style="color: #990000">.</span>x<span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># A simple expression is initialized with the `expr` option</span></span>
+model<span style="color: #990000">.</span>e <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Expression</span></span><span style="color: #990000">(</span>expr<span style="color: #990000">=</span>model<span style="color: #990000">.</span>x<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>Standard components cannot be defined without initial values:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-style: italic"><span style="color: #9A1900"># These declarations raise exceptions</span></span>
+model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>o <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Objective</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>e <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Expression</span></span><span style="color: #990000">()</span></tt></pre></div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+<strong>Exactly 0 of these declarations raise an exception on a
+       ConcreteModel as of Pyomo trunk r10847. I can&#8217;t imagine they
+       would behave differently on an AbstractModel either.</strong>
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>WEH</strong>:: Correct. But this is a design document. I think that they
+          should generate exceptions.
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The <code>Set</code>, <code>Param</code> and <code>Var</code> components can be constructed without initial values:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-style: italic"><span style="color: #9A1900"># These declarations define components without initial values</span></span>
+model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>p <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Param</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>v <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">()</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># These declarations define components with initial values</span></span>
+model<span style="color: #990000">.</span>B <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=[</span><span style="color: #993399">1</span><span style="color: #990000">])</span>
+model<span style="color: #990000">.</span>q <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Param</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=</span><span style="color: #993399">1.0</span><span style="color: #990000">)</span>
+model<span style="color: #990000">.</span>w <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=</span><span style="color: #993399">1.0</span><span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>The reason for this difference is that these are data components, which define
+placeholders for data that will be provided later.  Set and parameter
+data can be declared abstractly, and the values of variables is
+defined during optimization.  Hence, these components do not require
+initial values to specify a model.</p></div>
+<div class="paragraph"><p>For consistency, all Pyomo components support the <code>len()</code> function.
+By construction, all simple components have length one.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+<strong>All simple components do <em>NOT</em> have length one. See below:</strong>
+</p>
+</dd>
+</dl></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConcreteModel</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">()</span>              <span style="font-style: italic"><span style="color: #9A1900"># len() -&gt; 0</span></span>
+model<span style="color: #990000">.</span>o <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Objective</span></span><span style="color: #990000">()</span>               <span style="font-style: italic"><span style="color: #9A1900"># len() -&gt; 0</span></span>
+model<span style="color: #990000">.</span>e <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Expression</span></span><span style="color: #990000">()</span>              <span style="font-style: italic"><span style="color: #9A1900"># len() -&gt; 1</span></span>
+model<span style="color: #990000">.</span>v <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">()</span>                     <span style="font-style: italic"><span style="color: #9A1900"># len() -&gt; 1</span></span>
+model<span style="color: #990000">.</span>s2 <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">])</span>    <span style="font-style: italic"><span style="color: #9A1900"># len() -&gt; 2</span></span>
+model<span style="color: #990000">.</span>s1 <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=[</span><span style="color: #993399">1</span><span style="color: #990000">])</span>      <span style="font-style: italic"><span style="color: #9A1900"># len() -&gt; 1</span></span>
+model<span style="color: #990000">.</span>s0 <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=[])</span>       <span style="font-style: italic"><span style="color: #9A1900"># len() -&gt; 0</span></span>
+model<span style="color: #990000">.</span>q <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Param</span></span><span style="color: #990000">()</span>                   <span style="font-style: italic"><span style="color: #9A1900"># len() -&gt; 1</span></span></tt></pre></div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+This is far from consistent. Perhaps more intuitive would be for
+       <code>simple</code> components to simply not have a <code>length</code> (because it
+       should be implied that it is a single element). The only
+       <code>simple</code> component that should have a <code>length</code> is a Set object.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>WEH</strong>:: I like your suggestion of only supporting <code>len()</code> for simple
+          <code>Set</code> components.  I&#8217;ll have think through whether this will
+          create significant backards compatibility issues.
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_indexed_components">2.2. Indexed Components</h3>
+<div class="paragraph"><p>An indexed component is declared by constructing a component with
+one or more index sets.  Indexed components do not need to be defined
+with initial values.  For example:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>index <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">]</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Declare a component that can contain 3 sets</span></span>
+model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Declare a component that can contain 3 parameters</span></span>
+model<span style="color: #990000">.</span>p <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Param</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Declare a component that can contain 3 variables</span></span>
+model<span style="color: #990000">.</span>v <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Declare a component that can contain 3 constraints</span></span>
+model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Declare a component that can contain 3 objectives</span></span>
+model<span style="color: #990000">.</span>o <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Objective</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Declare a component that can contain 3 expressions</span></span>
+model<span style="color: #990000">.</span>e <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Expression</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>When no initial values are provided, and indexed component does not
+construct any indexed component data.  Hence, the lengths of the
+components in this example are zero.</p></div>
+<div class="paragraph"><p>There are several standard techniques for initializing indexed
+components: (1) a rule, (2) explicit addition, and (3) data
+initialization. The first two options are always supported for
+standard components.  Data components support the last option.  For
+example:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>index <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">]</span>
+
+model<span style="color: #990000">.</span>x <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Initialize with a rule</span></span>
+<span style="font-weight: bold"><span style="color: #0000FF">def</span></span> <span style="font-weight: bold"><span style="color: #000000">c_rule</span></span><span style="color: #990000">(</span>model<span style="color: #990000">,</span> i<span style="color: #990000">):</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> i <span style="color: #990000">==</span> <span style="color: #993399">2</span><span style="color: #990000">:</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> Constraint<span style="color: #990000">.</span>Skip
+    <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> model<span style="color: #990000">.</span>x<span style="color: #990000">[</span>i<span style="color: #990000">]</span> <span style="color: #990000">&gt;=</span> <span style="color: #993399">0</span>
+model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>index<span style="color: #990000">,</span> rule<span style="color: #990000">=</span>c_rule<span style="color: #990000">)</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Explicitly initialize with the add() method.</span></span>
+model<span style="color: #990000">.</span>cc <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span>
+model<span style="color: #990000">.</span>cc<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">add</span></span><span style="color: #990000">(</span><span style="color: #993399">1</span><span style="color: #990000">,</span> model<span style="color: #990000">.</span>x<span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">]</span> <span style="color: #990000">&gt;=</span> <span style="color: #993399">0</span><span style="color: #990000">)</span>
+model<span style="color: #990000">.</span>cc<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">add</span></span><span style="color: #990000">(</span><span style="color: #993399">3</span><span style="color: #990000">,</span> model<span style="color: #990000">.</span>x<span style="color: #990000">[</span><span style="color: #993399">3</span><span style="color: #990000">]</span> <span style="color: #990000">&gt;=</span> <span style="color: #993399">0</span><span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>This example further illustrates that indexed components can contain
+component data for a subset of the index set.  In this example, the
+<code>c</code> and <code>cc</code> components have length 2, but the size of the index
+set is 3.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+Although Gabe has proposed the use of <em>setitem</em> to
+        initialize indexed components, I do not think that we should
+        make that a part of the generic API for all indexed components.
+        It requires that the <code>initial value</code> of the component can
+        be specified with (1) a single data value or (2) a component
+        data object.  We&#8217;re not allowing (2) in this discussion,
+        and the <code>add()</code> method allows for the specification of an
+        arbitrary number of data values used to initialize a
+        component.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+The <code>BuildAction</code> and <code>BuildCheck</code> components do not currently
+        support the <code>add()</code> method.  Hence, the <code>always</code> assertion in
+        the previous paragraph is not true.  Does it make sense to
+        <code>add</code> a build action or check?
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Data components, along with a variety of other components, support
+initialization with data.  For example:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>index <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">]</span>
+
+model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>index<span style="color: #990000">,</span> initialize<span style="color: #990000">={</span><span style="color: #993399">1</span><span style="color: #990000">:[</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">4</span><span style="color: #990000">,</span><span style="color: #993399">6</span><span style="color: #990000">]}</span>
+model<span style="color: #990000">.</span>p <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Param</span></span><span style="color: #990000">(</span>index<span style="color: #990000">,</span> initialize<span style="color: #990000">={</span><span style="color: #993399">1</span><span style="color: #990000">:</span><span style="color: #993399">1</span><span style="color: #990000">})</span>
+model<span style="color: #990000">.</span>v <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">(</span>index<span style="color: #990000">,</span> initialize<span style="color: #990000">={</span><span style="color: #993399">1</span><span style="color: #990000">:</span><span style="color: #993399">1.0</span><span style="color: #990000">})</span>
+
+model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>index<span style="color: #990000">,</span> initialize<span style="color: #990000">={</span><span style="color: #993399">1</span><span style="color: #990000">:</span> model<span style="color: #990000">.</span>v<span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">]</span> <span style="color: #990000">&gt;=</span> <span style="color: #993399">0</span><span style="color: #990000">})</span></tt></pre></div></div>
+<div class="paragraph"><p>The initialization data specifies the index values that are used
+to construct the component.  Thus, all of the components have length
+one in this example.</p></div>
+<div class="paragraph"><p>The <code>Param</code> and <code>Var</code> can also be declared with special arguments
+to create dense configurations:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>index <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">]</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Index '1' has value 1.0.  All other indices are implicitly</span></span>
+<span style="font-style: italic"><span style="color: #9A1900"># defined with value 0.0.</span></span>
+model<span style="color: #990000">.</span>p <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Param</span></span><span style="color: #990000">(</span>index<span style="color: #990000">,</span> default<span style="color: #990000">=</span><span style="color: #993399">0.0</span><span style="color: #990000">,</span> initialize<span style="color: #990000">={</span><span style="color: #993399">1</span><span style="color: #990000">:</span><span style="color: #993399">1.0</span><span style="color: #990000">})</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Densely initialize this component</span></span>
+model<span style="color: #990000">.</span>v <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">(</span>index<span style="color: #990000">,</span> dense<span style="color: #990000">=</span>True<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>In this example, both components have length 3.  The parameter
+component is defined with a sparse data representation that has a
+single component data object.  The variable component is declared
+dense, and it uses three component data objects.</p></div>
+<div class="paragraph"><p>The <code>Param</code> and <code>Var</code> components also allow special semantics for dynamically initializing component data:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>index <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">]</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Mutable parameters allow component data to be defined with the __setitem__</span></span>
+<span style="font-style: italic"><span style="color: #9A1900"># and __getitem__ methods.</span></span>
+model<span style="color: #990000">.</span>p <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Param</span></span><span style="color: #990000">(</span>index<span style="color: #990000">,</span> initialize<span style="color: #990000">={</span><span style="color: #993399">1</span><span style="color: #990000">:</span><span style="color: #993399">1.0</span><span style="color: #990000">},</span> mutable<span style="color: #990000">=</span>True<span style="color: #990000">)</span>
+<span style="font-style: italic"><span style="color: #9A1900"># Here, len(model.p) is 1</span></span>
+model<span style="color: #990000">.</span>p<span style="color: #990000">[</span><span style="color: #993399">2</span><span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="color: #993399">2.0</span>
+<span style="font-style: italic"><span style="color: #9A1900"># Here, len(model.p) is 2</span></span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Variable components allow component data to be defined with the __setitem__</span></span>
+<span style="font-style: italic"><span style="color: #9A1900"># or __getitem_ methods.</span></span>
+model<span style="color: #990000">.</span>v <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">(</span>index<span style="color: #990000">)</span>
+<span style="font-style: italic"><span style="color: #9A1900"># Here, len(model.v) is 0</span></span>
+model<span style="color: #990000">.</span>v<span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">].</span>value <span style="color: #990000">=</span> <span style="color: #993399">1</span>
+<span style="font-style: italic"><span style="color: #9A1900"># Here, len(model.v) is 1</span></span>
+vdata <span style="color: #990000">=</span> model<span style="color: #990000">.</span>v<span style="color: #990000">[</span><span style="color: #993399">2</span><span style="color: #990000">]</span>
+<span style="font-style: italic"><span style="color: #9A1900"># Here, len(model.v) is 2</span></span></tt></pre></div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+The implicit definition of component data in these two
+        instances is problematic.  For example, simply iterating over
+        the index set and printing mutable parameter or variable values
+        will create component data objects for all indices.  However,
+        no obvious, intuitive syntax exists for constructing component
+        data for new indices.  The <code>add()</code> method can be used, but this
+        seems burdensome for users.  (I looked at other programming
+        languages, like MOSEL, and they also employ implicit
+        initialization of variables.)
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_flattening_indices">3. Flattening Indices</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_a_motivating_example">3.1. A Motivating Example</h3>
+<div class="paragraph"><p>Consider a simple multi-commodity flow model:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">from</span></span> pyomo<span style="color: #990000">.</span>environ <span style="font-weight: bold"><span style="color: #000080">import</span></span> <span style="color: #990000">*</span>
+
+model <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConcreteModel</span></span><span style="color: #990000">()</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Sets</span></span>
+model<span style="color: #990000">.</span>Nodes <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">]</span>
+model<span style="color: #990000">.</span>Edges <span style="color: #990000">=</span> <span style="color: #990000">[(</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">3</span><span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">)]</span>
+model<span style="color: #990000">.</span>Commodities <span style="color: #990000">=</span> <span style="color: #990000">[(</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">3</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">)]</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Variables</span></span>
+model<span style="color: #990000">.</span>Flow <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Commodities<span style="color: #990000">,</span>
+                 model<span style="color: #990000">.</span>Edges<span style="color: #990000">,</span>
+                 within<span style="color: #990000">=</span>NonNegativeReals<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>There are a number of ways to interpret this syntax. Focusing on
+how to access a particular index, one faces the following choices:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Flow[c,e] for a commodity c and an edge e
+</p>
+</li>
+<li>
+<p>
+Flow[(s,t),(u,v)] for a commodity (s,t) and an edge (u,v)
+</p>
+</li>
+<li>
+<p>
+Flow[s,t,u,v] for a commodity (s,t) and an edge (u,v)
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>A modeler that is fluent in Python knows that the first two bullets
+are equivalent from the viewpoint of the Python interpretor, and they
+know that the third bullet is <em>not</em> interpreted the same as the first
+two. The modeler runs a quick test to determine which of the
+interpretations is correct:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">for</span></span> c <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>Commodities<span style="color: #990000">:</span>
+    <span style="color: #990000">(</span>s<span style="color: #990000">,</span>t<span style="color: #990000">)</span> <span style="color: #990000">=</span> c
+    <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> e <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>Edges<span style="color: #990000">:</span>
+        <span style="color: #990000">(</span>u<span style="color: #990000">,</span>v<span style="color: #990000">)</span> <span style="color: #990000">=</span> e
+        <span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Flow<span style="color: #990000">[</span>c<span style="color: #990000">,</span>e<span style="color: #990000">])</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Flow<span style="color: #990000">[(</span>s<span style="color: #990000">,</span>t<span style="color: #990000">),(</span>u<span style="color: #990000">,</span>v<span style="color: #990000">)])</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Flow<span style="color: #990000">[</span>s<span style="color: #990000">,</span>t<span style="color: #990000">,</span>u<span style="color: #990000">,</span>v<span style="color: #990000">])</span></tt></pre></div></div>
+<div class="paragraph"><p>The modeler does not realize that her decision to use the
+first and second bullet forms will likely increase the build
+time of her model by an order of magnitude (see:
+./component_container_examples/slow_index.py)</p></div>
+</div>
+<div class="sect2">
+<h3 id="_considering_unflattened_pyomo_models">3.2. Considering Unflattened Pyomo Models</h3>
+<div class="paragraph"><p>Some developers have argued that tuple flattening is the correct
+approach because we use a similar style of indexing in math
+programming papers. For example, one might encounter the following
+notation:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+$P_{ijk} = d_{jk}\qquad\forall\; i \in V;\; (j,k) \in E$
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Advocates of tuple flattening in Pyomo would have you note that the
+indexing for the variable $P$ is written as
+$P_{ijk}$ not $P_{i(jk)}$. However, one could
+argue that we exclude the parentheses for the same reason that we exclude
+the commas, which is that it reduces clutter, and the human mind, being
+excellent at disambiguation, is able to extract the inferred meaning
+from $P_{ijk}$ perhaps more easily without the extra
+characters. Being the math programmers we are, we of course know that
+human language (even written mathematical notation) does not translate
+directly into an algorithm. We include <em>psuedocode</em> in our papers, not
+machine parsable code. With these comments aside, lets discuss the
+more fundamental issue with Pyomo&#8217;s Set operations.</p></div>
+<div class="sect3">
+<h4 id="_a_cartesian_product_it_is_not">3.2.1. A Cartesian Product it is Not</h4>
+<div class="paragraph"><p>The Cartesian product can be defined using set-builder notation as:
+$X_1\times...\times X_n = \{(x_1,...,x_n)\;|\;x_1\in
+X1,...,\;x_n\in X_n\}$. One should note from this definition that the
+Cartesian product is <code>not</code> associative (in the general case where all
+$X_i \neq \emptyset$). That is, $(A\times
+B)\times C \neq A\times B\times C \neq A\times(B\times C)$. One
+should also note that this definition is entirely independent of what
+elements make up the individual sets (e.g., carrots, objects, real
+numbers, elements of $\mathbb{R}^3$, 10-tuples).</p></div>
+<div class="paragraph"><p>With this definition in mind, let&#8217;s examine a straightforward implementation
+in Python. Consider how one would implement a Cartesian product across 2
+sets $A,B$:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">def</span></span> <span style="font-weight: bold"><span style="color: #000000">CartesianProduct</span></span><span style="color: #990000">(</span>A<span style="color: #990000">,</span> B<span style="color: #990000">):</span>
+   prod <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">set</span></span><span style="color: #990000">()</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> a <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> A<span style="color: #990000">:</span>
+      <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> b <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> B<span style="color: #990000">:</span>
+         prod<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">add</span></span><span style="color: #990000">((</span>a<span style="color: #990000">,</span>b<span style="color: #990000">))</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> prod</tt></pre></div></div>
+<div class="paragraph"><p>Note that this implementation is sufficiently abstracted from the type
+of objects that are contained in each of the sets. As far as Python is
+concerned, if it&#8217;s hashable it can live inside of a Set. Let&#8217;s make
+this example concrete by defining the sets $A,B$ as the
+following:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>A <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">set</span></span><span style="color: #990000">([(</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">)])</span>
+B <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">set</span></span><span style="color: #990000">([</span><span style="color: #FF0000">'a'</span><span style="color: #990000">,</span> <span style="color: #FF0000">'b'</span><span style="color: #990000">])</span></tt></pre></div></div>
+<div class="paragraph"><p>Consider an what an arbitrary element in $x\in A\times
+B$ looks like:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>prod <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">CartesianProduct</span></span><span style="color: #990000">(</span>A<span style="color: #990000">,</span>B<span style="color: #990000">)</span>
+<span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">(((</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">),</span><span style="color: #FF0000">'a'</span><span style="color: #990000">)</span> <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> prod<span style="color: #990000">)</span> <span style="font-style: italic"><span style="color: #9A1900"># -&gt; True</span></span>
+<span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">((</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #FF0000">'a'</span><span style="color: #990000">)</span> <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> prod<span style="color: #990000">)</span>   <span style="font-style: italic"><span style="color: #9A1900"># -&gt; False</span></span></tt></pre></div></div>
+<div class="paragraph"><p>Now lets translate this example to Pyomo. Our initial attempt might be the following:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConcreteModel</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=</span>A<span style="color: #990000">)</span>
+<span style="font-style: italic"><span style="color: #9A1900"># -&gt; ValueError: The value=(1, 2) is a tuple for set=A, which has dimen=1</span></span></tt></pre></div></div>
+<div class="paragraph"><p>Ouch, another error. Let&#8217;s fix that:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConcreteModel</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>dimen<span style="color: #990000">=</span><span style="color: #993399">2</span><span style="color: #990000">,</span> initialize<span style="color: #990000">=</span>A<span style="color: #990000">)</span>
+model<span style="color: #990000">.</span>B <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=</span>B<span style="color: #990000">)</span>
+model<span style="color: #990000">.</span>prod <span style="color: #990000">=</span> A<span style="color: #990000">*</span>B
+<span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">(((</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">),</span><span style="color: #FF0000">'a'</span><span style="color: #990000">)</span> <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>prod<span style="color: #990000">)</span> <span style="font-style: italic"><span style="color: #9A1900"># -&gt; False</span></span>
+<span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">((</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #FF0000">'a'</span><span style="color: #990000">)</span> <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>prod<span style="color: #990000">)</span>   <span style="font-style: italic"><span style="color: #9A1900"># -&gt; True</span></span></tt></pre></div></div>
+<div class="paragraph"><p>One will note that the output from the <code>print</code> function shows that the
+resulting set <code>model.prod</code> violates the definition of a Cartesian
+product over 2 sets.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+This is the part where a new user starts yelling 4-letter words
+       at their computer screen.
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>Okay, so our first attempt didn&#8217;t produce the set we were looking
+for. Let&#8217;s try a different approach. We&#8217;ve already computed the
+Cartesian product using our own function, why don&#8217;t we just store that
+in a Pyomo Set object. Remembering our lesson about defining model.A,
+and using our knowledge that 2-tuples live inside of our 2-set
+Cartesian product (by definition) we go with:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConcreteModel</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>prod <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>dimen<span style="color: #990000">=</span><span style="color: #993399">2</span><span style="color: #990000">,</span> initialize<span style="color: #990000">=</span>prod<span style="color: #990000">)</span>
+<span style="font-style: italic"><span style="color: #9A1900"># -&gt; ValueError: The value=(1, 2, 'a') is a tuple for set=prod, which has dimen=2</span></span></tt></pre></div></div>
+<div class="paragraph"><p>By changing <code>dimen=2</code> to <code>dimen=3</code>, one ends up with some Python code
+that doesn&#8217;t raise an exception but indeed does not produce a
+Cartesian product.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+At this point, we are asking the user to abandon their
+       intuitive notion that <code>len(&lt;a-tuple&gt;)</code> is equivalent to the
+       <code>dimension of &lt;a-tuple&gt;</code>, and also accept the fact that Pyomo&#8217;s
+       definition of cross product (this phrase is used in the
+       <em>published</em> Pyomo book to describe the * operator on Set) is
+       not the same as the definition found on Wikipedia. I am
+       frustrated by this point. Are you?
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The question to ask at this point is why.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Why is it necessary to declare a dimension for a Set?
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+Is it because it is necessary to disambiguate external data
+       file parsing (like in the DAT format)? Okay great, but I don&#8217;t
+       use those, so why is this (or Set for that matter) a dependency
+       for concrete modeling.
+</p>
+</dd>
+</dl></div>
+</li>
+<li>
+<p>
+Why does Pyomo implement the Cartesian product this way?
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+Does it have something to do with AMPL or the previous bullet
+       point?  Is it even possible to define a non-associative n-ary
+       operator (set product) by overloading an associative binary
+       operator (*)?
+</p>
+</dd>
+</dl></div>
+</li>
+</ul></div>
+<div class="paragraph"><p>I&#8217;ll end this section with another motivating example for an interface
+that does not have a dependency on Set.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>Exercise 1</strong>
+</dt>
+<dd>
+<p>
+Use the Python data structure of your choice to store a
+               random value for each element in $A\times B$.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: This is my answer:
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">import</span></span> random
+d <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">dict</span></span><span style="color: #990000">(((</span>a<span style="color: #990000">,</span>b<span style="color: #990000">),</span> random<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">random</span></span><span style="color: #990000">())</span> <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> a <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> A <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> b <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> B<span style="color: #990000">)</span>
+<span style="font-style: italic"><span style="color: #9A1900"># or</span></span>
+d <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">dict</span></span><span style="color: #990000">()</span>
+<span style="font-weight: bold"><span style="color: #0000FF">for</span></span> a <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> A<span style="color: #990000">:</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> b <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> B<span style="color: #990000">:</span>
+      d<span style="color: #990000">[</span>a<span style="color: #990000">,</span>b<span style="color: #990000">]</span> <span style="color: #990000">=</span> random<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">random</span></span><span style="color: #990000">()</span></tt></pre></div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>Exercise 2</strong>
+</dt>
+<dd>
+<p>
+Define a Pyomo variable for each element in $A\times B$.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: This would be my answer, and I don&#8217;t know why we do not want
+         to allow users to extend their thought process in this
+         way. It has been noted in other sections of this document
+         that I am confusing our indexed component containers with
+         dictionaries, and that this might be indicative of a problem
+         with the documentation. I can assure you it has nothing to do
+         with the documentation. It has everything to do with my
+         understanding of how we use the containers in all places in
+         pyomo.* <code>except</code> the construction phase, and the fact that
+         our component emulates <em>dict</em> in every sense of the word
+         <code>except</code> giving users access to <em>setitem</em>. A <em>dict</em> is an
+         intuitive tool for this job, whereas understanding how
+         Pyomo&#8217;s Set works is not intuitive.
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model<span style="color: #990000">.</span>v <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">VarDict</span></span><span style="color: #990000">(((</span>a<span style="color: #990000">,</span>b<span style="color: #990000">),</span> <span style="font-weight: bold"><span style="color: #000000">VarData</span></span><span style="color: #990000">(</span>Reals<span style="color: #990000">))</span> <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> a <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> A <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> b <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> B<span style="color: #990000">)</span>
+<span style="font-style: italic"><span style="color: #9A1900"># or</span></span>
+model<span style="color: #990000">.</span>v <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">VarDict</span></span><span style="color: #990000">()</span>
+<span style="font-weight: bold"><span style="color: #0000FF">for</span></span> a <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> A<span style="color: #990000">:</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> b <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> B<span style="color: #990000">:</span>
+      model<span style="color: #990000">.</span>v<span style="color: #990000">[</span>a<span style="color: #990000">,</span>b<span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">VarData</span></span><span style="color: #990000">(</span>Reals<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>Here are some potential answers if you are forced to used the current
+version of Pyomo:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Abandon the definition of Cartesian product and simply use <code>model.prod</code> from
+  above to index a standard Var.
+</p>
+</li>
+<li>
+<p>
+Use the manually computed version of <code>prod</code> and place it inside a Pyomo <code>SetOf</code>
+  object, and use that to index the variable.
+</p>
+</li>
+<li>
+<p>
+Use <code>namedtuple</code> objects instead of pure tuples to trick Pyomo into
+  doing the correct thing.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_rethinking_pyomo_components">4. Rethinking Pyomo Components</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_using_explicit_component_data_objects">4.1. Using Explicit Component Data Objects</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+Although Gabe has proposed the use of <em>setitem</em> to
+        initialize indexed components, I do not think that we should
+        make that a part of the generic API for all indexed
+        components.  It requires that the <code>initial value</code> of the
+        component can be specified with a single data value.  The
+        <code>add()</code> method allows for the specification of an arbitrary
+        number of data values used to initialize a component.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: It does not necessarily require an <code>initial value</code>, it could
+         be an explicitly constructed object (e.g., x[i] =
+         VarData(Reals)). The use of <em>setitem</em> is a stylistic
+         preference (that I think is intuitive for an interface that
+         already supports half of the dictionary methods).  I&#8217;m
+         proposing some kind of assignment to an explicitly created
+         object be allowed, and then I&#8217;m proposing a discussion about
+         whether or not the implicit forms should be considered. We
+         already use the implicit forms for rule based definitions of
+         Objective, Constraint, and Expression, so it shouldn&#8217;t be a
+         stretch to go between the list below. Once these connections
+         are obvious, <em>setitem</em> becomes a natural setting for
+         explicit assignment.
+</p>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+return model.x &gt;= 1 &#8594; return ConstraintData(model.x &gt;= 1)
+</p>
+</li>
+<li>
+<p>
+model.c[i] = model.x &gt;= 1 &#8594; model.c[i] = ConstraintData(model.x &gt;= 1)
+</p>
+</li>
+<li>
+<p>
+model.c.add(i, model.x &gt;= 1) &#8594; model.c.add(i, ConstraintData(model.x &gt;= 1))
+</p>
+</li>
+</ol></div>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_concrete_vs_abstract">4.2. Concrete vs Abstract</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+The implicit definition of component data in these two
+        instances is problematic.  For example, simply iterating over
+        the index set and printing mutable parameter or variable values
+        will create component data objects for all indices.  However,
+        no obvious, intuitive syntax exists for constructing component
+        data for new indices.  The <code>add()</code> method can be used, but this
+        seems burdensome for users.  (I looked at other programming
+        languages, like MOSEL, and they also employ implicit
+        initialization of variables.)
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: I agree that these behaviors are problematic.  However, there
+         does exist an intuitive way of expressing this kind of
+         behavior. One should simply replace <code>Var(index)</code> with
+         <code>defaultdict(lambda: VarData(Reals))</code> (ignoring the index
+         checking), and it immediately makes sense, at least, to
+         someone who knows Python, rather than to only the core Pyomo
+         developers who&#8217;ve yet to finish changing how it works. If you
+         were to measure the <code>amount of burden</code> placed on a user by
+         (a) requiring them to populate a dictionary (using any of the
+         dict interface methods) or (b) forcing them to spend N+ hours
+         debugging, frustrated by this implicit behavior, I would say
+         that (b) is the more burdensome of the two. I&#8217;ve been there,
+         but in my situation I can immediately jump into the source
+         code and figure out if I am crazy or if something needs to be
+         fixed. Most users can not do that.
+</p>
+</li>
+</ul></div>
+</dd>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+To summarize, I am <strong>NOT</strong> saying force everyone to use concrete
+       modeling components. I am saying give them the option of using
+       these more explicit components that don&#8217;t suffer from the
+       implicit behaviors we are discussing so that they can get on
+       with finishing their work, while we and they figure out how the
+       abstract interface works. A Pyomo modeler is trying to do two
+       things (1) figure out how to use Pyomo and (2) figure out how
+       to model their problem as a mathematical program. I think
+       intuitive component containers like Dict, List, and a Singleton
+       along with a more explicit syntax for creating and storing
+       optimization objects will allow them to spend less time on (1)
+       and more time on (2).
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+FWIW, I think it&#8217;s a mistake to assume that users start developing
+    with concrete models and then move to abstract models.  There are plenty
+    of contexts where this isn&#8217;t true.  (For example, PySP.)
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: (a) PySP does not require abstract models. (b) One would not
+         start with a PySP model. One would start with a deterministic
+         Pyomo model.
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_concrete_component_containers">4.3. Concrete Component Containers</h3>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+Gabe has suggested that we have dictionary and list containers
+        that are used for concrete models.  I don&#8217;t think we want to do
+        that, but I wanted to reserve some space for him to make his
+        case for that.
+</p>
+</dd>
+</dl></div>
+<div class="sect3">
+<h4 id="_motivating_examples">4.3.1. Motivating Examples</h4>
+<div class="sect4">
+<h5 id="_example_index_sets_are_unnecessarily_restrictive">EXAMPLE: Index Sets are Unnecessarily Restrictive</h5>
+<div class="paragraph"><p>Consider a simple multi-commodity flow model:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #000080">from</span></span> pyomo<span style="color: #990000">.</span>environ <span style="font-weight: bold"><span style="color: #000080">import</span></span> <span style="color: #990000">*</span>
+
+model <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConcreteModel</span></span><span style="color: #990000">()</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Sets</span></span>
+model<span style="color: #990000">.</span>Nodes <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">]</span>
+model<span style="color: #990000">.</span>Edges <span style="color: #990000">=</span> <span style="color: #990000">[(</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">2</span><span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">3</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">3</span><span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">)]</span>
+model<span style="color: #990000">.</span>Commodities <span style="color: #990000">=</span> <span style="color: #990000">[(</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">),</span> <span style="color: #990000">(</span><span style="color: #993399">3</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">)]</span>
+
+<span style="font-style: italic"><span style="color: #9A1900"># Variables</span></span>
+model<span style="color: #990000">.</span>Flow <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Var</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Commodities<span style="color: #990000">,</span>
+                 model<span style="color: #990000">.</span>Edges<span style="color: #990000">,</span>
+                 within<span style="color: #990000">=</span>NonNegativeReals<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>There are a number of ways to interpret this syntax. Focusing on
+how to access a particular index, one faces the following choices:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Flow[c,e] for a commodity c and an edge e
+</p>
+</li>
+<li>
+<p>
+Flow[(s,t),(u,v)] for a commodity (s,t) and an edge (u,v)
+</p>
+</li>
+<li>
+<p>
+Flow[s,t,u,v] for a commodity (s,t) and an edge (u,v)
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>A modeler that is fluent in Python knows that the first two bullets
+are equivalent from the viewpoint of the Python interpretor, and they
+know that the third bullet is <em>not</em> interpreted the same as the first
+two. The modeler runs a quick test to determine which of the
+interpretations is correct:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">for</span></span> c <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>Commodities<span style="color: #990000">:</span>
+    <span style="color: #990000">(</span>s<span style="color: #990000">,</span>t<span style="color: #990000">)</span> <span style="color: #990000">=</span> c
+    <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> e <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>Edges<span style="color: #990000">:</span>
+        <span style="color: #990000">(</span>u<span style="color: #990000">,</span>v<span style="color: #990000">)</span> <span style="color: #990000">=</span> e
+        <span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Flow<span style="color: #990000">[</span>c<span style="color: #990000">,</span>e<span style="color: #990000">])</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Flow<span style="color: #990000">[(</span>s<span style="color: #990000">,</span>t<span style="color: #990000">),(</span>u<span style="color: #990000">,</span>v<span style="color: #990000">)])</span>
+        <span style="font-weight: bold"><span style="color: #0000FF">print</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Flow<span style="color: #990000">[</span>s<span style="color: #990000">,</span>t<span style="color: #990000">,</span>u<span style="color: #990000">,</span>v<span style="color: #990000">])</span></tt></pre></div></div>
+<div class="paragraph"><p>To her surprise, all forms seem to work. She panics, and then double
+checks that she hasn&#8217;t been wrong about how the built-in <em>dict</em> type
+works. She relaxes a bit after verifying that <em>dict</em> does not treat
+bullet 3 the same as the first two. Gratified in her knowledge that
+she actually <em>wasn&#8217;t</em> misunderstanding how basic Python data
+structures work, she moves forward on building her Pyomo model, but
+with a sense of perplexion about Pyomo variables. She decides to stick
+with the first and second bullet forms where possible, as it is much
+easier for her and her colleagues to read, and it works with Python
+dictionaries, which they are using to store data during this initial
+prototype.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+FWIW, I have yet to hear a user panic (or otherwise raise
+        concerns) about the apparent inconsistency described here.
+        The <code>Flow</code> object is not a dictionary, nor was it advertised
+        as such.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: I guess I am her ;) a few years ago. I don&#8217;t think I am alone
+         in that when I encounter something I don&#8217;t expect, I question
+         what I know, which for programming may lead some to question
+         whether or not they have written broken code because of it.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>WEH</strong>:: I see a consistent thread of your comments where you were
+        treating components as dictionaries, but they weren&#8217;t, which you
+        found frustrating.  I&#8217;m wondering how much of your frustration
+        would be addressed by better documentation.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+<div class="paragraph"><p>The modeler makes her first attempt at a flow balance constraint:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">def</span></span> <span style="font-weight: bold"><span style="color: #000000">FlowBalanceConstraint_rule</span></span><span style="color: #990000">(</span>model<span style="color: #990000">,</span> c<span style="color: #990000">,</span> u<span style="color: #990000">):</span>
+    out_flow <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">sum</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Flow<span style="color: #990000">[</span>c<span style="color: #990000">,</span>e<span style="color: #990000">]</span> <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> e <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>EdgesOutOfNode<span style="color: #990000">[</span>u<span style="color: #990000">])</span>
+    in_flow <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">sum</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Flow<span style="color: #990000">[</span>c<span style="color: #990000">,</span>e<span style="color: #990000">]</span> <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> e <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>EdgesInToNode<span style="color: #990000">[</span>u<span style="color: #990000">])</span>
+    <span style="color: #990000">...</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> <span style="color: #990000">...</span>
+model<span style="color: #990000">.</span>FlowBalanceConstraint <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>Commodities<span style="color: #990000">,</span>
+                                         model<span style="color: #990000">.</span>Nodes<span style="color: #990000">,</span>
+                                         rule<span style="color: #990000">=</span>FlowBalanceConstraint_rule<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>To her dismay she gets the following error:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>TypeError<span style="color: #990000">:</span> <span style="font-weight: bold"><span style="color: #000000">FlowBalanceConstraint_rule</span></span><span style="color: #990000">()</span> takes exactly <span style="color: #993399">3</span> <span style="font-weight: bold"><span style="color: #000000">arguments</span></span> <span style="color: #990000">(</span><span style="color: #993399">4</span> given<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img alt="Note" src="data:image/png;base64,
+iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAJhUlEQVRoge2ZWWycVxXHf+fce7/v
+m/GaGCde4pI0aQlJC0kRtE1L00JbLIjY4QkeUB9YHhAIJFCExAsKUkE8IAFFPIDUIqhBRSDRBUqC
+CimFFBCBpCWx02IaZ3G2SdyxPZ7vHh6+mcnSZnFjKIge6Wj8zYzvPf9z/me5d8TM+F8WfbkNuFx5
+BcDLLf/fAEZGRmx4eNh6enqsp6fHhoeHbWRk5D9aFeSlVqHNmzfb6H33sHnT7ZQmD5GfOMax6Sm+
+Pl5h1Yc+xpYtW2SBbX1ReUkRGBkZsdH77mHLW95EOv4Ms3ueJh6YYPHUFF9aljJ63z3cf//9/5FI
+vKQIDA8P293L2yhVjjH7t51ocDiviFecF46n7XzBreChhx4qNhH5t0XjJUVgx44ddGUZ9b/vIpQD
+oRQIWSDJAiFL6B9axo4dO4gxAmANWVDLG+Ln82URMRGhVCqRHxonlAPqFXWKC4r6IhI6OMjMzBN4
+/4LlTUQQEZxzZ32QJAlpmrb+p16vU6vVOHXq1AWjN18AnDj0F971vrs4OnmYJVkoDA4FCPUO172I
+Cgnt7SV++4vvsGhRJx3tJbIsRVVpsUnOBBABBVFEClKYwbKr7sTM7EIUnBcA7z21k7t49x1X8JXv
+bOWra7rw5QRtcN8PLCfvvZJvb9vJycpJpg4/hp/N0I4SMQs4Jw0A5zBXHGiCaIZIKABgpGlKjPEF
+0TpT5pUDRXiVt99+Le03r+WzuytM1gO6pB/3+o0cbxvk8yOPMjW6i2iR2lxOjJDHSDMFogmGwzQ7
+rRJAUpAENAGXIZq2AFzQpvkACCEQcahP+cRH3sKHn9zHXU+MM7rtGeD33NDXzaZynZU9gcezpUw9
+X6OzIyOakkfF4QEpPG6nDRNNEA2FSgKimETSNCXPc0II57VpXhEolUqoOrxPSLOMT330Dv5SqfKD
+NR388Y2L+caQsjITNv3pMBs3rOT56ZyZGaM+J0QUxDc0INrWUgggoRGBAOIRAt77hY1AmqaoeJxP
+cN645jVDbNn8Hj73o8fZ/af9mEE9j9y2YRXt5YzZWmRmzjj1/BwhTXAKzitOHEbeWlc0AVwDnCv8
+KoZzjotV33lTSL1HNKAuEtKM1169jM98/E6mTk3x4Nbd7Bk7TEdHRvAeVY+hmDqmZwx1kIkiqrhz
+S2zL+AbNMC6l/80LgHMOEY9oQvBCks5RKpXo7JhFxbhz42pet2aQet1YtLiDJAkIDq8BHwJmwlwO
+UaD0ojsrNKuUReIZyb9gABCHcwWFgg+0lTPyvIRToVzKWLpkMfV6REQplYvmZCj1uuBUSdJwTg8A
+XBdoCZMOsBkQBeGi/J83gBgjmABC8AlJGsjzFLMyaXDM1etEA0VR50iCx6mSZhkiijpPjEpQD+SF
+4WdJrTAewdCFB1CtVlFVVATnhMQnWJqC5aTBk+c5IIgWRoTgSZJAmiZAo1s7hwsppglI+fTiljeY
+nyHkLQotKIAYI4igzpFHISQOiwEnKTEG8hhRVZw6YjRQLfJGHcF7jleqTBw8znXr12MABnv37efY
+iSnesG4tiUsRUQwD7JIAzKsPqCqiRbVwweM04XdPjhJN+dvTBxgbn6G9q59yZx9/3HWEb33vN+zc
+/RzOJ+w/eJLtO8Z5ZNtT7PvHIUQTvvv9X/Lc/mN0d3by3fseRLQwvWh0Fy+h8wbQ2VFG1KM+xfuA
+qufo8So/fejPPD/rqJys8pvf7eLAoeNMHqnw2U9+kH3jVQ5MClMzKUla5obr13HliiEMmDx6gltv
+uY7Vr1nBQF8PJopQ9AFTt/AROFfMjCW9XTy19xB33Hodb924jr1j+/nDk3/nzTdei4jw3nfeyCOP
+bufa1y5jzeoVrcHM8HR3dfHlr/2Q+x94jFtuuh44/9B2PplXDryYLF3STXd3e+t5UXcHY89OsOH6
+NS2Qed7wpM1Rm50G4MGHH2P961Zy3bqreXrPP5mrzwLt5y6/cACq1eoLCKm+TN/SAebmfn8aUG83
+PYs7+cnPH+eqKwd5as8/edc7bi02847pmVkATk1VWbF8AOcca1Yv59DkqcYK0tCL02deACqVCldc
+0YdIwLmEPM9RV6NnUZlPf3wT6oqJcePN6wHhzTeu4/CRCrfctJ4sSxBRli7pYfHEMUSU97/7Th75
+1RP8eec+Yp5zzTVXM9DfDyogBvHS6HTJACYmJnjVoq5GFw0454gCEOnoaMfiNGZFFRFxJGkbywZ6
+i1NWoy9kWYmbb1gHKCHApuGbisVFGyoYUswa5OR5ftF56JIBjI6OMtDfWwAQ35jnc8AVpRXBohVq
+UowECKqK4RBxoE0W6gvGCcEjaOEAwEQWdpgbGxujt7erOLO2mk3R8i0Wz9EiuUGz+qlKEQEUaJbI
+4lTHmTVePKgWzpDGJGpc8CDTlEsuo88++wxXDA0UIUbAOP23KGZKjI48KnkuhcbiPbPCOBoeBikO
+Lk2VxjqNRilaAEqSZGEAbN261bZt+zW33XY7IAXXm6Ou0YhIMamaaUOl5WRrzg00viuKWWxpQUOH
+NAZFQRpD48Xlkig0MTHBB95zG+VSylz1KCbWyDOh2XyK+56IqjWMKigkUnzWnPPFFFRRLZ29SQRU
+ELOGY4pZ6LKOlM07mZ07d/KOtw1TcB4sGkTDiDQ9K1IkrKeYmQC08d7pZLSiRBpE5s7aS0XAHFEK
+AGY51Wr18g80Zmb33nsvX/z8XdSmj2AWOXhwkrxe46+79jB55Dh/3T2GxUhHextdXW2sXN7PNWtW
+IQKDA71FFBoAjIgQkVg/a5+oHrU5zIznDhxk964xKpXKggAoTlWW8+OfPorlOQ//cjsDy1bS2dFO
+W+diVly1iL6+Pqanpzl5qsL4pPHwN3/G1InDlMsZ7Z1tDA30cfWqIa5dexV9fb2YnT7UTxw4xsHJ
+o4yOjfOP8QOMjx/k4OQx7r777lY0zycXvJ02M4sxMjg4SL1eR0TYsGEDw8PD9PX10d7ejogUN3a1
+GqpKCIE8z5mdnUVVqVarbN++nba2Nvbu3csDDzyAqrJ8+atb+zjn6e/vZ/Xq1axatYq1a9fS29tL
+lmUMDQ1RKpXOm9EXvV6v1+tWr9eZnp5mZmaGWq1GjLHF62aiNZ+bnPfe45xrvTZzxMyYmZk56+LX
+zKjX661DvHOOJElIkoRSqYT3/vLvRlW15eHCa4VxzdvmpjZDfubzuXeb3vuzqCEixBhbo0NTkyS5
+PAr9L8j/96+U/w3yCoCXW14B8HLLvwDd67nwZIEPdgAAAABJRU5ErkJggg==" />
+</td>
+<td class="content">The modeler&#8217;s constraint rule would have worked had she
+      wrapped her set declarations in SetOf(), or had she
+      used something like collections.namedtuple as elements of the set
+      rather than a pure tuple.</td>
+</tr></table>
+</div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+We all know what the solution to this example is. However, once
+       we flatten c to s,t in the function arguments, the rule
+       definition for this model is no longer generic. If the
+       dimension of elements in Commodities changes, so does the rule.
+       The workarounds in the note above were not apparent to me until
+       I created these examples. Do we consider them a bug or a
+       feature?  Whatever the case may be, for any user who might
+       stumble across these workarounds, it will be far from intuitive
+       why these approaches allow one to write <code>def
+       FlowBalanceConstraint_rule(model, c, u)</code>. I would be surprised
+       if any other developers knew of these workarounds as well.
+</p>
+</dd>
+</dl></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Morals</div>
+<div class="ulist"><ul>
+<li>
+<p>
+Abstract modeling that involves flattening tuples
+  is not abstract (or generic).
+</p>
+</li>
+<li>
+<p>
+Supporting Flow[c,e] should not be the expensive hack that it is.
+</p>
+</li>
+</ul></div>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+I do not follow the conclusion that we need new modeling
+        components.  Rather, I think this motivates a reconsideration
+        of the use of argument flattening.
+</p>
+</dd>
+</dl></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Motivates</div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>VarDict</code>: Because I shouldn&#8217;t have to go through some confusing
+             tuple flattening nonsense in order to organize a
+             collection of optimization variables into a container. It
+             should be up to me whether <code>Flow</code> should be indexed as
+             <code>Flow[i,j,k,l,p,s,t,o]</code> or <code>Flow[k1, p, k2]</code>, and I
+             shouldn&#8217;t pay an order of magnitude penalty for the more
+             concise syntax.
+</p>
+</li>
+<li>
+<p>
+More intuitive containers for optimization modeling objects that
+  provide more flexibility over how I organize these objects, allowing
+  me to write self-documenting code. E.g., Dict (at a minimum) and
+  List objects for most, if not all, of the component types, including
+  <code>Block</code>. The important pieces are the (currently named) XData
+  objects, and we should be making less of a fuss about how users
+  organize these. There could be <strong>extremely trivial</strong> and <strong>stable</strong>
+  implementations of Singleton, Dict, and List containers that anyone
+  familiar with Python would easily understand how to use after
+  reading 20 lines of example code.  Example Documentation:
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model<span style="color: #990000">.</span>x <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">VarSingleton</span></span><span style="color: #990000">(</span>Reals<span style="color: #990000">,</span> bounds<span style="color: #990000">=(</span><span style="color: #993399">0</span><span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">))</span>
+<span style="font-style: italic"><span style="color: #9A1900"># Behaves like dict</span></span>
+model<span style="color: #990000">.</span>X <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">VarDict</span></span><span style="color: #990000">()</span>
+<span style="font-weight: bold"><span style="color: #0000FF">for</span></span> i <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> <span style="font-weight: bold"><span style="color: #000000">range</span></span><span style="color: #990000">(</span><span style="color: #993399">5</span><span style="color: #990000">,</span><span style="color: #993399">10</span><span style="color: #990000">):</span>
+   <span style="font-style: italic"><span style="color: #9A1900"># using explicit instantiation</span></span>
+   model<span style="color: #990000">.</span>X<span style="color: #990000">[</span>i<span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">VarData</span></span><span style="color: #990000">(</span>Binary<span style="color: #990000">,</span> bounds<span style="color: #990000">=(</span><span style="color: #993399">0</span><span style="color: #990000">,</span><span style="color: #993399">1</span><span style="color: #990000">))</span>
+   <span style="font-style: italic"><span style="color: #9A1900"># or</span></span>
+   <span style="font-style: italic"><span style="color: #9A1900"># using implicit instantiation</span></span>
+   model<span style="color: #990000">.</span>X<span style="color: #990000">[</span>i<span style="color: #990000">]</span> <span style="color: #990000">=</span> Binary
+   model<span style="color: #990000">.</span>X<span style="color: #990000">[</span>i<span style="color: #990000">].</span><span style="font-weight: bold"><span style="color: #000000">setlb</span></span><span style="color: #990000">(</span><span style="color: #993399">0</span><span style="color: #990000">)</span>
+   model<span style="color: #990000">.</span>X<span style="color: #990000">[</span>i<span style="color: #990000">].</span><span style="font-weight: bold"><span style="color: #000000">setub</span></span><span style="color: #990000">(</span><span style="color: #993399">1</span><span style="color: #990000">)</span>
+
+model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConstraintSingleton</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>x <span style="color: #990000">&gt;=</span> <span style="color: #993399">0.5</span><span style="color: #990000">)</span>
+<span style="font-style: italic"><span style="color: #9A1900"># Behaves like list</span></span>
+model<span style="color: #990000">.</span>C <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConstraintList</span></span><span style="color: #990000">()</span>
+<span style="font-weight: bold"><span style="color: #0000FF">for</span></span> i <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>X<span style="color: #990000">:</span>
+   <span style="font-style: italic"><span style="color: #9A1900"># using explicit instantiation</span></span>
+   model<span style="color: #990000">.</span>C<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">append</span></span><span style="color: #990000">(</span><span style="font-weight: bold"><span style="color: #000000">ConstraintData</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>X<span style="color: #990000">[</span>i<span style="color: #990000">]</span> <span style="color: #990000">&gt;=</span> <span style="color: #993399">1.0</span><span style="color: #990000">/</span>i<span style="color: #990000">))</span>
+   <span style="font-style: italic"><span style="color: #9A1900"># or</span></span>
+   <span style="font-style: italic"><span style="color: #9A1900"># using implicit instantiation</span></span>
+   model<span style="color: #990000">.</span>C<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">append</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>X<span style="color: #990000">[</span>i<span style="color: #990000">]</span> <span style="color: #990000">&gt;=</span> <span style="color: #993399">1.0</span><span style="color: #990000">/</span>i<span style="color: #990000">)</span></tt></pre></div></div>
+</div></div>
+</div>
+<div class="sect4">
+<h5 id="_example_jagged_index_sets_are_not_intuitive">EXAMPLE: Jagged Index Sets Are Not Intuitive</h5>
+<div class="paragraph"><p>It is not intuitive why something like this:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">]</span>
+model<span style="color: #990000">.</span>B <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #993399">1</span><span style="color: #990000">:</span> <span style="color: #990000">[</span><span style="color: #FF0000">'a'</span><span style="color: #990000">,</span><span style="color: #FF0000">'b'</span><span style="color: #990000">],</span> <span style="color: #993399">2</span><span style="color: #990000">:</span> <span style="color: #990000">[</span><span style="color: #FF0000">'c'</span><span style="color: #990000">,</span><span style="color: #FF0000">'d'</span><span style="color: #990000">]}</span>
+
+model<span style="color: #990000">.</span>C <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConstraintDict</span></span><span style="color: #990000">()</span>
+<span style="font-weight: bold"><span style="color: #0000FF">for</span></span> i <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>A<span style="color: #990000">:</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> j <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>B<span style="color: #990000">[</span>i<span style="color: #990000">]:</span>
+        model<span style="color: #990000">.</span>C<span style="color: #990000">[</span>i<span style="color: #990000">,</span>j<span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+        <span style="font-style: italic"><span style="color: #9A1900"># or</span></span>
+        model<span style="color: #990000">.</span>C<span style="color: #990000">[</span>i<span style="color: #990000">,</span>j<span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConstraintData</span></span><span style="color: #990000">(...)</span></tt></pre></div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+This example could be written without <code>ConstraintDict</code>, so
+        this isn&#8217;t a motivating example for <code>ConstraintDict</code> (as is
+        suggested below).
+</p>
+</dd>
+</dl></div>
+<div class="paragraph"><p>needs to be written as:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">]</span>
+model<span style="color: #990000">.</span>B <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #993399">1</span><span style="color: #990000">:</span> <span style="color: #990000">[</span><span style="color: #FF0000">'a'</span><span style="color: #990000">,</span><span style="color: #FF0000">'b'</span><span style="color: #990000">],</span> <span style="color: #993399">2</span><span style="color: #990000">:</span> <span style="color: #990000">[</span><span style="color: #FF0000">'c'</span><span style="color: #990000">,</span><span style="color: #FF0000">'d'</span><span style="color: #990000">]}</span>
+
+<span style="font-weight: bold"><span style="color: #0000FF">def</span></span> <span style="font-weight: bold"><span style="color: #000000">C_index_rule</span></span><span style="color: #990000">(</span>model<span style="color: #990000">):</span>
+   d <span style="color: #990000">=</span> <span style="color: #990000">[]</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> i <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>A<span style="color: #990000">:</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> j <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>B<span style="color: #990000">[</span>i<span style="color: #990000">]:</span>
+           d<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">append</span></span><span style="color: #990000">(</span>i<span style="color: #990000">,</span>j<span style="color: #990000">)</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> d
+model<span style="color: #990000">.</span>C_index <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>dimen<span style="color: #990000">=</span><span style="color: #993399">2</span><span style="color: #990000">,</span> initialize<span style="color: #990000">=</span>C_index_rule<span style="color: #990000">)</span>
+<span style="font-weight: bold"><span style="color: #0000FF">def</span></span> <span style="font-weight: bold"><span style="color: #000000">C_rule</span></span><span style="color: #990000">(</span>model<span style="color: #990000">,</span> i<span style="color: #990000">,</span> j<span style="color: #990000">):</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> <span style="color: #990000">...</span>
+model<span style="color: #990000">.</span>C <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>C_index<span style="color: #990000">,</span> rule<span style="color: #990000">=</span>C_rule<span style="color: #990000">):</span></tt></pre></div></div>
+<div class="paragraph"><p>Note that the use of <em>setitem</em>[] is not the critical take home point
+from this example. <code>Constraint</code> does have an <code>add()</code> method, and this
+could be used to fill the constraint in a for loop. It is the
+construction of the intermediate set that should not be necessary.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+The word <em>needs</em> is too strong here.  The first example is for
+        a concrete model, and the second is for an abstract model.  You seem
+        be complaining that it&#8217;s harder to write an abstract model.  To
+        which I respond "so what?"
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: Agreed. I approach that next. Showing the above motivates the
+         idea that even if you want to use abstract modeling, getting
+         an initial prototype working can be done in a much more
+         concise manner using a concrete approach. That is, concrete
+         modeling can be useful even to people who like abstract
+         modeling. However, the current containers are implemented in
+         such a way as to make straightforward concrete modeling
+         behaviors (such as what is shown below) susceptible to very
+         unintuitive traps brought about by implicit behaviors
+         designed to handle edge cases in the abstract setting.
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+<div class="paragraph"><p>A more concrete approach using the <code>Constraint</code> component might be to
+try:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">]</span>
+model<span style="color: #990000">.</span>B <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #993399">1</span><span style="color: #990000">:</span> <span style="color: #990000">[</span><span style="color: #FF0000">'a'</span><span style="color: #990000">,</span><span style="color: #FF0000">'b'</span><span style="color: #990000">],</span> <span style="color: #993399">2</span><span style="color: #990000">:</span> <span style="color: #990000">[</span><span style="color: #FF0000">'c'</span><span style="color: #990000">,</span><span style="color: #FF0000">'d'</span><span style="color: #990000">]}</span>
+model<span style="color: #990000">.</span>C_index <span style="color: #990000">=</span> <span style="color: #990000">[(</span>i<span style="color: #990000">,</span>j<span style="color: #990000">)</span> <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> i <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>A <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> j <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>B<span style="color: #990000">[</span>i<span style="color: #990000">]]</span>
+model<span style="color: #990000">.</span>C <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>C_index<span style="color: #990000">)</span>
+RuntimeError<span style="color: #990000">:</span> Cannot add component <span style="color: #FF0000">'C_index'</span> <span style="color: #990000">(</span>type <span style="color: #990000">&lt;</span><span style="font-weight: bold"><span style="color: #0000FF">class</span></span> 'pyomo<span style="color: #990000">.</span>core<span style="color: #990000">.</span>base<span style="color: #990000">.</span>sets<span style="color: #990000">\</span>
+             <span style="color: #990000">.</span>SimpleSet<span style="color: #FF0000">'&gt;) to block '</span>unknown<span style="color: #FF0000">': a component by that name (type &lt;type '</span>list'<span style="color: #990000">&gt;)\</span>
+             <span style="font-weight: bold"><span style="color: #0000FF">is</span></span> already defined<span style="color: #990000">.</span></tt></pre></div></div>
+<div class="paragraph"><p>If you are lucky, you get a response from the Pyomo forum the same day
+for this black-hole of an error, and realize you need to do the
+following (or just never do something as stupid as naming the index for
+a component <em>&lt;component-name&gt;_index</em>):</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model<span style="color: #990000">.</span>A <span style="color: #990000">=</span> <span style="color: #990000">[</span><span style="color: #993399">1</span><span style="color: #990000">,</span><span style="color: #993399">2</span><span style="color: #990000">]</span>
+model<span style="color: #990000">.</span>B <span style="color: #990000">=</span> <span style="color: #990000">{</span><span style="color: #993399">1</span><span style="color: #990000">:</span> <span style="color: #990000">[</span><span style="color: #FF0000">'a'</span><span style="color: #990000">,</span><span style="color: #FF0000">'b'</span><span style="color: #990000">],</span> <span style="color: #993399">2</span><span style="color: #990000">:</span> <span style="color: #990000">[</span><span style="color: #FF0000">'c'</span><span style="color: #990000">,</span><span style="color: #FF0000">'d'</span><span style="color: #990000">]}</span>
+model<span style="color: #990000">.</span>C_index <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Set</span></span><span style="color: #990000">(</span>initialize<span style="color: #990000">=[(</span>i<span style="color: #990000">,</span>j<span style="color: #990000">)</span> <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> i <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>A <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> j <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>B<span style="color: #990000">[</span>i<span style="color: #990000">]])</span>
+model<span style="color: #990000">.</span>C <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>C_index<span style="color: #990000">)</span>
+<span style="font-weight: bold"><span style="color: #0000FF">for</span></span> i<span style="color: #990000">,</span>j <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>C_index<span style="color: #990000">:</span>
+   model<span style="color: #990000">.</span>C<span style="color: #990000">.</span><span style="font-weight: bold"><span style="color: #000000">add</span></span><span style="color: #990000">((</span>i<span style="color: #990000">,</span>j<span style="color: #990000">),</span> <span style="color: #990000">...)</span></tt></pre></div></div>
+<div class="paragraph"><p>Perhaps by accident, you later realize that you can call <code>add()</code> with
+indices that are not in <code>C_index</code> (without error), leaving you
+wondering why you defined <code>C_index</code> in the first place.</p></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Morals</div>
+<div class="ulist"><ul>
+<li>
+<p>
+Defining an explicit index list just to fill something over that
+  index is not intuitive and it takes the fun out of being in Python.
+</p>
+</li>
+<li>
+<p>
+The connection between <code>components</code> and their <code>index set</code> is weaker
+  than most developers think. There&#8217;s not much point in requiring
+  there even be a connection outside the narrow context of rule-based
+  abstract modeling.
+</p>
+</li>
+<li>
+<p>
+Implicit creation of index sets that occurs for Constraint and other
+  indexed components is not intuitive and leads to errors that are
+  impossible to understand.  Users have enough to think about when
+  formulating their model. They should be able to script these things
+  in a concrete setting for initial toy prototypes without having to
+  deal with errors that arise from the implicit behaviors related to Set
+  objects (including tuple flattening).
+</p>
+</li>
+</ul></div>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+If the complaint is that our temporary sets get exposed to
+        users and cause errors, I agree.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+If the complain is that our users might not want to use
+        simpler concrete modeling constructs, then I disagree.  I
+        don&#8217;t think we should move to only support concrete models in
+        Pyomo.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: I am not suggesting we only support concrete modeling in
+         Pyomo.  I am suggesting we allow concrete modeling to be done
+         separated from these issues. I don&#8217;t think this separation
+         can occur without backward incompatible changes to the
+         interface. It is also not clear whether these issues will ever
+         be fully resolved with incremental changes to the current set
+         of component containers. I think the containers I am
+         prototyping and pushing for accomplish two things: (1)
+         provide users with a stable API that is, IMHO, intuitive for
+         many to understand, requires much less code, requires much
+         less documentation, and would not need to change, and (2)
+         provide a stable building block on which the abstract
+         interface can be improved over a realistic time scale.
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Motivates</div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>ConstraintDict</code>: Because I&#8217;m just mapping a set of hashable indices
+                    to constraint objects. A MutableMapping (e.g., <code>dict</code>)
+                    is a well defined interface for doing this in Python.
+                    Why force users to learn a different interface,
+                    especially one that doesn&#8217;t even exist yet (because
+                    we not can agree on what it should look like)?
+</p>
+</li>
+</ul></div>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+No, I don&#8217;t think this motivates the use of <code>ConstraintDict</code>.
+        I can use the <code>Constraint</code> object in the example above.  If
+        we&#8217;re concerned that we have an explicit <code>Set</code> object in the
+        model, then let&#8217;s fix that.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+What different interface?  What interface doesn&#8217;t exist?  Why
+        are you forcing me to learn the <code>MutableMapping</code> Python
+        object? (I hadn&#8217;t heard of this object before today, so I
+        don&#8217;t think you can argue that this will be familiar to Python
+        users.)
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: The Constraint interface. Is there a concise way to describe
+         the Constraint interface that is well understood and
+         documented. The best I can come up with is "A singleton,
+         <em>dict</em>-like hybrid that supports a subset of the
+         functionality of <em>dict</em> (no <em>setitem</em>), as well as a method
+         commonly associated with the built-in <em>set</em> type (add), along
+         with various Pyomo related methods." The idea of redesigning
+         it (the non-singleton case) as a MutableMapping (whether or
+         not you have heard of that:
+         <a href="https://docs.python.org/3/library/collections.abc.html">https://docs.python.org/3/library/collections.abc.html</a>), is
+         that the set of methods it carries related to storing objects
+         is very well documented and can be succinctly described as
+         "behaving like <em>dict</em>".
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+</div>
+<div class="sect4">
+<h5 id="_example_annotating_models">EXAMPLE: Annotating Models</h5>
+<div class="paragraph"><p>Model annotations are naturally expressed using a Suffix. Consider
+some meta-algorithm scripted with Pyomo that requests that you
+annotate constraints in your model with the type of convex relaxation
+technique to be employed. E.g.,</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model<span style="color: #990000">.</span>convexify <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Suffix</span></span><span style="color: #990000">()</span>
+model<span style="color: #990000">.</span>c1 <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>expr<span style="color: #990000">=</span>model<span style="color: #990000">.</span>x<span style="color: #990000">**</span><span style="color: #993399">2</span> <span style="color: #990000">&gt;=</span> model<span style="color: #990000">.</span>y<span style="color: #990000">)</span>
+model<span style="color: #990000">.</span>convexify<span style="color: #990000">[</span>model<span style="color: #990000">.</span>c1<span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="color: #FF0000">'technique_a'</span></tt></pre></div></div>
+<div class="paragraph"><p>When you apply this approach to a real model, you are likely to
+encounter cases like the following:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">def</span></span> <span style="font-weight: bold"><span style="color: #000000">c_rule</span></span><span style="color: #990000">(</span>model<span style="color: #990000">,</span> i<span style="color: #990000">,</span> j<span style="color: #990000">,</span> k<span style="color: #990000">,</span> l<span style="color: #990000">):</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> <span style="color: #990000">(</span>i<span style="color: #990000">,</span>j<span style="color: #990000">)</span> <span style="color: #990000">&gt;=</span> l<span style="color: #990000">:</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> k <span style="color: #990000">&lt;=</span> i<span style="color: #990000">:</span>
+           <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> <span style="color: #990000">...</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">else</span></span><span style="color: #990000">:</span>
+           <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> <span style="color: #990000">...</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">else</span></span><span style="color: #990000">:</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> i<span style="color: #990000">+</span>j<span style="color: #990000">-</span><span style="color: #993399">1</span> <span style="color: #990000">==</span> l<span style="color: #990000">:</span>
+           <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> <span style="color: #990000">...</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">else</span></span><span style="color: #990000">:</span>
+           <span style="font-weight: bold"><span style="color: #0000FF">return</span></span> Constraint<span style="color: #990000">.</span>Skip
+model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">Constraint</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>index<span style="color: #990000">,</span> rule<span style="color: #990000">=</span>c_rule<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>How does one annotate this model when only certain indices of constraint
+<code>c</code> are nonlinear? You copy and paste:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">def</span></span> <span style="font-weight: bold"><span style="color: #000000">c_annotate_rule</span></span><span style="color: #990000">(</span>model<span style="color: #990000">,</span> i<span style="color: #990000">,</span> j<span style="color: #990000">,</span> k<span style="color: #990000">,</span> l<span style="color: #990000">):</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> <span style="color: #990000">(</span>i<span style="color: #990000">,</span>j<span style="color: #990000">)</span> <span style="color: #990000">&gt;=</span> l<span style="color: #990000">:</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> k <span style="color: #990000">&lt;=</span> i<span style="color: #990000">:</span>
+           model<span style="color: #990000">.</span>confexify<span style="color: #990000">[</span>model<span style="color: #990000">.</span>c<span style="color: #990000">[</span>i<span style="color: #990000">,</span>j<span style="color: #990000">,</span>k<span style="color: #990000">,</span>l<span style="color: #990000">]]</span> <span style="color: #990000">=</span> <span style="color: #FF0000">'technique_a'</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">else</span></span><span style="color: #990000">:</span>
+           <span style="font-weight: bold"><span style="color: #0000FF">pass</span></span>
+   <span style="font-weight: bold"><span style="color: #0000FF">else</span></span><span style="color: #990000">:</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> i<span style="color: #990000">+</span>j<span style="color: #990000">-</span><span style="color: #993399">1</span> <span style="color: #990000">==</span> l<span style="color: #990000">:</span>
+           <span style="font-weight: bold"><span style="color: #0000FF">pass</span></span>
+       <span style="font-weight: bold"><span style="color: #0000FF">else</span></span><span style="color: #990000">:</span>
+           <span style="font-weight: bold"><span style="color: #0000FF">pass</span></span>
+model<span style="color: #990000">.</span>c_annotate <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">BuildAction</span></span><span style="color: #990000">(</span>model<span style="color: #990000">.</span>index<span style="color: #990000">,</span> rule<span style="color: #990000">=</span>c_annotate_rule<span style="color: #990000">)</span></tt></pre></div></div>
+<div class="paragraph"><p>It is a bug waiting to happen. It is an unfortunate result of the
+Abstract modeling framework that there is not a better way to write
+this. However, it can be written using a single for loop if doing
+Concrete modeling (or using a BuildAction) AND using a Constraint
+container that allows it (e.g., ConstraintDict using <em>setitem</em>[] or
+Constraint using <code>add()</code>. Example:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>model<span style="color: #990000">.</span>c <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">ConstraintDict</span></span><span style="color: #990000">()</span>
+<span style="font-weight: bold"><span style="color: #0000FF">for</span></span> i<span style="color: #990000">,</span>j<span style="color: #990000">,</span>k<span style="color: #990000">,</span>l <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> model<span style="color: #990000">.</span>index<span style="color: #990000">:</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> <span style="color: #990000">(</span>i<span style="color: #990000">,</span>j<span style="color: #990000">)</span> <span style="color: #990000">&gt;=</span> l<span style="color: #990000">:</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> k <span style="color: #990000">&lt;=</span> i<span style="color: #990000">:</span>
+           model<span style="color: #990000">.</span>c<span style="color: #990000">[</span>i<span style="color: #990000">,</span>j<span style="color: #990000">,</span>k<span style="color: #990000">,</span>l<span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+           model<span style="color: #990000">.</span>confexify<span style="color: #990000">[</span>model<span style="color: #990000">.</span>c<span style="color: #990000">[</span>i<span style="color: #990000">,</span>j<span style="color: #990000">,</span>k<span style="color: #990000">,</span>l<span style="color: #990000">]]</span> <span style="color: #990000">=</span> <span style="color: #FF0000">'technique_a'</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">else</span></span><span style="color: #990000">:</span>
+           model<span style="color: #990000">.</span>c<span style="color: #990000">[</span>i<span style="color: #990000">,</span>j<span style="color: #990000">,</span>k<span style="color: #990000">,</span>l<span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="color: #990000">...</span>
+   <span style="font-weight: bold"><span style="color: #0000FF">else</span></span><span style="color: #990000">:</span>
+       <span style="font-weight: bold"><span style="color: #0000FF">if</span></span> i<span style="color: #990000">+</span>j<span style="color: #990000">-</span><span style="color: #993399">1</span> <span style="color: #990000">==</span> l<span style="color: #990000">:</span>
+           model<span style="color: #990000">.</span>c<span style="color: #990000">[</span>i<span style="color: #990000">,</span>j<span style="color: #990000">,</span>k<span style="color: #990000">,</span>l<span style="color: #990000">]</span> <span style="color: #990000">=</span> <span style="color: #990000">...</span></tt></pre></div></div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Motivates</div>
+<div class="ulist"><ul>
+<li>
+<p>
+Explicit rather than Implicit: Because why do I need to create a set
+  and have something implicitly defined for me, when I can explicitly
+  define the thing inside a for loop and place related logic next to
+  each other (rather than in a copy-pasted identical for
+  loop). Perhaps this is necessary in the narrow scope of rule-based
+  abstract modeling, but it should not be necessary in the context of
+  concrete modeling.
+</p>
+</li>
+</ul></div>
+</div></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+You are implying that the concrete examples above cannot be
+        supported by Pyomo today.  I don&#8217;t believe that&#8217;s true.  Can
+        you confirm?
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: I can confirm that Pyomo <strong>DOES</strong> support this today (just use
+         Constraint.add()). But as the example prior to this one
+         points out, using Constraint in a concrete setting is
+         awkward, due to the implicit behaviors of Set as well as the
+         idea that a Constraint without an index is a singleton, but a
+         Constraint with an index can be populated with any number of
+         keys not in that index using Constraint.add() (so why do we
+         force a connection during declaration?). It is very intuitive
+         that when I say something is a <em>dict</em>, it means I&#8217;m going to
+         populate it with keys mapping to some set of objects. There
+         should not be a need to declare an index for this <em>dict</em>
+         prior to populating it.
+</p>
+</li>
+</ul></div>
+</dd>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+This does seem to illustrate a limitation of abstract models.
+        But how does this change our design of Pyomo?
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>GH</strong>:: The take home from these examples is that concrete modeling
+         in Pyomo is being made unnecessarily awkward by trying to
+         cram both abstract and concrete behavior into a single
+         component that behaves both as a singleton and <em>dict</em>-like
+         object. Concrete modeling should be made easier and more
+         intuitive, since this is <strong>THE</strong> place to start for testing or
+         debugging a model. Picture firing up the python interactive
+         interpreter and typing the five lines necessary to figure out
+         the behavior for component A in some context, I&#8217;m not going
+         to create a separate file data to do this (unless the problem
+         has to do with importing data). I can&#8217;t necessarily know if
+         the problem has to do with importing data unless I verify
+         that I understand the intended behavior with concrete
+         components.
+</p>
+</li>
+</ul></div>
+</dd>
+</dl></div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_extending_to_other_components">4.3.2. Extending to Other Components</h4>
+<div class="paragraph"><p>As of r10847, Pyomo trunk includes a Dict prototype for
+Expression, Objective, and Constraint. Extending this functionality to
+Block and Var would not be a difficult undertaking. This would
+necessarily include:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+Deciding on a pure abstract interface for BlockData and VarData.
+</p>
+</li>
+<li>
+<p>
+Implementing a general purpose version of this interface.
+</p>
+</li>
+<li>
+<p>
+A developer discussion about implicit vs. explicit creation of
+   XData components. E.g., VarDict[i,j] = Reals vs. VarDict[i,j] =
+   VarData(Reals), and whether or not we support the implicit form
+   never, or only for some components.  For instance BlockData(),
+   shouldn&#8217;t require any arguments (that I can think of), so
+   supporting implicit creation during an explicit assignment is a bit
+   goofy (e.g., BlockDict[i,j] = None?).
+</p>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+I think we need to discuss the pure abstract interface that
+        you refer to.  Although I&#8217;ve seen the commits you made
+        recently, I don&#8217;t understand why they are required.
+</p>
+</dd>
+</dl></div>
+</li>
+</ol></div>
+</div>
+<div class="sect3">
+<h4 id="_a_list_container">4.3.3. A List Container</h4>
+<div class="paragraph"><p>I&#8217;m less attached to this idea. But if you support XDict, it&#8217;s hard to
+think of any reason why <strong>NOT</strong> to provide XList.</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<strong>WEH</strong>
+</dt>
+<dd>
+<p>
+I don&#8217;t think we need VarDict because we already have Var, and
+        I don&#8217;t think we need VarList because we already have VarList.  I&#8217;m
+        not seeing what a different component layer adds to Pyomo.
+</p>
+</dd>
+<dt class="hdlist1">
+<strong>GH</strong>
+</dt>
+<dd>
+<p>
+The list of inconsistencies and awkward behaviors that have
+       been discussed throughout the document above is far from
+       complete. Drawing on my experiences as a developer that has
+       tried to make Pyomo core more intuitive in the concrete
+       setting, the only conclusion I can draw at this point is that
+       we need a cleaner separation of the concrete and abstract
+       interfaces. I know we all want to make Pyomo better, but we
+       have different ideas about these core components, and I have no
+       doubt that Pyomo core will continue to go back and forth with
+       these issues as long as an abstract and concrete interface try
+       to live in the same component container. IMHO, I think
+       designing a Concrete-only interface that we all agree upon will
+       be a trivial exercise. Additionally, I think rebuilding ALL of
+       the current abstract functionality on top of these concrete
+       building blocks is another trivial exercise (we can even
+       include the current inconsistencies). We can provide the stable
+       concrete interface now, and work on improvements and fixes to
+       the abstract interface that would necessarily take place over a
+       longer time period because of backward incompatibility concerns
+       as well as developer disagreement over what the <em>correct</em>
+       behavior is.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2015-10-12 13:56:04 CDT
+</div>
+</div>
+</body>
+</html>

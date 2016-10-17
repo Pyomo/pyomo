@@ -1,0 +1,1 @@
+load example1.tab : c1=[A,B,C] Z=D;

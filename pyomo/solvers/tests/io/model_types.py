@@ -45,31 +45,31 @@ class _ModelClassBase(object):
         with open(filename,'w') as f:
             soln = {}
             for block in model.block_data_objects():
-                soln[block.cname(True)] = {}
+                soln[block.name] = {}
                 for suffix_name, suffix in suffixes.items():
                     if suffix.get(block) is not None:
-                        soln[block.cname(True)][suffix_name] = suffix.get(block)
+                        soln[block.name][suffix_name] = suffix.get(block)
             for var in model.component_data_objects(Var):
-                soln[var.cname(True)] = {}
-                soln[var.cname(True)]['value'] = var.value
-                soln[var.cname(True)]['stale'] = var.stale
+                soln[var.name] = {}
+                soln[var.name]['value'] = var.value
+                soln[var.name]['stale'] = var.stale
                 for suffix_name, suffix in suffixes.items():
                     if suffix.get(var) is not None:
-                        soln[var.cname(True)][suffix_name] = suffix.get(var)
+                        soln[var.name][suffix_name] = suffix.get(var)
             for con in model.component_data_objects(Constraint):
-                soln[con.cname(True)] = {}
+                soln[con.name] = {}
                 con_value = con(exception=False)
-                soln[con.cname(True)]['value'] = con_value
+                soln[con.name]['value'] = con_value
                 for suffix_name, suffix in suffixes.items():
                     if suffix.get(con) is not None:
-                        soln[con.cname(True)][suffix_name] = suffix.get(con)
+                        soln[con.name][suffix_name] = suffix.get(con)
             for obj in model.component_data_objects(Objective):
-                soln[obj.cname(True)] = {}
+                soln[obj.name] = {}
                 obj_value = obj(exception=False)
-                soln[obj.cname(True)]['value'] = obj_value
+                soln[obj.name]['value'] = obj_value
                 for suffix_name, suffix in suffixes.items():
                     if suffix.get(obj) is not None:
-                        soln[obj.cname(True)][suffix_name] = suffix.get(obj)
+                        soln[obj.name][suffix_name] = suffix.get(obj)
             json.dump(soln, f, indent=2, sort_keys=True)
 
     def validateCurrentSolution(self,**kwds):
@@ -90,121 +90,121 @@ class _ModelClassBase(object):
             except:
                 return (False,"Problem reading file "+self.results_file)
         for var in model.component_data_objects(Var):
-            var_value_sol = solution[var.cname(True)]['value']
+            var_value_sol = solution[var.name]['value']
             var_value = var.value
             if not ((var_value is None) and (var_value_sol is None)):
                 if ((var_value is None) ^ (var_value_sol is None)) or \
                    (abs(var_value_sol - var_value) > self.diff_tol):
                     return (False,
-                            error_str.format(var.cname(True),
+                            error_str.format(var.name,
                                              'value',
                                              var_value_sol,
                                              var_value))
-            if not (solution[var.cname(True)]['stale'] is var.stale):
+            if not (solution[var.name]['stale'] is var.stale):
                 return (False,
-                        error_str.format(var.cname(True),
+                        error_str.format(var.name,
                                          'stale',
-                                         solution[var.cname(True)]['stale'],
+                                         solution[var.name]['stale'],
                                          var.stale))
             for suffix_name, suffix in suffixes.items():
-                if suffix_name in solution[var.cname(True)]:
+                if suffix_name in solution[var.name]:
                     if suffix.get(var) is None:
-                        if not(solution[var.cname(True)][suffix_name] in \
+                        if not(solution[var.name][suffix_name] in \
                                solution["suffix defaults"][suffix_name]):
                             return (False,
                                     error_str.format(
-                                        var.cname(True),
+                                        var.name,
                                         suffix,
-                                        solution[var.cname(True)][suffix_name],
+                                        solution[var.name][suffix_name],
                                         "none defined"))
-                    elif not abs(solution[var.cname(True)][suffix_name] - \
+                    elif not abs(solution[var.name][suffix_name] - \
                                  suffix.get(var)) < self.diff_tol:
                         return (False,
                                 error_str.format(
-                                    var.cname(True),
+                                    var.name,
                                     suffix,
-                                    solution[var.cname(True)][suffix_name],
+                                    solution[var.name][suffix_name],
                                     suffix.get(var)))
         for con in model.component_data_objects(Constraint):
-            con_value_sol = solution[con.cname(True)]['value']
+            con_value_sol = solution[con.name]['value']
             con_value = con(exception=False)
             if not ((con_value is None) and (con_value_sol is None)):
                 if ((con_value is None) ^ (con_value_sol is None)) or \
                    (abs(con_value_sol - con_value) > self.diff_tol):
                     return (False,
-                            error_str.format(con.cname(True),
+                            error_str.format(con.name,
                                              'value',
                                              con_value_sol,
                                              con_value))
             for suffix_name, suffix in suffixes.items():
-                if suffix_name in solution[con.cname(True)]:
+                if suffix_name in solution[con.name]:
                     if suffix.get(con) is None:
-                        if not (solution[con.cname(True)][suffix_name] in \
+                        if not (solution[con.name][suffix_name] in \
                                 solution["suffix defaults"][suffix_name]):
                             return (False,
                                     error_str.format(
-                                        con.cname(True),
+                                        con.name,
                                         suffix,
-                                        solution[con.cname(True)][suffix_name],
+                                        solution[con.name][suffix_name],
                                         "none defined"))
-                    elif not abs(solution[con.cname(True)][suffix_name] - \
+                    elif not abs(solution[con.name][suffix_name] - \
                                  suffix.get(con)) < self.diff_tol:
                         return (False,
                                 error_str.format(
-                                    con.cname(True),
+                                    con.name,
                                     suffix,
-                                    solution[con.cname(True)][suffix_name],
+                                    solution[con.name][suffix_name],
                                     suffix.get(con)))
         for obj in model.component_data_objects(Objective):
-            obj_value_sol = solution[obj.cname(True)]['value']
+            obj_value_sol = solution[obj.name]['value']
             obj_value = obj(exception=False)
             if not ((obj_value is None) and (obj_value_sol is None)):
                 if ((obj_value is None) ^ (obj_value_sol is None)) or \
                    (abs(obj_value_sol - obj_value) > self.diff_tol):
                     return (False,
-                            error_str.format(obj.cname(True),
+                            error_str.format(obj.name,
                                              'value',
                                              obj_value_sol,
                                              obj_value))
             for suffix_name, suffix in suffixes.items():
-                if suffix_name in solution[obj.cname(True)]:
+                if suffix_name in solution[obj.name]:
                     if suffix.get(obj) is None:
-                        if not(solution[obj.cname(True)][suffix_name] in \
+                        if not(solution[obj.name][suffix_name] in \
                                solution["suffix defaults"][suffix_name]):
                             return (False,
                                     error_str.format(
-                                        obj.cname(True),
+                                        obj.name,
                                         suffix,
-                                        solution[obj.cname(True)][suffix_name],
+                                        solution[obj.name][suffix_name],
                                         "none defined"))
-                    elif not abs(solution[obj.cname(True)][suffix_name] - \
+                    elif not abs(solution[obj.name][suffix_name] - \
                                  suffix.get(obj)) < self.diff_tol:
                         return (False,
                                 error_str.format(
-                                    obj.cname(True),
+                                    obj.name,
                                     suffix,
-                                    solution[obj.cname(True)][suffix_name],
+                                    solution[obj.name][suffix_name],
                                     suffix.get(obj)))
         for block in model.block_data_objects():
             for suffix_name, suffix in suffixes.items():
-                if (solution[block.cname(True)] is not None) and \
-                   (suffix_name in solution[block.cname(True)]):
+                if (solution[block.name] is not None) and \
+                   (suffix_name in solution[block.name]):
                     if suffix.get(block) is None:
-                        if not(solution[block.cname(True)][suffix_name] in \
+                        if not(solution[block.name][suffix_name] in \
                                solution["suffix defaults"][suffix_name]):
                             return (False,
                                     error_str.format(
-                                        block.cname(True),
+                                        block.name,
                                         suffix,
-                                        solution[block.cname(True)][suffix_name],
+                                        solution[block.name][suffix_name],
                                         "none defined"))
-                    elif not abs(solution[block.cname(True)][suffix_name] - \
+                    elif not abs(solution[block.name][suffix_name] - \
                                  suffix.get(block)) < sefl.diff_tol:
                         return (False,
                                 error_str.format(
-                                    block.cname(True),
+                                    block.name,
                                     suffix,
-                                    solution[block.cname(True)][suffix_name],
+                                    solution[block.name][suffix_name],
                                     suffix.get(block)))
         return (True,"")
 
@@ -267,7 +267,7 @@ class simple_LP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.a1 = Param(initialize=1.0, mutable=True)
         model.a2 = Param([1], initialize=1.0, mutable=True)
@@ -310,7 +310,7 @@ class trivial_constraints_LP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.x = Var(domain=RealInterval(bounds=(float('-inf'), None)))
         model.y = Var(bounds=(None, float('inf')))
@@ -371,7 +371,7 @@ class piecewise_LP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.x = Var()
         model.y = Var()
@@ -411,7 +411,7 @@ class constant_objective_LP1(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.x = Var(within=NonNegativeReals)
         model.obj = Objective(expr=0.0)
@@ -439,7 +439,7 @@ class constant_objective_LP2(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.x = Var(within=NonNegativeReals)
         model.obj = Objective(expr=model.x-model.x)
@@ -472,7 +472,7 @@ class constant_objective_QP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.x = Var(within=NonNegativeReals)
         model.obj = Objective(expr=model.x**2-model.x**2)
@@ -499,7 +499,7 @@ class block_LP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.b = Block()
         model.B = Block([1,2,3])
@@ -535,7 +535,7 @@ class inactive_index_LP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.s = Set(initialize=[1,2])
         model.x = Var()
@@ -592,7 +592,7 @@ class unused_vars_LP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.s = Set(initialize=[1,2])
 
@@ -689,7 +689,7 @@ class unused_vars_MILP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.s = Set(initialize=[1,2])
 
@@ -785,7 +785,7 @@ class simple_MILP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.a = Param(initialize=1.0)
         model.x = Var(within=NonNegativeReals)
@@ -819,7 +819,7 @@ class discrete_var_bounds_MILP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.w2 = Var(within=Binary)
         model.x2 = Var(within=Binary)
@@ -863,7 +863,7 @@ class simple_QP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.a = Param(initialize=1.0)
         model.x = Var(within=NonNegativeReals)
@@ -904,7 +904,7 @@ class simple_MIQP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.a = Param(initialize=1.0)
         model.x = Var(within=NonNegativeReals)
@@ -938,7 +938,7 @@ class simple_QCP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.x = Var(within=NonNegativeReals)
         model.y = Var(within=NonNegativeReals)
@@ -985,7 +985,7 @@ class simple_MIQCP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.x = Var(within=Binary)
         model.y = Var(within=Binary)
@@ -1021,7 +1021,7 @@ class simple_SOS1(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.a = Param(initialize=0.1)
         model.x = Var(within=NonNegativeReals)
@@ -1063,7 +1063,7 @@ class simple_SOS2(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.f = Var()
         model.x = Var(bounds=(1,3))
@@ -1124,7 +1124,7 @@ class duals_maximize(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.neg1 = Param(initialize=-1.0, mutable=True)
         model.pos1 = Param(initialize=1.0, mutable=True)
@@ -1184,7 +1184,7 @@ class duals_minimize(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.s = RangeSet(1,12)
         model.x = Var(model.s)
@@ -1240,7 +1240,7 @@ class compiled_LP(_ModelClassBase):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
-        model.name = self.descrStr()
+        model._name = self.descrStr()
 
         model.s = RangeSet(1,12)
         model.x = Var(model.s)
@@ -1337,7 +1337,7 @@ if __name__ == "__main__":
 
     #model.preprocess()
     #for block in model.block_data_objects(active=True):
-    #    print(block.cname(True))
+    #    print(block.name)
     #    block._canonical_repn.pprint()
 
     #model.write(format=None,filename="junk.nl",symbolic_solver_labels=True)
@@ -1394,9 +1394,9 @@ if __name__ == "__main__":
             results = json.load(f)
         for block in model.block_data_objects():
             for var in components_data(block,Var):
-                if 'stale' not in results[var.cname(True)]:
-                    results[var.cname(True)]['stale'] = var.stale
-                print '\t%18s'%var.cname(True), results[var.cname(True)]
+                if 'stale' not in results[var.name]:
+                    results[var.name]['stale'] = var.stale
+                print '\t%18s'%var.name, results[var.name]
         with open(name,'w') as f:
             json.dump(results, f, indent=2)
     """

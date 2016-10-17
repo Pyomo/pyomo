@@ -1,0 +1,68 @@
+
+[[OptionalPackages]]
+== Optional Packages ==
+
+=== pyomo.extras ===
+
+The `pyomo.extras` packages installs a variety of packages that extend Pyomo's functionality, including:
+
+* `Pyro` - This library supports distributed parallel communication in Python.
+
+* `Suds` - This library provides a lightweight SOAP client that is used by `pyomo.neos` to remotely launch optimizers on the NEOS server.
+
+* `OpenOpt` - This library provides interfaces for a variety of optimizers.
+
+
+=== PyYaml ===
+
+The default file format used by Pyomo is JSON.  YAML is the default format
+if the PyYaml package is installed.  On most platforms, this package can be
+easily installed with `pip`:
+[[shell]]
+----
+pip install PyYaml
+----
+
+=== Pywin32 ===
+
+On Windows, it may be necessary to install the Python Windows
+extensions. This package enables Python to support Windows COM
+interfaces, and specifically it allows Pyomo to work with Excel
+spreadsheets. Note that "pywin32" is a bit of a misnomer, in that
+it works fine on 64-bit platforms; based on what we can tell, the
+"32" just means "non-16-bit".
+
+The installer for this extension is available from
+http://sourceforge.net/projects/pywin32.  This install simply updates
+the Python site packages.
+
+
+=== PyODBC ===
+
+Pyomo uses the PyODBC package to access ODBC data
+sources.  On Windows, the PyODBC package can be installed by
+downloading a Windows installer, or by executing `easy_install`:
+[[shell]]
+----
+easy_install pyodbc
+----
+On Linux and Mac OS X, you need to install several system-level packages for proper ODBC functionality. These include:
+
+* `unixODBC`: provides generic ODBC connectivity
+* `unixODBC-devel`: includes ODBC development headers for linking with other libraries
+* `mdbtools`: implements Microsoft Jet (Access) database interaction
+* `libmdbodbc`: bridges Jet databases via ODBC
+
+Finally, users on such Unix-based systems may have to configure their local ODBC installations for Jet databases if using Microsoft Access. To do so, add the following to the file `/etc/odbcinst.ini`:
+
+----
+[Microsoft Access Driver (*.mdb)]
+Description = MDB Tools ODBC drivers
+Driver      = /usr/lib/libmdbodbc.so.0
+Setup       =
+FileUsage   = 2
+----
+Pyomo will attempt to add any further ODBC information as needed.
+
+
+// vim: set syntax=asciidoc:

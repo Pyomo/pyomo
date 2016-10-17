@@ -10,10 +10,9 @@
 from __future__ import division
 
 #__all__ = ( 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
-#            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh', 
+#            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
 #            'atanh', 'ceil', 'floor' )
 
-from copy import deepcopy
 import logging
 import math
 import sys
@@ -121,7 +120,7 @@ class _ExpressionBase(NumericValue):
             ostream = sys.stdout
         _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
-        ostream.write(self.cname() + "( ")
+        ostream.write(self.getname() + "( ")
         first = True
         for arg in self._args:
             if first:
@@ -130,7 +129,7 @@ class _ExpressionBase(NumericValue):
                 ostream.write(" , ")
             else:
                 ostream.write(", ")
-            arg.to_string( ostream=ostream, precedence=self._precedence(), 
+            arg.to_string( ostream=ostream, precedence=self._precedence(),
                            verbose=verbose )
         ostream.write(" )")
 
@@ -170,7 +169,7 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
     def is_expression(self):
         return True
 
-    def polynomial_degree(self):
+    def polynomial_degree(self, ):
         return None
 
     def _precedence(self):
@@ -216,11 +215,17 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
         return buf.getvalue()
 
 class _ExternalFunctionExpression(_ExpressionBase):
-    __slots__ = ('_fcn')
+    __slots__ = ('_fcn',)
 
     def __init__(self, fcn, args):
         """Construct a call to an external function"""
-        _ExpressionBase.__init__(self, args)
+        _args = tuple(
+            _generate_expression__clone_if_needed(
+                x,-2) if isinstance(x, _ExpressionBase)
+            else x if isinstance(x, basestring)
+            else as_numeric(x)
+            for x in args )
+        _ExpressionBase.__init__(self, _args)
         self._fcn = fcn
 
     def __getstate__(self):
@@ -229,8 +234,8 @@ class _ExternalFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def cname(self):
-        return self._fcn.cname()
+    def getname(self, *args, **kwds):
+        return self._fcn.getname(*args, **kwds)
 
     def polynomial_degree(self):
         return None
@@ -262,7 +267,7 @@ class _IntrinsicFunctionExpression(_ExpressionBase):
         """Construct an expression with an operation and a set of arguments"""
         if nargs and nargs != len(args):
             raise ValueError("%s() takes exactly %d arguments (%d given)" % \
-                ( self.cname(), nargs, len(args) ))
+                ( self.name, nargs, len(args) ))
         _ExpressionBase.__init__(self, args)
         self._operator = operator
         self._name = name
@@ -276,7 +281,7 @@ class _IntrinsicFunctionExpression(_ExpressionBase):
     def _apply_operation(self, values):
         return self._operator(*tuple(values))
 
-    def cname(self):
+    def getname(self, *args, **kwds):
         return self._name
 
     def polynomial_degree(self):
@@ -364,7 +369,7 @@ class _PowExpression(_IntrinsicFunctionExpression):
                 first = False
             else:
                 ostream.write("**")
-            arg.to_string( ostream=ostream, verbose=verbose, 
+            arg.to_string( ostream=ostream, verbose=verbose,
                            precedence=self._precedence() )
         if precedence and _my_precedence > precedence:
             ostream.write(" )")
@@ -453,14 +458,14 @@ class _InequalityExpression(_LinearExpression):
             ostream.write("( ")
         for i, strict in enumerate(self._strict):
             arg = self._args[i]
-            arg.to_string( ostream=ostream, verbose=verbose, 
+            arg.to_string( ostream=ostream, verbose=verbose,
                            precedence=_my_precedence )
             if strict:
                 ostream.write("  <  ")
             else:
                 ostream.write("  <=  ")
         arg = self._args[-1]
-        arg.to_string( ostream=ostream, verbose=verbose, 
+        arg.to_string( ostream=ostream, verbose=verbose,
                        precedence=_my_precedence )
         if precedence and _my_precedence > precedence:
             ostream.write(" )")
@@ -476,7 +481,7 @@ class _EqualityExpression(_LinearExpression):
         """Constructor"""
         if 2 != len(args):
             raise ValueError("%s() takes exactly 2 arguments (%d given)" % \
-                ( self.cname(), len(args) ))
+                ( self.name, len(args) ))
         _LinearExpression.__init__(self, args)
 
     def __nonzero__(self):
@@ -509,7 +514,7 @@ class _EqualityExpression(_LinearExpression):
                 first = False
             else:
                 ostream.write("  ==  ")
-            arg.to_string( ostream=ostream, verbose=verbose, 
+            arg.to_string( ostream=ostream, verbose=verbose,
                            precedence=_my_precedence)
         if precedence and _my_precedence > precedence:
             ostream.write(" )")
@@ -529,7 +534,7 @@ class _ProductExpression(_ExpressionBase):
     def __init__(self):
         """Constructor"""
         _ExpressionBase.__init__(self, None)
-        
+
         # generate_expression will create these for us.  Creating them
         # here is significantly wasteful as they would just end up being
         # thrown away.
@@ -603,7 +608,7 @@ class _ProductExpression(_ExpressionBase):
                 ostream.write(" , ")
             else:
                 ostream.write(" * ")
-            arg.to_string( ostream=ostream, verbose=verbose, 
+            arg.to_string( ostream=ostream, verbose=verbose,
                            precedence=_my_precedence )
         if first:
             ostream.write('1')
@@ -622,7 +627,7 @@ class _ProductExpression(_ExpressionBase):
                     ostream.write(" , ")
                 else:
                     ostream.write(" * ")
-                arg.to_string( ostream=ostream, verbose=verbose, 
+                arg.to_string( ostream=ostream, verbose=verbose,
                                precedence=_my_precedence )
             if len(self._denominator) > 1 and not _verbose:
                 ostream.write(" )")
@@ -665,7 +670,7 @@ class _SumExpression(_LinearExpression):
         self._const = 0
         # generate_expression will create this for us.  Creating it
         # here is significantly wasteful as they would just end up being
-        # thrown away.  
+        # thrown away.
         #self._coef = []
         # TODO: determine if we can do something similar with _args for
         # all _LinearExpressions
@@ -723,7 +728,7 @@ class _SumExpression(_LinearExpression):
             else:
                 ostream.write(str(abs(self._coef[i]))+"*")
                 _sub_precedence = _ProductExpression.PRECEDENCE
-            arg.to_string( ostream=ostream, verbose=verbose, 
+            arg.to_string( ostream=ostream, verbose=verbose,
                            precedence=_sub_precedence )
             first=False
         if _verbose or ( precedence and _my_precedence > precedence ):
@@ -746,7 +751,7 @@ class Expr_if(_ExpressionBase):
     def __init__(self, IF=None, THEN=None, ELSE=None):
         """Constructor"""
         _ExpressionBase.__init__(self, None)
-        
+
         self._if = as_numeric(IF)
         self._then = as_numeric(THEN)
         self._else = as_numeric(ELSE)
@@ -758,7 +763,7 @@ class Expr_if(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def cname(self):
+    def getname(self, *args, **kwds):
         return "Expr_if"
 
     def is_constant(self):
@@ -773,7 +778,7 @@ class Expr_if(_ExpressionBase):
     def is_fixed(self):
         if self._if.is_fixed():
             if self._if():
-                return self._then.is_fixed() 
+                return self._then.is_fixed()
             else:
                 return self._else.is_fixed()
         else:
@@ -794,13 +799,13 @@ class Expr_if(_ExpressionBase):
             ostream = sys.stdout
         _my_precedence = self._precedence()
         ostream.write("Expr_if( if=( ")
-        self._if.to_string( ostream=ostream, verbose=verbose, 
+        self._if.to_string( ostream=ostream, verbose=verbose,
                             precedence=self._precedence() )
         ostream.write(" ), then=( ")
-        self._then.to_string( ostream=ostream, verbose=verbose, 
+        self._then.to_string( ostream=ostream, verbose=verbose,
                               precedence=self._precedence() )
         ostream.write(" ), else=( ")
-        self._else.to_string( ostream=ostream, verbose=verbose, 
+        self._else.to_string( ostream=ostream, verbose=verbose,
                               precedence=self._precedence())
         ostream.write(" ) )")
 
@@ -872,7 +877,7 @@ def generate_expression(etype, _self, other):
         raise TypeError("Argument for expression '%s' is an indexed "\
               "numeric value specified without an index: %s\n    Is "\
               "variable or parameter '%s' defined over an index that "\
-              "you did not specify?" % (etype, _self.cname(), _self.cname()))
+              "you did not specify?" % (etype, _self.name, _self.name))
 
     self_type = _self.__class__
     # In-place operators should only clone `self` if someone else (other
@@ -917,7 +922,7 @@ def generate_expression(etype, _self, other):
                 return abs(_self)
             else:
                 return _AbsExpression([_self])
-    
+
     if other.__class__ in native_numeric_types:
         other_type = None
     else:
@@ -930,8 +935,8 @@ def generate_expression(etype, _self, other):
             raise TypeError(
                 "Argument for expression '%s' is an indexed numeric "
                 "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?" 
-                % (etype, other.cname(), ) )
+                "value defined over an index that you did not specify?"
+                % (etype, other.name, ) )
         if other.is_expression():
             other = _generate_expression__clone_if_needed(other, 0)
         elif other.is_constant():
@@ -1192,7 +1197,7 @@ def generate_expression(etype, _self, other):
                 ans._coef = 1
                 ans._numerator = [ _self ]
                 ans._denominator = [ other ]
-            return ans    
+            return ans
 
     elif etype == _pow:#'pow':
         #
@@ -1277,9 +1282,9 @@ def generate_relational_expression(etype, lhs, rhs):
         raise TypeError(
             "Argument for expression '%s' is an indexed numeric value "
             "specified without an index: %s\n    Is variable or parameter "
-            "'%s' defined over an index that you did not specify?" 
-            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype), 
-               lhs.cname(), lhs.cname()))
+            "'%s' defined over an index that you did not specify?"
+            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
+               lhs.name, lhs.name))
     elif lhs.is_expression():
         lhs = _generate_relational_expression__clone_if_needed(lhs)
         if lhs.is_relational():
@@ -1290,9 +1295,9 @@ def generate_relational_expression(etype, lhs, rhs):
         raise TypeError(
             "Argument for expression '%s' is an indexed numeric value "
             "specified without an index: %s\n    Is variable or parameter "
-            "'%s' defined over an index that you did not specify?" 
-            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype), 
-               rhs.cname(), rhs.cname()))
+            "'%s' defined over an index that you did not specify?"
+            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
+               rhs.name, rhs.name))
     elif rhs.is_expression():
         rhs = _generate_relational_expression__clone_if_needed(rhs)
         if rhs.is_relational():

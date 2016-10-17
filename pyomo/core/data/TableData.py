@@ -88,8 +88,7 @@ class TableData(Plugin):
           index=self.options.index,
           set=self.options.set,
           param=self.options.param,
-          ncolumns = self.options.ncolumns
-        )
+          ncolumns = self.options.ncolumns)
 
     def clear(self):
         """
@@ -104,28 +103,28 @@ class TableData(Plugin):
                 header_index.append(i)
         else:
             for i in self.options.select:
-                header_index.append( headers.index(str(i)) )
+                header_index.append(headers.index(str(i)))
         self.options.ncolumns = len(headers)
-        
+
         if not self.options.param is None:
             if not type(self.options.param) in (list, tuple):
-                self.options.param = (self.options.param, )
+                self.options.param = (self.options.param,)
             _params = []
             for p in self.options.param:
                 if isinstance(p, Param):
                     self.options.model = p.model()
-                    _params.append( p.name )
+                    _params.append(p.local_name)
                 else:
-                    _params.append( p )
+                    _params.append(p)
             self.options.param = tuple(_params)
 
         if isinstance(self.options.set, Set):
             self.options.model = self.options.set.model()
-            self.options.set = self.options.set.name
+            self.options.set = self.options.set.local_name
 
         if isinstance(self.options.index, Set):
             self.options.model = self.options.index.model()
-            self.options.index = self.options.index.name
+            self.options.index = self.options.index.local_name
 
         if self.options.format is None:
             if not self.options.set is None:
@@ -141,7 +140,7 @@ class TableData(Plugin):
         if self.options.format == 'set':
             if not self.options.index is None:
                 msg = "Cannot specify index for data with the 'set' format: %s"
-                raise IOError(msg % str( self.options.index ))
+                raise IOError(msg % str(self.options.index))
 
             self._info = ["set",self.options.set,":="]
             for row in rows:
@@ -154,24 +153,24 @@ class TableData(Plugin):
             if not self.options.index is None:
                 msg = "Cannot specify index for data with the 'set_array' "   \
                       'format: %s'
-                raise IOError(msg % str( self.options.index ))
+                raise IOError(msg % str(self.options.index))
 
             self._info = ["set",self.options.set, ":"]
-            self._info.extend( headers[1:] )
-            self._info.append( ":=" )
+            self._info.extend(headers[1:])
+            self._info.append(":=")
             for row in rows:
-                self._info.extend( row )
+                self._info.extend(row)
 
         elif self.options.format == 'transposed_array':
             self._info = ["param",self.options.param[0],"(tr)",":"]
-            self._info.extend( headers[1:] )
+            self._info.extend(headers[1:])
             self._info.append(":=")
             for row in rows:
                 self._info.extend(row)
 
         elif self.options.format == 'array':
             self._info = ["param",self.options.param[0],":"]
-            self._info.extend( headers[1:] )
+            self._info.extend(headers[1:])
             self._info.append(":=")
             for row in rows:
                 self._info.extend(row)
@@ -186,7 +185,7 @@ class TableData(Plugin):
             self._info.append(":=")
             for row in rows:
                 for i in header_index:
-                    self._info.append( row[i] )
+                    self._info.append(row[i])
             self.options.ncolumns = len(header_index)
         else:
             msg = "Unknown parameter format: '%s'"
@@ -201,21 +200,21 @@ class TableData(Plugin):
             if self.options.columns is None:
                 cols = []
                 for i in xrange(self.options.set.dimen):
-                    cols.append(self.options.set.name+str(i))
+                    cols.append(self.options.set.local_name+str(i))
                 tmp.append(cols)
             # Get rows
             if not self.options.sort is None:
                 for data in sorted(self.options.set):
                     if self.options.set.dimen > 1:
-                        tmp.append( list(data) )
+                        tmp.append(list(data))
                     else:
-                        tmp.append( [data] )
+                        tmp.append([data])
             else:
                 for data in self.options.set:
                     if self.options.set.dimen > 1:
-                        tmp.append( list(data) )
+                        tmp.append(list(data))
                     else:
-                        tmp.append( [data] )
+                        tmp.append([data])
         elif not self.options.param is None:
             if type(self.options.param) in (list,tuple):
                 _param = self.options.param
@@ -231,15 +230,15 @@ class TableData(Plugin):
                 else:
                     row = [index]
                 for param in _param:
-                    row.append( value(param[index]) )
+                    row.append(value(param[index]))
                 tmp.append(row)
             # Create column names
             if self.options.columns is None:
                 cols = []
                 for i in xrange(len(tmp[0])-len(_param)):
-                    cols.append('I'+str(i)) 
+                    cols.append('I'+str(i))
                 for param in _param:
-                    cols.append( param)
+                    cols.append(param)
                 tmp = [cols] + tmp
         return tmp
 

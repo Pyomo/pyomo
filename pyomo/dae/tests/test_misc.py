@@ -335,6 +335,88 @@ class TestDaeMisc(unittest.TestCase):
         self.assertTrue(value(m.con3[2,0,2,1,1].lower) == None)
         self.assertTrue(value(m.con3[3,2,3,2,2].upper) == 20)                   
  
+    # test update_contset_indexed_component method for Constraints with
+    # single index of the differentialset
+    def test_update_contset_indexed_component_expressions_single(self):
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        m.p = Param(m.t,default=3)
+        m.v = Var(m.t, initialize=5)
+
+        def _con1(m,i):
+            return m.p[i]*m.v[i]
+        m.con1 = Expression(m.t, rule=_con1)
+
+        # Rules that iterate over a differentialset implicitly are not updated
+        # after the discretization
+        def _con2(m):
+            return sum(m.v[i] for i in m.t)
+        m.con2 = Expression(rule=_con2)
+
+        generate_finite_elements(m.t,5)
+        update_contset_indexed_component(m.v)
+        update_contset_indexed_component(m.p)
+        update_contset_indexed_component(m.con1)
+        update_contset_indexed_component(m.con2)
+
+        self.assertTrue(len(m.con1)==6)
+        self.assertEqual(m.con1[2](), 15)
+        self.assertEqual(m.con1[8](), 15)
+        self.assertEqual(m.con2(), 10)
+
+    # test update_contset_indexed_component method for Constraints with
+    # multiple indices
+    def test_update_contset_indexed_component_expressions_multiple(self):
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        m.t2 = ContinuousSet(initialize=[1,2,3])
+        m.s1 = Set(initialize=[1,2,3])
+        m.s2 = Set(initialize=[(1,1),(2,2)])
+        def _init(m,i,j):
+            return j+i
+        m.p1 = Param(m.s1,m.t,default=_init)
+        m.v1 = Var(m.s1, m.t, initialize=5)
+        m.v2 = Var(m.s2,m.t,initialize=2)
+        m.v3 = Var(m.t2,m.s2, initialize=1)
+
+        def _con1(m,si,ti):
+            return m.v1[si,ti]*m.p1[si,ti]
+        m.con1 = Expression(m.s1,m.t,rule=_con1)
+
+        def _con2(m,i,j,ti):
+            return m.v2[i,j,ti]+m.p1[1,ti]
+        m.con2 = Expression(m.s2,m.t,rule=_con2)
+
+        def _con3(m,i,ti,ti2,j,k):
+            return m.v1[i,ti]-m.v3[ti2,j,k]*m.p1[i,ti]
+        m.con3 = Expression(m.s1,m.t,m.t2,m.s2,rule=_con3)
+
+        generate_finite_elements(m.t,5)
+        update_contset_indexed_component(m.p1)
+        update_contset_indexed_component(m.v1)
+        update_contset_indexed_component(m.v2)
+        update_contset_indexed_component(m.v3)
+        update_contset_indexed_component(m.con1)
+        update_contset_indexed_component(m.con2)
+        update_contset_indexed_component(m.con3)
+
+        self.assertTrue(len(m.con1) == 18)
+        self.assertTrue(len(m.con2) == 12)
+        self.assertTrue(len(m.con3) == 108)
+
+        self.assertEqual(m.con1[1,4](), 25)
+        self.assertEqual(m.con1[2,6](), 40)
+        self.assertEqual(m.con1[3,8](), 55)
+
+        self.assertEqual(m.con2[1,1,2](), 5)
+        self.assertEqual(m.con2[2,2,4](), 7)
+        self.assertEqual(m.con2[1,1,8](), 11)
+
+        self.assertEqual(m.con3[1,2,1,1,1](), 2)
+        self.assertEqual(m.con3[1,4,1,2,2](), 0)
+        self.assertEqual(m.con3[2,6,3,1,1](), -3)
+        self.assertEqual(m.con3[3,8,2,2,2](), -6)
+
     # test update_contset_indexed_component method for other components
     def test_update_contset_indexed_component_other(self):
         m = ConcreteModel()

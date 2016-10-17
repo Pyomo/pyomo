@@ -1,0 +1,46 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: 25.0
+  Upper bound: 25.0
+  Number of objectives: 1
+  Number of constraints: 2
+  Number of variables: 5
+  Number of nonzeros: 5
+  Sense: maximize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 1
+      Number of created subproblems: 1
+  Error rc: 0
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Message: None
+  Objective:
+    value:
+      Value: 25
+  Variable:
+    x[hammer]:
+      Value: 1
+    x[screwdriver]:
+      Value: 1
+    x[towel]:
+      Value: 1
+  Constraint: No values
