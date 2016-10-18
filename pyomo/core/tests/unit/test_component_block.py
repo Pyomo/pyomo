@@ -73,6 +73,20 @@ class _Test_block_base(object):
         self.assertEqual(sorted(names.values()),
                          sorted(self._names.values()))
 
+    def test_preorder_traversal(self):
+        if hasattr(self, "_preorder"):
+            for o1, o2 in zip(self._block.preorder_traversal(),
+                              self._preorder):
+                print(o1.name, o2.name)
+            # this first test makes failures a
+            # little easier to debug
+            self.assertEqual(
+                [str(obj) for obj in self._block.preorder_traversal()],
+                [str(obj) for obj in self._preorder])
+            self.assertEqual(
+                [id(obj) for obj in self._block.preorder_traversal()],
+                [id(obj) for obj in self._preorder])
+
     def test_child_key(self):
         for child in self._child_key:
             parent = child.parent
@@ -515,6 +529,26 @@ class Test_block(_Test_block_base, unittest.TestCase):
         # Manually encode the correct output
         # for tests in the base testing class
         #
+
+        cls._preorder = [model,
+                         model.v_1,
+                         model.vdict_1,
+                         model.vdict_1[None],
+                         model.vlist_1,
+                         model.vlist_1[0],
+                         model.vlist_1[1],
+                         model.b_1,
+                         model.b_1.v_2,
+                         model.b_1.b_2,
+                         model.b_1.b_2.b_3,
+                         model.b_1.b_2.v_3,
+                         model.b_1.b_2.vlist_3,
+                         model.b_1.b_2.vlist_3[0],
+                         model.bdict_1,
+                         model.blist_1,
+                         model.blist_1[0],
+                         model.blist_1[0].v_2,
+                         model.blist_1[0].b_2]
 
         cls._names = ComponentMap()
         cls._names[model.v_1] = "v_1"
