@@ -231,11 +231,17 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
         return buf.getvalue()
 
 class _ExternalFunctionExpression(_ExpressionBase):
-    __slots__ = ('_fcn')
+    __slots__ = ('_fcn',)
 
     def __init__(self, fcn, args):
         """Construct a call to an external function"""
-        _ExpressionBase.__init__(self, args)
+        _args = tuple(
+            _generate_expression__clone_if_needed(
+                x,-2) if isinstance(x, _ExpressionBase)
+            else x if isinstance(x, basestring)
+            else as_numeric(x)
+            for x in args )
+        _ExpressionBase.__init__(self, _args)
         self._fcn = fcn
 
     def __getstate__(self):
@@ -250,10 +256,6 @@ class _ExternalFunctionExpression(_ExpressionBase):
 
     def getname(self, *args, **kwds):
         return self._fcn.getname(*args, **kwds)
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
 
     def polynomial_degree(self):
         return None
@@ -307,10 +309,6 @@ class _IntrinsicFunctionExpression(_ExpressionBase):
 
     def getname(self, *args, **kwds):
         return self._name
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
 
     def polynomial_degree(self):
         if self.is_fixed():
@@ -823,10 +821,6 @@ class Expr_if(_ExpressionBase):
 
     def getname(self, *args, **kwds):
         return "Expr_if"
-
-    def cname(self, *args, **kwds):
-        logger.warning("DEPRECATED: The cname() method has been renamed to getname()")
-        return self.getname(*args, **kwds)
 
     def is_constant(self):
         if self._if.is_constant():

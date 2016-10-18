@@ -48,15 +48,15 @@ class Test(unittest.TestCase):
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 
-    def test_affine_lp(self):
-        """Test examples/pyomo/piecewise/affine.py"""
-        self.run_convert2lp('affine.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.lp'), currdir+'affine.lp', tolerance=_LP_diff_tol)
+    def test_nonconvex_lp(self):
+        """Test examples/pyomo/piecewise/nonconvex.py"""
+        self.run_convert2lp('nonconvex.py')
+        self.assertFileEqualsBaseline(join(currdir,'unknown.lp'), currdir+'nonconvex.lp', tolerance=_LP_diff_tol)
 
-    def test_affine_nl(self):
-        """Test examples/pyomo/piecewise/affine.py"""
-        self.run_convert2nl('affine.py')
-        self.assertFileEqualsBaseline(join(currdir,'unknown.nl'), currdir+'affine.nl', tolerance=_NL_diff_tol)
+    def test_nonconvex_nl(self):
+        """Test examples/pyomo/piecewise/nonconvex.py"""
+        self.run_convert2nl('nonconvex.py')
+        self.assertFileEqualsBaseline(join(currdir,'unknown.nl'), currdir+'nonconvex.nl', tolerance=_NL_diff_tol)
         os.remove(join(currdir,'unknown.row'))
         os.remove(join(currdir,'unknown.col'))
 

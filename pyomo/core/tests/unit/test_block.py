@@ -520,6 +520,70 @@ class TestBlock(unittest.TestCase):
             os.unlink("unknown.lp")
         pyutilib.services.TempfileManager.clear_tempfiles()
 
+    def test_collect_ctypes(self):
+        b = Block(concrete=True)
+        self.assertEqual(b.collect_ctypes(),
+                         set())
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set())
+        b.x = Var()
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([Var]))
+        b.y = Constraint(expr=b.x >= 1)
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var, Constraint]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([Var, Constraint]))
+        b.y.deactivate()
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var, Constraint]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([Var]))
+        B = Block()
+        B.b = b
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([Block]))
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=True),
+                         set([Block]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([Block, Var, Constraint]))
+        self.assertEqual(B.collect_ctypes(active=True),
+                         set([Block, Var]))
+        b.deactivate()
+        self.assertEqual(B.collect_ctypes(descend_into=False),
+                         set([Block]))
+        self.assertEqual(B.collect_ctypes(descend_into=False,
+                                          active=True),
+                         set([]))
+        self.assertEqual(B.collect_ctypes(),
+                         set([Block, Var, Constraint]))
+        self.assertEqual(B.collect_ctypes(active=True),
+                         set([]))
+        del b.y
+
+        # a block DOES check its own .active flag apparently
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([]))
+        b.activate()
+        self.assertEqual(b.collect_ctypes(),
+                         set([Var]))
+        self.assertEqual(b.collect_ctypes(active=True),
+                         set([Var]))
+
+        del b.x
+        self.assertEqual(b.collect_ctypes(), set())
+        b.x = Var()
+        self.assertEqual(b.collect_ctypes(), set([Var]))
+        b.reclassify_component_type(b.x, Constraint)
+        self.assertEqual(b.collect_ctypes(), set([Constraint]))
+        del b.x
+        self.assertEqual(b.collect_ctypes(), set())
+
     def test_clear_attribute(self):
         """ Coverage of the _clear_attribute method """
         obj = Set()
