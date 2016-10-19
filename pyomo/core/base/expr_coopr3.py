@@ -329,8 +329,8 @@ class _AbsExpression(_IntrinsicFunctionExpression):
     def __init__(self, args):
         _IntrinsicFunctionExpression.__init__(self, 'abs', 1, args, abs)
 
-    def __getstate__(self):
-        return _IntrinsicFunctionExpression.__getstate__(self)
+    #def __getstate__(self):
+    #    return _IntrinsicFunctionExpression.__getstate__(self)
 
     def __copy__(self):
         return self.__class__( tuple(clone_expression(x) for x in self._args) )
@@ -345,8 +345,8 @@ class _PowExpression(_IntrinsicFunctionExpression):
     def __init__(self, args):
         _IntrinsicFunctionExpression.__init__(self, 'pow', 2, args, pow)
 
-    def __getstate__(self):
-        return _IntrinsicFunctionExpression.__getstate__(self)
+    #def __getstate__(self):
+    #    return _IntrinsicFunctionExpression.__getstate__(self)
 
     def __copy__(self):
         return self.__class__( tuple(clone_expression(x) for x in self._args) )
@@ -892,8 +892,8 @@ class _GetItemExpression(_ExpressionBase):
         self._base = base
 
     def __getstate__(self):
-        result = _IndexLookupExpression.__getstate__(self)
-        for i in _IndexLookupExpression.__slots__:
+        result = _ExpressionBase.__getstate__(self)
+        for i in _GetItemExpression.__slots__:
             result[i] = getattr(self, i)
         return result
 
