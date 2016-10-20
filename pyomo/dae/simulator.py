@@ -165,7 +165,7 @@ class Simulator:
         for con in m.component_objects(Constraint):
             
             # Skip the discretization equations if model is discretized
-            if '_disc_eq' in con.name():
+            if '_disc_eq' in con.name:
                 continue
             
             # Check dimension of the Constraint. Current
@@ -243,7 +243,7 @@ class Simulator:
             # Add the differential equation to rhsdict and derivlist
             dv = args[0]
             RHS = args[1]
-            _name = dv._base.name()
+            _name = dv._base.name
             if _name in rhsdict:
                 raise DAE_Error(
                     "Found multiple RHS expressions for the "
@@ -267,18 +267,18 @@ class Simulator:
         diffvarids=[]
         for deriv in derivlist:
             deriv = m.component(deriv)
-            diffvars.append(deriv.get_state_var().name())
+            diffvars.append(deriv.get_state_var().name)
             diffvarids.append(id(deriv.get_state_var()))
 
         # Make sure there are no DerivativeVars or algebraic variables
         # in the RHS expressions. The template map should only contain
         # differential variables.
         for item in templatemap.values():
-            if item.name() in allderivs:
+            if item.name in allderivs:
                 raise DAE_Error(
                     "Cannot simulate a differential equation with "
                     "multiple DerivativeVars")
-            if item.name() not in diffvars:
+            if item.name not in diffvars:
                 # This only catches algebraic variables indexed by
                 # time. TODO: how to catch variables not indexed by
                 # time or warn the user that values must be set for
