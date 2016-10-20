@@ -93,9 +93,9 @@ def _check_productexpression(expr,i):
 def _check_sumexpression(expr,i):
     """
     Accepts an equality expression and an index value. Checks the
-    SumExpression at expr._args[i] to see if it is a DerivativeVar. If
-    so, return the GetItemExpression for the DerivativeVar and the
-    RHS. If not, return None.
+    SumExpression at expr._args[i] to see if it contains a
+    DerivativeVar. If so, return the GetItemExpression for the
+    DerivativeVar and the RHS. If not, return None.
     """
     sumexp = expr._args[i]
     items = sumexp._args
