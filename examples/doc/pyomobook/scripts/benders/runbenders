@@ -56,7 +56,7 @@ for i in range(1, max_iterations+1):
                         suffixes=['rc','dual'])
     for instance in sub_insts:
         print("Profit for scenario=%s is %f"
-              % (instance.name(), instance.Exp_Stage2_Profit()))
+              % (instance.name, instance.Exp_Stage2_Profit()))
     print("")
 
     # if not converged, add store the pricing information

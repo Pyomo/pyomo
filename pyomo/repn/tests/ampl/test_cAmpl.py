@@ -146,7 +146,7 @@ class CAmplBasicTest(unittest.TestCase):
         self.assertIsInstance(exp_ar, pyomo.core.ampl.ampl_representation)
 
         self.assertEquals(type(exp), type(exp_ar._nonlinear_expr))
-        self.assertEquals(exp.name(), exp_ar._nonlinear_expr.name())
+        self.assertEquals(exp.name, exp_ar._nonlinear_expr.name)
         self.assertEquals(0, len(exp_ar._nonlinear_vars))
 
     def testFixedValue(self):

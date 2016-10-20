@@ -142,7 +142,7 @@ class Finite_Difference_Transformation(Transformation):
                      "must be a differential set")
             elif 'scheme' in tmpds.get_discretization_info():
                 raise ValueError("The discretization scheme '%s' has already been applied "\
-                     "to the ContinuousSet '%s'" %(tmpds.get_discretization_info()['scheme'],tmpds.name(True)))
+                     "to the ContinuousSet '%s'" %(tmpds.get_discretization_info()['scheme'],tmpds.name))
 
         if None in self._nfe:
             raise ValueError("A general discretization scheme has already been applied to "\
@@ -157,8 +157,8 @@ class Finite_Difference_Transformation(Transformation):
             self._nfe[None] = tmpnfe
             currentds = None
         else :
-            self._nfe[tmpds.name(True)]=tmpnfe
-            currentds = tmpds.name(True)
+            self._nfe[tmpds.name]=tmpnfe
+            currentds = tmpds.name
 
         self._scheme = self.all_schemes.get(self._scheme_name,None)
         if self._scheme is None:
@@ -175,20 +175,20 @@ class Finite_Difference_Transformation(Transformation):
 
         self._fe = {}
         for ds in itervalues(block.component_map(ContinuousSet)):
-            if currentds is None or currentds == ds.name(True):
+            if currentds is None or currentds == ds.name:
                 generate_finite_elements(ds,self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds)-1 > self._nfe[currentds]:
                         print("***WARNING: More finite elements were found in ContinuousSet "\
                             "'%s' than the number of finite elements specified in apply. "\
-                            "The larger number of finite elements will be used." %(ds.name(True)))
+                            "The larger number of finite elements will be used." %(ds.name))
 
-                self._nfe[ds.name(True)]=len(ds)-1
-                self._fe[ds.name(True)]=sorted(ds)
+                self._nfe[ds.name]=len(ds)-1
+                self._fe[ds.name]=sorted(ds)
                 # Adding discretization information to the differentialset object itself
                 # so that it can be accessed outside of the discretization object
                 disc_info = ds.get_discretization_info()
-                disc_info['nfe']=self._nfe[ds.name(True)]
+                disc_info['nfe']=self._nfe[ds.name]
                 disc_info['scheme']=self._scheme_name + ' Difference'
 
         # Maybe check to see if any of the ContinuousSets have been changed,
@@ -201,7 +201,7 @@ class Finite_Difference_Transformation(Transformation):
         for d in itervalues(block.component_map(DerivativeVar)):
             dsets = d.get_continuousset_list()
             for i in set(dsets):
-                if currentds is None or i.name(True) == currentds:
+                if currentds is None or i.name == currentds:
                     oldexpr = d.get_derivative_expression()
                     loc = d.get_state_var()._contset[i]
                     count = dsets.count(i)
@@ -209,7 +209,7 @@ class Finite_Difference_Transformation(Transformation):
                         raise DAE_Error(
                             "Error discretizing '%s' with respect to '%s'. Current implementation "\
                             "only allows for taking the first or second derivative with respect to "\
-                            "a particular ContinuousSet" %(d.name(True),i.name(True)))
+                            "a particular ContinuousSet" %(d.name,i.name))
                     scheme = self._scheme[count-1]
                     newexpr = create_partial_expression(scheme,oldexpr,i,loc)
                     d.set_derivative_expression(newexpr)

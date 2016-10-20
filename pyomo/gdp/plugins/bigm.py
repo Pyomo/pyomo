@@ -74,13 +74,13 @@ class BigM_Transformation(Transformation):
                 if not _t.active:
                     continue
                 if _t.parent_component() is _t:
-                    _name = _t.name()
+                    _name = _t.local_name
                     for _idx, _obj in _t.iteritems():
                         if _obj.active:
                             self._transformDisjunction(_name, _idx, _obj)
                 else:
                     self._transformDisjunction(
-                        _t.parent_component().name(), _t.index(), _t )
+                        _t.parent_component().local_name, _t.index(), _t)
 
     def _transformBlock(self, block):
         # For every (active) disjunction in the block, convert it to a
@@ -101,7 +101,7 @@ class BigM_Transformation(Transformation):
         # able to get to the _disjuncts map from the other component).
         #
         # FIXME: the disjuncts list should just be on the _DisjunctData
-        if obj.parent_block().name().startswith('_gdp_relax'):
+        if obj.parent_block().local_name.startswith('_gdp_relax'):
             # Do not transform a block more than once
             return
 
@@ -139,7 +139,7 @@ class BigM_Transformation(Transformation):
         if not disjunct.active:
             disjunct.indicator_var.fix(0)
             return
-        if disjunct.parent_block().name().startswith('_gdp_relax'):
+        if disjunct.parent_block().local_name.startswith('_gdp_relax'):
             # Do not transform a block more than once
             return
 
@@ -155,13 +155,13 @@ class BigM_Transformation(Transformation):
             # SimpleDisjunct, then we can just reclassify the entire
             # component into our scratch space
             disjunct.parent_block().del_component(disjunct)
-            _tmp.add_component(disjunct.name(), disjunct)
+            _tmp.add_component(disjunct.local_name, disjunct)
             _tmp.reclassify_component_type(disjunct, Block)
         else:
-            _block = _tmp.component(disjunct.parent_component().name())
+            _block = _tmp.component(disjunct.parent_component().local_name)
             if _block is None:
                 _block = Block(disjunct.parent_component().index_set())
-                _tmp.add_component(disjunct.parent_component().name(), _block)
+                _tmp.add_component(disjunct.parent_component().local_name, _block)
             # Move this disjunction over to the Constraint
             idx = disjunct.index()
             _block._data[idx] = disjunct.parent_component()._data.pop(idx)
@@ -231,7 +231,7 @@ class BigM_Transformation(Transformation):
 
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
                     logger.debug("GDP(BigM): Promoting local constraint "
-                                 "'%s' as '%s'", constraint.name(), n)
+                                 "'%s' as '%s'", constraint.local_name, n)
                 M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
                 if i == 0:
                     newC = Constraint(expr=c.lower <= c.body - M_expr)

@@ -76,7 +76,7 @@ class BasicSymbolMap(object):
 
     def pprint(self, **kwds):
         print("BasicSymbolMap:")
-        lines = [repr(label)+" <-> "+obj.name(True)+" (id="+str(id(obj))+")"
+        lines = [repr(label)+" <-> "+obj.name+" (id="+str(id(obj))+")"
                  for label, obj in iteritems(self.bySymbol)]
         print('\n'.join(sorted(lines)))
         print("")
@@ -112,7 +112,7 @@ def create_block_symbol_maps(owner_block,
 
     if owner_block.is_constructed() is False:
         raise ValueError("Failed to create _PHInstanceSymbolMap on Block %s. "\
-                         "This Block has not been fully construced." % owner_block.name(True))
+                         "This Block has not been fully construced." % owner_block.name)
 
     # The ctypes input may be iterable or a single type.
     # Either way turn it into a tuple of type(s)
@@ -127,13 +127,13 @@ def create_block_symbol_maps(owner_block,
     if phinst_sm_dict is not None:
         if (update_new is False) and (update_all is False):
             print("***WARNING - Attribute with name _PHInstanceSymbolMaps already exists " \
-                  "on Block %s. This Attribute will be overwritten" % owner_block.name(True))
+                  "on Block %s. This Attribute will be overwritten" % owner_block.name)
             phinst_sm_dict = owner_block._PHInstanceSymbolMaps = {}
         else:
             if type(phinst_sm_dict) is not dict:
                 raise TypeError("Failed to update _PHInstanceSymbolMaps attribute "\
                                 "on Block %s. Expected to find object with type %s "\
-                                "but existing object is of type %s." % (owner_block.name(True),
+                                "but existing object is of type %s." % (owner_block.name,
                                                                         dict,
                                                                         type(phinst_sm_dict)))
 
@@ -412,7 +412,7 @@ def extractComponentIndices(component, index_template):
        if (index_template != '') and (index_template != "*"):
           raise RuntimeError(
               "Index template=%r specified for scalar object=%s"
-              % (index_template, component.name(True)))
+              % (index_template, component.name))
        return [None]
 
     # from this point on, we're dealing with an indexed component.
@@ -431,7 +431,7 @@ def extractComponentIndices(component, index_template):
             "the dimension of component=%s (%s)"
             % (index_template,
                len(index_template),
-               component.name(True),
+               component.name,
                component_index_dimension))
 
     # cache for efficiency
@@ -527,9 +527,11 @@ def create_ph_parameters(instance, scenario_tree, default_rho, linearizing_penal
     # leaf tree node (where PH doesn't blend variables).
     instance_variables = {}  # map between variable names and sets of indices
 
-    scenario = scenario_tree.get_scenario(instance.name())
+    scenario = scenario_tree.get_scenario(instance.name)
     if scenario == None:
-        raise RuntimeError("Scenario corresponding to instance name="+instance.name()+" not present in scenario tree - could not create PH parameters for instance")
+        raise RuntimeError("Scenario corresponding to instance name="
+                           +instance.name+" not present in scenario tree "
+                           "- could not create PH parameters for instance")
 
     for tree_node in scenario._node_list[:-1]:
 
@@ -754,10 +756,10 @@ def find_active_objective(instance, safety_checks=False):
                                                               descend_into=True):
             objectives.append(objective_data)
         if len(objectives) > 1:
-            names = [o.name(True) for o in objectives]
+            names = [o.name for o in objectives]
             raise AssertionError("More than one active objective was "
                                  "found on instance %s: %s"
-                                 % (instance.name(True), names))
+                                 % (instance.name, names))
         if len(objectives) > 0:
             return objectives[0]
     return None

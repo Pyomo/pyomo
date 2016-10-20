@@ -98,7 +98,7 @@ class _ComplementarityData(_BlockData):
             return
         #
         if (_e1[0] is None) + (_e1[2] is None) + (_e2[0] is None) + (_e2[2] is None) != 2:
-            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % self.name(True))
+            raise RuntimeError("Complementarity condition %s must have exactly two finite bounds" % self.name)
         #
         if _e1[0] is None and _e1[2] is None:
             # Only e2 will be an unconstrained expression
@@ -153,8 +153,8 @@ class Complementarity(Block):
 
     def construct(self, data=None):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):        #pragma:nocover
-            logger.debug( "Constructing %s '%s', from data=%s",
-                          self.__class__.__name__, self.name(), str(data) )
+            logger.debug("Constructing %s '%s', from data=%s",
+                         self.__class__.__name__, self.name, str(data))
         if self._constructed:                                       #pragma:nocover
             return
         #
@@ -182,7 +182,7 @@ class Complementarity(Block):
                     logger.error(
                         "Rule failed when generating expression for "
                         "complementarity %s:\n%s: %s"
-                        % ( self.name(True), type(err).__name__, err ) )
+                        % ( self.name, type(err).__name__, err ) )
                     raise
         else:
             if not self._expr is None:
@@ -199,7 +199,7 @@ class Complementarity(Block):
                     logger.error(
                         "Rule failed when generating expression for "
                         "complementarity %s with index %s:\n%s: %s"
-                        % ( self.name(True), idx, type(err).__name__, err ) )
+                        % ( self.name, idx, type(err).__name__, err ) )
                     raise
 
     def add(self, index, cc):
@@ -220,7 +220,7 @@ class Complementarity(Block):
             elif len(cc) != 2:
                 raise ValueError(
                     "Invalid tuple for Complementarity %s (expected 2-tuple):"
-                    "\n\t%s" % (self.name(True), cc) )
+                    "\n\t%s" % (self.name, cc) )
         elif cc.__class__ is list:
             #
             # Call add() recursively to apply the error same error
@@ -234,11 +234,11 @@ is None instead of a 2-tuple.  Please modify your rule to return
 Complementarity.Skip instead of None.
 
 Error thrown for Complementarity "%s"
-""" % ( self.name(True), ) )
+""" % ( self.name, ) )
         else:
             raise ValueError(
                 "Unexpected argument declaring Complementarity %s:\n\t%s"
-                % (self.name(True), cc) )
+                % (self.name, cc) )
         #
         self[index]._args = tuple( as_numeric(x) for x in cc )
         return self[index]
@@ -315,7 +315,7 @@ class ComplementarityList(IndexedComplementarity):
         """
         generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
         if generate_debug_messages:         #pragma:nocover
-            logger.debug("Constructing complementarity list %s", self.name(True))
+            logger.debug("Constructing complementarity list %s", self.name)
         if self._constructed:               #pragma:nocover
             return
         _self_rule = self._rule

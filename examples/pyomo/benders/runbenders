@@ -47,7 +47,7 @@ for i in range(1, max_iterations+1):
     # solve the subproblems.
     solve_all_instances(solver_manager, 'cplex', sub_insts)
     for instance in sub_insts:
-        print("Profit for scenario="+instance.name()+" is "+
+        print("Profit for scenario="+instance.name+" is "+
               str(round(instance.Exp_Stage2_Profit(), 4)))
     print("")
 

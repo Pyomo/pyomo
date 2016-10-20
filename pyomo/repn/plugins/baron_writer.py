@@ -38,7 +38,7 @@ from six.moves import xrange
 logger = logging.getLogger('pyomo.core')
 
 # TODO: The to_string function is handy, but the fact that
-#       it calls .name(True) under the hood for all components
+#       it calls .name under the hood for all components
 #       everywhere they are used will present ENORMOUS
 #       overhead for components that have a large index set.
 #       It might be worth adding an extra keyword to that
@@ -144,7 +144,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                              "I/O options is forbidden")
 
         if output_filename is None:
-            output_filename = model.name() + ".bar"
+            output_filename = model.name + ".bar"
 
         output_file=open(output_filename, "w")
 
@@ -241,12 +241,12 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                 raise ValueError(
                                     "A suffix '%s' contained an invalid value: %s\n"
                                     "Choices are: [relaxationonly, convex, local]"
-                                    % (suffix.name(True), constraint_type))
+                                    % (suffix.name, constraint_type))
                 else:
                     raise ValueError(
                         "The BARON writer can not export suffix with name '%s'. "
                         "Either remove it from block '%s' or deactivate it."
-                        % (block.name(True), name))
+                        % (block.name, name))
 
         non_standard_eqns = r_o_eqns + c_eqns + l_eqns
 
@@ -291,7 +291,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 #    logger.warning(
                 #        "Variable symbol '%s' for variable %s exceeds maximum "
                 #        "character limit for BARON. Solver may fail"
-                #        % (var_name, var_data.name(True)))
+                #        % (var_name, var_data.name))
 
                 TypeList.append(var_name)
 
@@ -650,7 +650,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     raise ValueError("The BARON writer has detected multiple active "
                                      "objective functions on model %s, but "
                                      "currently only handles a single objective."
-                                     % (model.name(True)))
+                                     % (model.name))
 
                 # create symbol
                 create_symbol_func(symbol_map, objective_data, labeler)

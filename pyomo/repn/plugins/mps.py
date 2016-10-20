@@ -144,7 +144,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         self._referenced_variable_ids.clear()
 
         if output_filename is None:
-            output_filename = model.name() + ".mps"
+            output_filename = model.name + ".mps"
 
         # when sorting, there are a non-trivial number of
         # temporary objects created. these all yield
@@ -265,7 +265,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
                     "currently not supported. Deactive this constraint in order to "
-                    "proceed." % (soscondata.name(True), vardata.name(True)))
+                    "proceed." % (soscondata.name, vardata.name))
             self._referenced_variable_ids[id(vardata)] = vardata
             output_file.write(sos_template_string
                               % (variable_symbol_map.getSymbol(vardata),
@@ -351,7 +351,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         output_file.write("* Source:     Pyomo MPS Writer\n")
         output_file.write("* Format:     Free MPS\n")
         output_file.write("*\n")
-        output_file.write("NAME %s\n" % (model.name(),))
+        output_file.write("NAME %s\n" % (model.name,))
 
         #
         # ROWS section
@@ -376,12 +376,12 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     descend_into=False):
 
                 numObj += 1
-                onames.append(objective_data.name())
+                onames.append(objective_data.name)
                 if numObj > 1:
                     raise ValueError(
                         "More than one active objective defined for input "
                         "model '%s'; Cannot write legal MPS file\n"
-                        "Objectives: %s" % (model.name(True), ' '.join(onames)))
+                        "Objectives: %s" % (model.name, ' '.join(onames)))
 
                 objective_label = create_symbol_func(symbol_map,
                                                      objective_data,
@@ -417,7 +417,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     raise RuntimeError(
                         "Cannot write legal MPS file. Objective '%s' "
                         "has nonlinear terms that are not quadratic."
-                        % objective_data.name(True))
+                        % objective_data.name)
 
                 constant = extract_variable_coefficients(
                     objective_label,
@@ -486,7 +486,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 raise RuntimeError(
                     "Cannot write legal MPS file. Constraint '%s' "
                     "has nonlinear terms that are not quadratic."
-                    % constraint_data.name(True))
+                    % constraint_data.name)
 
             # Create symbol
             con_symbol = create_symbol_func(symbol_map,
@@ -643,7 +643,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                             "usually indicative of a preprocessing error. Use the "
                             "IO-option 'output_fixed_variable_bounds=True' to suppress "
                             "this error and fix the variable by overwriting its bounds "
-                            "in the MPS file." % (vardata.name(True), model.name(True)))
+                            "in the MPS file." % (vardata.name, model.name))
                     if vardata.value is None:
                         raise ValueError("Variable cannot be fixed to a value of None.")
                     output_file.write((" FX BOUND "+entry_template)

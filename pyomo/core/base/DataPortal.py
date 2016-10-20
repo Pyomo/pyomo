@@ -344,7 +344,7 @@ class DataPortal(object):
             ans = []
             for item in options.data:
                 try:
-                    ans.append(item.name())
+                    ans.append(item.local_name)
                     self._model = item.model()
                 except:
                     ans.append(item)
@@ -357,7 +357,7 @@ class DataPortal(object):
             #
             try:
                 self._model = options.data.model()
-                options.data = [ self._data_manager.options.data.name() ]
+                options.data = [ self._data_manager.options.data.local_name ]
             except:
                 pass
 

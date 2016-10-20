@@ -595,7 +595,7 @@ class DDSIP_Input(object):
                 raise ValueError("Variable with name '%s' was declared "
                                  "on the scenario tree but did not appear "
                                  "in the reference scenario LP file."
-                                 % (vardata.name(True)))
+                                 % (vardata.name))
             if scenario_tree_id in rootnode._standard_variable_ids:
                 self._FirstStageVars.append(LP_name)
                 self._FirstStageVarIdMap[LP_name] = scenario_tree_id
@@ -606,7 +606,7 @@ class DDSIP_Input(object):
                 self._SecondStageVars.append(LP_name)
                 self._SecondStageVarIdMap[LP_name] = scenario_tree_id
             else:
-                print(("%s %s" % (str(scenario_tree_id), str(vardata.name(True)))))
+                print(("%s %s" % (str(scenario_tree_id), str(vardata.name))))
                 # More than two stages?
                 assert False
             self._AllVars.append(LP_name)
@@ -650,7 +650,7 @@ class DDSIP_Input(object):
             all_vars = set()
             tmp_buffer = {}
             for block in self._reference_scenario_instance.block_data_objects(active=True):
-                all_vars.update(vardata.name(True, tmp_buffer) \
+                all_vars.update(vardata.getname(True, tmp_buffer) \
                                 for vardata in block.component_data_objects(Var, descend_into=False))
             print(("Number of Variables Found on Model: "+str(len(all_vars))))
             print ("writing all_vars.dat")
@@ -662,7 +662,7 @@ class DDSIP_Input(object):
             for scenario_tree_id, vardata in \
                 iteritems(self._reference_scenario_instance.\
                           _ScenarioTreeSymbolMap.bySymbol):
-                tree_vars.add(vardata.name(True))
+                tree_vars.add(vardata.name)
             print(("Number of Scenario Tree Variables (found in ddsip LP file): "+str(len(tree_vars))))
             print ("writing tree_vars.dat")
             with open("tree_vars.dat",'w') as f:
@@ -677,7 +677,7 @@ class DDSIP_Input(object):
                     self._reference_scenario_instance.\
                     find_component(cost_variable_name)
                 if stage_cost_component.type() is not Expression:
-                    cost_vars.add(stage_cost_component[cost_variable_index].name(True))
+                    cost_vars.add(stage_cost_component[cost_variable_index].name)
             print(("Number of Scenario Tree Cost Variables (found in ddsip LP file): "+str(len(cost_vars))))
             print ("writing cost_vars.dat")
             with open("cost_vars.dat","w") as f:
@@ -739,7 +739,7 @@ class DDSIP_Input(object):
             block_canonical_repn = getattr(block, "_canonical_repn", None)
             if block_canonical_repn is None:
                 raise ValueError("Unable to find _canonical_repn ComponentMap "
-                                 "on block %s" % (block.name(True)))
+                                 "on block %s" % (block.name))
             isPiecewise = False
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 isPiecewise = True
@@ -749,7 +749,7 @@ class DDSIP_Input(object):
                     descend_into=False):
                 raise TypeError("SOSConstraints are not handled by the "
                                 "DDSIP interface: %s"
-                                % (constraint_data.name(True)))
+                                % (constraint_data.name))
             for constraint_data in block.component_data_objects(
                     Constraint,
                     active=True,
@@ -1458,7 +1458,7 @@ class ddextension(pyomo.util.plugin.SingletonPlugin):
         # were not variables in the model (and DDSIP solution)
         for scenario in ph._scenario_tree._scenarios:
             if scenario._instance is not None:
-                print(("%s %s" % list(map(str(scenario._name, scenario._instance.name())))))
+                print(("%s %s" % list(map(str(scenario._name, scenario._instance.name)))))
                 scenario.push_solution_to_instance()
                 scenario.update_solution_from_instance()
                 """
