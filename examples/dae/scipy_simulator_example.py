@@ -2,8 +2,6 @@ from pyomo.environ import *
 from pyomo.dae import *
 from pyomo.dae.simulator import Simulator
 
-#from integrator import scipy_integrator
-
 m = ConcreteModel()
 
 m.t = ContinuousSet(bounds=(0.0,10.0))
@@ -25,11 +23,11 @@ def _diffeq1(m,t):
     return m.domegadt[t] == -m.b*m.omega[t] - m.c*sin(m.theta[t])
 m.diffeq1 = Constraint(m.t,rule=_diffeq1)
 
-
 def _diffeq2(m,t):
     return m.dthetadt[t] == m.omega[t]
 m.diffeq2 = Constraint(m.t,rule=_diffeq2)
 
+# Simulate the model
 sim = Simulator(m)
 tsim, profiles = sim.simulate()
 varorder = sim.get_variable_order()

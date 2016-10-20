@@ -86,8 +86,8 @@ def _check_productexpression(expr,i):
                 RHS = tempnum/tempdenom
                 return [dv, RHS]                
     else:
-        raise TypeError("Simulator is unable to handle pyomo4 \
-                expression trees.")
+        raise TypeError(
+            "Simulator is unable to handle pyomo4 expression trees.")
     return None
 
 def _check_sumexpression(expr,i):
@@ -131,14 +131,17 @@ class Simulator:
         
         self._intpackage = kwds.pop('package','scipy')
         if self._intpackage != 'scipy':
-            raise DAE_Error("The integrator package %s was specified \
-            using the 'package' keyword argument. SciPy is the only \
-            package currently supported by the Simulator." %(intpackage))
+            raise DAE_Error(
+                "The integrator package %s was specified using the "
+                "'package' keyword argument. SciPy is the only "
+                "package currently supported by the "
+                "Simulator."%(self._intpackage))
 
         temp = m.component_map(ContinuousSet)
         if len(temp) != 1:
-            raise DAE_Error("Currently the scipy integrator may only \
-            be applied to Pyomo models with a single ContinuousSet")
+            raise DAE_Error(
+                "Currently the scipy integrator may only be applied to "
+                "Pyomo models with a single ContinuousSet")
 
         # Get the ContinuousSet in the model
         contset = temp.values()[0]
@@ -171,8 +174,9 @@ class Simulator:
             if con.dim() == 0:
                 continue
             elif con.dim() > 1:
-                print("WARNING: Any differential equations indexed by\
-                multiple sets will not be simulated.")
+                print(
+                    "WARNING: Any differential equations indexed by "
+                    "multiple sets will not be simulated.")
                 continue
 
             # Check if the continuous set is the indexing set
@@ -241,8 +245,9 @@ class Simulator:
             RHS = args[1]
             _name = dv._base.name()
             if _name in rhsdict:
-                raise DAE_Error("Found multiple RHS expressions for \
-                the DerivativeVar %s" %(_name))
+                raise DAE_Error(
+                    "Found multiple RHS expressions for the "
+                    "DerivativeVar %s" %(_name))
             
             derivlist.append(_name)
             rhsdict[_name] = substitute_template_expression(
@@ -253,8 +258,8 @@ class Simulator:
         allderivs = derivs.keys()
         if set(allderivs) != set(derivlist):
             missing = list(set(allderivs)-set(derivlist))
-            print("WARNING: Could not find a RHS expression for the \
-            following DerivativeVar components "+str(missing))
+            print("WARNING: Could not find a RHS expression for the "
+            "following DerivativeVar components "+str(missing))
 
         # Create ordered list of differential variables corresponding
         # to the list of derivatives.
@@ -270,15 +275,17 @@ class Simulator:
         # differential variables.
         for item in templatemap.values():
             if item.name() in allderivs:
-                raise DAE_Error("Cannot simulate a differential \
-                equation  with multiple DerivativeVars")
+                raise DAE_Error(
+                    "Cannot simulate a differential equation with "
+                    "multiple DerivativeVars")
             if item.name() not in diffvars:
                 # This only catches algebraic variables indexed by
                 # time. TODO: how to catch variables not indexed by
                 # time or warn the user that values must be set for
                 # these variables.
-                raise DAE_Error("Cannot simulate a differential \
-                equation with algebraic variables")
+                raise DAE_Error(
+                    "Cannot simulate a differential equation with "
+                    "algebraic variables")
 
         # Function sent to scipy integrator
         def _rhsfun(x,t):
@@ -328,14 +335,16 @@ class Simulator:
         tstep = kwds.pop('step', None)
         if tstep is not None and \
            tstep > (self._contset.last()-self._contset.first()):
-            raise ValueError("The step size %6.2f is larger than the \
-        span of the ContinuousSet %s" %(tstep,self._contset.name()))
+            raise ValueError(
+                "The step size %6.2f is larger than the span of the "
+                "ContinuousSet %s" %(tstep,self._contset.name()))
             
         numpoints = kwds.pop('numpoints',None)
         
         if tstep is not None and numpoints is not None:
-            raise ValueError("Cannot specify both the step size and \
-            the number of points for the simulator")
+            raise ValueError(
+                "Cannot specify both the step size and the number of "
+                "points for the simulator")
         if tstep is None and numpoints is None:
             # Use 100 points by default
             numpoints = 100
@@ -351,13 +360,15 @@ class Simulator:
         initcon = kwds.pop('initcon',None)
         if initcon is not None:
             if len(initcon)>len(self._diffvars):
-                raise ValueError("Too many initial conditions were \
-                specified. The simulator was expecting a list with \
-                %i values." %(len(self._diffvars)))
+                raise ValueError(
+                    "Too many initial conditions were specified. The "
+                    "simulator was expecting a list with %i values."
+                    %(len(self._diffvars)))
             if len(initcon)<len(self._diffvars):
-                raise ValueError("Too few initial conditions were \
-                specified. The simulator was expecting a list with \
-                %i values." %(len(self._diffvars)))
+                raise ValueError(
+                    "Too few initial conditions were specified. The "
+                    "simulator was expecting a list with %i values."
+                    %(len(self._diffvars)))
         else:
             initcon = []
             for nme in self._diffvars:
@@ -385,8 +396,9 @@ class Simulator:
         obtained from the simulating the ODE system.
         """
         if self._tsim is None:
-            raise DAE_Error("Tried to initialize the model without \
-            simulating it first")
+            raise DAE_Error(
+                "Tried to initialize the model without simulating it "
+                "first")
 
         tvals = list(self._contset)
         
