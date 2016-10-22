@@ -229,76 +229,30 @@ class _ExpressionBase(NumericValue):
     def is_expression(self):
         return True
 
+
     def polynomial_degree(self):
-        _typeList = TreeWalkerHelper.typeList
-
-        _stackMax = len(_stack)
-        _stackIdx = 0
-
-        _obj = self
-        _argList = _obj._args
-        _idx = 0
-        _len = len(_argList)
-        try:
-            _type = _typeList[_obj.__class__]
-            _ans = 0
-        except KeyError:
-            _type = 0
-            _ans = []
-        #_ans = 0 if _type else []
-        while 1: # Note: 1 is faster than True for Python 2.x
-            if _idx < _len:
+        _stack = [ (self, self._args, 0, len(self._args), []) ]
+        while 1:  # Note: 1 is faster than True for Python 2.x
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if _sub.__class__ in native_numeric_types:
-                    ans = 0
-                elif not _sub.is_expression():
-                    ans = 0 if _sub.is_fixed() else 1
+                if type(_sub) in native_numeric_types:
+                    _result.append( 0 )
+                elif _sub.is_expression():
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj     = _sub
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = len(_argList)
+                    _result  = []
                 else:
-                    if _stackIdx == _stackMax:
-                        _stackMax += 1
-                        _stack.append((_obj, _argList, _len, _type, _idx, _ans))
-                    else:
-                        _stack[_stackIdx] = \
-                                _obj, _argList, _len, _type, _idx, _ans
-
-                    _obj = _sub
-                    _argList = _obj._args
-                    _idx = 0
-                    _len = len(_argList)
-                    _type = _typeList.get(_obj.__class__, 0)
-                    _ans = 0 if _type else []
-
-                    _stackIdx += 1
-                    continue
+                    _result.append( 0 if _sub.is_fixed() else 1 )
+            ans = _obj._polynomial_degree(_result)
+            if _stack:
+                _stack[-1][-1].append( ans )
             else:
-                if not _type:
-                    _ans = _obj._polynomial_degree(_ans)
-                if _stackIdx == 0:
-                    return _ans
-                ans = _ans
-                _stackIdx -= 1
-                _obj, _argList, _len, _type, _idx, _ans = _stack[_stackIdx]
-
-            #_objType = type(_obj)
-            if _type is 1:#_objType is _SumExpression:
-                if _ans is not None:
-                    if ans is None or ans > _ans:
-                        _ans = ans
-            elif _type is 2:#_objType is _ProductExpression:
-                if _ans is not None:
-                    if ans is None:
-                        _ans = None
-                    else:
-                        _ans += ans
-            elif _type is 3:#_objType is _NegationExpression:
-                _ans = ans
-            elif _type is 4:#_objType is _LinearExpression_Pool
-                if ans == 1:
-                    _ans = ans
-                    _idx = _len
-            else:
-                _ans.append(ans)
+                return ans
 
 
     def _polynomial_degree(self, ans):
@@ -380,7 +334,7 @@ class _NegationExpression(_ExpressionBase):
         return 'neg'
 
     def _polynomial_degree(self, result):
-        return result.pop()
+        return result[0]
 
     def _precedence(self):
         return _NegationExpression.PRECEDENCE
@@ -431,7 +385,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
         ostream.write(self.getname())
 
     def _polynomial_degree(self, result):
-        if result.pop() == 0:
+        if result[0] == 0:
             return 0
         else:
             return None
@@ -464,7 +418,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
-        if result.pop() == 0:
+        if result[0] == 0:
             return 0
         else:
             return None
@@ -504,8 +458,7 @@ class _PowExpression(_ExpressionBase):
         # integer, it is also polynomial.  While we would like to just
         # call this a non-polynomial expression, these exceptions occur
         # too frequently (and in particular, a**2)
-        r = result.pop()
-        l = result.pop()
+        l,r = result
         if r == 0:
             if l == 0:
                 return 0
@@ -594,6 +547,17 @@ class _InequalityExpression(_ExpressionBase):
     def _precedence(self):
         return _InequalityExpression.PRECEDENCE
 
+    def _polynomial_degree(self, result):
+        # NB: We can't use max() here because None (non-polynomial)
+        # overrides a numeric value (and max() just ignores it)
+        ans = 0
+        for x in result:
+            if x is None:
+                return None
+            elif ans < x:
+                ans = x
+        return ans
+
     def _apply_operation(self, result):
         for i, a in enumerate(result):
             if not i:
@@ -633,6 +597,17 @@ class _EqualityExpression(_ExpressionBase):
     def _precedence(self):
         return _EqualityExpression.PRECEDENCE
 
+    def _polynomial_degree(self, result):
+        # NB: We can't use max() here because None (non-polynomial)
+        # overrides a numeric value (and max() just ignores it)
+        ans = 0
+        for x in result:
+            if x is None:
+                return None
+            elif ans < x:
+                ans = x
+        return ans
+
     def _apply_operation(self, result):
         _l, _r = result
         return _l == _r
@@ -657,8 +632,7 @@ class _ProductExpression(_ExpressionBase):
         # NB: We can't use sum() here because None (non-polynomial)
         # overrides a numeric value (and sum() just ignores it - or
         # errors in py3k)
-        a = result.pop()
-        b = result.pop()
+        a, b = result
         if a is None or b is None:
             return None
         else:
@@ -689,8 +663,7 @@ class _DivisionExpression(_ExpressionBase):
         # NB: We can't use sum() here because None (non-polynomial)
         # overrides a numeric value (and sum() just ignores it - or
         # errors in py3k)
-        d = result.pop()
-        n = result.pop()
+        n,d = result
         if d == 0:
             return n
         else:
@@ -739,14 +712,11 @@ class _SumExpression(_ExpressionBase):
         # NB: We can't use max() here because None (non-polynomial)
         # overrides a numeric value (and max() just ignores it)
         ans = 0
-        for x in self._args:
-            _pd = result.pop()
-            if ans is not None:
-                if _pd is not None:
-                    if _pd > ans:
-                        ans = _pd
-                else:
-                    ans = None
+        for x in result:
+            if x is None:
+                return None
+            elif ans < x:
+                ans = x
         return ans
 
     def _apply_operation(self, result):
@@ -929,16 +899,13 @@ class Expr_if(_ExpressionBase):
             return False
 
     def _polynomial_degree(self, result):
-        _else = result.pop()
-        _then = result.pop()
-        _if = result.pop()
+        _if, _then, _else = result
         if _if == 0:
-            if self._if():
-                return _then
-            else:
-                return _else
-        else:
-            return None
+            try:
+                return _then if self._if() else _else
+            except:
+                pass
+        return None
 
     def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
         ostream.write("%s=( " % ('if','then','else')[_idx], )
@@ -983,8 +950,8 @@ class Expr_if(_ExpressionBase):
         ostream.write(" ) )")
 
     def _apply_operation(self, result):
-        _i, _t, _e = result
-        return _t if _i else _e
+        _if, _then, _else = result
+        return _then if _if else _else
 
 
 class _GetItemExpression(_ExpressionBase):
@@ -1148,6 +1115,12 @@ class _LinearExpression(_ExpressionBase):
                 ostream.write(' - ')
             else:
                 ostream.write(' + ')
+
+    def _polynomial_degree(self, result):
+        if result:
+            return max(result)
+        else:
+            return 0
 
     def _apply_operation(self, result):
         assert( len(result) == len(self._args) )
