@@ -35,7 +35,7 @@ except:
 from pyomo.core.base.component import Component
 #from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
-from pyomo.core.base.numvalue import native_numeric_types
+from pyomo.core.base.numvalue import native_types, native_numeric_types
 from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base import expr_common as common
@@ -96,17 +96,13 @@ or
 def identify_variables(expr, include_fixed=True, allow_duplicates=False):
     if not allow_duplicates:
         _seen = set()
-    expr = as_numeric(expr)
-    if expr.is_expression():
-        _stack = [ (expr._args, 0, len(expr._args)) ]
-    else:
-        _stack = [ ([expr], 0, 1) ]
+    _stack = [ ([expr], 0, 1) ]
     while _stack:
         _argList, _idx, _len = _stack.pop()
         while _idx < _len:
             _sub = _argList[_idx]
             _idx += 1
-            if type(_sub) in native_numeric_types:
+            if type(_sub) in native_types:
                 pass
             elif _sub.is_expression():
                 _stack.append(( _argList, _idx, _len ))
