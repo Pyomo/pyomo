@@ -186,9 +186,10 @@ def __solver_call__(self, _name=None, args=[], **kwds):
             if mode in _implicit_solvers:
                 if _implicit_solvers[mode] not in IOptSolver._factory_cls:
                     raise RuntimeError(
-                        "The %s solver plugin was not registered as a valid "
-                        "solver plugin - cannot construct solver plugin with "
-                        "IO mode=%s" % (_implicit_solvers[mode], mode) )
+                        "  The solver plugin was not registered.\n"
+                        "  Please confirm that the 'pyomo.environ' package has been imported.")
+                    #"solver plugin - cannot construct solver plugin with "
+                    #"IO mode=%s" % (_implicit_solvers[mode], mode) )
                 opt = PluginFactory(
                     IOptSolver._factory_cls[_implicit_solvers[mode]],
                     args, **kwds )
