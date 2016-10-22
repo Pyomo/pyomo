@@ -165,26 +165,28 @@ class _ExpressionBase(NumericValue):
         return buf.getvalue()
 
     def __call__(self, exception=None):
-        _result = []
-        _stack = [ (self, self._args, 0, len(self._args)) ]
-        while _stack:
-            _obj, _argList, _idx, _len = _stack.pop()
+        _stack = [ (self, self._args, 0, len(self._args), []) ]
+        while 1:  # Note: 1 is faster than True for Python 2.x
+            _obj, _argList, _idx, _len, _result = _stack.pop()
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
                 if type(_sub) in native_numeric_types:
-                    _result.append(_sub)
+                    _result.append( _sub )
                 elif _sub.is_expression():
-                    _stack.append(( _obj, _argList, _idx, _len ))
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
                     _obj     = _sub
                     _argList = _sub._args
                     _idx     = 0
                     _len     = len(_argList)
+                    _result  = []
                 else:
-                    _result.append(value(_sub))
-            _result.append( _obj._apply_operation(_result) )
-        assert(len(_result)==1)
-        return _result[0]
+                    _result.append( value(_sub) )
+            ans = _obj._apply_operation(_result)
+            if _stack:
+                _stack[-1][-1].append( ans )
+            else:
+                return ans
 
 
     def clone(self):
@@ -392,7 +394,7 @@ class _NegationExpression(_ExpressionBase):
             ostream.write("- ")
 
     def _apply_operation(self, result):
-        return -result.pop()
+        return -result[0]
 
 class _UnaryFunctionExpression(_ExpressionBase):
     """An object that defines a mathematical expression that can be evaluated"""
@@ -435,7 +437,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
             return None
 
     def _apply_operation(self, result):
-        return self._fcn(result.pop())
+        return self._fcn(result[0])
 
 # Backwards compatibility: Coopr 3.x expected a slightly less informative name
 _IntrinsicFunctionExpression =  _UnaryFunctionExpression
@@ -469,7 +471,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
 
     def _apply_operation(self, result):
         """Evaluate the expression"""
-        return self._fcn.evaluate(result.pop())
+        return self._fcn.evaluate( result )
 
     def _inline_operator(self):
         return ', '
@@ -539,8 +541,7 @@ class _PowExpression(_ExpressionBase):
         return _PowExpression.PRECEDENCE
 
     def _apply_operation(self, result):
-        _r = result.pop()
-        _l = result.pop()
+        _l, _r = result
         return _l ** _r
 
     def getname(self, *args, **kwds):
@@ -594,11 +595,10 @@ class _InequalityExpression(_ExpressionBase):
         return _InequalityExpression.PRECEDENCE
 
     def _apply_operation(self, result):
-        args = result[-len(self._args):]
-        result[-len(self._args):] = []
-        _l = args.pop(0)
-        for i, a in enumerate(args):
-            if self._strict[i]:
+        for i, a in enumerate(result):
+            if not i:
+                pass
+            elif self._strict[i-1]:
                 if not _l < a:
                     return False
             else:
@@ -634,7 +634,8 @@ class _EqualityExpression(_ExpressionBase):
         return _EqualityExpression.PRECEDENCE
 
     def _apply_operation(self, result):
-        return result.pop() == result.pop()
+        _l, _r = result
+        return _l == _r
 
     def _to_string_prefix(self, ostream, verbose):
         pass
@@ -671,7 +672,8 @@ class _ProductExpression(_ExpressionBase):
         return ' * '
 
     def _apply_operation(self, result):
-        return result.pop() * result.pop()
+        _l, _r = result
+        return _l * _r
 
 
 class _DivisionExpression(_ExpressionBase):
@@ -702,8 +704,7 @@ class _DivisionExpression(_ExpressionBase):
         return ' / '
 
     def _apply_operation(self, result):
-        _r = result.pop()
-        _l = result.pop()
+        _l, _r = result
         return _l / _r
 
 
@@ -749,7 +750,7 @@ class _SumExpression(_ExpressionBase):
         return ans
 
     def _apply_operation(self, result):
-        return sum(result.pop() for x in self._args)
+        return sum(result)
 
     def getname(self, *args, **kwds):
         return 'sum'
@@ -982,9 +983,7 @@ class Expr_if(_ExpressionBase):
         ostream.write(" ) )")
 
     def _apply_operation(self, result):
-        _e = result.pop()
-        _t = result.pop()
-        _i = result.pop()
+        _i, _t, _e = result
         return _t if _i else _e
 
 
@@ -1031,9 +1030,7 @@ class _GetItemExpression(_ExpressionBase):
         return 0 if self.is_fixed() else 1
 
     def _apply_operation(self, result):
-        r = result[-len(self._args):]
-        result[-len(self._args):] = []
-        return value(self._base.__getitem__(tuple(r)))
+        return value(self._base.__getitem__( tuple(result) ))
 
     def _to_string_prefix(self, ostream, verbose):
         ostream.write(self.name)
@@ -1153,14 +1150,10 @@ class _LinearExpression(_ExpressionBase):
                 ostream.write(' + ')
 
     def _apply_operation(self, result):
-        if not self._args:
-            return value(self._const)
-
-        r = result[-len(self._args):]
-        result[-len(self._args):] = []
+        assert( len(result) == len(self._args) )
         ans = value(self._const)
         for i,v in enumerate(self._args):
-            ans += r[i] * value(self._coef[id(v)])
+            ans += value(self._coef[id(v)]) * result[i]
         return ans
 
     def __iadd__(self, other, _reversed=0):
