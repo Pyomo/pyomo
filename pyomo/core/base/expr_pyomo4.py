@@ -187,29 +187,6 @@ class _ExpressionBase(NumericValue):
         return _result[0]
 
 
-        argList = self._args
-        _stack = [ (self, argList, 0, len(argList)) ]
-        _result = []
-        while _stack:
-            _obj, _argList, _idx, _len = _stack.pop()
-            if _idx < _len:
-                _sub = _argList[_idx]
-                _stack.append((_obj, _argList, _idx+1, _len))
-                if type(_sub) in native_numeric_types:
-                    _result.append(_sub)
-                    continue
-
-                if _sub.is_expression():
-                    argList = _sub._args
-                    _stack.append(( _sub, argList, 0, len(argList) ))
-                else:
-                    _result.append(value(_sub))
-            else:
-                _result.append( _obj._apply_operation(_result) )
-        assert(len(_result)==1)
-        return _result[0]
-
-
     def clone(self):
         ans = copy.copy(self)
         if safe_mode:
