@@ -1,8 +1,7 @@
 # wl_abstract_script.py: Scripting using an AbstractModel
 from pyomo.environ import *
 
-model = AbstractModel()
-model.name = "(WL)"
+model = AbstractModel(name="(WL)")
 
 model.N = Set()
 model.M = Set()
@@ -28,6 +27,7 @@ model.warehouse_active = Constraint(model.N, model.M, rule=warehouse_active_rule
 def num_warehouses_rule(model):
     return sum(model.y[n] for n in model.N) <= model.P
 model.num_warehouses = Constraint(rule=num_warehouses_rule)
+
 # @abstractsolve:
 instance = model.create_instance('wl_data.dat')
 solver = SolverFactory('glpk')

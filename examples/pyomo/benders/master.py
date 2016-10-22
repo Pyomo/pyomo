@@ -12,8 +12,7 @@
 
 from pyomo.core import *
 
-model = AbstractModel()
-model.name = "Master"
+model = AbstractModel(name="Master")
 
 ##############################################################################
 

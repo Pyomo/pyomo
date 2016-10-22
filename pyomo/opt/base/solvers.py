@@ -16,6 +16,7 @@ __all__ = ('IOptSolver',
 
 import re
 import os
+import sys
 import time
 import logging
 
@@ -172,15 +173,16 @@ def __solver_call__(self, _name=None, args=[], **kwds):
     else:
         subsolver = None
     opt = None
-    if _name in IOptSolver._factory_active:
-        opt = PluginFactory(IOptSolver._factory_cls[_name], args, **kwds)
-    else:
-        mode = kwds.get('solver_io', 'nl')
-        if mode is None:
-            mode = 'nl'
-        pyutilib.services.register_executable(name=_name)
-        if pyutilib.services.registered_executable(_name):
+    try:
+        if _name in IOptSolver._factory_active:
+            opt = PluginFactory(IOptSolver._factory_cls[_name], args, **kwds)
+        else:
+            mode = kwds.get('solver_io', 'nl')
+            if mode is None:
+                mode = 'nl'
             _implicit_solvers = {'nl': 'asl', 'os': '_ossolver' }
+            if "executable" not in kwds:
+                kwds["executable"] = _name
             if mode in _implicit_solvers:
                 if _implicit_solvers[mode] not in IOptSolver._factory_cls:
                     raise RuntimeError(
@@ -192,6 +194,11 @@ def __solver_call__(self, _name=None, args=[], **kwds):
                     args, **kwds )
                 if opt is not None:
                     opt.set_options('solver='+_name)
+    except:
+        err = sys.exc_info()[1]
+        logger.error("Failed to create solver with name '%s':\n%s"
+                     % (_name, err))
+        opt = None
     if opt is not None and subsolver is not None:
         opt.set_options('solver='+subsolver)
     if opt is None:

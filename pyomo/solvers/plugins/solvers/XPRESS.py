@@ -198,8 +198,6 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         log_file_contents = "".join(log_file.readlines())
         log_file.close()
 
-        return
-
         for line in log_file_contents.split("\n"):
             tokens = re.split('[ \t]+',line.strip())
 

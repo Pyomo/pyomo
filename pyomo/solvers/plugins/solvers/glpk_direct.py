@@ -145,7 +145,7 @@ class GLPKDirect ( OptSolver ):
         for soscondata in model.component_data_objects(SOSConstraint, active=True):
             raise Exception("Solver: glpk_direct does not support SOSConstraint declarations")
 
-        glp_set_prob_name( lp, model.name )
+        glp_set_prob_name(lp, model.name)
 
         glp_set_obj_dir( lp, sense )
         glp_add_rows( lp, num_constraints )
@@ -205,7 +205,7 @@ class GLPKDirect ( OptSolver ):
         if model_canonical_repn is None:
             raise ValueError("No _canonical_repn ComponentMap was found on "
                              "block with name %s. Did you forget to preprocess?"
-                             % (model.cname(True)))
+                             % (model.name))
 
         for name in constraint_list:
             constraint_set = constraint_list[ name ]
@@ -221,7 +221,7 @@ class GLPKDirect ( OptSolver ):
                     raise ValueError("No entry found in _canonical_repn ComponentMap on "
                                      "block %s for active constraint with name %s. "
                                      "Did you forget to preprocess?"
-                                     % (model.cname(True), constraint.cname(True)))
+                                     % (model.name, constraint.name))
 
                 offset = 0.0
                 if 0 in expression:
@@ -273,7 +273,7 @@ class GLPKDirect ( OptSolver ):
                 raise ValueError("No entry found in _canonical_repn ComponentMap on "
                                  "block %s for active objective with name %s. "
                                  "Did you forget to preprocess?"
-                                 % (model.cname(True), objective[key].cname(True)))
+                                 % (model.name, objective[key].name))
 
             if expression.is_constant():
                 msg = "Ignoring objective '%s[%s]' which is constant"
@@ -542,9 +542,9 @@ class GLPKDirect ( OptSolver ):
         # solv.termination_condition = None
         # solv.termination_message = None
 
-        prob.name = glp_get_prob_name( lp )
-        prob.number_of_constraints = glp_get_num_rows( lp )
-        prob.number_of_nonzeros = glp_get_num_nz( lp )
+        prob.name = glp_get_prob_name(lp)
+        prob.number_of_constraints = glp_get_num_rows(lp)
+        prob.number_of_nonzeros = glp_get_num_nz(lp)
         prob.number_of_variables = num_variables
         prob.number_of_binary_variables = bin_variables
         prob.number_of_integer_variables = int_variables

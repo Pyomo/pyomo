@@ -31,7 +31,7 @@ class CAmplBasicTest(unittest.TestCase):
     def testNone(self):
         with self.assertRaises(ValueError) as cm:
             pyomo.repn.generate_ampl_repn(None)
-    
+
     def testVar(self):
         testname = 'testname'
 

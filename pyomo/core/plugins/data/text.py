@@ -54,7 +54,7 @@ class TextTable(TableData):
                         p = self.options.param
                     if isinstance(p, Param):
                         self.options.model = p.model()
-                        p = p.name
+                        p = p.local_name
                     self._info = ["param",p,":=",tmp[0][0]]
                 elif len(self.options.symbol_map) == 1:
                     self._info = ["param",self.options.symbol_map[self.options.symbol_map.keys()[0]],":=",tmp[0][0]]
@@ -67,7 +67,7 @@ class TextTable(TableData):
             self.FILE.close()
             self.FILE = None
             raise sys.exc_info()[1]
-            
+
         self.FILE.close()
         self.FILE = None
 

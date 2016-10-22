@@ -68,11 +68,12 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                     A2*x + B2*y <= b2
 
         NOTE THE VARIABLE BOUNDS!
-        """ 
+        """
         #
-        # Populate the block with the linear constraints.  Note that we don't simply clone the
-        # current block.  We need to collect a single set of equations that can be easily 
-        # expressed.
+        # Populate the block with the linear constraints.
+        # Note that we don't simply clone the current block.
+        # We need to collect a single set of equations that
+        # can be easily expressed.
         #
         d2 = {}
         B2 = {}
@@ -101,7 +102,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             o_terms = generate_canonical_repn(odata.expr, compute_values=False)
             for i in range(len(o_terms.variables)):
                 var = o_terms.variables[i]
-                if var.parent_component().name in self._fixed_upper_vars:
+                if var.parent_component().local_name in self._fixed_upper_vars:
                     #
                     # Skip fixed upper variables
                     #
@@ -118,11 +119,11 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             # Stop after the first objective
             break
         #
-        # Iterate through all lower level variables, adding dual variables 
+        # Iterate through all lower level variables, adding dual variables
         # and complementarity slackness conditions for y bound constraints
         #
         for vcomponent in instance.component_objects(Var, active=True):
-            if vcomponent.name in self._fixed_upper_vars:
+            if vcomponent.local_name in self._fixed_upper_vars:
                 #
                 # Skip fixed upper variables
                 #
@@ -160,7 +161,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
                         sids_set.add(id_)
                         sids_list.append(id_)
         #
-        # Iterate through all constraints, adding dual variables and 
+        # Iterate through all constraints, adding dual variables and
         # complementary slackness conditions (for inequality constraints)
         #
         for cdata in submodel.component_data_objects(Constraint, active=True):
@@ -193,7 +194,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             c_terms = generate_canonical_repn(cdata.body, compute_values=False)
             for i in range(len(c_terms.variables)):
                 var = c_terms.variables[i]
-                if var.parent_component().name in self._fixed_upper_vars:
+                if var.parent_component().local_name in self._fixed_upper_vars:
                     continue
                 id_ = id(var)
                 B2.setdefault(id_,{}).setdefault(id(cdata),c_terms.linear[i])
@@ -217,7 +218,7 @@ class LinearComplementarity_BilevelTransformation(Base_BilevelTransformation):
             B2_ = B2.get(vid,{})
             utmp_keys = list(utmp.keys())
             if self._deterministic:
-                utmp_keys.sort(key=lambda x:utmp[x][0].cname() if utmp[x][1] is None else utmp[x][1].cname())
+                utmp_keys.sort(key=lambda x:utmp[x][0].local_name if utmp[x][1] is None else utmp[x][1].local_name)
             for uid in utmp_keys:
                 if uid in B2_:
                     lb_dual, ub_dual = utmp[uid]

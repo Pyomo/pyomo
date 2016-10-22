@@ -18,7 +18,7 @@ Unifying framework and Extensions (Vielma, Nemhauser 2008).
 TODO: Add regression tests for the following completed tasks
 *) user not providing floats can be an major issue for BIGM's and MC
 *) Other TODO's
-*) affine functions - BIGM_SOS1, BIGM_SOS2 ***** possible edge case bug
+*) nonconvex/nonconcave functions - BIGM_SOS1, BIGM_SOS2 ***** possible edge case bug
 
 Possible Extensions
 *) Consider another piecewise rep ("SOS2_MANUAL"?) where we manually implement
@@ -217,7 +217,7 @@ class _PiecewiseData(_BlockData):
         if not _isNonDecreasing(domain_pts):
             msg = "'%s' does not have a list of domain points "\
                   "that is non-decreasing"
-            raise ValueError(msg % (self.cname(True),))
+            raise ValueError(msg % (self.name,))
         self._domain_pts = domain_pts
         self._range_pts = range_pts
 
@@ -232,7 +232,7 @@ class _PiecewiseData(_BlockData):
     def __call__(self, x):
         if self._constructed is False:
             raise ValueError("Piecewise component %s has not "
-                             "been constructed yet" % self.cname(True))
+                             "been constructed yet" % self.name)
 
         for i in xrange(len(self._domain_pts)-1):
             xL = self._domain_pts[i]
@@ -247,7 +247,7 @@ class _PiecewiseData(_BlockData):
         raise ValueError("The point %s is outside the list of domain "
                          "points for Piecewise component %s. The valid "
                          "point range is [%s,%s]."
-                         % (x, self.cname(True),
+                         % (x, self.name,
                             min(self._domain_pts),
                             max(self._domain_pts)))
 
@@ -453,7 +453,7 @@ class _DLOGPiecewise(object):
         if not _isPowerOfTwo(len(pblock._domain_pts)-1):
             msg = "'%s' does not have a list of domain points "\
                   "with length (2^n)+1"
-            raise ValueError(msg % (pblock.cname(True),))
+            raise ValueError(msg % (pblock.name,))
         x_pts = pblock._domain_pts
         y_pts = pblock._range_pts
         bound_type = pblock._bound_type
@@ -593,7 +593,7 @@ class _LOGPiecewise(object):
         if not _isPowerOfTwo(len(pblock._domain_pts)-1):
             msg = "'%s' does not have a list of domain points "\
                   "with length (2^n)+1"
-            raise ValueError(msg % (pblock.cname(True),))
+            raise ValueError(msg % (pblock.name,))
         x_pts = pblock._domain_pts
         y_pts = pblock._range_pts
         bound_type = pblock._bound_type
@@ -1226,7 +1226,7 @@ class Piecewise(Block):
                       "lower and upper bounds. Refer to the Piecewise help "\
                       "documentation for information on how to disable this "\
                       "restriction"
-                raise ValueError(msg % (self.cname(True), index, _self_xvar))
+                raise ValueError(msg % (self.name, index, _self_xvar))
 
         if self._warn_domain_coverage is True:
             # Print a warning when the feasible region created by the piecewise
@@ -1236,14 +1236,14 @@ class Piecewise(Block):
                     "include the lower bound of domain variable: %s.lb = %s < %s. "\
                     "Refer to the Piecewise help documentation for information on "\
                     "how to disable this warning."
-                print(msg % ( self.cname(True), index, _self_xvar, _self_xvar.lb,
+                print(msg % ( self.name, index, _self_xvar, _self_xvar.lb,
                               min(_self_domain_pts_index) ))
             if (_self_xvar.ub is not None) and (_self_xvar.ub > max(_self_domain_pts_index)):
                     msg = "**WARNING: Piecewise '%s[%s]' feasible region does not "\
                         "include the upper bound of domain variable: %s.ub = %s > %s. "\
                         "Refer to the Piecewise help documentation for information on "\
                         "how to disable this warning."
-                    print(msg % ( self.cname(True), index, _self_xvar, _self_xvar.ub,
+                    print(msg % ( self.name, index, _self_xvar, _self_xvar.ub,
                                   max(_self_domain_pts_index) ))
 
         if len(_self_domain_pts_index) <= 1:
@@ -1258,19 +1258,19 @@ class Piecewise(Block):
                 "Piecewise component '%s[%s]' failed to construct "
                 "piecewise representation. List of breakpoints "
                 "must contain at least two elements. Current list: %s"
-                % (self.cname(True), index, str(_self_domain_pts_index)))
+                % (self.name, index, str(_self_domain_pts_index)))
 
         # generate the list of range values using the function rule
         # check if convexity or concavity holds as well
         force_simple = False
         if self.is_indexed() is False:
-            character,range_pts,isStep=_characterize_function(self.cname(True),
+            character,range_pts,isStep=_characterize_function(self.name,
                                                               self._warning_tol,
                                                               self._f_rule,
                                                               _self_parent,
                                                               _self_domain_pts_index)
         else:
-            character,range_pts,isStep=_characterize_function(self.cname(True),
+            character,range_pts,isStep=_characterize_function(self.name,
                                                               self._warning_tol,
                                                               self._f_rule,
                                                               _self_parent,
@@ -1285,7 +1285,7 @@ class Piecewise(Block):
                   "piecewise representation '%s' does not currently support this "\
                   "functionality. Refer to the Piecewise help documentation for "\
                   "information about which piecewise representations support step functions."
-            raise ValueError(msg % (self.cname(True), index, self._pw_rep))
+            raise ValueError(msg % (self.name, index, self._pw_rep))
 
         # Make automatic simplications to the piecewise constraints
         # for the special cases of convexity and lower bound
@@ -1336,7 +1336,7 @@ class Piecewise(Block):
                 else:
                     msg = "Piecewise '%s[%s]' does not have a valid "\
                           "piecewise representation: '%s'"
-                    raise ValueError(msg % (self.cname(True), index, self._pw_rep))
+                    raise ValueError(msg % (self.name, index, self._pw_rep))
 
         if self.is_indexed():
             comp = _PiecewiseData(self)
@@ -1359,6 +1359,6 @@ class IndexedPiecewise(Piecewise):
         Piecewise.__init__(self,*args,**kwds)
 
     def __str__(self):
-        return str(self.cname())
+        return str(self.name)
 
 register_component(Piecewise, "Constraints that contain piecewise linear expressions.")

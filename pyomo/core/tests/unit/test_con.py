@@ -351,6 +351,206 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+    # make sure we can use a mutable param that
+    # has not been given a value in the upper bound
+    # of an inequality constraint
+    def test_mutable_novalue_param_lower_bound(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.p = Param(mutable=True)
+        model.p.value = None
+
+        model.c = Constraint(expr=0 <= model.x - model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p <= model.x)
+        self.assertTrue(model.c.lower is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p <= model.x + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p + 1 <= model.x)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p + 1)**2 <= model.x)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p <= model.x <= model.p + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x - model.p >= 0)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x >= model.p)
+        self.assertTrue(model.c.lower is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x + 1 >= model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x >= model.p + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x >= (model.p + 1)**2)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p + 1 >= model.x >= model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p, model.x, None))
+        self.assertTrue(model.c.lower is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p, model.x + 1, None))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p + 1, model.x, None))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p, model.x, 1))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+    # make sure we can use a mutable param that
+    # has not been given a value in the lower bound
+    # of an inequality constraint
+    def test_mutable_novalue_param_upper_bound(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.p = Param(mutable=True)
+        model.p.value = None
+
+        model.c = Constraint(expr=model.x - model.p <= 0)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x <= model.p)
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x + 1 <= model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x <= model.p + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x <= (model.p + 1)**2)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p + 1 <= model.x <= model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=0 >= model.x - model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p >= model.x)
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p >= model.x + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p + 1 >= model.x)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p + 1)**2 >= model.x)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p >= model.x >= model.p + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(None, model.x, model.p))
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(None, model.x + 1, model.p))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(None, model.x, model.p + 1))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(1, model.x, model.p))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+    # make sure we can use a mutable param that
+    # has not been given a value in the rhs of
+    # of an equality constraint
+    def test_mutable_novalue_param_equality(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.p = Param(mutable=True)
+        model.p.value = None
+
+        model.c = Constraint(expr=model.x - model.p == 0)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x == model.p)
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x + 1 == model.p)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x + 1 == (model.p + 1)**2)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x == model.p + 1)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p <= model.x <= model.p)
+        self.assertTrue(model.c.upper is model.p)
+        # GH: Not sure if we are supposed to detect equality
+        #     in this situation. I would rather us not, for
+        #     the sake of making the code less complicated.
+        #     Either way, I am not going to test for it here.
+        #self.assertEqual(model.c.equality, <blah>)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.x, model.p))
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p, model.x))
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
 
 class TestSimpleCon(unittest.TestCase):
 
@@ -938,7 +1138,7 @@ class MiscConTests(unittest.TestCase):
 
     def test_constructor(self):
         a = Constraint(name="b")
-        self.assertEqual(a.name,"b")
+        self.assertEqual(a.local_name, "b")
         try:
             a = Constraint(foo="bar")
             self.fail("Can't specify an unexpected constructor option")

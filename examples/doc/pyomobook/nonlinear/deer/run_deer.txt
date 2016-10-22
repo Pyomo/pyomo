@@ -2,13 +2,13 @@
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
 [    0.02] Applying solver
-[    0.05] Processing results
+[    0.04] Processing results
     Number of solutions: 1
     Solution Information
       Gap: None
       Status: optimal
       Function Value: 659.224784497
-    Solver results file: results.yml
+    Solver results file: results.json
 
 ==========================================================
 Solution Summary
@@ -17,30 +17,30 @@ Solution Summary
 Model unknown
 
   Variables:
-    f : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value         : Upper : Fixed : Stale
-        None :     0 : 189.605592667 :  None : False : False
-    d : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value         : Upper : Fixed : Stale
-        None :     0 : 196.006401042 :  None : False : False
-    b : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value         : Upper : Fixed : Stale
-        None :     0 : 54.3697276124 :  None : False : False
-    hf : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :     0 :   0.0 :  None : False : False
-    hd : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value         : Upper : Fixed : Stale
-        None :     0 : 37.8450171569 :  None : False : False
-    hb : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value        : Upper : Fixed : Stale
-        None :     0 : 62.137976734 :  None : False : False
-    br : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value         : Upper : Fixed : Stale
-        None :     0 : 1.09999999201 :  None : False : False
-    c : Size=1, Index=None, Domain=PositiveReals
-        Key  : Lower : Value        : Upper : Fixed : Stale
-        None :     0 : 700000.00699 :  None : False : False
+    f : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 189.605592667 :  None : False : False : PositiveReals
+    d : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 196.006401042 :  None : False : False : PositiveReals
+    b : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 54.3697276124 :  None : False : False : PositiveReals
+    hf : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :   0.0 :  None : False : False : PositiveReals
+    hd : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 37.8450171569 :  None : False : False : PositiveReals
+    hb : Size=1, Index=None
+        Key  : Lower : Value        : Upper : Fixed : Stale : Domain
+        None :     0 : 62.137976734 :  None : False : False : PositiveReals
+    br : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 1.09999999201 :  None : False : False : PositiveReals
+    c : Size=1, Index=None
+        Key  : Lower : Value        : Upper : Fixed : Stale : Domain
+        None :     0 : 700000.00699 :  None : False : False : PositiveReals
 
   Objectives:
     obj : Size=1, Index=None, Active=True
@@ -70,5 +70,5 @@ Model unknown
         Key  : Lower : Body              : Upper
         None :  None : 9.34787180995e-09 :   0.0
 
-[    0.05] Applying Pyomo postprocessing actions
-[    0.05] Pyomo Finished
+[    0.04] Applying Pyomo postprocessing actions
+[    0.04] Pyomo Finished

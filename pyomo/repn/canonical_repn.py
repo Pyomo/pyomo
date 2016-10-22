@@ -476,7 +476,7 @@ class coopr3_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
         ordered_vars = None
         if self.variables is not None:
             ordered_vars = sorted(
-                (v.cname(True), i) for i,v in enumerate(self.variables) )
+                (v.name, i) for i,v in enumerate(self.variables) )
         tmp_str = str(self.constant) if (self.constant) else ("")
         tmp_str += (" + ") if (self.constant and self.variables) else ("")
         tmp_str += (" + ".join("%s*%s"%(self.linear[i], v) for v,i in ordered_vars)) if (self.variables) else ("")

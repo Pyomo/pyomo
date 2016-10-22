@@ -79,15 +79,15 @@ id_counter=0
 
 def Pyomo2FD_expression(exp, ipoint, vars, symbol_map):
     if isinstance(exp, expr._IntrinsicFunctionExpression):
-        if not exp.cname() in intrinsic_function_expressions:
-            logger.error("Unsupported intrinsic function (%s)", exp.cname(True))
-            raise TypeError("FuncDesigner does not support '{0}' expressions".format(exp.cname(True)))
+        if not exp.name in intrinsic_function_expressions:
+            logger.error("Unsupported intrinsic function (%s)", exp.name)
+            raise TypeError("FuncDesigner does not support '{0}' expressions".format(exp.name))
 
         args = []
         for child_exp in exp._args:
-            args.append( Pyomo2FD_expression(child_exp, ipoint, vars, symbol_map) )
+            args.append( Pyomo2FD_expression(child_exp, ipoint, vars, symbol_map))
 
-        fn = intrinsic_function_expressions[exp.cname()]
+        fn = intrinsic_function_expressions[exp.name]
         return fn(*tuple(args))
 
     elif isinstance(exp, expr._SumExpression):
@@ -190,8 +190,8 @@ def Pyomo2FuncDesigner(instance):
             _f.append( Pyomo2FD_expression(obj.expr, ipoint, vars, smap) )
         else:
             _f.append( - Pyomo2FD_expression(obj.expr, ipoint, vars, smap) )
-        _f_name.append( obj.cname(True) )
-        smap.getSymbol(obj, lambda objective: objective.cname(True))
+        _f_name.append(obj.name)
+        smap.getSymbol(obj, lambda objective: objective.name)
 
     # TODO - use 0.0 for default values???
     # TODO - create results map

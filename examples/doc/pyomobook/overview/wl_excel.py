@@ -1,3 +1,4 @@
+# wl_excel.py: Loading Excel data using Pandas
 import pandas
 import sys
 from pyomo.environ import *
@@ -10,8 +11,7 @@ d = {(r, c):df.at[r,c] for r in N for c in M}
 P = int(sys.argv[2])
 
 # create the model (could be imported)
-model = ConcreteModel()
-model.name = "(WL)"
+model = ConcreteModel(name="(WL)")
 
 model.x = Var(N, M, bounds=(0,1))
 model.y = Var(N, within=Binary)

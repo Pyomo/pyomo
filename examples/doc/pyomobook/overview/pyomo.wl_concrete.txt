@@ -2,12 +2,12 @@
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
 [    0.00] Applying solver
-[    0.01] Processing results
+[    0.02] Processing results
     Number of solutions: 1
     Solution Information
       Gap: 0.0
       Status: optimal
-      Function Value: 2415.0
+      Function Value: 2745.0
     Solver results file: results.yml
 [    0.02] Applying Pyomo postprocessing actions
 [    0.02] Pyomo Finished
@@ -19,12 +19,12 @@
 # ----------------------------------------------------------
 Problem: 
 - Name: unknown
-  Lower bound: 2415.0
-  Upper bound: 2415.0
+  Lower bound: 2745.0
+  Upper bound: 2745.0
   Number of objectives: 1
-  Number of constraints: 14
-  Number of variables: 13
-  Number of nonzeros: 31
+  Number of constraints: 18
+  Number of variables: 16
+  Number of nonzeros: 40
   Sense: minimize
 # ----------------------------------------------------------
 #   Solver Information
@@ -37,7 +37,7 @@ Solver:
       Number of bounded subproblems: 1
       Number of created subproblems: 1
   Error rc: 0
-  Time: 0.006258964538574219
+  Time: 0.007071971893310547
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
@@ -49,11 +49,13 @@ Solution:
   Message: None
   Objective:
     obj:
-      Value: 2415
+      Value: 2745
   Variable:
     x[Ashland,Chicago]:
       Value: 1
     x[Ashland,NYC]:
+      Value: 1
+    x[Harlingen,Houston]:
       Value: 1
     x[Harlingen,LA]:
       Value: 1

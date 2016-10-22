@@ -101,7 +101,10 @@ def perform_install(package, config=None, user='hudson', dest='python', virtuale
         configfile = config
 
     if 'PYPI_URL' in os.environ:
-        pypi_url = [ '--pypi-url', os.environ['PYPI_URL'] ]
+        if os.environ['PYPI_URL']:
+            pypi_url = [ '--pypi-url', os.environ['PYPI_URL'] ]
+        else:
+            pypi_url = []
     else:
         pypi_url = [ '--pypi-url', 'http://giskard.sandia.gov:8888/pypi',
                      '--trust-pypi-url' ]

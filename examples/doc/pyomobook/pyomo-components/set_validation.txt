@@ -1,0 +1,23 @@
+7 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['AA', 'BB', 'CC']
+    B : Dim=0, Dimen=1, Size=1, Domain=A, Ordered=False, Bounds=None
+        ['BB']
+    C : Dim=0, Dimen=1, Size=1, Domain=None, Ordered=False, Bounds=None
+        ['CC']
+    F : Dim=1, Dimen=1, Size=3, Domain=A, ArraySize=3, Ordered=False, Bounds=None
+        Key : Members
+          1 :  ['AA']
+          2 :  ['BB']
+          3 :  ['CC']
+    F_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+    G : Dim=1, Dimen=1, Size=3, Domain=None, ArraySize=3, Ordered=False, Bounds=None
+        Key : Members
+          1 :  ['AA']
+          2 :  ['BB']
+          3 :  ['CC']
+    G_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+7 Declarations: A B C F_index F G_index G

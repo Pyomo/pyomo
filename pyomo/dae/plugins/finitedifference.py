@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 import logging
+from six import itervalues
 
 from pyomo.core.base.plugin import alias
 from pyomo.core.base import Transformation
@@ -92,10 +93,11 @@ def _backward_transform_order2(v,s):
 class Finite_Difference_Transformation(Transformation):
     """
     Transformation that applies finite difference methods to
-    DAE, ODE, or PDE models. 
-    
+    DAE, ODE, or PDE models.
     """
-    alias('dae.finite_difference', doc="TODO")
+    alias('dae.finite_difference', doc="Discretizes a DAE model using "\
+          "a finite difference method transforming the model into an NLP.")
+
 
     def __init__(self):
         super(Finite_Difference_Transformation, self).__init__()
@@ -116,13 +118,13 @@ class Finite_Difference_Transformation(Transformation):
         Applies the transformation to a modeling instance
 
         Keyword Arguments:
-        nfe           The desired number of finite element points to be 
+        nfe           The desired number of finite element points to be
                       included in the discretization.
-        wrt           Indicates which ContinuousSet the transformation 
+        wrt           Indicates which ContinuousSet the transformation
                       should be applied to. If this keyword argument is not
                       specified then the same scheme will be applied to all
                       ContinuousSets.
-        scheme        Indicates which finite difference method to apply. 
+        scheme        Indicates which finite difference method to apply.
                       Options are BACKWARD, CENTRAL, or FORWARD. The default
                       scheme is the backward difference method
         """
@@ -140,7 +142,7 @@ class Finite_Difference_Transformation(Transformation):
                      "must be a differential set")
             elif 'scheme' in tmpds.get_discretization_info():
                 raise ValueError("The discretization scheme '%s' has already been applied "\
-                     "to the ContinuousSet '%s'" %(tmpds.get_discretization_info()['scheme'],tmpds.cname(True)))
+                     "to the ContinuousSet '%s'" %(tmpds.get_discretization_info()['scheme'],tmpds.name))
 
         if None in self._nfe:
             raise ValueError("A general discretization scheme has already been applied to "\
@@ -155,8 +157,8 @@ class Finite_Difference_Transformation(Transformation):
             self._nfe[None] = tmpnfe
             currentds = None
         else :
-            self._nfe[tmpds.cname(True)]=tmpnfe
-            currentds = tmpds.cname(True)
+            self._nfe[tmpds.name]=tmpnfe
+            currentds = tmpds.name
 
         self._scheme = self.all_schemes.get(self._scheme_name,None)
         if self._scheme is None:
@@ -172,34 +174,34 @@ class Finite_Difference_Transformation(Transformation):
     def _transformBlock(self, block, currentds):
 
         self._fe = {}
-        for ds in block.component_map(ContinuousSet).itervalues():
-            if currentds is None or currentds == ds.cname(True):
+        for ds in itervalues(block.component_map(ContinuousSet)):
+            if currentds is None or currentds == ds.name:
                 generate_finite_elements(ds,self._nfe[currentds])
                 if not ds.get_changed():
                     if len(ds)-1 > self._nfe[currentds]:
                         print("***WARNING: More finite elements were found in ContinuousSet "\
                             "'%s' than the number of finite elements specified in apply. "\
-                            "The larger number of finite elements will be used." %(ds.cname(True)))
-                
-                self._nfe[ds.cname(True)]=len(ds)-1
-                self._fe[ds.cname(True)]=sorted(ds)
+                            "The larger number of finite elements will be used." %(ds.name))
+
+                self._nfe[ds.name]=len(ds)-1
+                self._fe[ds.name]=sorted(ds)
                 # Adding discretization information to the differentialset object itself
                 # so that it can be accessed outside of the discretization object
                 disc_info = ds.get_discretization_info()
-                disc_info['nfe']=self._nfe[ds.cname(True)]
+                disc_info['nfe']=self._nfe[ds.name]
                 disc_info['scheme']=self._scheme_name + ' Difference'
-                     
+
         # Maybe check to see if any of the ContinuousSets have been changed,
         # if they haven't then the model components need not be updated
         # or even iterated through
 
-        for c in block.component_map().itervalues():
+        for c in itervalues(block.component_map()):
             update_contset_indexed_component(c)
 
-        for d in block.component_map(DerivativeVar).itervalues():
+        for d in itervalues(block.component_map(DerivativeVar)):
             dsets = d.get_continuousset_list()
             for i in set(dsets):
-                if currentds is None or i.cname(True) == currentds:
+                if currentds is None or i.name == currentds:
                     oldexpr = d.get_derivative_expression()
                     loc = d.get_state_var()._contset[i]
                     count = dsets.count(i)
@@ -207,7 +209,7 @@ class Finite_Difference_Transformation(Transformation):
                         raise DAE_Error(
                             "Error discretizing '%s' with respect to '%s'. Current implementation "\
                             "only allows for taking the first or second derivative with respect to "\
-                            "a particular ContinuousSet" %(d.cname(True),i.cname(True)))
+                            "a particular ContinuousSet" %(d.name,i.name))
                     scheme = self._scheme[count-1]
                     newexpr = create_partial_expression(scheme,oldexpr,i,loc)
                     d.set_derivative_expression(newexpr)
@@ -217,14 +219,14 @@ class Finite_Difference_Transformation(Transformation):
                 add_discretization_equations(block,d)
                 block.reclassify_component_type(d,Var)
 
-        # Reclassify Integrals if all ContinuousSets have been discretized       
+        # Reclassify Integrals if all ContinuousSets have been discretized
         if block_fully_discretized(block):
-            
+
             if block.contains_component(Integral):
-                for i in block.component_map(Integral).itervalues():  
+                for i in itervalues(block.component_map(Integral)):
                     i.reconstruct()
                     block.reclassify_component_type(i,Expression)
                 # If a model contains integrals they are most likely to appear in the objective
                 # function which will need to be reconstructed after the model is discretized.
-                for k in block.component_map(Objective).itervalues():
+                for k in itervalues(block.component_map(Objective)):
                     k.reconstruct()

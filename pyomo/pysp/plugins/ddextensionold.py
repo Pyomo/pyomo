@@ -256,7 +256,7 @@ class ddextension_base(object):
             try:
                 LP_name = LP_byObject[id(vardata)]
             except:
-                print(("FAILED ON VAR DATA= "+vardata.cname(True)))
+                print(("FAILED ON VAR DATA= "+vardata.name))
                 foobar
             if scenario_tree_id in firststage_blended_variables:
                 self._FirstStageVars.append(LP_name)
@@ -290,13 +290,13 @@ class ddextension_base(object):
             print("Not all model variables are on the scenario tree. Investigating...")
             all_vars = set()
             for block in self._reference_scenario_instance.block_data_objects(active=True):
-                all_vars.update(vardata.cname(True) \
+                all_vars.update(vardata.name \
                                 for vardata in components_data(block, Var))
             tree_vars = set()
             for scenario_tree_id, vardata in \
                 iteritems(self._reference_scenario_instance.\
                           _ScenarioTreeSymbolMap.bySymbol):
-                tree_vars.add(vardata.cname(True))
+                tree_vars.add(vardata.name)
             cost_vars = set()
             for stage in ph._scenario_tree._stages:
                 cost_variable_name, cost_variable_index = \
@@ -305,7 +305,7 @@ class ddextension_base(object):
                     self._reference_scenario_instance.\
                     find_component(cost_variable_name)
                 if stage_cost_component.type() is not Expression:
-                    cost_vars.add(stage_cost_component[cost_variable_index].cname(True))
+                    cost_vars.add(stage_cost_component[cost_variable_index].name)
             print(("Number of Scenario Tree Variables (found ddsip LP file): "+str(len(tree_vars))))
             print(("Number of Scenario Tree Cost Variables (found ddsip LP file): "+str(len(cost_vars))))
             print(("Number of Variables Found on Model: "+str(len(all_vars))))
@@ -361,13 +361,13 @@ class ddextension_base(object):
             block_canonical_repn = getattr(block, "_canonical_repn",None)
             if block_canonical_repn is None:
                 raise ValueError("Unable to find _canonical_repn ComponentMap "
-                                 "on block %s" % (block.cname(True)))
+                                 "on block %s" % (block.name))
             isPiecewise = False
             if isinstance(block, (Piecewise, _PiecewiseData)):
                 isPiecewise = True
             for constraint_data in block.component_data_objects(SOSConstraint, active=True, descend_into=False):
                 raise TypeError("SOSConstraints are not handled by the DDSIP interface: %s"
-                                % (constraint_data.cname(True)))
+                                % (constraint_data.name))
             for constraint_data in block.component_data_objects(Constraint, active=True, descend_into=False):
                 LP_name = LP_byObject[id(constraint_data)]
                 # if it is a range constraint this will account for

@@ -68,23 +68,22 @@ model = ConcreteModel()
 model.b = Block()
 model.b.x = Var()
 
-print(model.b.x.cname())                        # 'x'
-print(model.b.x.cname(True))                    # 'b.x'
-print(model.b.x.cname(fully_qualified=True))    # 'b.x'
+print(model.b.x.local_name)   # 'x'
+print(model.b.x.name)         # 'b.x'
 # @:nested1
 
 print("special1")
 # --------------------------------------------------
 # @special1:
 model = ConcreteModel()
-model.p = Param([1,2,3], initialize={1:1, 3:3})
-model.q = Param([1,2,3], initialize={1:1, 3:3}, default=0)
+model.p = Param([1,2,3], initialize={1:1.42, 3:3.14})
+model.q = Param([1,2,3], initialize={1:1.42, 3:3.14}, default=0)
 
 # Demonstrating the len() function
 print(len(model.p))                 # 2
 print(len(model.q))                 # 3
 
-# Demonstrating the 'in' operator
+# Demonstrating the 'in' operator (checks against component keys)
 print(2 in model.p)                 # False
 print(2 in model.q)                 # True
 
@@ -93,48 +92,81 @@ print([key for key in model.p])     # [1,3]
 print([key for key in model.q])     # [1,2,3]
 
 # Demonstrating the '[]' operator
-print(model.p[1])                   # 1
-print(model.q[1])                   # 1
+print(model.p[1])                   # 1.42
+print(model.q[1])                   # 1.42
 # @:special1
+
+print("special2")
+# --------------------------------------------------
+# @special2:
+model = ConcreteModel()
+model.p = Var([1,2,3], initialize={1:1.42, 3:3.14})
+model.q = Var([1,2,3], initialize={1:1.42, 2: 2.5, 3:3.14})
+
+# Demonstrating the len() function
+print(len(model.p))                 # 2
+print(len(model.q))                 # 3
+
+# Demonstrating the 'in' operator (checks against component keys)
+print(2 in model.p)                 # False
+print(2 in model.q)                 # True
+
+# Demonstrating iteration over component keys
+print([key for key in model.p])     # [1,3]
+print([key for key in model.q])     # [1,2,3]
+
+# Demonstrating the '[]' operator
+print(model.p[1])                   # 1.42
+print(model.q[1])                   # 1.42
+# @:special2
 
 print("indexed2")
 # --------------------------------------------------
 # @indexed2:
 model = ConcreteModel()
-model.p = Param([1,2,3], initialize={1:1, 3:3})
-model.q = Param([1,2,3], initialize={1:1, 3:3}, default=0)
+model.x = Var([1,2,3], initialize={1:1.42, 3:3.14})
+
+# Demonstrating the len() function
+print(len(model.x))                 # 3
+
+# Demonstrating the 'in' operator (checks against component keys)
+print(2 in model.x)                 # True
+print(4 in model.x)                 # False
+
+# Demonstrating iteration over component keys
+print([key for key in model.x])     # [1,2,3]
+
+# Demonstrating the '[]' operator
+print(value(model.x[1]))            # 1.42
 
 # Demonstrating the keys() function
-print(list(model.p.keys()))         # [1,3]
-print(list(model.q.keys()))         # [1,2,3]
+print(list(model.x.keys()))         # [1,2,3]
+# @:indexed2
 
 # Demonstrating the items() function
-print(list(model.p.items()))        # [(1,1), (3,3)]
-print(list(model.q.items()))        # [(1,1), (2,0), (3,3)]
+#print(list(model.x.items()))        # [(1,1.42), (2,None), (3,3.14)]
 
 # Demonstrating the values() function
-print(list(model.p.values()))       # [1,3]
-print(list(model.q.values()))       # [1,0,3]
-# @:indexed2
+#print(list(model.x.values()))       # [1.42,None,3.14]
 
 print("indexed3")
 # --------------------------------------------------
 # @indexed3:
 model = ConcreteModel()
-model.p = Param([1,2,3], initialize={1:1, 3:3})
-model.q = Param([1,2,3], initialize={1:1, 3:3}, default=0)
+model.p = Param([1,2,3], initialize={1:1.42, 3:3.14})
+model.q = Param([1,2,3], initialize={1:1.42, 3:3.14}, default=0)
 
 # Demonstrating the keys() function
 print(list(model.p.iterkeys()))     # [1,3]
 print(list(model.q.iterkeys()))     # [1,2,3]
 
 # Demonstrating the items() function
-print(list(model.p.iteritems()))    # [(1,1), (3,3)]
-print(list(model.q.iteritems()))    # [(1,1), (2,0), (3,3)]
+print(list(model.p.iteritems()))    # [(1,1.42), (3,3.14)]
+print(list(model.q.iteritems()))    # [(1,1.42), (2,0), (3,3.14)]
 
 # Demonstrating the values() function
-print(list(model.p.itervalues()))   # [1,3]
-print(list(model.q.itervalues()))   # [1,0,3]
+print(list(model.p.itervalues()))   # [1.42,3.14]
+print(list(model.q.itervalues()))   # [1.42,0,3.14]
 # @:indexed3
 
 print("indexed4")
@@ -158,8 +190,8 @@ print("numvalue1")
 # --------------------------------------------------
 # @numvalue1:
 model = ConcreteModel()
-# A single parameter is a subclass of NumericValue 
-model.p = Param(initialize=3)   
+# A single parameter is a subclass of NumericValue
+model.p = Param(initialize=3)
 
 model.p + 2             # Calls __add__
 model.p - 2             # Calls __sub__
@@ -188,7 +220,7 @@ print("numvalue2")
 # --------------------------------------------------
 # @numvalue2:
 model = ConcreteModel()
-# A single parameter is a subclass of NumericConstant 
+# A single parameter is a subclass of NumericConstant
 model.p = Param(initialize=-3)
 
 abs(model.p)            # Calls __abs__

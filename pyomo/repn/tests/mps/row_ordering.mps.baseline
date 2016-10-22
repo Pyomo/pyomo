@@ -1,0 +1,32 @@
+* Source:     Pyomo MPS Writer
+* Format:     Free MPS
+*
+NAME unknown
+OBJSENSE
+ MIN
+ROWS
+ N  obj
+ E  c_e_con4(2)_
+ E  c_e_con4(1)_
+ G  r_l_con3_
+ L  r_u_con3_
+ L  c_u_con2_
+ G  c_l_con1_
+COLUMNS
+     a obj 1
+     a c_e_con4(2)_ 1
+     a c_e_con4(1)_ 1
+     a r_l_con3_ 1
+     a r_u_con3_ 1
+     a c_u_con2_ 1
+     a c_l_con1_ 1
+RHS
+     RHS c_e_con4(2)_ 2
+     RHS c_e_con4(1)_ 1
+     RHS r_l_con3_ 0
+     RHS r_u_con3_ 1
+     RHS c_u_con2_ 1
+     RHS c_l_con1_ 0
+BOUNDS
+ FR BOUND a
+ENDATA

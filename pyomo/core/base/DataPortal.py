@@ -19,13 +19,13 @@ class DataPortal(object):
     """
     An object that manages loading and storing data from
     external data sources.  This object interfaces to plugins that
-    manipulate the data in a manner that is dependent on the 
+    manipulate the data in a manner that is dependent on the
     data format.
 
     Note that data is organized as follows:
         data[namespace][symbol][index] -> value
     The default namespace is None.
-    
+
     Constructor Arguments:
         model       The model for which this data is associated.  This is
                         used for error checing (e.g. object names must
@@ -90,7 +90,7 @@ class DataPortal(object):
             tmp = data.split(".")[-1]
         else:
             tmp = data
-        self._data_manager = DataManagerFactory(tmp) 
+        self._data_manager = DataManagerFactory(tmp)
         if type(self._data_manager) is UnknownDataManager:
             raise IOError("Unknown file format '%s'" % tmp)
         self._data_manager.initialize(**kwds)
@@ -102,7 +102,7 @@ class DataPortal(object):
         """
         self._data_manager.close()
         self._data_manager = None
-        
+
     def load(self, **kwds):
         """
         Import data from an external data source.
@@ -262,7 +262,7 @@ class DataPortal(object):
 
     def namespaces(self):
         """
-        Return an iterator for the data namespaces 
+        Return an iterator for the data namespaces
         """
         for key in self._data:
             yield key
@@ -307,7 +307,7 @@ class DataPortal(object):
         #
         if options.data is None and (not options.set is None or not options.param is None or not options.index is None):
             #
-            # Set options.data to a list of elements of the options.set, 
+            # Set options.data to a list of elements of the options.set,
             # options.param and options.index values.
             #
             options.data = []
@@ -336,7 +336,7 @@ class DataPortal(object):
         #
         if type(options.data) in (list, tuple):
             #
-            # If options.data is a list/tuple, then 
+            # If options.data is a list/tuple, then
             # process it to get the names of the
             # elements.  Thus, if a component is included
             # in options.data, then it is replaced by its name.
@@ -344,7 +344,7 @@ class DataPortal(object):
             ans = []
             for item in options.data:
                 try:
-                    ans.append(item.name)
+                    ans.append(item.local_name)
                     self._model = item.model()
                 except:
                     ans.append(item)
@@ -354,10 +354,10 @@ class DataPortal(object):
             # If options.data is a single value, then we assume that
             # it is a component.  Reset its value to the value of
             # the component name.
-            # 
+            #
             try:
                 self._model = options.data.model()
-                options.data = [ self._data_manager.options.data.name ]
+                options.data = [ self._data_manager.options.data.local_name ]
             except:
                 pass
 

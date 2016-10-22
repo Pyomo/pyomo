@@ -1,0 +1,15 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+M : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+    ['Chicago', 'Houston', 'LA', 'NYC']
+[    0.01] Applying solver
+[    0.03] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: 2745.0
+    Solver results file: results.yml
+[    0.03] Applying Pyomo postprocessing actions
+[    0.03] Pyomo Finished

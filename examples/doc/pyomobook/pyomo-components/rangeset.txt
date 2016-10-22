@@ -1,0 +1,9 @@
+3 RangeSet Declarations
+    A : Dim=0, Dimen=1, Size=10, Domain=Integers, Ordered=True, Bounds=(1, 10)
+        Virtual
+    C : Dim=0, Dimen=1, Size=6, Domain=Integers, Ordered=True, Bounds=(5, 10)
+        Virtual
+    D : Dim=0, Dimen=1, Size=6, Domain=Reals, Ordered=True, Bounds=(2.5, 10.0)
+        Virtual
+
+3 Declarations: A C D
