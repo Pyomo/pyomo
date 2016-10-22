@@ -476,9 +476,10 @@ class _ExternalFunctionExpression(_ExpressionBase):
         if safe_mode:
             self._parent_expr = None
             for x in args:
-                if isinstance(x, _ExpressionBase) and x._parent_expr:
-                    raise EntangledExpressionError(x)
-                x._parent_expr = bypass_backreference or ref(self)
+                if isinstance(x, _ExpressionBase):
+                    if x._parent_expr:
+                        raise EntangledExpressionError(x)
+                    x._parent_expr = bypass_backreference or ref(self)
         self._args = tuple(
             x if isinstance(x, basestring) else as_numeric(x)
             for x in args )
