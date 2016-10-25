@@ -512,9 +512,11 @@ You can silence this warning by one of three ways:
     def _processUnhashableIndex(self, ndx, _exception):
         """Process a call to __getitem__ with unhashable elements
 
-        There are two basic ways to get here:
-          1) the index constains one or more slices
-          2) the index contains a Pyomo (Simple)COmponent
+        There are three basic ways to get here:
+          1) the index constains one or more slices or ellipsis
+          2) the index contains an unhashable type (e.g., a Pyomo
+             (Simple)Component
+          3) the index contains an IndexTemplate
         """
         #
         # Iterate through the index and look for slices and constant
@@ -529,6 +531,8 @@ You can silence this warning by one of three ways:
         #
         if type(ndx) not in (tuple, list):
             ndx = [ndx]
+        else:
+            ndx = pyutilib.misc.flatten(ndx)
 
         for i,val in enumerate(ndx):
             if type(val) is slice:
