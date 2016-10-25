@@ -15,6 +15,7 @@ from pyomo.core.base import expr as EXPR
 from pyomo.core.base import expr_common
 from pyomo.core.base.template_expr import (
     IndexTemplate, 
+    _GetItemIndexer,
     substitute_template_expression, 
     substitute_template_with_param,
     substitute_template_with_index,
@@ -288,35 +289,65 @@ class TestTemplateSubstitution(unittest.TestCase):
 
     def test_simple_substitute_param(self):
         def diffeq(m,t, i):
-            return m.dxdt[t, i] == t * m.x[t, i] ** 2 + m.y**2
+            return m.dxdt[t, i] == t*m.x[t, i-1]**2 + m.y**2 + \
+                m.x[t, i+1] + m.x[t, i-1]
 
         m = self.m
         t = IndexTemplate(m.TIME)
-        e = diffeq(m,t, 2)
-        t.set_value(5)
+        e = diffeq(m, t, 2)
 
         self.assertTrue( isinstance(e, EXPR._ExpressionBase) )
-        self.assertEqual((e._args[0](), e._args[1]()), (10,126))
 
         _map = {}
         E = substitute_template_expression(
             e, substitute_template_with_param, _map )
         self.assertIsNot(e,E)
 
-        self.assertEqual( len(_map), 2 )
-        self.assertIn( id(m.x), _map )
-        self.assertIn( id(m.dxdt), _map )
+        self.assertEqual( len(_map), 3 )
+
+        idx1 = _GetItemIndexer( m.x[t,1] )
+        self.assertIs( idx1._base, m.x )
+        self.assertEqual( len(idx1._args), 2 )
+        self.assertIs( idx1._args[0], t )
+        self.assertEqual( idx1._args[1], 1 )
+        self.assertIn( idx1, _map )
+
+        idx2 = _GetItemIndexer( m.dxdt[t,2] )
+        self.assertIs( idx2._base, m.dxdt )
+        self.assertEqual( len(idx2._args), 2 )
+        self.assertIs( idx2._args[0], t )
+        self.assertEqual( idx2._args[1], 2 )
+        self.assertIn( idx2, _map )
+
+        idx3 = _GetItemIndexer( m.x[t,3] )
+        self.assertIs( idx3._base, m.x )
+        self.assertEqual( len(idx3._args), 2 )
+        self.assertIs( idx3._args[0], t )
+        self.assertEqual( idx3._args[1], 3 )
+        self.assertIn( idx3, _map )
+
+        self.assertFalse( idx1 == idx2 )
+        self.assertFalse( idx1 == idx3 )
+        self.assertFalse( idx2 == idx3 )
+
+        idx4 = _GetItemIndexer( m.x[t,2] )
+        self.assertNotIn( idx4, _map )
+
+        t.set_value(5)
+        self.assertEqual((e._args[0](), e._args[1]()), (10,136))
 
         self.assertEqual(
             str(E),
-            'dxdt  ==  {TIME} * x**2.0 + y**2.0' )
-        _map[id(m.x)].set_value( value(m.x[value(t), 2]) )
-        _map[id(m.dxdt)].set_value( value(m.dxdt[value(t), 2]) )
-        self.assertEqual((E._args[0](), E._args[1]()), (10,126))
+            'dxdt[{TIME},2]  ==  {TIME} * x[{TIME},1]**2.0 + y**2.0 + x[{TIME},3] + x[{TIME},1]' )
 
-        _map[id(m.x)].set_value( 12 )
-        _map[id(m.dxdt)].set_value( 34 )
-        self.assertEqual((E._args[0](), E._args[1]()), (34,721))
+        _map[idx1].set_value( value(m.x[value(t), 1]) )
+        _map[idx2].set_value( value(m.dxdt[value(t), 2]) )
+        _map[idx3].set_value( value(m.x[value(t), 3]) )
+        self.assertEqual((E._args[0](), E._args[1]()), (10,136))
+
+        _map[idx1].set_value( 12 )
+        _map[idx2].set_value( 34 )
+        self.assertEqual((E._args[0](), E._args[1]()), (34,738))
 
 
     def test_simple_substitute_index(self):

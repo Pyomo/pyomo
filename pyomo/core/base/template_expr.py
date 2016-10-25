@@ -8,11 +8,14 @@
 #  _________________________________________________________________________
 
 from pyomo.core.base.numvalue import (
-    NumericValue, native_numeric_types, as_numeric )
+    NumericValue, native_numeric_types, as_numeric, value )
 import pyomo.core.base
+import logging
 
 class TemplateExpressionError(ValueError):
-    pass
+    def __init__(self, template, *args, **kwds):
+        self.template = template
+        super(TemplateExpressionError, self).__init__(*args, **kwds)
 
 
 class IndexTemplate(NumericValue):
@@ -44,7 +47,7 @@ class IndexTemplate(NumericValue):
         Return the value of this object.
         """
         if self._value is None:
-            raise TemplateExpressionError()
+            raise TemplateExpressionError(self)
         else:
             return self._value
 
@@ -59,6 +62,9 @@ class IndexTemplate(NumericValue):
         Returns False because this cannot immediately be simplified.
         """
         return False
+
+    def __str__(self):
+        return self.getname()
 
     def getname(self, fully_qualified=False, name_buffer=None):
         return "{"+self._set.getname(fully_qualified, name_buffer)+"}"
@@ -146,6 +152,37 @@ def substitute_template_expression(expr, substituter, *args):
     return _stack[0][0][0]
 
 
+class _GetItemIndexer(object):
+    # Note that this class makes the assumption that only one template
+    # ever appears in an expression for a single index
+    def __init__(self, expr):
+        self._base = expr._base
+        self._args = []
+        _hash = [ id(self._base) ]
+        for x in expr._args:
+            try:
+                active_level = logging.root.manager.disable
+                logging.disable(logging.CRITICAL)
+                val = value(x)
+                self._args.append(val)
+                _hash.append(val)
+            except TemplateExpressionError as e:
+                self._args.append(e.template)
+                _hash.append(id(e.template._set))
+            finally:
+                logging.disable(active_level)
+
+        self._hash = tuple(_hash)
+
+    def __hash__(self):
+        return hash(self._hash)
+
+    def __eq__(self, other):
+        if type(other) is _GetItemIndexer:
+            return self._hash == other._hash
+        else:
+            return False
+
 def substitute_template_with_param(expr, _map):
     """A simple substituter to replace _Getitem nodes with mutable Params.
 
@@ -157,11 +194,12 @@ def substitute_template_with_param(expr, _map):
     if type(expr) is IndexTemplate:
         return expr
 
-    _id = id(expr._base)
+    _id = _GetItemIndexer(expr)
     if _id not in _map:
         _map[_id] = pyomo.core.base.param.Param(mutable=True)
         _map[_id].construct()
-        _map[_id]._name = expr._base.name
+        _args = []
+        _map[_id]._name = "%s[%s]" % (expr._base.name, ','.join(str(x) for x in _id._args))
     return _map[_id]
 
 
@@ -178,4 +216,3 @@ def substitute_template_with_index(expr):
         return as_numeric(expr())
     else:
         return expr.resolve_template()
-    
