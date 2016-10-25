@@ -205,7 +205,9 @@ def __solver_call__(self, _name=None, args=[], **kwds):
     if opt is None:
         opt = UnknownSolver( type=_name, *args, **kwds )
         opt.name = _name
+    opt.deactivate()
     return opt
+
 #
 # Adding the the custom __call__ method to SolverFactory
 #
