@@ -504,8 +504,26 @@ class _PowExpression(_ExpressionBase):
         return '**'
 
 
+class _LinearOperatorExpression(_ExpressionBase):
+    """An 'abstract' class that defines the polynominal degree for a simple
+    linear operator
+    """
 
-class _InequalityExpression(_ExpressionBase):
+    __slots__ = ()
+
+    def _polynomial_degree(self, result):
+        # NB: We can't use max() here because None (non-polynomial)
+        # overrides a numeric value (and max() just ignores it)
+        ans = 0
+        for x in result:
+            if x is None:
+                return None
+            elif ans < x:
+                ans = x
+        return ans
+
+
+class _InequalityExpression(_LinearOperatorExpression):
     """An object that defines a series of less-than or
     less-than-or-equal expressions"""
 
@@ -547,17 +565,6 @@ class _InequalityExpression(_ExpressionBase):
     def _precedence(self):
         return _InequalityExpression.PRECEDENCE
 
-    def _polynomial_degree(self, result):
-        # NB: We can't use max() here because None (non-polynomial)
-        # overrides a numeric value (and max() just ignores it)
-        ans = 0
-        for x in result:
-            if x is None:
-                return None
-            elif ans < x:
-                ans = x
-        return ans
-
     def _apply_operation(self, result):
         for i, a in enumerate(result):
             if not i:
@@ -578,7 +585,7 @@ class _InequalityExpression(_ExpressionBase):
         ostream.write( '  <  ' if self._strict[idx-1] else '  <=  ' )
 
 
-class _EqualityExpression(_ExpressionBase):
+class _EqualityExpression(_LinearOperatorExpression):
     """An object that defines a equal-to expression"""
 
     __slots__ = ()
@@ -596,17 +603,6 @@ class _EqualityExpression(_ExpressionBase):
 
     def _precedence(self):
         return _EqualityExpression.PRECEDENCE
-
-    def _polynomial_degree(self, result):
-        # NB: We can't use max() here because None (non-polynomial)
-        # overrides a numeric value (and max() just ignores it)
-        ans = 0
-        for x in result:
-            if x is None:
-                return None
-            elif ans < x:
-                ans = x
-        return ans
 
     def _apply_operation(self, result):
         _l, _r = result
@@ -689,7 +685,7 @@ class _DivisionExpression(_ExpressionBase):
 
 
 
-class _SumExpression(_ExpressionBase):
+class _SumExpression(_LinearOperatorExpression):
     """An object that defines a simple summation of expressions"""
 
     __slots__ = ()
@@ -707,17 +703,6 @@ class _SumExpression(_ExpressionBase):
                 return True
             else:
                 ostream.write(' + ')
-
-    def _polynomial_degree(self, result):
-        # NB: We can't use max() here because None (non-polynomial)
-        # overrides a numeric value (and max() just ignores it)
-        ans = 0
-        for x in result:
-            if x is None:
-                return None
-            elif ans < x:
-                ans = x
-        return ans
 
     def _apply_operation(self, result):
         return sum(result)

@@ -2077,6 +2077,12 @@ class PolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.b.fixed = False
 
+        expr = self.model.a == self.model.a * self.model.b
+        self.assertEqual(expr.polynomial_degree(), 2)
+        self.model.b.fixed = True
+        self.assertEqual(expr.polynomial_degree(), 1)
+        self.model.b.fixed = False
+
     def test_simple_product(self):
         expr = self.model.c * self.model.d
         self.assertEqual(expr.polynomial_degree(), 0)
