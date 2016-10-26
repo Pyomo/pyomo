@@ -217,17 +217,31 @@ class Connector(IndexedComponent):
 
 
     def display(self, prefix="", ostream=None):
+        """
+        Print component state information
+
+        This duplicates logic in Component.pprint()
+        """
+        if not self.active:
+            return
         if ostream is None:
             ostream = sys.stdout
-        ostream.write(prefix+"Connector "+self.local_name+" :")
-        ostream.write("  Size="+str(len(self)))
-        if None in self._data:
-            ostream.write(prefix+"  : {"+\
-                ', '.join(sorted(self._data[None].keys()))+"}"+'\n')
-        else:
-            for key in sorted(self._data.keys()):
-                ostream.write(prefix+"  "+str(key)+" : {"+\
-                  ', '.join(sorted(self._data[key].keys()))+"}"+'\n')
+        tab="    "
+        ostream.write(prefix+self.local_name+" : ")
+        ostream.write("Size="+str(len(self)))
+
+        ostream.write("\n")
+        def _line_generator(k,v):
+            for _k, _v in iteritems(v.vars):
+                if _v.is_expression() or not _v.is_indexed():
+                    _val = str(value( _v ))
+                else:
+                    _val = "{%s}" % (', '.join('%r: %r' % (
+                        x, value(_v[x])) for x in sorted(_v._data) ),)
+                yield _k, _val
+        tabular_writer( ostream, prefix+tab,
+                        ((k,v) for k,v in iteritems(self._data)),
+                        ( "Name","Value" ), _line_generator )
 
 
 class SimpleConnector(Connector, _ConnectorData):

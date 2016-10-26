@@ -135,6 +135,47 @@ class TestConnector(unittest.TestCase):
         :     flow :    1 : composition[c] * flow
 """)
         
+    def test_display(self):
+        pipe = ConcreteModel()
+        pipe.SPECIES = Set(initialize=['a','b','c'])
+        pipe.flow = Var(initialize=10)
+        pipe.composition = Var( pipe.SPECIES,
+                                initialize=lambda m,i: ord(i)-ord('a') )
+        pipe.pIn  = Var( within=NonNegativeReals, initialize=3.14 )
+
+        pipe.OUT = Connector()
+        pipe.OUT.add(-pipe.flow, "flow")
+        pipe.OUT.add(pipe.composition, "composition")
+        pipe.OUT.add(pipe.pIn, "pressure")
+
+        os = StringIO()
+        pipe.OUT.display(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""OUT : Size=1
+    Key  : Name        : Value
+    None :    pressure : 3.14
+         :        flow : -10
+         : composition : {'a': 0, 'b': 1, 'c': 2}
+""")
+
+        def _IN(m, i):
+            return { 'pressure': pipe.pIn,
+                     'flow': pipe.composition[i] * pipe.flow }
+
+        pipe.IN = Connector(pipe.SPECIES, rule=_IN)
+        os = StringIO()
+        pipe.IN.display(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""IN : Size=3
+    Key : Name     : Value
+      a : pressure :  3.14
+        :     flow :     0
+      b : pressure :  3.14
+        :     flow :    10
+      c : pressure :  3.14
+        :     flow :    20
+""")
+
     def test_single_scalar_expand(self):
         m = ConcreteModel()
         m.x = Var()
