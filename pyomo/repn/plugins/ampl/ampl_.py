@@ -26,7 +26,7 @@ import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import *
 from pyomo.core.base import *
-from pyomo.core.base import expr, external, SymbolMap, Block
+from pyomo.core.base import expr, SymbolMap, Block
 import pyomo.core.base.expr_common
 from pyomo.core.base.var import Var
 from pyomo.core.base import _ExpressionData, Expression, SortComponents
@@ -90,10 +90,10 @@ del prod_comment
 del div_template
 del div_comment
 
-_op_template[external._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
-                                                      "h%d:%s{C}\n") #string arg
-_op_comment[external._ExternalFunctionExpression] = ("\t#%s", #function
-                                                     "")      #string arg
+_op_template[expr._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
+                                                  "h%d:%s{C}\n") #string arg
+_op_comment[expr._ExternalFunctionExpression] = ("\t#%s", #function
+                                                 "")      #string arg
 
 for opname in _intrinsic_function_operators:
     _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
@@ -539,9 +539,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write(self._op_string[expr._NegationExpression])
                 self._print_nonlinear_terms_NL(exp._args[0])
 
-            elif exp_type is external._ExternalFunctionExpression:
+            elif exp_type is expr._ExternalFunctionExpression:
                 fun_str, string_arg_str = \
-                    self._op_string[external._ExternalFunctionExpression]
+                    self._op_string[expr._ExternalFunctionExpression]
                 if not self._symbolic_solver_labels:
                     OUTPUT.write(fun_str
                                  % (self.external_byFcn[exp._fcn._function][1],

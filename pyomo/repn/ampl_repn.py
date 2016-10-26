@@ -19,10 +19,9 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       is_fixed)
-from pyomo.core.base import external
 from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
                                        generate_canonical_repn)
-import pyomo.core.base.expr_common
+from pyomo.core.base import expr_common
 
 import six
 from six import itervalues, iteritems, StringIO
@@ -31,11 +30,6 @@ from six.moves import xrange, zip
 logger = logging.getLogger('pyomo.core')
 
 using_py3 = six.PY3
-
-_using_pyomo4_trees = False
-if pyomo.core.base.expr_common.mode == \
-   pyomo.core.base.expr_common.Mode.pyomo4_trees:
-    _using_pyomo4_trees = True
 
 class AmplRepn(object):
 
@@ -218,6 +212,10 @@ class AmplRepn(object):
 
 def _generate_ampl_repn(exp):
     ampl_repn = AmplRepn()
+
+    # We need to do this not at the global scope in case someone changed
+    # the mode after importing the environment.
+    _using_pyomo4_trees = expr_common.mode == expr_common.Mode.pyomo4_trees
 
     exp_type = type(exp)
     if exp_type in native_numeric_types:
@@ -616,7 +614,7 @@ def _generate_ampl_repn(exp):
         #
         # External Functions
         #
-        elif exp_type is external._ExternalFunctionExpression:
+        elif exp_type is Expr._ExternalFunctionExpression:
             # In theory, the argument are fixed, we can simply evaluate this expression
             if exp.is_fixed():
                 ampl_repn._constant = value(exp)
@@ -729,6 +727,10 @@ def _generate_ampl_repn(exp):
         raise ValueError("Unexpected expression type: "+str(exp))
 
 def generate_ampl_repn(exp, idMap=None):
+    # We need to do this not at the global scope in case someone changed
+    # the mode after importing the environment.
+    _using_pyomo4_trees = expr_common.mode == expr_common.Mode.pyomo4_trees
+
     if idMap is None:
         idMap = {}
     degree = exp.polynomial_degree()

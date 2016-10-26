@@ -13,6 +13,8 @@ import pyutilib.misc
 
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
+from pyomo.core.base.template_expr import TemplateExpressionError
+
 
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
@@ -228,6 +230,7 @@ class _IndexedComponent_slicer(object):
         self._call_stack.append( (
             _IndexedComponent_slicer.call, idx ) )
         return self
+
 
 class IndexedComponent(Component):
     """
@@ -509,9 +512,11 @@ You can silence this warning by one of three ways:
     def _processUnhashableIndex(self, ndx, _exception):
         """Process a call to __getitem__ with unhashable elements
 
-        There are two basic ways to get here:
-          1) the index constains one or more slices
-          2) the index contains a Pyomo (Simple)COmponent
+        There are three basic ways to get here:
+          1) the index constains one or more slices or ellipsis
+          2) the index contains an unhashable type (e.g., a Pyomo
+             (Simple)Component
+          3) the index contains an IndexTemplate
         """
         #
         # Iterate through the index and look for slices and constant
@@ -526,6 +531,12 @@ You can silence this warning by one of three ways:
         #
         if type(ndx) not in (tuple, list):
             ndx = [ndx]
+        else:
+            # We would normally do "flatten()" here, but the current
+            # (10/2016) implementation of flatten() is too aggressive:
+            # it will attempt to expand *any* iterable, including
+            # SimpleParam.
+            ndx = pyutilib.misc.flatten_tuple(tuple(ndx))
 
         for i,val in enumerate(ndx):
             if type(val) is slice:
@@ -557,6 +568,35 @@ You can silence this warning by one of three ways:
 
             try:
                 _num_val = val.as_numeric()
+                # Attempt to retrieve the numeric value .. if this
+                # is a template expression generation, then it
+                # should raise a TemplateExpressionError
+                try:
+                    # Disable all logging for the time being.  We are
+                    # not keeping the result of this calculation - only
+                    # seeing if it is possible.  Any errors generated
+                    # evaluating the expression are not informative to
+                    # the user
+                    active_level = logging.root.manager.disable
+                    logging.disable(logging.CRITICAL)
+                    _num_val()
+                except TemplateExpressionError:
+                    # Not good: we have to defer this import to now
+                    # due to circular imports (expr imports _VarData
+                    # imports indexed_component, but we need expr
+                    # here
+                    from pyomo.core.base import expr as EXPR
+                    return EXPR._GetItemExpression(self, tuple(ndx))
+                except:
+                    # There are other ways we could get an exception
+                    # that is not TemplateExpressionError; most notably,
+                    # evaluating a Param / Var that is not initialized.
+                    # At this point, we will silently eat that
+                    # error... it will come back again below.
+                    pass
+                finally:
+                    logging.disable(active_level)
+
                 if _num_val.is_constant():
                     _found_numeric = True
                     val = _num_val()

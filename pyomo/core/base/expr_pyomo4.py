@@ -35,8 +35,8 @@ except:
 from pyomo.core.base.component import Component
 #from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
-from pyomo.core.base.numvalue import native_numeric_types
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.numvalue import native_types, native_numeric_types
+from pyomo.core.base.var import _VarData, Var
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base import expr_common as common
 import pyomo.core.base.expr_common
@@ -96,17 +96,13 @@ or
 def identify_variables(expr, include_fixed=True, allow_duplicates=False):
     if not allow_duplicates:
         _seen = set()
-    expr = as_numeric(expr)
-    if expr.is_expression():
-        _stack = [ (expr._args, 0, len(expr._args)) ]
-    else:
-        _stack = [ ([expr], 0, 1) ]
+    _stack = [ ([expr], 0, 1) ]
     while _stack:
         _argList, _idx, _len = _stack.pop()
         while _idx < _len:
             _sub = _argList[_idx]
             _idx += 1
-            if type(_sub) in native_numeric_types:
+            if type(_sub) in native_types:
                 pass
             elif _sub.is_expression():
                 _stack.append(( _argList, _idx, _len ))
@@ -169,49 +165,28 @@ class _ExpressionBase(NumericValue):
         return buf.getvalue()
 
     def __call__(self, exception=None):
-        _result = []
-        _stack = [ (self, self._args, 0, len(self._args)) ]
-        while _stack:
-            _obj, _argList, _idx, _len = _stack.pop()
+        _stack = [ (self, self._args, 0, len(self._args), []) ]
+        while 1:  # Note: 1 is faster than True for Python 2.x
+            _obj, _argList, _idx, _len, _result = _stack.pop()
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
                 if type(_sub) in native_numeric_types:
-                    _result.append(_sub)
+                    _result.append( _sub )
                 elif _sub.is_expression():
-                    _stack.append(( _obj, _argList, _idx, _len ))
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
                     _obj     = _sub
                     _argList = _sub._args
                     _idx     = 0
                     _len     = len(_argList)
+                    _result  = []
                 else:
-                    _result.append(value(_sub))
-            _result.append( _obj._apply_operation(_result) )
-        assert(len(_result)==1)
-        return _result[0]
-
-
-        argList = self._args
-        _stack = [ (self, argList, 0, len(argList)) ]
-        _result = []
-        while _stack:
-            _obj, _argList, _idx, _len = _stack.pop()
-            if _idx < _len:
-                _sub = _argList[_idx]
-                _stack.append((_obj, _argList, _idx+1, _len))
-                if type(_sub) in native_numeric_types:
-                    _result.append(_sub)
-                    continue
-
-                if _sub.is_expression():
-                    argList = _sub._args
-                    _stack.append(( _sub, argList, 0, len(argList) ))
-                else:
-                    _result.append(value(_sub))
+                    _result.append( value(_sub) )
+            ans = _obj._apply_operation(_result)
+            if _stack:
+                _stack[-1][-1].append( ans )
             else:
-                _result.append( _obj._apply_operation(_result) )
-        assert(len(_result)==1)
-        return _result[0]
+                return ans
 
 
     def clone(self):
@@ -220,7 +195,7 @@ class _ExpressionBase(NumericValue):
             ans._parent_expr = None
         return ans
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         """The text name of this Expression function"""
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement getname()" % ( str(self.__class__), ))
@@ -254,76 +229,30 @@ class _ExpressionBase(NumericValue):
     def is_expression(self):
         return True
 
+
     def polynomial_degree(self):
-        _typeList = TreeWalkerHelper.typeList
-
-        _stackMax = len(_stack)
-        _stackIdx = 0
-
-        _obj = self
-        _argList = _obj._args
-        _idx = 0
-        _len = len(_argList)
-        try:
-            _type = _typeList[_obj.__class__]
-            _ans = 0
-        except KeyError:
-            _type = 0
-            _ans = []
-        #_ans = 0 if _type else []
-        while 1: # Note: 1 is faster than True for Python 2.x
-            if _idx < _len:
+        _stack = [ (self, self._args, 0, len(self._args), []) ]
+        while 1:  # Note: 1 is faster than True for Python 2.x
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if _sub.__class__ in native_numeric_types:
-                    ans = 0
-                elif not _sub.is_expression():
-                    ans = 0 if _sub.is_fixed() else 1
+                if type(_sub) in native_numeric_types:
+                    _result.append( 0 )
+                elif _sub.is_expression():
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj     = _sub
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = len(_argList)
+                    _result  = []
                 else:
-                    if _stackIdx == _stackMax:
-                        _stackMax += 1
-                        _stack.append((_obj, _argList, _len, _type, _idx, _ans))
-                    else:
-                        _stack[_stackIdx] = \
-                                _obj, _argList, _len, _type, _idx, _ans
-
-                    _obj = _sub
-                    _argList = _obj._args
-                    _idx = 0
-                    _len = len(_argList)
-                    _type = _typeList.get(_obj.__class__, 0)
-                    _ans = 0 if _type else []
-
-                    _stackIdx += 1
-                    continue
+                    _result.append( 0 if _sub.is_fixed() else 1 )
+            ans = _obj._polynomial_degree(_result)
+            if _stack:
+                _stack[-1][-1].append( ans )
             else:
-                if not _type:
-                    _ans = _obj._polynomial_degree(_ans)
-                if _stackIdx == 0:
-                    return _ans
-                ans = _ans
-                _stackIdx -= 1
-                _obj, _argList, _len, _type, _idx, _ans = _stack[_stackIdx]
-
-            #_objType = type(_obj)
-            if _type is 1:#_objType is _SumExpression:
-                if _ans is not None:
-                    if ans is None or ans > _ans:
-                        _ans = ans
-            elif _type is 2:#_objType is _ProductExpression:
-                if _ans is not None:
-                    if ans is None:
-                        _ans = None
-                    else:
-                        _ans += ans
-            elif _type is 3:#_objType is _NegationExpression:
-                _ans = ans
-            elif _type is 4:#_objType is _LinearExpression_Pool
-                if ans == 1:
-                    _ans = ans
-                    _idx = _len
-            else:
-                _ans.append(ans)
+                return ans
 
 
     def _polynomial_degree(self, ans):
@@ -401,11 +330,11 @@ class _NegationExpression(_ExpressionBase):
 
     PRECEDENCE = 4
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'neg'
 
     def _polynomial_degree(self, result):
-        return result.pop()
+        return result[0]
 
     def _precedence(self):
         return _NegationExpression.PRECEDENCE
@@ -419,7 +348,7 @@ class _NegationExpression(_ExpressionBase):
             ostream.write("- ")
 
     def _apply_operation(self, result):
-        return -result.pop()
+        return -result[0]
 
 class _UnaryFunctionExpression(_ExpressionBase):
     """An object that defines a mathematical expression that can be evaluated"""
@@ -449,20 +378,20 @@ class _UnaryFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return self._name
 
     def _to_string_prefix(self, ostream, verbose):
         ostream.write(self.getname())
 
     def _polynomial_degree(self, result):
-        if result.pop() == 0:
+        if result[0] == 0:
             return 0
         else:
             return None
 
     def _apply_operation(self, result):
-        return self._fcn(result.pop())
+        return self._fcn(result[0])
 
 # Backwards compatibility: Coopr 3.x expected a slightly less informative name
 _IntrinsicFunctionExpression =  _UnaryFunctionExpression
@@ -476,26 +405,27 @@ class _ExternalFunctionExpression(_ExpressionBase):
         if safe_mode:
             self._parent_expr = None
             for x in args:
-                if isinstance(x, _ExpressionBase) and x._parent_expr:
-                    raise EntangledExpressionError(x)
-                x._parent_expr = bypass_backreference or ref(self)
+                if isinstance(x, _ExpressionBase):
+                    if x._parent_expr:
+                        raise EntangledExpressionError(x)
+                    x._parent_expr = bypass_backreference or ref(self)
         self._args = tuple(
             x if isinstance(x, basestring) else as_numeric(x)
             for x in args )
         self._fcn = fcn
 
-    def getname(self):
-        return self._fcn.getname()
+    def getname(self, *args, **kwds):
+        return self._fcn.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
-        if result.pop() == 0:
+        if result[0] == 0:
             return 0
         else:
             return None
 
     def _apply_operation(self, result):
         """Evaluate the expression"""
-        return self._fcn.evaluate(result.pop())
+        return self._fcn.evaluate( result )
 
     def _inline_operator(self):
         return ', '
@@ -528,8 +458,7 @@ class _PowExpression(_ExpressionBase):
         # integer, it is also polynomial.  While we would like to just
         # call this a non-polynomial expression, these exceptions occur
         # too frequently (and in particular, a**2)
-        r = result.pop()
-        l = result.pop()
+        l,r = result
         if r == 0:
             if l == 0:
                 return 0
@@ -565,19 +494,36 @@ class _PowExpression(_ExpressionBase):
         return _PowExpression.PRECEDENCE
 
     def _apply_operation(self, result):
-        _r = result.pop()
-        _l = result.pop()
+        _l, _r = result
         return _l ** _r
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'pow'
 
     def _inline_operator(self):
         return '**'
 
 
+class _LinearOperatorExpression(_ExpressionBase):
+    """An 'abstract' class that defines the polynominal degree for a simple
+    linear operator
+    """
 
-class _InequalityExpression(_ExpressionBase):
+    __slots__ = ()
+
+    def _polynomial_degree(self, result):
+        # NB: We can't use max() here because None (non-polynomial)
+        # overrides a numeric value (and max() just ignores it)
+        ans = 0
+        for x in result:
+            if x is None:
+                return None
+            elif ans < x:
+                ans = x
+        return ans
+
+
+class _InequalityExpression(_LinearOperatorExpression):
     """An object that defines a series of less-than or
     less-than-or-equal expressions"""
 
@@ -620,11 +566,10 @@ class _InequalityExpression(_ExpressionBase):
         return _InequalityExpression.PRECEDENCE
 
     def _apply_operation(self, result):
-        args = result[-len(self._args):]
-        result[-len(self._args):] = []
-        _l = args.pop(0)
-        for i, a in enumerate(args):
-            if self._strict[i]:
+        for i, a in enumerate(result):
+            if not i:
+                pass
+            elif self._strict[i-1]:
                 if not _l < a:
                     return False
             else:
@@ -640,7 +585,7 @@ class _InequalityExpression(_ExpressionBase):
         ostream.write( '  <  ' if self._strict[idx-1] else '  <=  ' )
 
 
-class _EqualityExpression(_ExpressionBase):
+class _EqualityExpression(_LinearOperatorExpression):
     """An object that defines a equal-to expression"""
 
     __slots__ = ()
@@ -660,7 +605,8 @@ class _EqualityExpression(_ExpressionBase):
         return _EqualityExpression.PRECEDENCE
 
     def _apply_operation(self, result):
-        return result.pop() == result.pop()
+        _l, _r = result
+        return _l == _r
 
     def _to_string_prefix(self, ostream, verbose):
         pass
@@ -682,22 +628,22 @@ class _ProductExpression(_ExpressionBase):
         # NB: We can't use sum() here because None (non-polynomial)
         # overrides a numeric value (and sum() just ignores it - or
         # errors in py3k)
-        a = result.pop()
-        b = result.pop()
+        a, b = result
         if a is None or b is None:
             return None
         else:
             return a + b
 
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'prod'
 
     def _inline_operator(self):
         return ' * '
 
     def _apply_operation(self, result):
-        return result.pop() * result.pop()
+        _l, _r = result
+        return _l * _r
 
 
 class _DivisionExpression(_ExpressionBase):
@@ -713,23 +659,21 @@ class _DivisionExpression(_ExpressionBase):
         # NB: We can't use sum() here because None (non-polynomial)
         # overrides a numeric value (and sum() just ignores it - or
         # errors in py3k)
-        d = result.pop()
-        n = result.pop()
+        n,d = result
         if d == 0:
             return n
         else:
             return None
 
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'div'
 
     def _inline_operator(self):
         return ' / '
 
     def _apply_operation(self, result):
-        _r = result.pop()
-        _l = result.pop()
+        _l, _r = result
         return _l / _r
 
 
@@ -741,7 +685,7 @@ class _DivisionExpression(_ExpressionBase):
 
 
 
-class _SumExpression(_ExpressionBase):
+class _SumExpression(_LinearOperatorExpression):
     """An object that defines a simple summation of expressions"""
 
     __slots__ = ()
@@ -760,24 +704,10 @@ class _SumExpression(_ExpressionBase):
             else:
                 ostream.write(' + ')
 
-    def _polynomial_degree(self, result):
-        # NB: We can't use max() here because None (non-polynomial)
-        # overrides a numeric value (and max() just ignores it)
-        ans = 0
-        for x in self._args:
-            _pd = result.pop()
-            if ans is not None:
-                if _pd is not None:
-                    if _pd > ans:
-                        ans = _pd
-                else:
-                    ans = None
-        return ans
-
     def _apply_operation(self, result):
-        return sum(result.pop() for x in self._args)
+        return sum(result)
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'sum'
 
     def __iadd__(self, other):
@@ -932,7 +862,7 @@ class Expr_if(_ExpressionBase):
     def _arguments(self):
         return ( self._if, self._then, self._else )
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return "Expr_if"
 
     def is_constant(self):
@@ -954,16 +884,13 @@ class Expr_if(_ExpressionBase):
             return False
 
     def _polynomial_degree(self, result):
-        _else = result.pop()
-        _then = result.pop()
-        _if = result.pop()
+        _if, _then, _else = result
         if _if == 0:
-            if self._if():
-                return _then
-            else:
-                return _else
-        else:
-            return None
+            try:
+                return _then if self._if() else _else
+            except:
+                pass
+        return None
 
     def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
         ostream.write("%s=( " % ('if','then','else')[_idx], )
@@ -1008,10 +935,61 @@ class Expr_if(_ExpressionBase):
         ostream.write(" ) )")
 
     def _apply_operation(self, result):
-        _e = result.pop()
-        _t = result.pop()
-        _i = result.pop()
-        return _t if _i else _e
+        _if, _then, _else = result
+        return _then if _if else _else
+
+
+class _GetItemExpression(_ExpressionBase):
+    """Expression to call "__getitem__" on the base"""
+
+    __slots__ = ('_base')
+    PRECEDENCE = 1
+
+    def _precedence(self):
+        return _GetItemExpression.PRECEDENCE
+
+    def __init__(self, base, args):
+        """Construct an expression with an operation and a set of arguments"""
+        if safe_mode:
+            self._parent_expr = None
+        self._args = args
+        self._base = base
+
+    def __copy__(self):
+        """Clone this object using the specified arguments"""
+        return self.__class__(
+            self._base,
+            self._args.__class__(
+                (clone_expression(a) for a in self._args) )
+        )
+
+    def __getstate__(self):
+        result = super(_GetItemExpression, self).__getstate__()
+        for i in _GetItemExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def getname(self, *args, **kwds):
+        return self._base.getname(*args, **kwds)
+
+    def is_constant(self):
+        return False
+
+    def is_fixed(self):
+        return not isinstance(self._base, Var)
+
+    def _polynomial_degree(self, result):
+        return 0 if self.is_fixed() else 1
+
+    def _apply_operation(self, result):
+        return value(self._base.__getitem__( tuple(result) ))
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.name)
+
+    def resolve_template(self):
+        return self._base.__getitem__(tuple(value(i) for i in self._args))
+
 
 _LinearExpression_Pool = []
 
@@ -1072,7 +1050,7 @@ class _LinearExpression(_ExpressionBase):
             ans.extend(self._args)
             return ans
 
-    def getname(self):
+    def getname(self, *args, **kwds):
         return 'linear'
 
     def is_constant(self):
@@ -1123,15 +1101,17 @@ class _LinearExpression(_ExpressionBase):
             else:
                 ostream.write(' + ')
 
-    def _apply_operation(self, result):
-        if not self._args:
-            return value(self._const)
+    def _polynomial_degree(self, result):
+        if result:
+            return max(result)
+        else:
+            return 0
 
-        r = result[-len(self._args):]
-        result[-len(self._args):] = []
+    def _apply_operation(self, result):
+        assert( len(result) == len(self._args) )
         ans = value(self._const)
         for i,v in enumerate(self._args):
-            ans += r[i] * value(self._coef[id(v)])
+            ans += value(self._coef[id(v)]) * result[i]
         return ans
 
     def __iadd__(self, other, _reversed=0):
