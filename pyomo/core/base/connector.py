@@ -9,25 +9,18 @@
 
 __all__ = [ 'Connector' ]
 
-import itertools
 import logging
-import weakref
 import sys
 from six import iteritems, itervalues
-from six.moves import xrange
 from weakref import ref as weakref_ref
 
 from pyomo.util.plugin import Plugin, implements
 
-from pyomo.core.base.component import Component, ComponentData, register_component
-from pyomo.core.base.constraint import Constraint, ConstraintList
-from pyomo.core.base.expr import _ProductExpression
-from pyomo.core.base.indexed_component import IndexedComponent, \
-    UnindexedComponent_set
-from pyomo.core.base.misc import apply_indexed_rule, create_name
-from pyomo.core.base.numvalue import NumericValue
+from pyomo.core.base.component import ComponentData, register_component
+from pyomo.core.base.indexed_component import IndexedComponent
+from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
+from pyomo.core.base.numvalue import NumericValue, value
 from pyomo.core.base.plugin import IPyomoScriptModifyInstance
-from pyomo.core.base.var import Var, VarList
 
 logger = logging.getLogger('pyomo.core')
 
@@ -166,17 +159,6 @@ class Connector(IndexedComponent):
         IndexedComponent.__init__(self, *args, **kwd)
         self._conval = {}
 
-    def as_numeric(self):
-        if None in self._conval:
-            return self._conval[None]
-        return self
-
-    def is_expression(self):
-        return False
-
-    def is_relational(self):
-        return False
-
     #
     # This method must be defined on subclasses of
     # IndexedComponent
@@ -226,8 +208,7 @@ class Connector(IndexedComponent):
                 _len = 1 if _v.is_expression() else len(_v)
                 yield _k, _len, str(_v)
         return ( [("Size", len(self)),
-                  ("Index", self._index \
-                       if self._index != UnindexedComponent_set else None),
+                  ("Index", self._index if self.is_indexed() else None),
                   ],
                  iteritems(self._data),
                  ( "Name","Size", "Variable", ),
@@ -266,10 +247,19 @@ class SimpleConnector(Connector, _ConnectorData):
 
 
 class IndexedConnector(Connector):
-    pass
+    """An array of connectors"""
+
+    # These methods are normally found on the NumericValue
+    # interface, but they are here to trick the expression
+    # system into reporting errors about trying to use
+    # "indexed NumericValue" objects in expressions
+    def as_numeric(self): return self
+    def is_expression(self): return False
+    def is_relational(self): return False
 
 
-register_component(Connector, "A bundle of variables that can be manipilated together.")
+register_component(
+    Connector, "A bundle of variables that can be manipilated together.")
 
 
 class ConnectorExpander(Plugin):
