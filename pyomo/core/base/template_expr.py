@@ -183,8 +183,8 @@ class _GetItemIndexer(object):
         else:
             return False
 
-def substitute_template_with_param(expr, _map):
-    """A simple substituter to replace _Getitem nodes with mutable Params.
+def substitute_getitem_with_param(expr, _map):
+    """A simple substituter to replace _GetItem nodes with mutable Params.
 
     This substituter will replace all _GetItemExpression nodes with a
     new Param.  For example, this method will create expressions
@@ -204,7 +204,7 @@ def substitute_template_with_param(expr, _map):
     return _map[_id]
 
 
-def substitute_template_with_index(expr):
+def substitute_template_with_value(expr):
     """A simple substituter to expand expression for current template
 
     This substituter will replace all _GetItemExpression / IndexTemplate

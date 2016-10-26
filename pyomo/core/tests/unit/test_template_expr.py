@@ -17,8 +17,8 @@ from pyomo.core.base.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
     substitute_template_expression, 
-    substitute_template_with_param,
-    substitute_template_with_index,
+    substitute_getitem_with_param,
+    substitute_template_with_value,
 )
 
 class ExpressionObjectTester(object):
@@ -300,7 +300,7 @@ class TestTemplateSubstitution(unittest.TestCase):
 
         _map = {}
         E = substitute_template_expression(
-            e, substitute_template_with_param, _map )
+            e, substitute_getitem_with_param, _map )
         self.assertIsNot(e,E)
 
         self.assertEqual( len(_map), 3 )
@@ -362,8 +362,7 @@ class TestTemplateSubstitution(unittest.TestCase):
         self.assertTrue( isinstance(e, EXPR._ExpressionBase) )
         self.assertEqual((e._args[0](), e._args[1]()), (10,126))
 
-        E = substitute_template_expression(
-            e, substitute_template_with_index)
+        E = substitute_template_expression(e, substitute_template_with_value)
         self.assertIsNot(e,E)
 
         self.assertEqual(
