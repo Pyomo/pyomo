@@ -199,7 +199,8 @@ def substitute_template_with_param(expr, _map):
         _map[_id] = pyomo.core.base.param.Param(mutable=True)
         _map[_id].construct()
         _args = []
-        _map[_id]._name = "%s[%s]" % (expr._base.name, ','.join(str(x) for x in _id._args))
+        _map[_id]._name = "%s[%s]" % (
+            expr._base.name, ','.join(str(x) for x in _id._args) )
     return _map[_id]
 
 
