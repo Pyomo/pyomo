@@ -532,7 +532,11 @@ You can silence this warning by one of three ways:
         if type(ndx) not in (tuple, list):
             ndx = [ndx]
         else:
-            ndx = pyutilib.misc.flatten(ndx)
+            # We would normally do "flatten()" here, but the current
+            # (10/2016) implementation of flatten() is too aggressive:
+            # it will attempt to expand *any* iterable, including
+            # SimpleParam.
+            ndx = pyutilib.misc.flatten_tuple(tuple(ndx))
 
         for i,val in enumerate(ndx):
             if type(val) is slice:
