@@ -233,9 +233,9 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """OUT : Size=1
     Key  : Name        : Value
-    None :    pressure : 3.14
+    None : composition : {'a': 0, 'b': 1, 'c': 2}
          :        flow : -10
-         : composition : {'a': 0, 'b': 1, 'c': 2}
+         :    pressure : 3.14
 """)
 
         def _IN(m, i):
@@ -248,12 +248,12 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """IN : Size=3
     Key : Name     : Value
-      a : pressure :  3.14
-        :     flow :     0
-      b : pressure :  3.14
-        :     flow :    10
-      c : pressure :  3.14
-        :     flow :    20
+      a :     flow :     0
+        : pressure :  3.14
+      b :     flow :    10
+        : pressure :  3.14
+      c :     flow :    20
+        : pressure :  3.14
 """)
 
     def test_single_scalar_expand(self):

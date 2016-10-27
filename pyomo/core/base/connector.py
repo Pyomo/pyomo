@@ -196,7 +196,8 @@ class Connector(IndexedComponent):
         """Print component information."""
         def _line_generator(k,v):
             for _k, _v in sorted(iteritems(v.vars)):
-                _len = 1 if _v.is_expression() or not _v.is_indexed() else len(_v)
+                _len = 1 if _v.is_expression() or not _v.is_indexed() \
+                       else len(_v)
                 yield _k, _len, str(_v)
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
@@ -223,7 +224,7 @@ class Connector(IndexedComponent):
 
         ostream.write("\n")
         def _line_generator(k,v):
-            for _k, _v in iteritems(v.vars):
+            for _k, _v in sorted(iteritems(v.vars)):
                 if _v.is_expression() or not _v.is_indexed():
                     _val = str(value( _v ))
                 else:
