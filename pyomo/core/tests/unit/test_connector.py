@@ -112,9 +112,10 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """OUT : Size=1, Index=None
     Key  : Name        : Size : Variable
-    None :    pressure :    1 : pIn
-         :        flow :    1 : -1 * flow
+    None :      comp_a :    1 : composition[a]
          : composition :    3 : composition
+         :        flow :    1 : -1 * flow
+         :    pressure :    1 : pIn
 """)
 
         def _IN(m, i):
@@ -127,12 +128,12 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """IN : Size=3, Index=SPECIES
     Key : Name     : Size : Variable
-      a : pressure :    1 : pIn
-        :     flow :    1 : composition[a] * flow
-      b : pressure :    1 : pIn
-        :     flow :    1 : composition[b] * flow
-      c : pressure :    1 : pIn
-        :     flow :    1 : composition[c] * flow
+      a :     flow :    1 : composition[a] * flow
+        : pressure :    1 : pIn
+      b :     flow :    1 : composition[b] * flow
+        : pressure :    1 : pIn
+      c :     flow :    1 : composition[c] * flow
+        : pressure :    1 : pIn
 """)
         
     def test_display(self):
@@ -146,6 +147,7 @@ class TestConnector(unittest.TestCase):
         pipe.OUT = Connector()
         pipe.OUT.add(-pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
+        pipe.OUT.add(pipe.composition['a'], "comp_a")
         pipe.OUT.add(pipe.pIn, "pressure")
 
         os = StringIO()
