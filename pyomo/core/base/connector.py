@@ -13,7 +13,7 @@ import itertools
 import logging
 import weakref
 import sys
-from six import iteritems, itervalues
+from six import iteritems, itervalues, iterkeys
 from six.moves import xrange
 
 from pyomo.util.plugin import Plugin, implements
@@ -555,7 +555,7 @@ class ConnectorExpander(Plugin):
                 elif isinstance(arg, VarList):
                     args[idx] = arg.add()
 
-        for var in ref.vars.iterkeys():
+        for var in iterkeys(ref.vars):
             if var in skip:
                 continue
             if constraint.body.is_expression():
