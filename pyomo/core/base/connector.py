@@ -59,53 +59,34 @@ class _ConnectorData(ComponentData, NumericValue):
         raise ValueError(msg % self.name)
 
     def is_fixed(self):
-        # The semantics here are not clear, and given how aggressive
-        # Constraint.add() is at simplifying expressions, returning True
-        # has undesirable effects.
-        # TODO: revisit this after refactoring Constraint.add()
-        return False
-
-        if len(self.vars) == 0:
-            return False
-        for var in itervalues(self.vars):
-            if not var.is_fixed():
-                return False
-        return True
+        """Return True if all vars/expressions in the Connector are fixed"""
+        return all(v.is_fixed() for v in self._iter_vars())
 
     def is_constant(self):
-        # The semantics here are not clear, and given how aggressive
-        # Constraint.add() is at simplifying expressions, returning True
-        # has undesirable effects.
-        # TODO: revisit this after refactoring Constraint.add()
-        return False
+        """Return False
 
-        for var in itervalues(self.vars):
-            if not var.is_constant():
-                return False
-        return True
+        Because the expression generation logic will attempt to evaluate
+        constant subexpressions, a Connector can never be constant.
+        """
+        return False
 
     def polynomial_degree(self):
-        if self.is_fixed():
-            return 0
-        return 1
+        ans = 0
+        for v in self._iter_vars():
+            tmp = v.polynomial_degree()
+            if tmp is None:
+                return None
+            ans = max(ans, tmp)
+        return ans
 
     def is_binary(self):
-        for var in itervalues(self.vars):
-            if var.is_binary():
-                return True
-        return False
+        return len(self) and all(v.is_binary() for v in self._iter_vars())
 
     def is_integer(self):
-        for var in itervalues(self.vars):
-            if var.is_integer():
-                return True
-        return False
+        return len(self) and all(v.is_integer() for v in self._iter_vars())
 
     def is_continuous(self):
-        for var in itervalues(self.vars):
-            if var.is_continuous():
-                return True
-        return False
+        return len(self) and all(v.is_continuous() for v in self._iter_vars())
 
 
     def add(self, var, name=None, aggregate=None):
@@ -117,6 +98,16 @@ class _ConnectorData(ComponentData, NumericValue):
         self.vars[name] = var
         if aggregate is not None:
             self.aggregators[var] = aggregate
+
+
+    def _iter_vars(self):
+        for var in itervalues(self.vars):
+            if var.is_expression() or not var.is_indexed():
+                yield var
+            else:
+                for v in itervalues(var):
+                    yield v
+
 
 
 class Connector(IndexedComponent):

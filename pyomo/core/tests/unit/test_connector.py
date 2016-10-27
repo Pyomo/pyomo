@@ -95,6 +95,84 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(pipe.OUT), 1)
         self.assertEqual(len(pipe.OUT.vars), 3)
 
+
+    def test_fixed(self):
+        pipe = ConcreteModel()
+        pipe.SPECIES = Set(initialize=['a','b','c'])
+        pipe.flow = Var()
+        pipe.composition = Var(pipe.SPECIES)
+        pipe.pIn  = Var( within=NonNegativeReals )
+
+        pipe.OUT = Connector()
+        self.assertTrue( pipe.OUT.is_fixed())
+
+        pipe.OUT.add(pipe.flow, "flow")
+        self.assertFalse( pipe.OUT.is_fixed())
+
+        pipe.flow.fix(0)
+        self.assertTrue( pipe.OUT.is_fixed())
+
+        pipe.OUT.add(-pipe.pIn, "pressure")
+        self.assertFalse( pipe.OUT.is_fixed())
+
+        pipe.pIn.fix(1)
+        self.assertTrue( pipe.OUT.is_fixed())
+
+        pipe.OUT.add(pipe.composition, "composition")
+        self.assertFalse( pipe.OUT.is_fixed())
+
+        pipe.composition['a'].fix(1)
+        self.assertFalse( pipe.OUT.is_fixed())
+
+        pipe.composition['b'].fix(1)
+        pipe.composition['c'].fix(1)
+        self.assertTrue( pipe.OUT.is_fixed())
+
+
+    def test_polynomial_degree(self):
+        pipe = ConcreteModel()
+        pipe.SPECIES = Set(initialize=['a','b','c'])
+        pipe.flow = Var()
+        pipe.composition = Var(pipe.SPECIES)
+        pipe.pIn  = Var( within=NonNegativeReals )
+
+        pipe.OUT = Connector()
+        self.assertEqual( pipe.OUT.polynomial_degree(), 0)
+
+        pipe.OUT.add(pipe.flow, "flow")
+        self.assertEqual( pipe.OUT.polynomial_degree(), 1)
+
+        pipe.flow.fix(0)
+        self.assertEqual( pipe.OUT.polynomial_degree(), 0)
+
+        pipe.OUT.add(-pipe.pIn, "pressure")
+        self.assertEqual( pipe.OUT.polynomial_degree(), 1)
+
+        pipe.pIn.fix(1)
+        self.assertEqual( pipe.OUT.polynomial_degree(), 0)
+
+        pipe.OUT.add(pipe.composition, "composition")
+        self.assertEqual( pipe.OUT.polynomial_degree(), 1)
+
+        pipe.composition['a'].fix(1)
+        self.assertEqual( pipe.OUT.polynomial_degree(), 1)
+
+        pipe.composition['b'].fix(1)
+        pipe.composition['c'].fix(1)
+        self.assertEqual( pipe.OUT.polynomial_degree(), 0)
+
+        pipe.OUT.add(pipe.flow*pipe.pIn, "quadratic")
+        self.assertEqual( pipe.OUT.polynomial_degree(), 0)
+
+        pipe.flow.unfix()
+        self.assertEqual( pipe.OUT.polynomial_degree(), 1)
+
+        pipe.pIn.unfix()
+        self.assertEqual( pipe.OUT.polynomial_degree(), 2)
+
+        pipe.OUT.add(pipe.flow/pipe.pIn, "nonLin")
+        self.assertEqual( pipe.OUT.polynomial_degree(), None)
+
     def test_pprint(self):
         pipe = ConcreteModel()
         pipe.SPECIES = Set(initialize=['a','b','c'])
@@ -105,6 +183,7 @@ class TestConnector(unittest.TestCase):
         pipe.OUT = Connector()
         pipe.OUT.add(-pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
+        pipe.OUT.add(pipe.composition['a'], "comp_a")
         pipe.OUT.add(pipe.pIn, "pressure")
 
         os = StringIO()
@@ -147,7 +226,6 @@ class TestConnector(unittest.TestCase):
         pipe.OUT = Connector()
         pipe.OUT.add(-pipe.flow, "flow")
         pipe.OUT.add(pipe.composition, "composition")
-        pipe.OUT.add(pipe.composition['a'], "comp_a")
         pipe.OUT.add(pipe.pIn, "pressure")
 
         os = StringIO()
