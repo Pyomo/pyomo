@@ -42,7 +42,7 @@ except:
 from pyomo.core.base.component import Component
 #from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
-from pyomo.core.base.numvalue import ZeroConstant, native_numeric_types
+from pyomo.core.base.numvalue import native_numeric_types, native_types
 from pyomo.core.base.var import _VarData, Var
 
 import pyomo.core.base.expr_common
@@ -85,28 +85,35 @@ or
     return msg
 
 
-def identify_variables(expr, include_fixed=True):
-    if expr.is_expression():
-        if type(expr) is _ProductExpression:
-            for arg in expr._numerator:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-            for arg in expr._denominator:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-        elif type(expr) is _ExternalFunctionExpression:
-            for arg in expr._args:
-                if isinstance(arg, basestring):
-                    continue
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-        else:
-            for arg in expr._args:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-    elif include_fixed or not expr.is_fixed():
-        if isinstance(expr, _VarData):
-            yield expr
+def identify_variables(expr, include_fixed=True, allow_duplicates=False):
+    if not allow_duplicates:
+        _seen = set()
+    _stack = [ ([expr], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if type(_sub) in native_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                if type(_sub) is _ProductExpression:
+                    if _sub._denominator:
+                        _stack.append(
+                            (_sub._denominator, 0, len(_sub._denominator)) )
+                    _argList = _sub._numerator
+                else:
+                    _argList = _sub._args
+                _idx = 0
+                _len = len(_argList)
+            elif isinstance(_sub, _VarData):
+                if include_fixed or not _sub.is_fixed():
+                    if not allow_duplicates:
+                        if id(_sub) in _seen:
+                            continue
+                        _seen.add(id(_sub))
+                    yield _sub
 
 
 class _ExpressionBase(NumericValue):
@@ -329,8 +336,8 @@ class _AbsExpression(_IntrinsicFunctionExpression):
     def __init__(self, args):
         _IntrinsicFunctionExpression.__init__(self, 'abs', 1, args, abs)
 
-    def __getstate__(self):
-        return _IntrinsicFunctionExpression.__getstate__(self)
+    #def __getstate__(self):
+    #    return _IntrinsicFunctionExpression.__getstate__(self)
 
     def __copy__(self):
         return self.__class__( tuple(clone_expression(x) for x in self._args) )
@@ -345,8 +352,8 @@ class _PowExpression(_IntrinsicFunctionExpression):
     def __init__(self, args):
         _IntrinsicFunctionExpression.__init__(self, 'pow', 2, args, pow)
 
-    def __getstate__(self):
-        return _IntrinsicFunctionExpression.__getstate__(self)
+    #def __getstate__(self):
+    #    return _IntrinsicFunctionExpression.__getstate__(self)
 
     def __copy__(self):
         return self.__class__( tuple(clone_expression(x) for x in self._args) )
@@ -892,8 +899,8 @@ class _GetItemExpression(_ExpressionBase):
         self._base = base
 
     def __getstate__(self):
-        result = _IndexLookupExpression.__getstate__(self)
-        for i in _IndexLookupExpression.__slots__:
+        result = _ExpressionBase.__getstate__(self)
+        for i in _GetItemExpression.__slots__:
             result[i] = getattr(self, i)
         return result
 

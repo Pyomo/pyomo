@@ -37,6 +37,7 @@ TerminationCondition = Enum(
     'minStepLength',        # Step length is smaller than specified limit
     'globallyOptimal',      # Found a globally optimal solution
     'locallyOptimal',       # Found a locally optimal solution
+    'feasible',             # Found a solution that is feasible
     'optimal',              # Found an optimal solution
     'maxEvaluations',       # Exceeded maximum number of problem evaluations (e.g., branch and bound nodes)
     'other',                # Other, uncategorized normal termination
