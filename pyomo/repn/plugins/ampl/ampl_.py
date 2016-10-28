@@ -13,6 +13,11 @@
 
 __all__ = ['ProblemWriter_nl']
 
+try:
+    basestring
+except:
+    basestring = str
+
 import itertools
 import logging
 import operator

@@ -10,6 +10,11 @@ from __future__ import division
 
 __all__ = [ 'AmplRepn', 'generate_ampl_repn']
 
+try:
+    basestring
+except:
+    basestring = str
+
 import logging
 
 from pyomo.core.base import expr as Expr
