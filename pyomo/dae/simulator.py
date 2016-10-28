@@ -9,7 +9,6 @@
 
 __all__ = ('Simulator', )
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 from pyomo.environ import Constraint, Param, value
@@ -22,10 +21,13 @@ from pyomo.core.base import expr as EXPR
 from pyomo.core.base import expr_common as common
 from pyomo.core.base.template_expr import (
     IndexTemplate,
+    _GetItemIndexer,
     substitute_template_expression,
-    substitute_template_with_param,
-    substitute_template_with_index,
+    substitute_getitem_with_param,
+    substitute_template_with_value,
 )
+
+from six import iterkeys, itervalues
 
 def _check_getitemexpression(expr,i):
     """
@@ -144,7 +146,7 @@ class Simulator:
                 "Pyomo models with a single ContinuousSet")
 
         # Get the ContinuousSet in the model
-        contset = temp.values()[0]
+        contset = list(temp.values())[0]
 
         # Create a index template for the continuous set
         cstemplate = IndexTemplate(contset)
@@ -251,7 +253,7 @@ class Simulator:
             
             derivlist.append(_name)
             rhsdict[_name] = substitute_template_expression(
-                RHS, substitute_template_with_param, templatemap)
+                RHS, substitute_getitem_with_param, templatemap)
         
         # Check to see if we found a RHS for every DerivativeVar in
         # the model
@@ -268,17 +270,18 @@ class Simulator:
         for deriv in derivlist:
             deriv = m.component(deriv)
             diffvars.append(deriv.get_state_var().name)
-            diffvarids.append(id(deriv.get_state_var()))
+            # List with keys for the substituter map
+            diffvarids.append(_GetItemIndexer(deriv.get_state_var()[cstemplate])) 
 
         # Make sure there are no DerivativeVars or algebraic variables
         # in the RHS expressions. The template map should only contain
         # differential variables.
-        for item in templatemap.values():
-            if item.name in allderivs:
+        for item in iterkeys(templatemap):
+            if item._base.name in allderivs:
                 raise DAE_Error(
                     "Cannot simulate a differential equation with "
                     "multiple DerivativeVars")
-            if item.name not in diffvars:
+            if item._base.name not in diffvars:
                 # This only catches algebraic variables indexed by
                 # time. TODO: how to catch variables not indexed by
                 # time or warn the user that values must be set for

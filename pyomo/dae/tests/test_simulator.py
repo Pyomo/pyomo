@@ -22,9 +22,10 @@ from pyomo.dae.simulator import (
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base.template_expr import (
     IndexTemplate, 
+    _GetItemIndexer,
     substitute_template_expression, 
-    substitute_template_with_param,
-    substitute_template_with_index,
+    substitute_getitem_with_param,
+    substitute_template_with_value,
 )
 
 class TestSimulator(unittest.TestCase):
@@ -60,13 +61,13 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(mysim._derivlist[0], m.dv.name)
         self.assertEqual(mysim._derivlist[1], m.dw.name)
         self.assertEqual(len(mysim._templatemap), 1)
-        self.assertTrue(id(m.v) in mysim._templatemap)
-        self.assertFalse(id(m.w) in mysim._templatemap)
+        self.assertTrue(_GetItemIndexer(m.v[t]) in mysim._templatemap)
+        self.assertFalse(_GetItemIndexer(m.w[t]) in mysim._templatemap)
         self.assertEqual(len(mysim._rhsdict), 2)
         self.assertTrue(isinstance(mysim._rhsdict[m.dv.name], Param))
-        self.assertIs(mysim._rhsdict[m.dv.name].name, m.v.name)
+        self.assertEqual(mysim._rhsdict[m.dv.name].name, 'v[{t}]')
         self.assertTrue(isinstance(mysim._rhsdict[m.dw.name], Param))
-        self.assertIs(mysim._rhsdict[m.dw.name].name, m.v.name)
+        self.assertEqual(mysim._rhsdict[m.dw.name].name, 'v[{t}]')
         self.assertEqual(len(mysim._rhsfun([0,0],0)), 2)
         self.assertIsNone(mysim._tsim)
         self.assertIsNone(mysim._simsolution)
