@@ -1278,6 +1278,13 @@ class MiscVarTests(unittest.TestCase):
         self.assertTrue( newIdx in model.s[1] )
         self.assertTrue( newIdx in model.x )
 
+    def test_abstract_index(self):
+        model = AbstractModel()
+        model.A = Set()
+        model.B = Set()
+        model.C = model.A | model.B
+        model.x = Var(model.C)
+
 
 if __name__ == "__main__":
     unittest.main()

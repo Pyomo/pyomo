@@ -364,7 +364,7 @@ class Connector(Component):
     # the Connector.
 
     def __new__(cls, *args, **kwds):
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
             self = SimpleConnector(*args, **kwds)
         else:
             self = IndexedConnector(*args, **kwds)
