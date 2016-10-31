@@ -42,8 +42,8 @@ except:
 from pyomo.core.base.component import Component
 #from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
-from pyomo.core.base.numvalue import ZeroConstant, native_numeric_types
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.numvalue import native_numeric_types, native_types
+from pyomo.core.base.var import _VarData, Var
 
 import pyomo.core.base.expr_common
 from pyomo.core.base.expr_common import \
@@ -53,7 +53,7 @@ from pyomo.core.base.expr_common import \
 
 
 def clone_expression(exp):
-    if exp.is_expression():
+    if type(exp) not in native_numeric_types and exp.is_expression():
         # It is important that this function calls the clone method not __copy__.
         # __copy__ and clone are the same for all classes that advertise "is_expression = True"
         # except the _ExpressionData class (in which case clone does nothing
@@ -85,28 +85,35 @@ or
     return msg
 
 
-def identify_variables(expr, include_fixed=True):
-    if expr.is_expression():
-        if type(expr) is _ProductExpression:
-            for arg in expr._numerator:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-            for arg in expr._denominator:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-        elif type(expr) is _ExternalFunctionExpression:
-            for arg in expr._args:
-                if isinstance(arg, basestring):
-                    continue
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-        else:
-            for arg in expr._args:
-                for var in identify_variables(arg, include_fixed):
-                    yield var
-    elif include_fixed or not expr.is_fixed():
-        if isinstance(expr, _VarData):
-            yield expr
+def identify_variables(expr, include_fixed=True, allow_duplicates=False):
+    if not allow_duplicates:
+        _seen = set()
+    _stack = [ ([expr], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if type(_sub) in native_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                if type(_sub) is _ProductExpression:
+                    if _sub._denominator:
+                        _stack.append(
+                            (_sub._denominator, 0, len(_sub._denominator)) )
+                    _argList = _sub._numerator
+                else:
+                    _argList = _sub._args
+                _idx = 0
+                _len = len(_argList)
+            elif isinstance(_sub, _VarData):
+                if include_fixed or not _sub.is_fixed():
+                    if not allow_duplicates:
+                        if id(_sub) in _seen:
+                            continue
+                        _seen.add(id(_sub))
+                    yield _sub
 
 
 class _ExpressionBase(NumericValue):
@@ -140,8 +147,11 @@ class _ExpressionBase(NumericValue):
                 ostream.write(" , ")
             else:
                 ostream.write(", ")
-            arg.to_string( ostream=ostream, precedence=self._precedence(),
-                           verbose=verbose )
+            try:
+                arg.to_string( ostream=ostream, precedence=self._precedence(),
+                               verbose=verbose )
+            except:
+                ostream.write(str(arg))
         ostream.write(" )")
 
     def clone(self):
@@ -220,8 +230,9 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
             except Exception:
                 if exception:
                     e = sys.exc_info()[1]
-                    logger.error("evaluating expression: %s\n    (expression: %s)",
-                                 str(e), str(self))
+                    logger.error(
+                        "evaluating expression: %s\n    (expression: %s)",
+                        str(e), str(self) )
                     raise
                 yield None
 
@@ -339,8 +350,8 @@ class _AbsExpression(_IntrinsicFunctionExpression):
     def __init__(self, args):
         _IntrinsicFunctionExpression.__init__(self, 'abs', 1, args, abs)
 
-    def __getstate__(self):
-        return _IntrinsicFunctionExpression.__getstate__(self)
+    #def __getstate__(self):
+    #    return _IntrinsicFunctionExpression.__getstate__(self)
 
     def __copy__(self):
         return self.__class__( tuple(clone_expression(x) for x in self._args) )
@@ -355,8 +366,8 @@ class _PowExpression(_IntrinsicFunctionExpression):
     def __init__(self, args):
         _IntrinsicFunctionExpression.__init__(self, 'pow', 2, args, pow)
 
-    def __getstate__(self):
-        return _IntrinsicFunctionExpression.__getstate__(self)
+    #def __getstate__(self):
+    #    return _IntrinsicFunctionExpression.__getstate__(self)
 
     def __copy__(self):
         return self.__class__( tuple(clone_expression(x) for x in self._args) )
@@ -906,6 +917,43 @@ class Expr_if(_ExpressionBase):
             return self._then(exception=exception)
         else:
             return self._else(exception=exception)
+
+
+class _GetItemExpression(_ExpressionBase):
+    __slots__ = ('_base')
+
+    def __init__(self, base, args):
+        """Construct a call to an external function"""
+        _ExpressionBase.__init__(self, args)
+        self._base = base
+
+    def __getstate__(self):
+        result = _ExpressionBase.__getstate__(self)
+        for i in _GetItemExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def __copy__(self):
+        return self.__class__( self._base,
+                               tuple(clone_expression(x) for x in self._args) )
+
+    def getname(self, *args, **kwds):
+        return self._base.getname(*args, **kwds)
+
+    def polynomial_degree(self):
+        return 0 if self.is_fixed() else 1
+
+    def is_constant(self):
+        return False
+
+    def is_fixed(self):
+        return not isinstance(self._base, Var)
+
+    def _apply_operation(self, values):
+        return value(self._base[values])
+
+    def resolve_template(self):
+        return self._base.__getitem__(tuple(value(i) for i in self._args))
 
 
 def _generate_expression__clone_if_needed(obj, target):

@@ -13,7 +13,7 @@ import itertools
 import logging
 import weakref
 import sys
-from six import iteritems, itervalues
+from six import iteritems, itervalues, iterkeys
 from six.moves import xrange
 
 from pyomo.util.plugin import Plugin, implements
@@ -364,7 +364,7 @@ class Connector(Component):
     # the Connector.
 
     def __new__(cls, *args, **kwds):
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
             self = SimpleConnector(*args, **kwds)
         else:
             self = IndexedConnector(*args, **kwds)
@@ -555,7 +555,7 @@ class ConnectorExpander(Plugin):
                 elif isinstance(arg, VarList):
                     args[idx] = arg.add()
 
-        for var in ref.vars.iterkeys():
+        for var in iterkeys(ref.vars):
             if var in skip:
                 continue
             if constraint.body.is_expression():
