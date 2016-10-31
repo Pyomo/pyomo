@@ -199,22 +199,18 @@ def is_fixed(obj):
         pass
     return as_numeric(obj).is_fixed()
 
-def is_data(obj):
+def potentially_variable(obj):
     """
-    A utility function that returns a boolean that indicates
-    whether the input object represents data.
+    A utility function that returns a boolean indicating
+    whether the input object can reference variables.
     """
-    # JDS: NB: I am not sure why we allow str to be a constant, but
-    # since we have historically done so, we check for type membership
-    # in native_types and not in native_numeric_types.
-    #
     if obj.__class__ in native_types:
-        return True
+        return False
     try:
-        return obj._is_data()
+        return obj._potentially_variable()
     except AttributeError:
         pass
-    return as_numeric(obj)._is_data()
+    return as_numeric(obj)._potentially_variable()
 
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
@@ -366,9 +362,9 @@ class NumericValue(object):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
-    def _is_data(self):
-        """Return True if variables can not appear in this expression"""
-        return False
+    def _potentially_variable(self):
+        """Return True if variables can appear in this expression"""
+        return True
 
     def is_expression(self):
         """Return True if this numeric value is an expression"""
@@ -620,8 +616,8 @@ class NumericConstant(NumericValue):
     def is_fixed(self):
         return True
 
-    def _is_data(self):
-        return True
+    def _potentially_variable(self):
+        return False
 
     def __str__(self):
         return str(self.value)

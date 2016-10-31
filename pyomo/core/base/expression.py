@@ -125,10 +125,10 @@ class _ExpressionData(NumericValue):
         """A boolean indicating whether this expression is fixed."""
         raise NotImplementedError
 
-    # _Expression data should never return True because
+    # _ExpressionData should never return False because
     # they can store subexpressions that contain variables
-    def _is_data(self):
-        return False
+    def _potentially_variable(self):
+        return True
 
 class _GeneralExpressionDataImpl(_ExpressionData):
     """

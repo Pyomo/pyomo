@@ -90,11 +90,11 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
-    def _is_data(self):
+    def _potentially_variable(self):
         """
-        Returns True because this object stores data.
+        Returns False because this object can never reference variables.
         """
-        return True
+        return False
 
     def __nonzero__(self):
         """Return True if the value is defined and non-zero."""

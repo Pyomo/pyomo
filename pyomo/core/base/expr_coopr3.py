@@ -192,11 +192,11 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
                 return False
         return True
 
-    def _is_data(self):
+    def _potentially_variable(self):
         for arg in self._args:
-            if not arg._is_data():
-                return False
-        return True
+            if arg._potentially_variable():
+                return True
+        return False
 
     def is_expression(self):
         return True
@@ -293,13 +293,13 @@ class _ExternalFunctionExpression(_ExpressionBase):
                 return False
         return True
 
-    def _is_data(self):
+    def _potentially_variable(self):
         for arg in self._args:
             if isinstance(arg, basestring):
                 continue
-            if not arg._is_data():
-                return False
-        return True
+            if arg._potentially_variable():
+                return True
+        return False
 
     def _apply_operation(self, values):
         return self._fcn.evaluate(values)
@@ -403,7 +403,7 @@ class _PowExpression(_IntrinsicFunctionExpression):
         return False
 
     # the base class implementation is fine
-    #def _is_data(self)
+    #def _potentially_variable(self)
 
     def _precedence(self):
         return _PowExpression.PRECEDENCE
@@ -634,14 +634,14 @@ class _ProductExpression(_ExpressionBase):
                 return False
         return True
 
-    def _is_data(self):
+    def _potentially_variable(self):
         for arg in self._numerator:
-            if not arg._is_data():
-                return False
+            if arg._potentially_variable():
+                return True
         for arg in self._denominator:
-            if not arg._is_data():
-                return False
-        return True
+            if arg._potentially_variable():
+                return True
+        return False
 
     def _precedence(self):
         return _ProductExpression.PRECEDENCE
@@ -878,7 +878,7 @@ class Expr_if(_ExpressionBase):
             return False
 
     # the base class implementation is fine
-    #def _is_data(self)
+    #def _potentially_variable(self)
 
     def polynomial_degree(self):
         if self._if.is_fixed():
