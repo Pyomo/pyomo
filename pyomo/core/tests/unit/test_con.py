@@ -351,6 +351,226 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+    def test_nondata_bounds(self):
+        model = ConcreteModel()
+        model.c = Constraint()
+        model.e1 = Expression()
+        model.e2 = Expression()
+        model.e3 = Expression()
+        with self.assertRaises(ValueError):
+            model.c.set_value(model.e1 <= model.e2 <= model.e3)
+        model.e1.expr = 1.0
+        model.e2.expr = 1.0
+        model.e3.expr = 1.0
+        with self.assertRaises(ValueError):
+            model.c.set_value(model.e1 <= model.e2 <= model.e3)
+        model.p1 = Param(mutable=True)
+        model.p2 = Param(mutable=True)
+        model.c.set_value(model.p1 <= model.e1 <= model.p2)
+        model.e1.expr = None
+        model.c.set_value(model.p1 <= model.e1 <= model.p2)
+
+    # make sure we can use a mutable param that
+    # has not been given a value in the upper bound
+    # of an inequality constraint
+    def test_mutable_novalue_param_lower_bound(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.p = Param(mutable=True)
+        model.p.value = None
+
+        model.c = Constraint(expr=0 <= model.x - model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p <= model.x)
+        self.assertTrue(model.c.lower is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p <= model.x + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p + 1 <= model.x)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p + 1)**2 <= model.x)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p <= model.x <= model.p + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x - model.p >= 0)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x >= model.p)
+        self.assertTrue(model.c.lower is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x + 1 >= model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x >= model.p + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x >= (model.p + 1)**2)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p + 1 >= model.x >= model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p, model.x, None))
+        self.assertTrue(model.c.lower is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p, model.x + 1, None))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p + 1, model.x, None))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p, model.x, 1))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+    # make sure we can use a mutable param that
+    # has not been given a value in the lower bound
+    # of an inequality constraint
+    def test_mutable_novalue_param_upper_bound(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.p = Param(mutable=True)
+        model.p.value = None
+
+        model.c = Constraint(expr=model.x - model.p <= 0)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x <= model.p)
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x + 1 <= model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x <= model.p + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x <= (model.p + 1)**2)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p + 1 <= model.x <= model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=0 >= model.x - model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p >= model.x)
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p >= model.x + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p + 1 >= model.x)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p + 1)**2 >= model.x)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p >= model.x >= model.p + 1)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(None, model.x, model.p))
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(None, model.x + 1, model.p))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(None, model.x, model.p + 1))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(1, model.x, model.p))
+        self.assertEqual(model.c.equality, False)
+        model.del_component(model.c)
+
+    # make sure we can use a mutable param that
+    # has not been given a value in the rhs of
+    # of an equality constraint
+    def test_mutable_novalue_param_equality(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.p = Param(mutable=True)
+        model.p.value = None
+
+        model.c = Constraint(expr=model.x - model.p == 0)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x == model.p)
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x + 1 == model.p)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x + 1 == (model.p + 1)**2)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.x == model.p + 1)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=model.p <= model.x <= model.p)
+        self.assertTrue(model.c.upper is model.p)
+        # GH: Not sure if we are supposed to detect equality
+        #     in this situation. I would rather us not, for
+        #     the sake of making the code less complicated.
+        #     Either way, I am not going to test for it here.
+        #self.assertEqual(model.c.equality, <blah>)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.x, model.p))
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
+        model.c = Constraint(expr=(model.p, model.x))
+        self.assertTrue(model.c.upper is model.p)
+        self.assertEqual(model.c.equality, True)
+        model.del_component(model.c)
+
 class TestSimpleCon(unittest.TestCase):
 
     def test_set_expr_explicit_multivariate(self):
@@ -1291,6 +1511,14 @@ class MiscConTests(unittest.TestCase):
         except ValueError:
             pass
         #
+
+    def test_abstract_index(self):
+        model = AbstractModel()
+        model.A = Set()
+        model.B = Set()
+        model.C = model.A | model.B
+        model.x = Constraint(model.C)
+
 
 if __name__ == "__main__":
     unittest.main()

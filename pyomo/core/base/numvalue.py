@@ -162,8 +162,8 @@ def value(obj, exception=True):
 
 def is_constant(obj):
     """
-    A utility function that returns a boolean that indicates whether the
-    object is a constant
+    A utility function that returns a boolean that indicates
+    whether the object is a constant.
     """
     # This method is rarely, if ever, called.  Plus, since the
     # expression generation (and constraint generation) system converts
@@ -184,8 +184,8 @@ def is_constant(obj):
 
 def is_fixed(obj):
     """
-    A utility function that returns a boolean that indicates whether the
-    input object's value is fixed.
+    A utility function that returns a boolean that indicates
+    whether the input object's value is fixed.
     """
     # JDS: NB: I am not sure why we allow str to be a constant, but
     # since we have historically done so, we check for type membership
@@ -199,6 +199,18 @@ def is_fixed(obj):
         pass
     return as_numeric(obj).is_fixed()
 
+def potentially_variable(obj):
+    """
+    A utility function that returns a boolean indicating
+    whether the input object can reference variables.
+    """
+    if obj.__class__ in native_types:
+        return False
+    try:
+        return obj._potentially_variable()
+    except AttributeError:
+        pass
+    return as_numeric(obj)._potentially_variable()
 
 # It is very common to have only a few constants in a model, but those
 # constants get repeated many times.  KnownConstants lets us re-use /
@@ -349,6 +361,10 @@ class NumericValue(object):
     def is_fixed(self):
         """Return True if this is a non-constant value that has been fixed"""
         return False
+
+    def _potentially_variable(self):
+        """Return True if variables can appear in this expression"""
+        return True
 
     def is_expression(self):
         """Return True if this numeric value is an expression"""
@@ -576,7 +592,6 @@ functions.""" % (self.name,))
         """
         return generate_expression(_abs,self, None)
 
-
 class NumericConstant(NumericValue):
     """An object that contains a constant numeric value.
 
@@ -600,6 +615,9 @@ class NumericConstant(NumericValue):
 
     def is_fixed(self):
         return True
+
+    def _potentially_variable(self):
+        return False
 
     def __str__(self):
         return str(self.value)

@@ -53,6 +53,66 @@ class TestSimpleVar(PyomoModel):
         self.instance.x.fixed = True
         self.assertEqual(self.instance.x.fixed, True)
 
+    def Xtest_setlb_nondata_expression(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.e = Expression()
+        with self.assertRaises(ValueError):
+            model.x.setlb(model.e)
+        model.e.expr = 1.0
+        with self.assertRaises(ValueError):
+            model.x.setlb(model.e)
+        model.y = Var()
+        with self.assertRaises(ValueError):
+            model.x.setlb(model.y)
+        model.y.value = 1.0
+        with self.assertRaises(ValueError):
+            model.x.setlb(model.y)
+        model.y.fix()
+        with self.assertRaises(ValueError):
+            model.x.setlb(model.y + 1)
+
+    def Xtest_setub_nondata_expression(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.e = Expression()
+        with self.assertRaises(ValueError):
+            model.x.setub(model.e)
+        model.e.expr = 1.0
+        with self.assertRaises(ValueError):
+            model.x.setub(model.e)
+        model.y = Var()
+        with self.assertRaises(ValueError):
+            model.x.setub(model.y)
+        model.y.value = 1.0
+        with self.assertRaises(ValueError):
+            model.x.setub(model.y)
+        model.y.fix()
+        with self.assertRaises(ValueError):
+            model.x.setub(model.y + 1)
+
+    def Xtest_setlb_data_expression(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.p = Param(mutable=True)
+        model.x.setlb(model.p)
+        model.x.setlb(model.p**2 + 1)
+        model.p.value = 1.0
+        model.x.setlb(model.p)
+        model.x.setlb(model.p**2)
+        model.x.setlb(1.0)
+
+    def Xtest_setub_data_expression(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.p = Param(mutable=True)
+        model.x.setub(model.p)
+        model.x.setub(model.p**2 + 1)
+        model.p.value = 1.0
+        model.x.setub(model.p)
+        model.x.setub(model.p**2)
+        model.x.setub(1.0)
+
     def test_fix_all(self):
         """Test fix all variables method"""
         self.model.B = RangeSet(4)
@@ -1277,6 +1337,13 @@ class MiscVarTests(unittest.TestCase):
 
         self.assertTrue( newIdx in model.s[1] )
         self.assertTrue( newIdx in model.x )
+
+    def test_abstract_index(self):
+        model = AbstractModel()
+        model.A = Set()
+        model.B = Set()
+        model.C = model.A | model.B
+        model.x = Var(model.C)
 
 
 if __name__ == "__main__":

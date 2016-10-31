@@ -125,6 +125,11 @@ class _ExpressionData(NumericValue):
         """A boolean indicating whether this expression is fixed."""
         raise NotImplementedError
 
+    # _ExpressionData should never return False because
+    # they can store subexpressions that contain variables
+    def _potentially_variable(self):
+        return True
+
 class _GeneralExpressionDataImpl(_ExpressionData):
     """
     An object that defines an expression that is never cloned
@@ -249,7 +254,7 @@ class Expression(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Expression:
             return super(Expression, cls).__new__(cls)
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleExpression.__new__(SimpleExpression)
         else:
             return IndexedExpression.__new__(IndexedExpression)
