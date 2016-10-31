@@ -647,7 +647,7 @@ class Constraint(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleConstraint.__new__(SimpleConstraint)
         else:
             return IndexedConstraint.__new__(IndexedConstraint)

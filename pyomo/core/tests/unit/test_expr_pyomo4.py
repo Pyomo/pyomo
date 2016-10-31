@@ -2077,6 +2077,12 @@ class PolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.b.fixed = False
 
+        expr = self.model.a == self.model.a * self.model.b
+        self.assertEqual(expr.polynomial_degree(), 2)
+        self.model.b.fixed = True
+        self.assertEqual(expr.polynomial_degree(), 1)
+        self.model.b.fixed = False
+
     def test_simple_product(self):
         expr = self.model.c * self.model.d
         self.assertEqual(expr.polynomial_degree(), 0)
@@ -2936,21 +2942,24 @@ class ExpressionUtilities(unittest.TestCase):
 
     def test_identify_vars_params(self):
         m = ConcreteModel()
-        m.I = RangeSet(2)
+        m.I = RangeSet(3)
         m.a = Param(initialize=1)
         m.b = Param(m.I, initialize=1, mutable=True)
         self.assertEqual( list(EXPR.identify_variables(m.a)), [] )
         self.assertEqual( list(EXPR.identify_variables(m.b[1])), [] )
         self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])), [] )
         self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1])), [] )
-        self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1] + m.b[2])),
-                          [] )
+        self.assertEqual( list(EXPR.identify_variables(
+            m.a**m.b[1] + m.b[2])), [] )
+        self.assertEqual( list(EXPR.identify_variables(
+            m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])), [] )
 
     def test_identify_vars_vars(self):
         m = ConcreteModel()
-        m.I = RangeSet(2)
+        m.I = RangeSet(3)
         m.a = Var(initialize=1)
         m.b = Var(m.I, initialize=1)
+        m.x = ExternalFunction(library='foo.so', function='bar')
         self.assertEqual( list(EXPR.identify_variables(m.a)), [m.a] )
         self.assertEqual( list(EXPR.identify_variables(m.b[1])), [m.b[1]] )
         self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])),
@@ -2959,6 +2968,17 @@ class ExpressionUtilities(unittest.TestCase):
                           [ m.a, m.b[1] ] )
         self.assertEqual( list(EXPR.identify_variables(m.a**m.b[1] + m.b[2])),
                           [ m.a, m.b[1], m.b[2] ] )
+        self.assertEqual( list(EXPR.identify_variables(
+            m.a**m.b[1] + m.b[2]*m.b[3]*m.b[2])),
+                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
+        self.assertEqual( list(EXPR.identify_variables(
+            m.a**m.b[1] + m.b[2]/m.b[3]*m.b[2])),
+                          [ m.a, m.b[1], m.b[2], m.b[3] ] )
+
+        self.assertEqual( list(EXPR.identify_variables(
+            m.x(m.a, 'string_param', 1)*m.b[1] )),
+                          [ m.a, m.b[1] ] )
+
 
         self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a)),
                           [ m.a ] )

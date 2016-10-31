@@ -19,8 +19,7 @@ from ctypes import (
 
 from pyomo.core.base.numvalue import as_numeric
 from pyomo.core.base.component import Component
-from pyomo.core.base.expr import (_ExpressionBase,
-                                  _ExternalFunctionExpression)
+from pyomo.core.base import expr as EXPR
 
 __all__  = ( 'ExternalFunction', )
 
@@ -58,7 +57,7 @@ class ExternalFunction(Component):
         for i in idxs:
             if type(args[i]) is types.GeneratorType:
                 args = args[:i] + tuple(args[i]) + args[i+1:]
-        return _ExternalFunctionExpression(self, args)
+        return EXPR._ExternalFunctionExpression(self, args)
 
     def evaluate(self, args):
         raise NotImplementedError(
