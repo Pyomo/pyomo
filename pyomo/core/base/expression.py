@@ -125,6 +125,11 @@ class _ExpressionData(NumericValue):
         """A boolean indicating whether this expression is fixed."""
         raise NotImplementedError
 
+    # _ExpressionData should never return False because
+    # they can store subexpressions that contain variables
+    def _potentially_variable(self):
+        return True
+
 class _GeneralExpressionDataImpl(_ExpressionData):
     """
     An object that defines an expression that is never cloned

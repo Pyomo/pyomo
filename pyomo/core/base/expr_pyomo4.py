@@ -226,6 +226,13 @@ class _ExpressionBase(NumericValue):
                 return False
         return True
 
+    # FIXME: These need to be made non-recursive
+    def _potentially_variable(self):
+        for a in self._args:
+            if a.__class__ not in native_numeric_types and a._potentially_variable():
+                return True
+        return False
+
     def is_expression(self):
         return True
 
@@ -489,6 +496,9 @@ class _PowExpression(_ExpressionBase):
         return value(self._args[1]) == 0 or \
             self._args[0].__class__ in native_numeric_types or \
             self._args[0].is_constant()
+
+    # the base class implementation is fine
+    #def _potentially_variable(self)
 
     def _precedence(self):
         return _PowExpression.PRECEDENCE
@@ -882,6 +892,9 @@ class Expr_if(_ExpressionBase):
                 return self._else.is_fixed()
         else:
             return False
+
+    # the base class implementation is fine
+    #def _potentially_variable(self)
 
     def _polynomial_degree(self, result):
         _if, _then, _else = result

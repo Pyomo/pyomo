@@ -24,8 +24,9 @@ from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
      UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT
 from pyomo.core.base.var import SimpleVar
+from pyomo.core.base.numvalue import potentially_variable
 
-class Expression_EvaluateNumericConstant(unittest.TestCase):
+class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -140,14 +141,14 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
         except TypeError:
             pass
 
-class Expression_EvaluateVarData(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -160,14 +161,14 @@ class Expression_EvaluateVarData(Expression_EvaluateNumericConstant):
         tmp.value=val
         return tmp
 
-class Expression_EvaluateVar(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -180,14 +181,14 @@ class Expression_EvaluateVar(Expression_EvaluateNumericConstant):
         tmp.value=val
         return tmp
 
-class Expression_EvaluateFixedVar(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -201,14 +202,14 @@ class Expression_EvaluateFixedVar(Expression_EvaluateNumericConstant):
         tmp.value=val
         return tmp
 
-class Expression_EvaluateImmutableParam(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -220,14 +221,14 @@ class Expression_EvaluateImmutableParam(Expression_EvaluateNumericConstant):
         tmp.construct()
         return tmp
 
-class Expression_EvaluateMutableParam(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -290,7 +291,7 @@ class TestNumericValue(unittest.TestCase):
         self.assertEqual(abs(c()), 2.2)
         self.assertEqual(str(c), "-2.2")
 
-class Generate_SumExpression(unittest.TestCase):
+class TestGenerate_SumExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -655,7 +656,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.b)], 1)
         self.assertEqual(e._coef[id(m.c)], -1)
 
-class Generate_ProductExpression(unittest.TestCase):
+class TestGenerate_ProductExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -872,7 +873,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e), float)
         self.assertEqual(e, 1.5)
 
-class Generate_RelationalExpression(unittest.TestCase):
+class TestGenerate_RelationalExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1159,18 +1160,18 @@ class Generate_RelationalExpression(unittest.TestCase):
         except TypeError:
             pass
 
-class PrettyPrinter_oldStyle(unittest.TestCase):
+class TestPrettyPrinter_oldStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-        PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
+        TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
 
     def test_sum(self):
@@ -1276,18 +1277,18 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
             " ) ) ) ) ) )",
             str(expr) )
 
-class PrettyPrinter_newStyle(unittest.TestCase):
+class TestPrettyPrinter_newStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-        PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
+        TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
 
     def test_sum(self):
@@ -1483,7 +1484,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
         self.assertFileEqualsBaseline( currdir+"varpprint.out",
                                        currdir+"varpprint.txt" )
 
-class InplaceExpressionGeneration(unittest.TestCase):
+class TestInplaceExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1637,7 +1638,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(x._args[0]._args[1], m.a)
         #self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
-class GeneralExpressionGeneration(unittest.TestCase):
+class TestGeneralExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1722,7 +1723,7 @@ class GeneralExpressionGeneration(unittest.TestCase):
         self.assertIs(type(e), EXPR._NegationExpression)
         self.assertIs(type(e._args[0]), EXPR._IntrinsicFunctionExpression)
 
-class ExprConditionalContext(unittest.TestCase):
+class TestExprConditionalContext(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -2012,7 +2013,7 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(value(1 == instance.v), True)
         self.checkCondition(value(2 == instance.v), False)
 
-class PolynomialDegree(unittest.TestCase):
+class TestPolynomialDegree(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2243,7 +2244,7 @@ def TrapRefCount_fcn(obj, target = None):
     else:
         return TrapRefCount.inst.saved_fcn(obj, target)
 
-class CloneIfNeeded(unittest.TestCase):
+class TestCloneIfNeeded(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2520,7 +2521,7 @@ class CloneIfNeeded(unittest.TestCase):
         self.assertEqual(len(expr1._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count + 1)
 
-class CloneExpression(unittest.TestCase):
+class TestCloneExpression(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2702,7 +2703,7 @@ class CloneExpression(unittest.TestCase):
         self.assertEqual(expr1._then(), expr2._then())
         self.assertEqual(expr1._else(), expr2._else())
 
-class IsFixedIsConstant(unittest.TestCase):
+class TestIsFixedIsConstant(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2929,9 +2930,80 @@ class IsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), False)
         m.a.fixed = False
 
-class ExpressionUtilities(unittest.TestCase):
+class TestPotentiallyVariable(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def test_var(self):
+        m = ConcreteModel()
+        m.x = Var()
+        e = m.x
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x + 1
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x**2
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x**2/(m.x + 1)
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+    def test_param(self):
+        m = ConcreteModel()
+        m.x = Param(mutable=True)
+        e = m.x
+        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(potentially_variable(e), False)
+
+        e = m.x + 1
+        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(potentially_variable(e), False)
+
+        e = m.x**2
+        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(potentially_variable(e), False)
+
+        e = m.x**2/(m.x + 1)
+        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(potentially_variable(e), False)
+
+    # TODO: This test fails due to bugs in Pyomo4 expression generation
+    def Xtest_expression(self):
+        m = ConcreteModel()
+        m.x = Expression()
+        e = m.x
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x + 1
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x**2
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x**2/(m.x + 1)
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+    def test_misc(self):
+        self.assertEqual(potentially_variable(0), False)
+        self.assertEqual(potentially_variable('a'), False)
+        self.assertEqual(potentially_variable(None), False)
+
+class TestExpressionUtilities(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):

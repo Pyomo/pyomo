@@ -192,6 +192,12 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
                 return False
         return True
 
+    def _potentially_variable(self):
+        for arg in self._args:
+            if arg._potentially_variable():
+                return True
+        return False
+
     def is_expression(self):
         return True
 
@@ -286,6 +292,14 @@ class _ExternalFunctionExpression(_ExpressionBase):
             if not arg.is_fixed():
                 return False
         return True
+
+    def _potentially_variable(self):
+        for arg in self._args:
+            if isinstance(arg, basestring):
+                continue
+            if arg._potentially_variable():
+                return True
+        return False
 
     def _apply_operation(self, values):
         return self._fcn.evaluate(values)
@@ -387,6 +401,9 @@ class _PowExpression(_IntrinsicFunctionExpression):
         if self._args[1].is_fixed():
             return self._args[0].is_fixed() or bool(self._args[1] == 0)
         return False
+
+    # the base class implementation is fine
+    #def _potentially_variable(self)
 
     def _precedence(self):
         return _PowExpression.PRECEDENCE
@@ -616,6 +633,15 @@ class _ProductExpression(_ExpressionBase):
             if not arg.is_fixed():
                 return False
         return True
+
+    def _potentially_variable(self):
+        for arg in self._numerator:
+            if arg._potentially_variable():
+                return True
+        for arg in self._denominator:
+            if arg._potentially_variable():
+                return True
+        return False
 
     def _precedence(self):
         return _ProductExpression.PRECEDENCE
@@ -850,6 +876,9 @@ class Expr_if(_ExpressionBase):
                 return self._else.is_fixed()
         else:
             return False
+
+    # the base class implementation is fine
+    #def _potentially_variable(self)
 
     def polynomial_degree(self):
         if self._if.is_fixed():

@@ -363,10 +363,10 @@ class _GeneralConstraintData(_ConstraintData):
                     arg1 = as_numeric(arg1)
 
                 self._equality = True
-                if arg1 is None or arg1.is_fixed():
+                if arg1 is None or (not arg1._potentially_variable()):
                     self._lower = self._upper = arg1
                     self._body = arg0
-                elif arg0 is None or arg0.is_fixed():
+                elif arg0 is None or (not arg0._potentially_variable()):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
@@ -379,11 +379,12 @@ class _GeneralConstraintData(_ConstraintData):
                 arg0 = expr[0]
                 if arg0 is not None:
                     arg0 = as_numeric(arg0)
-                    if not arg0.is_fixed():
+                    if arg0._potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
-                            "value was non-constant."
+                            "value was not data or an expression "
+                            "restricted to storage of data."
                             % (self.name))
 
                 arg1 = expr[1]
@@ -393,11 +394,12 @@ class _GeneralConstraintData(_ConstraintData):
                 arg2 = expr[2]
                 if arg2 is not None:
                     arg2 = as_numeric(arg2)
-                    if not arg2.is_fixed():
+                    if arg2._potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
-                            "value was non-constant."
+                            "value was not data or an expression "
+                            "restricted to storage of data."
                             % (self.name))
 
                 self._lower = arg0
@@ -464,10 +466,10 @@ class _GeneralConstraintData(_ConstraintData):
                     _args = (expr._lhs, expr._rhs)
                 except AttributeError:
                     _args = expr._args
-                if _args[1].is_fixed():
+                if not _args[1]._potentially_variable():
                     self._lower = self._upper = _args[1]
                     self._body = _args[0]
-                elif _args[0].is_fixed():
+                elif not _args[0]._potentially_variable():
                     self._lower = self._upper = _args[0]
                     self._body = _args[1]
                 else:
@@ -521,19 +523,21 @@ class _GeneralConstraintData(_ConstraintData):
 
                 if len(_args) == 3:
 
-                    if not _args[0].is_fixed():
+                    if _args[0]._potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "
                             "inequality expression (lower <= "
                             "expression <= upper) but the lower "
-                            "bound was non-constant."
+                            "bound was not data or an expression "
+                            "restricted to storage of data."
                             % (self.name))
-                    if not _args[2].is_fixed():
+                    if _args[2]._potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "\
                             "inequality expression (lower <= "
                             "expression <= upper) but the upper "
-                            "bound was non-constant."
+                            "bound was not data or an expression "
+                            "restricted to storage of data."
                             % (self.name))
 
                     self._lower = _args[0]
@@ -542,11 +546,11 @@ class _GeneralConstraintData(_ConstraintData):
 
                 else:
 
-                    if _args[1].is_fixed():
+                    if not _args[1]._potentially_variable():
                         self._lower = None
                         self._body  = _args[0]
                         self._upper = _args[1]
-                    elif _args[0].is_fixed():
+                    elif not _args[0]._potentially_variable():
                         self._lower = _args[0]
                         self._body  = _args[1]
                         self._upper = None

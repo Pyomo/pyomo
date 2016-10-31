@@ -1317,6 +1317,7 @@ class compiled_LP(_ModelClassBase):
 if __name__ == "__main__":
     import pyomo.environ
     from pyomo.opt import *
+    M = simple_LP()
     #M = piecewise_LP()
     #M = compiled_LP()
     #M = trivial_constraints_LP()
@@ -1360,10 +1361,11 @@ if __name__ == "__main__":
     #opt.options['write'] = 'infeas.iis'
     #model.cccc = Constraint(expr=model.x <= -1)
 
-    results = opt.solve(model,
-                        keepfiles=True,
-#                        symbolic_solver_labels=True,
-                        tee=True)
+    model.write("junk.lp", io_options={"symbolic_solver_labels": True})
+    #results = opt.solve(model,
+    #                    keepfiles=True,
+    #                    symbolic_solver_labels=True,
+    #                    tee=True)
 #                        warmstart=True,
 #                        load_solutions=False)
 
