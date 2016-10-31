@@ -748,6 +748,14 @@ class MiscObjTests(unittest.TestCase):
         except Exception:
             self.fail("Error generating objective")
 
+    def test_abstract_index(self):
+        model = AbstractModel()
+        model.A = Set()
+        model.B = Set()
+        model.C = model.A | model.B
+        model.x = Objective(model.C)
+
+
 
 if __name__ == "__main__":
     unittest.main()

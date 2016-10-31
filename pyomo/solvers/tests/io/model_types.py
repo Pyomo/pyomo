@@ -282,7 +282,8 @@ class simple_LP(_ModelClassBase):
 
         model.inactive_obj = Objective(expr=model.x + 3.0*model.y + 1.0 + model.z1 - model.z2)
         model.inactive_obj.deactivate()
-        model.obj = Objective(expr=model.inactive_obj)
+        model.p = Param(mutable=True, initialize=0.0)
+        model.obj = Objective(expr=model.p + model.inactive_obj)
         model.c1 = Constraint(expr=model.dummy_expr1 <= model.dummy_expr2)
         model.c2 = Constraint(expr=2.0 <= model.x/model.a3 - model.y <= 10)
         model.c3 = Constraint(expr=0 <= model.z1 + 1 <= 10)
@@ -1316,11 +1317,13 @@ class compiled_LP(_ModelClassBase):
 if __name__ == "__main__":
     import pyomo.environ
     from pyomo.opt import *
+    M = simple_LP()
     #M = piecewise_LP()
     #M = compiled_LP()
-    M = trivial_constraints_LP()
+    #M = trivial_constraints_LP()
     #M = discrete_var_bounds_MILP()
     #M = simple_QCP()
+    M = simple_LP()
     M.generateModel()
     M.warmstartModel()
     model = M.model
@@ -1343,11 +1346,11 @@ if __name__ == "__main__":
     #model.write(format=None,filename="junk.nl",symbolic_solver_labels=True)
     #model.pprint()
 
-    opt = SolverFactory("cbc", solver_io="mps")
+    #opt = SolverFactory("cbc", solver_io="mps")
     #opt = SolverFactory("gurobi", solver_io='mps')
     #opt = SolverFactory("glpk", solver_io='mps')
     #opt = SolverFactory("pico", solver_io='nl')
-    #opt = SolverFactory("cplex", solver_io='python')
+    opt = SolverFactory("cplex", solver_io='lp')
     #opt = SolverFactory("gurobi_ampl")
     #opt = SolverFactory("baron")
     #opt.options['NumLoc'] = 10
@@ -1358,10 +1361,11 @@ if __name__ == "__main__":
     #opt.options['write'] = 'infeas.iis'
     #model.cccc = Constraint(expr=model.x <= -1)
 
-    results = opt.solve(model,
-                        keepfiles=True,
-#                        symbolic_solver_labels=True,
-                        tee=True)
+    model.write("junk.lp", io_options={"symbolic_solver_labels": True})
+    #results = opt.solve(model,
+    #                    keepfiles=True,
+    #                    symbolic_solver_labels=True,
+    #                    tee=True)
 #                        warmstart=True,
 #                        load_solutions=False)
 

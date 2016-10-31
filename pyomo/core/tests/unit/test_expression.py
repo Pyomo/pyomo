@@ -790,6 +790,14 @@ E : Size=2, Index=E_index
         model.e.expr += 2
         self.assertEqual(model.e.expr(), 3)
 
+    def test_abstract_index(self):
+        model = AbstractModel()
+        model.A = Set()
+        model.B = Set()
+        model.C = model.A | model.B
+        model.x = Expression(model.C)
+
+
 if __name__ == "__main__":
     unittest.main()
 
