@@ -97,23 +97,35 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         #
         # Apply kestrel
         #
+        # Set the kestrel_options environment
+        #
+        neos_sname = self._solvers[solver_name].lower()
         os.environ['kestrel_options'] = 'solver=%s' % self._solvers[solver_name]
+        #
+        # Set the <solver>_options environment
+        # 
         solver_options = {}
         for key in opt.options:
             solver_options[key]=opt.options[key]
         solver_options.update(user_solver_options)
-
         options = opt._get_options_string(solver_options)
-        # GH: Should we really be modifying the environment
-        #     for this manager (knowing that we are not
-        #     executing locally)
         if not options == "":
-            os.environ[self._solvers[solver_name].lower()+'_options'] = \
-                opt._get_options_string()
+            os.environ[neos_sname+'_options'] = options
+        #
+        # Generate an XML string using these two environment variables
+        #
         xml = self.kestrel.formXML(opt._problem_files[0])
         (jobNumber, password) = self.kestrel.submit(xml)
         ah.job = jobNumber
         ah.password = password
+        #
+        # Cleanup
+        #
+        del os.environ['kestrel_options']
+        try:
+            del os.environ[neos_sname+"_options"]
+        except:
+            pass
         #
         # Store action handle, and return
         #

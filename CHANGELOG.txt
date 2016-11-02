@@ -3,6 +3,24 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.0
+-------------------------------------------------------------------------------
+
+- Added examples used in the Pyomo book to the Pyomo software repos
+- Added support for automatically generating "template expressions"
+- Fix tuple flattening in the case of unhashable SimpleParam in indexes
+- Deactivated solver plugins before the are returned from the SolverFactory
+- Significantly simplified the polynomial_degree() logic for Pyomo4 expressions
+- Updates to expression logic
+- Adding a 'feasible' attribute to the TerminationCondition Enum
+- Updates to ExternalFunction logic
+- Renamed the component name() method to getname() and added a 'name' property
+- Fix to allow creating undefined (and uninitialized) mutable params
+- Added more careful checks in Set() and Param() to ensure that an abstract set 
+  expression is not evaluated
+- Added DAE examples to Pyomo
+
+-------------------------------------------------------------------------------
 Pyomo 4.4.1
 -------------------------------------------------------------------------------
 
