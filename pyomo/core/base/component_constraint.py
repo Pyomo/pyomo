@@ -121,9 +121,44 @@ class constraint(IConstraint):
         self._equality = False
 
         # call the setter
-        self.set_expr(expr)
+        self.expr = expr
 
-    def set_expr(self, expr):
+    #
+    # Define the IConstraint abstract methods
+    #
+
+    @property
+    def body(self):
+        return self._body
+    @property
+    def lower(self):
+        return self._lower
+    @property
+    def upper(self):
+        return self._upper
+    @property
+    def equality(self):
+        return self._equality
+    @property
+    def strict_lower(self):
+        return False
+    @property
+    def strict_upper(self):
+        return False
+
+    #
+    # Extend the IConstraint interface to allow the
+    # expression on this constraint to be changed
+    # after construction.
+    #
+
+    @property
+    def expr(self):
+        raise AttributeError(
+            "The expr property method can only be used "
+            "to set the constraint expression.")
+    @expr.setter
+    def expr(self, expr):
         """Set the expression on this constraint."""
         if expr is None:
             self._body = None
@@ -146,10 +181,10 @@ class constraint(IConstraint):
                     arg1 = as_numeric(arg1)
 
                 self._equality = True
-                if arg1 is None or arg1.is_fixed():
+                if arg1 is None or (not arg1._potentially_variable()):
                     self._lower = self._upper = arg1
                     self._body = arg0
-                elif arg0 is None or arg0.is_fixed():
+                elif arg0 is None or (not arg0._potentially_variable()):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
@@ -162,11 +197,13 @@ class constraint(IConstraint):
                 arg0 = expr[0]
                 if arg0 is not None:
                     arg0 = as_numeric(arg0)
-                    if not arg0.is_fixed():
+                    if arg0._potentially_variable():
                         raise ValueError(
-                            "Constraint expression is a 3-tuple (lower,"
+                            "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
-                            "value was non-constant.")
+                            "value was not data or an expression "
+                            "restricted to storage of data."
+                            % (self.name))
 
                 arg1 = expr[1]
                 if arg1 is not None:
@@ -175,23 +212,25 @@ class constraint(IConstraint):
                 arg2 = expr[2]
                 if arg2 is not None:
                     arg2 = as_numeric(arg2)
-                    if not arg2.is_fixed():
+                    if arg2._potentially_variable():
                         raise ValueError(
-                            "Constraint expression is a 3-tuple (lower,"
+                            "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
-                            "value was non-constant.")
+                            "value was not data or an expression "
+                            "restricted to storage of data."
+                            % (self.name))
 
                 self._lower = arg0
                 self._body  = arg1
                 self._upper = arg2
             else:
                 raise ValueError(
-                    "Can not set constraint expression using "
+                    "Constructor rule for constraint '%s' returned "
                     "a tuple of length %d. Expecting a tuple of "
                     "length 2 or 3:\n"
                     "Equality:   (left, right)\n"
                     "Inequality: (lower, expression, upper)"
-                    % (len(expr)))
+                    % (self.name, len(expr)))
 
             relational_expr = False
         else:
@@ -199,19 +238,19 @@ class constraint(IConstraint):
                 relational_expr = expr.is_relational()
                 if not relational_expr:
                     raise ValueError(
-                        "Constraint expression does not have a proper "
+                        "Constraint '%s' does not have a proper "
                         "value. Found '%s'\nExpecting a tuple or "
                         "equation. Examples:"
                         "\n   summation(model.costs) == model.income"
                         "\n   (0, model.price[item], 50)"
-                        % (str(expr)))
+                        % (self.name, str(expr)))
             except AttributeError:
-                msg = ("Constraint expression does not have a proper "
+                msg = ("Constraint '%s' does not have a proper "
                        "value. Found '%s'\nExpecting a tuple or "
                        "equation. Examples:"
                        "\n   summation(model.costs) == model.income"
                        "\n   (0, model.price[item], 50)"
-                       % (str(expr)))
+                       % (self.name, str(expr)))
                 if type(expr) is bool:
                     msg += ("\nNote: constant Boolean expressions "
                             "are not valid constraint expressions. "
@@ -245,10 +284,10 @@ class constraint(IConstraint):
                     _args = (expr._lhs, expr._rhs)
                 except AttributeError:
                     _args = expr._args
-                if _args[1].is_fixed():
+                if not _args[1]._potentially_variable():
                     self._lower = self._upper = _args[1]
                     self._body = _args[0]
-                elif _args[0].is_fixed():
+                elif not _args[0]._potentially_variable():
                     self._lower = self._upper = _args[0]
                     self._body = _args[1]
                 else:
@@ -279,10 +318,11 @@ class constraint(IConstraint):
                         #       warning
                         #
                         raise ValueError(
-                            "Constraint expression is a strict "
+                            "Constraint '%s' encountered a strict "
                             "inequality expression ('>' or '<'). All"
                             " constraints must be formulated using "
-                            "using '<=', '>=', or '=='.")
+                            "using '<=', '>=', or '=='."
+                            % (self.name))
 
                 try:
                     _args = (expr._lhs, expr._rhs)
@@ -301,29 +341,34 @@ class constraint(IConstraint):
 
                 if len(_args) == 3:
 
-                    if not _args[0].is_fixed():
+                    if _args[0]._potentially_variable():
                         raise ValueError(
-                            "Constraint expression is a double-sided "
+                            "Constraint '%s' found a double-sided "
                             "inequality expression (lower <= "
                             "expression <= upper) but the lower "
-                            "bound was non-constant.")
-                    if not _args[2].is_fixed():
+                            "bound was not data or an expression "
+                            "restricted to storage of data."
+                            % (self.name))
+                    if _args[2]._potentially_variable():
                         raise ValueError(
-                            "Constraint expression is a double-sided "\
+                            "Constraint '%s' found a double-sided "\
                             "inequality expression (lower <= "
                             "expression <= upper) but the upper "
-                            "bound was non-constant.")
+                            "bound was not data or an expression "
+                            "restricted to storage of data."
+                            % (self.name))
+
                     self._lower = _args[0]
                     self._body  = _args[1]
                     self._upper = _args[2]
 
                 else:
 
-                    if _args[1].is_fixed():
+                    if not _args[1]._potentially_variable():
                         self._lower = None
                         self._body  = _args[0]
                         self._upper = _args[1]
-                    elif _args[0].is_fixed():
+                    elif not _args[0]._potentially_variable():
                         self._lower = _args[0]
                         self._body  = _args[1]
                         self._upper = None
@@ -347,13 +392,13 @@ class constraint(IConstraint):
             if not pyutilib.math.is_finite(val):
                 if val > 0:
                     raise ValueError(
-                        "Constraint expression has a +Inf lower "
-                        "bound.")
+                        "Constraint '%s' created with a +Inf lower "
+                        "bound." % (self.name))
                 self._lower = None
             elif bool(val > 0) == bool(val <= 0):
                 raise ValueError(
-                    "Constraint expression has a non-numeric "
-                    "lower bound.")
+                    "Constraint '%s' created with a non-numeric "
+                    "lower bound." % (self.name))
 
         if (self._upper is not None) and \
            is_constant(self._upper):
@@ -361,13 +406,13 @@ class constraint(IConstraint):
             if not pyutilib.math.is_finite(val):
                 if val < 0:
                     raise ValueError(
-                        "Constraint expression has a -Inf upper "
-                        "bound.")
+                        "Constraint '%s' created with a -Inf upper "
+                        "bound." % (self.name))
                 self._upper = None
             elif bool(val > 0) == bool(val <= 0):
                 raise ValueError(
-                    "Constraint expression has a non-numeric "
-                    "upper bound.")
+                    "Constraint '%s' created with a non-numeric "
+                    "upper bound." % (self.name))
 
         #
         # Error check, to ensure that we don't have a constraint that
@@ -379,32 +424,9 @@ class constraint(IConstraint):
         if self._equality:
             if self._lower is None:
                 raise ValueError(
-                    "Equality constraint expression defined with "
-                    "non-finite term.")
+                    "Equality constraint '%s' defined with "
+                    "non-finite term." % (self.name))
             assert self._lower is self._upper
-
-    #
-    # Define the IConstraint abstract methods
-    #
-
-    @property
-    def body(self):
-        return self._body
-    @property
-    def lower(self):
-        return self._lower
-    @property
-    def upper(self):
-        return self._upper
-    @property
-    def equality(self):
-        return self._equality
-    @property
-    def strict_lower(self):
-        return False
-    @property
-    def strict_upper(self):
-        return False
 
 class constraint_list(ComponentList,
                       _IActiveComponentContainer):

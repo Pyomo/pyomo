@@ -334,15 +334,17 @@ class _TestComponentDictBase(object):
         self.assertEqual(cdict.child_key(c), 1)
 
     def test_name(self):
-        components = {}
-        components['a'] = self._ctype_factory()
-        components[1] = self._ctype_factory()
-        components[None] = self._ctype_factory()
-        components[(1,)] = self._ctype_factory()
-        components[(1,2)] = self._ctype_factory()
-        components['(1,2)'] = self._ctype_factory()
+        children = {}
+        children['a'] = self._ctype_factory()
+        children[1] = self._ctype_factory()
+        children[None] = self._ctype_factory()
+        children[(1,)] = self._ctype_factory()
+        children[(1,2)] = self._ctype_factory()
+        children['(1,2)'] = self._ctype_factory()
+        children['x'] = self._container_type()
+        children['x']['y'] = self._ctype_factory()
 
-        for key, c in components.items():
+        for key, c in children.items():
             self.assertTrue(c.parent is None)
             self.assertTrue(c.parent_block is None)
             if isinstance(c, IBlockStorage):
@@ -358,9 +360,9 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.root_block is None)
         self.assertEqual(cdict.local_name, None)
         self.assertEqual(cdict.name, None)
-        cdict.update(components)
+        cdict.update(children)
         names = cdict.generate_names()
-        for key, c in components.items():
+        for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is None)
             if isinstance(c, IBlockStorage):
@@ -376,6 +378,9 @@ class _TestComponentDictBase(object):
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "[%s]" % (repr(key)))
             self.assertEqual(c.name, names[c])
+        for c in cdict.components():
+            self.assertNotEqual(c.name, None)
+            self.assertEqual(c.name, names[c])
 
         model = block()
         model.cdict = cdict
@@ -388,7 +393,7 @@ class _TestComponentDictBase(object):
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "cdict")
         names = model.generate_names()
-        for key, c in components.items():
+        for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is model)
@@ -400,6 +405,9 @@ class _TestComponentDictBase(object):
                              "cdict[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "cdict[%s]" % (repr(key)))
+            self.assertEqual(c.name, names[c])
+        for c in cdict.components():
+            self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
 
         b = block()
@@ -416,7 +424,7 @@ class _TestComponentDictBase(object):
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "model.cdict")
         names = b.generate_names()
-        for key, c in components.items():
+        for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
@@ -428,6 +436,9 @@ class _TestComponentDictBase(object):
                              "model.cdict[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "model.cdict[%s]" % (repr(key)))
+            self.assertEqual(c.name, names[c])
+        for c in cdict.components():
+            self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
 
         bdict = block_dict()
@@ -446,7 +457,7 @@ class _TestComponentDictBase(object):
         self.assertTrue(cdict.root_block is b)
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "[0].model.cdict")
-        for key, c in components.items():
+        for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
@@ -479,7 +490,7 @@ class _TestComponentDictBase(object):
         self.assertEqual(cdict.local_name, "cdict")
         self.assertEqual(cdict.name, "bdict[0].model.cdict")
         names = m.generate_names()
-        for key, c in components.items():
+        for key, c in children.items():
             self.assertTrue(c.parent is cdict)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is m)
@@ -491,6 +502,9 @@ class _TestComponentDictBase(object):
                              "bdict[0].model.cdict[%s]" % (str(key)))
             self.assertEqual(c.getname(fully_qualified=True, convert=repr),
                              "bdict[0].model.cdict[%s]" % (repr(key)))
+            self.assertEqual(c.name, names[c])
+        for c in cdict.components():
+            self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
 
 class _TestActiveComponentDictBase(_TestComponentDictBase):
@@ -504,16 +518,16 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertFalse(isinstance(cdict, _IActiveComponent))
 
     def test_active(self):
-        components = {}
-        components['a'] = self._ctype_factory()
-        components[1] = self._ctype_factory()
-        components[None] = self._ctype_factory()
-        components[(1,)] = self._ctype_factory()
-        components[(1,2)] = self._ctype_factory()
-        components['(1,2)'] = self._ctype_factory()
+        children = {}
+        children['a'] = self._ctype_factory()
+        children[1] = self._ctype_factory()
+        children[None] = self._ctype_factory()
+        children[(1,)] = self._ctype_factory()
+        children[(1,2)] = self._ctype_factory()
+        children['(1,2)'] = self._ctype_factory()
 
         cdict = self._container_type()
-        cdict.update(components)
+        cdict.update(children)
         with self.assertRaises(AttributeError):
             cdict.active = False
         for c in cdict.values():
@@ -550,9 +564,9 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         for c in cdict.values():
             self.assertEqual(c.active, False)
 
-        test_key = list(components.keys())[0]
+        test_key = list(children.keys())[0]
         del cdict[test_key]
-        cdict[test_key] = components[test_key]
+        cdict[test_key] = children[test_key]
 
         self.assertEqual(m.active, False)
         self.assertEqual(bdict.active, False)
@@ -564,9 +578,9 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
             self.assertEqual(c.active, False)
 
         del cdict[test_key]
-        components[test_key].activate()
-        self.assertEqual(components[test_key].active, True)
-        cdict[test_key] = components[test_key]
+        children[test_key].activate()
+        self.assertEqual(children[test_key].active, True)
+        cdict[test_key] = children[test_key]
 
         self.assertEqual(m.active, True)
         self.assertEqual(bdict.active, True)

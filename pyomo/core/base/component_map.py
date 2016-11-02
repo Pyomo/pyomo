@@ -96,8 +96,8 @@ class ComponentMap(collections.MutableMapping):
         try:
             return self._dict[id(component)][1]
         except KeyError:
-            raise KeyError("Component with id: %s"
-                           % (id(component)))
+            raise KeyError("Component with id '%s': %s"
+                           % (id(component), str(component)))
 
     def __setitem__(self, component, value):
         self._dict[id(component)] = (component,value)
@@ -106,8 +106,8 @@ class ComponentMap(collections.MutableMapping):
         try:
             del self._dict[id(component)]
         except KeyError:
-            raise KeyError("Component with id: %s"
-                            % (id(component)))
+            raise KeyError("Component with id '%s': %s"
+                           % (id(component), str(component)))
 
     def __iter__(self):
         return (component \

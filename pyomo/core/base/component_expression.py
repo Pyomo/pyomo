@@ -8,6 +8,7 @@
 #  _________________________________________________________________________
 
 __all__ = ("expression",
+           "data_expression",
            "expression_list",
            "expression_dict")
 
@@ -27,6 +28,7 @@ from pyomo.core.base.component_dict import ComponentDict
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.numvalue import (NumericValue,
                                       is_fixed,
+                                      potentially_variable,
                                       as_numeric)
 
 import six
@@ -64,6 +66,11 @@ class IExpression(IComponent, NumericValue):
         """A boolean indicating whether this expression is fixed."""
         return is_fixed(self.expr)
 
+    def _potentially_variable(self):
+        """A boolean indicating whether this expression can
+        reference variables."""
+        return True
+
     #
     # Ducktyping _ExpressionBase functionality
     #
@@ -86,7 +93,7 @@ class IExpression(IComponent, NumericValue):
         return self
 
     def polynomial_degree(self):
-        """A tuple of subexpressions involved in this expressions operation."""
+        """The polynomial degree of the stored expression."""
         return self.expr.polynomial_degree()
 
     def _polynomial_degree(self, result):
@@ -140,6 +147,37 @@ class expression(IExpression):
         return self._expr
     @expr.setter
     def expr(self, expr):
+        self._expr = as_numeric(expr) if (expr is not None) else None
+
+class data_expression(expression):
+    """A reusable expression that is restricted to storage
+    of data expressions."""
+
+    #
+    # Overload a few methods
+    #
+
+    def _potentially_variable(self):
+        """A boolean indicating whether this expression can
+        reference variables."""
+        return False
+
+    def polynomial_degree(self):
+        """Always return zero because we always validate
+        that the stored expression can never reference
+        variables."""
+        return 0
+
+    def _polynomial_degree(self, result):
+        return results.pop()
+
+    @property
+    def expr(self):
+        return self._expr
+    @expr.setter
+    def expr(self, expr):
+        if potentially_variable(expr):
+            raise ValueError("Expression is not restricted to data.")
         self._expr = as_numeric(expr) if (expr is not None) else None
 
 class expression_list(ComponentList):

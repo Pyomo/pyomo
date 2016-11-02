@@ -378,9 +378,11 @@ class _TestComponentListBase(object):
         self.assertEqual(clist.child_key(c), 0)
 
     def test_name(self):
-        components = [self._ctype_factory() for i in range(5)]
+        children = [self._ctype_factory() for i in range(5)]
+        children.append(self._container_type())
+        children[-1].append(self._ctype_factory())
 
-        for c in components:
+        for c in children:
             self.assertTrue(c.parent is None)
             self.assertTrue(c.parent_block is None)
             if isinstance(c, IBlockStorage):
@@ -396,9 +398,9 @@ class _TestComponentListBase(object):
         self.assertTrue(clist.root_block is None)
         self.assertEqual(clist.local_name, None)
         self.assertEqual(clist.name, None)
-        clist.extend(components)
+        clist.extend(children)
         names = clist.generate_names()
-        for i, c in enumerate(components):
+        for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is None)
             if isinstance(c, IBlockStorage):
@@ -407,6 +409,9 @@ class _TestComponentListBase(object):
                 self.assertTrue(c.root_block is None)
             self.assertEqual(c.local_name, "[%s]" % (i))
             self.assertEqual(c.name, "[%s]" % (i))
+            self.assertEqual(c.name, names[c])
+        for c in clist.components():
+            self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
 
         model = block()
@@ -420,12 +425,15 @@ class _TestComponentListBase(object):
         self.assertEqual(clist.local_name, "clist")
         self.assertEqual(clist.name, "clist")
         names = model.generate_names()
-        for i, c in enumerate(components):
+        for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is model)
             self.assertEqual(c.local_name, "[%s]" % (i))
             self.assertEqual(c.name, "clist[%s]" % (i))
+            self.assertEqual(c.name, names[c])
+        for c in clist.components():
+            self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
 
         b = block()
@@ -442,12 +450,15 @@ class _TestComponentListBase(object):
         self.assertEqual(clist.local_name, "clist")
         self.assertEqual(clist.name, "model.clist")
         names = b.generate_names()
-        for i, c in enumerate(components):
+        for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
             self.assertEqual(c.local_name, "[%s]" % (i))
             self.assertEqual(c.name, "model.clist[%s]" % (i))
+            self.assertEqual(c.name, names[c])
+        for c in clist.components():
+            self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
 
         blist = block_list()
@@ -466,7 +477,7 @@ class _TestComponentListBase(object):
         self.assertTrue(clist.root_block is b)
         self.assertEqual(clist.local_name, "clist")
         self.assertEqual(clist.name, "[0].model.clist")
-        for i, c in enumerate(components):
+        for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is b)
@@ -494,7 +505,7 @@ class _TestComponentListBase(object):
         self.assertEqual(clist.local_name, "clist")
         self.assertEqual(clist.name, "blist[0].model.clist")
         names = m.generate_names()
-        for i, c in enumerate(components):
+        for i, c in enumerate(children):
             self.assertTrue(c.parent is clist)
             self.assertTrue(c.parent_block is model)
             self.assertTrue(c.root_block is m)
@@ -502,6 +513,52 @@ class _TestComponentListBase(object):
             self.assertEqual(c.name,
                              "blist[0].model.clist[%s]" % (i))
             self.assertEqual(c.name, names[c])
+        for c in clist.components():
+            self.assertNotEqual(c.name, None)
+            self.assertEqual(c.name, names[c])
+
+    def test_components(self):
+        clist = self._container_type()
+        self.assertEqual(list(clist.components()), [])
+
+        clistflattened = []
+        clistflattened.append(self._ctype_factory())
+        clist.append(clistflattened[-1])
+        clistflattened.append(self._ctype_factory())
+        clist.append(clistflattened[-1])
+        self.assertEqual(list(id(_c) for _c in clist.components()),
+                         list(id(_c) for _c in clistflattened))
+
+        csublist = self._container_type()
+        self.assertEqual(list(csublist.components()), [])
+
+        csublistflattened = []
+        csublistflattened.append(self._ctype_factory())
+        clistflattened.append(csublistflattened[-1])
+        csublist.append(csublistflattened[-1])
+
+        csublistflattened.append(self._ctype_factory())
+        clistflattened.append(csublistflattened[-1])
+        csublist.append(csublistflattened[-1])
+
+        csublistflattened.append(self._ctype_factory())
+        clistflattened.append(csublistflattened[-1])
+        csublist.append(csublistflattened[-1])
+
+        self.assertEqual(list(id(_c) for _c in csublist.components()),
+                         list(id(_c) for _c in csublistflattened))
+        self.assertEqual(len(set(id(_c) for _c in csublist.components())),
+                         len(list(id(_c) for _c in csublist.components())))
+        self.assertEqual(len(set(id(_c) for _c in csublist.components())),
+                         3)
+
+        clist.append(csublist)
+        self.assertEqual(list(id(_c) for _c in clist.components()),
+                         list(id(_c) for _c in clistflattened))
+        self.assertEqual(len(set(id(_c) for _c in clist.components())),
+                         len(list(id(_c) for _c in clist.components())))
+        self.assertEqual(len(set(id(_c) for _c in clist.components())),
+                         5)
 
 class _TestActiveComponentListBase(_TestComponentListBase):
 

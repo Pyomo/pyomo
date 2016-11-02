@@ -23,9 +23,7 @@ from pyomo.core.base.component_interface import \
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
 from pyomo.core.base.component_list import ComponentList
-from pyomo.core.base.numvalue import (NumericValue,
-                                      is_fixed,
-                                      as_numeric)
+from pyomo.core.base.numvalue import NumericValue
 
 import six
 
@@ -59,6 +57,11 @@ class IParameter(IComponent, NumericValue):
     def is_fixed(self):
         """A boolean indicating that this parameter is fixed."""
         return True
+
+    def _potentially_variable(self):
+        """Returns False because this object can never
+        reference variables."""
+        return False
 
 class parameter(IParameter):
     """A placeholder for a numeric value in an expression."""

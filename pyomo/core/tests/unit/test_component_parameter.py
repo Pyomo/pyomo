@@ -1,11 +1,14 @@
 import pickle
 
 import pyutilib.th as unittest
+from pyomo.core.base.component_interface import (ICategorizedObject,
+                                                 IComponent)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
-from pyomo.core.base.component_parameter import (parameter,
+from pyomo.core.base.component_parameter import (IParameter,
+                                                 parameter,
                                                  parameter_dict,
                                                  parameter_list)
 from pyomo.core.base.component_variable import variable
@@ -13,6 +16,10 @@ from pyomo.core.base.param import Param
 from pyomo.core.base.component_block import block
 from pyomo.core.base.set_types import (RealSet,
                                        IntegerSet)
+from pyomo.core.base.numvalue import (NumericValue,
+                                      is_fixed,
+                                      is_constant,
+                                      potentially_variable)
 
 class Test_parameter(unittest.TestCase):
 
@@ -42,6 +49,37 @@ class Test_parameter(unittest.TestCase):
         p.value = 1
         self.assertEqual(p.value, 1)
         self.assertEqual(p(), 1)
+
+    def test_type(self):
+        p = parameter()
+        self.assertTrue(isinstance(p, ICategorizedObject))
+        self.assertTrue(isinstance(p, IComponent))
+        self.assertTrue(isinstance(p, IParameter))
+        self.assertTrue(isinstance(p, NumericValue))
+
+    def test_is_constant(self):
+        p = parameter()
+        self.assertEqual(p.is_constant(), False)
+        self.assertEqual(is_constant(p), False)
+        p.value = 1.0
+        self.assertEqual(p.is_constant(), False)
+        self.assertEqual(is_constant(p), False)
+
+    def test_is_fixed(self):
+        p = parameter()
+        self.assertEqual(p.is_fixed(), True)
+        self.assertEqual(is_fixed(p), True)
+        p.value = 1.0
+        self.assertEqual(p.is_fixed(), True)
+        self.assertEqual(is_fixed(p), True)
+
+    def test_potentially_variable(self):
+        p = parameter()
+        self.assertEqual(p._potentially_variable(), False)
+        self.assertEqual(potentially_variable(p), False)
+        p.value = 1.0
+        self.assertEqual(p._potentially_variable(), False)
+        self.assertEqual(potentially_variable(p), False)
 
 class Test_parameter_dict(_TestComponentDictBase,
                           unittest.TestCase):

@@ -17,6 +17,8 @@ from pyomo.core.base.component_constraint import (IConstraint,
                                                   constraint_list)
 from pyomo.core.base.component_variable import variable
 from pyomo.core.base.component_parameter import parameter
+from pyomo.core.base.component_expression import (expression,
+                                                  data_expression)
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.component_block import block
 from pyomo.core.base.set_types import (RealSet,
@@ -102,6 +104,119 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.equality, True)
         self.assertEqual(c.strict_lower, False)
         self.assertEqual(c.strict_upper, False)
+
+    def test_nondata_bounds(self):
+        c = constraint()
+        e = expression()
+
+        eL = expression()
+        eU = expression()
+        with self.assertRaises(ValueError):
+            c.expr = (eL <= e <= eU)
+        e.expr = 1.0
+        eL.expr = 1.0
+        eU.expr = 1.0
+        with self.assertRaises(ValueError):
+            c.expr = (eL <= e <= eU)
+
+        vL = variable()
+        vU = variable()
+        with self.assertRaises(ValueError):
+            c.expr = (vL <= e <= vU)
+        e.expr = 1.0
+        vL.value = 1.0
+        vU.value = 1.0
+        with self.assertRaises(ValueError):
+            c.expr = (vL <= e <= vU)
+        vL.value = 1.0
+        vU.value = 1.0
+        with self.assertRaises(ValueError):
+            c.expr = (vL <= 0.0 <= vU)
+
+    def test_fixed_variable_stays_in_body(self):
+        c = constraint()
+        x = variable(value=0.5)
+        c.expr = (0 <= x <= 1)
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 0.5)
+        self.assertEqual(c.upper(), 1)
+        x.value = 2
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 2)
+        self.assertEqual(c.upper(), 1)
+
+        # ensure the variable is not moved into the upper or
+        # lower bound expression (this used to be a bug)
+        x.fix(0.5)
+        c.expr = (0 <= x <= 1)
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 0.5)
+        self.assertEqual(c.upper(), 1)
+        x.value = 2
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 2)
+        self.assertEqual(c.upper(), 1)
+
+        x.free()
+        x.value = 1
+        c.expr = (0 == x)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c.upper(), 0)
+        c.expr = (x == 0)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c.upper(), 0)
+
+        # ensure the variable is not moved into the upper or
+        # lower bound expression (this used to be a bug)
+        x.fix()
+        c.expr = (0 == x)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c.upper(), 0)
+        c.expr = (x == 0)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c.upper(), 0)
+
+        # ensure the variable is not moved into the upper or
+        # lower bound expression (this used to be a bug)
+        x.free()
+        c.expr = (0 == x)
+        x.fix()
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c.upper(), 0)
+        x.free()
+        c.expr = (x == 0)
+        x.fix()
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lower(), 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c.upper(), 0)
+
+    def test_data_bounds(self):
+        c = constraint()
+        e = expression(expr=1.0)
+
+        pL = parameter()
+        pU = parameter()
+        c.expr = (pL <= e <= pU)
+        e.expr = None
+        c.expr = (pL <= e <= pU)
+
+        e.expr = 1.0
+        eL = data_expression()
+        eU = data_expression()
+        c.expr = (eL <= e <= eU)
+        e.expr = None
+        c.expr = (eL <= e <= eU)
 
     # make sure we can use a mutable param that
     # has not been given a value in the upper bound
@@ -378,22 +493,22 @@ class Test_constraint(unittest.TestCase):
 
         c = constraint()
         with self.assertRaises(ValueError):
-            c.set_expr(x == float('inf'))
+            c.expr = (x == float('inf'))
         with self.assertRaises(ValueError):
-            c.set_expr(float('inf') == x)
+            c.expr = (float('inf') == x)
 
     def test_strict_inequality_failure(self):
         x = variable()
         y = variable()
         c = constraint()
         with self.assertRaises(ValueError):
-            c.set_expr(x < 0)
+            c.expr = (x < 0)
         with self.assertRaises(ValueError):
-            c.set_expr(x > 0)
+            c.expr = (x > 0)
         with self.assertRaises(ValueError):
-            c.set_expr(x < y)
+            c.expr = (x < y)
         with self.assertRaises(ValueError):
-            c.set_expr(x > y)
+            c.expr = (x > y)
 
     def test_expr_construct_inf_equality(self):
         x = variable()
@@ -473,27 +588,78 @@ class Test_constraint(unittest.TestCase):
         x = variable()
         y = variable()
         c = constraint()
-        c.set_expr(0 <= x - y <= 1)
+        c.expr = (0 <= x - y <= 1)
         self.assertEqual(c.lower, 0)
         self.assertEqual(c.upper, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
-            c.set_expr(x <= x - y <= 1)
+            c.expr = (x <= x - y <= 1)
         self.assertEqual(c.lower, 0)
         self.assertEqual(c.upper, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
-            c.set_expr(0 <= x - y <= y)
+            c.expr = (0 <= x - y <= y)
         self.assertEqual(c.lower, 0)
         self.assertEqual(c.upper, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
-            c.set_expr(x >= x - y >= 1)
+            c.expr = (x >= x - y >= 1)
         self.assertEqual(c.lower, 0)
         self.assertEqual(c.upper, 1)
         self.assertEqual(c.equality, False)
         with self.assertRaises(ValueError):
-            c.set_expr(0 >= x - y >= y)
+            c.expr = (0 >= x - y >= y)
+
+    def test_equality_infinite(self):
+        c = constraint()
+        v = variable()
+        c.expr = (v == 1)
+        with self.assertRaises(ValueError):
+            c.expr = (v == float('inf'))
+        with self.assertRaises(ValueError):
+            c.expr = (v, float('inf'))
+        with self.assertRaises(ValueError):
+            c.expr = (float('inf') == v)
+        with self.assertRaises(ValueError):
+            c.expr = (float('inf'), v)
+        with self.assertRaises(ValueError):
+            c.expr = (v == float('-inf'))
+        with self.assertRaises(ValueError):
+            c.expr = (v, float('-inf'))
+        with self.assertRaises(ValueError):
+            c.expr = (float('-inf') == v)
+        with self.assertRaises(ValueError):
+            c.expr = (float('-inf'), v)
+
+    def test_equality_infinite(self):
+        c = constraint()
+        v = variable()
+        c.expr = (v == 1)
+        with self.assertRaises(ValueError):
+            c.expr = (v == float('inf'))
+        with self.assertRaises(ValueError):
+            c.expr = (v, float('inf'))
+        with self.assertRaises(ValueError):
+            c.expr = (float('inf') == v)
+        with self.assertRaises(ValueError):
+            c.expr = (float('inf'), v)
+        with self.assertRaises(ValueError):
+            c.expr = (v == float('-inf'))
+        with self.assertRaises(ValueError):
+            c.expr = (v, float('-inf'))
+        with self.assertRaises(ValueError):
+            c.expr = (float('-inf') == v)
+        with self.assertRaises(ValueError):
+            c.expr = (float('-inf'), v)
+
+    def test_equality_nonnumeric(self):
+        c = constraint()
+        v = variable()
+        c.expr = (v == 1)
+        with self.assertRaises(TypeError):
+            c.expr = (v, 'x')
+        with self.assertRaises(TypeError):
+            c.expr = ('x', v)
 
     def test_slack_methods(self):
         x = variable(value=2)
@@ -509,11 +675,11 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cR.lslack(), -5.0)
         self.assertEqual(cR.uslack(), 1.0)
 
-    def test_set_expr(self):
+    def test_expr(self):
 
         x = variable(value=1.0)
         c = constraint()
-        c.set_expr(2 >= x >= 0)
+        c.expr = (2 >= x >= 0)
         self.assertEqual(c(), 1)
         self.assertEqual(c.body(), 1)
         self.assertEqual(c.lower(), 0)
@@ -522,7 +688,7 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.strict_lower, False)
         self.assertEqual(c.strict_upper, False)
 
-        c.set_expr(0 >= x >= -2)
+        c.expr = (0 >= x >= -2)
         self.assertEqual(c(), 1)
         self.assertEqual(c.body(), 1)
         self.assertEqual(c.lower(), -2)
@@ -531,12 +697,21 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.strict_lower, False)
         self.assertEqual(c.strict_upper, False)
 
-    def test_set_expr_wrong_type(self):
+    def test_expr_no_getter(self):
+        c = constraint()
+        with self.assertRaises(AttributeError):
+            c.expr
+        v = variable()
+        c.expr = 0 <= v <= 1
+        with self.assertRaises(AttributeError):
+            c.expr
+
+    def test_expr_wrong_type(self):
         c = constraint()
         with self.assertRaises(ValueError):
-            c.set_expr(2)
+            c.expr = (2)
         with self.assertRaises(ValueError):
-            c.set_expr(True)
+            c.expr = (True)
 
     def test_chainedInequalityError(self):
         x = variable()
@@ -544,9 +719,11 @@ class Test_constraint(unittest.TestCase):
         a = x <= 0
         if x <= 0:
             pass
+        def f():
+            c.expr = a
         self.assertRaisesRegexp(
             TypeError, "contains non-constant terms \(variables\) "
-            "appearing in a Boolean context", c.set_expr, a)
+            "appearing in a Boolean context", f)
 
     def test_tuple_constraint_create(self):
         x = variable()

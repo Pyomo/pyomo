@@ -12,7 +12,10 @@ from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
-from pyomo.core.base.numvalue import NumericValue
+from pyomo.core.base.numvalue import (NumericValue,
+                                      is_fixed,
+                                      is_constant,
+                                      potentially_variable)
 from pyomo.core.base.component_variable import (IVariable,
                                                 variable,
                                                 variable_dict,
@@ -92,6 +95,87 @@ class Test_variable(unittest.TestCase):
         self.assertTrue(isinstance(v, IComponent))
         self.assertTrue(isinstance(v, IVariable))
         self.assertTrue(isinstance(v, NumericValue))
+
+    def test_is_constant(self):
+        v = variable()
+        self.assertEqual(v.is_constant(), False)
+        self.assertEqual(is_constant(v), False)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, None)
+        v.value = 1.0
+        self.assertEqual(v.is_constant(), False)
+        self.assertEqual(is_constant(v), False)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, 1.0)
+        v.fix()
+        self.assertEqual(v.is_constant(), False)
+        self.assertEqual(is_constant(v), False)
+        self.assertEqual(v.fixed, True)
+        self.assertEqual(v.value, 1.0)
+        v.value = None
+        self.assertEqual(v.is_constant(), False)
+        self.assertEqual(is_constant(v), False)
+        self.assertEqual(v.fixed, True)
+        self.assertEqual(v.value, None)
+        v.free()
+        self.assertEqual(v.is_constant(), False)
+        self.assertEqual(is_constant(v), False)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, None)
+
+    def test_is_fixed(self):
+        v = variable()
+        self.assertEqual(v.is_fixed(), False)
+        self.assertEqual(is_fixed(v), False)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, None)
+        v.value = 1.0
+        self.assertEqual(v.is_fixed(), False)
+        self.assertEqual(is_fixed(v), False)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, 1.0)
+        v.fix()
+        self.assertEqual(v.is_fixed(), True)
+        self.assertEqual(is_fixed(v), True)
+        self.assertEqual(v.fixed, True)
+        self.assertEqual(v.value, 1.0)
+        v.value = None
+        self.assertEqual(v.is_fixed(), True)
+        self.assertEqual(is_fixed(v), True)
+        self.assertEqual(v.fixed, True)
+        self.assertEqual(v.value, None)
+        v.free()
+        self.assertEqual(v.is_fixed(), False)
+        self.assertEqual(is_fixed(v), False)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, None)
+
+    def test_potentially_variable(self):
+        v = variable()
+        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, None)
+        v.value = 1.0
+        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, 1.0)
+        v.fix()
+        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(v.fixed, True)
+        self.assertEqual(v.value, 1.0)
+        v.value = None
+        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(v.fixed, True)
+        self.assertEqual(v.value, None)
+        v.free()
+        self.assertEqual(v._potentially_variable(), True)
+        self.assertEqual(potentially_variable(v), True)
+        self.assertEqual(v.fixed, False)
+        self.assertEqual(v.value, None)
 
     def test_to_string(self):
         b = block()
