@@ -670,6 +670,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
         symbol_map = SymbolMap()
 
         name_labeler = self._name_labeler
+        # These will get updated when symbolic_solver_labels
+        # is true. It is critical that nonzero values go in
+        # the header of the NL file if you want ASL to
+        # parse the .row and .col files.
+        max_rowname_len = 0
+        max_colname_len = 0
 
         #
         # Collect statistics
@@ -762,6 +768,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                  active=True,
                                                                  sort=sorter,
                                                                  descend_into=False):
+                if symbolic_solver_labels:
+                    objname = name_labeler(active_objective)
+                    if len(objname) > max_rowname_len:
+                        max_rowname_len = len(objname)
 
                 if gen_obj_ampl_repn:
                     ampl_repn = generate_ampl_repn(active_objective.expr)
@@ -839,6 +849,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                 active=True,
                                                                 sort=sorter,
                                                                 descend_into=False):
+                if symbolic_solver_labels:
+                    conname = name_labeler(constraint_data)
+                    if len(conname) > max_rowname_len:
+                        max_rowname_len = len(conname)
 
                 if gen_con_ampl_repn:
                     ampl_repn = generate_ampl_repn(constraint_data.body)
@@ -1114,8 +1128,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
             colfilename = OUTPUT.name+'.col'
         if symbolic_solver_labels:
             colf = open(colfilename,'w')
+            colfile_line_template = "%s\n"
             for var_ID in full_var_list:
-                colf.write(name_labeler(Vars_dict[var_ID])+'\n')
+                varname = name_labeler(Vars_dict[var_ID])
+                colf.write(colfile_line_template % varname)
+                if len(varname) > max_colname_len:
+                    max_colname_len = len(varname)
             colf.close()
 
         if show_section_timing:
@@ -1190,7 +1208,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # LINE 9
         #
-        OUTPUT.write(" 0 0\t# max name lengths: constraints, variables\n")
+        OUTPUT.write(" %d %d\t# max name lengths: constraints, variables\n"
+                     % (max_rowname_len, max_colname_len))
+
         #
         # LINE 10
         #
