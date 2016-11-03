@@ -11,7 +11,8 @@ __all__ = [ 'Connector' ]
 
 import logging
 import sys
-from six import iteritems, itervalues
+from six import iteritems, itervalues, iterkeys
+from six.moves import xrange
 from weakref import ref as weakref_ref
 
 from pyomo.util.plugin import Plugin, implements

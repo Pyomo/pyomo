@@ -24,6 +24,8 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionData,
                                         SimpleExpression,
                                         Expression)
+from pyomo.core.base.objective import (_GeneralObjectiveData,
+                                       SimpleObjective)
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector, Connector
 from pyomo.core.base.var import SimpleVar, Var, _GeneralVarData, _VarData
 
@@ -779,7 +781,8 @@ _linear_collectors = {
     Var                     : _collect_linear_var,
     _GeneralExpressionData  : _collect_identity,
     SimpleExpression        : _collect_identity,
-    Expression              : _collect_identity
+    _GeneralObjectiveData  : _collect_identity,
+    SimpleObjective        : _collect_identity
     }
 
 def collect_linear_canonical_repn(exp, idMap, compute_values=True):

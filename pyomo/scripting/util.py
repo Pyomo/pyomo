@@ -615,7 +615,7 @@ def apply_optimizer(data, instance=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
 
-    return pyutilib.misc.Options(results=results, opt=solver, local=data.local)
+    return pyutilib.misc.Options(results=results, opt=opt, local=data.local)
 
 
 @pyomo_api(namespace='pyomo.script')
@@ -636,12 +636,15 @@ def process_results(data, instance=None, results=None, opt=None):
     if data.options.postsolve.print_logfile:
         print("")
         print("==========================================================")
-        print("Solver Logfile:",opt._log_file)
+        print("Solver Logfile: "+str(opt._log_file))
         print("==========================================================")
         print("")
         with open(opt._log_file, "r") as INPUT:
             for line in INPUT:
-                print(line,)
+                sys.stdout.write(line)
+        print("==========================================================")
+        print("Solver Logfile - END")
+        print("==========================================================")
     #
     try:
         # transform the results object into human-readable names.
