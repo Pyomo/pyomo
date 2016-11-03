@@ -39,6 +39,25 @@ class IndexTemplate(NumericValue):
             state[i] = getattr(self, i)
         return state
 
+    def __deepcopy__(self, memo):
+        # Because we leverage deepcopy for expression cloning, we need
+        # to see if this is a clone operation and *not* copy the
+        # template.
+        #
+        # TODO: JDS: We should consider converting the IndexTemplate to
+        # a proper Component: that way it could leverage the normal
+        # logic of using the parent_block scope to dictate the behavior
+        # of deepcopy.
+        if '__block_scope__' in memo:
+            memo[id(self)] = self
+            return self
+        #
+        # "Normal" deepcopying outside the context of pyomo.
+        #
+        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
+        ans.__setstate__(deepcopy(self.__getstate__(), memo))
+        return ans
+
     # Note: because NONE of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
 
