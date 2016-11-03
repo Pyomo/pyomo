@@ -1264,7 +1264,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Rely on the _tree_iterator:
         #
-        return self._tree_iterator(ctype=Block,
+        return self._tree_iterator(ctype=(Block,),
                                    active=active,
                                    sort=sort,
                                    traversal=descent_order)
@@ -1277,8 +1277,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
         # TODO: merge into block_data_objects
         if ctype is None:
-            ctype = Block
-        if isclass(ctype):
+            ctype = (Block,)
+        elif isclass(ctype):
             ctype = (ctype,)
 
         # A little weird, but since we "normally" return a generator, we
