@@ -14,6 +14,8 @@ __all__ = ("SPSolverResults",
 import time
 import logging
 
+import pyutilib.misc
+
 from pyomo.opt import undefined
 
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
@@ -43,10 +45,11 @@ class SPSolver(PySPConfiguredObject):
     def __init__(self, *args, **kwds):
         super(SPSolver, self).__init__(*args, **kwds)
         self._name = None
+        self._solver_options = pyutilib.misc.Options()
 
     @property
     def options(self):
-        return self._options
+        return self._solver_options
 
     @property
     def name(self):
@@ -96,9 +99,10 @@ class SPSolver(PySPConfiguredObject):
 def SPSolverFactory(solver_name, **kwds):
     if solver_name in SPSolverFactory._registered_solvers:
         type_ = SPSolverFactory._registered_solvers[solver_name]
-        options = PySPConfigBlock(implicit=True)
-        type_.register_options(options)
-        return type_(options, **kwds)
+        config = type_.register_options()
+        for key, val in kwds.items():
+            config[key] = val
+        return type_(config)
     else:
         raise ValueError(
             "No SPSolver object has been registered with name: %s"

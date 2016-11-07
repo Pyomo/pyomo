@@ -83,7 +83,8 @@ def _write_bundle_nl(worker,
     # linking variable suffix
     #
     tmpblock.add_component(_variable_id_suffix_name,
-                           Suffix(direction=Suffix.EXPORT))
+                           Suffix(direction=Suffix.EXPORT,
+                                  datatype=Suffix.INT))
     linking_suffix = getattr(tmpblock, _variable_id_suffix_name)
 
     # Loop over all nodes for the bundle except the leaf nodes,
@@ -156,7 +157,8 @@ def _write_scenario_nl(worker,
     #
     bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
     tmpblock.add_component(_variable_id_suffix_name,
-                           Suffix(direction=Suffix.EXPORT))
+                           Suffix(direction=Suffix.EXPORT,
+                                  datatype=Suffix.INT))
     linking_suffix = getattr(tmpblock, _variable_id_suffix_name)
 
     # Loop over all nodes for the scenario except the leaf node,
@@ -215,6 +217,8 @@ def EXTERNAL_invoke_solve(worker,
                           executable,
                           output_solver_log,
                           io_options,
+                          command_line_options,
+                          options_filename,
                           suffixes=None):
     assert os.path.exists(working_directory)
     import mpi4py.MPI
@@ -257,22 +261,38 @@ def EXTERNAL_invoke_solve(worker,
     assert load_function is not None
     assert len(filedata) > 0
 
-    option_filename = os.path.join(working_directory, "schuripopt.opt")
     args = []
     args.append(problem_list_filename)
     args.append("use_problem_file=yes")
     args.append("mpi_spawn_mode=yes")
-    #args.append("relax_integrality=yes")
-    #args.append("output_file="+str(logfile))
-    #args.append("option_file_name="+option_filename)
+    args.append("option_file_name="+options_filename)
+    if mpi4py.MPI.COMM_WORLD.rank == 0:
+        args.append("output_file="+str(logfile))
+    for key, val in command_line_options:
+        key = key.strip()
+        if key == "use_problem_file":
+            raise ValueError(
+                "Use of the 'use_problem_file' command-line "
+                "option is disallowed.")
+        elif key == "mpi_spawn_mode":
+            raise ValueError(
+                "Use of the 'mpi_spawn_mode' command-line "
+                "option is disallowed.")
+        elif key == "option_file_name":
+            raise ValueError(
+                "Use of the 'option_file_name' command-line "
+                "option is disallowed.")
+        elif key == "output_file":
+            raise ValueError(
+                "Use of the 'output_file' command-line "
+                "option is disallowed.")
+        elif key == '-AMPL':
+            raise ValueError(
+                "Use of the '-AMPL' command-line "
+                "option is disallowed.")
+        else:
+            args.append(key+"="+str(val))
     args.append("-AMPL")
-    #if mpi4py.MPI.COMM_WORLD.rank == 0:
-    #    with open(option_filename, "w") as f:
-    #        f.write("output_file "+logfile)
-    #    with open(option_filename) as f:
-    #        print("@@@")
-    #        print(f.read())
-    #        print("@@@")
 
     # TODO
     print("Command: %s" % (' '.join([executable]+args)))
@@ -356,6 +376,10 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
         super(SchurIpoptSolver, self).__init__(*args, **kwds)
         self._name = "schuripopt"
         self._executable = "schuripopt"
+        if not _mpi4py_available:
+            raise RuntimeError(
+                "The 'mpi4py' module is not available, but it "
+                "is required by the %s solver" % (self.name))
 
     def _launch_solver(self,
                        manager,
@@ -363,6 +387,7 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
                        logfile,
                        ignore_bundles=False,
                        output_solver_log=False,
+                       verbose=False,
                        io_options=None):
 
         if not os.path.exists(output_directory):
@@ -391,9 +416,34 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
                     f.write("\n")
 
         assert subproblem_type is not None
-        if self.get_option("verbose"):
+
+        options_filename = os.path.join(output_directory, "schuripopt.opt")
+        # just in case output_directory is not a tmpdir, make sure
+        # we don't silently overwrite someone's options file
+        assert not os.path.exists(options_filename)
+        command_line_options = []
+        with open(options_filename, "w") as f:
+            for key, val in self.options.items():
+                key = key.strip()
+                if key.startswith("OF_"):
+                    if key == "OF_output_file":
+                        raise ValueError(
+                            "Use of the 'output_file' option "
+                            "is disallowed. Use the logfile "
+                            "keyword instead.")
+                    f.write(key[3:]+" "+str(val)+"\n")
+                else:
+                    command_line_options.append((key,val))
+
+        if verbose:
+            print("Schuripopt solver problem list file: %s"
+                  % (problem_list_filename))
+            print("Schuripopt solver options file: %s"
+                  % (options_filename))
+            print("Schuripopt solver problem type: %s"
+                  % (subproblem_type))
             print("Sending solver invocation request to "
-                  "scenario tree workers")
+                  "workers")
 
         worker_results = manager.invoke_function(
             "EXTERNAL_invoke_solve",
@@ -405,7 +455,9 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
                            problem_list_filename,
                            self.executable,
                            output_solver_log,
-                           io_options))
+                           io_options,
+                           command_line_options,
+                           options_filename))
 
         results = ScenarioTreeManagerSolverResults(subproblem_type)
         for worker_name in worker_results:
@@ -418,12 +470,9 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
     def _solve_impl(self,
                     sp,
                     output_solver_log=False,
+                    verbose=False,
+                    logfile=None,
                     **kwds):
-
-        if not _mpi4py_available:
-            raise RuntimeError(
-                "The 'mpi4py' module is not available, but it "
-                "is required by the %s solver" % (self.name))
 
         #
         # Setup the SchurIpopt working directory
@@ -432,8 +481,14 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
         problem_list_filename = "PySP_Subproblems.txt"
         working_directory = self._create_tempdir("workdir")
         logfile = self._files["logfile"] = \
+            logfile if (logfile is not None) else \
             os.path.join(working_directory,
                          "schuripopt.log")
+        if verbose:
+            print("Schuripopt solver working directory: %s"
+                  % (working_directory))
+            print("Schuripopt solver logfile: %s"
+                  % (logfile))
 
         #
         # Launch SchurIpopt from the worker processes
@@ -444,6 +499,7 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
             working_directory,
             logfile=logfile,
             output_solver_log=output_solver_log,
+            verbose=verbose,
             io_options=kwds)
 
         objective = 0.0
