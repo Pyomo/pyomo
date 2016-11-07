@@ -952,6 +952,10 @@ class Scenario(object):
     def probability(self):
         return self._probability
 
+    @property
+    def instance(self):
+        return self._instance
+
     def get_current_objective(self):
         return self._objective
 
