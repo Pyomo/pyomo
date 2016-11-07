@@ -1,5 +1,4 @@
 # interdiction.py
-
 from pyomo.environ import *
 from pyomo.bilevel import *
 from interdiction_data import A, budget
@@ -17,8 +16,7 @@ M.sub.o  = Objective(expr=M.sub.f, sense=maximize)
 
 # Flow constraint
 def flow_rule(M, n):
-    return sum(M.y[i,n] for i in sequence(0,4) if (i,n) in A) == \
-           sum(M.y[n,j] for j in sequence(1,5) if (n,j) in A)
+    return sum(M.y[i,n] for i in sequence(0,4) if (i,n) in A) == sum(M.y[n,j] for j in sequence(1,5) if (n,j) in A)
 M.sub.flow = Constraint(sequence(1,4), rule=flow_rule)
 
 # Source constraint

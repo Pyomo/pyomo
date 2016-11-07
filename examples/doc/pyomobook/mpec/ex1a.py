@@ -1,5 +1,4 @@
-# file ex1a.py
-
+# ex1a.py
 from pyomo.environ import *
 from pyomo.mpec import *
 
