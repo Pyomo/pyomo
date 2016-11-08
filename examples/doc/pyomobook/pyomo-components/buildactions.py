@@ -5,7 +5,6 @@ model = AbstractModel()
 
 model.N = Set() # Set of warehouses
 model.M = Set() # Set of customers
-
 model.d = Param(model.N,model.M)
 model.P = Param()
 
