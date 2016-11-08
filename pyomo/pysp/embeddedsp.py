@@ -17,8 +17,10 @@ from pyomo.core.base.numvalue import is_fixed, is_constant
 from pyomo.core.base.block import (Block,
                                    SortComponents)
 from pyomo.core.base.var import Var, _VarData
-from pyomo.core.base.objective import Objective
-from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.objective import (Objective,
+                                       _ObjectiveData)
+from pyomo.core.base.constraint import (Constraint,
+                                        _ConstraintData)
 from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.suffix import ComponentMap
@@ -71,13 +73,16 @@ class TableDistribution(Distribution):
     """
 
     def __init__(self, values, weights=None):
-        assert len(values) > 0
+        if len(values) == 0:
+            raise ValueError("Empty tables are not allowed")
         self.values = values
         self.weights = weights
         if self.weights is None:
             self.weights = [1.0/len(self.values)]*len(self.values)
-        assert len(self.values) == len(self.weights)
-        assert abs(sum(self.weights) - 1) < 1e-6
+        if len(self.values) != len(self.weights):
+            raise ValueError("Different number of weights than values")
+        if abs(sum(self.weights) - 1) > 1e-6:
+            raise ValueError("Weights do not sum to 1")
 
     def expectation(self):
         return sum(value * weight for value, weight
@@ -489,7 +494,7 @@ class EmbeddedSP(object):
                 del self.objective_to_stochastic_data_map[obj]
             else:
                 # TODO: Can we make this declaration sparse
-                #       by idenfifying which variables have
+                #       by identifying which variables have
                 #       stochastic coefficients? How to handle
                 #       non-linear expressions?
                 sto_obj.declare(obj)
@@ -720,67 +725,70 @@ class EmbeddedSP(object):
         return (len(self.variable_to_stochastic_data_lb_map) > 0) or \
             (len(self.variable_to_stochastic_data_ub_map) > 0)
 
-    def compute_constraint_stage(self,
-                                 constraint_object,
-                                 derived_last_stage=False,
-                                 check_fixed_status=True):
+    def compute_time_stage(self,
+                           obj,
+                           derived_last_stage=False):
         """
-        Obtain the time stage that a constraint belongs in.
+        Determine the time stage that an object belongs
+        in. Object types recognized are variables,
+        constraints, expressions, and objectives.
 
-        Computes the time stage of a constraint based on
-        the time stage of the variables and stochastic data that appear
-        in the constraint's lower bound, body, and upper
-        bound expressions. The time stage for the constraint is
-        computed as the maximum time stage of any variables or
-        stochastic data that are encountered.
+        For variables, the time stage is determined by the
+        user annotations on the reference model. For
+        objectives, constraints, and expressions, the time
+        stage is determined by the existance of the
+        variables and stochastic data that inside any
+        expressions. The time stage is computed as the
+        maximum time stage of any variables or stochastic
+        data that are encountered. Fixed variables are treated
+        as data belonging to the same time stage.
 
         Args:
-            constraint_object: The constraint to inspect.
-            derived_last_stage (bool): Indicates that
+            obj: The object to classify.
+            derived_last_stage (bool): Indicates whether
                 derived variables within a time stage should
                 be treated as if they belong to the final
-                time stage when computing the time stage of
-                the constraint. When the value is True,
-                derived variables will be treated like
-                variables in final time stage. The default
-                is False, meaning that the derived status of
-                variables will not be considered in the
-                computation.
-            check_fixed_status (bool): Indicates that the
-                fixed status of variables should be
-                considered when computing the time stage of
-                the constraint. When the value is False, the
-                fixed status of variables will be ignored.
-                The default is True, meaning that variables
-                whose fixed flag is active will be treated
-                as constants and excluded from the
-                computation.
+                time stage (where non-anticipativity is not
+                enforced). When the value is True, derived
+                variables will be treated like variables in
+                final time stage. The default is False,
+                meaning that the derived status of variables
+                will not be considered in the computation.
 
         Returns:
-            The implied time stage for the constraint.
+            The implied time stage for the object. The first
+            time stage starts at 1.
         """
         stage = min(self.time_stages)
         laststage = max(self.time_stages)
         # check if the constraint is associated with stochastic data
         # TODO: We need to add the concept of data stage if we
         #       want to deal with the multi-stage case
-        if constraint_object in self.constraint_to_stochastic_data_map:
-            stage = laststage
+        if isinstance(obj, _ConstraintData):
+            if obj in self.constraint_to_stochastic_data_map:
+                stage = laststage
+            vars_ = self.constraint_to_variables_map[obj]
+        elif isinstance(obj, _ObjectiveData):
+            if obj in self.objective_to_stochastic_data_map:
+                stage = laststage
+            vars_ = self.objective_to_variables_map[obj]
+        else:
+            vars_ = tuple(self._collect_variables(obj).values())
         # there is no point in executing this check if we
-        # already know the constraint belongs to the final
+        # already know that the object belongs to the final
         # time stage
         if stage < laststage:
-            for var in \
-                  self.constraint_to_variables_map[constraint_object]:
-                if (not var.fixed) or (not check_fixed_status):
-                    varstage, derived = self.variable_to_stage_map[var]
-                    if derived_last_stage and derived:
-                        stage = laststage
-                    else:
-                        stage = max(stage, varstage)
-                    if stage == laststage:
-                        # no point in checking anything else
-                        break
+            for var in vars_:
+                varstage, derived = self.variable_to_stage_map[var]
+                if derived_last_stage and derived:
+                    stage = laststage
+                else:
+                    stage = max(stage, varstage)
+                if stage == laststage:
+                    # no point in checking anything else
+                    break
+            else: # executed when no break occurs in the for loop
+                stage = 1
         return stage
 
     def generate_sample_sp(self, size, options=None):

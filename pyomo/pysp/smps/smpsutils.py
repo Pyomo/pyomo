@@ -1422,7 +1422,7 @@ def convert_embedded(output_directory,
             Constraint,
             active=True,
             descend_into=True):
-        constage = sp.compute_constraint_stage(
+        constage = sp.compute_time_stage(
             con,
             derived_last_stage=not enforce_derived_nonanticipativity)
         if constage == firststage:
