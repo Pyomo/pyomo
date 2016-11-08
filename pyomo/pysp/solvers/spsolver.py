@@ -59,37 +59,50 @@ class SPSolver(PySPConfiguredObject):
 
         start = time.time()
 
-        scenario_tree = sp.scenario_tree
+        tmp_options = kwds.pop('options', None)
+        orig_options = self.options
+        if tmp_options is not None:
+            self._solver_options = pyutilib.misc.Options()
+            for key, val in orig_options.items():
+                self._solver_options[key] = val
+            for key, val in tmp_options.items():
+                self._solver_options[key] = val
 
-        num_scenarios = len(scenario_tree.scenarios)
-        num_stages = len(scenario_tree.stages)
-        num_na_variables = 0
-        num_na_continuous_variables = 0
-        for stage in scenario_tree.stages[:-1]:
-            for tree_node in stage.nodes:
-                num_na_variables += len(tree_node._standard_variable_ids)
-                for id_ in tree_node._standard_variable_ids:
-                    if not tree_node.is_variable_discrete(id_):
-                        num_na_continuous_variables += 1
+        try:
+            scenario_tree = sp.scenario_tree
 
-        if kwds.get('output_solver_log', False):
-            print("-"*20)
-            print("Problem Statistics".center(20))
-            print("-"*20)
-            print("Total number of time stages...............: %10s"
-                  % (num_stages))
-            print("Total number of non-anticipative variables: %10s\n"
-                  "                                continuous: %10s\n"
-                  "                                  discrete: %10s"
-                  % (num_na_variables,
-                     num_na_continuous_variables,
-                     num_na_variables - num_na_continuous_variables))
+            num_scenarios = len(scenario_tree.scenarios)
+            num_stages = len(scenario_tree.stages)
+            num_na_variables = 0
+            num_na_continuous_variables = 0
+            for stage in scenario_tree.stages[:-1]:
+                for tree_node in stage.nodes:
+                    num_na_variables += len(tree_node._standard_variable_ids)
+                    for id_ in tree_node._standard_variable_ids:
+                        if not tree_node.is_variable_discrete(id_):
+                            num_na_continuous_variables += 1
 
-        results = self._solve_impl(sp, *args, **kwds)
+            if kwds.get('output_solver_log', False):
+                print("-"*20)
+                print("Problem Statistics".center(20))
+                print("-"*20)
+                print("Total number of time stages...............: %10s"
+                      % (num_stages))
+                print("Total number of non-anticipative variables: %10s\n"
+                      "                                continuous: %10s\n"
+                      "                                  discrete: %10s"
+                      % (num_na_variables,
+                         num_na_continuous_variables,
+                         num_na_variables - num_na_continuous_variables))
 
-        stop = time.time()
-        results.pysp_time = stop - start
-        results.solver_name = self.name
+            results = self._solve_impl(sp, *args, **kwds)
+
+            stop = time.time()
+            results.pysp_time = stop - start
+            results.solver_name = self.name
+        finally:
+            if tmp_options is not None:
+                self._solver_options = orig_options
 
         return results
 
