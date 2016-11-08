@@ -1522,7 +1522,7 @@ class Block(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Block:
             return super(Block, cls).__new__(cls)
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleBlock.__new__(SimpleBlock)
         else:
             return IndexedBlock.__new__(IndexedBlock)

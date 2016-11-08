@@ -118,6 +118,10 @@ class _VarData(ComponentData, NumericValue):
         """Returns False because this is not a constant in an expression."""
         return False
 
+    def _potentially_variable(self):
+        """Returns True because this is a variable."""
+        return True
+
     def _polynomial_degree(self, result):
         """
         If the variable is fixed, it represents a constant
@@ -429,7 +433,7 @@ class Var(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Var:
             return super(Var, cls).__new__(cls)
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
             return SimpleVar.__new__(SimpleVar)
         else:
             return IndexedVar.__new__(IndexedVar)

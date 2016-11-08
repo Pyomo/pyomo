@@ -1,3 +1,4 @@
+# multimodal_init1.py
 from pyomo.environ import *
 from math import pi
 
