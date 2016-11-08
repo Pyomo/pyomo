@@ -294,8 +294,7 @@ def EXTERNAL_invoke_solve(worker,
             args.append(key+"="+str(val))
     args.append("-AMPL")
 
-    # TODO
-    print("Command: %s" % (' '.join([executable]+args)))
+    #print("Command: %s" % (' '.join([executable]+args)))
     start = time.time()
     spawn = mpi4py.MPI.COMM_WORLD.Spawn(
         executable,
@@ -310,11 +309,6 @@ def EXTERNAL_invoke_solve(worker,
                      root=mpi4py.MPI.ROOT)
     rc = mpi4py.MPI.COMM_WORLD.bcast(rc, root=0)
     spawn.Disconnect()
-    #rc, log = pyutilib.subprocess.run(
-    #    [executable]+args,
-    #    cwd=working_directory,
-    #    outfile=logfile,
-    #    tee=output_solver_log)
     stop = time.time()
     solve_time = stop - start
 
@@ -343,6 +337,35 @@ def EXTERNAL_invoke_solve(worker,
                 load_function(object_name, None, results)
 
     return worker_results
+
+def EXTERNAL_collect_solution(worker, scenario, stages=None):
+    solution = {}
+    instance = scenario.instance
+    assert instance is not None
+    tmp = {}
+    bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
+    for stagenum, stage in enumerate(worker.scenario_tree.stages):
+        if (stages is None) or stage.name in stages:
+            stage_solution = solution[stage.name] = {}
+            cost_variable_name, cost_variable_index = \
+                stage._cost_variable
+            stage_cost_obj = \
+                instance.find_component(cost_variable_name)[cost_variable_index]
+            if not stage_cost_obj.is_expression():
+                stage_solution[ComponentUID(
+                    stage_cost_obj,
+                    cuid_buffer=tmp)] = (stage_cost_obj.value,
+                                         stage_cost_obj.stale)
+            node = scenario.node_list[stagenum]
+            assert node.stage is stage
+            for variable_id in node._variable_ids:
+                var = bySymbol[variable_id]
+                if var.is_expression():
+                    continue
+                stage_solution[ComponentUID(var, cuid_buffer=tmp)] = \
+                    (var.value, var.stale)
+
+    return solution
 
 class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
 
@@ -472,12 +495,12 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
                     output_solver_log=False,
                     verbose=False,
                     logfile=None,
+                    reference_model=None,
                     **kwds):
 
         #
         # Setup the SchurIpopt working directory
         #
-
         problem_list_filename = "PySP_Subproblems.txt"
         working_directory = self._create_tempdir("workdir")
         logfile = self._files["logfile"] = \
@@ -494,7 +517,7 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
         # Launch SchurIpopt from the worker processes
         # (assumed to be launched together using mpirun)
         #
-        solve_results = self._launch_solver(
+        status = self._launch_solver(
             sp,
             working_directory,
             logfile=logfile,
@@ -503,28 +526,40 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
             io_options=kwds)
 
         objective = 0.0
-        if solve_results.solve_type == "bundles":
+        if status.solve_type == "bundles":
             assert sp.scenario_tree.contains_bundles()
-            assert len(solve_results.objective) == \
+            assert len(status.objective) == \
                 len(sp.scenario_tree.bundles)
             for bundle in sp.scenario_tree.bundles:
                 objective += bundle.probability * \
-                             solve_results.objective[bundle.name]
+                             status.objective[bundle.name]
         else:
-            assert solve_results.solve_type == "scenarios"
-            assert len(solve_results.objective) == \
+            assert status.solve_type == "scenarios"
+            assert len(status.objective) == \
                 len(sp.scenario_tree.scenarios)
             for scenario in sp.scenario_tree.scenarios:
                 objective += scenario.probability * \
-                             solve_results.objective[scenario.name]
+                             status.objective[scenario.name]
 
         results = SPSolverResults()
         results.objective = objective
-        results.solver_time = max(solve_results.solve_time.values())
+        results.solver_time = max(status.solve_time.values())
         results.pyomo_solve_time = \
-            max(solve_results.pyomo_solve_time.values())
-        # TODO
-        results.xhat = dict(sp.scenario_tree.scenarios[0]._x)
+            max(status.pyomo_solve_time.values())
+        if reference_model is not None:
+            scenario_name = sp.scenario_tree.scenarios[0].name
+            stages = tuple(stage.name for stage in sp.scenario_tree.stages[:-1])
+            # extract the first stage solution from one of the scenarios
+            solution = sp.invoke_function(
+                "EXTERNAL_collect_solution",
+                thisfile,
+                invocation_type=InvocationType.OnScenario(scenario_name),
+                function_kwds={'stages':stages})
+            for stage_name in solution:
+                stage_solution = solution[stage_name]
+                for cuid in stage_solution:
+                    var = cuid.find_component(reference_model)
+                    var.value, var.stale = stage_solution[cuid]
 
         return results
 
