@@ -107,21 +107,21 @@ def CreateTestMethod(test_case,
 
         # try to solve the original instance
         results1 = _solve(instance1)
-        #instance1.solutions.load(results1)
+        instance1.solutions.load_from(results1)
 
         # try to solve the unpickled instance
         results2 = _solve(instance2)
-        #instance2.solutions.load(results2)
+        instance2.solutions.load_from(results2)
 
         # try to pickle the instance and results,
         # then unpickle and load results
         inst, res = pickle.loads(pickle.dumps([instance1,results1]))
-        #inst.solutions.load(res)
+        inst.solutions.load_from(res)
 
         # try to pickle the instance and results,
         # then unpickle and load results
         inst, res = pickle.loads(pickle.dumps([instance2,results2]))
-        #inst.solutions.load(res)
+        inst.solutions.load_from(res)
 
     return pickle_test
 
