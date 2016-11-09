@@ -9,10 +9,14 @@
 
 __all__ = ("EmbeddedSP,")
 
+import os
 import itertools
+import random
+import math
 
 import pyomo.core.base.expr
 import pyomo.core.base.param
+from pyomo.core.base import ComponentUID
 from pyomo.core.base.numvalue import is_fixed, is_constant
 from pyomo.core.base.block import (Block,
                                    SortComponents)
@@ -35,10 +39,13 @@ from pyomo.pysp.annotations import (locate_annotations,
 from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
 from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
+from pyomo.pysp.scenariotree.manager import \
+    InvocationType
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory
 from pyomo.pysp.scenariotree.manager_solver import \
-    ScenarioTreeManagerSolverClientSerial
+    (ScenarioTreeManagerSolverClientSerial,
+     ScenarioTreeManagerSolverClientPyro)
 
 from six.moves import xrange, zip
 
@@ -49,13 +56,19 @@ from six.moves import xrange, zip
 #       to check if a mutable Param (e.g., stochastic data)
 #       appears there.
 
-"""
-These distributions are documented by the SMPS format
-documentation found at: http://myweb.dal.ca/gassmann/smps2.htm#StochIndep
-"""
+# generate an absolute path to this file
+thisfile = os.path.abspath(__file__)
+def _update_data(worker, scenario, data):
+    instance = scenario.instance
+    assert instance is not None
+    for cuid, val in data:
+        cuid.find_component(instance).value = val
 
-import random
-import math
+#
+# These distributions are documented by the SMPS format
+# documentation found at:
+# http://myweb.dal.ca/gassmann/smps2.htm#StochIndep
+#
 
 class Distribution(object):
     def expectation(self, *args, **kwds):
@@ -671,9 +684,9 @@ class EmbeddedSP(object):
 
         # TODO: This is a hack. Cleanup the PySP solver interface
         #       to not require a scenario tree
-        stm = self._create_scenario_tree_model(1)
-        self.scenario_tree = ScenarioTree(scenariotreeinstance=stm)
-        self.scenario_tree.linkInInstances({"s1": self.reference_model})
+        #stm = self._create_scenario_tree_model(1)
+        #self.scenario_tree = ScenarioTree(scenariotreeinstance=stm)
+        #self.scenario_tree.linkInInstances({"s1": self.reference_model})
 
     def _create_scenario_tree_model(self, size):
         assert size > 0
@@ -791,6 +804,46 @@ class EmbeddedSP(object):
                 stage = 1
         return stage
 
+    def pyro_sample_sp(self,
+                       size,
+                       **kwds):
+        assert size > 0
+        model = self.reference_model.clone()
+
+        scenario_tree_model = \
+            self._create_scenario_tree_model(size)
+        factory = ScenarioTreeInstanceFactory(
+            model=self.reference_model,
+            scenario_tree=scenario_tree_model)
+        options = \
+            ScenarioTreeManagerSolverClientPyro.register_options()
+        for key in kwds:
+            options[key] = kwds[key]
+        manager = ScenarioTreeManagerSolverClientPyro(
+            options,
+            factory=factory)
+        try:
+            init = manager.initialize(async=True)
+            pcuids = ComponentMap()
+            for param in self.stochastic_data:
+                pcuids[param] = ComponentUID(param)
+            init.complete()
+            for scenario in manager.scenario_tree.scenarios:
+                data = []
+                for param, dist in self.stochastic_data.items():
+                    data.append((pcuids[param], dist.sample()))
+                manager.invoke_function(
+                    "_update_data",
+                    thisfile,
+                    invocation_type=InvocationType.OnScenario(scenario.name),
+                    function_args=(data,),
+                    oneway=True)
+            manager.reference_model = model
+        except:
+            manager.close()
+            raise
+        return manager
+
     def generate_sample_sp(self, size, options=None):
         assert size > 0
         def model_callback(scenario_name, node_list):
@@ -799,8 +852,9 @@ class EmbeddedSP(object):
             del m._PySP_UserCostExpression
             return m
         scenario_tree_model = self._create_scenario_tree_model(size)
-        factory = ScenarioTreeInstanceFactory(model_callback,
-                                              scenario_tree_model)
+        factory = ScenarioTreeInstanceFactory(
+            model=model_callback,
+            scenario_tree=scenario_tree_model)
         if options is None:
             options = \
                 ScenarioTreeManagerSolverClientSerial.register_options()

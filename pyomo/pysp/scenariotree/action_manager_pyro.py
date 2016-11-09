@@ -50,6 +50,12 @@ class ScenarioTreeActionManagerPyro(PyroAsynchronousActionManager):
         # (it will still report them, just take no action)
         self.ignore_task_errors = False
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
     def close(self):
         """Close the manager."""
         if len(self.server_pool):
