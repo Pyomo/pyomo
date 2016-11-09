@@ -13,22 +13,22 @@ def ph_rhosetter_callback(ph, scenario_tree, scenario):
 
    root_node = scenario_tree.findRootNode()
 
-   scenario_instance = scenario._instance
-   symbol_map = scenario_instance._ScenarioTreeSymbolMap
+   si = scenario._instance
+   sm = si._ScenarioTreeSymbolMap
 
-   for i in scenario_instance.ProductSizes:
+   for i in si.ProductSizes:
 
       ph.setRhoOneScenario(
          root_node,
          scenario,
-         symbol_map.getSymbol(scenario_instance.NumProducedFirstStage[i]),
-         scenario_instance.UnitProductionCosts[i] * MyRhoFactor * 0.001)
+         sm.getSymbol(si.NumProducedFirstStage[i]),
+         si.UnitProductionCosts[i] * MyRhoFactor * 0.001)
 
-      for j in scenario_instance.ProductSizes:
+      for j in si.ProductSizes:
          if j <= i: 
             ph.setRhoOneScenario(
                root_node,
                scenario,
-               symbol_map.getSymbol(scenario_instance.NumUnitsCutFirstStage[i,j]),
-               scenario_instance.UnitReductionCost * MyRhoFactor * 0.001)
+               sm.getSymbol(si.NumUnitsCutFirstStage[i,j]),
+               si.UnitReductionCost * MyRhoFactor * 0.001)
 #@:pyomobook

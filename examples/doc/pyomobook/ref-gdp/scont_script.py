@@ -12,3 +12,4 @@ status = solver.solve(model)
 # @:xfrm
 
 print(status)
+model.display()
