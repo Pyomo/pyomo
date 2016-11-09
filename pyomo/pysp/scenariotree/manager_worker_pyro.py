@@ -124,7 +124,6 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         self._scenario_tree = \
             self._full_scenario_tree.make_compressed(scenarios_to_construct,
                                                      normalize=False)
-
         self._instances = \
             self._full_scenario_tree._scenario_instance_factory.\
             construct_instances_for_scenario_tree(

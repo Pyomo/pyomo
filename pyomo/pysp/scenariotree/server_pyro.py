@@ -174,6 +174,8 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
 
         elif data.action == 'ScenarioTreeServerPyro_setup':
             options = self.register_options()
+            model_input = data.options.pop('model')
+            scenario_tree_input = data.options.pop('scenario_tree')
             for name, val in iteritems(data.options):
                 options.get(name).set_value(val)
             self.set_options(options)
@@ -187,13 +189,15 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
                 self.display_options()
 
             # Make sure these are not archives
-            assert os.path.exists(self._options.model_location)
-            assert (self._options.scenario_tree_location is None) or \
-                os.path.exists(self._options.scenario_tree_location)
+            assert (not isinstance(model_input, six.string_types)) or \
+                os.path.exists(model_input)
+            assert (scenario_tree_input is None) or \
+                (not isinstance(scenario_tree_input, six.string_types)) or \
+                os.path.exists(scenario_tree_input)
             self._scenario_instance_factory = \
                 ScenarioTreeInstanceFactory(
-                    self._options.model_location,
-                    self._options.scenario_tree_location)
+                    model=model_input,
+                    scenario_tree=scenario_tree_input)
 
             #
             # Try to prevent unnecessarily re-importing the model module
@@ -231,7 +235,6 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
 
             assert self._scenario_instance_factory is not None
             assert self._full_scenario_tree is not None
-
             if worker_name in self._worker_map:
                 raise RuntimeError(
                     "Server %s Cannot initialize worker with name '%s' "

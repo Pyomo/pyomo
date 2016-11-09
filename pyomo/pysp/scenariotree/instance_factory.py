@@ -22,7 +22,8 @@ from pyutilib.misc import (ArchiveReaderFactory,
 
 from pyomo.core import (Block,
                         IPyomoScriptModifyInstance,
-                        DataPortal)
+                        DataPortal,
+                        AbstractModel)
 from pyomo.core.base.block import _BlockData
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.pysp.phutils import _OLD_OUTPUT
@@ -224,7 +225,7 @@ class ScenarioTreeInstanceFactory(object):
     def __init__(self,
                  model,
                  scenario_tree,
-                 data_location=None):
+                 data=None):
         """Class to help manage construction of scenario tree models.
 
         This class is designed to help manage the various input formats
@@ -248,11 +249,11 @@ class ScenarioTreeInstanceFactory(object):
                 can also be set to a directory name where it
                 is assumed a file named
                 ScenarioStructure.dat exists.
-            data_location: Directory containing .dat files
+            data: Directory containing .dat files
                 necessary for building the scenario
                 instances associated with the scenario
                 tree. This argument is required if no
-                filenames are given for the first two
+                directory information can be extracted from the first two
                 arguments and the reference model is an
                 abstract Pyomo model. Otherwise, it is not
                 required or the location will be inferred
@@ -275,13 +276,13 @@ class ScenarioTreeInstanceFactory(object):
         self._scenario_tree_model = None
         self._data_directory = None
         try:
-            self._init(model, scenario_tree, data_location)
+            self._init(model, scenario_tree, data)
         except:
             self.close()
             raise
         self._closed = False
 
-    def _init(self, model, scenario_tree, data_location):
+    def _init(self, model, scenario_tree, data):
 
         self._model_filename = None
         self._model_module = None
@@ -411,7 +412,7 @@ class ScenarioTreeInstanceFactory(object):
                 "scenario tree model must be a concrete Pyomo model.")
 
         self._data_directory = None
-        if data_location is None:
+        if data is None:
             if self.scenario_tree_directory() is not None:
                 logger.debug("data directory is set to the scenario tree "
                              "directory: %s"
@@ -423,7 +424,9 @@ class ScenarioTreeInstanceFactory(object):
                              % (self.model_directory()))
                 self._data_directory = self.model_directory()
             else:
-                if self._model_callback is None:
+                if (self._model_callback is None) and \
+                   isinstance(self._model_object, AbstractModel) and \
+                   (not self._model_object.is_constructed()):
                     raise ValueError(
                         "A data location is required since no model "
                         "callback was provided and no other location could "
@@ -432,15 +435,15 @@ class ScenarioTreeInstanceFactory(object):
         else:
             logger.debug("data location is provided, attempting "
                          "to load specification: %s"
-                         % (data_location))
+                         % (data))
             self._data_directory, self._archives = \
-                _extract_pathspec(data_location,
+                _extract_pathspec(data,
                                   None,
                                   archives=self._archives)
             if not os.path.exists(self._data_directory):
                 logger.error("Failed to extract data directory "
                              "from path specification: %s"
-                             % (data_location))
+                             % (data))
                 raise IOError("path does not exist: %s"
                               % (self._data_directory))
 
@@ -519,9 +522,11 @@ class ScenarioTreeInstanceFactory(object):
 
             elif self._model_object is not None:
 
-                assert self.data_directory() is not None
-                if scenario_tree._scenario_based_data:
-
+                if (not isinstance(self._model_object, AbstractModel)) or \
+                   (self._model_object.is_constructed()):
+                    scenario_instance = self._model_object.clone()
+                elif scenario_tree._scenario_based_data:
+                    assert self.data_directory() is not None
                     scenario_data_filename = \
                         os.path.join(self.data_directory(),
                                      str(scenario_name))
@@ -568,7 +573,7 @@ class ScenarioTreeInstanceFactory(object):
                                 profile_memory=profile_memory,
                                 report_timing=output_instance_construction_time)
                 else:
-
+                    assert self.data_directory() is not None
                     data_files = []
                     for node_name in node_name_list:
                         node_data_filename = \

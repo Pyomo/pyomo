@@ -298,7 +298,7 @@ class Test(unittest.TestCase):
         with ScenarioTreeInstanceFactory(
                 model=reference_test_model,
                 scenario_tree=scenario_tree_model,
-                data_location=testdatadir) as factory:
+                data=testdatadir) as factory:
             self.assertTrue(factory.model_directory() is None)
             self.assertTrue(factory.scenario_tree_directory() is None)
             self._check_factory(factory)
@@ -319,7 +319,7 @@ class Test(unittest.TestCase):
                 model=reference_test_model,
                 scenario_tree=join(testdatadir,
                                    "reference_test_scenario_tree_model.py"),
-                data_location=testdatadir) as factory:
+                data=testdatadir) as factory:
             self.assertTrue(factory.model_directory() is None)
             self.assertTrue(factory.scenario_tree_directory() is not None)
             self.assertTrue(factory._scenario_tree_module is not None)
@@ -349,7 +349,7 @@ class Test(unittest.TestCase):
                 model=testdatadir,
                 scenario_tree=join(testdatadir,
                                    "reference_test_scenario_tree.dat"),
-                data_location=join(testdatadir, "yaml_data")) as factory:
+                data=join(testdatadir, "yaml_data")) as factory:
             self.assertEqual(len(factory._archives), 0)
             self.assertTrue(factory.model_directory() is not None)
             self.assertTrue(factory.scenario_tree_directory() is not None)
@@ -367,7 +367,7 @@ class Test(unittest.TestCase):
         with ScenarioTreeInstanceFactory(
                 model=reference_test_model,
                 scenario_tree=scenario_tree_model,
-                data_location=testdatadir) as factory:
+                data=testdatadir) as factory:
             self.assertTrue(factory.model_directory() is None)
             self.assertTrue(factory.scenario_tree_directory() is None)
             self._check_factory(factory)
@@ -395,6 +395,31 @@ class Test(unittest.TestCase):
             self.assertTrue(factory.model_directory() is None)
             self.assertTrue(factory.scenario_tree_directory() is None)
             self._check_factory(factory)
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+
+    def test_init13(self):
+        # A concrete model and scenario tree model without any data
+        # (all scenarios will be duplicates of the reference model)
+        model = reference_test_model.create_instance()
+        scenario_tree_model = CreateAbstractScenarioTreeModel().\
+            create_instance(
+                join(testdatadir, "reference_test_scenario_tree.dat"))
+        with ScenarioTreeInstanceFactory(
+                model=model,
+                scenario_tree=scenario_tree_model) as factory:
+            self.assertTrue(factory.model_directory() is None)
+            self.assertTrue(factory.scenario_tree_directory() is None)
+
+            scenario_tree = factory.generate_scenario_tree()
+            instances = factory.construct_instances_for_scenario_tree(
+                scenario_tree,
+                verbose=True)
+            self.assertEqual(len(instances), 3)
+            self.assertEqual(instances["s1"].p(), model.p())
+            self.assertEqual(instances["s2"].p(), model.p())
+            self.assertEqual(instances["s3"].p(), model.p())
+
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)
 

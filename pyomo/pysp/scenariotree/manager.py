@@ -1854,12 +1854,34 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         # extract server options
         server_options = ScenarioTreeServerPyro.\
                          extract_user_options_to_dict(self._options)
+
+        scenario_instance_factory = \
+            self._scenario_tree._scenario_instance_factory
         # override these options just in case this instance factory
         # extracted from an archive
-        server_options['model_location'] = \
-            self._scenario_tree._scenario_instance_factory._model_filename
-        server_options['scenario_tree_location'] = \
-            self._scenario_tree._scenario_instance_factory._scenario_tree_filename
+        server_options['model_location'] = None
+        if scenario_instance_factory._model_filename is not None:
+            server_options['model'] = \
+                scenario_instance_factory._model_filename
+        elif scenario_instance_factory._model_object is not None:
+            # we are pickling a model!
+            server_options['model'] = \
+                scenario_instance_factory._model_object
+        else:
+            # TODO: Maybe we can use dill?
+            assert False
+
+        server_options['scenario_tree_location'] = None
+        if scenario_instance_factory._scenario_tree_filename is not None:
+            server_options['scenario_tree'] = \
+                scenario_instance_factory._scenario_tree_filename
+        elif scenario_instance_factory._scenario_tree_model:
+            # we are pickling a model!
+            server_options['scenario_tree'] = \
+                scenario_instance_factory._scenario_tree_model
+        else:
+            # TODO
+            assert False
 
         # transmit setup requests
         action_handles = []
@@ -2122,8 +2144,6 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
             len(self._action_manager.server_pool)
         assert len(self._pyro_worker_server_map) == 0
         assert len(self._pyro_worker_list) == 0
-        scenario_instance_factory = \
-            self._scenario_tree._scenario_instance_factory
 
         worker_type = ScenarioTreeServerPyro.\
                       get_registered_worker_type(self._worker_registered_name)
@@ -2315,7 +2335,7 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
         if self._options.verbose:
             if servers_required == 0:
                 assert timeout is not None
-                print("Using timeout of %s seconds to aquire up to "
+                print("Using timeout of %s seconds to acquire up to "
                       "%s servers" % (timeout, num_jobs))
             else:
                 print("Waiting to acquire exactly %s servers to distribute "
