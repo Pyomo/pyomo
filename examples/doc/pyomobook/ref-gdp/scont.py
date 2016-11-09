@@ -7,7 +7,7 @@ U = [2,4,6]
 index = [0,1,2]
 
 model = ConcreteModel()
-model.x = Var(index, within=Reals)
+model.x = Var(index, within=Reals, bounds=(0,20))
 
 # Each disjunct is a semi-continuous variable
 #    x[k] == 0 or L[k] <= x[k] <= U[k]
@@ -17,8 +17,6 @@ def d_rule(block, k, i):
         block.c = Constraint(expr=m.x[k] == 0)
     else:
         block.c = Constraint(expr=L[k] <= m.x[k] <= U[k])
-    block.BigM = Suffix()
-    block.BigM[block.c] = 1
 model.d = Disjunct(index, [0,1], rule=d_rule)
 
 # There are three disjunctions
@@ -28,12 +26,7 @@ def D_rule(block, k):
 model.D = Disjunction(index, rule=D_rule)
 
 # Minimize the number of x variables that are nonzero
-model.o = Objective(expr=sum(model.x[k] for k in index))
+model.o = Objective(expr=sum(model.x[k].indicator_var for k in index))
 
 # Satisfy a demand that is met by these variables
 model.c = Constraint(expr=sum(model.x[k] for k in index) >= 7)
-
-
-def pyomo_postprocess(options=None, instance=None, results=None):
-    instance.pprint()
-    instance.display()
