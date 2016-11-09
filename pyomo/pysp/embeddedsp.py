@@ -844,23 +844,23 @@ class EmbeddedSP(object):
             raise
         return manager
 
-    def generate_sample_sp(self, size, options=None):
+    def generate_sample_sp(self, size, **kwds):
         assert size > 0
         def model_callback(scenario_name, node_list):
             m = self.sample(return_copy=True)
-            # TODO
-            del m._PySP_UserCostExpression
             return m
         scenario_tree_model = self._create_scenario_tree_model(size)
         factory = ScenarioTreeInstanceFactory(
             model=model_callback,
             scenario_tree=scenario_tree_model)
-        if options is None:
-            options = \
-                ScenarioTreeManagerSolverClientSerial.register_options()
+        options = \
+            ScenarioTreeManagerSolverClientPyro.register_options()
+        for key in kwds:
+            options[key] = kwds[key]
         manager = ScenarioTreeManagerSolverClientSerial(options,
                                                         factory=factory)
         manager.initialize()
+        manager.reference_model = self.reference_model.clone()
         return manager
 
     def sample(self, return_copy=False):

@@ -23,6 +23,7 @@ import pyutilib.misc
 from pyutilib.pyro import shutdown_pyro_components
 
 import pyomo.solvers
+from pyomo.core.base import ComponentUID
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
                        PersistentSolver,
@@ -653,7 +654,11 @@ class EFSolver(SPSolver, PySPConfiguredObject):
         self._name = "ef"
         ExtensiveFormAlgorithm.validate_options(self._options)
 
-    def _solve_impl(self, sp, output_solver_log=False):
+    def _solve_impl(self,
+                    sp,
+                    output_solver_log=False,
+                    reference_model=None):
+
         with ExtensiveFormAlgorithm(sp, self._options) as ef:
             ef.build_ef()
             # TODO: resolve this preprocessing mess
@@ -678,7 +683,38 @@ class EFSolver(SPSolver, PySPConfiguredObject):
         results = SPSolverResults()
         results.objective = ef.objective
         results.bound = ef.bound
-        results.xhat = dict(sp.scenario_tree.scenarios[0]._x)
+        # TODO
+        #results.solver_time
+        #results.pyomo_solve_time
+        if reference_model is not None:
+            scenario_name = sp.scenario_tree.scenarios[0].name
+            stages = tuple(stage.name for stage in sp.scenario_tree.stages[:-1])
+            scenario = sp.scenario_tree.scenarios[0]
+            instance = scenario.instance
+            bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
+            tmp = {}
+            for stagenum, stage in enumerate(sp.scenario_tree.stages[:-1]):
+                cost_variable_name, cost_variable_index = \
+                    stage._cost_variable
+                stage_cost_obj = \
+                    instance.find_component(cost_variable_name)[cost_variable_index]
+                if not stage_cost_obj.is_expression():
+                    refvar = ComponentUID(stage_cost_obj,cuid_buffer=tmp).\
+                        find_component(reference_model)
+                    refvar.value = stage_cost_obj.value
+                    refvar.stale = stage_cost_obj.stale
+
+                node = scenario.node_list[stagenum]
+                assert node.stage is stage
+                for variable_id in node._variable_ids:
+                    var = bySymbol[variable_id]
+                    if var.is_expression():
+                        continue
+                    refvar = ComponentUID(var, cuid_buffer=tmp).\
+                        find_component(reference_model)
+                    refvar.value = var.value
+                    refvar.stale = var.stale
+
         return results
 
 def runef_register_options(options=None):

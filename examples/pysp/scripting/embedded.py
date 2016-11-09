@@ -1,7 +1,7 @@
 import time
 
 from pyomo.environ import *
-from pyomo.opt import SolverStatus, TerminationCondition
+from pyomo.opt import TerminationCondition
 from pyomo.pysp.annotations import (StochasticDataAnnotation,
                                     StageCostAnnotation,
                                     VariableStageAnnotation)
@@ -31,8 +31,11 @@ random.seed(2352352342)
 #     creating a test set that is used to evaluate
 #     the solutions from steps (2) and (3).
 
+d_dist = UniformDistribution(0, 100)
 train_N = 150
 test_N = 150
+cplex = SolverFactory("cplex")
+saa_solver = SPSolverFactory("ddsip") # "ef"
 
 #
 # Define the reference model
@@ -64,30 +67,26 @@ model.varstage.declare(model.x, 1)
 model.stagecost.declare(model.cost[1], 1)
 model.stagecost.declare(model.cost[2], 2)
 model.stochdata.declare(model.d,
-                        distribution=UniformDistribution(0, 100))
+                        distribution=d_dist)
 sp = EmbeddedSP(model)
 
 #
 # Solve the deterministic approximation
 #
 sp.set_expected_value()
-with SolverFactory("cplex") as opt:
-    results = opt.solve(sp.reference_model)
-    assert results.solver.status ==\
-        SolverStatus.ok
-    assert results.solver.termination_condition == \
-        TerminationCondition.optimal
+status = cplex.solve(sp.reference_model)
+assert status.solver.termination_condition == \
+    TerminationCondition.optimal
 ev_solution = sp.reference_model.x()
 
 #
 # Setup an explicit training sample and solve
 #
 train_sp = sp.generate_sample_sp(train_N)
-solver = SPSolverFactory("ddsip") # "ef"
-results = solver.solve(train_sp,
-                       output_solver_log=True)
+results = saa_solver.solve(train_sp,
+                           output_solver_log=True)
 print(results)
-saa_solution = results.xhat['root'].values()[0]
+saa_solution = list(results.xhat['root'].values())[0]
 
 print("Deterministic Solution:  %s" % (ev_solution))
 print("SAA Solution: %s" % (saa_solution))
@@ -97,28 +96,23 @@ print("SAA Solution: %s" % (saa_solution))
 #
 ev_objectives = []
 saa_objectives = []
-with SolverFactory("cplex", solver_io="python") as opt:
-    for i in range(test_N):
-        # samples into the reference model by default
-        sp.sample()
+for i in range(test_N):
+    # samples into the reference model by default
+    sp.sample()
 
-        # evaluate the solution from the deterministic approximiation
-        sp.reference_model.x.fix(ev_solution)
-        results = opt.solve(sp.reference_model)
-        assert results.solver.status ==\
-            SolverStatus.ok
-        assert results.solver.termination_condition == \
-            TerminationCondition.optimal
-        ev_objectives.append(sp.reference_model.obj())
+    # evaluate the solution from the deterministic approximiation
+    sp.reference_model.x.fix(ev_solution)
+    status = cplex.solve(sp.reference_model)
+    assert status.solver.termination_condition == \
+        TerminationCondition.optimal
+    ev_objectives.append(sp.reference_model.obj())
 
-        # evaluate the solution from the SAA
-        sp.reference_model.x.fix(saa_solution)
-        results = opt.solve(sp.reference_model)
-        assert results.solver.status == \
-            SolverStatus.ok
-        assert results.solver.termination_condition == \
-            TerminationCondition.optimal
-        saa_objectives.append(sp.reference_model.obj())
+    # evaluate the solution from the SAA
+    sp.reference_model.x.fix(saa_solution)
+    status = cplex.solve(sp.reference_model)
+    assert status.solver.termination_condition == \
+        TerminationCondition.optimal
+    saa_objectives.append(sp.reference_model.obj())
 
 print("Average Test Objective for Deterministic Solution: %s"
       % (sum(ev_objectives)/float(test_N)))
