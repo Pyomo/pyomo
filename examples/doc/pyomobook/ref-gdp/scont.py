@@ -26,7 +26,7 @@ def D_rule(block, k):
 model.D = Disjunction(index, rule=D_rule)
 
 # Minimize the number of x variables that are nonzero
-model.o = Objective(expr=sum(model.x[k].indicator_var for k in index))
+model.o = Objective(expr=sum(model.d[k,1].indicator_var for k in index))
 
 # Satisfy a demand that is met by these variables
 model.c = Constraint(expr=sum(model.x[k] for k in index) >= 7)
