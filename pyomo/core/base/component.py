@@ -98,7 +98,9 @@ class Component(object):
         # Verify that ctype has been specified.
         #
         if self._type is None:
-            raise pyomo.util.DeveloperError("Must specify a class for the component type!")
+            raise pyomo.util.DeveloperError(
+                "Must specify a component type for class %s!"
+                % ( type(self).__name__, ) )
         #
         self._constructed   = False
         self._parent        = None    # Must be a weakref

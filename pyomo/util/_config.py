@@ -21,9 +21,9 @@ logger.setLevel( logging.WARNING )
 logger.addHandler( LogHandler(pyomo_base, verbosity=lambda: logger.isEnabledFor(logging.DEBUG)) )
 
 
-class DeveloperError(Exception):
+class DeveloperError(NotImplementedError):
     """
-    Exception class used to throw errors that result from
+    Exception class used to throw errors that result from Pyomo
     programming errors, rather than user modeling errors (e.g., a
     component not declaring a 'ctype').
     """
@@ -31,7 +31,9 @@ class DeveloperError(Exception):
     def __init__(self, val):
         self.parameter = val
 
-    def __str__(self):                                  #pragma:nocover
-        return repr(self.parameter)
+    def __str__(self):
+        return ( "Internal Pyomo implementation error:\n\t%s\n"
+                 "\tPlease report this to the Pyomo Developers."
+                 % ( repr(self.parameter), ) )
 
 
