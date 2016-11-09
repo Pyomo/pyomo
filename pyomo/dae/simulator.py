@@ -151,6 +151,7 @@ class Simulator:
         # Create a index template for the continuous set
         cstemplate = IndexTemplate(contset)
 
+        # Ensure that there is at least one derivative in the model
         derivs = m.component_map(DerivativeVar)
         if len(derivs) == 0:
             raise DAE_Error("Cannot simulate a model with no derivatives")
@@ -161,117 +162,140 @@ class Simulator:
 
         # Loop over constraints to find differential equations with separable
         # RHS. Must find a RHS for every derivative var otherwise ERROR. Build
-        # dictionary of DerivativeVar:RHS equation. In simple ODE case can
-        # populate the vmap directly from the derivative var since it
-        # shouldn't include any other algebraic variables
-        for con in m.component_objects(Constraint):
+        # dictionary of DerivativeVar:RHS equation. 
+
+        for con in m.component_objects(Constraint,active=True):
             
             # Skip the discretization equations if model is discretized
             if '_disc_eq' in con.name:
                 continue
             
-            # Check dimension of the Constraint. Current
-            # implementation only works for single dimensional
-            # Constraints. 
+            # Check dimension of the Constraint. Check if the
+            # Constraint is indexed by the continuous set and
+            # determine its order in the indexing sets
+            allkeys = []
             if con.dim() == 0:
                 continue
-            elif con.dim() > 1:
-                print(
-                    "WARNING: Any differential equations indexed by "
-                    "multiple sets will not be simulated.")
-                continue
+            elif con.dim() == 1:
+                # Check if the continuous set is the indexing set
+                if not con._index is contset :
+                    continue
+                else:
+                   csidx = 0 
+                   noncsidx = (None,)
+            else:
+                temp = con._implicit_subsets
+                csidx = -1
+                noncsidx = None
+                for s in temp:
+                    if s is contset:
+                        if csidx != -1:
+                            raise DAE_Error(
+                                "Cannot simulate the constraint %s because "\
+                                "it is indexed by duplicate ContinuousSets" \
+                                %(con.name)) 
+                        csidx = temp.index(s)
+                    elif noncsidx is None:
+                        noncsidx = s
+                    else:
+                        noncsidx = noncsidx.cross(s)
+                if csidx == -1:
+                    continue
 
-            # Check if the continuous set is the indexing set
-            if not con._index is contset :
-                continue
-            
             # Get the rule used to construct the constraint
             conrule = con.rule
 
-            # Call the rule with the IndexTemplate to create a
-            # templated expression
-            tempexp = conrule(m,cstemplate)
+            for i in noncsidx:
+                # Insert the index template and call the rule to
+                # create a templated expression              
+                if i is None:
+                    tempexp = conrule(m,cstemplate)
+                else:
+                    if not isinstance(i,tuple):
+                        i = (i,)
+                    tempidx = i[0:csidx]+(cstemplate,)+i[csidx:]
+                    tempexp = conrule(m,*tempidx)
 
-            # Check to make sure it's an _EqualityExpression
-            if not type(tempexp) is EXPR._EqualityExpression:
-                continue
+                # Check to make sure it's an _EqualityExpression
+                if not type(tempexp) is EXPR._EqualityExpression:
+                    continue
             
-            # Check to make sure it's a differential equation with
-            # separable RHS
-            args = None
-            # Case 1: m.dxdt[t] = RHS 
-            if type(tempexp._args[0]) is EXPR._GetItemExpression:
-                args = _check_getitemexpression(tempexp,0)
+                # Check to make sure it's a differential equation with
+                # separable RHS
+                args = None
+                # Case 1: m.dxdt[t] = RHS 
+                if type(tempexp._args[0]) is EXPR._GetItemExpression:
+                    args = _check_getitemexpression(tempexp,0)
             
-            # Case 2: RHS = m.dxdt[t]
-            if args is None:
-                if type(tempexp._args[1]) is EXPR._GetItemExpression:
-                    args = _check_getitemexpression(tempexp,1)
+                # Case 2: RHS = m.dxdt[t]
+                if args is None:
+                    if type(tempexp._args[1]) is EXPR._GetItemExpression:
+                        args = _check_getitemexpression(tempexp,1)
 
-            # Case 3: m.p*m.dxdt[t] = RHS
-            if args is None:
-                if type(tempexp._args[0]) is EXPR._ProductExpression:
-                    args = _check_productexpresstion(tempexp,0)
+                # Case 3: m.p*m.dxdt[t] = RHS
+                if args is None:
+                    if type(tempexp._args[0]) is EXPR._ProductExpression:
+                        args = _check_productexpresstion(tempexp,0)
 
-            # Case 4: RHS =  m.p*m.dxdt[t]
-            if args is None:
-                if type(tempexp._args[1]) is EXPR._ProductExpression:
-                    args = _check_productexpresstion(tempexp,1)
+                # Case 4: RHS =  m.p*m.dxdt[t]
+                if args is None:
+                    if type(tempexp._args[1]) is EXPR._ProductExpression:
+                        args = _check_productexpresstion(tempexp,1)
 
-            # Case 5: m.dxdt[t] + CONSTANT = RHS or CONSTANT + m.dxdt[t] = RHS
-            if args is None:
-                if type(tempexp._args[0]) is EXPR._SumExpression:
-                    args = _check_sumexpresstion(tempexp,0)
+                # Case 5: m.dxdt[t] + CONSTANT = RHS 
+                # or CONSTANT + m.dxdt[t] = RHS
+                if args is None:
+                    if type(tempexp._args[0]) is EXPR._SumExpression:
+                        args = _check_sumexpresstion(tempexp,0)
 
-            # Case 6: RHS = m.dxdt[t] + CONSTANT
-            if args is None:
-                if type(tempexp._args[1]) is EXPR._SumExpression:
-                    args = _check_sumexpresstion(tempexp,1)
+                # Case 6: RHS = m.dxdt[t] + CONSTANT
+                if args is None:
+                    if type(tempexp._args[1]) is EXPR._SumExpression:
+                        args = _check_sumexpresstion(tempexp,1)
 
             
-            # Case 7: RHS = m.p*m.dxdt[t] + CONSTANT
-            # This case will be caught by Case 6 if p is immutable. If
-            # p is mutable then this case will not be detected as a
-            # separable differential equation
+                # Case 7: RHS = m.p*m.dxdt[t] + CONSTANT
+                # This case will be caught by Case 6 if p is immutable. If
+                # p is mutable then this case will not be detected as a
+                # separable differential equation
 
-            # At this point if args is not None then args[0] contains
-            # the _GetItemExpression for the DerivativeVar and args[1]
-            # contains the RHS expression
-            if args is None:
-                # Constraint is not a separable differential equation
-                continue
-                
+                # At this point if args is not None then args[0] contains
+                # the _GetItemExpression for the DerivativeVar and args[1]
+                # contains the RHS expression
+                if args is None:
+                    # Constraint is not a separable differential equation
+                    continue
             
-            # Add the differential equation to rhsdict and derivlist
-            dv = args[0]
-            RHS = args[1]
-            _name = dv._base.name
-            if _name in rhsdict:
-                raise DAE_Error(
-                    "Found multiple RHS expressions for the "
-                    "DerivativeVar %s" %(_name))
+                # Add the differential equation to rhsdict and derivlist
+                dv = args[0]
+                RHS = args[1]
+                dvkey = _GetItemIndexer(dv)
+                if dvkey in rhsdict.keys():
+                    raise DAE_Error(
+                        "Found multiple RHS expressions for the "
+                        "DerivativeVar %s" %(_name))
             
-            derivlist.append(_name)
-            rhsdict[_name] = substitute_template_expression(
-                RHS, substitute_getitem_with_param, templatemap)
+                derivlist.append(dvkey)
+                rhsdict[dvkey] = substitute_template_expression(
+                    RHS, substitute_getitem_with_param, templatemap)
         
         # Check to see if we found a RHS for every DerivativeVar in
         # the model
+        # FIXME: Not sure how to rework this for multi-index case
         allderivs = derivs.keys()
-        if set(allderivs) != set(derivlist):
-            missing = list(set(allderivs)-set(derivlist))
-            print("WARNING: Could not find a RHS expression for the "
-            "following DerivativeVar components "+str(missing))
+        # if set(allderivs) != set(derivlist):
+        #     missing = list(set(allderivs)-set(derivlist))
+        #     print("WARNING: Could not find a RHS expression for the "
+        #     "following DerivativeVar components "+str(missing))
 
         # Create ordered list of differential variables corresponding
         # to the list of derivatives.
         diffvars=[]
-        diffvarids=[]
         for deriv in derivlist:
-            deriv = m.component(deriv)
-            diffvars.append(deriv.get_state_var().name)
-            # List with keys for the substituter map
-            diffvarids.append(_GetItemIndexer(deriv.get_state_var()[cstemplate])) 
+            sv = deriv._base.get_state_var()
+            diffvars.append(_GetItemIndexer(sv[deriv._args]))
+            # # List with keys for the substituter map
+            # diffvarids.append(_GetItemIndexer(deriv.get_state_var()[cstemplate])) 
 
         # Make sure there are no DerivativeVars or algebraic variables
         # in the RHS expressions. The template map should only contain
@@ -281,7 +305,7 @@ class Simulator:
                 raise DAE_Error(
                     "Cannot simulate a differential equation with "
                     "multiple DerivativeVars")
-            if item._base.name not in diffvars:
+            if item not in diffvars:
                 # This only catches algebraic variables indexed by
                 # time. TODO: how to catch variables not indexed by
                 # time or warn the user that values must be set for
@@ -294,7 +318,7 @@ class Simulator:
         def _rhsfun(x,t):
             residual = []
             cstemplate.set_value(t)
-            for idx,v in enumerate(diffvarids):
+            for idx,v in enumerate(diffvars):
                 if v in templatemap:
                     templatemap[v].set_value(x[idx])
 
@@ -306,7 +330,7 @@ class Simulator:
         self._contset = contset
         self._cstemplate = cstemplate
         self._diffvars = diffvars
-        self._diffvarids = diffvarids
+        # self._diffvarids = diffvarids 
         self._derivlist = derivlist
         self._templatemap = templatemap
         self._rhsdict = rhsdict
@@ -374,10 +398,14 @@ class Simulator:
                     %(len(self._diffvars)))
         else:
             initcon = []
-            for nme in self._diffvars:
-                v = self._model.component(nme)
+            for v in self._diffvars:
+                for idx,i in enumerate(v._args):
+                    if type(i) is IndexTemplate:
+                        break
+                initpoint = self._contset.first()
+                vidx = tuple(v._args[0:idx])+(initpoint,)+tuple(v._args[idx+1:])
                 # This line will raise an error if no value was set
-                initcon.append(value(v[self._contset.first()]))
+                initcon.append(value(v._base[vidx]))
 
         try:
             from scipy.integrate import odeint
@@ -405,11 +433,14 @@ class Simulator:
 
         tvals = list(self._contset)
         
-        for idx,nme in enumerate(self._diffvars):
-            v = self._model.component(nme)
+        for idx,v in enumerate(self._diffvars):
+            for idx2,i in enumerate(v._args):
+                    if type(i) is IndexTemplate:
+                        break
             valinit = np.interp(tvals, self._tsim,
                                 self._simsolution[:,idx])
             for i,t in enumerate(tvals):
-                v[t] = valinit[i]
+                vidx = tuple(v._args[0:idx2])+(t,)+tuple(v._args[idx2+1:])
+                v._base[vidx] = valinit[i]
 
 register_component(Simulator, "Used to simulate a system of ODEs")
