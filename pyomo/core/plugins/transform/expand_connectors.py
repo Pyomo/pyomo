@@ -10,30 +10,27 @@
 import logging
 logger = logging.getLogger('pyomo.core')
 
-from six import iteritems, iterkeys, itervalues
+from six import next, iteritems, iterkeys, itervalues
 
 from pyomo.core.base.plugin import alias
-from pyomo.core.base import Transformation, Connector, Constraint, ConstraintList, VarList, TraversalStrategy
-from pyomo.core.base.connector import _ConnectorData
-from pyomo.core.base.expr import clone_expression
+from pyomo.core.base import Transformation, Connector, Constraint, \
+    ConstraintList, Var, VarList, TraversalStrategy
+from pyomo.core.base.connector import _ConnectorData, SimpleConnector
+from pyomo.core.base import expr
 
 class ExpandConnectors(Transformation):
     alias('core.expand_connectors', 
           doc="Expand all connectors in the model to simple constraints")
 
-    def __init__(self):
-        super(ExpandConnectors, self).__init__()
-
     def _apply_to(self, instance, **kwds):
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
             logger.debug("Calling ConnectorExpander")
-                
-        noConnectors = True
-        for b in instance.block_data_objects(active=True):
-            if b.component_map(Connector):
-                noConnectors = False
-                break
-        if noConnectors:
+
+        connectorsFound = False
+        for c in instance.component_data_objects(Connector):
+            connectorsFound = True
+            break
+        if not connectorsFound:
             return
 
         if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
@@ -43,190 +40,189 @@ class ExpandConnectors(Transformation):
         # At this point, there are connectors in the model, so we must
         # look for constraints that involve connectors and expand them.
         #
-        #options = kwds['options']
-        #model = kwds['model']
+        connector_types = set([SimpleConnector, _ConnectorData])
+        constraint_list = []
+        connector_list = []
+        matched_connectors = {}
+        found = dict()
+        for constraint in instance.component_data_objects(Constraint):
+            for c in expr.identify_variables(
+                    constraint.body, include_potentially_variable=True):
+                if c.__class__ in connector_types:
+                    found[id(c)] = c
+            if not found:
+                continue
 
-        # In general, blocks should be relatively self-contained, so we
-        # should build the connectors from the "bottom up":
-        blockList = list(instance.block_data_objects(
-            active=True, 
-            descent_order=TraversalStrategy.PostfixDepthFirstSearch ))
+            # Note that it is important to copy the set of found
+            # connectors, since the matching routine below will
+            # manipulate sets in place.
+            found_this_constraint = dict(found)
+            constraint_list.append( (constraint, found_this_constraint) )
 
-        # Expand each constraint involving a connector
-        for block in blockList:
-            if __debug__ and logger.isEnabledFor(logging.DEBUG): #pragma:nocover
-                logger.debug("   block: " + block.cname())
+            # Find all the connectors that are used in the constraint,
+            # so we know which connectors to validate against each
+            # other.  Note that the validation must be transitive (that
+            # is, if con1 has a & b and con2 has b & c, then a,b, and c
+            # must all validate against each other.
+            for cId, c in iteritems(found_this_constraint):
+                if cId in matched_connectors:
+                    oldSet = matched_connectors[cId]
+                    found.update( oldSet )
+                    for _cId in oldSet:
+                        matched_connectors[_cId] = found
+                else:
+                    connector_list.append(c)
+                matched_connectors[cId] = found
 
-            CCC = []
-            for constraint in block.component_objects(
-                    (Constraint, ConstraintList)):
-                name = constraint.name
-                cList = []
-                CCC.append((name+'.expanded', cList))
-                for idx, c in iteritems(constraint):
-                    if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
-                        logger.debug("   (looking at constraint %s[%s])", name, idx)
-                    connectors = []
-                    self._gather_connectors(c.body, connectors)
-                    if len(connectors) == 0:
-                        continue
-                    if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
-                        logger.debug("   (found connectors in constraint)")
-                    
-                    # Validate that all connectors match
-                    errors, ref, skip = self._validate_connectors(connectors)
-                    if errors:
-                        logger.error(
-                            ( "Connector mismatch: errors detected when "
-                              "constructing constraint %s\n    " %
-                              (name + (idx and '[%s]' % idx or '')) ) +
-                            '\n    '.join(reversed(errors)) )
-                        raise ValueError(
-                            "Connector mismatch in constraint %s" % \
-                            name + (idx and '[%s]' % idx or ''))
-                    
-                    if __debug__ and logger.isEnabledFor(logging.DEBUG):   #pragma:nocover
-                        logger.debug("   (connectors valid)")
+            # Reset found back to empty (this is more efficient as the
+            # bulk of the constraints in the model will not have
+            # connectors - so if we did this at the top of the loop, we
+            # would spend a lot of time clearing empty sets
+            found = {}
 
-                    # Fill in any empty connectors
-                    for conn in connectors:
-                        if conn.vars:
-                            continue
-                        for var in ref.vars:
-                            if var in skip:
-                                continue
-                            v = Var()
-                            block.add_component(conn.cname() + '.auto.' + var, v)
-                            conn.vars[var] = v
-                            v.construct()
-                    
-                    # OK - expand this constraint
-                    self._expand_constraint(block, name, idx, c, ref, skip, cList, connectors)
-                    # Now deactivate the original constraint
-                    c.deactivate()
-            for name, exprs in CCC:
-                if not exprs:
-                    continue
-                cList = ConstraintList()
-                block.add_component( name, cList )
-                #cList.construct()
-                for expr in exprs:
-                    cList.add(expr)
-                
+        # Validate all connector sets and expand the empty ones
+        known_conn_sets = {}
+        for connector in connector_list:
+            conn_set = matched_connectors[id(connector)]
+            if id(conn_set) in known_conn_sets:
+                continue
+            known_conn_sets[id(conn_set)] \
+                = self._validate_and_expand_connector_set(conn_set)
+
+        # Expand each constraint
+        for constraint, conn_set in constraint_list:
+            cList = ConstraintList()
+            constraint.parent_block().add_component(
+                '%s.expanded' % ( constraint.local_name, ), cList )
+            connId = next(iterkeys(conn_set))
+            ref = known_conn_sets[id(matched_connectors[connId])]
+            for k,v in sorted(iteritems(ref)):
+                if v[0].is_indexed():
+                    _iter = v[0]
+                else:
+                    _iter = (v[0],)
+                for idx in _iter:
+                    substitution = {}
+                    for c in itervalues(conn_set):
+                        if v[0].is_indexed():
+                            new_v = c.vars[k][idx]
+                        else:
+                            new_v = c.vars[k]
+                        if isinstance(new_v, VarList):
+                            substitution[id(c)] = new_v.add()
+                        else:
+                            substitution[id(c)] = new_v
+                    cList.add((
+                        constraint.lower,
+                        expr.clone_expression( constraint.body, substitution ),
+                        constraint.upper ))
+            constraint.deactivate()
 
         # Now, go back and implement VarList aggregators
-        for block in blockList:
-            for conn in itervalues(block.component_map(Connector)):
-                for var, aggregator in iteritems(conn.aggregators):
-                    c = Constraint(expr=aggregator(block, var))
-                    block.add_component(
-                        conn.cname() + '.' + var.cname() + '.aggregate', c)
-                    c.construct()
+        for conn in connector_list:
+            block = conn.parent_block()
+            for var, aggregator in iteritems(conn.aggregators):
+                c = Constraint(expr=aggregator(block, conn.vars[var]))
+                block.add_component(
+                    '%s.%s.aggregate' % (conn.local_name, var), c )
 
-    def _gather_connectors(self, expr, connectors):
-        if expr.is_expression():
-            if expr.__class__ is _ProductExpression:
-                for e in expr._numerator:
-                    self._gather_connectors(e, connectors)
-                for e in expr._denominator:
-                    self._gather_connectors(e, connectors)
-            else:
-                for e in expr._args:
-                    self._gather_connectors(e, connectors)
-        elif isinstance(expr, _ConnectorData):
-            connectors.append(expr)
 
-    def _validate_connectors(self, connectors):
-        errors = []
-        ref = None
-        skip = set()
-        for idx in xrange(len(connectors)):
-            if connectors[idx].vars.keys():
-                ref = connectors.pop(idx)
-                break
-        if ref is None:
-            errors.append(
+    def _validate_and_expand_connector_set(self, connectors):
+        ref = {}
+        # First, go through the connectors and get the superset of all fields
+        for c in itervalues(connectors):
+            for k,v in iteritems(c.vars):
+                if k in ref:
+                    # We have already seen this var
+                    continue
+                if v is None:
+                    # This is a skipped var
+                    continue
+                # OK: New var, so add it tot he reference list
+                _len = (
+                    #-1 if v is None else
+                    1 if v.is_expression() or not v.is_indexed() else
+                    len(v) )
+                ref[k] = ( v, _len, c )
+
+        if not ref:
+            logger.warning(
                 "Cannot identify a reference connector: no connectors "
-                "have assigned variables" )
-            return errors, ref, skip
+                "in the connector set have assigned variables:\n\t(%s)"
+                % ( ', '.join(sorted(c.name for c in connectors)), ))
+            return ref
 
-        a = set(ref.vars.keys())
-        for key, val in iteritems(ref.vars):
-            if val is None:
-                skip.add(key)
-        for tmp in connectors:
-            b = set(tmp.vars.keys())
-            if not b:
+        # Now make sure that connectors match
+        empty = []
+        for c in itervalues(connectors):
+            if not c.vars:
+                # This is an empty connector and should be defined with
+                # "auto" vars
+                empty.append(c)
                 continue
-            for key, val in iteritems(tmp.vars):
-                if val is None:
-                    skip.add(key)
-            for var in a - b:
-                # TODO: add a fq_name so we can easily get
-                # the full model.block.connector name
-                errors.append(
-                    "Connector '%s' missing variable '%s' "
-                    "(appearing in reference connector '%s')" %
-                    ( tmp.cname(), var, ref.cname() ) )
-            for var in b - a:
-                errors.append(
-                    "Reference connector '%s' missing variable '%s' "
-                    "(appearing in connector '%s')" %
-                    ( ref.cname(), var, tmp.cname() ) )
-        return errors, ref, skip
 
-    def _expand_constraint(self, block, name, idx, constraint, ref, skip, cList, connectors):
-        def _substitute_var(arg, var):
-            if arg.is_expression():
-                if arg.__class__ is _ProductExpression:
-                    _substitute_vars(arg._numerator, var)
-                    _substitute_vars(arg._denominator, var)
+            for k,v in iteritems(ref):
+                if k not in c.vars:
+                    raise ValueError(
+                        "Connector mismatch: Connector '%s' missing variable "
+                        "'%s' (appearing in reference connector '%s')" %
+                        ( c.name, k, v[2].name ) )
+                _v = c.vars[k]
+                _len = (
+                    -1 if v is None else
+                    1 if _v.is_expression() or not _v.is_indexed() else
+                    len(_v) )
+                if _len >= 0 and _len != v[1]:
+                    raise ValueError(
+                        "Connector mismatch: Connector variable '%s' index "
+                        "mismatch (%s elements in reference connector '%s', "
+                        "but %s elements in connector '%s')" %
+                        ( k, v[1], v[2].name, _len, c.name ))
+                if v[0].is_indexed() ^ _v.is_indexed():
+                    raise ValueError(
+                        "Connector mismatch: Connector variable '%s' mixing "
+                        "indexed and non-indexed targets on connectors '%s' "
+                        "and '%s'" %
+                        ( k, v[2].name, c.name ))
+                if v[0].is_indexed() and len(v[0].index_set() ^ _v.index_set()):
+                    raise ValueError(
+                        "Connector mismatch: Connector variable '%s' has "
+                        "mismatched indices on connectors '%s' and '%s'" %
+                        ( k, v[2].name, c.name ))
+
+
+        # as we are adding things to the model, sort by key so that
+        # the order things are added is deterministic
+        sorted_refs = sorted(iteritems(ref))
+        if len(empty) > 1:
+            # This is expensive (names aren't cheap), but does result in
+            # a deterministic ordering
+            empty.sort(key=lambda x: x.name)
+
+        # Fill in any empty connectors
+        for c in empty:
+            block = c.parent_block()
+            for k, v in sorted_refs:
+                if v[0].is_indexed():
+                    idx = ( v[0].index_set(), )
                 else:
-                    _substitute_vars(arg._args, var)
-                return arg
-            elif isinstance(arg, _ConnectorData):
-                v = arg.vars[var]
-                if v.is_expression():
-                    v = v.clone()
-                return _substitute_var(v, var) 
-            elif isinstance(arg, VarList):
-                return arg.add()
-            return arg
+                    idx = ()
+                var_args = {}
+                try:
+                    var_args['domain'] = v[0].domain
+                except AttributeError:
+                    pass
+                try:
+                    var_args['bounds'] = v[0].bounds
+                except AttributeError:
+                    pass
+                new_var = Var( *idx, **var_args )
+                block.add_component('%s.auto.%s' % ( c.local_name, k ), new_var)
+                if v[0].is_indexed():
+                    for idx in v[0]:
+                        new_var[idx].domain = v[0][idx].domain
+                        new_var[idx].setlb( v[0][idx].lb )
+                        new_var[idx].setub( v[0][idx].ub )
+                c.vars[k] = new_var
 
-        def _substitute_vars(args, var):
-            for idx, arg in enumerate(args):
-                if arg.is_expression():
-                    if arg.__class__ is _ProductExpression:
-                        _substitute_vars(arg._numerator, var)
-                        _substitute_vars(arg._denominator, var)
-                    else:
-                        _substitute_vars(arg._args, var)
-                elif isinstance(arg, _ConnectorData):
-                    v = arg.vars[var]
-                    if v.is_expression():
-                        v = v.clone()
-                    args[idx] = _substitute_var(v, var) 
-                elif isinstance(arg, VarList):
-                    args[idx] = arg.add()
-
-        for var in sorted(ref.vars.iterkeys()):
-            if var in skip:
-                continue
-            #vMap = dict((id(c),var) for c in connectors)
-            #if constraint.equality:
-            #    cList.append( ( clone_expression(constraint.body, substitute=vMap),
-            #                    constraint.upper ) )
-            #else:
-            #    cList.append( ( constraint.lower,
-            #                    clone_expression(constraint.body, substitute=vMap),
-            #                    constraint.upper ) )
-            #return
-
-            if constraint.body.is_expression():
-                c = _substitute_var(constraint.body.clone(), var)
-            else:
-                c = _substitute_var(constraint.body, var)
-            if constraint.equality:
-                cList.append( ( c, constraint.upper ) )
-            else:
-                cList.append( ( constraint.lower, c, constraint.upper ) )
+        return ref

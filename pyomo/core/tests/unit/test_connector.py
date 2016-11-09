@@ -256,7 +256,7 @@ class TestConnector(unittest.TestCase):
         : pressure :  3.14
 """)
 
-    def test_single_scalar_expand(self):
+    def test_expand_single_scalar(self):
         m = ConcreteModel()
         m.x = Var()
         m.CON = Connector()
@@ -288,12 +288,12 @@ class TestConnector(unittest.TestCase):
 """)
 
 
-    def test_multiple_scalar_expand(self):
+    def test_expand_scalar(self):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
         m.CON = Connector()
-        m.CON.add(m.x, "x")
+        m.CON.add(m.x)
         m.CON.add(m.y)
 
         # 2 constraints: one has a connector, the other doesn't.  The
@@ -320,6 +320,325 @@ class TestConnector(unittest.TestCase):
     Key : Lower : Body : Upper : Active
       1 :   1.0 :    x :   1.0 :   True
       2 :   1.0 :    y :   1.0 :   True
+""")
+
+
+    def test_expand_expression(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.CON = Connector()
+        m.CON.add(-m.x)
+        m.CON.add(1 + m.y)
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == 1)
+        m.nocon = Constraint(expr = m.x == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+    Key : Lower : Body   : Upper : Active
+      1 :   1.0 : -1 * x :   1.0 :   True
+      2 :   1.0 :  1 + y :   1.0 :   True
+""")
+
+
+    def test_expand_indexed(self):
+        m = ConcreteModel()
+        m.x = Var([1,2])
+        m.y = Var()
+        m.CON = Connector()
+        m.CON.add(m.x)
+        m.CON.add(m.y)
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == 1)
+        m.nocon = Constraint(expr = m.x[1] == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+    Key : Lower : Body : Upper : Active
+      1 :   1.0 : x[1] :   1.0 :   True
+      2 :   1.0 : x[2] :   1.0 :   True
+      3 :   1.0 :    y :   1.0 :   True
+""")
+
+
+    def test_expand_empty_scalar(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(1,3))
+        m.y = Var(domain=Binary)
+        m.CON = Connector()
+        m.CON.add(m.x)
+        m.CON.add(m.y)
+        m.ECON = Connector()
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == m.ECON)
+        m.nocon = Constraint(expr = m.x == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+
+        self.assertIs( m.x.domain, m.component('ECON.auto.x').domain )
+        self.assertIs( m.y.domain, m.component('ECON.auto.y').domain )
+        self.assertEqual( m.x.bounds, m.component('ECON.auto.x').bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON.auto.y').bounds )
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+    Key : Lower : Body            : Upper : Active
+      1 :   0.0 : x - ECON.auto.x :   0.0 :   True
+      2 :   0.0 : y - ECON.auto.y :   0.0 :   True
+""")
+
+
+    def test_expand_empty_expression(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.CON = Connector()
+        m.CON.add(-m.x, 'x')
+        m.CON.add(1 + m.y, 'y')
+        m.ECON = Connector()
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == m.ECON)
+        m.nocon = Constraint(expr = m.x == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 4)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+    Key : Lower : Body                 : Upper : Active
+      1 :   0.0 : -1 * x - ECON.auto.x :   0.0 :   True
+      2 :   0.0 :  1 + y - ECON.auto.y :   0.0 :   True
+""")
+
+
+    def test_expand_empty_indexed(self):
+        m = ConcreteModel()
+        m.x = Var([1,2], domain=Binary)
+        m.y = Var(bounds=(1,3))
+        m.CON = Connector()
+        m.CON.add(m.x)
+        m.CON.add(m.y)
+        m.ECON = Connector()
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == m.ECON)
+        m.nocon = Constraint(expr = m.x[1] == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+
+        self.assertIs( m.x[1].domain, m.component('ECON.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('ECON.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('ECON.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('ECON.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('ECON.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON.auto.y').bounds )
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+    Key : Lower : Body                  : Upper : Active
+      1 :   0.0 : x[1] - ECON.auto.x[1] :   0.0 :   True
+      2 :   0.0 : x[2] - ECON.auto.x[2] :   0.0 :   True
+      3 :   0.0 :       y - ECON.auto.y :   0.0 :   True
+""")
+
+    def test_expand_multiple_empty_indexed(self):
+        m = ConcreteModel()
+        m.x = Var([1,2], domain=Binary)
+        m.y = Var(bounds=(1,3))
+        m.CON = Connector()
+        m.CON.add(m.x)
+        m.CON.add(m.y)
+        m.ECON2 = Connector()
+        m.ECON1 = Connector()
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == m.ECON1)
+        m.d = Constraint(expr= m.ECON2 == m.ECON1)
+        m.nocon = Constraint(expr = m.x[1] == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+        self.assertFalse(m.d.active)
+        self.assertTrue(m.component('d.expanded').active)
+
+        m.pprint()
+
+        self.assertIs( m.x[1].domain, m.component('ECON1.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('ECON1.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('ECON1.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('ECON1.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('ECON1.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON1.auto.y').bounds )
+
+        self.assertIs( m.x[1].domain, m.component('ECON2.auto.x')[1].domain )
+        self.assertIs( m.x[2].domain, m.component('ECON2.auto.x')[2].domain )
+        self.assertIs( m.y.domain, m.component('ECON2.auto.y').domain )
+        self.assertEqual( m.x[1].bounds, m.component('ECON2.auto.x')[1].bounds )
+        self.assertEqual( m.x[2].bounds, m.component('ECON2.auto.x')[2].bounds )
+        self.assertEqual( m.y.bounds, m.component('ECON2.auto.y').bounds )
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+    Key : Lower : Body                   : Upper : Active
+      1 :   0.0 : x[1] - ECON1.auto.x[1] :   0.0 :   True
+      2 :   0.0 : x[2] - ECON1.auto.x[2] :   0.0 :   True
+      3 :   0.0 :       y - ECON1.auto.y :   0.0 :   True
+""")
+
+        os = StringIO()
+        m.component('d.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""d.expanded : Size=3, Index=d.expanded_index, Active=True
+    Key : Lower : Body                              : Upper : Active
+      1 :   0.0 : ECON2.auto.x[1] - ECON1.auto.x[1] :   0.0 :   True
+      2 :   0.0 : ECON2.auto.x[2] - ECON1.auto.x[2] :   0.0 :   True
+      3 :   0.0 :       ECON2.auto.y - ECON1.auto.y :   0.0 :   True
+""")
+
+
+    def test_expand_multiple_indexed(self):
+        m = ConcreteModel()
+        m.x = Var([1,2], domain=Binary)
+        m.y = Var(bounds=(1,3))
+        m.CON = Connector()
+        m.CON.add(m.x)
+        m.CON.add(m.y)
+        m.a1 = Var([1,2])
+        m.a2 = Var([1,2])
+        m.b1 = Var()
+        m.b2 = Var()
+        m.ECON2 = Connector()
+        m.ECON2.add(m.a1,'x')
+        m.ECON2.add(m.b1,'y')
+        m.ECON1 = Connector()
+        m.ECON1.add(m.a2,'x')
+        m.ECON1.add(m.b2,'y')
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == m.ECON1)
+        m.d = Constraint(expr= m.ECON2 == m.ECON1)
+        m.nocon = Constraint(expr = m.x[1] == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+        self.assertFalse(m.d.active)
+        self.assertTrue(m.component('d.expanded').active)
+
+        m.pprint()
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+    Key : Lower : Body         : Upper : Active
+      1 :   0.0 : x[1] - a2[1] :   0.0 :   True
+      2 :   0.0 : x[2] - a2[2] :   0.0 :   True
+      3 :   0.0 :       y - b2 :   0.0 :   True
+""")
+
+        os = StringIO()
+        m.component('d.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""d.expanded : Size=3, Index=d.expanded_index, Active=True
+    Key : Lower : Body          : Upper : Active
+      1 :   0.0 : a1[1] - a2[1] :   0.0 :   True
+      2 :   0.0 : a1[2] - a2[2] :   0.0 :   True
+      3 :   0.0 :       b1 - b2 :   0.0 :   True
 """)
 
 

@@ -98,7 +98,7 @@ class _ConnectorData(ComponentData, NumericValue):
                              "'%s' into Connector '%s'" % (name, self.name))
         self.vars[name] = var
         if aggregate is not None:
-            self.aggregators[var] = aggregate
+            self.aggregators[name] = aggregate
 
 
     def _iter_vars(self):
@@ -197,8 +197,12 @@ class Connector(IndexedComponent):
         """Print component information."""
         def _line_generator(k,v):
             for _k, _v in sorted(iteritems(v.vars)):
-                _len = 1 if _v.is_expression() or not _v.is_indexed() \
-                       else len(_v)
+                if _v is None:
+                    _len = '*'
+                elif _v.is_expression() or not _v.is_indexed():
+                    _len = 1
+                else:
+                    _len = len(_v)
                 yield _k, _len, str(_v)
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
@@ -226,7 +230,9 @@ class Connector(IndexedComponent):
         ostream.write("\n")
         def _line_generator(k,v):
             for _k, _v in sorted(iteritems(v.vars)):
-                if _v.is_expression() or not _v.is_indexed():
+                if _v is None:
+                    _val = '*'
+                elif _v.is_expression() or not _v.is_indexed():
                     _val = str(value( _v ))
                 else:
                     _val = "{%s}" % (', '.join('%r: %r' % (
