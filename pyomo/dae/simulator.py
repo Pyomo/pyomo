@@ -273,7 +273,7 @@ class Simulator:
                 if dvkey in rhsdict.keys():
                     raise DAE_Error(
                         "Found multiple RHS expressions for the "
-                        "DerivativeVar %s" %(_name))
+                        "DerivativeVar %s" %(str(dvkey)))
             
                 derivlist.append(dvkey)
                 rhsdict[dvkey] = substitute_template_expression(
