@@ -74,7 +74,10 @@ or
     return msg
 
 
-def identify_variables(expr, include_fixed=True, allow_duplicates=False):
+def identify_variables( expr,
+                        include_fixed=True,
+                        allow_duplicates=False,
+                        include_potentially_variable=False ):
     if not allow_duplicates:
         _seen = set()
     _stack = [ ([expr], 0, 1) ]
@@ -97,13 +100,20 @@ def identify_variables(expr, include_fixed=True, allow_duplicates=False):
                 _idx = 0
                 _len = len(_argList)
             elif isinstance(_sub, _VarData):
-                if include_fixed or not _sub.is_fixed():
+                if ( include_fixed
+                     or not _sub.is_fixed()
+                     or include_potentially_variable ):
                     if not allow_duplicates:
                         if id(_sub) in _seen:
                             continue
                         _seen.add(id(_sub))
                     yield _sub
-
+            elif include_potentially_variable and _sub._potentially_variable():
+                if not allow_duplicates:
+                    if id(_sub) in _seen:
+                        continue
+                    _seen.add(id(_sub))
+                yield _sub
 
 class _ExpressionBase(NumericValue):
     """An object that defines a mathematical expression that can be evaluated"""
