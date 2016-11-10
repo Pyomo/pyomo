@@ -150,8 +150,8 @@ class _ExpressionBase(NumericValue):
             try:
                 arg.to_string( ostream=ostream, precedence=self._precedence(),
                                verbose=verbose )
-            except:
-                ostream.write(str(arg))
+            except AttributeError:
+                ostream.write("(%s)" % (arg,))
         ostream.write(" )")
 
     def clone(self):
@@ -429,8 +429,11 @@ class _PowExpression(_IntrinsicFunctionExpression):
                 first = False
             else:
                 ostream.write("**")
-            arg.to_string( ostream=ostream, verbose=verbose,
-                           precedence=self._precedence() )
+            try:
+                arg.to_string( ostream=ostream, verbose=verbose,
+                               precedence=self._precedence() )
+            except AttributeError:
+                ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
             ostream.write(" )")
 
@@ -523,15 +526,21 @@ class _InequalityExpression(_LinearExpression):
             ostream.write("( ")
         for i, strict in enumerate(self._strict):
             arg = self._args[i]
-            arg.to_string( ostream=ostream, verbose=verbose,
-                           precedence=_my_precedence )
+            try:
+                arg.to_string( ostream=ostream, verbose=verbose,
+                               precedence=_my_precedence )
+            except AttributeError:
+                ostream.write("(%s)" % (arg,))
             if strict:
                 ostream.write("  <  ")
             else:
                 ostream.write("  <=  ")
         arg = self._args[-1]
-        arg.to_string( ostream=ostream, verbose=verbose,
-                       precedence=_my_precedence )
+        try:
+            arg.to_string( ostream=ostream, verbose=verbose,
+                           precedence=_my_precedence )
+        except AttributeError:
+            ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
             ostream.write(" )")
 
@@ -582,8 +591,11 @@ class _EqualityExpression(_LinearExpression):
                 first = False
             else:
                 ostream.write("  ==  ")
-            arg.to_string( ostream=ostream, verbose=verbose,
-                           precedence=_my_precedence)
+            try:
+                arg.to_string( ostream=ostream, verbose=verbose,
+                               precedence=_my_precedence)
+            except AttributeError:
+                ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
             ostream.write(" )")
 
@@ -685,8 +697,11 @@ class _ProductExpression(_ExpressionBase):
                 ostream.write(" , ")
             else:
                 ostream.write(" * ")
-            arg.to_string( ostream=ostream, verbose=verbose,
-                           precedence=_my_precedence )
+            try:
+                arg.to_string( ostream=ostream, verbose=verbose,
+                               precedence=_my_precedence )
+            except AttributeError:
+                ostream.write("(%s)" % (arg,))
         if first:
             ostream.write('1')
         if len(self._denominator) > 0:
@@ -704,8 +719,11 @@ class _ProductExpression(_ExpressionBase):
                     ostream.write(" , ")
                 else:
                     ostream.write(" * ")
-                arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_my_precedence )
+                try:
+                    arg.to_string( ostream=ostream, verbose=verbose,
+                                   precedence=_my_precedence )
+                except AttributeError:
+                    ostream.write("(%s)" % (arg,))
             if len(self._denominator) > 1 and not _verbose:
                 ostream.write(" )")
         if _verbose:
@@ -821,8 +839,11 @@ class _SumExpression(_LinearExpression):
             else:
                 ostream.write(str(abs(self._coef[i]))+"*")
                 _sub_precedence = _ProductExpression.PRECEDENCE
-            arg.to_string( ostream=ostream, verbose=verbose,
-                           precedence=_sub_precedence )
+            try:
+                arg.to_string( ostream=ostream, verbose=verbose,
+                               precedence=_sub_precedence )
+            except AttributeError:
+                ostream.write("(%s)" % arg)
             first=False
         if _verbose or ( precedence and _my_precedence > precedence ):
             ostream.write(" )")
