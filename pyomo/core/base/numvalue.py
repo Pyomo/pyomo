@@ -390,7 +390,7 @@ class NumericValue(object):
     def _polynomial_degree(self, result):
         """Private method that computes the polynomial degree of this
         expression"""
-        return 0
+        return None
 
     def __float__(self):
         """Coerce the value to a floating point"""
@@ -618,6 +618,9 @@ class NumericConstant(NumericValue):
 
     def _potentially_variable(self):
         return False
+
+    def _polynomial_degree(self, result):
+        return 0
 
     def __str__(self):
         return str(self.value)
