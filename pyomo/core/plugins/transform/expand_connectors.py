@@ -136,7 +136,7 @@ class ExpandConnectors(Transformation):
                     # We have already seen this var
                     continue
                 if v is None:
-                    # This is a skipped var
+                    # This is an implicit var
                     continue
                 # OK: New var, so add it tot he reference list
                 _len = (
@@ -153,12 +153,13 @@ class ExpandConnectors(Transformation):
             return ref
 
         # Now make sure that connectors match
-        empty = []
+        empty_or_partial = []
         for c in itervalues(connectors):
+            c_is_partial = False
             if not c.vars:
                 # This is an empty connector and should be defined with
                 # "auto" vars
-                empty.append(c)
+                empty_or_partial.append(c)
                 continue
 
             for k,v in iteritems(ref):
@@ -168,6 +169,11 @@ class ExpandConnectors(Transformation):
                         "'%s' (appearing in reference connector '%s')" %
                         ( c.name, k, v[2].name ) )
                 _v = c.vars[k]
+                if _v is None:
+                    if not c_is_partial:
+                        empty_or_partial.append(c)
+                        c_is_partial = True
+                    continue
                 _len = (
                     -1 if v is None else
                     1 if _v.is_expression() or not _v.is_indexed() else
@@ -194,15 +200,18 @@ class ExpandConnectors(Transformation):
         # as we are adding things to the model, sort by key so that
         # the order things are added is deterministic
         sorted_refs = sorted(iteritems(ref))
-        if len(empty) > 1:
+        if len(empty_or_partial) > 1:
             # This is expensive (names aren't cheap), but does result in
             # a deterministic ordering
-            empty.sort(key=lambda x: x.name)
+            empty_or_partial.sort(key=lambda x: x.name)
 
         # Fill in any empty connectors
-        for c in empty:
+        for c in empty_or_partial:
             block = c.parent_block()
             for k, v in sorted_refs:
+                if k in c.vars and c.vars[k] is not None:
+                    continue
+
                 if v[0].is_indexed():
                     idx = ( v[0].index_set(), )
                 else:
