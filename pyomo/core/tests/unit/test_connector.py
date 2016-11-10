@@ -490,6 +490,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
 
         TransformationFactory('core.expand_connectors').apply_to(m)
+        #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 3)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 5)
@@ -535,6 +536,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
         TransformationFactory('core.expand_connectors').apply_to(m)
+        #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
@@ -543,8 +545,6 @@ class TestConnector(unittest.TestCase):
         self.assertTrue(m.component('c.expanded').active)
         self.assertFalse(m.d.active)
         self.assertTrue(m.component('d.expanded').active)
-
-        m.pprint()
 
         self.assertIs( m.x[1].domain, m.component('ECON1.auto.x')[1].domain )
         self.assertIs( m.x[2].domain, m.component('ECON1.auto.x')[2].domain )
@@ -610,6 +610,7 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
 
         TransformationFactory('core.expand_connectors').apply_to(m)
+        #m.pprint()
 
         self.assertEqual(len(list(m.component_objects(Constraint))), 5)
         self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
@@ -618,8 +619,6 @@ class TestConnector(unittest.TestCase):
         self.assertTrue(m.component('c.expanded').active)
         self.assertFalse(m.d.active)
         self.assertTrue(m.component('d.expanded').active)
-
-        m.pprint()
 
         os = StringIO()
         m.component('c.expanded').pprint(ostream=os)
@@ -641,6 +640,178 @@ class TestConnector(unittest.TestCase):
       3 :   0.0 :       b1 - b2 :   0.0 :   True
 """)
 
+
+    def test_expand_implicit_indexed(self):
+        m = ConcreteModel()
+        m.x = Var([1,2], domain=Binary)
+        m.y = Var(bounds=(1,3))
+        m.CON = Connector()
+        m.CON.add(m.x)
+        m.CON.add(m.y)
+        m.a2 = Var([1,2])
+        m.b1 = Var()
+        m.ECON2 = Connector(implicit=['x'])
+        m.ECON2.add(m.b1,'y')
+        m.ECON1 = Connector(implicit=['y'])
+        m.ECON1.add(m.a2,'x')
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == m.ECON1)
+        m.d = Constraint(expr= m.ECON2 == m.CON)
+        m.nocon = Constraint(expr = m.x[1] == 2)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 3)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 3)
+
+        os = StringIO()
+        m.ECON1.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""ECON1 : Size=1, Index=None
+    Key  : Name : Size : Variable
+    None :    x :    2 :       a2
+         :    y :    - :     None
+""")
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+        #m.pprint()
+
+        os = StringIO()
+        m.ECON1.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""ECON1 : Size=1, Index=None
+    Key  : Name : Size : Variable
+    None :    x :    2 :           a2
+         :    y :    1 : ECON1.auto.y
+""")
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 9)
+        self.assertTrue(m.nocon.active)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+        self.assertFalse(m.d.active)
+        self.assertTrue(m.component('d.expanded').active)
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=3, Index=c.expanded_index, Active=True
+    Key : Lower : Body             : Upper : Active
+      1 :   0.0 :     x[1] - a2[1] :   0.0 :   True
+      2 :   0.0 :     x[2] - a2[2] :   0.0 :   True
+      3 :   0.0 : y - ECON1.auto.y :   0.0 :   True
+""")
+
+        os = StringIO()
+        m.component('d.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""d.expanded : Size=3, Index=d.expanded_index, Active=True
+    Key : Lower : Body                   : Upper : Active
+      1 :   0.0 : ECON2.auto.x[1] - x[1] :   0.0 :   True
+      2 :   0.0 : ECON2.auto.x[2] - x[2] :   0.0 :   True
+      3 :   0.0 :                 b1 - y :   0.0 :   True
+""")
+
+
+    def test_varlist_aggregator(self):
+        m = ConcreteModel()
+        m.flow = VarList()
+        m.phase = Var(bounds=(1,3))
+        m.CON = Connector()
+        m.CON.add( m.flow,
+                   aggregate=lambda m,v: sum(v[i] for i in v) == 0 )
+        m.CON.add(m.phase)
+        m.ECON2 = Connector()
+        m.ECON1 = Connector()
+
+        # 2 constraints: one has a connector, the other doesn't.  The
+        # former should be deactivated and expanded, the latter should
+        # be left untouched.
+        m.c = Constraint(expr= m.CON == m.ECON1)
+        m.d = Constraint(expr= m.ECON2 == m.CON)
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 2)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 2)
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+        #m.pprint()
+
+        self.assertEqual(len(list(m.component_objects(Constraint))), 5)
+        self.assertEqual(len(list(m.component_data_objects(Constraint))), 7)
+        self.assertFalse(m.c.active)
+        self.assertTrue(m.component('c.expanded').active)
+        self.assertFalse(m.d.active)
+        self.assertTrue(m.component('d.expanded').active)
+
+        self.assertEqual( len(m.flow), 2 )
+
+        os = StringIO()
+        m.component('c.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""c.expanded : Size=2, Index=c.expanded_index, Active=True
+    Key : Lower : Body                      : Upper : Active
+      1 :   0.0 : flow[1] - ECON1.auto.flow :   0.0 :   True
+      2 :   0.0 :  phase - ECON1.auto.phase :   0.0 :   True
+""")
+
+        os = StringIO()
+        m.component('d.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""d.expanded : Size=2, Index=d.expanded_index, Active=True
+    Key : Lower : Body                      : Upper : Active
+      1 :   0.0 : ECON2.auto.flow - flow[2] :   0.0 :   True
+      2 :   0.0 :  ECON2.auto.phase - phase :   0.0 :   True
+""")
+
+        os = StringIO()
+        m.component('CON.flow.aggregate').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""CON.flow.aggregate : Size=1, Index=None, Active=True
+    Key  : Lower : Body              : Upper : Active
+    None :   0.0 : flow[1] + flow[2] :   0.0 :   True
+""")
+
+        os = StringIO()
+        m.CON.pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""CON : Size=1, Index=None
+    Key  : Name  : Size : Variable
+    None :  flow :    * :     flow
+         : phase :    1 :    phase
+""")
+
+
+    def test_indexed_connector(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=1, domain=Reals)
+        m.y = Var(initialize=2, domain=Reals)
+        m.c = Connector([1,2])
+        m.c[1].add(m.x, name='v')
+        m.c[2].add(m.y, name='v')
+
+        m.eq = Constraint(expr=m.c[1] == m.c[2])
+
+        TransformationFactory('core.expand_connectors').apply_to(m)
+
+        os = StringIO()
+        m.component('eq.expanded').pprint(ostream=os)
+        self.assertEqual(os.getvalue(),
+"""eq.expanded : Size=1, Index=eq.expanded_index, Active=True
+    Key : Lower : Body  : Upper : Active
+      1 :   0.0 : x - y :   0.0 :   True
+""")
+
+
+    def test_setup_connector_before_construct(self):
+        model = ConcreteModel()
+        model.x = Var(initialize=1, domain=Reals)
+        model.y = Var(initialize=2, domain=Reals)
+        c = Connector([1,2])
+        c[1].add(model.x, name='v')
+        c[2].add(model.y, name='v')
+        model.c = c
 
 if __name__ == "__main__":
     unittest.main()
