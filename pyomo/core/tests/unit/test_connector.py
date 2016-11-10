@@ -804,14 +804,5 @@ class TestConnector(unittest.TestCase):
 """)
 
 
-    def test_setup_connector_before_construct(self):
-        model = ConcreteModel()
-        model.x = Var(initialize=1, domain=Reals)
-        model.y = Var(initialize=2, domain=Reals)
-        c = Connector([1,2])
-        c[1].add(model.x, name='v')
-        c[2].add(model.y, name='v')
-        model.c = c
-
 if __name__ == "__main__":
     unittest.main()
