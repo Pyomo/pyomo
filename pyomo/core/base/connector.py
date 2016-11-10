@@ -202,6 +202,8 @@ class Connector(IndexedComponent):
         def _line_generator(k,v):
             for _k, _v in sorted(iteritems(v.vars)):
                 if _v is None:
+                    _len = '-'
+                elif _k in v.aggregators:
                     _len = '*'
                 elif _v.is_expression() or not _v.is_indexed():
                     _len = 1
@@ -235,7 +237,7 @@ class Connector(IndexedComponent):
         def _line_generator(k,v):
             for _k, _v in sorted(iteritems(v.vars)):
                 if _v is None:
-                    _val = '*'
+                    _val = '-'
                 elif _v.is_expression() or not _v.is_indexed():
                     _val = str(value( _v ))
                 else:
