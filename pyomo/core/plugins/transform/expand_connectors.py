@@ -97,21 +97,20 @@ class ExpandConnectors(Transformation):
             connId = next(iterkeys(conn_set))
             ref = known_conn_sets[id(matched_connectors[connId])]
             for k,v in sorted(iteritems(ref)):
-                if v[0].is_indexed():
+                if v[1] >= 0:
                     _iter = v[0]
                 else:
                     _iter = (v[0],)
                 for idx in _iter:
                     substitution = {}
                     for c in itervalues(conn_set):
-                        if v[0].is_indexed():
+                        if v[1] >= 0:
                             new_v = c.vars[k][idx]
+                        elif k in c.aggregators:
+                            new_v = c.vars[k].add()
                         else:
                             new_v = c.vars[k]
-                        if isinstance(new_v, VarList):
-                            substitution[id(c)] = new_v.add()
-                        else:
-                            substitution[id(c)] = new_v
+                        substitution[id(c)] = new_v
                     cList.add((
                         constraint.lower,
                         expr.clone_expression( constraint.body, substitution ),
@@ -138,10 +137,11 @@ class ExpandConnectors(Transformation):
                 if v is None:
                     # This is an implicit var
                     continue
-                # OK: New var, so add it tot he reference list
+                # OK: New var, so add it to the reference list
                 _len = (
-                    #-1 if v is None else
-                    1 if v.is_expression() or not v.is_indexed() else
+                    #-3 if v is None else
+                    -2 if k in c.aggregators else
+                    -1 if v.is_expression() or not v.is_indexed() else
                     len(v) )
                 ref[k] = ( v, _len, c )
 
@@ -175,22 +175,23 @@ class ExpandConnectors(Transformation):
                         c_is_partial = True
                     continue
                 _len = (
-                    -1 if v is None else
-                    1 if _v.is_expression() or not _v.is_indexed() else
+                    -3 if _v is None else
+                    -2 if k in c.aggregators else
+                    -1 if _v.is_expression() or not _v.is_indexed() else
                     len(_v) )
+                if (_len >= 0) ^ (v[1] >= 0):
+                    raise ValueError(
+                        "Connector mismatch: Connector variable '%s' mixing "
+                        "indexed and non-indexed targets on connectors '%s' "
+                        "and '%s'" %
+                        ( k, v[2].name, c.name ))
                 if _len >= 0 and _len != v[1]:
                     raise ValueError(
                         "Connector mismatch: Connector variable '%s' index "
                         "mismatch (%s elements in reference connector '%s', "
                         "but %s elements in connector '%s')" %
                         ( k, v[1], v[2].name, _len, c.name ))
-                if v[0].is_indexed() ^ _v.is_indexed():
-                    raise ValueError(
-                        "Connector mismatch: Connector variable '%s' mixing "
-                        "indexed and non-indexed targets on connectors '%s' "
-                        "and '%s'" %
-                        ( k, v[2].name, c.name ))
-                if v[0].is_indexed() and len(v[0].index_set() ^ _v.index_set()):
+                if v[1] >= 0 and len(v[0].index_set() ^ _v.index_set()):
                     raise ValueError(
                         "Connector mismatch: Connector variable '%s' has "
                         "mismatched indices on connectors '%s' and '%s'" %
@@ -212,7 +213,7 @@ class ExpandConnectors(Transformation):
                 if k in c.vars and c.vars[k] is not None:
                     continue
 
-                if v[0].is_indexed():
+                if v[1] >= 0:
                     idx = ( v[0].index_set(), )
                 else:
                     idx = ()
@@ -227,11 +228,11 @@ class ExpandConnectors(Transformation):
                     pass
                 new_var = Var( *idx, **var_args )
                 block.add_component('%s.auto.%s' % ( c.local_name, k ), new_var)
-                if v[0].is_indexed():
-                    for idx in v[0]:
-                        new_var[idx].domain = v[0][idx].domain
-                        new_var[idx].setlb( v[0][idx].lb )
-                        new_var[idx].setub( v[0][idx].ub )
+                if idx:
+                    for i in idx[0]:
+                        new_var[i].domain = v[0][i].domain
+                        new_var[i].setlb( v[0][i].lb )
+                        new_var[i].setub( v[0][i].ub )
                 c.vars[k] = new_var
 
         return ref
