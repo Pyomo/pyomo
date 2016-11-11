@@ -815,7 +815,7 @@ class BendersAlgorithm(PySPConfiguredObject):
             master.component_data_objects(Constraint,
                                           active=True,
                                           descend_into=False))))
-        # now count the firs-stage constraints on the scenario
+        # now count the first-stage constraints on the scenario
         # instances included in the master ef
         for scenario in master_scenario_tree.scenarios:
             instance = scenario._instance
@@ -831,8 +831,12 @@ class BendersAlgorithm(PySPConfiguredObject):
                 # would be the case when no second-stage variables appear
                 # in the expression but one or more rhs or first-stage variable
                 # coefficients changes with scenarios.
-                node = scenario.constraintNode(constraint_data,
-                                               instance=instance)
+                try:
+                    node = scenario.constraintNode(constraint_data,
+                                                   instance=instance)
+                except RuntimeError:
+                    # TODO: Adapt this to handle the multistage case
+                    node = scenario.node_list[-1]
                 # Not sure if we want to allow variables to not be declared on
                 # some stage in the scenario tree.
                                                #assume_last_stage_if_missing=True)
@@ -1317,14 +1321,45 @@ class BendersSolver(SPSolver, PySPConfiguredObject):
         self._name = "benders"
         BendersAlgorithm.validate_options(self._options)
 
-    def _solve_impl(self, sp, output_solver_log=False):
+    def _solve_impl(self,
+                    sp,
+                    output_solver_log=False,
+                    reference_model=None):
         with BendersAlgorithm(sp, self._options) as benders:
             benders.build_master_problem()
             objective = benders.solve(output_solver_log=output_solver_log)
         results = SPSolverResults()
         results.objective = benders.incumbent_objective
         results.bound = benders.bound
-        results.xhat = benders.incumbent_xhat
+        if reference_model is not None:
+            stages = tuple(stage.name for stage in sp.scenario_tree.stages[:-1])
+            scenario = sp.scenario_tree.scenarios[0]
+            tmp = {}
+            for stagenum, stage in enumerate(sp.scenario_tree.stages[:-1]):
+                cost_variable_name, cost_variable_index = \
+                    stage._cost_variable
+                stage_cost_obj = \
+                    instance.find_component(cost_variable_name)[cost_variable_index]
+                if not stage_cost_obj.is_expression():
+                    refvar = ComponentUID(stage_cost_obj,cuid_buffer=tmp).\
+                        find_component(reference_model)
+                    refvar.value = stage_cost_obj.value
+                    refvar.stale = stage_cost_obj.stale
+
+                # TODO (the multi-stage case is problematic)
+                node = scenario.node_list[stagenum]
+                assert node.stage is stage
+                master_var = getattr(benders.master,
+                                     "MASTER_BLEND_VAR_"+str(tree_node._name))
+                for variable_id in node._variable_ids:
+                    var = master_var[variable_id]
+                    if var.is_expression():
+                        continue
+                    refvar = ComponentUID(var, cuid_buffer=tmp).\
+                        find_component(reference_model)
+                    refvar.value = var.value
+                    refvar.stale = var.stale
+
         return results
 
 def runbenders_register_options(options=None):
