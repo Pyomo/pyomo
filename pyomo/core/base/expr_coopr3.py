@@ -1407,11 +1407,17 @@ def generate_relational_expression(etype, lhs, rhs):
         # expression.
         for i,arg in enumerate(prevExpr._cloned_from):
             if arg == cloned_from[0]:
-                match.append(1)
+                match.append((i,0))
             elif arg == cloned_from[1]:
-                match.append(0)
+                match.append((i,1))
+        if etype == _eq:
+            raise TypeError(chainedInequalityErrorMessage())
         if len(match) == 1:
-            if match[0]:
+            if match[0][0] == match[0][1]:
+                raise TypeError(chainedInequalityErrorMessage(
+                    "Attempting to form a compound inequality with two "
+                    "%s bounds" % ('lower' if match[0][0] else 'upper',)))
+            if not match[0][1]:
                 cloned_from = prevExpr._cloned_from + (cloned_from[1],)
                 lhs = prevExpr
                 lhs_is_relational = True
@@ -1426,9 +1432,15 @@ def generate_relational_expression(etype, lhs, rhs):
                 buf = StringIO()
                 prevExpr.to_string(buf)
                 raise TypeError("Cannot create a compound inequality with "
-                      "identical upper and lower\n\tbounds with strict "
+                      "identical upper and lower\n\tbounds using strict "
                       "inequalities: constraint infeasible:\n\t%s and "
                       "%s < %s" % ( buf.getvalue().strip(), lhs, rhs ))
+            if match[0] == (0,0):
+                # This is a particularly weird case where someone
+                # evaluates the *same* inequality twice in a row.  This
+                # should always be an error (you can, for example, get
+                # it with "0 <= a >= 0").
+                raise TypeError(chainedInequalityErrorMessage())
             etype = _eq
         else:
             raise TypeError(chainedInequalityErrorMessage())
