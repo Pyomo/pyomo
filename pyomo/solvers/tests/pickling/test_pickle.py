@@ -79,52 +79,49 @@ def CreateTestMethod(test_case,
         for suffix in test_suffixes:
             setattr(model,suffix,Suffix(direction=Suffix.IMPORT))
 
-        def _solve(_model, **kwds):
+        def _solve(_model):
             _opt, io_options = test_case.initialize()
-            io_options.update(kwds)
-            if isinstance(_opt, PersistentSolver):
-                _opt.compile_instance(_model,
-                                      symbolic_solver_labels=symbolic_labels)
-            if _opt.warm_start_capable():
-                return _opt.solve(_model,
-                                  symbolic_solver_labels=symbolic_labels,
-                                  warmstart=True,
-                                  **io_options)
-            else:
-                return _opt.solve(_model,
-                                  symbolic_solver_labels=symbolic_labels,
-                                  **io_options)
+            try:
+                if isinstance(_opt, PersistentSolver):
+                    _opt.compile_instance(_model,
+                                          symbolic_solver_labels=symbolic_labels)
+                if _opt.warm_start_capable():
+                    return _opt.solve(_model,
+                                      symbolic_solver_labels=symbolic_labels,
+                                      warmstart=True,
+                                      **io_options)
+                else:
+                    return _opt.solve(_model,
+                                      symbolic_solver_labels=symbolic_labels,
+                                      **io_options)
+            finally:
+                _opt.deactivate()
+            del _opt
 
-        status = _solve(model)
-        m = pickle.loads(pickle.dumps(model))
+        results = _solve(model)
 
-        #
-        # operate on a cloned model
-        #
-        instance1 = m.clone()
-        status1 = _solve(instance1)
-        inst, res = pickle.loads(pickle.dumps([instance1,status1]))
-
-        #
-        # operate on an unpickled model
-        #
+        instance1 = model.clone()
         # try to pickle then unpickle instance
         instance2 = pickle.loads(pickle.dumps(instance1))
         self.assertNotEqual(id(instance1),id(instance2))
-        status2 = _solve(instance2)
-        # try to pickle the instance and status,
-        # then unpickle and load status
-        inst, res = pickle.loads(pickle.dumps([instance2,status2]))
 
-        #
-        # operate on a clone of an unpickled model
-        #
-        instance3 = instance2.clone()
-        self.assertNotEqual(id(instance2),id(instance3))
-        status3 = _solve(instance3)
-        # try to pickle the instance and status,
-        # then unpickle and load status
-        inst, res = pickle.loads(pickle.dumps([instance3,status3]))
+        # try to solve the original instance
+        results1 = _solve(instance1)
+        #instance1.solutions.load(results1)
+
+        # try to solve the unpickled instance
+        results2 = _solve(instance2)
+        #instance2.solutions.load(results2)
+
+        # try to pickle the instance and results,
+        # then unpickle and load results
+        inst, res = pickle.loads(pickle.dumps([instance1,results1]))
+        #inst.solutions.load(res)
+
+        # try to pickle the instance and results,
+        # then unpickle and load results
+        inst, res = pickle.loads(pickle.dumps([instance2,results2]))
+        #inst.solutions.load(res)
 
     return pickle_test
 
