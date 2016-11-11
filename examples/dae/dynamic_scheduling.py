@@ -30,10 +30,10 @@ m.cost = Param(m.products, initialize={'A':15000, 'B':20000})
 
 m.tstart = Var(m.products,bounds=(0,None)) # Start Time
 m.tproc = Var(m.products,bounds=(0,None)) # Processing Time
-m.time = Var(m.products, m.tau) # Scaled time over each job
+m.time = Var(m.products, m.tau, bounds=(0,None)) # Scaled time over each job
 m.totaltime = Var() # Total job time
 
-m.c = Var(m.products, m.tau)
+m.c = Var(m.products, m.tau, bounds=(0,None))
 m.dc = DerivativeVar(m.c, wrt=m.tau)
 m.dtime = DerivativeVar(m.time, wrt=m.tau)
 
@@ -100,7 +100,7 @@ gdp_relax = TransformationFactory('gdp.bigm')
 gdp_relax.apply_to(m, default_bigM=50.0)
 
 # Solve the model
-solver = SolverFactory('bonmin')
+solver = SolverFactory('couenne')
 solver.solve(m,tee=True)
 
 # Plot the results
