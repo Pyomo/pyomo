@@ -372,7 +372,8 @@ class Simulator:
 
         if integrator not in valid_integrators:
             raise DAE_Error(
-                        "Unrecognized scipy integrator %s" %(integrator))
+                "Unrecognized Scipy integrator \'%s\'. Please select "
+                "an integrator from %s"%(integrator,valid_integrators))
 
         # Set the time step or the number of points for the lists
         # returned by the scipy integrator
