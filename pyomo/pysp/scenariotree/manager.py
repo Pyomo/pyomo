@@ -44,8 +44,15 @@ from pyomo.pysp.scenariotree.server_pyro_utils \
             WorkerInitType)
 from pyomo.pysp.ef import create_ef_instance
 
+import six
 from six import iteritems, itervalues, StringIO
 from six.moves import xrange
+
+try:
+    import dill
+    dill_available = True
+except ImportError:
+    dill_available = False
 
 try:
     from guppy import hpy
@@ -512,68 +519,86 @@ class ScenarioTreeManager(PySPConfiguredObject):
         self._scenario_tree.remove_bundle(bundle_name)
 
     def invoke_function(self,
-                        function_name,
-                        module_name,
+                        function,
+                        module_name=None,
                         invocation_type=InvocationType.Single,
                         function_args=(),
                         function_kwds=None,
                         async=False,
                         oneway=False):
-        """Invokes a function on scenario tree constructs managed by
-           this scenario tree manager. The function must always accept
-           at least one argument, which is the process-local scenario
-           tree worker object (may or may not be this object).
+        """Invokes a function on scenario tree constructs
+        managed by this scenario tree manager. The first
+        argument accepted by the function must always be the
+        process-local scenario tree worker object, which may
+        or may not be this object.
 
         Args:
-            function_name:
-                 The name of the function to be invoked.
+            function:
+                 The function or name of the function to be
+                 invoked. If the object is a function, then
+                 the manager will attempt to transmit it
+                 using the dill package. Otherwise, the
+                 argument must be a string and the
+                 module_name keyword is required.
             module_name:
-                 The name / location of the module containing the
-                 function.
+                 The name of the module containing the
+                 function. This can also be an absolute path
+                 to a file that contains the function
+                 definition. If this function argument is an
+                 actual function, this keyword must be left
+                 at its default value of None; otherwise, it
+                 is required.
             invocation_type:
-                 Controls how the function is invoked. Refer to the
-                 doc string for pyomo.pysp.scenariotree.manager.InvocationType
+                 Controls how the function is invoked. Refer
+                 to the doc string for
+                 pyomo.pysp.scenariotree.manager.InvocationType
                  for more information.
             function_args:
-                 Extra arguments passed to the function when it is
-                 invoked. These will always be placed after the
-                 initial process-local scenario tree worker object as
-                 well as any additional arguments governed by the
+                 Extra arguments passed to the function when
+                 it is invoked. These will always be placed
+                 after the initial process-local scenario
+                 tree worker object as well as any
+                 additional arguments governed by the
                  invocation type.
             function_kwds:
-                 Additional keywords to pass to the function when it
-                 is invoked.
+                 Additional keywords to pass to the function
+                 when it is invoked.
             async:
-                 When set to True, the return value will be an
-                 asynchronous object. Invocation results can be
-                 obtained at any point by calling the complete()
-                 method on this object, which will block until all
-                 associated action handles are collected.
+                 When set to True, the return value will be
+                 an asynchronous object. Invocation results
+                 can be obtained at any point by calling the
+                 complete() method on this object, which
+                 will block until all associated action
+                 handles are collected.f
             oneway:
-                 When set to True, it will be assumed no return value
-                 is expected from this function (async is
-                 implied). Setting both async and oneway to True will
-                 result in an exception being raised.
+                 When set to True, it will be assumed no
+                 return value is expected from this function
+                 (async is implied). Setting both async and
+                 oneway to True will result in an exception
+                 being raised.
 
-            *Note: The 'oneway' and 'async' keywords are valid for all
-                   scenario tree manager implementations. However,
-                   they are designed for use with Pyro-based
+            *Note: The 'oneway' and 'async' keywords are
+                   valid for all scenario tree manager
+                   implementations. However, they are
+                   designed for use with Pyro-based
                    implementations. Their existence in other
                    implementations is not meant to guarantee
-                   asynchronicity, but rather to provide a consistent
-                   interface for code to be written around.
+                   asynchronicity, but rather to provide a
+                   consistent interface for code to be
+                   written around.
 
         Returns:
-            If 'oneway' is True, this function will always return
-            None. Otherwise, the return value type is governed by the
-            'invocation_type' keyword, which will be nested inside an
-            asynchronous object if 'async' is set to True.
+            If 'oneway' is True, this function will always
+            return None. Otherwise, the return value type is
+            governed by the 'invocation_type' keyword, which
+            will be nested inside an asynchronous object if
+            'async' is set to True.
         """
         if async and oneway:
             raise ValueError("async oneway calls do not make sense")
         invocation_type = _map_deprecated_invocation_type(invocation_type)
-        return self._invoke_function_impl(function_name,
-                                          module_name,
+        return self._invoke_function_impl(function,
+                                          module_name=module_name,
                                           invocation_type=invocation_type,
                                           function_args=function_args,
                                           function_kwds=function_kwds,
@@ -882,73 +907,91 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
 
     def invoke_function_on_worker(self,
                                   worker_name,
-                                  function_name,
-                                  module_name,
+                                  function,
+                                  module_name=None,
                                   invocation_type=InvocationType.Single,
                                   function_args=(),
                                   function_kwds=None,
                                   async=False,
                                   oneway=False):
-        """Invokes a function on a scenario tree worker managed
-           by this scenario tree manager client. The function must
-           always accept at least one argument, which is the
-           process-local scenario tree worker object (may or may not
-           be this object).
+        """Invokes a function on a scenario tree worker
+        managed by this scenario tree manager client. The
+        first argument accepted by the function must always
+        be the process-local scenario tree worker object,
+        which may or may not be this object.
 
         Args:
             worker_name:
-                 The name of the scenario tree worker. The list of worker
-                 names can be found at client.worker_names.
-            function_name:
-                 The name of the function to be invoked.
+                 The name of the scenario tree worker. The
+                 list of worker names can be found at
+                 client.worker_names.
+            function:
+                 The function or name of the function to be
+                 invoked. If the object is a function, then
+                 the manager will attempt to transmit it
+                 using the dill package. Otherwise, the
+                 argument must be a string and the
+                 module_name keyword is required.
             module_name:
-                 The name / location of the module containing the
-                 function.
+                 The name of the module containing the
+                 function. This can also be an absolute path
+                 to a file that contains the function
+                 definition. If this function argument is an
+                 actual function, this keyword must be left
+                 at its default value of None; otherwise, it
+                 is required.
             invocation_type:
-                 Controls how the function is invoked. Refer to the
-                 doc string for pyomo.pysp.scenariotree.manager.InvocationType
+                 Controls how the function is invoked. Refer
+                 to the doc string for
+                 pyomo.pysp.scenariotree.manager.InvocationType
                  for more information.
             function_args:
-                 Extra arguments passed to the function when it is
-                 invoked. These will always be placed after the
-                 initial process-local scenario tree worker object as
-                 well as any additional arguments governed by the
+                 Extra arguments passed to the function when
+                 it is invoked. These will always be placed
+                 after the initial process-local scenario
+                 tree worker object as well as any
+                 additional arguments governed by the
                  invocation type.
             function_kwds:
-                 Additional keywords to pass to the function when it
-                 is invoked.
+                 Additional keywords to pass to the function
+                 when it is invoked.
             async:
-                 When set to True, the return value will be an
-                 asynchronous object. Invocation results can be
-                 obtained at any point by calling the complete()
-                 method on this object, which will block until all
-                 associated action handles are collected.
+                 When set to True, the return value will be
+                 an asynchronous object. Invocation results
+                 can be obtained at any point by calling the
+                 complete() method on this object, which
+                 will block until all associated action
+                 handles are collected.
             oneway:
-                 When set to True, it will be assumed no return value
-                 is expected from this function (async is
-                 implied). Setting both async and oneway to True will
-                 result in an exception being raised.
+                 When set to True, it will be assumed no
+                 return value is expected from this function
+                 (async is implied). Setting both async and
+                 oneway to True will result in an exception
+                 being raised.
 
-            *Note: The 'oneway' and 'async' keywords are valid for all
-                   scenario tree manager implementations. However,
-                   they are designed for use with Pyro-based
+            *Note: The 'oneway' and 'async' keywords are
+                   valid for all scenario tree manager
+                   implementations. However, they are
+                   designed for use with Pyro-based
                    implementations. Their existence in other
                    implementations is not meant to guarantee
-                   asynchronicity, but rather to provide a consistent
-                   interface for code to be written around.
+                   asynchronicity, but rather to provide a
+                   consistent interface for code to be
+                   written around.
 
         Returns:
-            If 'oneway' is True, this function will always return
-            None. Otherwise, the return value type is governed by the
-            'invocation_type' keyword, which will be nested inside an
-            asynchronous object if 'async' is set to True.
+            If 'oneway' is True, this function will always
+            return None. Otherwise, the return value type is
+            governed by the 'invocation_type' keyword, which
+            will be nested inside an asynchronous object if
+            'async' is set to True.
         """
         if async and oneway:
             raise ValueError("async oneway calls do not make sense")
         invocation_type = _map_deprecated_invocation_type(invocation_type)
         return self._invoke_function_on_worker_impl(worker_name,
-                                                    function_name,
-                                                    module_name,
+                                                    function,
+                                                    module_name=module_name,
                                                     invocation_type=invocation_type,
                                                     function_args=function_args,
                                                     function_kwds=function_kwds,
@@ -1122,8 +1165,8 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
         self._modules_imported = {}
 
     def _invoke_function_by_worker(self,
-                                   function_name,
-                                   module_name,
+                                   function,
+                                   module_name=None,
                                    invocation_type=InvocationType.Single,
                                    function_args=(),
                                    function_kwds=None):
@@ -1131,28 +1174,38 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
         if function_kwds is None:
             function_kwds = {}
 
-        if module_name in self._modules_imported:
-            this_module = self._modules_imported[module_name]
-        elif module_name in sys.modules:
-            this_module = sys.modules[module_name]
+        if not isinstance(function, six.string_types):
+            if module_name is not None:
+                raise ValueError(
+                    "The module_name keyword must be None "
+                    "when the function argument is not a string.")
         else:
-            this_module = pyutilib.misc.import_file(module_name,
-                                                    clear_cache=True)
-            self._modules_imported[module_name] = this_module
-            self._modules_imported[this_module.__file__] = this_module
-            if this_module.__file__.endswith(".pyc"):
-                self._modules_imported[this_module.__file__[:-1]] = \
-                    this_module
+            if module_name in self._modules_imported:
+                this_module = self._modules_imported[module_name]
+            elif module_name in sys.modules:
+                this_module = sys.modules[module_name]
+            else:
+                this_module = pyutilib.misc.import_file(module_name,
+                                                        clear_cache=True)
+                self._modules_imported[module_name] = this_module
+                self._modules_imported[this_module.__file__] = this_module
+                if this_module.__file__.endswith(".pyc"):
+                    self._modules_imported[this_module.__file__[:-1]] = \
+                        this_module
 
-        module_attrname = function_name
-        subname = None
-        if not hasattr(this_module, module_attrname):
-            if "." in module_attrname:
-                module_attrname, subname = function_name.split(".",1)
+            module_attrname = function
+            subname = None
             if not hasattr(this_module, module_attrname):
-                raise RuntimeError(
-                    "Function="+function_name+" is not present "
-                    "in module="+module_name)
+                if "." in module_attrname:
+                    module_attrname, subname = function.split(".",1)
+                if not hasattr(this_module, module_attrname):
+                    raise RuntimeError(
+                        "Function="+function+" is not present "
+                        "in module="+module_name)
+
+            function = getattr(this_module, module_attrname)
+            if subname is not None:
+                function = getattr(function, subname)
 
         call_objects = None
         if invocation_type == InvocationType.Single:
@@ -1190,13 +1243,6 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
                              "Expected one of %s"
                              % (invocation_type,
                                 [str(v) for v in InvocationType._values]))
-
-        function = getattr(this_module, module_attrname)
-        if subname is not None:
-            function = getattr(function, subname)
-
-        if function_kwds is None:
-            function_kwds = {}
 
         result = None
         if (invocation_type == InvocationType.Single):
@@ -1463,8 +1509,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
 
     def _invoke_function_on_worker_impl(self,
                                         worker_name,
-                                        function_name,
-                                        module_name,
+                                        function,
+                                        module_name=None,
                                         invocation_type=InvocationType.Single,
                                         function_args=(),
                                         function_kwds=None,
@@ -1475,12 +1521,12 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
         start_time = time.time()
 
         if self._options.verbose:
-            print("Invoking function=%s in module=%s "
-                  "on worker=%s"
-                  % (function_name, module_name, worker_name))
+            print("Transmitting external function invocation request "
+                  "for function=%s in module=%s on worker=%s."
+                  % (str(function), module_name, worker_name))
 
-        result = self._invoke_function_by_worker(function_name,
-                                                 module_name,
+        result = self._invoke_function_by_worker(function,
+                                                 module_name=module_name,
                                                  invocation_type=invocation_type,
                                                  function_args=function_args,
                                                  function_kwds=function_kwds)
@@ -1557,8 +1603,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
     #def _close_impl(...)
 
     def _invoke_function_impl(self,
-                              function_name,
-                              module_name,
+                              function,
+                              module_name=None,
                               invocation_type=InvocationType.Single,
                               function_args=(),
                               function_kwds=None,
@@ -1568,8 +1614,8 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
 
         result = self._invoke_function_on_worker_impl(
             self._worker_name,
-            function_name,
-            module_name,
+            function,
+            module_name=module_name,
             invocation_type=invocation_type,
             function_args=function_args,
             function_kwds=function_kwds,
@@ -1661,8 +1707,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
     def _invoke_function_on_worker_pyro(self,
                                         worker_name,
-                                        function_name,
-                                        module_name,
+                                        function,
+                                        module_name=None,
                                         invocation_type=InvocationType.Single,
                                         function_args=(),
                                         function_kwds=None,
@@ -1673,9 +1719,9 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
             worker_name=worker_name,
             action="_invoke_function_impl",
             generate_response=not oneway,
-            args=(function_name,
-                  module_name),
-            kwds={'invocation_type': (invocation_type.key,
+            args=(function,),
+            kwds={'module_name': module_name,
+                  'invocation_type': (invocation_type.key,
                                       getattr(invocation_type, 'data', None)),
                   'function_args': function_args,
                   'function_kwds': function_kwds})
@@ -1707,8 +1753,8 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
 
     def _invoke_function_on_worker_impl(self,
                                         worker_name,
-                                        function_name,
-                                        module_name,
+                                        function,
+                                        module_name=None,
                                         invocation_type=InvocationType.Single,
                                         function_args=(),
                                         function_kwds=None,
@@ -1722,12 +1768,28 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         if self._options.verbose:
             print("Invoking external function=%s in module=%s "
                   "on worker=%s"
-                  % (function_name, module_name, worker_name))
+                  % (str(function), module_name, worker_name))
+
+        if not isinstance(function, six.string_types):
+            if not dill_available:
+                raise ValueError(
+                    "This dill module must be available "
+                    "when transmitting function objects")
+            if module_name is not None:
+                raise ValueError(
+                    "The module_name keyword must be None "
+                    "when the function argument is not a string.")
+            function = dill.dumps(function)
+        else:
+            if module_name is None:
+                raise ValueError(
+                    "A module name is required when "
+                    "a function name is given")
 
         action_handle = self._invoke_function_on_worker_pyro(
             worker_name,
-            function_name,
-            module_name,
+            function,
+            module_name=module_name,
             invocation_type=invocation_type,
             function_args=function_args,
             function_kwds=function_kwds,
@@ -2424,8 +2486,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
     def _invoke_function_impl(
             self,
-            function_name,
-            module_name,
+            function,
+            module_name=None,
             invocation_type=InvocationType.Single,
             function_args=(),
             function_kwds=None,
@@ -2437,7 +2499,24 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
         if self._options.verbose:
             print("Transmitting external function invocation request "
-                  "to scenario tree workers")
+                  "for function=%s in module=%s."
+                  % (str(function), module_name))
+
+        if not isinstance(function, six.string_types):
+            if not dill_available:
+                raise ValueError(
+                    "This dill module must be available "
+                    "when transmitting function objects")
+            if module_name is not None:
+                raise ValueError(
+                    "The module_name keyword must be None "
+                    "when the function argument is not a string.")
+            function = dill.dumps(function)
+        else:
+            if module_name is None:
+                raise ValueError(
+                    "A module name is required when "
+                    "a function name is given")
 
         if self._transmission_paused:
             if (not async) and (not oneway):
@@ -2461,8 +2540,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
             for worker_name in self._pyro_worker_list:
                 action_handle_data[self._invoke_function_on_worker_pyro(
                     worker_name,
-                    function_name,
-                    module_name,
+                    function,
+                    module_name=module_name,
                     invocation_type=invocation_type,
                     function_args=function_args,
                     function_kwds=function_kwds,
@@ -2481,8 +2560,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
             action_handle_data = self._invoke_function_on_worker_pyro(
                 self.get_worker_for_scenario(invocation_type.data),
-                function_name,
-                module_name,
+                function,
+                module_name=module_name,
                 invocation_type=invocation_type,
                 function_args=function_args,
                 function_kwds=function_kwds,
@@ -2492,8 +2571,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
             action_handle_data = self._invoke_function_on_worker_pyro(
                 self.get_worker_for_bundle(invocation_type.data),
-                function_name,
-                module_name,
+                function,
+                module_name=module_name,
                 invocation_type=invocation_type,
                 function_args=function_args,
                 function_kwds=function_kwds,
@@ -2524,8 +2603,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
             for worker_name in worker_map:
                 action_handle_data[self._invoke_function_on_worker_pyro(
                     worker_name,
-                    function_name,
-                    module_name,
+                    function,
+                    module_name=module_name,
                     invocation_type=_invocation_type(worker_map[worker_name]),
                     function_args=function_args,
                     function_kwds=function_kwds,
@@ -2554,8 +2633,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                     self._action_manager,
                     action_handle_data=self._invoke_function_on_worker_pyro(
                         worker_name,
-                        function_name,
-                        module_name,
+                        function,
+                        module_name=module_name,
                         invocation_type=invocation_type,
                         function_args=result,
                         function_kwds=function_kwds,
@@ -2565,8 +2644,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
             action_handle_data = self._invoke_function_on_worker_pyro(
                 self._pyro_worker_list[-1],
-                function_name,
-                module_name,
+                function,
+                module_name=module_name,
                 invocation_type=invocation_type,
                 function_args=result,
                 function_kwds=function_kwds,
@@ -2609,8 +2688,8 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                    (worker_name != _get_worker_func(object_names[-1])):
                     action_handle_data=self._invoke_function_on_worker_pyro(
                         worker_name,
-                        function_name,
-                        module_name,
+                        function,
+                        module_name=module_name,
                         invocation_type=_invocation_type(object_names_for_worker),
                         function_args=result,
                         function_kwds=function_kwds,

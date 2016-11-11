@@ -22,7 +22,14 @@ from pyomo.pysp.scenariotree.manager \
             ScenarioTreeManager,
             InvocationType)
 
+import six
 from six import iteritems, string_types
+
+try:
+    import dill
+    dill_available = True
+except ImportError:
+    dill_available = False
 
 #
 # A full implementation of the ScenarioTreeManager interface
@@ -171,8 +178,8 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
             print("")
 
     def _invoke_function_impl(self,
-                              function_name,
-                              module_name,
+                              function,
+                              module_name=None,
                               invocation_type=InvocationType.Single,
                               function_args=(),
                               function_kwds=None):
@@ -180,8 +187,8 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         start_time = time.time()
 
         if self._options.verbose:
-            print("Received request to invoke external function"
-                  "="+function_name+" in module="+module_name)
+            print("Received request to invoke function"
+                  "="+str(function)+" in module="+module_name)
 
         # pyutilib.Enum can not be serialized depending on the
         # serializer type used by Pyro, so we just transmit it
@@ -195,9 +202,16 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
                 assert isinstance(invocation_type, _EnumValueWithData)
                 invocation_type = invocation_type(_invocation_type_data)
 
+        # here we assume that if the module_name is None,
+        # then a function was serialized by the fill module
+        # before being transmitted
+        if module_name is None:
+            assert dill_available
+            function = dill.loads(function)
+
         result = self._invoke_function_by_worker(
-            function_name,
-            module_name,
+            function,
+            module_name=module_name,
             invocation_type=invocation_type,
             function_args=function_args,
             function_kwds=function_kwds)
@@ -251,8 +265,8 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
     #
 
     def invoke_function(self,
-                        function_name,
-                        module_name,
+                        function,
+                        module_name=None,
                         invocation_type=InvocationType.Single,
                         function_args=(),
                         function_kwds=None,
@@ -262,14 +276,24 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         ScenarioTreeManager interface. It should not be invoked by a
         client, but only locally (e.g., inside a local function
         invocation transmitted by the client).
-
         """
         if async and oneway:
             raise ValueError("async oneway calls do not make sense")
         invocation_type = _map_deprecated_invocation_type(invocation_type)
 
-        self._invoke_function_impl(function_name,
-                                   module_name,
+        if not isinstance(function, six.string_types):
+            if module_name is not None:
+                raise ValueError(
+                    "The module_name keyword must be None "
+                    "when the function argument is not a string.")
+        else:
+            if module_name is None:
+                raise ValueError(
+                    "A module name is required when "
+                    "a function name is given")
+
+        self._invoke_function_impl(function,
+                                   module_name=module_name,
                                    invocation_type=invocation_type,
                                    function_args=function_args,
                                    function_kwds=function_kwds)
