@@ -1078,16 +1078,89 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict[0], True)
 
-        e = m.a <= 0 <= 1
-        self.assertIs(type(e), bool)
-        self.assertEqual(e, True)
+
+    def test_eval_compoundInequality(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=0)
+
+        self.assertTrue( 0 <= m.x <= 0 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( 1 <= m.x <= 1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( -1 <= m.x <= -1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+
+        self.assertTrue( 0 <= m.x <= 1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( 1 <= m.x <= 2 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertTrue( -1 <= m.x <= 0 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+
+
+    def test_compoundInequality_errors(self):
+        m = ConcreteModel()
+        m.x = Var()
+
+        try:
+            0 <= m.x >= 0
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        try:
+            0 <= m.x >= 1
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Attempting to form a compound inequality with two lower bounds",
+                str(e) )
+
+        try:
+            0 >= m.x <= 1
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Attempting to form a compound inequality with two upper bounds",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
         self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
         try:
-            m.a == m.b
+            m.x == 5
             self.fail("expected construction of relational expression to "
-                      "generate a chainedInequality TypeError")
-        except TypeError:
-            pass
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
+        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        try:
+            m.x*2 <= 5
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
+        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        try:
+            m.x <= 0
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
 
     def test_inequalityErrors(self):
         m = self.m
@@ -2551,7 +2624,7 @@ class TestCloneIfNeeded(unittest.TestCase):
     def test_cloneCount_relationalExpression_compound_reversed(self):
         # relational expression of a compound expression (simple vars)
         count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < self.model.a > self.model.d
+        expr = self.model.c > self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         self.assertEqual( EXPR.generate_relational_expression.clone_counter,
@@ -2560,7 +2633,7 @@ class TestCloneIfNeeded(unittest.TestCase):
         # relational expression of a compound expression
         # (non-expression common term)
         count = EXPR.generate_relational_expression.clone_counter
-        expr = 2*self.model.c < self.model.a > 2*self.model.d
+        expr = 2*self.model.c > self.model.a > 2*self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         self.assertEqual( EXPR.generate_relational_expression.clone_counter,
@@ -2569,7 +2642,7 @@ class TestCloneIfNeeded(unittest.TestCase):
         # relational expression of a compound expression
         # (expression common term)
         count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < 2 * self.model.a > self.model.d
+        expr = self.model.c > 2 * self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         self.assertEqual( EXPR.generate_relational_expression.clone_counter,
@@ -2577,7 +2650,7 @@ class TestCloneIfNeeded(unittest.TestCase):
 
         # relational expression of a referenced compound expression (1)
         count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < self.model.a
+        expr = self.model.c > self.model.a
         expr1 = expr > self.model.d
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
@@ -2586,7 +2659,7 @@ class TestCloneIfNeeded(unittest.TestCase):
 
         # relational expression of a referenced compound expression (2)
         count = EXPR.generate_relational_expression.clone_counter
-        expr = 2*self.model.c < 2*self.model.a
+        expr = 2*self.model.c > 2*self.model.a
         expr1 = self.model.d > expr
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
