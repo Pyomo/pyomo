@@ -16,6 +16,7 @@ from __future__ import division
 import logging
 import math
 import sys
+import traceback
 
 logger = logging.getLogger('pyomo.core')
 
@@ -53,25 +54,32 @@ from pyomo.core.base.expr_common import \
 
 def chainedInequalityErrorMessage(msg=None):
     if msg is None:
-        msg = "Nonconstant relational expression used in an "\
-              "unexpected Boolean context."
+        msg = "Relational expression used in an unexpected Boolean context."
     buf = StringIO()
     generate_relational_expression.chainedInequality.to_string(buf)
     # We are about to raise an exception, so it's OK to reset chainedInequality
     generate_relational_expression.chainedInequality = None
-    msg += """
+    info = generate_relational_expression.call_info
+
+    args = ( str(msg).strip(), buf.getvalue().strip(), info[0], info[1],
+             ':\n    %s' % info[3] if info[3] is not None else '.' )
+    return """%s
+
 The inequality expression:
     %s
-contains non-constant terms (variables) appearing in a Boolean context, e.g.:
+contains non-constant terms (variables) that were evaluated in an
+unexpected Boolean context at
+  File '%s', line %s%s
+
+Evaluating Pyomo variables in a Boolean context, e.g.
     if expression <= 5:
-This is generally invalid.  If you want to obtain the Boolean value of
-the expression based on the current variable values, explicitly evaluate
-the expression, e.g.:
+is generally invalid.  If you want to obtain the Boolean value of the
+expression based on the current variable values, explicitly evaluate the
+expression using the value() function:
     if value(expression) <= 5:
 or
     if value(expression <= 5):
-""" % ( buf.getvalue().strip(), )
-    return msg
+""" % args
 
 
 def identify_variables( expr,
@@ -460,6 +468,8 @@ class _InequalityExpression(_LinearExpression):
         if generate_relational_expression.chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
         if not self.is_constant():
+            generate_relational_expression.call_info \
+                = traceback.extract_stack(limit=2)[-2]
             generate_relational_expression.chainedInequality = self
             return True
 
@@ -1489,6 +1499,7 @@ def generate_relational_expression(etype, lhs, rhs):
 # expressions of the type "a < b < c".  This provides a buffer to hold
 # the first inequality so the second inequality can access it later.
 generate_relational_expression.chainedInequality = None
+generate_relational_expression.call_info = None
 
 # [debugging] clone_counter is a count of the number of calls to
 # expr.clone() made during expression generation.
