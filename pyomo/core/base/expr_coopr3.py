@@ -467,7 +467,7 @@ class _InequalityExpression(_LinearExpression):
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
-        if not self.is_constant():
+        if not self.is_constant() and len(self._args) == 2:
             generate_relational_expression.call_info \
                 = traceback.extract_stack(limit=2)[-2]
             generate_relational_expression.chainedInequality = self
