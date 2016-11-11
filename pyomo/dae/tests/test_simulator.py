@@ -68,7 +68,7 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dv[t])].name, 'v[{t}]')
         self.assertTrue(isinstance(mysim._rhsdict[_GetItemIndexer(m.dw[t])], Param))
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw[t])].name, 'v[{t}]')
-        self.assertEqual(len(mysim._rhsfun([0,0],0)), 2)
+        self.assertEqual(len(mysim._rhsfun(0,[0,0])), 2)
         self.assertIsNone(mysim._tsim)
         self.assertIsNone(mysim._simsolution)
         m.del_component('deq1')
@@ -142,7 +142,7 @@ class TestSimulator(unittest.TestCase):
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw2[1,t])].name, 'w2[1,{t}]')
         self.assertEqual(mysim._rhsdict[_GetItemIndexer(m.dw2[3,t])].name, 'w2[3,{t}]')
 
-        self.assertEqual(len(mysim._rhsfun([0]*12,0)), 12)
+        self.assertEqual(len(mysim._rhsfun(0,[0]*12)), 12)
         self.assertIsNone(mysim._tsim)
         self.assertIsNone(mysim._simsolution)
 

@@ -138,11 +138,6 @@ class Simulator:
                 "'package' keyword argument. SciPy is the only "
                 "package currently supported by the "
                 "Simulator."%(self._intpackage))
-        else:
-            try:
-                from scipy.integrate import ode
-            except ImportError:
-                raise ImportError("Tried to import SciPy but failed")
 
         temp = m.component_map(ContinuousSet)
         if len(temp) != 1:
@@ -362,7 +357,12 @@ class Simulator:
         be specified as keyword arguments and will be passed on to the
         integrator.
         """
-        from scipy.integrate import ode
+        # 
+
+        try:
+            from scipy.integrate import ode
+        except ImportError:
+            raise ImportError("Tried to import SciPy but failed")
 
         # Specify the scipy integrator to use for simulation
         valid_integrators = ['vode','zvode','lsoda','dopri5','dop853']
