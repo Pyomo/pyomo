@@ -28,8 +28,8 @@ def _diffeq2(m,t):
 m.diffeq2 = Constraint(m.t,rule=_diffeq2)
 
 # Simulate the model
-sim = Simulator(m)
-tsim, profiles = sim.simulate(numpoints=200)
+sim = Simulator(m, package='scipy')
+tsim, profiles = sim.simulate(numpoints=100,integrator='vode')
 varorder = sim.get_variable_order()
 
 # Discretize model using Orthogonal Collocation

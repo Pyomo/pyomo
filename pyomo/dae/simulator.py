@@ -138,6 +138,11 @@ class Simulator:
                 "'package' keyword argument. SciPy is the only "
                 "package currently supported by the "
                 "Simulator."%(self._intpackage))
+        else:
+            try:
+                from scipy.integrate import ode
+            except ImportError:
+                raise ImportError("Tried to import SciPy but failed")
 
         temp = m.component_map(ContinuousSet)
         if len(temp) != 1:
@@ -313,7 +318,7 @@ class Simulator:
                     "algebraic variables")
 
         # Function sent to scipy integrator
-        def _rhsfun(x,t):
+        def _rhsfun(t,x):
             residual = []
             cstemplate.set_value(t)
             for idx,v in enumerate(diffvars):
@@ -357,20 +362,19 @@ class Simulator:
         be specified as keyword arguments and will be passed on to the
         integrator.
         """
-        
+        from scipy.integrate import ode
+
         # Specify the scipy integrator to use for simulation
-        integrator = kwds.pop('integrator', 'odeint')
+        valid_integrators = ['vode','zvode','lsoda','dopri5','dop853']
+        integrator = kwds.pop('integrator', 'lsoda')
         if integrator is 'odeint':
-            try:
-                from scipy.integrate import odeint
-            except ImportError:
-                raise ImportError("Tried to import SciPy but failed")
-        else:
+            integrator = 'lsoda'
+
+        if integrator not in valid_integrators:
             raise DAE_Error(
-                        "The scipy integrator %s is not supported by "
-                        "the pyomo.dae Simulator" %(integrator))
-        
-        # Set the time step or the number of points for the vectors
+                        "Unrecognized scipy integrator %s" %(integrator))
+
+        # Set the time step or the number of points for the lists
         # returned by the scipy integrator
         tstep = kwds.pop('step', None)
         if tstep is not None and \
@@ -422,23 +426,27 @@ class Simulator:
                 # This line will raise an error if no value was set
                 initcon.append(value(v._base[vidx]))
         
-        # Check other options being sent to the integrator Always get
-        # full output from the integrator to check for convergence
-        kwds['full_output'] = True        
+        scipyint = ode(self._rhsfun).set_integrator(integrator,**kwds)
+        scipyint.set_initial_value(initcon,tsim[0])
 
-        sol,infodict = odeint(self._rhsfun,initcon,tsim,**kwds)
+        profile = np.array(initcon)
+        i = 1
+        while scipyint.successful() and scipyint.t < tsim[-1]:
+            profilestep = scipyint.integrate(tsim[i])
+            profile = np.vstack([profile,profilestep])
+            i += 1
+            
+
+        # sol,infodict = odeint(self._rhsfun,initcon,tsim,**kwds)
         
-        if infodict['message'] != 'Integration successful.':
+        if not scipyint.successful():
             raise DAE_Error("The Scipy integrator %s did not terminate "
-                            "successfully. Re-run with the option "
-                            "\'printmessg=True\' for more information."
-                            %(integrator))
+                            "successfully."%(integrator))
 
         self._tsim = tsim
-        self._simsolution = sol
-        self._siminfo = infodict
+        self._simsolution = profile
             
-        return [tsim,sol]
+        return [tsim,profile]
 
     def initialize_model(self):
         """
