@@ -294,8 +294,6 @@ class Simulator:
         for deriv in derivlist:
             sv = deriv._base.get_state_var()
             diffvars.append(_GetItemIndexer(sv[deriv._args]))
-            # # List with keys for the substituter map
-            # diffvarids.append(_GetItemIndexer(deriv.get_state_var()[cstemplate])) 
 
         # Make sure there are no DerivativeVars or algebraic variables
         # in the RHS expressions. The template map should only contain
@@ -330,7 +328,6 @@ class Simulator:
         self._contset = contset
         self._cstemplate = cstemplate
         self._diffvars = diffvars
-        # self._diffvarids = diffvarids 
         self._derivlist = derivlist
         self._templatemap = templatemap
         self._rhsdict = rhsdict
@@ -354,11 +351,27 @@ class Simulator:
         Simulate the model. The user may specify initial conditions using
         a list. If no list is provided then the simulator will take
         the current value of the differential variable at the lower
-        bound of the ContinuousSet. The user may also specify the time
-        step for the profiles returned by the integrator and other
-        simulation options.
+        bound of the ContinuousSet. The user may also specify either
+        the time step or the number of points for the profiles
+        returned by simulator. Other integrator-specific options may
+        be specified as keyword arguments and will be passed on to the
+        integrator.
         """
-
+        
+        # Specify the scipy integrator to use for simulation
+        integrator = kwds.pop('integrator', 'odeint')
+        if integrator is 'odeint':
+            try:
+                from scipy.integrate import odeint
+            except ImportError:
+                raise ImportError("Tried to import SciPy but failed")
+        else:
+            raise DAE_Error(
+                        "The scipy integrator %s is not supported by "
+                        "the pyomo.dae Simulator" %(integrator))
+        
+        # Set the time step or the number of points for the vectors
+        # returned by the scipy integrator
         tstep = kwds.pop('step', None)
         if tstep is not None and \
            tstep > (self._contset.last()-self._contset.first()):
@@ -384,6 +397,8 @@ class Simulator:
             tsim = np.arrange(
                 self._contset.first(),self._contset.last(),tstep)
 
+        # Check if initial conditions were provided, otherwise obtain
+        # them from the current variable values
         initcon = kwds.pop('initcon',None)
         if initcon is not None:
             if len(initcon)>len(self._diffvars):
@@ -406,18 +421,22 @@ class Simulator:
                 vidx = tuple(v._args[0:idx])+(initpoint,)+tuple(v._args[idx+1:])
                 # This line will raise an error if no value was set
                 initcon.append(value(v._base[vidx]))
-
-        try:
-            from scipy.integrate import odeint
-        except ImportError:
-            raise ImportError("Tried to import SciPy but failed")
         
-        # TODO: Figure out how to get information back from integrator and
-        # verify that it terminated successfully
-        sol = odeint(self._rhsfun,initcon,tsim)
+        # Check other options being sent to the integrator Always get
+        # full output from the integrator to check for convergence
+        kwds['full_output'] = True        
+
+        sol,infodict = odeint(self._rhsfun,initcon,tsim,**kwds)
+        
+        if infodict['message'] != 'Integration successful.':
+            raise DAE_Error("The Scipy integrator %s did not terminate "
+                            "successfully. Re-run with the option "
+                            "\'printmessg=True\' for more information."
+                            %(integrator))
 
         self._tsim = tsim
         self._simsolution = sol
+        self._siminfo = infodict
             
         return [tsim,sol]
 

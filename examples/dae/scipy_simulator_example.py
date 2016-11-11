@@ -29,7 +29,7 @@ m.diffeq2 = Constraint(m.t,rule=_diffeq2)
 
 # Simulate the model
 sim = Simulator(m)
-tsim, profiles = sim.simulate()
+tsim, profiles = sim.simulate(numpoints=200)
 varorder = sim.get_variable_order()
 
 # Discretize model using Orthogonal Collocation
