@@ -1188,6 +1188,10 @@ class ProgressiveHedging(_PHBase):
     def get_objective_sense(self):
         return self._objective_sense
 
+    def is_converged(self):
+        return (self._or_convergers and any(converger.isConverged(self) for converger in self._convergers)) or \
+               (not self._or_convergers and all(converger.isConverged(self) for converger in self._convergers))
+    
     def set_dual_mode(self):
 
         self._dual_mode = True
@@ -3870,8 +3874,7 @@ class ProgressiveHedging(_PHBase):
                     if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
                     self._cost_history[self._current_iteration] = expected_cost
 
-                    if (self._or_convergers and any(converger.isConverged(self) for converger in self._convergers)) or \
-                       (not self._or_convergers and all(converger.isConverged(self) for converger in self._convergers)):
+                    if self.is_converged():
 
                         if (len(self._incumbent_cost_history) == 0) or \
                            ((self._objective_sense == minimize) and \
@@ -4086,8 +4089,7 @@ class ProgressiveHedging(_PHBase):
             if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
             self._cost_history[self._current_iteration] = expected_cost
             
-            if (self._or_convergers and any(converger.isConverged(self) for converger in self._convergers)) or \
-               (not self._or_convergers and all(converger.isConverged(self) for converger in self._convergers)):
+            if self.is_converged():
                
                 if not _OLD_OUTPUT: print("Caching results for new incumbent solution")
                 self.cacheSolutions(self._incumbent_cache_id)
@@ -4288,9 +4290,8 @@ class ProgressiveHedging(_PHBase):
                 if not _OLD_OUTPUT: print("Expected Cost=%14.4f" % (expected_cost))
                 self._cost_history[self._current_iteration] = expected_cost
 
-                if (self._or_convergers and any(converger.isConverged(self) for converger in self._convergers)) or \
-                   (not self._or_convergers and all(converger.isConverged(self) for converger in self._convergers)):                    
-
+                if self.is_converged():
+                    
                     if (len(self._incumbent_cost_history) == 0) or \
                        ((self._objective_sense == minimize) and \
                         (expected_cost < min(self._incumbent_cost_history.values()))) or \
@@ -4315,8 +4316,7 @@ class ProgressiveHedging(_PHBase):
                 # check for early termination.
                 if not self._dual_mode:
 
-                    if (self._or_convergers and any(converger.isConverged(self) for converger in self._convergers)) or \
-                       (not self._or_convergers and all(converger.isConverged(self) for converger in self._convergers)):                    
+                    if self.is_converged():
 
                         plugin_convergence = True
                         for plugin in self._ph_plugins:
