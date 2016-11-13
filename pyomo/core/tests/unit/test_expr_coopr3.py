@@ -13,6 +13,7 @@
 
 import os
 import sys
+import re
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
@@ -1059,16 +1060,22 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
             self.fail("expected construction of invalid compound inequality: "
                       "combining strict and nonstrict relationships in an "
                       "implicit equality.")
-        except TypeError:
-            pass
+        except TypeError as e:
+            self.assertIn(
+                "Cannot create a compound inequality with identical upper and "
+                "lower bounds using strict inequalities",
+                re.sub('\s+',' ',str(e)) )
 
         try:
             0 <= m.a < 0
             self.fail("expected construction of invalid compound inequality: "
                       "combining strict and nonstrict relationships in an "
                       "implicit equality.")
-        except TypeError:
-            pass
+        except TypeError as e:
+            self.assertIn(
+                "Cannot create a compound inequality with identical upper and "
+                "lower bounds using strict inequalities",
+                re.sub('\s+',' ',str(e)) )
 
         e = 0 <= 1 < m.a
         self.assertIs(type(e), EXPR._InequalityExpression)
