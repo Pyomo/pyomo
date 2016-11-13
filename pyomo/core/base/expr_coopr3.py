@@ -49,37 +49,11 @@ import pyomo.core.base.expr_common
 from pyomo.core.base.expr_common import \
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
     _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq, clone_expression
+    _lt, _le, _eq, clone_expression, chainedInequalityErrorMessage as cIEM
 
-
-def chainedInequalityErrorMessage(msg=None):
-    if msg is None:
-        msg = "Relational expression used in an unexpected Boolean context."
-    buf = StringIO()
-    generate_relational_expression.chainedInequality.to_string(buf)
-    # We are about to raise an exception, so it's OK to reset chainedInequality
-    generate_relational_expression.chainedInequality = None
-    info = generate_relational_expression.call_info
-
-    args = ( str(msg).strip(), buf.getvalue().strip(), info[0], info[1],
-             ':\n    %s' % info[3] if info[3] is not None else '.' )
-    return """%s
-
-The inequality expression:
-    %s
-contains non-constant terms (variables) that were evaluated in an
-unexpected Boolean context at
-  File '%s', line %s%s
-
-Evaluating Pyomo variables in a Boolean context, e.g.
-    if expression <= 5:
-is generally invalid.  If you want to obtain the Boolean value of the
-expression based on the current variable values, explicitly evaluate the
-expression using the value() function:
-    if value(expression) <= 5:
-or
-    if value(expression <= 5):
-""" % args
+# Wrap the common chainedInequalityErrorMessage to pass the local context
+chainedInequalityErrorMessage \
+    = lambda *x: cIEM(generate_relational_expression, *x)
 
 
 def identify_variables( expr,
