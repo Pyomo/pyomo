@@ -17,6 +17,7 @@ from __future__ import division
 import logging
 import math
 import sys
+import traceback
 from six import advance_iterator
 from weakref import ref
 
@@ -43,7 +44,11 @@ from pyomo.core.base.expr_common import \
     ensure_independent_trees as safe_mode, bypass_backreference, \
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
     _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq, clone_expression
+    _lt, _le, _eq, clone_expression, chainedInequalityErrorMessage as cIEM
+
+# Wrap the common chainedInequalityErrorMessage to pass the local context
+chainedInequalityErrorMessage \
+    = lambda *x: cIEM(generate_relational_expression, *x)
 
 _stack = []
 
@@ -54,28 +59,6 @@ def _const_to_string(*args):
 
 class EntangledExpressionError(Exception):
     pass
-
-def chainedInequalityErrorMessage(msg=None):
-    if msg is None:
-        msg = "Nonconstant relational expression used in an "\
-              "unexpected Boolean context."
-    buf = StringIO()
-    generate_relational_expression.chainedInequality.to_string(buf)
-    # We are about to raise an exception, so it's OK to reset chainedInequality
-    generate_relational_expression.chainedInequality = None
-    msg += """
-The inequality expression:
-    %s
-contains non-constant terms (variables) appearing in a Boolean context, e.g.:
-    if expression <= 5:
-This is generally invalid.  If you want to obtain the Boolean value of
-the expression based on the current variable values, explicitly evaluate
-the expression, e.g.:
-    if value(expression) <= 5:
-or
-    if value(expression <= 5):
-""" % ( buf.getvalue().strip(), )
-    return msg
 
 
 def identify_variables( expr,
@@ -533,7 +516,9 @@ class _InequalityExpression(_LinearOperatorExpression):
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
-        if not self.is_constant():
+        if not self.is_constant() and len(self._args) == 2:
+            generate_relational_expression.call_info \
+                = traceback.extract_stack(limit=2)[-2]
             generate_relational_expression.chainedInequality = self
             return True
 
@@ -1632,11 +1617,17 @@ def generate_relational_expression(etype, lhs, rhs):
         # expression.
         for i,arg in enumerate(prevExpr._cloned_from):
             if arg == cloned_from[0]:
-                match.append(1)
+                match.append((i,0))
             elif arg == cloned_from[1]:
-                match.append(0)
+                match.append((i,1))
+        if etype == _eq:
+            raise TypeError(chainedInequalityErrorMessage())
         if len(match) == 1:
-            if match[0]:
+            if match[0][0] == match[0][1]:
+                raise TypeError(chainedInequalityErrorMessage(
+                    "Attempting to form a compound inequality with two "
+                    "%s bounds" % ('lower' if match[0][0] else 'upper',)))
+            if not match[0][1]:
                 cloned_from = prevExpr._cloned_from + (cloned_from[1],)
                 lhs = prevExpr
                 lhs_is_relational = True
@@ -1651,9 +1642,15 @@ def generate_relational_expression(etype, lhs, rhs):
                 buf = StringIO()
                 prevExpr.to_string(buf)
                 raise TypeError("Cannot create a compound inequality with "
-                      "identical upper and lower\n\tbounds with strict "
-                      "inequalities: constraint trivially infeasible:\n\t%s and "
+                      "identical upper and lower\n\tbounds using strict "
+                      "inequalities: constraint infeasible:\n\t%s and "
                       "%s < %s" % ( buf.getvalue().strip(), lhs, rhs ))
+            if match[0] == (0,0):
+                # This is a particularly weird case where someone
+                # evaluates the *same* inequality twice in a row.  This
+                # should always be an error (you can, for example, get
+                # it with "0 <= a >= 0").
+                raise TypeError(chainedInequalityErrorMessage())
             etype = _eq
         else:
             raise TypeError(chainedInequalityErrorMessage())
