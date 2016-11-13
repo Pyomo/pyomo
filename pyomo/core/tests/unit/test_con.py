@@ -1331,8 +1331,8 @@ class MiscConTests(unittest.TestCase):
             pass
         m.c = Constraint()
         self.assertRaisesRegexp(
-            TypeError, "contains non-constant terms \(variables\) "
-            "appearing in a Boolean context", m.c.set_value, a)
+            TypeError, "Relational expression used in an unexpected "
+            "Boolean context.", m.c.set_value, a)
 
     def test_tuple_constraint_create(self):
         def rule1(model):
