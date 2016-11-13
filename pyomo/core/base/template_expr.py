@@ -186,6 +186,12 @@ class _GetItemIndexer(object):
                 self._args.append(val)
                 _hash.append(val)
             except TemplateExpressionError as e:
+                if x is not e.template:
+                    raise TypeError(
+                        "Cannot use the param substituter with expression "
+                        "templates\nwhere the component index has the "
+                        "IndexTemplate in an expression.\n\tFound in %s"
+                        % ( expr, ))
                 self._args.append(e.template)
                 _hash.append(id(e.template._set))
             finally:
