@@ -9,12 +9,19 @@
 #  _________________________________________________________________________
 
 from __future__ import division
+from copy import deepcopy
 
 class Mode(object):
     coopr3_trees = (1,)
     pyomo4_trees = (2,)
 mode = _default_mode = Mode.pyomo4_trees
 mode = _default_mode = Mode.coopr3_trees
+
+def clone_expression(exp, substitute=None):
+    memo = {'__block_scope__': { id(None): False }}
+    if substitute:
+        memo.update(substitute)
+    return deepcopy(exp, memo)
 
 def _clear_expression_pool():
     from expr_coopr3 import _clear_expression_pool as \

@@ -13,10 +13,10 @@ from __future__ import division
 #            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
 #            'atanh', 'ceil', 'floor' )
 
-import copy
 import logging
 import math
 import sys
+import traceback
 
 logger = logging.getLogger('pyomo.core')
 
@@ -49,43 +49,43 @@ import pyomo.core.base.expr_common
 from pyomo.core.base.expr_common import \
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
     _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq
+    _lt, _le, _eq, clone_expression
 
-
-def clone_expression(exp):
-    if type(exp) not in native_numeric_types and exp.is_expression():
-        # It is important that this function calls the clone method not __copy__.
-        # __copy__ and clone are the same for all classes that advertise "is_expression = True"
-        # except the _ExpressionData class (in which case clone does nothing
-        # so that the object remains persistent when generating expressions)
-        return exp.clone()
-    else:
-        return exp
 
 def chainedInequalityErrorMessage(msg=None):
     if msg is None:
-        msg = "Nonconstant relational expression used in an "\
-              "unexpected Boolean context."
+        msg = "Relational expression used in an unexpected Boolean context."
     buf = StringIO()
     generate_relational_expression.chainedInequality.to_string(buf)
     # We are about to raise an exception, so it's OK to reset chainedInequality
     generate_relational_expression.chainedInequality = None
-    msg += """
+    info = generate_relational_expression.call_info
+
+    args = ( str(msg).strip(), buf.getvalue().strip(), info[0], info[1],
+             ':\n    %s' % info[3] if info[3] is not None else '.' )
+    return """%s
+
 The inequality expression:
     %s
-contains non-constant terms (variables) appearing in a Boolean context, e.g.:
+contains non-constant terms (variables) that were evaluated in an
+unexpected Boolean context at
+  File '%s', line %s%s
+
+Evaluating Pyomo variables in a Boolean context, e.g.
     if expression <= 5:
-This is generally invalid.  If you want to obtain the Boolean value of
-the expression based on the current variable values, explicitly evaluate
-the expression, e.g.:
+is generally invalid.  If you want to obtain the Boolean value of the
+expression based on the current variable values, explicitly evaluate the
+expression using the value() function:
     if value(expression) <= 5:
 or
     if value(expression <= 5):
-""" % ( buf.getvalue().strip(), )
-    return msg
+""" % args
 
 
-def identify_variables(expr, include_fixed=True, allow_duplicates=False):
+def identify_variables( expr,
+                        include_fixed=True,
+                        allow_duplicates=False,
+                        include_potentially_variable=False ):
     if not allow_duplicates:
         _seen = set()
     _stack = [ ([expr], 0, 1) ]
@@ -108,13 +108,20 @@ def identify_variables(expr, include_fixed=True, allow_duplicates=False):
                 _idx = 0
                 _len = len(_argList)
             elif isinstance(_sub, _VarData):
-                if include_fixed or not _sub.is_fixed():
+                if ( include_fixed
+                     or not _sub.is_fixed()
+                     or include_potentially_variable ):
                     if not allow_duplicates:
                         if id(_sub) in _seen:
                             continue
                         _seen.add(id(_sub))
                     yield _sub
-
+            elif include_potentially_variable and _sub._potentially_variable():
+                if not allow_duplicates:
+                    if id(_sub) in _seen:
+                        continue
+                    _seen.add(id(_sub))
+                yield _sub
 
 class _ExpressionBase(NumericValue):
     """An object that defines a mathematical expression that can be evaluated"""
@@ -154,13 +161,8 @@ class _ExpressionBase(NumericValue):
                 ostream.write("(%s)" % (arg,))
         ostream.write(" )")
 
-    def clone(self):
-        return copy.copy(self)
-
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        raise NotImplementedError("Derived expression (%s) failed to "\
-            "implement __copy__()" % ( str(self.__class__), ))
+    def clone(self, substitute=None):
+        return clone_expression(self, substitute)
 
     def simplify(self, model): #pragma:nocover
         print("""
@@ -267,10 +269,6 @@ class _ExternalFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def __copy__(self):
-        return self.__class__( self._fcn,
-                               tuple(clone_expression(x) for x in self._args) )
-
     def getname(self, *args, **kwds):
         return self._fcn.getname(*args, **kwds)
 
@@ -323,12 +321,6 @@ class _IntrinsicFunctionExpression(_ExpressionBase):
             result[i] = getattr(self, i)
         return result
 
-    def __copy__(self):
-        return self.__class__( self._name,
-                               None,
-                               tuple(clone_expression(x) for x in self._args),
-                               self._operator )
-
     def _apply_operation(self, values):
         return self._operator(*tuple(values))
 
@@ -353,9 +345,6 @@ class _AbsExpression(_IntrinsicFunctionExpression):
     #def __getstate__(self):
     #    return _IntrinsicFunctionExpression.__getstate__(self)
 
-    def __copy__(self):
-        return self.__class__( tuple(clone_expression(x) for x in self._args) )
-
 # Should this actually be a special class, or just an instance of
 # _IntrinsicFunctionExpression (like sin, cos, etc)?
 class _PowExpression(_IntrinsicFunctionExpression):
@@ -368,9 +357,6 @@ class _PowExpression(_IntrinsicFunctionExpression):
 
     #def __getstate__(self):
     #    return _IntrinsicFunctionExpression.__getstate__(self)
-
-    def __copy__(self):
-        return self.__class__( tuple(clone_expression(x) for x in self._args) )
 
     def polynomial_degree(self):
         # _PowExpression is a tricky thing.  In general, a**b is
@@ -484,7 +470,9 @@ class _InequalityExpression(_LinearExpression):
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
-        if not self.is_constant():
+        if not self.is_constant() and len(self._args) == 2:
+            generate_relational_expression.call_info \
+                = traceback.extract_stack(limit=2)[-2]
             generate_relational_expression.chainedInequality = self
             return True
 
@@ -497,11 +485,6 @@ class _InequalityExpression(_LinearExpression):
 
     def _precedence(self):
         return _InequalityExpression.PRECEDENCE
-
-    def __copy__(self):
-        return self.__class__( [clone_expression(x) for x in self._args],
-                               copy.copy(self._strict),
-                               copy.copy(self._cloned_from) )
 
     def _apply_operation(self, values):
         """Method that defines the less-than-or-equal operation"""
@@ -557,9 +540,6 @@ class _EqualityExpression(_LinearExpression):
             raise ValueError("%s() takes exactly 2 arguments (%d given)" % \
                 ( self.name, len(args) ))
         _LinearExpression.__init__(self, args)
-
-    def __copy__(self):
-        return self.__class__( tuple(clone_expression(x) for x in self._args) )
 
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
@@ -731,14 +711,6 @@ class _ProductExpression(_ExpressionBase):
         elif precedence and _my_precedence > precedence:
             ostream.write(" )")
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        tmp = self.__class__()
-        tmp._numerator = [clone_expression(x) for x in self._numerator]
-        tmp._denominator = [clone_expression(x) for x in self._denominator]
-        tmp._coef = self._coef
-        return tmp
-
     def __call__(self, exception=True):
         """Evaluate the expression"""
         try:
@@ -783,14 +755,6 @@ class _SumExpression(_LinearExpression):
         for i in _SumExpression.__slots__:
             result[i] = getattr(self, i)
         return result
-
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        tmp = self.__class__()
-        tmp._args = [clone_expression(x) for x in self._args]
-        tmp._coef = copy.copy(self._coef)
-        tmp._const = self._const
-        return tmp
 
     def _precedence(self):
         return _SumExpression.PRECEDENCE
@@ -926,12 +890,6 @@ class Expr_if(_ExpressionBase):
                               precedence=self._precedence())
         ostream.write(" ) )")
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__(IF=clone_expression(self._if),
-                              THEN=clone_expression(self._then),
-                              ELSE=clone_expression(self._else))
-
     def __call__(self, exception=True):
         """Evaluate the expression"""
         if self._if(exception=exception):
@@ -941,7 +899,7 @@ class Expr_if(_ExpressionBase):
 
 
 class _GetItemExpression(_ExpressionBase):
-    __slots__ = ('_base')
+    __slots__ = ('_base',)
 
     def __init__(self, base, args):
         """Construct a call to an external function"""
@@ -953,10 +911,6 @@ class _GetItemExpression(_ExpressionBase):
         for i in _GetItemExpression.__slots__:
             result[i] = getattr(self, i)
         return result
-
-    def __copy__(self):
-        return self.__class__( self._base,
-                               tuple(clone_expression(x) for x in self._args) )
 
     def getname(self, *args, **kwds):
         return self._base.getname(*args, **kwds)
@@ -1474,11 +1428,17 @@ def generate_relational_expression(etype, lhs, rhs):
         # expression.
         for i,arg in enumerate(prevExpr._cloned_from):
             if arg == cloned_from[0]:
-                match.append(1)
+                match.append((i,0))
             elif arg == cloned_from[1]:
-                match.append(0)
+                match.append((i,1))
+        if etype == _eq:
+            raise TypeError(chainedInequalityErrorMessage())
         if len(match) == 1:
-            if match[0]:
+            if match[0][0] == match[0][1]:
+                raise TypeError(chainedInequalityErrorMessage(
+                    "Attempting to form a compound inequality with two "
+                    "%s bounds" % ('lower' if match[0][0] else 'upper',)))
+            if not match[0][1]:
                 cloned_from = prevExpr._cloned_from + (cloned_from[1],)
                 lhs = prevExpr
                 lhs_is_relational = True
@@ -1493,9 +1453,15 @@ def generate_relational_expression(etype, lhs, rhs):
                 buf = StringIO()
                 prevExpr.to_string(buf)
                 raise TypeError("Cannot create a compound inequality with "
-                      "identical upper and lower\n\tbounds with strict "
+                      "identical upper and lower\n\tbounds using strict "
                       "inequalities: constraint infeasible:\n\t%s and "
                       "%s < %s" % ( buf.getvalue().strip(), lhs, rhs ))
+            if match[0] == (0,0):
+                # This is a particularly weird case where someone
+                # evaluates the *same* inequality twice in a row.  This
+                # should always be an error (you can, for example, get
+                # it with "0 <= a >= 0").
+                raise TypeError(chainedInequalityErrorMessage())
             etype = _eq
         else:
             raise TypeError(chainedInequalityErrorMessage())
@@ -1566,6 +1532,7 @@ def generate_relational_expression(etype, lhs, rhs):
 # expressions of the type "a < b < c".  This provides a buffer to hold
 # the first inequality so the second inequality can access it later.
 generate_relational_expression.chainedInequality = None
+generate_relational_expression.call_info = None
 
 # [debugging] clone_counter is a count of the number of calls to
 # expr.clone() made during expression generation.

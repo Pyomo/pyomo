@@ -1029,9 +1029,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # preserved as references (anything outside this block
         # hierarchy).  We must always go through this effort to prevent
         # copying certain "reserved" components (like Any,
-        # NonNegativeReals, etc).
+        # NonNegativeReals, etc) that are not "owned" by any blocks and
+        # should be preserved as singletons.
         #
-        new_block = copy.deepcopy(self, {'__block_scope__': set( (id(self),) )})
+        new_block = copy.deepcopy(
+            self, {'__block_scope__': {id(self):True, id(None):False}} )
         new_block._parent = None
         return new_block
 
@@ -1189,16 +1191,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         block.  By default, this generator recursively
         descends into sub-blocks.
         """
-        if not descend_into:
-            for x in self._component_data_iter(ctype=ctype,
-                                               active=active,
-                                               sort=sort):
-                yield x[1]
-            return
-        for _block in self.block_data_objects(active=active,
-                                              sort=sort,
-                                              descend_into=descend_into,
-                                              descent_order=descent_order):
+        if descend_into:
+            block_generator = self.block_data_objects(
+                active=active,
+                sort=sort,
+                descend_into=descend_into,
+                descent_order=descent_order)
+        else:
+            block_generator = (self,)
+
+        for _block in block_generator:
             for x in _block._component_data_iter(ctype=ctype,
                                                  active=active,
                                                  sort=sort):
@@ -1217,16 +1219,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         tuple is
             ((component name, index value), _ComponentData)
         """
-        if not descend_into:
-            for x in self._component_data_iter(ctype=ctype,
-                                               active=active,
-                                               sort=sort):
-                yield x
-            return
-        for _block in self.block_data_objects(active=active,
-                                              sort=sort,
-                                              descend_into=descend_into,
-                                              descent_order=descent_order):
+        if descend_into:
+            block_generator = self.block_data_objects(
+                active=active,
+                sort=sort,
+                descend_into=descend_into,
+                descent_order=descent_order)
+        else:
+            block_generator = (self,)
+
+        for _block in block_generator:
             for x in _block._component_data_iter(ctype=ctype,
                                                  active=active,
                                                  sort=sort):
@@ -1262,7 +1264,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Rely on the _tree_iterator:
         #
-        return self._tree_iterator(ctype=Block,
+        return self._tree_iterator(ctype=(Block,),
                                    active=active,
                                    sort=sort,
                                    traversal=descent_order)
@@ -1275,8 +1277,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
         # TODO: merge into block_data_objects
         if ctype is None:
-            ctype = Block
-        if isclass(ctype):
+            ctype = (Block,)
+        elif isclass(ctype):
             ctype = (ctype,)
 
         # A little weird, but since we "normally" return a generator, we
