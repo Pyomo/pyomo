@@ -204,6 +204,11 @@ def construct_ph_options_parser(usage_string):
       dest="max_iterations",
       type=int,
       default=100)
+    phOpts.add_argument('--or-convergers',
+      help="Terminate when any one of the convergence criterion is satisfied. Defaults to False, i.e., and",
+      action="store_true",
+      dest="or_convergers",
+      default=False)
     phOpts.add_argument('--termdiff-threshold',
       help="The convergence threshold used in the term-diff and normalized term-diff convergence criteria. Default is 0.0001.",
       action="store",
