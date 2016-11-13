@@ -10,7 +10,7 @@ EDIR=../../../examples/pysp/sizes
 #EDIR=$BASEDIR/pyomo/src/pyomo/pyomo/pysp/tests/examples/test_model/feas
 #EDIR=../impossible
 
-python bbph.py -i $EDIR/SIZES3 -m $EDIR/models --default-rho=1 --user-defined-extension=pyomo.pysp.plugins.phboundextension --traceback --BBPH-Verbose --BBPH-OuterIterationLimit=4 --max-iterations=40 --or-convergers
+python bbph.py -i $EDIR/SIZES3 -m $EDIR/models --default-rho=1 --user-defined-extension=pyomo.pysp.plugins.phboundextension --traceback --BBPH-Verbose --BBPH-OuterIterationLimit=4 --max-iterations=40 --or-convergers --termdiff-threshold=0.005
 
 #python BBPH.py -i $EDIR/SIZES3 -m $EDIR/models --default-rho=1 --user-defined-extension=pyomo.pysp.plugins.phboundextension --traceback --BBPH-OuterIterationLimit=5 --max-iterations=5 #--pyro-host=localhost --solver-manager=phpyro --phpyro-required-workers=3
 
