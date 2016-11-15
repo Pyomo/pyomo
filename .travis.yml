@@ -18,6 +18,7 @@ matrix:
   - python: '3.5'        
     env: PYRO="Pyro4" YAML=""
 install:
+- pip install $PYRO
 - sudo apt-get update
 # We do this conditionally because it saves us some downloading if the
 # version is the same.
@@ -35,7 +36,6 @@ install:
 - conda install -y --channel conda-forge glpk
 - pip install xlrd
 - pip install openpyxl
-- pip install $PYRO
 - pip install coverage
 - pip install networkx
 - pip install git+https://github.com/PyUtilib/pyutilib
