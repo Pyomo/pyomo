@@ -32,7 +32,7 @@ install:
 - if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 - if [ -n "${YAML}" ]; then pip install pyyaml; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
-- conda install -f --channel conda-forge glpk
+- conda install -y --channel conda-forge glpk
 - pip install xlrd
 - pip install openpyxl
 - pip install $PYRO
