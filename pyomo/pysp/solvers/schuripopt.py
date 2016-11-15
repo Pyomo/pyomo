@@ -266,6 +266,7 @@ def EXTERNAL_invoke_solve(worker,
     args.append("use_problem_file=yes")
     args.append("mpi_spawn_mode=yes")
     args.append("option_file_name="+options_filename)
+
     if mpi4py.MPI.COMM_WORLD.rank == 0:
         args.append("output_file="+str(logfile))
     for key, val in command_line_options:
@@ -502,7 +503,9 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
         # Setup the SchurIpopt working directory
         #
         problem_list_filename = "PySP_Subproblems.txt"
-        working_directory = self._create_tempdir("workdir")
+        working_directory = self._create_tempdir("workdir",
+                                                 dir=os.getcwd())
+
         logfile = self._files["logfile"] = \
             logfile if (logfile is not None) else \
             os.path.join(working_directory,
