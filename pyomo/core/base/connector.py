@@ -21,7 +21,7 @@ from pyomo.core.base.component import ComponentData, register_component
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.numvalue import NumericValue, value
-from pyomo.core.base.plugin import IPyomoScriptModifyInstance
+from pyomo.core.base.plugin import IPyomoScriptModifyInstance, TransformationFactory
 
 logger = logging.getLogger('pyomo.core')
 
