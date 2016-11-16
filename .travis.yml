@@ -52,7 +52,6 @@ script:
 - ls
 - pwd
 - test.pyomo -v --cat=nightly --cov
-- ls
 after_success:
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
@@ -60,6 +59,7 @@ after_success:
 - pwd
 - coverage combine
 - pip install codecov
+- cp ../.coverage .
 - codecov
 #- pip install python-coveralls
 #- coveralls
