@@ -18,7 +18,6 @@ matrix:
   - python: '3.5'        
     env: PYRO="Pyro4" YAML=""
 install:
-- pip install $PYRO
 - sudo apt-get update
 # We do this conditionally because it saves us some downloading if the
 # version is the same.
@@ -33,6 +32,7 @@ install:
 - if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 - if [ -n "${YAML}" ]; then pip install pyyaml; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" ]; then pip install $PYRO; fi
 - conda install -y --channel conda-forge glpk
 - pip install xlrd
 - pip install openpyxl
@@ -41,22 +41,21 @@ install:
 - pip install git+https://github.com/PyUtilib/pyutilib
 - python setup.py develop
 script:
-- cd $TRAVIS_BUILD_DIR
 # The next three commands enable tracking of coverage
 # for any subprocesses launched by tests
 - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
-- which glpsol
-- echo $PATH
-- ls
-- pwd
+#- which glpsol
+#- echo $PATH
+#- ls
+#- pwd
 - test.pyomo -v --cat=nightly --cov
 after_success:
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
-- ls
-- pwd
+#- ls
+#- pwd
 - coverage combine
 - pip install codecov
 - cp ../.coverage .
