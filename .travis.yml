@@ -41,7 +41,7 @@ install:
 - pip install git+https://github.com/PyUtilib/pyutilib
 - python setup.py develop
 script:
-- cd ..
+- cd $TRAVIS_BUILD_DIR
 # The next three commands enable tracking of coverage
 # for any subprocesses launched by tests
 - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc
