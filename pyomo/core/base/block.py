@@ -26,6 +26,7 @@ from pyomo.core.base.component import Component, ActiveComponentData, \
 from pyomo.core.base.sets import Set,  _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
 
@@ -1709,7 +1710,84 @@ class IndexedBlock(Block):
     def __init__(self, *args, **kwds):
         Block.__init__(self, *args, **kwds)
 
+def generate_cuid_names(block,
+                        ctype=None,
+                        descend_into=True,
+                        cuid_names_=None):
+    """
+    Bulk generation of CUID strings for all components
+    stored on a block.
 
+    Args:
+        block: The block to generate CUID strings for.
+        ctype: The ctype to generate CUID strings for (e.g.,
+            Var). This keyword is optional and if left to
+            its default value of None, the function will
+            generate CUID strings for all component
+            types. Note that if ctype is not None, this
+            function will still generate CUID strings for
+            any parent containers (such as blocks) that
+            prefix the components requested even though the
+            parent ctype may not match the input ctype.
+        descend_into (bool): Indicates whether or not the
+            function should descend into subblocks. Default
+            is True.
+        cuid_names_: Used internally by the function.
+
+    Returns:
+        A dictionary-like object that maps model components
+        to their CUID string.
+    """
+
+    # get the current blocks label, if it has one
+    if cuid_names_ is None:
+        cuid_names_ = ComponentMap()
+        block_prefix = ''
+    else:
+        block_prefix = cuid_names_[block] + '.'
+
+    # determine if we need to generate labels on
+    # subblocks
+    if (ctype is not None) and \
+       (ctype is not Block) and \
+       descend_into:
+        ctypes = (Block, ctype)
+    else:
+        ctypes = (ctype,)
+
+    for ctype_ in ctypes:
+        for key, obj in block.component_map(ctype=ctype_).items():
+            obj_cuid = block_prefix+key
+            if obj.is_indexed():
+                for data_key, obj_data in obj.items():
+                    if data_key.__class__ is tuple:
+                        key_cuid = ','.join(
+                            ComponentUID.tDict.get(type(x), '?') + str(x)
+                            for x in data_key)
+                    else:
+                        key_cuid = ComponentUID.tDict.get(type(data_key), '?') + \
+                                   str(data_key)
+                    cuid_names_[obj_data] = \
+                        obj_cuid + ":" + key_cuid
+                obj_cuid += ":**"
+            cuid_names_[obj] = obj_cuid
+
+    # Now recurse into subblocks
+    if descend_into:
+        for key, block_ in block.component_map(ctype=Block).items():
+            if block_.is_indexed():
+                for block_data in block_.values():
+                    generate_cuid_names(block_data,
+                                        ctype=ctype,
+                                        descend_into=descend_into,
+                                        cuid_names_=cuid_names_)
+            else:
+                generate_cuid_names(block_,
+                                    ctype=ctype,
+                                    descend_into=descend_into,
+                                    cuid_names_=cuid_names_)
+
+    return cuid_names_
 #
 # Deprecated functions.
 #
