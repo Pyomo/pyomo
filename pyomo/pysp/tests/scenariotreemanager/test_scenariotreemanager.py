@@ -996,7 +996,16 @@ def tearDownModule():
     _kill(_dispatch_srvr_process)
     _dispatch_srvr_port = None
     _dispatch_srvr_process = None
-    [_kill(proc) for proc in _taskworker_processes]
+    for i, proc in enumerate(_taskworker_processes):
+        _kill(proc)
+        outname = os.path.join(thisdir,
+                               "TestCapture_scenariotreeserver_" + \
+                               str(i+1) + ".out")
+        if os.path.exists(outname):
+            try:
+                os.remove(outname)
+            except OSError:
+                pass
     _taskworker_processes = []
     if os.path.exists(os.path.join(thisdir, "Pyro_NS_URI")):
         try:
@@ -1004,55 +1013,45 @@ def tearDownModule():
         except OSError:
             pass
 
+def _setUpPyro():
+    global _pyomo_ns_port
+    global _pyomo_ns_process
+    global _dispatch_srvr_port
+    global _dispatch_srvr_process
+    global _taskworker_processes
+    if _pyomo_ns_process is None:
+        _pyomo_ns_process, _pyomo_ns_port = \
+            _get_test_nameserver(ns_host=_pyomo_ns_host)
+    assert _pyomo_ns_process is not None
+    if _dispatch_srvr_process is None:
+        _dispatch_srvr_process, _dispatch_srvr_port = \
+            _get_test_dispatcher(ns_host=_pyomo_ns_host,
+                                 ns_port=_pyomo_ns_port)
+    assert _dispatch_srvr_process is not None
+    if len(_taskworker_processes) == 0:
+        for i in range(3):
+            outname = os.path.join(thisdir,
+                                   "TestCapture_scenariotreeserver_" + \
+                                   str(i+1) + ".out")
+            with open(outname, "w") as f:
+                _taskworker_processes.append(
+                    subprocess.Popen(["scenariotreeserver", "--traceback"] + \
+                                     ["--import-module="+thisfile] + \
+                                     (["--verbose"] if _run_verbose else []) + \
+                                     ["--pyro-host="+str(_pyomo_ns_host)] + \
+                                     ["--pyro-port="+str(_pyomo_ns_port)],
+                                     stdout=f,
+                                     stderr=subprocess.STDOUT))
+
+        time.sleep(2)
+        [_poll(proc) for proc in _taskworker_processes]
+
 class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
     cls = ScenarioTreeManagerClientPyro
 
-    def _setUpPyro(self):
-        global _pyomo_ns_port
-        global _pyomo_ns_process
-        global _dispatch_srvr_port
-        global _dispatch_srvr_process
-        global _taskworker_processes
-        if _pyomo_ns_process is None:
-            _pyomo_ns_process, _pyomo_ns_port = \
-                _get_test_nameserver(ns_host=_pyomo_ns_host)
-        assert _pyomo_ns_process is not None
-        if _dispatch_srvr_process is None:
-            _dispatch_srvr_process, _dispatch_srvr_port = \
-                _get_test_dispatcher(ns_host=_pyomo_ns_host,
-                                     ns_port=_pyomo_ns_port)
-        assert _dispatch_srvr_process is not None
-        class_name, test_name = self.id().split('.')[-2:]
-        if len(_taskworker_processes) == 0:
-            for i in range(3):
-                outname = os.path.join(thisdir,
-                                       class_name+"."+test_name+".scenariotreeserver_"+str(i+1)+".out")
-                self._tempfiles.append(outname)
-                with open(outname, "w") as f:
-                    _taskworker_processes.append(
-                        subprocess.Popen(["scenariotreeserver", "--traceback"] + \
-                                         ["--import-module="+thisfile] + \
-                                         (["--verbose"] if _run_verbose else []) + \
-                                         ["--pyro-host="+str(_pyomo_ns_host)] + \
-                                         ["--pyro-port="+str(_pyomo_ns_port)],
-                                         stdout=f,
-                                         stderr=subprocess.STDOUT))
-
-            time.sleep(2)
-            [_poll(proc) for proc in _taskworker_processes]
-
-    def _cleanup(self):
-        for fname in self._tempfiles:
-            try:
-                os.remove(fname)
-            except OSError:
-                pass
-        self._tempfiles = []
-
     def setUp(self):
-        self._tempfiles = []
-        self._setUpPyro()
+        _setUpPyro()
         [_poll(proc) for proc in _taskworker_processes]
         self.options = PySPConfigBlock()
         ScenarioTreeManagerClientPyro.register_options(
@@ -1080,7 +1079,6 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
                                      delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), False)
         self.assertEqual(list(self.options.unused_user_values()), [])
-        self._cleanup()
 
     @unittest.nottest
     def _bundles1_1server_test(self,
@@ -1096,7 +1094,6 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
                                      delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
-        self._cleanup()
 
     @unittest.nottest
     def _bundles2_1server_test(self,
@@ -1109,7 +1106,6 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
-        self._cleanup()
 
     @unittest.nottest
     def _bundles3_1server_test(self,
@@ -1122,7 +1118,6 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
             self._run_function_tests(manager, async=async, oneway=oneway, delay=delay)
             self.assertEqual(manager._scenario_tree.contains_bundles(), True)
         self.assertEqual(list(self.options.unused_user_values()), [])
-        self._cleanup()
 
     def test_scenarios_1server(self):
         self._scenarios_1server_test(async=False,
