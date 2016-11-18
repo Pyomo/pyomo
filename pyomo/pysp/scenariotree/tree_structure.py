@@ -24,7 +24,9 @@ from pyomo.core import (value, minimize, maximize,
                         CounterLabeler, IntegerSet,
                         Objective, SOSConstraint, Set,
                         ComponentUID)
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.suffix import ComponentMap
+from pyomo.core.base.block import (_BlockData,
+                                   generate_cuid_names)
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.repn import (generate_canonical_repn,
                         GeneralCanonicalRepn)
@@ -43,11 +45,21 @@ logger = logging.getLogger('pyomo.pysp')
 
 class _CUIDLabeler(object):
     def __init__(self):
-        self._cuid_buffer = {}
+        self._cuid_map = ComponentMap()
+
+    def update_cache(self, block):
+        self._cuid_map.update(generate_cuid_names(block))
+
+    def clear_cache(self):
+        self._cuid_map = {}
 
     def __call__(self, obj):
-        cuid = ComponentUID(obj, cuid_buffer=self._cuid_buffer)
-        return repr(cuid)
+        if obj in self._cuid_map:
+            return self._cuid_map[obj]
+        else:
+            cuid = repr(ComponentUID(obj))
+            self._cuid_map[obj] = cuid
+            return cuid
 
 class ScenarioTreeNode(object):
 
@@ -1806,6 +1818,8 @@ class ScenarioTree(object):
         labeler = None
         if create_variable_ids:
             labeler = self._id_labeler
+            for scenario in self.scenarios:
+                labeler.update_cache(scenario.instance)
 
         for stage in self._stages:
             tree_node_list = sorted(stage._tree_nodes, key=lambda x: x._name)
@@ -1819,6 +1833,9 @@ class ScenarioTree(object):
                     id_labeler=labeler,
                     name_index_to_id_map=name_index_to_id_map,
                     initialize_solution_data=initialize_solution_data)
+
+        if labeler is not None:
+            labeler.clear_cache()
 
     #
     # is the indicated scenario / bundle in the tree?
