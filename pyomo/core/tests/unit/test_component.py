@@ -48,87 +48,87 @@ class TestComponentUID(unittest.TestCase):
     def test_genFromComponent_nested(self):
         cuid = ComponentUID(self.m.b[1,'2'].c.a[3])
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',(3,),'#'), ('c',tuple(),''), ('b',(1,'2'),'#$')) )
 
     def test_genFromComponent_indexed(self):
         cuid = ComponentUID(self.m.b[1,'2'].c.a)
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a','**',None), ('c',tuple(),''), ('b',(1,'2'),'#$')) )
 
     def test_parseFromString(self):
         cuid = ComponentUID('b[1,2].c.a[2]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'..')) )
-        
+
     def test_parseFromString_singleQuote(self):
         cuid = ComponentUID('b[1,\'2\'].c.a[2]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'.$')) )
 
     def test_parseFromString_doubleQuote(self):
         cuid = ComponentUID('b[1,\"2\"].c.a[2]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'.$')) )
 
     def test_parseFromString_typeID(self):
         cuid = ComponentUID('b[#1,$2].c.a[2]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',(1,'2'),'#$')) )
 
     def test_parseFromString_wildcard_1(self):
         cuid = ComponentUID('b[**].c.a[*]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('',),'*'), ('c',tuple(),''), ('b','**',None)) )
-        
+
     def test_parseFromString_wildcard_2(self):
         cuid = ComponentUID('b[*,*].c.a[*]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('',),'*'), ('c',tuple(),''), ('b',('',''),'**')) )
-        
+
     def test_parseFromRepr(self):
         cuid = ComponentUID('b:1,2.c.a:2')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'..')) )
-        
+
     def test_parseFromRepr_singleQuote(self):
         cuid = ComponentUID('b:1,\'2\'.c.a:2')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'.$')) )
 
     def test_parseFromRepr_doubleQuote(self):
         cuid = ComponentUID('b:1,\"2\".c.a:2')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'.$')) )
 
     def test_parseFromRepr_typeID(self):
         cuid = ComponentUID('b:#1,$2.c.a:2')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',(1,'2'),'#$')) )
-        
+
     def test_parseFromRepr_wildcard_1(self):
         cuid = ComponentUID('b:**.c.a:*')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('',),'*'), ('c',tuple(),''), ('b','**',None)) )
-        
+
     def test_parseFromRepr_wildcard_2(self):
         cuid = ComponentUID('b:*,*.c.a:*')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('',),'*'), ('c',tuple(),''), ('b',('',''),'**')) )
-    
+
     def test_find_explicit_exists(self):
         ref = self.m.b[1,'2'].c.a[3]
         cuid = ComponentUID(ref)
@@ -360,9 +360,6 @@ class TestEnviron(unittest.TestCase):
 
     def test_sets(self):
         self.assertTrue(set(x[0] for x in pyomo.core.base._pyomo.predefined_sets()) >= set(['Reals', 'Integers', 'Boolean']))
-
-    
-
 
 if __name__ == "__main__":
     unittest.main()

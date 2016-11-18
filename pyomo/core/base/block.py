@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
-            'active_components', 'components', 'active_components_data', 
+            'active_components', 'components', 'active_components_data',
             'components_data']
 
 import copy
@@ -1733,4 +1733,3 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
 
 register_component(
     Block, "A component that contains one or more model components." )
-
