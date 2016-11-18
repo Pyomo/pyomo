@@ -27,8 +27,8 @@ install:
   - "python -m pip install PyYAML"
   - "python -m pip install coverage"
   - "python -m pip install nose"
+  - "python -m pip install Pyro4"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
-  - "python -m pip Pyro4"
   - "python setup.py develop"
   - "dir %PYTHON%\\Scripts"
 
