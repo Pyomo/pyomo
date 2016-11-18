@@ -1,20 +1,51 @@
-We are pleased to announce the release of Pyomo 4.4. Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 5.0. Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
-The following are highlights of this release:
 
-- Modeling
-   * Added an SP representation that uses annotations for declaring mutable stochastic data
+The following are a summary of changes since Pyomo 4.0:
 
-- Solvers
-   * Adding PySP solver interface to the SD solver
+Release and documentation of GDP, Bilevel, MPEC and DAE capabilities
+  * Finalized many APIs
+  * Bug fixes in transformations and meta-solvers
+  * First documented release of pyomo.bilevel, pyomo.mpec and pyomo.dae
 
-- Other
-   * Allow the use of ellipsis in indices
-   * Python 3.x compatibility updates
+Pyomo command
+  * Added support for configuration files
+  * Added 'pyomo install-extras' to install optional Python packages
+  * Added the 'pyomo info' subcommand to describe Pyomo installation
+  * Consolidated help information in the 'pyomo help' subcommand
+
+Installers
+  * Conda installers
+  * Script to install pyomo.extras
+  * Many updates to the pyomo_install script
+
+Modeling Changes
+  * Rework of model transformation logic
+  * SOSConstraint, Suffix, Block, Expression
+  * Added slicing when indexing a component.
+  * Allow the use of ellipsis in indices
+  * SP representation for mutable stochastic data
+
+Scripting
+  * Optimization results loaded into models
+  * Removed explicit model preprocessing
+
+Solver Updates
+  * Complete rework of pyomo.mpec solvers
+  * Better support for NEOS solvers
+  * Resolved various issues with python direct interfaces (cplex and gurobi)
+  * Major performance enhancements for Pyro-based solver managers
+  * Significant speed-up of CPLEX solver interfaces
+  * Adding PySP solver interface to the SD solver
+
+Misc
+   * Added utility for converting PySP models into SMPS input files
+   * Added an MPS file writer
+   * Many fixes to the 'sol' file reader
    * Support evaluating external functions in AMPL-stype shared libraries
-   * Use HTTPS with NEOS
+   * Added support for automatically generating "template expressions"
+   * Many bug fixes
 
-See http://pyomo.org for installation options and documentation for getting started with Pyomo.
 
 Enjoy!
 
@@ -31,12 +62,12 @@ The Pyomo home page provides resources for Pyomo users:
 
  * http://pyomo.org
 
-Pyomo development is hosted by Sandia National Laboratories and COIN-OR:
+Pyomo development is hosted at GitHub:
 
- * https://software.sandia.gov/pyomo 
- * https://projects.coin-or.org/Pyomo
+ * https://github.com/Pyomo
 
-See the Pyomo Forum for online discussions of Pyomo:
+Get help at 
 
- * http://groups.google.com/group/pyomo-forum/
+ * StackOverflow: http://stackoverflow.com/questions/tagged/pyomo
+ * Pyomo Forum:   http://groups.google.com/group/pyomo-forum/
 

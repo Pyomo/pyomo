@@ -25,9 +25,11 @@ def generate_intrinsic_function_expression(etype, name, arg):
 import math
 from pyomo.core.base import numvalue
 
+# Import global methods that are common to all expression systems
+from pyomo.core.base.expr_common import clone_expression
+
 _common_module_members = [
     'identify_variables',
-    'clone_expression',
     'generate_expression',
     'generate_intrinsic_function_expression',
     'generate_relational_expression',

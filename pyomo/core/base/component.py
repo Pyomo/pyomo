@@ -64,7 +64,139 @@ def cname(*args, **kwds):
         "DEPRECATED: The cname() function has been renamed to name()" )
     return name(*args, **kwds)
 
-class Component(object):
+
+class _ComponentBase(object):
+    """An abstract base class for Component and ComponentData
+
+    This class defines some fundamental methods and properties that are
+    expected for all Component-like objects.  They are centralized here
+    to avoid repeated code in the Component and ComponentData classes.
+    """
+    __slots__ = ()
+
+    def __deepcopy__(self, memo):
+        # The problem we are addressing is when we want to clone a
+        # sub-block in a model.  In that case, the block can have
+        # references to both child components and to external
+        # ComponentData (mostly through expressions pointing to Vars
+        # and Params outside this block).  For everything stored beneath
+        # this block, we want to clone the Component (and all
+        # corresponding ComponentData objects).  But for everything
+        # stored outside this Block, we want to do a simple shallow
+        # copy.
+        #
+        # Nominally, expressions only point to ComponentData
+        # derivatives.  However, with the developemtn of Expression
+        # Templates (and the corresponding _GetItemExpression object),
+        # expressions can refer to container (non-Simple) components, so
+        # we need to override __deepcopy__ for both Component and
+        # ComponentData.
+
+        #try:
+        #    print("Component: %s" % (self.name,))
+        #except:
+        #    print("DANGLING ComponentData: %s on %s" % (
+        #        type(self),self.parent_component()))
+
+        # Note: there is an edge case when cloning a block: the initial
+        # call to deepcopy (on the target block) has __block_scope__
+        # defined, however, the parent block of self is either None, or
+        # is (by definition) out of scope.  So we will check that
+        # id(self) is not in __block_scope__: if it is, then this is the
+        # top-level block and we need to do the normal deepcopy.
+        if '__block_scope__' in memo and \
+                id(self) not in memo['__block_scope__']:
+            _known = memo['__block_scope__']
+            _new = []
+            tmp = self.parent_block()
+            tmpId = id(tmp)
+            # Note: normally we would need to check that tmp does not
+            # end up being None.  However, since clone() inserts
+            # id(None) into the __block_scope__ dictionary, we are safe
+            while tmpId not in _known:
+                _new.append(tmpId)
+                tmp = tmp.parent_block()
+                tmpId = id(tmp)
+
+            # Remember whether all newly-encountered blocks are in or
+            # out of scope (prevent duplicate work)
+            for _id in _new:
+                _known[_id] = _known[tmpId]
+
+            if not _known[tmpId]:
+                # component is out-of-scope.  shallow copy only
+                ans = memo[id(self)] = self
+                return ans
+
+        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
+        # We can't do the "obvious", since this is a (partially)
+        # slot-ized class and the __dict__ structure is
+        # nonauthoritative:
+        #
+        # for key, val in self.__dict__.iteritems():
+        #     object.__setattr__(ans, key, deepcopy(val, memo))
+        #
+        # Further, __slots__ is also nonauthoritative (this may be a
+        # singleton component -- in which case it also has a __dict__).
+        # Plus, as this may be a derived class with several layers of
+        # slots.  So, we will resort to partially "pickling" the object,
+        # deepcopying the state dict, and then restoring the copy into
+        # the new instance.
+        #
+        # [JDS 7/7/14] I worry about the efficiency of using both
+        # getstate/setstate *and* deepcopy, but we need deepcopy to
+        # update the _parent refs appropriately, and since this is a
+        # slot-ized class, we cannot overwrite the __deepcopy__
+        # attribute to prevent infinite recursion.
+        ans.__setstate__(deepcopy(self.__getstate__(), memo))
+        return ans
+
+    def cname(self, *args, **kwds):
+        logger.warning(
+            """DEPRECATED: The cname() method has been renamed to getname().
+The preferred method of obtaining a component name is to use the .name
+property, which returns the fully qualified component name.  The
+.local_name property will return the component name only within the
+context of the immediate parent container.""")
+        return self.getname(*args, **kwds)
+
+    @property
+    def name(self):
+        """Get the fully qualifed component name."""
+        return self.getname(fully_qualified=True)
+
+    # Adding a setter here to help users adapt to the new
+    # setting. The .name attribute is now ._name. It should
+    # never be assigned to by user code.
+    @name.setter
+    def name(self, val):
+        raise ValueError(
+            "The .name attribute is now a property method "
+            "that returns the fully qualified component name. "
+            "Assignment is not allowed.")
+
+    @property
+    def local_name(self):
+        """Get the component name only within the context of
+        the immediate parent container."""
+        return self.getname(fully_qualified=False)
+
+    @property
+    def active(self):
+        """Return the active attribute"""
+        # Normal components cannot be deactivated
+        return True
+
+    @active.setter
+    def active(self, value):
+        """Set the active attribute to the given value"""
+        raise AttributeError(
+            "Setting the 'active' flag on a component that does not "
+            "support deactivation is not allowed.")
+
+
+
+class Component(_ComponentBase):
     """
     This is the base class for all Pyomo modeling components.
 
@@ -104,17 +236,6 @@ class Component(object):
         #
         self._constructed   = False
         self._parent        = None    # Must be a weakref
-
-    @property
-    def active(self):
-        """Return the active attribute"""
-        # Normal components cannot be deactivated
-        return True
-
-    @active.setter
-    def active(self, value):
-        """Set the active attribute to the given value"""
-        raise AttributeError("Assignment not allowed.")
 
     def __getstate__(self):
         """
@@ -282,9 +403,9 @@ class Component(object):
     def name(self):
         """Get the fully qualifed component name."""
         return self.getname(fully_qualified=True)
-    # Adding a setter here to help users adapt to the new
-    # setting. The .name attribute is now ._name. It should
-    # never be assigned to by user code.
+
+    # Allow setting a componet's name if it is not owned by a parent
+    # block (this supports, e.g., naming a model)
     @name.setter
     def name(self, val):
         if self.parent_block() is None:
@@ -294,21 +415,6 @@ class Component(object):
                 "The .name attribute is not settable when the component "
                 "is assigned to a Block.\nTriggered by attempting to set "
                 "component '%s' to name '%s'" % (self.name,val))
-
-    @property
-    def local_name(self):
-        """Get the component name only within the context of
-        the immediate parent container."""
-        return self.getname(fully_qualified=False)
-
-    def cname(self, *args, **kwds):
-        logger.warning(
-            """DEPRECATED: The cname() method has been renamed to getname().
-The preferred method of obtaining a component name is to use the .name
-property, which returns the fully qualified component name.  The
-.local_name property will return the component name only within the
-context of the immediate parent container.""")
-        return self.getname(*args, **kwds)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         """Print component information"""
@@ -400,7 +506,7 @@ class ActiveComponent(Component):
         self._active=False
 
 
-class ComponentData(object):
+class ComponentData(_ComponentBase):
     """
     This is the base class for the component data used
     in Pyomo modeling components.  Subclasses of ComponentData are
@@ -507,71 +613,6 @@ class ComponentData(object):
                 # of setting self.__dict__[key] = val.
                 object.__setattr__(self, key, val)
 
-    def __deepcopy__(self, memo):
-        # Note: we only override __deepcopy__ for _ComponentData and not
-        # for all components.  The problem we are addressing is when we
-        # want to clone a sub-block in a model.  In that case, the block
-        # can have references to both child components and to external
-        # _ComponentData (mostly through expressions pointing to Vars
-        # and Params outside this block).  For everything stored beneath
-        # this block, we want to clone the Component (and all
-        # corresponding _ComponentData objects).  But for everything
-        # stored outside this Block, we want to do a simple shallow
-        # copy.  As expressions only point to _ComponentData
-        # derivatives, there is no reason to override __deepcopy__ on
-        # Component.
-
-        #try:
-        #    print("Component: %s" % (self.name,))
-        #except:
-        #    print("DANGLING ComponentData: %s on %s" % (
-        #        type(self),self.parent_component()))
-
-        if '__block_scope__' in memo:
-            _known = memo['__block_scope__']
-            _newComponent = False
-            tmp = self.parent_component()
-            while id(tmp) not in _known:
-                if tmp is None:
-                    # Out of the __top_block__ scope... shallow copy only
-                    #print("   ...out of scope")
-                    ans = memo[id(self)] = self
-                    return ans
-                _newComponent = True
-                tmp = tmp.parent_block()
-
-            if _newComponent:
-                # Add this block to the list of known blocks
-                tmp = self.parent_component()
-                while id(tmp) not in _known:
-                    #print("   ...NEW: %s" % (tmp,))
-                    _known.add( id(tmp) )
-                    tmp = tmp.parent_block()
-
-
-        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
-        # We can't do the "obvious", since this is a (partially)
-        # slot-ized class and the __dict__ structure is
-        # nonauthoritative:
-        #
-        # for key, val in self.__dict__.iteritems():
-        #     object.__setattr__(ans, key, deepcopy(val, memo))
-        #
-        # Further, __slots__ is also nonauthoritative (this may be a
-        # singleton component -- in which case it also has a __dict__).
-        # Plus, as this may be a derived class with several layers of
-        # slots.  So, we will resort to partially "pickling" the object,
-        # deepcopying the state dict, and then restoring the copy into
-        # the new instance.
-        #
-        # [JDS 7/7/14] I worry about the efficiency of using both
-        # getstate/setstate *and* deepcopy, but we need deepcopy to
-        # update the _parent refs appropriately, and since this is a
-        # slot-ized class, we cannot overwrite the __deepcopy__
-        # attribute to prevent infinite recursion.
-        ans.__setstate__(deepcopy(self.__getstate__(), memo))
-        return ans
-
     def parent_component(self):
         """Returns the component associated with this object."""
         if self._component is None:
@@ -669,35 +710,6 @@ class ComponentData(object):
         raise RuntimeError("Fatal error: cannot find the component data in "
                            "the owning component's _data dictionary.")
 
-    @property
-    def name(self):
-        """Get the fully qualifed component name."""
-        return self.getname(fully_qualified=True)
-    # Adding a setter here to help users adapt to the new
-    # setting. The .name attribute is now ._name. It should
-    # never be assigned to by user code.
-    @name.setter
-    def name(self, val):
-        raise ValueError(
-            "The .name attribute is now a property method "
-            "that returns the fully qualified component name. "
-            "Assignment is not allowed.")
-
-    @property
-    def local_name(self):
-        """Get the component name only within the context of
-        the immediate parent container."""
-        return self.getname(fully_qualified=False)
-
-    def cname(self, *args, **kwds):
-        logger.warning(
-            """DEPRECATED: The cname() method has been renamed to getname().
-The preferred method of obtaining a component name is to use the .name
-property, which returns the fully qualified component name.  The
-.local_name property will return the component name only within the
-context of the immediate parent container.""")
-        return self.getname(*args, **kwds)
-
     def is_indexed(self):
         """Return true if this component is indexed"""
         return False
@@ -783,7 +795,8 @@ class ActiveComponentData(ComponentData):
     @active.setter
     def active(self, value):
         """Set the active attribute to a specified value."""
-        raise AttributeError("Assignment not allowed. Use the (de)activate method")
+        raise AttributeError(
+            "Assignment not allowed. Use the (de)activate method" )
 
     def activate(self):
         """Set the active attribute to True"""

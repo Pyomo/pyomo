@@ -803,12 +803,12 @@ class SimpleSetBase(Set):
              ("Domain", None if self.domain is None else self.domain.name),
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
-            iteritems( {None: self} ),
-            None,
+            iteritems( {None: self} ), 
+            None, #("Members",),
             lambda k, v: [
-                "Virtual" if not v.concrete or v.virtual \
+                "Virtual" if not self.concrete or v.virtual \
                     else v.value if v.ordered \
-                    else sorted(v) ] )
+                    else sorted(v), ] )
 
     def _set_repn(self, other):
         """
@@ -1677,10 +1677,10 @@ class IndexedSet(Set):
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
             iteritems(self._data),
-            ("Key","Members"),
-            lambda k, v: [
-                k,
-                v.value if self.ordered else sorted(v.value) ] )
+            ("Members",),
+            lambda k, v: [ 
+                #"Virtual" if not v.concrete or v.virtual else \
+                v.value if self.ordered else sorted(v) ] )
 
     def construct(self, values=None):
         """
