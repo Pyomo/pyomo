@@ -51,6 +51,7 @@ script:
 #- ls
 #- pwd
 - test.pyomo -v --cat=nightly --cov
+- test.pyomo -v --cat=parallel --cov
 after_success:
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
