@@ -2150,6 +2150,188 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                                                 self.default_registered_worker_name)
         super(ScenarioTreeManagerClientPyro, self).__init__(*args, **kwds)
 
+    def _request_scenario_tree_data(self):
+
+        start_time = time.time()
+
+        if self.get_option("verbose"):
+            print("Broadcasting requests to collect scenario tree "
+                  "data from workers")
+
+        # maps scenario or bundle name to async object
+        async_results = {}
+
+        need_node_data = dict((tree_node.name, True)
+                              for tree_node in self._scenario_tree._tree_nodes)
+        need_scenario_data = dict((scenario.name,True)
+                                  for scenario in self._scenario_tree._scenarios)
+
+        assert not self._transmission_paused
+        self.pause_transmit()
+        if self._scenario_tree.contains_bundles():
+
+            for bundle in self._scenario_tree._scenario_bundles:
+
+                object_names = {}
+                object_names['nodes'] = \
+                    [tree_node.name
+                     for scenario in bundle._scenario_tree._scenarios
+                     for tree_node in scenario.node_list
+                     if need_node_data[tree_node.name]]
+                object_names['scenarios'] = \
+                    [scenario_name \
+                     for scenario_name in bundle._scenario_names]
+
+                async_results[bundle.name] = \
+                    self.invoke_method_on_worker(
+                        self.get_worker_for_bundle(bundle.name),
+                        "_collect_scenario_tree_data_for_client",
+                        method_args=(object_names,),
+                        async=True)
+
+                for node_name in object_names['nodes']:
+                    need_node_data[node_name] = False
+                for scenario_name in object_names['scenarios']:
+                    need_scenario_data[scenario_name] = False
+
+        else:
+
+            for scenario in self._scenario_tree._scenarios:
+
+                object_names = {}
+                object_names['nodes'] = \
+                    [tree_node.name for tree_node in scenario.node_list \
+                     if need_node_data[tree_node.name]]
+                object_names['scenarios'] = [scenario.name]
+
+                async_results[scenario.name] = \
+                    self.invoke_method_on_worker(
+                        self.get_worker_for_scenario(scenario.name),
+                        "_collect_scenario_tree_data_for_client",
+                        method_args=(object_names,),
+                        async=True)
+
+                for node_name in object_names['nodes']:
+                    need_node_data[node_name] = False
+                for scenario_name in object_names['scenarios']:
+                    need_scenario_data[scenario_name] = False
+
+        self.unpause_transmit()
+
+        assert all(not val for val in itervalues(need_node_data))
+        assert all(not val for val in itervalues(need_scenario_data))
+
+        return async_results
+
+    def _gather_scenario_tree_data(self, async_results):
+
+        start_time = time.time()
+
+        have_node_data = dict((tree_node.name, False)
+                              for tree_node in self._scenario_tree._tree_nodes)
+        have_scenario_data = dict((scenario.name, False)
+                                  for scenario in self._scenario_tree._scenarios)
+
+        if self.get_option("verbose"):
+            print("Waiting for scenario tree data collection")
+
+        if self._scenario_tree.contains_bundles():
+
+            for bundle_name in async_results:
+
+                results = async_results[bundle_name].complete()
+
+                for tree_node_name, node_data in iteritems(results['nodes']):
+                    assert have_node_data[tree_node_name] == False
+                    have_node_data[tree_node_name] = True
+                    tree_node = self._scenario_tree.get_node(tree_node_name)
+                    tree_node._variable_ids.update(
+                        node_data['_variable_ids'])
+                    tree_node._standard_variable_ids.update(
+                        node_data['_standard_variable_ids'])
+                    tree_node._variable_indices.update(
+                        node_data['_variable_indices'])
+                    tree_node._integer.update(node_data['_integer'])
+                    tree_node._binary.update(node_data['_binary'])
+                    tree_node._semicontinuous.update(
+                        node_data['_semicontinuous'])
+                    # these are implied
+                    tree_node._derived_variable_ids = \
+                        set(tree_node._variable_ids) - \
+                        tree_node._standard_variable_ids
+                    tree_node._name_index_to_id = \
+                        dict((val,key)
+                             for key,val in iteritems(tree_node._variable_ids))
+
+                for scenario_name, scenario_data in \
+                      iteritems(results['scenarios']):
+                    assert have_scenario_data[scenario_name] == False
+                    have_scenario_data[scenario_name] = True
+                    scenario = self._scenario_tree.get_scenario(scenario_name)
+                    scenario._objective_name = scenario_data['_objective_name']
+                    scenario._objective_sense = scenario_data['_objective_sense']
+
+                if self.get_option("verbose"):
+                    print("Successfully loaded scenario tree data "
+                          "for bundle="+bundle_name)
+
+        else:
+
+            for scenario_name in async_results:
+
+                results = async_results[scenario_name].complete()
+
+                for tree_node_name, node_data in iteritems(results['nodes']):
+                    assert have_node_data[tree_node_name] == False
+                    have_node_data[tree_node_name] = True
+                    tree_node = self._scenario_tree.get_node(tree_node_name)
+                    tree_node._variable_ids.update(
+                        node_data['_variable_ids'])
+                    tree_node._standard_variable_ids.update(
+                        node_data['_standard_variable_ids'])
+                    tree_node._variable_indices.update(
+                        node_data['_variable_indices'])
+                    tree_node._integer.update(node_data['_integer'])
+                    tree_node._binary.update(node_data['_binary'])
+                    tree_node._semicontinuous.update(
+                        node_data['_semicontinuous'])
+                    # these are implied
+                    tree_node._derived_variable_ids = \
+                        set(tree_node._variable_ids) - \
+                        tree_node._standard_variable_ids
+                    tree_node._name_index_to_id = \
+                        dict((val,key)
+                             for key,val in iteritems(tree_node._variable_ids))
+
+                for scenario_name, scenario_data in \
+                      iteritems(results['scenarios']):
+                    assert have_scenario_data[scenario_name] == False
+                    have_scenario_data[scenario_name] = True
+                    scenario = self._scenario_tree.get_scenario(scenario_name)
+                    scenario._objective_name = scenario_data['_objective_name']
+                    scenario._objective_sense = scenario_data['_objective_sense']
+
+                if self.get_option("verbose"):
+                    print("Successfully loaded scenario tree data for "
+                          "scenario="+scenario_name)
+
+        self._objective_sense = \
+            self._scenario_tree._scenarios[0]._objective_sense
+        assert all(_s._objective_sense == self._objective_sense
+                   for _s in self._scenario_tree._scenarios)
+
+        assert all(itervalues(have_node_data))
+        assert all(itervalues(have_scenario_data))
+
+        if self.get_option("verbose"):
+            print("Scenario tree instance data successfully "
+                  "collected")
+
+        if self.get_option("output_times") or \
+           self.get_option("verbose"):
+            print("Scenario tree data collection time=%.2f seconds"
+                  % (time.time() - start_time))
+
     #
     # Override the PySPConfiguredObject register_options implementation so
     # that the default behavior will be to register this classes default
@@ -2460,7 +2642,16 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
                     invocation_type=InvocationType.PerScenario,
                     oneway=not self._options.pyro_handshake_at_startup)
 
-        return initialization_handle
+        async_results = self._request_scenario_tree_data()
+
+        def _complete_init():
+            self._gather_scenario_tree_data(async_results)
+            return None
+
+        async_callback = self.AsyncResultCallback(_complete_init)
+        return self.AsyncResultChain(
+            results=[initialization_handle, async_callback],
+            return_index=0)
 
     # implemented by _ScenarioTreeManagerClientPyroAdvanced
     #def _invoke_function_on_worker_impl(...)

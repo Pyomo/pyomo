@@ -53,35 +53,6 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
         super(ScenarioTreeManagerSolverWorkerPyro, self).\
             _init_solver_worker()
 
-    def _collect_scenario_tree_data_for_client(self, tree_object_names):
-
-        data = {}
-        node_data = data['nodes'] = {}
-        for node_name in tree_object_names['nodes']:
-            tree_node = self._scenario_tree.get_node(node_name)
-            this_node_data = node_data[node_name] = {}
-            this_node_data['_variable_ids'] = tree_node._variable_ids
-            this_node_data['_standard_variable_ids'] = \
-                tree_node._standard_variable_ids
-            this_node_data['_variable_indices'] = tree_node._variable_indices
-            this_node_data['_integer'] = tuple(tree_node._integer)
-            this_node_data['_binary'] = tuple(tree_node._binary)
-            this_node_data['_semicontinuous'] = \
-                tuple(tree_node._semicontinuous)
-            # master will need to reconstruct
-            # _derived_variable_ids
-            # _name_index_to_id
-
-        scenario_data = data['scenarios'] = {}
-        for scenario_name in tree_object_names['scenarios']:
-            scenario = self._scenario_tree.get_scenario(scenario_name)
-            this_scenario_data = scenario_data[scenario_name] = {}
-            this_scenario_data['_objective_name'] = scenario._objective_name
-            this_scenario_data['_objective_sense'] = \
-                scenario._objective_sense
-
-        return data
-
     # TODO: functionality for returning suffixes
     def _solve_objects_for_client(self,
                                   object_type,
