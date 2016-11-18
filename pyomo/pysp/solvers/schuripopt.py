@@ -12,6 +12,7 @@
 # TODO: Figure out what to do with working_directory, logfile, and output_solver_log
 #       when MPI_Comm_spawn is called.
 
+import binascii
 import os
 import sys
 import time
@@ -67,6 +68,11 @@ _objective_weight_suffix_name = "schurip_objective_weight"
 _variable_id_suffix_name = "schurip_variable_id"
 _schuripopt_group_label = "SchurIpoptSolver Options"
 
+# Assumes ASL uses 4-byte, signed integers to store suffixes
+_max_int = 2**31 - 1
+def _scenario_tree_id_to_int(vid):
+    return int(binascii.b2a_hex(vid.encode()), base=16) % _max_int
+
 def _write_bundle_nl(worker,
                      bundle,
                      output_directory,
@@ -98,7 +104,12 @@ def _write_bundle_nl(worker,
             master_variable = bundle_instance.find_component(
                 "MASTER_BLEND_VAR_"+str(node.name))
             for variable_id in node._standard_variable_ids:
-                linking_suffix[master_variable[variable_id]] = variable_id
+                linking_suffix[master_variable[variable_id]] = \
+                    _scenario_tree_id_to_int(variable_id)
+    # make sure the conversion from scenario tree id to int
+    # did not have any collisions
+    _ids = list(linking_suffix.values())
+    assert len(_ids) == len(set(_ids))
 
     #
     # objective weight suffix
@@ -165,7 +176,13 @@ def _write_scenario_nl(worker,
     # which has no blended variables
     for node in scenario._node_list[:-1]:
         for variable_id in node._standard_variable_ids:
-            linking_suffix[bySymbol[variable_id]] = variable_id
+            linking_suffix[bySymbol[variable_id]] = \
+                _scenario_tree_id_to_int(variable_id)
+    # make sure the conversion from scenario tree id to int
+    # did not have any collisions
+    _ids = list(linking_suffix.values())
+    assert len(_ids) == len(set(_ids))
+    print(_ids)
 
     #
     # objective weight suffix
@@ -369,32 +386,6 @@ def EXTERNAL_collect_solution(worker, scenario, stages=None):
     return solution
 
 class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
-
-    @classmethod
-    def _declare_options(cls, options=None):
-        if options is None:
-            options = PySPConfigBlock()
-        safe_declare_common_option(options,
-                                   "verbose",
-                                   ap_group=_schuripopt_group_label)
-        safe_declare_unique_option(
-            options,
-            "executable",
-            PySPConfigValue(
-                "schuripopt",
-                domain=_domain_must_be_str,
-                description=(
-                    "Name of the executable used when launching the "
-                    "SchurIpopt solver. The default is 'schuripopt'. "
-                    "This option can be set to an absolute or relative path."
-                    " Otherwise, it is assumed that the named executable "
-                    "will be found in the shell's search path."
-                ),
-                doc=None,
-                visibility=0),
-            ap_group=_schuripopt_group_label)
-
-        return options
 
     def __init__(self, *args, **kwds):
         super(SchurIpoptSolver, self).__init__(*args, **kwds)

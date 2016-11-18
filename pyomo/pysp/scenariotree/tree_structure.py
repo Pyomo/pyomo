@@ -22,7 +22,8 @@ import logging
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
                         CounterLabeler, IntegerSet,
-                        Objective, SOSConstraint, Set)
+                        Objective, SOSConstraint, Set,
+                        ComponentUID)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.repn import (generate_canonical_repn,
@@ -39,6 +40,14 @@ from six import iterkeys, iteritems, itervalues
 from six.moves import xrange
 
 logger = logging.getLogger('pyomo.pysp')
+
+class _CUIDLabeler(object):
+    def __init__(self):
+        self._cuid_buffer = {}
+
+    def __call__(self, obj):
+        cuid = ComponentUID(obj, cuid_buffer=self._cuid_buffer)
+        return repr(cuid)
 
 class ScenarioTreeNode(object):
 
@@ -359,9 +368,11 @@ class ScenarioTreeNode(object):
                 # create the ScenarioTree integer id for this variable
                 # across all scenario instances, or look it up if a
                 # map has been provided.
+                reference_object = \
+                    var_component[self._scenarios[0].name][index]
                 scenario_tree_id = None
                 if id_labeler != None:
-                    scenario_tree_id = id_labeler()
+                    scenario_tree_id = id_labeler(reference_object)
                 elif name_index_to_id_map != None:
                     scenario_tree_id = \
                         name_index_to_id_map[component_name, index]
@@ -1393,7 +1404,8 @@ class ScenarioTree(object):
         self._name = None
 
         # should be called once for each variable blended across a node
-        self._id_labeler = CounterLabeler()
+        #self._id_labeler = CounterLabeler()
+        self._id_labeler = _CUIDLabeler()
 
         #
         # the core objects defining the scenario tree.

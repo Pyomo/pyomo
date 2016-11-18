@@ -41,10 +41,6 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
 
         super(ScenarioTreeManagerSolverWorkerPyro, self).\
             __init__(*args, **kwds)
-        # Maps ScenarioTree variable IDs on the client-side to
-        # ScenarioTree variable IDs on this worker (by node name)
-        self._master_scenario_tree_id_map = {}
-        self._reverse_master_scenario_tree_id_map = {}
 
     #
     # Abstract methods for ScenarioTreeManager:
@@ -56,34 +52,6 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
             _init(*args, **kwds)
         super(ScenarioTreeManagerSolverWorkerPyro, self).\
             _init_solver_worker()
-
-    # Update the map from local to master scenario tree ids
-    def _update_master_scenario_tree_ids_for_client(self,
-                                                    object_name,
-                                                    new_ids):
-
-        if self.get_option("verbose"):
-            if self._scenario_tree.contains_bundles():
-                print("Received request to update master "
-                      "scenario tree ids for bundle="+object_name)
-            else:
-                print("Received request to update master "
-                      "scenario tree ids scenario="+object_name)
-
-        for node_name, new_master_node_ids in iteritems(new_ids):
-            tree_node = self._scenario_tree.get_node(node_name)
-            name_index_to_id = tree_node._name_index_to_id
-
-            self._master_scenario_tree_id_map[tree_node.name] = \
-                dict((master_variable_id, name_index_to_id[name_index])
-                     for master_variable_id, name_index
-                     in iteritems(new_master_node_ids))
-
-            self._reverse_master_scenario_tree_id_map[tree_node.name] = \
-                dict((local_variable_id, master_variable_id)
-                     for master_variable_id, local_variable_id
-                     in iteritems(self._master_scenario_tree_id_map\
-                                  [tree_node.name]))
 
     def _collect_scenario_tree_data_for_client(self, tree_object_names):
 
@@ -180,14 +148,11 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
                     scenario = self._scenario_tree.get_scenario(
                         scenario_name)
                     solution[scenario_name] = \
-                        scenario.copy_solution(
-                            translate_ids=\
-                            self._reverse_master_scenario_tree_id_map)
+                        scenario.copy_solution()
             else:
                 scenario = self._scenario_tree.get_scenario(object_name)
-                solution = scenario.copy_solution(
-                    translate_ids=\
-                    self._reverse_master_scenario_tree_id_map)
+                solution = scenario.copy_solution()
+
 
             results[object_name] = (manager_object_results, solution)
 
@@ -200,11 +165,6 @@ class ScenarioTreeManagerSolverWorkerPyro(ScenarioTreeManagerWorkerPyro,
 
         for node_name, node_fixed_vars in iteritems(fixed_variables):
             tree_node = self._scenario_tree.get_node(node_name)
-            node_variable_id_map = \
-                self._master_scenario_tree_id_map[node_name]
-            tree_node._fix_queue.update(
-                (node_variable_id_map[master_variable_id],
-                 node_fixed_vars[master_variable_id])
-                for master_variable_id in node_fixed_vars)
+            tree_node._fix_queue.update(node_fixed_vars)
 
         self.push_fix_queue_to_instances()
