@@ -1394,24 +1394,6 @@ def runbenders(options):
     with ScenarioTreeManagerFactory(options) as manager:
         manager.initialize()
 
-        # This is hard to do without a general option for
-        # relaxing integrality that works with all solver
-        # plugins. I think it's better left for advanced
-        # users that want to implement it within a script.
-        #print("Determining trivial lower bound using perfect "
-        #      "information (on LP relaxation)")
-        #self._manager.solve_subproblems(
-        #    ephemeral_solver_options={'relax_integrality': True})
-        #rootnode.updateNodeStatistics()
-        #trivial_bound = sum(scenario.probability * scenario._objective
-        #                    for scenario in scenario_tree.scenarios)
-        #if not master_alpha.fixed:
-        #    print("Determining initial alpha bound from scenario solves")
-        #    benders_cut = self.generate_cut(
-        #        dict((variable_id, rootnode._averages[variable_id])
-        #             for variable_id in rootnode._standard_variable_ids))
-        #    self.add_cut(benders_cut)
-
         print("")
         print("Running Generalized Benders solver for "
               "stochastic programming problems "
