@@ -13,47 +13,47 @@ s.t.
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(1)_:
 -1 BelowAverageScenario_DevotedAcreage(CORN)
-+1 MASTER_BLEND_VAR_RootNode(1)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__CORN)
 = 0
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(2)_:
 -1 AverageScenario_DevotedAcreage(CORN)
-+1 MASTER_BLEND_VAR_RootNode(1)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__CORN)
 = 0
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(3)_:
 -1 AboveAverageScenario_DevotedAcreage(CORN)
-+1 MASTER_BLEND_VAR_RootNode(1)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__CORN)
 = 0
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(4)_:
 -1 BelowAverageScenario_DevotedAcreage(SUGAR_BEETS)
-+1 MASTER_BLEND_VAR_RootNode(2)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__SUGAR_BEETS)
 = 0
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(5)_:
 -1 AverageScenario_DevotedAcreage(SUGAR_BEETS)
-+1 MASTER_BLEND_VAR_RootNode(2)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__SUGAR_BEETS)
 = 0
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(6)_:
 -1 AboveAverageScenario_DevotedAcreage(SUGAR_BEETS)
-+1 MASTER_BLEND_VAR_RootNode(2)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__SUGAR_BEETS)
 = 0
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(7)_:
 -1 BelowAverageScenario_DevotedAcreage(WHEAT)
-+1 MASTER_BLEND_VAR_RootNode(3)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__WHEAT)
 = 0
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(8)_:
 -1 AverageScenario_DevotedAcreage(WHEAT)
-+1 MASTER_BLEND_VAR_RootNode(3)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__WHEAT)
 = 0
 
 c_e_MASTER_BLEND_CONSTRAINT_RootNode(9)_:
 -1 AboveAverageScenario_DevotedAcreage(WHEAT)
-+1 MASTER_BLEND_VAR_RootNode(3)
++1 MASTER_BLEND_VAR_RootNode(DevotedAcreage__WHEAT)
 = 0
 
 c_u_BelowAverageScenario_ConstrainTotalAcreage_:
@@ -321,9 +321,9 @@ c_e_ONE_VAR_CONSTANT:
 ONE_VAR_CONSTANT = 1.0
 
 bounds
-    -inf <= MASTER_BLEND_VAR_RootNode(1) <= +inf
-    -inf <= MASTER_BLEND_VAR_RootNode(2) <= +inf
-    -inf <= MASTER_BLEND_VAR_RootNode(3) <= +inf
+    -inf <= MASTER_BLEND_VAR_RootNode(DevotedAcreage__CORN) <= +inf
+    -inf <= MASTER_BLEND_VAR_RootNode(DevotedAcreage__SUGAR_BEETS) <= +inf
+    -inf <= MASTER_BLEND_VAR_RootNode(DevotedAcreage__WHEAT) <= +inf
    0 <= BelowAverageScenario_DevotedAcreage(CORN) <= 500
    0 <= BelowAverageScenario_DevotedAcreage(SUGAR_BEETS) <= 500
    0 <= BelowAverageScenario_DevotedAcreage(WHEAT) <= 500
