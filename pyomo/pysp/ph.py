@@ -2888,6 +2888,8 @@ class ProgressiveHedging(_PHBase):
         failures = []
         subproblems = []
 
+        result_load_times = []
+
         # loop for the solver results, reading them and
         # loading them into instances as they are available.
         if self._scenario_tree.contains_bundles():
@@ -2964,8 +2966,7 @@ class ProgressiveHedging(_PHBase):
 
                     end_time = time.time()
                     if self._output_times:
-                        print("Time loading results for bundle %s=%0.2f seconds"
-                              % (bundle_name, end_time-start_time))
+                        result_load_times.append(end_time-start_time)
 
                 else:
 
@@ -3047,8 +3048,7 @@ class ProgressiveHedging(_PHBase):
 
                     end_time = time.time()
                     if self._output_times:
-                        print("Time loading results for bundle %s=%0.2f seconds"
-                              % (bundle_name, end_time-start_time))
+                        result_load_times.append(end_time-start_time)
 
                 if self._verbose:
                     print("Successfully loaded solution for bundle=%s"
@@ -3136,8 +3136,7 @@ class ProgressiveHedging(_PHBase):
                     end_time = time.time()
 
                     if self._output_times:
-                        print("Time loading results into instance %s=%0.2f seconds"
-                              % (scenario_name, end_time-start_time))
+                        result_load_times.append(end_time-start_time)                        
 
                 else:
 
@@ -3218,14 +3217,23 @@ class ProgressiveHedging(_PHBase):
                     end_time = time.time()
 
                     if self._output_times:
-                        print("Time loading results into instance %s=%0.2f seconds"
-                              % (scenario_name, end_time-start_time))
+                        result_load_times.append(end_time-start_time)                                                      
 
                 if self._verbose:
                     print("Successfully loaded solution for scenario=%s "
                           "- waiting on %d more"
                           % (scenario_name,
                              len(self._scenario_tree._scenarios) - num_results_so_far))
+
+        if self._output_times:
+            mean = sum(result_load_times) / float(len(result_load_times))
+            std_dev = sqrt(sum(pow(x-mean,2.0) for x in result_load_times)) / float(len(result_load_times))
+            print("Result load time statistics - Min: "
+                  "%0.2f Avg: %0.2f Max: %0.2f StdDev: %0.2f (seconds)"
+                  % (min(result_load_times),
+                     mean,
+                     max(result_load_times),
+                     std_dev))                    
 
         return subproblems, failures
 
