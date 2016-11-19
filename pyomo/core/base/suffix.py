@@ -535,8 +535,8 @@ class Suffix(ComponentMap, ActiveComponent):
              ('Datatype', self.SuffixDatatypeToStr[self._datatype]),
              ],
             ( (str(k),v) for k,v in itervalues(self._dict) ),
-            ("Key","Value"),
-            lambda k,v: [ k, v ]
+            ("Value",),
+            lambda k,v: [ v ]
             )
 
     # TODO: delete

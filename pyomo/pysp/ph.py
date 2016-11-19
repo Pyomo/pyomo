@@ -2550,15 +2550,6 @@ class ProgressiveHedging(_PHBase):
             if self._verbose:
                 print("Scenario tree instance data successfully collected")
 
-            if self._verbose:
-                print("Broadcasting scenario tree id mapping"
-                      "to PH solver servers")
-
-            phsolverserverutils.transmit_scenario_tree_ids(self)
-
-            if self._verbose:
-                print("Scenario tree ids successfully sent")
-
         self._objective_sense = \
             self._scenario_tree._scenarios[0]._objective_sense
 

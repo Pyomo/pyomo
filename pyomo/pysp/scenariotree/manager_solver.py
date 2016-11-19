@@ -1428,66 +1428,6 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
             print("Scenario tree data collection time=%.2f seconds"
                   % (time.time() - start_time))
 
-    #
-    # Sends a mapping between (name,index) and ScenarioTreeID so that
-    # phsolverservers are aware of the master nodes's ScenarioTreeID
-    # labeling.
-    #
-
-    def _transmit_scenario_tree_ids(self):
-
-        start_time = time.time()
-
-        if self.get_option("verbose"):
-            print("Broadcasting scenario tree id mapping"
-                  "to scenario tree servers")
-
-        assert not self._transmission_paused
-        self.pause_transmit()
-        if self._scenario_tree.contains_bundles():
-
-            for bundle in self._scenario_tree._scenario_bundles:
-
-                ids_to_transmit = {}
-                for stage in bundle._scenario_tree._stages:
-                    for bundle_tree_node in stage._tree_nodes:
-                        # The bundle scenariotree usually isn't populated
-                        # with variable value data so we need to reference
-                        # the original scenariotree node
-                        primary_tree_node = self._scenario_tree.\
-                                            _tree_node_map[bundle_tree_node.name]
-                        ids_to_transmit[primary_tree_node.name] = \
-                            primary_tree_node._variable_ids
-
-                    self.invoke_method_on_worker(
-                        self.get_worker_for_bundle(bundle.name),
-                        "_update_master_scenario_tree_ids_for_client",
-                        method_args=(bundle.name, ids_to_transmit),
-                        oneway=True)
-
-        else:
-
-            for scenario in self._scenario_tree._scenarios:
-
-                ids_to_transmit = {}
-                for tree_node in scenario.node_list:
-                    ids_to_transmit[tree_node.name] = tree_node._variable_ids
-
-                self.invoke_method_on_worker(
-                    self.get_worker_for_scenario(scenario.name),
-                    "_update_master_scenario_tree_ids_for_client",
-                    method_args=(scenario.name, ids_to_transmit),
-                    oneway=True)
-
-        self.unpause_transmit()
-
-        end_time = time.time()
-
-        if self.get_option("output_times") or \
-           self.get_option("verbose"):
-            print("Scenario tree variable ids broadcast time=%.2f "
-                  "seconds" % (time.time() - start_time))
-
     def _setup_scenario_solve(self, scenario_name):
         args, kwds = self._get_queue_solve_kwds()
         assert len(args) == 0
@@ -1516,7 +1456,6 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
 
         def _complete_init():
             self._gather_scenario_tree_data(async_results)
-            self._transmit_scenario_tree_ids()
             return None
 
         async_callback = self.AsyncResultCallback(_complete_init)
