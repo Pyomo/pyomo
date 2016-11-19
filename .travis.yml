@@ -4,8 +4,6 @@ matrix:
   - python: '2.6'
     env:              YAML="pyyaml"  CATEGORY="nightly"
   - python: '2.6'
-    env: PYRO="Pyro"  YAML="pyyaml"  CATEGORY="parallel"
-  - python: '2.6'
     env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
   - python: '2.7'
     env:              YAML="pyyaml"  CATEGORY="nightly"
