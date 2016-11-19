@@ -2,21 +2,31 @@ language: python
 matrix:
   include:
   - python: '2.6'
-    env: PYRO="Pyro"  YAML="pyyaml"
+    env:              YAML="pyyaml"  CATEGORY="nightly"
+  - python: '2.6'
+    env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
   - python: '2.7'
-    env: PYRO="Pyro"  YAML="pyyaml"
-  #- python: '2.7'     
-  #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"      
-  #- python: pypy     
-  #  env: PYRO="Pyro"  YAML="pyyaml"      
-  - python: '3.4'        
-    env: PYRO="Pyro4" YAML="pyyaml"      
-  - python: '3.5'        
-    env: PYRO="Pyro4" YAML="pyyaml"      
-  #- python: pypy3        
-  #  env: PYRO="Pyro4" YAML="pyyaml"      
-  - python: '3.5'        
-    env: PYRO="Pyro4" YAML=""
+    env:              YAML="pyyaml"  CATEGORY="nightly"
+  - python: '2.7'
+    env: PYRO="Pyro"  YAML="pyyaml"  CATEGORY="parallel"
+  - python: '2.7'
+    env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
+  - python: '3.4'
+    env:              YAML="pyyaml"  CATEGORY="nightly"
+  - python: '3.4'
+    env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
+  - python: '3.5'
+    env:                             CATEGORY="nightly"
+  - python: '3.5'
+    env:              YAML="pyyaml"  CATEGORY="nightly"
+  - python: '3.5'
+    env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
+  #- python: '2.7'
+  #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
+  #- python: pypy
+  #  env: PYRO="Pyro"  YAML="pyyaml"
+  #- python: pypy3
+  #  env: PYRO="Pyro4" YAML="pyyaml"
 install:
 - sudo apt-get update
 # We do this conditionally because it saves us some downloading if the
@@ -31,8 +41,8 @@ install:
 - hash -r
 - if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 - if [ -n "${YAML}" ]; then pip install pyyaml; fi
+- if [ -n "${PYRO}" ]; then pip install $PYRO; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
-- if [ "${TRAVIS_PYTHON_VERSION}" != "2.6" ]; then pip install $PYRO; fi
 - conda install -y --channel conda-forge glpk
 - pip install xlrd
 - pip install openpyxl
@@ -50,7 +60,7 @@ script:
 #- echo $PATH
 #- ls
 #- pwd
-- test.pyomo -v --cat=nightly --cov
+- test.pyomo -v --cat=$CATEGORY --cov
 after_success:
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
