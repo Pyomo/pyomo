@@ -15,51 +15,38 @@ from __future__ import division
 #            'atanh', 'ceil', 'floor' )
 
 import logging
-import math
 import sys
 import traceback
-from six import advance_iterator
-from weakref import ref
 
 logger = logging.getLogger('pyomo.core')
 
-from six import StringIO, next
+from six import StringIO, next, string_types
 from six.moves import xrange
-try:
-    basestring
-except:
-    basestring = str
+from weakref import ref
 
-#from pyomo.core.plugin import *
-
-from pyomo.core.base.component import Component
-#from pyomo.core.base.plugin import *
-from pyomo.core.base.numvalue import *
+from pyomo.core import (
+    Component, NumericValue, NumericConstant, Var, as_numeric, value
+)
 from pyomo.core.base.numvalue import native_types, native_numeric_types
-from pyomo.core.base.var import _VarData, Var
+from pyomo.core.base.var import _VarData
 from pyomo.core.base.param import _ParamData
-from pyomo.core.base import expr_common as common
 import pyomo.core.base.expr_common
-from pyomo.core.base.expr_common import \
-    ensure_independent_trees as safe_mode, bypass_backreference, \
-    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
-    _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
+from pyomo.core.base.expr_common import (
+    ensure_independent_trees as safe_mode, bypass_backreference,
+    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary,
+    _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow,
     _lt, _le, _eq, clone_expression, chainedInequalityErrorMessage as cIEM
+)
 
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
-_stack = []
-
-
 def _const_to_string(*args):
     args[1].write("%s" % args[0])
 
-
 class EntangledExpressionError(Exception):
     pass
-
 
 def identify_variables( expr,
                         include_fixed=True,
@@ -383,7 +370,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
                         raise EntangledExpressionError(x)
                     x._parent_expr = bypass_backreference or ref(self)
         self._args = tuple(
-            x if isinstance(x, basestring) else as_numeric(x)
+            x if isinstance(x, string_types) else as_numeric(x)
             for x in args )
         self._fcn = fcn
 
