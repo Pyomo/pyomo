@@ -32,7 +32,7 @@ from pyomo.core.base.objective import (minimize,
 def _component_map(self, *args, **kwds):
     import six
     kwds['return_key'] = True
-    kwds['include_all_parents'] = False
+    kwds['include_parent_blocks'] = False
     traversal = self.preorder_traversal(*args, **kwds)
     # skip the root (this block)
     six.next(traversal)
