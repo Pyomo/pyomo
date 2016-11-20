@@ -80,139 +80,35 @@ class _block_base(object):
     """
     __slots__ = ()
 
-    def preorder_traversal(self,
-                           ctype=_no_ctype,
-                           active=None,
-                           include_all_parents=True,
-                           return_key=False):
-        """
-        Generates a preorder traversal of the storage
-        tree. This includes all components and all component
-        containers (optionally) matching the requested type.
-
-        Args:
-            ctype: Indicate the type of components to
-                include. The default value indicates that
-                all types should be included.
-            active (True/None): Set to True to indicate that
-                only active objects should be included. The
-                default value of None indicates that all
-                components (including those that have been
-                deactivated) should be included. *Note*: This
-                flag is ignored for any objects that do not
-                have an active flag.
-            include_all_parents (bool): Indicates if parent
-              containers such as blocks or block containers
-              should be included even when the ctype is set
-              to something different. Default is True.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting the local storage key of the
-                object and the object itself. By default,
-                only the objects objects are returned.
-
-        Returns: an iterator of objects or (key,object) tuples
-        """
-        assert active in (None, True)
-        # TODO
-        from pyomo.core.base.block import Block
-        _active_flag_name = "active"
-        # rule: only containers get placed in the stack
-        stack = []
-        if (active is None) or \
-           getattr(self, _active_flag_name, True):
-            stack.append((None, self))
-        while len(stack) > 0:
-            node_key, node = stack.pop()
-            if (include_all_parents) or \
-               (ctype is _no_ctype) or \
-               (node.ctype == ctype):
-                if return_key:
-                    yield node_key, node
-                else:
-                    yield node
-            assert node._is_container
-            if isinstance(node, IBlockStorage):
-                children = node.children(ctype=ctype,
-                                         return_key=True)
-                isblock = True
-            else:
-                children = node.children(return_key=True)
-                isblock = False
-            for key, child in children:
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    if not child._is_container:
-                        if return_key:
-                           yield key, child
-                        else:
-                            yield child
-                    else:
-                        stack.append((key, child))
-            if isblock and (ctype != Block) and (ctype != _no_ctype):
-                for key, child in node.children(ctype=Block,
-                                                return_key=True):
-                    if (active is None) or \
-                       getattr(child, _active_flag_name, True):
-                        stack.append((key, child))
-
-    def postorder_traversal(self,
-                            ctype=_no_ctype,
-                            active=None,
-                            include_all_parents=True,
-                            return_key=False):
-        """
-        Generates a postorder traversal of the storage
-        tree. This includes all components and all component
-        containers (optionally) matching the requested type.
-
-        Args:
-            ctype: Indicate the type of components to
-                include. The default value indicates that
-                all types should be included.
-            active (True/None): Set to True to indicate that
-                only active objects should be included. The
-                default value of None indicates that all
-                components (including those that have been
-                deactivated) should be included. *Note*: This
-                flag is ignored for any objects that do not
-                have an active flag.
-            include_all_parents (bool): Indicates if parent
-              containers such as blocks or block containers
-              should be included even when the ctype is set
-              to something different. Default is True.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting the local storage key of the
-                object and the object itself. By default,
-                only the objects objects are returned.
-
-        Returns: an iterator of objects or (key,object) tuples
-        """
-        assert active in (None, True)
-        # TODO
-        from pyomo.core.base.block import Block
-        _active_flag_name = "active"
-        # rule: only containers get placed in the stack
-        stack = []
-        if (active is None) or \
-           getattr(self, _active_flag_name, True):
-            stack.append((None, self))
-        used = set()
-        while len(stack) > 0:
-            node_key, node = stack.pop()
-            assert node._is_container
-            if id(node) in used:
-                if (include_all_parents) or \
+    if False:                           #pragma:nocover
+        # This original implementation for preorder traversal
+        # technically works, but does not respect declaration
+        # order, which makes it difficult to test.  I'm keeping
+        # it around to do some performance profiling later on.
+        def _Xpreorder_traversal(self,
+                               ctype=_no_ctype,
+                               active=None,
+                               include_parent_blocks=True,
+                               return_key=False):
+            assert active in (None, True)
+            # TODO
+            from pyomo.core.base.block import Block
+            _active_flag_name = "active"
+            # rule: only containers get placed in the stack
+            stack = []
+            if (active is None) or \
+               getattr(self, _active_flag_name, True):
+                stack.append((None, self))
+            while len(stack) > 0:
+                node_key, node = stack.pop()
+                if (include_parent_blocks) or \
                    (ctype is _no_ctype) or \
                    (node.ctype == ctype):
                     if return_key:
                         yield node_key, node
                     else:
                         yield node
-            else:
-                used.add(id(node))
-                stack.append((node_key, node))
+                assert node._is_container
                 if isinstance(node, IBlockStorage):
                     children = node.children(ctype=ctype,
                                              return_key=True)
@@ -234,65 +130,292 @@ class _block_base(object):
                     for key, child in node.children(ctype=Block,
                                                     return_key=True):
                         if (active is None) or \
-                           getattr(self, _active_flag_name, True):
+                           getattr(child, _active_flag_name, True):
                             stack.append((key, child))
 
-    """ TODO: See if it is worth reimplementing the components() method using
-              the tree traversal methods.
-    def components_alt(self,
-                       ctype=_no_ctype,
-                       active=None,
-                       descend_into=True):
+    if False:                           #pragma:nocover
+        # This original implementation for postorder traversal
+        # technically works, but does not respect declaration
+        # order, which makes it difficult to test.  I'm keeping
+        # it around to do some performance profiling later on.
+        def _Xpostorder_traversal(self,
+                                  ctype=_no_ctype,
+                                  active=None,
+                                  include_parent_blocks=True,
+                                  return_key=False):
+            assert active in (None, True)
+            # TODO
+            from pyomo.core.base.block import Block
+            _active_flag_name = "active"
+            # rule: only containers get placed in the stack
+            stack = []
+            if (active is None) or \
+               getattr(self, _active_flag_name, True):
+                stack.append((None, self))
+            used = set()
+            while len(stack) > 0:
+                node_key, node = stack.pop()
+                assert node._is_container
+                if id(node) in used:
+                    if (include_parent_blocks) or \
+                       (ctype is _no_ctype) or \
+                       (node.ctype == ctype):
+                        if return_key:
+                            yield node_key, node
+                        else:
+                            yield node
+                else:
+                    used.add(id(node))
+                    stack.append((node_key, node))
+                    if isinstance(node, IBlockStorage):
+                        children = node.children(ctype=ctype,
+                                                 return_key=True)
+                        isblock = True
+                    else:
+                        children = node.children(return_key=True)
+                        isblock = False
+                    for key, child in children:
+                        if (active is None) or \
+                           getattr(child, _active_flag_name, True):
+                            if not child._is_container:
+                                if return_key:
+                                   yield key, child
+                                else:
+                                    yield child
+                            else:
+                                stack.append((key, child))
+                    if isblock and (ctype != Block) and (ctype != _no_ctype):
+                        for key, child in node.children(ctype=Block,
+                                                        return_key=True):
+                            if (active is None) or \
+                               getattr(self, _active_flag_name, True):
+                                stack.append((key, child))
+
+    def preorder_traversal(self,
+                           ctype=_no_ctype,
+                           active=None,
+                           include_parent_blocks=True,
+                           return_key=False,
+                           root_key=None):
+        """
+        Generates a preorder traversal of the storage
+        tree. This includes all components and all component
+        containers (optionally) matching the requested type.
+
+        Args:
+            ctype: Indicate the type of components to
+                include. The default value indicates that
+                all types should be included.
+            active (True/None): Set to True to indicate that
+                only active objects should be included. The
+                default value of None indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*: This
+                flag is ignored for any objects that do not
+                have an active flag.
+            include_parent_blocks (bool): Indicates if
+              parent block containers should be included
+              even when the ctype is set to something that
+              is not Block. Default is True.
+            return_key (bool): Set to True to indicate that
+                the return type should be a 2-tuple
+                consisting of the local storage key of the
+                object within its parent and the object
+                itself. By default, only the objects are
+                returned.
+
+        Returns: an iterator of objects or (key,object) tuples
+        """
+        assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
         _active_flag_name = "active"
-        if descend_into:
-            traversal = self.preorder_traversal(ctype=ctype,
-                                                active=active,
-                                                include_all_parents=False)
-            # skip the root (thisf block)
-            six.next(traversal)
-            for obj in traversal:
-                if obj._is_component:
-                    yield obj
-        else:
-            for child in self.children(ctype=ctype):
+        if active and (not self.active):
+            return
+        if include_parent_blocks or \
+           (ctype is _no_ctype) or \
+           (ctype is Block):
+            if return_key:
+                yield root_key, self
+            else:
+                yield self
+        for key, child in self.children(return_key=True):
+            if (ctype is _no_ctype) or \
+               (child.ctype is ctype) or \
+               (child.ctype is Block):
                 if (active is None) or \
                    getattr(child, _active_flag_name, True):
-                    if child._is_component:
-                        yield child
-                    else:
-                        assert child._is_container
-                        # child is a container
-                        if isinstance(child, _IActiveComponentContainer) and \
-                           (active is not None):
-                            for component in child.components():
-                                if getattr(component,
-                                           _active_flag_name,
-                                           True):
-                                    yield component
+                    if not child._is_container:
+                        # not a block and not a container
+                        if return_key:
+                            yield key, child
                         else:
-                            for component in child.components():
-                                yield component
-    """
+                            yield child
+                    elif not child._is_component:
+                        # not a block (but possibly a container of blocks)
+                        if child.ctype is Block:
+                            for obj_key, obj in child.preorder_traversal(
+                                    active=active,
+                                    return_key=True,
+                                    root_key=key):
+                                if not obj._is_component:
+                                    # a container of blocks
+                                    if (ctype is _no_ctype) or \
+                                       (ctype is Block) or \
+                                       include_parent_blocks:
+                                        if return_key:
+                                            yield obj_key, obj
+                                        else:
+                                            yield obj
+                                else:
+                                    # a block
+                                    for item in obj.preorder_traversal(
+                                            ctype=ctype,
+                                            active=active,
+                                            include_parent_blocks=include_parent_blocks,
+                                            return_key=return_key,
+                                            root_key=obj_key):
+                                        yield item
+
+                        else:
+                            for item in child.preorder_traversal(
+                                    active=active,
+                                    return_key=return_key,
+                                    root_key=key):
+                                yield item
+                    else:
+                        # a block
+                        for item in child.preorder_traversal(
+                                ctype=ctype,
+                                active=active,
+                                include_parent_blocks=include_parent_blocks,
+                                return_key=return_key,
+                                root_key=key):
+                            yield item
+
+    def postorder_traversal(self,
+                            ctype=_no_ctype,
+                            active=None,
+                            include_parent_blocks=True,
+                            return_key=False,
+                            root_key=None):
+        """
+        Generates a postorder traversal of the storage
+        tree. This includes all components and all component
+        containers (optionally) matching the requested type.
+
+        Args:
+            ctype: Indicate the type of components to
+                include. The default value indicates that
+                all types should be included.
+            active (True/None): Set to True to indicate that
+                only active objects should be included. The
+                default value of None indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*: This
+                flag is ignored for any objects that do not
+                have an active flag.
+            include_parent_blocks (bool): Indicates if
+              parent block containers should be included
+              even when the ctype is set to something that
+              is not Block. Default is True.
+            return_key (bool): Set to True to indicate that
+                the return type should be a 2-tuple
+                consisting of the local storage key of the
+                object within its parent and the object
+                itself. By default, only the objects are
+                returned.
+
+        Returns: an iterator of objects or (key,object) tuples
+        """
+        assert active in (None, True)
+        # TODO
+        from pyomo.core.base.block import Block
+        _active_flag_name = "active"
+        if active and (not self.active):
+            return
+        for key, child in self.children(return_key=True):
+            if (ctype is _no_ctype) or \
+               (child.ctype is ctype) or \
+               (child.ctype is Block):
+                if (active is None) or \
+                   getattr(child, _active_flag_name, True):
+                    if not child._is_container:
+                        # not a block and not a container
+                        if return_key:
+                            yield key, child
+                        else:
+                            yield child
+                    elif not child._is_component:
+                        # not a block (but possibly a container of blocks)
+                        if child.ctype is Block:
+                            for obj_key, obj in child.postorder_traversal(
+                                    active=active,
+                                    return_key=True,
+                                    root_key=key):
+                                if not obj._is_component:
+                                    # a container of blocks
+                                    if (ctype is _no_ctype) or \
+                                       (ctype is Block) or \
+                                       include_parent_blocks:
+                                        if return_key:
+                                            yield obj_key, obj
+                                        else:
+                                            yield obj
+                                else:
+                                    # a block
+                                    for item in obj.postorder_traversal(
+                                            ctype=ctype,
+                                            active=active,
+                                            include_parent_blocks=include_parent_blocks,
+                                            return_key=return_key,
+                                            root_key=obj_key):
+                                        yield item
+
+                        else:
+                            for item in child.postorder_traversal(
+                                    active=active,
+                                    return_key=return_key,
+                                    root_key=key):
+                                yield item
+                    else:
+                        # a block
+                        for item in child.postorder_traversal(
+                                ctype=ctype,
+                                active=active,
+                                include_parent_blocks=include_parent_blocks,
+                                return_key=return_key,
+                                root_key=key):
+                            yield item
+        if include_parent_blocks or \
+           (ctype is _no_ctype) or \
+           (ctype is Block):
+            if return_key:
+                yield root_key, self
+            else:
+                yield self
 
     def components(self,
                    ctype=_no_ctype,
                    active=None,
                    descend_into=True):
+        assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
         _active_flag_name = "active"
+        if active and (not self.active):
+            return
+
         for child in self.children(ctype=ctype):
             if (active is None) or \
                getattr(child, _active_flag_name, True):
                 if child._is_component:
                     yield child
                 else:
+                    # child is a container (but not a block)
                     assert child._is_container
-                    # child is a container
-                    if isinstance(child, _IActiveComponentContainer) and \
-                       (active is not None):
+                    if (active is not None) and \
+                       isinstance(child, _IActiveComponentContainer):
                         for component in child.components():
                             if getattr(component,
                                        _active_flag_name,
@@ -330,15 +453,15 @@ class _block_base(object):
     def blocks(self,
                active=None,
                descend_into=True):
+        assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
-        if (active is None) or \
-           self.active == active:
+        if (active is None) or self.active:
             yield self
-        for component in self.components(ctype=Block,
-                                         active=active,
-                                         descend_into=descend_into):
-            yield component
+            for component in self.components(ctype=Block,
+                                             active=active,
+                                             descend_into=descend_into):
+                yield component
 
     def generate_names(self,
                        ctype=_no_ctype,
@@ -381,24 +504,28 @@ class _block_base(object):
         # TODO
         from pyomo.core.base.block import Block
         names = ComponentMap()
+        if active and (not self.active):
+            return names
+
         if descend_into:
             traversal = self.preorder_traversal(ctype=ctype,
                                                 active=active,
-                                                include_all_parents=True,
+                                                include_parent_blocks=True,
                                                 return_key=True)
             # skip the root (this block)
             six.next(traversal)
-            for key, obj in traversal:
-                parent = obj.parent
-                name = parent._child_storage_entry_string % convert(key)
-                if parent is not self:
-                    names[obj] = (names[parent] +
-                                  parent._child_storage_delimiter_string +
-                                  name)
-                else:
-                    names[obj] = prefix + name
         else:
-            assert False # TODO
+            traversal = self.children(ctype=ctype,
+                                      return_key=True)
+        for key, obj in traversal:
+            parent = obj.parent
+            name = parent._child_storage_entry_string % convert(key)
+            if parent is not self:
+                names[obj] = (names[parent] +
+                              parent._child_storage_delimiter_string +
+                              name)
+            else:
+                names[obj] = prefix + name
 
         return names
 
@@ -411,6 +538,7 @@ class block(_block_base, IBlockStorage):
         self.__parent = None
         self.__active = True
         self.__byctype = defaultdict(OrderedDict)
+        self.__order = OrderedDict()
 
     # The base class implementation of __getstate__ handles
     # the parent weakref assumed to be stored with the
@@ -474,18 +602,14 @@ class block(_block_base, IBlockStorage):
 
         Returns: an iterator of objects or (key,object) tuples
         """
-        if ctype is _no_ctype:
-            ctypes = self.__byctype.keys()
+        if return_key:
+            itermethod = iteritems
         else:
-            ctypes = (ctype,)
-        for ctype in ctypes:
-            if ctype in self.__byctype:
-                if return_key:
-                    for key, child in iteritems(self.__byctype[ctype]):
-                        yield key, child
-                else:
-                    for child in itervalues(self.__byctype[ctype]):
-                        yield child
+            itermethod = itervalues
+        if ctype is _no_ctype:
+            return itermethod(self.__order)
+        else:
+            return itermethod(self.__byctype.get(ctype,{}))
 
     #
     # Interface
@@ -499,17 +623,20 @@ class block(_block_base, IBlockStorage):
                         "Implicitly replacing the component attribute "
                         "%s (type=%s) on block with a new Component "
                         "(type=%s).\nThis is usually indicative of a "
-                        "modelling error.\nTo avoid this warning, delete "
+                        "modeling error.\nTo avoid this warning, delete "
                         "the original component from the block before "
                         "assigning a new component with the same name."
                         % (name,
                            type(getattr(self, name)),
                            type(component)))
                     delattr(self, name)
+                if component.ctype not in self.__byctype:
+                    self.__byctype[component.ctype] = {}
                 self.__byctype[component.ctype][name] = component
+                self.__order[name] = component
                 component._parent = weakref.ref(self)
-            elif (name in self.__byctype[component.ctype]) and \
-                 (self.__byctype[component.ctype][name] is component):
+            elif hasattr(self, name) and \
+                 (getattr(self, name) is component):
                 # a very special case that makes sense to handle
                 # because the implied order should be: (1) delete
                 # the object at the current index, (2) insert the
@@ -530,8 +657,9 @@ class block(_block_base, IBlockStorage):
         super(block, self).__setattr__(name, component)
 
     def __delattr__(self, name):
-        component = self.__dict__[name]
+        component = getattr(self, name)
         if isinstance(component, (IComponent, IComponentContainer)):
+            del self.__order[name]
             del self.__byctype[component.ctype][name]
             if len(self.__byctype[component.ctype]) == 0:
                 del self.__byctype[component.ctype]
@@ -557,9 +685,9 @@ class block(_block_base, IBlockStorage):
                 component types should be counted on
                 sub-blocks. Default is True.
 
-        Returns: a set object of component types.
+        Returns: a set of component types.
         """
-        assert active in (True, None)
+        assert active in (None, True)
         ctypes = set()
         if not descend_into:
             if active is None:
@@ -575,7 +703,7 @@ class block(_block_base, IBlockStorage):
                         break # just need 1 or more
         else:
             for blk in self.blocks(active=active,
-                                     descend_into=True):
+                                   descend_into=True):
                 ctypes.update(blk.collect_ctypes(
                     active=active,
                     descend_into=False))

@@ -317,6 +317,16 @@ class IComponentContainer(ICategorizedObject):
         """A generator over the children of this container."""
         raise NotImplementedError     #pragma:nocover
 
+    @abc.abstractmethod
+    def preorder_traversal(self, *args, **kwds):
+        """A generator over all descendents in prefix order."""
+        raise NotImplementedError     #pragma:nocover
+
+    @abc.abstractmethod
+    def postorder_traversal(self, *args, **kwds):
+        """A generator over all descendents in postfix order."""
+        raise NotImplementedError     #pragma:nocover
+
     #
     # Interface
     #

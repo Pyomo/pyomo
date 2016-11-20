@@ -74,18 +74,70 @@ class _Test_block_base(object):
                          sorted(self._names.values()))
 
     def test_preorder_traversal(self):
-        if hasattr(self, "_preorder"):
-            for o1, o2 in zip(self._block.preorder_traversal(),
-                              self._preorder):
-                print(o1.name, o2.name)
-            # this first test makes failures a
-            # little easier to debug
-            self.assertEqual(
-                [str(obj) for obj in self._block.preorder_traversal()],
-                [str(obj) for obj in self._preorder])
-            self.assertEqual(
-                [id(obj) for obj in self._block.preorder_traversal()],
-                [id(obj) for obj in self._preorder])
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in self._block.preorder_traversal()],
+            [str(obj) for obj in self._preorder])
+        self.assertEqual(
+            [id(obj) for obj in self._block.preorder_traversal()],
+            [id(obj) for obj in self._preorder])
+        self.assertEqual(
+            [(k,id(obj)) for k,obj in self._block.preorder_traversal(return_key=True)],
+            [((obj.parent.child_key(obj) if obj.parent is not None else None),id(obj)) for obj in self._preorder])
+
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in self._block.preorder_traversal(ctype=Var)],
+            [str(obj) for obj in self._preorder if obj.ctype in (Block, Var)])
+        self.assertEqual(
+            [id(obj) for obj in self._block.preorder_traversal(ctype=Var)],
+            [id(obj) for obj in self._preorder if obj.ctype in (Block, Var)])
+
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in self._block.preorder_traversal(ctype=Var,
+                                                                include_parent_blocks=False)],
+            [str(obj) for obj in self._preorder if obj.ctype is Var])
+        self.assertEqual(
+            [id(obj) for obj in self._block.preorder_traversal(ctype=Var,
+                                                               include_parent_blocks=False)],
+            [id(obj) for obj in self._preorder if obj.ctype is Var])
+
+    def test_postorder_traversal(self):
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in self._block.postorder_traversal()],
+            [str(obj) for obj in self._postorder])
+        self.assertEqual(
+            [id(obj) for obj in self._block.postorder_traversal()],
+            [id(obj) for obj in self._postorder])
+        self.assertEqual(
+            [(k,id(obj)) for k,obj in self._block.postorder_traversal(return_key=True)],
+            [((obj.parent.child_key(obj) if obj.parent is not None else None),id(obj)) for obj in self._postorder])
+
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in self._block.postorder_traversal(ctype=Var)],
+            [str(obj) for obj in self._postorder if obj.ctype in (Block, Var)])
+        self.assertEqual(
+            [id(obj) for obj in self._block.postorder_traversal(ctype=Var)],
+            [id(obj) for obj in self._postorder if obj.ctype in (Block, Var)])
+
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in self._block.postorder_traversal(ctype=Var,
+                                                                include_parent_blocks=False)],
+            [str(obj) for obj in self._postorder if obj.ctype is Var])
+        self.assertEqual(
+            [id(obj) for obj in self._block.postorder_traversal(ctype=Var,
+                                                               include_parent_blocks=False)],
+            [id(obj) for obj in self._postorder if obj.ctype is Var])
 
     def test_child_key(self):
         for child in self._child_key:
@@ -241,7 +293,8 @@ class _Test_block_base(object):
                 sorted(str(_b)
                        for _b in
                        self._components_no_descend[obj][Block]
-                       if _b.active))
+                       if _b.active)
+                if getattr(obj, 'active', True) else [])
             self.assertEqual(
                 set(id(_b) for _b in
                     obj.components(ctype=Block,
@@ -249,7 +302,8 @@ class _Test_block_base(object):
                                    descend_into=False)),
                 set(id(_b) for _b in
                     self._components_no_descend[obj][Block]
-                    if _b.active))
+                    if _b.active)
+                if getattr(obj, 'active', True) else set())
             # test ctype=Var
             self.assertEqual(
                 sorted(str(_v)
@@ -259,14 +313,16 @@ class _Test_block_base(object):
                                       descend_into=False)),
                 sorted(str(_v)
                        for _v in
-                       self._components_no_descend[obj][Var]))
+                       self._components_no_descend[obj][Var])
+                if getattr(obj, 'active', True) else [])
             self.assertEqual(
                 set(id(_v) for _v in
                     obj.components(ctype=Var,
                                    active=True,
                                    descend_into=False)),
                 set(id(_v) for _v in
-                    self._components_no_descend[obj][Var]))
+                    self._components_no_descend[obj][Var])
+                if getattr(obj, 'active', True) else set())
             # test no ctype
             self.assertEqual(
                 sorted(str(_c)
@@ -278,7 +334,8 @@ class _Test_block_base(object):
                        self._components_no_descend[obj]
                        for _c in
                        self._components_no_descend[obj][ctype]
-                       if getattr(_c, "active", True)))
+                       if getattr(_c, "active", True))
+                if getattr(obj, 'active', True) else [])
             self.assertEqual(
                 set(id(_c) for _c in
                     obj.components(active=True,
@@ -287,7 +344,8 @@ class _Test_block_base(object):
                     self._components_no_descend[obj]
                     for _c in
                     self._components_no_descend[obj][ctype]
-                    if getattr(_c, "active", True)))
+                    if getattr(_c, "active", True))
+                if getattr(obj, 'active', True) else set())
 
     def test_components_active_None(self):
         for obj in self._components:
@@ -364,7 +422,8 @@ class _Test_block_base(object):
                 sorted(str(_b)
                        for _b in
                        self._components[obj][Block]
-                       if _b.active))
+                       if _b.active)
+                if getattr(obj, 'active', True) else [])
             self.assertEqual(
                 set(id(_b) for _b in
                     obj.components(ctype=Block,
@@ -372,7 +431,8 @@ class _Test_block_base(object):
                                    descend_into=True)),
                 set(id(_b) for _b in
                     self._components[obj][Block]
-                    if _b.active))
+                    if _b.active)
+                if getattr(obj, 'active', True) else set())
             # test ctype=Var
             self.assertEqual(
                 sorted(str(_v)
@@ -383,7 +443,8 @@ class _Test_block_base(object):
                 sorted(str(_v)
                        for _v in
                        self._components[obj][Var]
-                       if _active_path_to_object_exists(obj, _v)))
+                       if _active_path_to_object_exists(obj, _v))
+                if getattr(obj, 'active', True) else [])
             self.assertEqual(
                 set(id(_v) for _v in
                     obj.components(ctype=Var,
@@ -391,7 +452,8 @@ class _Test_block_base(object):
                                    descend_into=True)),
                 set(id(_v) for _v in
                     self._components[obj][Var]
-                    if _active_path_to_object_exists(obj, _v)))
+                    if _active_path_to_object_exists(obj, _v))
+                if getattr(obj, 'active', True) else set())
             # test no ctype
             self.assertEqual(
                 sorted(str(_c)
@@ -403,7 +465,8 @@ class _Test_block_base(object):
                        self._components[obj]
                        for _c in
                        self._components[obj][ctype]
-                       if _active_path_to_object_exists(obj, _c)))
+                       if _active_path_to_object_exists(obj, _c))
+                if getattr(obj, 'active', True) else [])
             self.assertEqual(
                 set(id(_c) for _c in
                     obj.components(active=True,
@@ -412,7 +475,8 @@ class _Test_block_base(object):
                     self._components[obj]
                     for _c in
                     self._components[obj][ctype]
-                    if _active_path_to_object_exists(obj, _c)))
+                    if _active_path_to_object_exists(obj, _c))
+                if getattr(obj, 'active', True) else set())
 
     def test_blocks_no_descend_active_None(self):
         for obj in self._blocks_no_descend:
@@ -448,14 +512,16 @@ class _Test_block_base(object):
                 sorted(str(_b)
                        for _b in
                        self._blocks_no_descend[obj]
-                       if _b.active))
+                       if _b.active)
+                if getattr(obj, 'active', True) else [])
             self.assertEqual(
                 set(id(_b) for _b in
                     obj.blocks(active=True,
                                descend_into=False)),
                 set(id(_b) for _b in
                     self._blocks_no_descend[obj]
-                    if _b.active))
+                    if _b.active)
+                if getattr(obj, 'active', True) else set())
 
     def test_blocks_active_None(self):
         for obj in self._blocks:
@@ -491,14 +557,16 @@ class _Test_block_base(object):
                 sorted(str(_b)
                        for _b in
                        self._blocks[obj]
-                       if _b.active))
+                       if _b.active)
+                if getattr(obj, 'active', True) else [])
             self.assertEqual(
                 set(id(_b) for _b in
                     obj.blocks(active=True,
                                descend_into=True)),
                 set(id(_b) for _b in
                     self._blocks[obj]
-                    if _b.active))
+                    if _b.active)
+                if getattr(obj, 'active', True) else set())
 
 class Test_block(_Test_block_base, unittest.TestCase):
 
@@ -549,6 +617,27 @@ class Test_block(_Test_block_base, unittest.TestCase):
                          model.blist_1[0],
                          model.blist_1[0].v_2,
                          model.blist_1[0].b_2]
+
+        cls._postorder = [model.v_1,
+                          model.vdict_1[None],
+                          model.vdict_1,
+                          model.vlist_1[0],
+                          model.vlist_1[1],
+                          model.vlist_1,
+                          model.b_1.v_2,
+                          model.b_1.b_2.b_3,
+                          model.b_1.b_2.v_3,
+                          model.b_1.b_2.vlist_3[0],
+                          model.b_1.b_2.vlist_3,
+                          model.b_1.b_2,
+                          model.b_1,
+                          model.bdict_1,
+                          model.blist_1[0].v_2,
+                          model.blist_1[0].b_2,
+                          model.blist_1[0],
+                          model.blist_1,
+                          model]
+        assert len(cls._preorder) == len(cls._postorder)
 
         cls._names = ComponentMap()
         cls._names[model.v_1] = "v_1"
@@ -854,6 +943,21 @@ class Test_StaticBlock(_Test_block_base, unittest.TestCase):
         # for tests in the base testing class
         #
 
+        cls._preorder = [model,
+                         model.b,
+                         model.b.v,
+                         model.b.blist,
+                         model.b.blist[0],
+                         model.v]
+
+        cls._postorder = [model.b.v,
+                          model.b.blist[0],
+                          model.b.blist,
+                          model.b,
+                          model.v,
+                          model]
+        assert len(cls._preorder) == len(cls._postorder)
+
         cls._names = ComponentMap()
         cls._names[model.b] = "b"
         cls._names[model.b.v] = "b.v"
@@ -908,6 +1012,7 @@ class Test_StaticBlock(_Test_block_base, unittest.TestCase):
             cls._blocks[obj] = \
                 [obj] + cls._components[obj][Block]
 
+    # override this test method on the base class
     def test_collect_ctypes(self):
         self.assertEqual(self._block.collect_ctypes(),
                          set([Block, Var]))

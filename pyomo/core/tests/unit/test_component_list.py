@@ -516,6 +516,10 @@ class _TestComponentListBase(object):
         for c in clist.components():
             self.assertNotEqual(c.name, None)
             self.assertEqual(c.name, names[c])
+        names = m.generate_names(descend_into=False)
+        self.assertEqual(len(names), len(list(m.children())))
+        for c in m.children():
+            self.assertEqual(c.name, names[c])
 
     def test_components(self):
         clist = self._container_type()
@@ -559,6 +563,58 @@ class _TestComponentListBase(object):
                          len(list(id(_c) for _c in clist.components())))
         self.assertEqual(len(set(id(_c) for _c in clist.components())),
                          5)
+
+    def test_preorder_traversal(self):
+        traversal = []
+        clist = self._container_type()
+        traversal.append((None,clist))
+        clist.append(self._ctype_factory())
+        traversal.append((0,clist[-1]))
+        clist.append(self._container_type())
+        traversal.append((1,clist[-1]))
+        clist[1].append(self._ctype_factory())
+        traversal.append((0,clist[1][-1]))
+        clist.append(self._ctype_factory())
+        traversal.append((2,clist[-1]))
+
+        self.assertEqual([c.name for k,c in traversal],
+                         [c.name for c in clist.preorder_traversal()])
+        self.assertEqual([id(c) for k,c in traversal],
+                         [id(c) for c in clist.preorder_traversal()])
+
+        self.assertEqual([(k,c.name) for k,c in traversal],
+                         [(k,c.name) for k,c in clist.preorder_traversal(
+                             return_key=True)])
+        self.assertEqual([(k,id(c)) for k,c in traversal],
+                         [(k,id(c)) for k,c in clist.preorder_traversal(
+                             return_key=True)])
+        return clist, traversal
+
+    def test_postorder_traversal(self):
+        traversal = []
+        clist = self._container_type()
+        clist.append(self._ctype_factory())
+        traversal.append((0,clist[-1]))
+        clist.append(self._container_type())
+        clist[1].append(self._ctype_factory())
+        traversal.append((0,clist[1][-1]))
+        traversal.append((1,clist[-1]))
+        clist.append(self._ctype_factory())
+        traversal.append((2,clist[-1]))
+        traversal.append((None,clist))
+
+        self.assertEqual([c.name for k,c in traversal],
+                         [c.name for c in clist.postorder_traversal()])
+        self.assertEqual([id(c) for k,c in traversal],
+                         [id(c) for c in clist.postorder_traversal()])
+
+        self.assertEqual([(k,c.name) for k,c in traversal],
+                         [(k,c.name) for k,c in clist.postorder_traversal(
+                             return_key=True)])
+        self.assertEqual([(k,id(c)) for k,c in traversal],
+                         [(k,id(c)) for k,c in clist.postorder_traversal(
+                             return_key=True)])
+        return clist, traversal
 
 class _TestActiveComponentListBase(_TestComponentListBase):
 
@@ -676,6 +732,40 @@ class _TestActiveComponentListBase(_TestComponentListBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+
+    def test_preorder_traversal(self):
+        clist, traversal = \
+            super(_TestActiveComponentListBase, self).\
+            test_preorder_traversal()
+        clist[1].deactivate()
+        self.assertEqual([c.name for k,c in traversal if c.active],
+                         [c.name for c in clist.preorder_traversal(
+                             active=True)])
+        self.assertEqual([id(c) for k,c in traversal if c.active],
+                         [id(c) for c in clist.preorder_traversal(
+                             active=True)])
+        clist.deactivate()
+        self.assertEqual(len(list(clist.preorder_traversal(active=True))),
+                         0)
+        self.assertEqual(len(list(clist.generate_names(active=True))),
+                         0)
+
+    def test_postorder_traversal(self):
+        clist, traversal = \
+            super(_TestActiveComponentListBase, self).\
+            test_postorder_traversal()
+        clist[1].deactivate()
+        self.assertEqual([c.name for k,c in traversal if c.active],
+                         [c.name for c in clist.postorder_traversal(
+                             active=True)])
+        self.assertEqual([id(c) for k,c in traversal if c.active],
+                         [id(c) for c in clist.postorder_traversal(
+                             active=True)])
+        clist.deactivate()
+        self.assertEqual(len(list(clist.postorder_traversal(active=True))),
+                         0)
+        self.assertEqual(len(list(clist.generate_names(active=True))),
+                         0)
 
 if __name__ == "__main__":
     unittest.main()

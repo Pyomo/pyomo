@@ -65,14 +65,125 @@ class ComponentList(IComponentContainer,
                 for component in child.components():
                     yield component
 
+    def child_key(self, child):
+        return self.index(child)
+
     def children(self, return_key=False):
+        """Iterate over the children of this container.
+
+        Args:
+            return_key (bool): Set to True to indicate that
+                the return type should be a 2-tuple
+                consisting the child storage key and the
+                child object. By default, only the child
+                objects are returned.
+
+        Returns: an iterator of objects or (key,object) tuples
+        """
         if return_key:
             return enumerate(self._data)
         else:
             return self._data.__iter__()
 
-    def child_key(self, child):
-        return self.index(child)
+    def preorder_traversal(self,
+                           active=None,
+                           return_key=False,
+                           root_key=None):
+        """
+        Generates a preorder traversal of the storage tree.
+
+        Args:
+            active (True/None): Set to True to indicate that
+                only active objects should be included. The
+                default value of None indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*: This
+                flag is ignored for any objects that do not
+                have an active flag.
+            return_key (bool): Set to True to indicate that
+                the return type should be a 2-tuple
+                consisting of the local storage key of the
+                object within its parent and the object
+                itself. By default, only the objects are
+                returned.
+            root_key: The key to return with this object
+                (when return_key is True).
+
+        Returns: an iterator of objects or (key,object) tuples
+        """
+        assert active in (None, True)
+        _active_flag_name = "active"
+        if (active is None) or \
+           getattr(self, _active_flag_name, True):
+            if return_key:
+                yield root_key, self
+            else:
+                yield self
+            for key, child in self.children(return_key=True):
+                if (active is None) or \
+                   getattr(child, _active_flag_name, True):
+                    if child._is_component:
+                        if return_key:
+                            yield key, child
+                        else:
+                            yield child
+                    else:
+                        assert child._is_container
+                        for item in child.preorder_traversal(
+                                active=active,
+                                return_key=return_key,
+                                root_key=key):
+                            yield item
+
+    def postorder_traversal(self,
+                            active=None,
+                            return_key=False,
+                            root_key=None):
+        """
+        Generates a postorder traversal of the storage tree.
+
+        Args:
+            active (True/None): Set to True to indicate that
+                only active objects should be included. The
+                default value of None indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*: This
+                flag is ignored for any objects that do not
+                have an active flag.
+            return_key (bool): Set to True to indicate that
+                the return type should be a 2-tuple
+                consisting of the local storage key of the
+                object within its parent and the object
+                itself. By default, only the objects are
+                returned.
+            root_key: The key to return with this object
+                (when return_key is True).
+
+        Returns: an iterator of objects or (key,object) tuples
+        """
+        assert active in (None, True)
+        _active_flag_name = "active"
+        if (active is None) or \
+           getattr(self, _active_flag_name, True):
+            for key, child in self.children(return_key=True):
+                if (active is None) or \
+                   getattr(child, _active_flag_name, True):
+                    if child._is_component:
+                        if return_key:
+                            yield key, child
+                        else:
+                            yield child
+                    else:
+                        assert child._is_container
+                        for item in child.postorder_traversal(
+                                active=active,
+                                return_key=return_key,
+                                root_key=key):
+                            yield item
+            if return_key:
+                yield root_key, self
+            else:
+                yield self
 
     def generate_names(self,
                        active=None,
@@ -106,21 +217,24 @@ class ComponentList(IComponentContainer,
             mapping component objects to names.
         """
         assert active in (None, True)
+        _active_flag_name = "active"
         names = ComponentMap()
-        name_template = (prefix +
-                         self._child_storage_delimiter_string +
-                         self._child_storage_entry_string)
-        for key, child in self.children(return_key=True):
-            if (active is None) or child.active:
-                names[child] = name_template % convert(key)
-                if descend_into and child._is_container and \
-                   (not child._is_component):
-                    names.update(child.generate_names(
-                        active=active,
-                        descend_into=True,
-                        convert=convert,
-                        prefix=names[child]))
-
+        if (active is None) or \
+           getattr(self, _active_flag_name, True):
+            name_template = (prefix +
+                             self._child_storage_delimiter_string +
+                             self._child_storage_entry_string)
+            for key, child in self.children(return_key=True):
+                if (active is None) or \
+                   getattr(child, _active_flag_name, True):
+                    names[child] = name_template % convert(key)
+                    if descend_into and child._is_container and \
+                       (not child._is_component):
+                        names.update(child.generate_names(
+                            active=active,
+                            descend_into=True,
+                            convert=convert,
+                            prefix=names[child]))
         return names
 
     #
