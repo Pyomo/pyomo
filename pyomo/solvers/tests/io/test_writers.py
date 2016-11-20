@@ -37,122 +37,122 @@ ExpectedFailures = []
 #
 
 ExpectedFailures.append(
-	('glpk', 'lp', (4,52,0,0),
-	 model_types.discrete_var_bounds_MILP,
-	 "Glpk ignores bounds on Binary variables through the "
-	 "LP file interface. A ticket has been filed."))
+    ('glpk', 'lp', (4,52,0,0),
+     model_types.discrete_var_bounds_MILP,
+     "Glpk ignores bounds on Binary variables through the "
+     "LP file interface. A ticket has been filed."))
 ExpectedFailures.append(
-	('glpk', 'mps', _trunk_version,
-	 model_types.duals_maximize,
-	 "Glpk does not accept the OBJSENSE section of the Free MPS format. "
-         "Therefore maximization models are not explicitly handled."))
+    ('glpk', 'mps', _trunk_version,
+     model_types.duals_maximize,
+     "Glpk does not accept the OBJSENSE section of the Free MPS format. "
+     "Therefore maximization models are not explicitly handled."))
 
 #
 # CBC
 #
 
 ExpectedFailures.append(
-	('cbc', 'lp', _trunk_version,
-	 model_types.duals_maximize,
-	 "For a maximization problem where a variable is pushed to its "
-	 "lower bound, Cbc reports the reduced cost as a positive number. In "
-	 "practice this should be reported as a negative number. A ticket has "
-	 "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125"))
+    ('cbc', 'lp', _trunk_version,
+     model_types.duals_maximize,
+     "For a maximization problem where a variable is pushed to its "
+     "lower bound, Cbc reports the reduced cost as a positive number. In "
+     "practice this should be reported as a negative number. A ticket has "
+     "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125"))
 
 #
 # PICO
 #
 
 ExpectedFailures.append(
-	('pico', 'lp', _trunk_version,
-	 model_types.discrete_var_bounds_MILP,
-	 "Pico ignores bounds on Binary variables through the "
-	 "LP file interface. A ticket has been filed."))
+    ('pico', 'lp', _trunk_version,
+     model_types.discrete_var_bounds_MILP,
+     "Pico ignores bounds on Binary variables through the "
+     "LP file interface. A ticket has been filed."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.piecewise_LP,
-	 "Pico reports an incorrect dual solution for this "
-	 "problem when using the NL file interface."))
+    ('pico', 'nl', _trunk_version,
+     model_types.piecewise_LP,
+     "Pico reports an incorrect dual solution for this "
+     "problem when using the NL file interface."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.duals_maximize,
-	 "Pico classifies certain models with equality "
-	 "constraints as infeasible when using the NL "
-	 "file interface. A ticket has been filed."))
+    ('pico', 'nl', _trunk_version,
+     model_types.duals_maximize,
+     "Pico classifies certain models with equality "
+     "constraints as infeasible when using the NL "
+     "file interface. A ticket has been filed."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.duals_minimize,
-	 "Pico classifies certain models with equality "
-	 "constraints as infeasible when using the NL "
-	 "file interface. A ticket has been filed."))
+    ('pico', 'nl', _trunk_version,
+     model_types.duals_minimize,
+     "Pico classifies certain models with equality "
+     "constraints as infeasible when using the NL "
+     "file interface. A ticket has been filed."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.inactive_index_LP,
-	 "Pico reports the wrong objective function value."))
+    ('pico', 'nl', _trunk_version,
+     model_types.inactive_index_LP,
+     "Pico reports the wrong objective function value."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.simple_LP,
-	 "Pico just gets the wrong answer."))
+    ('pico', 'nl', _trunk_version,
+     model_types.simple_LP,
+     "Pico just gets the wrong answer."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.compiled_LP,
-	 "Pico just gets the wrong answer."))
+    ('pico', 'nl', _trunk_version,
+     model_types.compiled_LP,
+     "Pico just gets the wrong answer."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.trivial_constraints_LP,
-	 "Pico just gets the wrong answer."))
+    ('pico', 'nl', _trunk_version,
+     model_types.trivial_constraints_LP,
+     "Pico just gets the wrong answer."))
 
 #
 # SCIP
 #
 
 ExpectedFailures.append(
-	('scip', 'nl', (3, 1, 0, 9),
-	 model_types.simple_SOS2,
-	 "SCIP (scipampl) does not recognize sos2 constraints "
-	 "inside NL files. A ticket has been filed."))
+    ('scip', 'nl', (3, 1, 0, 9),
+     model_types.simple_SOS2,
+     "SCIP (scipampl) does not recognize sos2 constraints "
+     "inside NL files. A ticket has been filed."))
 
 ExpectedFailures.append(
-	('scip', 'nl', (3, 1, 0, 9),
-	 model_types.simple_SOS1,
-	 "SCIP (scipampl) does not recognize sos1 constraints "
-	 "inside NL files. A ticket has been filed."))
+    ('scip', 'nl', (3, 1, 0, 9),
+     model_types.simple_SOS1,
+     "SCIP (scipampl) does not recognize sos1 constraints "
+     "inside NL files. A ticket has been filed."))
 
 #
 # CPLEX
 #
 
 ExpectedFailures.append(
-	('cplex', 'lp', _trunk_version,
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('cplex', 'lp', _trunk_version,
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('cplex', 'mps', _trunk_version,
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('cplex', 'mps', _trunk_version,
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('cplex', 'python', _trunk_version,
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('cplex', 'python', _trunk_version,
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('_cplex_persistent', 'python', _trunk_version,
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('_cplex_persistent', 'python', _trunk_version,
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('cplex', 'nl', (12,5,9,9),
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('cplex', 'nl', (12,5,9,9),
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 #
 # BARON
