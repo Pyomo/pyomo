@@ -188,6 +188,22 @@ ExpectedFailures.append(
      "Baron will not return dual solution when a solution is "
      "found during preprocessing."))
 
+#
+# IPOPT
+#
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', (3,10,3,0),
+     model_types.duals_maximize,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.4"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', (3,10,3,0),
+     model_types.simple_QCP,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.4"))
+
 def check_expected_failures(test_case, model_class):
 
     # If this situation is an expected failure then return the message why
