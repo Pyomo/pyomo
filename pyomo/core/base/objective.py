@@ -371,9 +371,8 @@ class Objective(ActiveIndexedComponent):
              ("Active", self.active)
              ],
             iteritems(self._data),
-            ( "Key","Active","Sense","Expression"),
-            lambda k, v: [ k,
-                           v.active,
+            ( "Active","Sense","Expression"),
+            lambda k, v: [ v.active,
                            ("minimize" if (v.sense == minimize) else "maximize"),
                            v.expr
                            ]
@@ -397,8 +396,8 @@ class Objective(ActiveIndexedComponent):
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,
                         ((k,v) for k,v in iteritems(self._data) if v.active),
-                        ( "Key","Active","Value" ),
-                        lambda k, v: [ k, v.active, value(v), ] )
+                        ( "Active","Value" ),
+                        lambda k, v: [ v.active, value(v), ] )
 
     #
     # Checks flags like Objective.Skip, etc. before

@@ -15,6 +15,7 @@ import pyutilib.th as unittest
 from pyomo.util import DeveloperError
 import pyomo.core.base._pyomo
 from pyomo.environ import *
+from pyomo.core.base.block import generate_cuid_names
 
 class TestComponent(unittest.TestCase):
 
@@ -48,87 +49,87 @@ class TestComponentUID(unittest.TestCase):
     def test_genFromComponent_nested(self):
         cuid = ComponentUID(self.m.b[1,'2'].c.a[3])
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',(3,),'#'), ('c',tuple(),''), ('b',(1,'2'),'#$')) )
 
     def test_genFromComponent_indexed(self):
         cuid = ComponentUID(self.m.b[1,'2'].c.a)
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a','**',None), ('c',tuple(),''), ('b',(1,'2'),'#$')) )
 
     def test_parseFromString(self):
         cuid = ComponentUID('b[1,2].c.a[2]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'..')) )
-        
+
     def test_parseFromString_singleQuote(self):
         cuid = ComponentUID('b[1,\'2\'].c.a[2]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'.$')) )
 
     def test_parseFromString_doubleQuote(self):
         cuid = ComponentUID('b[1,\"2\"].c.a[2]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'.$')) )
 
     def test_parseFromString_typeID(self):
         cuid = ComponentUID('b[#1,$2].c.a[2]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',(1,'2'),'#$')) )
 
     def test_parseFromString_wildcard_1(self):
         cuid = ComponentUID('b[**].c.a[*]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('',),'*'), ('c',tuple(),''), ('b','**',None)) )
-        
+
     def test_parseFromString_wildcard_2(self):
         cuid = ComponentUID('b[*,*].c.a[*]')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('',),'*'), ('c',tuple(),''), ('b',('',''),'**')) )
-        
+
     def test_parseFromRepr(self):
         cuid = ComponentUID('b:1,2.c.a:2')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'..')) )
-        
+
     def test_parseFromRepr_singleQuote(self):
         cuid = ComponentUID('b:1,\'2\'.c.a:2')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'.$')) )
 
     def test_parseFromRepr_doubleQuote(self):
         cuid = ComponentUID('b:1,\"2\".c.a:2')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',('1','2'),'.$')) )
 
     def test_parseFromRepr_typeID(self):
         cuid = ComponentUID('b:#1,$2.c.a:2')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('2',),'.'), ('c',tuple(),''), ('b',(1,'2'),'#$')) )
-        
+
     def test_parseFromRepr_wildcard_1(self):
         cuid = ComponentUID('b:**.c.a:*')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('',),'*'), ('c',tuple(),''), ('b','**',None)) )
-        
+
     def test_parseFromRepr_wildcard_2(self):
         cuid = ComponentUID('b:*,*.c.a:*')
         self.assertEqual(
-            cuid._cids, 
+            cuid._cids,
             (('a',('',),'*'), ('c',tuple(),''), ('b',('',''),'**')) )
-    
+
     def test_find_explicit_exists(self):
         ref = self.m.b[1,'2'].c.a[3]
         cuid = ComponentUID(ref)
@@ -351,7 +352,117 @@ class TestComponentUID(unittest.TestCase):
         self.assertTrue ( ComponentUID('baz') >= b )
         self.assertTrue ( ComponentUID('baz') == b )
         self.assertFalse( ComponentUID('baz') != b )
-    
+
+    def test_generate_cuid_names(self):
+        model = Block(concrete=True)
+        model.x = Var()
+        model.y = Var([1,2])
+        model.V = Var([('a','b'),(1,'2'),(3,4)])
+        model.b = Block(concrete=True)
+        model.b.z = Var([1,'2'])
+        setattr(model.b, '.H', Var(['a',2]))
+        model.B = Block(['a',2], concrete=True)
+        setattr(model.B['a'],'.k', Var())
+        model.B[2].b = Block()
+        model.B[2].b.x = Var()
+
+        cuids = generate_cuid_names(model)
+        self.assertEqual(len(cuids), 26)
+        for obj in [model.x,
+                    model.y,
+                    model.y_index,
+                    model.y[1],
+                    model.y[2],
+                    model.V,
+                    model.V_index,
+                    model.V['a','b'],
+                    model.V[1,'2'],
+                    model.V[3,4],
+                    model.b,
+                    model.b.z,
+                    model.b.z_index,
+                    model.b.z[1],
+                    model.b.z['2'],
+                    getattr(model.b, '.H'),
+                    getattr(model.b, '.H_index'),
+                    getattr(model.b, '.H')['a'],
+                    getattr(model.b, '.H')[2],
+                    model.B,
+                    model.B_index,
+                    model.B['a'],
+                    getattr(model.B['a'],'.k'),
+                    model.B[2],
+                    model.B[2].b,
+                    model.B[2].b.x]:
+            assert repr(ComponentUID(obj)) == cuids[obj]
+            del cuids[obj]
+        self.assertEqual(len(cuids), 0)
+
+        cuids = generate_cuid_names(model,
+                                    descend_into=False)
+        self.assertEqual(len(cuids), 15)
+        for obj in [model.x,
+                    model.y,
+                    model.y_index,
+                    model.y[1],
+                    model.y[2],
+                    model.V,
+                    model.V_index,
+                    model.V['a','b'],
+                    model.V[1,'2'],
+                    model.V[3,4],
+                    model.b,
+                    model.B,
+                    model.B_index,
+                    model.B['a'],
+                    model.B[2]]:
+            assert repr(ComponentUID(obj)) == cuids[obj]
+            del cuids[obj]
+        self.assertEqual(len(cuids), 0)
+
+        cuids = generate_cuid_names(model,
+                                    ctype=Var)
+        self.assertEqual(len(cuids), 21)
+        for obj in [model.x,
+                    model.y,
+                    model.y[1],
+                    model.y[2],
+                    model.V,
+                    model.V['a','b'],
+                    model.V[1,'2'],
+                    model.V[3,4],
+                    model.b,
+                    model.b.z,
+                    model.b.z[1],
+                    model.b.z['2'],
+                    getattr(model.b, '.H'),
+                    getattr(model.b, '.H')['a'],
+                    getattr(model.b, '.H')[2],
+                    model.B,
+                    model.B['a'],
+                    getattr(model.B['a'],'.k'),
+                    model.B[2],
+                    model.B[2].b,
+                    model.B[2].b.x]:
+            assert repr(ComponentUID(obj)) == cuids[obj]
+            del cuids[obj]
+        self.assertEqual(len(cuids), 0)
+
+        cuids = generate_cuid_names(model,
+                                    ctype=Var,
+                                    descend_into=False)
+        self.assertEqual(len(cuids), 8)
+        for obj in [model.x,
+                    model.y,
+                    model.y[1],
+                    model.y[2],
+                    model.V,
+                    model.V['a','b'],
+                    model.V[1,'2'],
+                    model.V[3,4]]:
+            assert repr(ComponentUID(obj)) == cuids[obj]
+            del cuids[obj]
+        self.assertEqual(len(cuids), 0)
 
 class TestEnviron(unittest.TestCase):
 
@@ -360,9 +471,6 @@ class TestEnviron(unittest.TestCase):
 
     def test_sets(self):
         self.assertTrue(set(x[0] for x in pyomo.core.base._pyomo.predefined_sets()) >= set(['Reals', 'Integers', 'Boolean']))
-
-    
-
 
 if __name__ == "__main__":
     unittest.main()

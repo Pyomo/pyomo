@@ -26,7 +26,7 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         Expression)
 from pyomo.core.base.objective import (_GeneralObjectiveData,
                                        SimpleObjective)
-from pyomo.core.base.connector import _ConnectorValue, SimpleConnector, Connector
+from pyomo.core.base.connector import _ConnectorData, SimpleConnector, Connector
 from pyomo.core.base.var import SimpleVar, Var, _GeneralVarData, _VarData
 
 from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper
@@ -403,7 +403,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
     #
     # Connector
     #
-    elif exp_type is _ConnectorValue or exp.type() is Connector:
+    elif exp_type is _ConnectorData or exp.type() is Connector:
         # Silently omit constraint...  The ConnectorExpander should
         # expand this constraint into indvidual constraints that
         # reference "real" variables.
@@ -784,7 +784,7 @@ _linear_collectors = {
     expr._ProductExpression           : _collect_linear_prod,
     expr._PowExpression               : _collect_linear_pow,
     expr._IntrinsicFunctionExpression : _collect_linear_intrinsic,
-    _ConnectorValue         : _collect_linear_connector,
+    _ConnectorData          : _collect_linear_connector,
     SimpleConnector         : _collect_linear_connector,
     expr.Expr_if            : _collect_branching_expr,
     param._ParamData        : _collect_linear_const,

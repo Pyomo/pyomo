@@ -14,10 +14,10 @@ from __future__ import division
 #            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
 #            'atanh', 'ceil', 'floor' )
 
-import copy
 import logging
 import math
 import sys
+import traceback
 from six import advance_iterator
 from weakref import ref
 
@@ -44,7 +44,11 @@ from pyomo.core.base.expr_common import \
     ensure_independent_trees as safe_mode, bypass_backreference, \
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
     _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq
+    _lt, _le, _eq, clone_expression, chainedInequalityErrorMessage as cIEM
+
+# Wrap the common chainedInequalityErrorMessage to pass the local context
+chainedInequalityErrorMessage \
+    = lambda *x: cIEM(generate_relational_expression, *x)
 
 _stack = []
 
@@ -53,47 +57,14 @@ def _const_to_string(*args):
     args[1].write("%s" % args[0])
 
 
-def clone_expression(exp):
-    if exp.__class__ in native_numeric_types:
-        return exp
-    if exp.is_expression():
-        # It is important that this function calls the clone method not
-        # __copy__.  __copy__ and clone are the same for all classes
-        # that advertise "is_expression = True" except the
-        # _ExpressionData class (in which case clone does nothing so
-        # that the object remains persistent when generating
-        # expressions)
-        return exp.clone()
-    else:
-        return exp
-
 class EntangledExpressionError(Exception):
     pass
 
-def chainedInequalityErrorMessage(msg=None):
-    if msg is None:
-        msg = "Nonconstant relational expression used in an "\
-              "unexpected Boolean context."
-    buf = StringIO()
-    generate_relational_expression.chainedInequality.to_string(buf)
-    # We are about to raise an exception, so it's OK to reset chainedInequality
-    generate_relational_expression.chainedInequality = None
-    msg += """
-The inequality expression:
-    %s
-contains non-constant terms (variables) appearing in a Boolean context, e.g.:
-    if expression <= 5:
-This is generally invalid.  If you want to obtain the Boolean value of
-the expression based on the current variable values, explicitly evaluate
-the expression, e.g.:
-    if value(expression) <= 5:
-or
-    if value(expression <= 5):
-""" % ( buf.getvalue().strip(), )
-    return msg
 
-
-def identify_variables(expr, include_fixed=True, allow_duplicates=False):
+def identify_variables( expr,
+                        include_fixed=True,
+                        allow_duplicates=False,
+                        include_potentially_variable=False ):
     if not allow_duplicates:
         _seen = set()
     _stack = [ ([expr], 0, 1) ]
@@ -110,12 +81,20 @@ def identify_variables(expr, include_fixed=True, allow_duplicates=False):
                 _idx = 0
                 _len = len(_argList)
             elif isinstance(_sub, _VarData):
-                if include_fixed or not _sub.is_fixed():
+                if ( include_fixed
+                     or not _sub.is_fixed()
+                     or include_potentially_variable ):
                     if not allow_duplicates:
                         if id(_sub) in _seen:
                             continue
                         _seen.add(id(_sub))
                     yield _sub
+            elif include_potentially_variable and _sub._potentially_variable():
+                if not allow_duplicates:
+                    if id(_sub) in _seen:
+                        continue
+                    _seen.add(id(_sub))
+                yield _sub
 
 
 class _ExpressionBase(NumericValue):
@@ -131,27 +110,21 @@ class _ExpressionBase(NumericValue):
             self._parent_expr = None
         self._args = args
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( self._args.__class__(
-            (clone_expression(a) for a in self._args) ))
-
     def __getstate__(self):
         state = super(_ExpressionBase, self).__getstate__()
         for i in _ExpressionBase.__pickle_slots__:
            state[i] = getattr(self,i)
         if safe_mode:
-            state['_parent_expr'] = None
-            if self._parent_expr is not None:
-                _parent_expr = self._parent_expr()
-                if _parent_expr is not None:
-                    state['_parent_expr'] = _parent_expr
+            if not bypass_backreference and self._parent_expr is not None:
+                state['_parent_expr'] = self._parent_expr()
+            else:
+                state['_parent_expr'] = self._parent_expr
         return state
 
     def __setstate__(self, state):
         super(_ExpressionBase, self).__setstate__(state)
         if safe_mode:
-            if self._parent_expr is not None:
+            if self._parent_expr is not None and not bypass_backreference:
                 self._parent_expr = ref(self._parent_expr)
 
     def __nonzero__(self):
@@ -189,8 +162,8 @@ class _ExpressionBase(NumericValue):
                 return ans
 
 
-    def clone(self):
-        ans = copy.copy(self)
+    def clone(self, substitute=None):
+        ans = clone_expression(self, substitute)
         if safe_mode:
             ans._parent_expr = None
         return ans
@@ -372,13 +345,6 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._fcn = fcn
         self._name = name
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( self._args.__class__(
-            (clone_expression(a) for a in self._args) ),
-                               self._name,
-                               self._fcn )
-
     def __getstate__(self):
         result = super(_UnaryFunctionExpression, self).__getstate__()
         for i in _UnaryFunctionExpression.__slots__:
@@ -446,11 +412,6 @@ class _AbsExpression(_UnaryFunctionExpression):
 
     def __init__(self, arg):
         super(_AbsExpression, self).__init__(arg, 'abs', abs)
-
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__( self._args.__class__(
-            (clone_expression(a) for a in self._args) ) )
 
 
 class _PowExpression(_ExpressionBase):
@@ -546,12 +507,6 @@ class _InequalityExpression(_LinearOperatorExpression):
         self._strict = strict
         self._cloned_from = cloned_from
 
-    def __copy__(self):
-        return self.__class__( self._args.__class__(
-            (clone_expression(a) for a in self._args) ),
-                               copy.copy(self._strict),
-                               copy.copy(self._cloned_from) )
-
     def __getstate__(self):
         result = super(_InequalityExpression, self).__getstate__()
         for i in _InequalityExpression.__slots__:
@@ -561,7 +516,9 @@ class _InequalityExpression(_LinearOperatorExpression):
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
-        if not self.is_constant():
+        if not self.is_constant() and len(self._args) == 2:
+            generate_relational_expression.call_info \
+                = traceback.extract_stack(limit=2)[-2]
             generate_relational_expression.chainedInequality = self
             return True
 
@@ -857,17 +814,11 @@ class Expr_if(_ExpressionBase):
         self._else = as_numeric(ELSE)
         self._args = (self._if, self._then, self._else)
 
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__(IF=clone_expression(self._if),
-                              THEN=clone_expression(self._then),
-                              ELSE=clone_expression(self._else))
-
     def __getstate__(self):
         state = super(Expr_if, self).__getstate__()
         for i in Expr_if.__slots__:
-            result[i] = getattr(self, i)
-        return result
+            state[i] = getattr(self, i)
+        return state
 
     def _arguments(self):
         return ( self._if, self._then, self._else )
@@ -955,7 +906,7 @@ class Expr_if(_ExpressionBase):
 class _GetItemExpression(_ExpressionBase):
     """Expression to call "__getitem__" on the base"""
 
-    __slots__ = ('_base')
+    __slots__ = ('_base',)
     PRECEDENCE = 1
 
     def _precedence(self):
@@ -967,14 +918,6 @@ class _GetItemExpression(_ExpressionBase):
             self._parent_expr = None
         self._args = args
         self._base = base
-
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__(
-            self._base,
-            self._args.__class__(
-                (clone_expression(a) for a in self._args) )
-        )
 
     def __getstate__(self):
         result = super(_GetItemExpression, self).__getstate__()
@@ -1020,15 +963,6 @@ class _LinearExpression(_ExpressionBase):
             self._const = 0
             self._args = []
             self._coef = {}
-
-    def __copy__(self):
-        """Clone this object using the specified arguments"""
-        return self.__class__(
-            copy.copy(self._const),
-            self._args.__class__(
-                (clone_expression(a) for a in self._args) ),
-            tuple( (clone_expression(self._coef[id(v)]) for v in self._args) )
-        )
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()
@@ -1683,11 +1617,17 @@ def generate_relational_expression(etype, lhs, rhs):
         # expression.
         for i,arg in enumerate(prevExpr._cloned_from):
             if arg == cloned_from[0]:
-                match.append(1)
+                match.append((i,0))
             elif arg == cloned_from[1]:
-                match.append(0)
+                match.append((i,1))
+        if etype == _eq:
+            raise TypeError(chainedInequalityErrorMessage())
         if len(match) == 1:
-            if match[0]:
+            if match[0][0] == match[0][1]:
+                raise TypeError(chainedInequalityErrorMessage(
+                    "Attempting to form a compound inequality with two "
+                    "%s bounds" % ('lower' if match[0][0] else 'upper',)))
+            if not match[0][1]:
                 cloned_from = prevExpr._cloned_from + (cloned_from[1],)
                 lhs = prevExpr
                 lhs_is_relational = True
@@ -1702,9 +1642,15 @@ def generate_relational_expression(etype, lhs, rhs):
                 buf = StringIO()
                 prevExpr.to_string(buf)
                 raise TypeError("Cannot create a compound inequality with "
-                      "identical upper and lower\n\tbounds with strict "
-                      "inequalities: constraint trivially infeasible:\n\t%s and "
+                      "identical upper and lower\n\tbounds using strict "
+                      "inequalities: constraint infeasible:\n\t%s and "
                       "%s < %s" % ( buf.getvalue().strip(), lhs, rhs ))
+            if match[0] == (0,0):
+                # This is a particularly weird case where someone
+                # evaluates the *same* inequality twice in a row.  This
+                # should always be an error (you can, for example, get
+                # it with "0 <= a >= 0").
+                raise TypeError(chainedInequalityErrorMessage())
             etype = _eq
         else:
             raise TypeError(chainedInequalityErrorMessage())

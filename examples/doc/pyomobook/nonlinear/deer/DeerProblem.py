@@ -1,8 +1,5 @@
+# DeerProblem.py
 from pyomo.environ import *
-
-#
-# Model
-#
 
 model = AbstractModel()
 

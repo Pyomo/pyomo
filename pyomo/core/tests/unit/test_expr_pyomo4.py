@@ -12,6 +12,7 @@
 #
 
 import os
+import re
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
@@ -1048,16 +1049,22 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
             self.fail("expected construction of invalid compound inequality: "
                       "combining strict and nonstrict relationships in an "
                       "implicit equality.")
-        except TypeError:
-            pass
+        except TypeError as e:
+            self.assertIn(
+                "Cannot create a compound inequality with identical upper and "
+                "lower bounds using strict inequalities",
+                re.sub('\s+',' ',str(e)) )
 
         try:
             0 <= m.a < 0
             self.fail("expected construction of invalid compound inequality: "
                       "combining strict and nonstrict relationships in an "
                       "implicit equality.")
-        except TypeError:
-            pass
+        except TypeError as e:
+            self.assertIn(
+                "Cannot create a compound inequality with identical upper and "
+                "lower bounds using strict inequalities",
+                re.sub('\s+',' ',str(e)) )
 
         e = 0 <= 1 < m.a
         self.assertIs(type(e), EXPR._InequalityExpression)
@@ -1067,16 +1074,88 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict[0], True)
 
-        e = m.a <= 0 <= 1
-        self.assertIs(type(e), bool)
-        self.assertEqual(e, True)
+    def test_eval_compoundInequality(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=0)
+
+        self.assertTrue( 0 <= m.x <= 0 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( 1 <= m.x <= 1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( -1 <= m.x <= -1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+
+        self.assertTrue( 0 <= m.x <= 1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( 1 <= m.x <= 2 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertTrue( -1 <= m.x <= 0 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+
+
+    def test_compoundInequality_errors(self):
+        m = ConcreteModel()
+        m.x = Var()
+
+        try:
+            0 <= m.x >= 0
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        try:
+            0 <= m.x >= 1
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Attempting to form a compound inequality with two lower bounds",
+                str(e) )
+
+        try:
+            0 >= m.x <= 1
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Attempting to form a compound inequality with two upper bounds",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
         self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
         try:
-            m.a == m.b
+            m.x == 5
             self.fail("expected construction of relational expression to "
-                      "generate a chainedInequality TypeError")
-        except TypeError:
-            pass
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
+        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        try:
+            m.x*2 <= 5
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
+        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        try:
+            m.x <= 0
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
 
     def test_inequalityErrors(self):
         m = self.m
@@ -2484,7 +2563,7 @@ class TestCloneIfNeeded(unittest.TestCase):
     def test_cloneCount_relationalExpression_compound_reversed(self):
         # relational expression of a compound expression (simple vars)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < self.model.a > self.model.d
+        expr = self.model.c > self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count )
@@ -2492,7 +2571,7 @@ class TestCloneIfNeeded(unittest.TestCase):
         # relational expression of a compound expression
         # (non-expression common term)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = 2*self.model.c < self.model.a > 2*self.model.d
+        expr = 2*self.model.c > self.model.a > 2*self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count )
@@ -2500,14 +2579,14 @@ class TestCloneIfNeeded(unittest.TestCase):
         # relational expression of a compound expression
         # (expression common term)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < 2 * self.model.a > self.model.d
+        expr = self.model.c > 2 * self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count + 1 )
 
         # relational expression of a referenced compound expression (1)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < self.model.a
+        expr = self.model.c > self.model.a
         expr1 = expr > self.model.d
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
@@ -2515,7 +2594,7 @@ class TestCloneIfNeeded(unittest.TestCase):
 
         # relational expression of a referenced compound expression (2)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = 2*self.model.c < 2*self.model.a
+        expr = 2*self.model.c > 2*self.model.a
         expr1 = self.model.d > expr
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
@@ -2530,7 +2609,6 @@ class TestCloneExpression(unittest.TestCase):
         self.m = ConcreteModel()
         self.m.a = Var(initialize=5)
         self.m.b = Var(initialize=10)
-        self.m.expr = self.m.a + self.m.b
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
@@ -2541,12 +2619,14 @@ class TestCloneExpression(unittest.TestCase):
         expr2 = expr1.clone()
         self.assertEqual( expr1(), 15 )
         self.assertEqual( expr2(), 15 )
+        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
         expr1._args[0] = self.m.b
         self.assertEqual( expr1(), 20 )
         self.assertEqual( expr2(), 15 )
+        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertNotEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
@@ -2555,12 +2635,14 @@ class TestCloneExpression(unittest.TestCase):
         expr2 = expr1.clone()
         self.assertEqual( expr1(), 15 )
         self.assertEqual( expr2(), 15 )
+        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
         expr1 += self.m.b
         self.assertEqual( expr1(), 25 )
         self.assertEqual( expr2(), 15 )
+        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
@@ -2570,42 +2652,80 @@ class TestCloneExpression(unittest.TestCase):
         expr2 = expr1.clone()
         self.assertEqual( expr1(), 50 )
         self.assertEqual( expr2(), 50 )
-        self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertEqual(id(expr1._args[1]), id(expr2._args[1]))
+        self.assertNotEqual( id(expr1),      id(expr2) )
+        # Note: as the _args are both components, Python will not
+        # duplicate the tuple
+        self.assertEqual( id(expr1._args),    id(expr2._args) )
+        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
         expr1 *= self.m.b
         self.assertEqual( expr1(), 500 )
         self.assertEqual( expr2(), 50 )
-        self.assertNotEqual(id(expr1._args),           id(expr2._args))
-        self.assertNotEqual(id(expr1._args[0]._args),  id(expr2._args))
-        self.assertEqual(id(expr1._args[1]),           id(expr2._args[1]))
-        self.assertEqual(id(expr1._args[0]._args[0]),  id(expr2._args[0]))
-        self.assertEqual(id(expr1._args[0]._args[1]),  id(expr2._args[1]))
+        self.assertNotEqual( id(expr1),                 id(expr2) )
+        self.assertNotEqual( id(expr1._args),           id(expr2._args) )
+        # Note: as the _args are both components, Python will not
+        # duplicate the tuple
+        self.assertEqual( id(expr1._args[0]._args),     id(expr2._args) )
+        self.assertEqual( id(expr1._args[1]),           id(expr2._args[1]) )
+        self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
+        self.assertEqual( id(expr1._args[0]._args[1]),  id(expr2._args[1]) )
+
+        expr1 = self.m.a * (self.m.b + self.m.a)
+        expr2 = expr1.clone()
+        self.assertEqual( expr1(), 75 )
+        self.assertEqual( expr2(), 75 )
+        # Note that since one of the args is a sum expression, the _args
+        # in the sum is a *list*, which will be duplicated by deepcopy.
+        # This will cause the two args in the Product to be different.
+        self.assertNotEqual( id(expr1),      id(expr2) )
+        self.assertNotEqual( id(expr1._args), id(expr2._args) )
+        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+        self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
+
 
     def test_ProductExpression_div(self):
         expr1 = self.m.a / self.m.b
         expr2 = expr1.clone()
         self.assertEqual( expr1(), 0.5 )
         self.assertEqual( expr2(), 0.5 )
-        self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertEqual(id(expr1._args[1]), id(expr2._args[1]))
+        self.assertNotEqual( id(expr1),       id(expr2) )
+        # Note: as the _args are both components, Python will not
+        # duplicate the tuple
+        self.assertEqual( id(expr1._args),    id(expr2._args) )
+        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
         expr1 /= self.m.b
         self.assertEqual( expr1(), 0.05 )
         self.assertEqual( expr2(), 0.5 )
-        self.assertNotEqual(id(expr1._args),           id(expr2._args))
-        self.assertNotEqual(id(expr1._args[0]._args),  id(expr2._args))
-        self.assertEqual(id(expr1._args[1]),           id(expr2._args[1]))
-        self.assertEqual(id(expr1._args[0]._args[0]),  id(expr2._args[0]))
-        self.assertEqual(id(expr1._args[0]._args[1]),  id(expr2._args[1]))
+        self.assertNotEqual( id(expr1),                 id(expr2) )
+        self.assertNotEqual( id(expr1._args),              id(expr2._args) )
+        # Note: as the _args are both components, Python will not
+        # duplicate the tuple
+        self.assertEqual( id(expr1._args[0]._args),  id(expr2._args) )
+        self.assertEqual( id(expr1._args[1]),           id(expr2._args[1]) )
+        self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
+        self.assertEqual( id(expr1._args[0]._args[1]),  id(expr2._args[1]) )
+
+        expr1 = self.m.a / (self.m.b + self.m.a)
+        expr2 = expr1.clone()
+        self.assertEqual( expr1(), 1/3. )
+        self.assertEqual( expr2(), 1/3. )
+        # Note that since one of the args is a sum expression, the _args
+        # in the sum is a *list*, which will be duplicated by deepcopy.
+        # This will cause the two args in the Product to be different.
+        self.assertNotEqual( id(expr1),      id(expr2) )
+        self.assertNotEqual( id(expr1._args), id(expr2._args) )
+        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+        self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
     def test_sumOfExpressions(self):
         expr1 = self.m.a * self.m.b + self.m.a * self.m.a
         expr2 = expr1.clone()
         self.assertEqual(expr1(), 75)
         self.assertEqual(expr2(), 75)
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
         self.assertEqual(expr1._args[0](), expr2._args[0]())
         self.assertEqual(expr1._args[1](), expr2._args[1]())
@@ -2614,6 +2734,7 @@ class TestCloneExpression(unittest.TestCase):
         expr1 += self.m.b
         self.assertEqual(expr1(), 85)
         self.assertEqual(expr2(), 75)
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
         self.assertEqual(len(expr1._args), 3)
         self.assertEqual(len(expr2._args), 2)
@@ -2627,6 +2748,7 @@ class TestCloneExpression(unittest.TestCase):
         expr2 = expr1.clone()
         self.assertEqual(expr1(), 150)
         self.assertEqual(expr2(), 150)
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
         self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
         self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
@@ -2648,6 +2770,7 @@ class TestCloneExpression(unittest.TestCase):
         expr1 *= self.m.b
         self.assertEqual(expr1(), 1500)
         self.assertEqual(expr2(), 150)
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
         self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
 
@@ -2661,6 +2784,7 @@ class TestCloneExpression(unittest.TestCase):
         expr1 = (self.m.a + self.m.b) / (self.m.a + self.m.a)
         expr2 = expr1.clone()
 
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
         self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
         self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
@@ -2694,6 +2818,7 @@ class TestCloneExpression(unittest.TestCase):
     def test_Expr_if(self):
         expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
         expr2 = expr1.clone()
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertEqual(expr1(), value(self.m.a))
         self.assertEqual(expr2(), value(self.m.a))
         self.assertNotEqual(id(expr1._if), id(expr2._if))
