@@ -722,8 +722,8 @@ class Test_constraint(unittest.TestCase):
         def f():
             c.expr = a
         self.assertRaisesRegexp(
-            TypeError, "contains non-constant terms \(variables\) "
-            "appearing in a Boolean context", f)
+            TypeError, "Relational expression used in an unexpected "
+            "Boolean context.", f)
 
     def test_tuple_constraint_create(self):
         x = variable()
