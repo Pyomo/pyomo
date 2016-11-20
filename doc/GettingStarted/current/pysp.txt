@@ -1303,4 +1303,35 @@ file (e.g., the LP format). The command-line option
 to the command-line help string for more information about
 the list of available format.
 
+=== Generating DDSIP Input Files From PySP Models ===
+
+PySP provides support for creating DDSIP inputs and some support for reading
+DDSIP solutions back into PySP is under development. To execute the
+interface, use a variant of the +python -m+ command:
+For example, to get a list of command arguments, use:
+[source,bash]
+----
+python -m pyomo.pysp.solvers.ddsip --help
+----
+Note that not all of the command arguments are relevant for DDSIP.
+
+Some researchers may simply want to write out the files needed by
+DDSIP, which are written to temorary directories. They will be
+retained if the +--keep-solver-files+ option is set. So, for example,
+to obtain inputs for DDSIP for the networkflow example that ships with
+PySP, one might want to +cd+ to the directory and the use a command
+like the following:
+[source,bash]
+----
+python -m pyomo.pysp.solvers.ddsip -s 1ef10 -m smps_model --keep-solver-files  --solver-options="NODELIM=1”
+----
+which might result in error messages from PySP because there might not
+be a solution file to read. Nonetheless, the terminal output will
+indicate where the input files for DDSIP were written.
+
+The +--solver-options+ command line argument can be used set the values of
+any DDSIP options that are written to the DDSIP configuration file;
+multiple options should be space-separated. See DDSIP documentation for
+a list of options.
+
 // vim: set syntax=asciidoc:
