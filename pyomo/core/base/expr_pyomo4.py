@@ -109,10 +109,26 @@ class _ExpressionBase(NumericValue):
         return state
 
     def __setstate__(self, state):
+        # This is complicated: because we cna change the safe_mode /
+        # bypass_backreference checks, the pickle may not be compatible
+        # with the current operating mode.  We will do our best to get
+        # things consistent.
+        if '_parent_expr' in state:
+            if safe_mode:
+                if state['_parent_expr'] is None:
+                    pass
+                elif bypass_backreference:
+                    state['_parent_expr'] = True
+                else:
+                    state['_parent_expr'] = ref(state['_parent_expr'])
+            else:
+                del state['_parent_expr']
         super(_ExpressionBase, self).__setstate__(state)
-        if safe_mode:
-            if self._parent_expr is not None and not bypass_backreference:
-                self._parent_expr = ref(self._parent_expr)
+        if safe_mode and '_parent_expr' not in state:
+            self._parent_expr = None
+            for arg in self._args:
+                if hasattr(arg, '_parent_expr'):
+                    arg._parent_expr = bypass_backreference or ref(self)
 
     def __nonzero__(self):
         return bool(self())
