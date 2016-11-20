@@ -69,6 +69,8 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         kwds['type'] = 'xpress'
         ILMLicensedSystemCallSolver.__init__(self, **kwds)
 
+        self.is_mip = kwds.pop('is_mip', False)
+
         #
         # Define valid problem formats and associated results formats
         #
@@ -156,7 +158,10 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
 
         # doesn't seem to be a global solve command for mip versus lp
         # solves
-        script += "lpoptimize\n"
+        if self.is_mip:
+            script += "mipoptimize\n"
+        else:
+            script += "lpoptimize\n"
 
         # a quick explanation of the various flags used below:
         # p: outputs in full precision

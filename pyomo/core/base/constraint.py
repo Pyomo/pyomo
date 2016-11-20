@@ -768,9 +768,8 @@ class Constraint(ActiveIndexedComponent):
              ("Active", self.active),
              ],
             iteritems(self),
-            ( "Key","Lower","Body","Upper","Active" ),
-            lambda k, v: [ k,
-                           "-Inf" if v.lower is None else v.lower,
+            ( "Lower","Body","Upper","Active" ),
+            lambda k, v: [ "-Inf" if v.lower is None else v.lower,
                            v.body,
                            "+Inf" if v.upper is None else v.upper,
                            v.active,
@@ -794,9 +793,8 @@ class Constraint(ActiveIndexedComponent):
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,
                         ((k,v) for k,v in iteritems(self._data) if v.active),
-                        ( "Key","Lower","Body","Upper" ),
-                        lambda k, v: [ k,
-                                       value(v.lower),
+                        ( "Lower","Body","Upper" ),
+                        lambda k, v: [ value(v.lower),
                                        v.body(),
                                        value(v.upper),
                                        ] )
