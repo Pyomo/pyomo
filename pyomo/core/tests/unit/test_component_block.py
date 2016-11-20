@@ -851,6 +851,17 @@ class Test_block(_Test_block_base, unittest.TestCase):
         b2.v = v
         self.assertTrue(v.parent is b2)
 
+    def test_delattr(self):
+        b = block()
+        with self.assertRaises(AttributeError):
+            del b.not_an_attribute
+        c = b.b = block()
+        self.assertIs(c.parent, b)
+        del b.b
+        self.assertIs(c.parent, None)
+        b.b = c
+        self.assertIs(c.parent, b)
+
     def test_collect_ctypes(self):
         b = block()
         self.assertEqual(b.collect_ctypes(),
@@ -919,16 +930,26 @@ class Test_block(_Test_block_base, unittest.TestCase):
         del b.x
         self.assertEqual(b.collect_ctypes(), set())
 
-class _MyBlock(StaticBlock):
-    __slots__ = ("b", "v", "n")
+class _MyBlockBaseBase(StaticBlock):
+    __slots__ = ()
     def __init__(self):
+        super(_MyBlockBaseBase, self).__init__()
+
+class _MyBlockBase(_MyBlockBaseBase):
+    __slots__ = ("b")
+    def __init__(self):
+        super(_MyBlockBase, self).__init__()
         self.b = block()
         self.b.v = variable()
+
+class _MyBlock(_MyBlockBase):
+    # testing when a __dict__ might appear (no __slots__)
+    def __init__(self):
+        super(_MyBlock, self).__init__()
         self.b.blist = block_list()
         self.b.blist.append(block())
         self.v = variable()
         self.n = 2.0
-        super(_MyBlock, self).__init__()
 
 class Test_StaticBlock(_Test_block_base, unittest.TestCase):
 
@@ -1035,6 +1056,71 @@ class Test_StaticBlock(_Test_block_base, unittest.TestCase):
                                                     descend_into=False),
                          set([Var]))
         self._block.b.activate()
+
+    def test_staticblock_delattr(self):
+        b = _MyBlock()
+        with self.assertRaises(AttributeError):
+            del b.not_an_attribute
+        c = b.b
+        self.assertIs(c.parent, b)
+        del b.b
+        self.assertIs(c.parent, None)
+        b.b = c
+        self.assertIs(c.parent, b)
+
+    def test_staticblock_setattr(self):
+        b = _MyBlockBase()
+        self.assertIs(b.b.parent, b)
+        self.assertIs(b.b.v.parent, b.b)
+        with self.assertRaises(ValueError):
+            b.b = b.b.v
+        self.assertIs(b.b.parent, b)
+        self.assertIs(b.b.v.parent, b.b)
+        with self.assertRaises(AttributeError):
+            b.not_an_attribute = 2
+        c = b.b
+        self.assertIs(c.parent, b)
+        # test the edge case in setattr
+        b.b = c
+        self.assertIs(c.parent, b)
+        # test an overwrite
+        b.b = block()
+        self.assertIs(c.parent, None)
+        self.assertIs(b.b.parent, b)
+
+    def test_staticblock__with_dict_setattr(self):
+        # This one was given a __dict__
+        b = _MyBlock()
+        self.assertIs(b.v.parent, b)
+        self.assertIs(b.b.parent, b)
+        with self.assertRaises(ValueError):
+            b.v = b.b
+        self.assertIs(b.v.parent, b)
+        self.assertIs(b.b.parent, b)
+        b.not_an_attribute = 2
+        v = b.v
+        self.assertIs(v.parent, b)
+        # test the edge case in setattr
+        b.v = v
+        self.assertIs(v.parent, b)
+        # test an overwrite
+        b.v = variable()
+        self.assertIs(v.parent, None)
+        self.assertIs(b.v.parent, b)
+
+    def test_inactive_behavior(self):
+        b = _MyBlock()
+        b.deactivate()
+        self.assertNotEqual(len(list(b.preorder_traversal())), 0)
+        self.assertEqual(len(list(b.preorder_traversal(active=True))), 0)
+        self.assertNotEqual(len(list(b.postorder_traversal())), 0)
+        self.assertEqual(len(list(b.postorder_traversal(active=True))), 0)
+        self.assertNotEqual(len(list(b.components())), 0)
+        self.assertEqual(len(list(b.components(active=True))), 0)
+        self.assertNotEqual(len(list(b.blocks())), 0)
+        self.assertEqual(len(list(b.blocks(active=True))), 0)
+        self.assertNotEqual(len(list(b.generate_names())), 0)
+        self.assertEqual(len(list(b.generate_names(active=True))), 0)
 
 class Test_block_dict(_TestActiveComponentDictBase,
                       unittest.TestCase):

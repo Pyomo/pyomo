@@ -764,9 +764,8 @@ class StaticBlock(_block_base, IBlockStorage):
     __init__ method. The set of components should be
     identified using __slots__.
 
-    Note that this implementation is not designed for
-    class hierarchies that extend more than one level
-    beyond this class.
+    This implementation can be used in class hierarchies
+    that extend more than one level beyond this base class.
     """
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
@@ -777,12 +776,60 @@ class StaticBlock(_block_base, IBlockStorage):
     def __init__(self):
         self._parent = None
         self._active = True
-        # Note: We are iterating over the derived
-        #       class's __slots__ here.
-        for name in self.__slots__:
-            obj = getattr(self, name)
-            if isinstance(obj, (IComponent, IComponentContainer)):
-                obj._parent = weakref.ref(self)
+
+    def _getattrs(self):
+        """Returns all attributes that may appear on this
+        class in the inheritance hierarchy."""
+        # Get all slots in the inheritance chain
+        # (base classes first)
+        for cls in reversed(self.__class__.__mro__):
+            for key in cls.__dict__.get("__slots__",()):
+                yield key, getattr(self, key)
+        for item in getattr(self, "__dict__",{}).items():
+            yield item
+
+    def __setattr__(self, name, component):
+        if isinstance(component, (IComponent, IComponentContainer)):
+            if component._parent is None:
+                if hasattr(self, name):
+                    logger.warning(
+                        "Implicitly replacing the component attribute "
+                        "%s (type=%s) on block with a new Component "
+                        "(type=%s).\nThis is usually indicative of a "
+                        "modeling error.\nTo avoid this warning, delete "
+                        "the original component from the block before "
+                        "assigning a new component with the same name."
+                        % (name,
+                           type(getattr(self, name)),
+                           type(component)))
+                    delattr(self, name)
+                component._parent = weakref.ref(self)
+            elif hasattr(self, name) and \
+                 (getattr(self, name) is component):
+                # a very special case that makes sense to handle
+                # because the implied order should be: (1) delete
+                # the object at the current index, (2) insert the
+                # the new object. This performs both without any
+                # actions, but it is an extremely rare case, so
+                # it should go last.
+                pass
+            else:
+                raise ValueError(
+                    "Invalid assignment to %s type with name '%s' "
+                    "at entry %s. A parent container has already "
+                    "been assigned to the component being "
+                    "inserted: %s"
+                    % (self.__class__.__name__,
+                       self.name,
+                       name,
+                       component.parent.name))
+        super(StaticBlock, self).__setattr__(name, component)
+
+    def __delattr__(self, name):
+        component = getattr(self, name)
+        if isinstance(component, (IComponent, IComponentContainer)):
+            component._parent = None
+        super(StaticBlock, self).__delattr__(name)
 
     #
     # Define the IComponentContainer abstract methods
@@ -792,8 +839,8 @@ class StaticBlock(_block_base, IBlockStorage):
     #def components(...)
 
     def child_key(self, child):
-        for key in self.__slots__:
-            if getattr(self, key) is child:
+        for key, obj in self._getattrs():
+            if obj is child:
                 return key
         raise ValueError("No child entry: %s"
                          % (child))
@@ -822,8 +869,7 @@ class StaticBlock(_block_base, IBlockStorage):
 
         Returns: an iterator objects or (key,object) tuples
         """
-        for key in self.__slots__:
-            child = getattr(self, key)
+        for key, child in self._getattrs():
             if isinstance(child, ICategorizedObject) and \
                ((ctype is _no_ctype) or (child.ctype == ctype)):
                 if return_key:
@@ -858,7 +904,7 @@ class StaticBlock(_block_base, IBlockStorage):
 
         Returns: a set object of component types.
         """
-        assert active in (True, None)
+        assert active in (None, True)
         ctypes = set()
         if not descend_into:
             for component in self.components(active=active,
