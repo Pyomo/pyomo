@@ -54,7 +54,7 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
         state = getattr(self, "__dict__", {}).copy()
         # Get all slots in the inheritance chain
         for cls in self.__class__.__mro__:
-            for key in getattr(cls, "__slots__", ()):
+            for key in cls.__dict__.get("__slots__",()):
                 state[key] = getattr(self, key)
         # make sure we don't store the __dict__ in
         # duplicate (it can be declared as a slot)
