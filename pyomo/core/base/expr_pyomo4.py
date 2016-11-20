@@ -333,6 +333,7 @@ class _NegationExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return -result[0]
 
+
 class _UnaryFunctionExpression(_ExpressionBase):
     """An object that defines a mathematical expression that can be evaluated"""
 
@@ -869,37 +870,6 @@ class Expr_if(_ExpressionBase):
 
     def _to_string_infix(self, ostream, idx, verbose):
         ostream.write(", ")
-
-    def xto_string(self, ostream=None, verbose=None, precedence=0):
-        """Print this expression"""
-        if ostream is None:
-            ostream = sys.stdout
-        _my_precedence = self._precedence()
-        ostream.write("Expr_if( if=( ")
-
-        try:
-            to_string = self._if.to_string
-        except AttributeError:
-            to_string = lambda o,v,p: _const_to_string(self._if,o,v,p)
-        to_string( ostream, verbose, self._precedence() )
-
-        ostream.write(" ), then=( ")
-
-        try:
-            to_string = self._then.to_string
-        except AttributeError:
-            to_string = lambda o,v,p: _const_to_string(self._then,o,v,p)
-        to_string( ostream, verbose, self._precedence() )
-
-        ostream.write(" ), else=( ")
-
-        try:
-            to_string = self._else.to_string
-        except AttributeError:
-            to_string = lambda o,v,p: _const_to_string(self._else,o,v,p)
-        to_string( ostream, verbose, self._precedence() )
-
-        ostream.write(" ) )")
 
     def _apply_operation(self, result):
         _if, _then, _else = result
