@@ -311,9 +311,15 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
                                  io_options=kwds)
         self._write_config(stats, config_filename)
 
+        # hacked by DLW, November 2016: the model file is now
+        # first and the config file is second. So ddsiputils
+        # gets it almost right.
         with open(sipstdin_filename, "w") as f:
+            f.write(input_files[0]+"\n")
             f.write(config_filename+"\n")
-            for fname in input_files:
+            iterfiles = iter(input_files) # to step over the zeroth
+            next(iterfiles)
+            for fname in iterfiles:
                 f.write(fname+"\n")
         sipstdin = None
         with open(sipstdin_filename) as f:
