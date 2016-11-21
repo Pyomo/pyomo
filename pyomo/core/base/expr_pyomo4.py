@@ -25,7 +25,7 @@ from six.moves import xrange
 from weakref import ref
 
 from pyomo.core import (
-    Component, NumericValue, NumericConstant, Var, as_numeric, value
+    Component, NumericValue, NumericConstant, Var, Connector, as_numeric, value
 )
 from pyomo.core.base.numvalue import native_types, native_numeric_types
 from pyomo.core.base.var import _VarData
@@ -176,6 +176,31 @@ class _ExpressionBase(NumericValue):
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement getname()" % ( str(self.__class__), ))
 
+
+    def _bool_tree_walker(self, test, combiner, native_result):
+        _stack = [ (self, self._args, 0, len(self._args), []) ]
+        while 1:  # Note: 1 is faster than True for Python 2.x
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            while _idx < _len:
+                _sub = _argList[_idx]
+                _idx += 1
+                if type(_sub) in native_numeric_types:
+                    _result.append( native_result )
+                elif _sub.is_expression():
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj     = _sub
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = len(_argList)
+                    _result  = []
+                else:
+                    _result.append( getattr(_sub, test)() )
+            ans = getattr(_obj,combiner)(_result)
+            if _stack:
+                _stack[-1][-1].append( ans )
+            else:
+                return ans
+
     #
     # this method contrast with the is_fixed() method.  This method
     # returns True if the expression is an atomic constant, that is it
@@ -188,26 +213,24 @@ class _ExpressionBase(NumericValue):
     # of course change over time, but at any point in time, they are
     # "fixed". hence, the name.
     #
-    # FIXME: These need to be made non-recursive
     def is_constant(self):
-        for a in self._args:
-            if a.__class__ not in native_numeric_types and not a.is_constant():
-                return False
-        return True
+        return self._bool_tree_walker('is_constant', '_is_constant', True)
 
-    # FIXME: These need to be made non-recursive
+    def _is_constant(self, ans):
+        return all(ans)
+
     def is_fixed(self):
-        for a in self._args:
-            if a.__class__ not in native_numeric_types and not a.is_fixed():
-                return False
-        return True
+        return self._bool_tree_walker('is_fixed', '_is_fixed', True)
 
-    # FIXME: These need to be made non-recursive
+    # the default _is_fixed implementation is identical to _is_constant:
+    _is_fixed = _is_constant
+
     def _potentially_variable(self):
-        for a in self._args:
-            if a.__class__ not in native_numeric_types and a._potentially_variable():
-                return True
-        return False
+        return self._bool_tree_walker(
+            '_potentially_variable', '_potentially_variable_combiner', False)
+
+    def _potentially_variable_combiner(self, ans):
+        return any(ans)
 
     def is_expression(self):
         return True
@@ -448,19 +471,13 @@ class _PowExpression(_ExpressionBase):
                 pass
         return None
 
-    def is_fixed(self):
-        if self._args[1].__class__ not in native_numeric_types and not self._args[1].is_fixed():
+    def _is_constant(self, args):
+        if not args[1]:
             return False
-        return value(self._args[1]) == 0 or \
-            self._args[0].__class__ in native_numeric_types or \
-            self._args[0].is_fixed()
+        return args[0] or value(self._args[1]) == 0
 
-    def is_constant(self):
-        if self._args[1].__class__ not in native_numeric_types and not self._args[1].is_constant():
-            return False
-        return value(self._args[1]) == 0 or \
-            self._args[0].__class__ in native_numeric_types or \
-            self._args[0].is_constant()
+    # the local _is_fixed override is identical to _is_constant:
+    _is_fixed = _is_constant
 
     # the base class implementation is fine
     #def _potentially_variable(self)
@@ -830,23 +847,17 @@ class Expr_if(_ExpressionBase):
     def getname(self, *args, **kwds):
         return "Expr_if"
 
-    def is_constant(self):
-        if self._if.is_constant():
+    def _is_constant(self, args):
+        if args[0]: #self._if.is_constant():
             if self._if():
-                return self._then.is_constant()
+                return args[1] #self._then.is_constant()
             else:
-                return self._else.is_constant()
+                return args[2] #self._else.is_constant()
         else:
             return False
 
-    def is_fixed(self):
-        if self._if.is_fixed():
-            if self._if():
-                return self._then.is_fixed()
-            else:
-                return self._else.is_fixed()
-        else:
-            return False
+    # the local _is_fixed override is identical to _is_constant:
+    _is_fixed = _is_constant
 
     # the base class implementation is fine
     #def _potentially_variable(self)
@@ -901,11 +912,18 @@ class _GetItemExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return self._base.getname(*args, **kwds)
 
-    def is_constant(self):
+    def _is_constant(self, args):
+        # This must be false to prevent automatic expression simplification
         return False
 
-    def is_fixed(self):
+    def _is_fixed(self, args):
+        # FIXME: This is tricky.  I think the correct answer is that we
+        # should iterate over the members of the args and make sure all
+        # are constant
         return not isinstance(self._base, Var)
+
+    def _potentially_variable_combiner(self, args):
+        return not isinstance(self._base, (Var, Connector))
 
     def _polynomial_degree(self, result):
         return 0 if self.is_fixed() else 1
@@ -973,11 +991,17 @@ class _LinearExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return 'linear'
 
-    def is_constant(self):
+    def _is_constant(self, args):
+        if not all(args):
+            return False
         if self._const.__class__ not in native_numeric_types \
            and not self._const.is_constant():
             return False
-        return super(_LinearExpression, self).is_constant()
+        for coef in itervaluse(self._coef):
+            if coef.__class__ not in native_numeric_types \
+               and not coef.is_constant():
+                return False
+        return True
 
     def _inline_operator(self):
         return ' + '
