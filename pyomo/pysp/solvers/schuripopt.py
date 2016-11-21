@@ -12,7 +12,8 @@
 # TODO: Figure out what to do with working_directory, logfile, and output_solver_log
 #       when MPI_Comm_spawn is called.
 
-import binascii
+import hashlib
+import uuid
 import os
 import sys
 import time
@@ -68,10 +69,19 @@ _objective_weight_suffix_name = "schurip_objective_weight"
 _variable_id_suffix_name = "schurip_variable_id"
 _schuripopt_group_label = "SchurIpoptSolver Options"
 
+
+_namespace_uuid = uuid.UUID(bytes=hashlib.md5('pysp'.encode()).digest())
 # Assumes ASL uses 4-byte, signed integers to store suffixes
 _max_int = 2**31 - 1
 def _scenario_tree_id_to_int(vid):
-    return int(binascii.b2a_hex(vid.encode()), base=16) % _max_int
+    # We need to map the vid to a NONZERO integer that can be stored
+    # in a 32-bit signed integer type.  The time_low field of the UUID
+    # is a 32-bit unsigned integer, which is still slightly too large,
+    # so we take the modulo with (_max_int-1) and then add one to
+    # ensure that we never get zero.
+    #
+    # We assume the caller of this function checks for collisions.
+    return 1 + (uuid.uuid5(_namespace_uuid, vid).time_low % (_max_int-1))
 
 def _write_bundle_nl(worker,
                      bundle,
