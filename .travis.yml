@@ -44,10 +44,8 @@ install:
 - if [ -n "${PYRO}" ]; then pip install $PYRO; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
 - conda install -y --channel conda-forge glpk
-- pip install xlrd
-- pip install openpyxl
+- conda install -y --channel conda-forge pyomo.extras
 - pip install coverage
-- pip install networkx
 - pip install git+https://github.com/PyUtilib/pyutilib
 - python setup.py develop
 script:
