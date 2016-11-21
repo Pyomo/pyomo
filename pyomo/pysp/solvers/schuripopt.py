@@ -41,6 +41,8 @@ from pyomo.pysp.util.config import (PySPConfigValue,
                                     _domain_tuple_of_str_or_dict)
 from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
+from pyomo.pysp.scenariotree.util import \
+    scenario_tree_id_to_pint32
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.scenariotree.manager_solver import \
     (ScenarioTreeManagerSolver,
@@ -68,20 +70,6 @@ thisfile = os.path.abspath(__file__)
 _objective_weight_suffix_name = "schurip_objective_weight"
 _variable_id_suffix_name = "schurip_variable_id"
 _schuripopt_group_label = "SchurIpoptSolver Options"
-
-
-_namespace_uuid = uuid.UUID(bytes=hashlib.md5('pysp'.encode()).digest())
-# Assumes ASL uses 4-byte, signed integers to store suffixes
-_max_int = 2**31 - 1
-def _scenario_tree_id_to_int(vid):
-    # We need to map the vid to a NONZERO integer that can be stored
-    # in a 32-bit signed integer type.  The time_low field of the UUID
-    # is a 32-bit unsigned integer, which is still slightly too large,
-    # so we take the modulo with (_max_int-1) and then add one to
-    # ensure that we never get zero.
-    #
-    # We assume the caller of this function checks for collisions.
-    return 1 + (uuid.uuid5(_namespace_uuid, vid).time_low % (_max_int-1))
 
 def _write_bundle_nl(worker,
                      bundle,
@@ -114,8 +102,10 @@ def _write_bundle_nl(worker,
             master_variable = bundle_instance.find_component(
                 "MASTER_BLEND_VAR_"+str(node.name))
             for variable_id in node._standard_variable_ids:
+                # Assumes ASL uses 4-byte, signed integers to store suffixes,
+                # and we need positive suffix values
                 linking_suffix[master_variable[variable_id]] = \
-                    _scenario_tree_id_to_int(variable_id)
+                    scenario_tree_id_to_pint32(variable_id)
     # make sure the conversion from scenario tree id to int
     # did not have any collisions
     _ids = list(linking_suffix.values())
@@ -186,8 +176,10 @@ def _write_scenario_nl(worker,
     # which has no blended variables
     for node in scenario._node_list[:-1]:
         for variable_id in node._standard_variable_ids:
+            # Assumes ASL uses 4-byte, signed integers to store suffixes,
+            # and we need positive suffix values
             linking_suffix[bySymbol[variable_id]] = \
-                _scenario_tree_id_to_int(variable_id)
+                scenario_tree_id_to_pint32(variable_id)
     # make sure the conversion from scenario tree id to int
     # did not have any collisions
     _ids = list(linking_suffix.values())

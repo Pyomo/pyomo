@@ -7,6 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import pyomo.pysp.scenariotree.util
 from pyomo.pysp.scenariotree.tree_structure_model import *
 from pyomo.pysp.scenariotree.tree_structure import *
 from pyomo.pysp.scenariotree.instance_factory import *
