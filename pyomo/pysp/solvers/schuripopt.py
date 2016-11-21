@@ -184,7 +184,6 @@ def _write_scenario_nl(worker,
     # did not have any collisions
     _ids = list(linking_suffix.values())
     assert len(_ids) == len(set(_ids))
-    print(_ids)
 
     #
     # objective weight suffix
