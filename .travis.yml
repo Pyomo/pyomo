@@ -2,47 +2,80 @@ language: python
 matrix:
   include:
   - python: '2.6'
-    env: PYRO="Pyro"  YAML="pyyaml"
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  - python: '2.6'
+    env:                             CATEGORY="parallel" EXTRAS="yes"
+  #
   - python: '2.7'
-    env: PYRO="Pyro"  YAML="pyyaml"
-  #- python: '2.7'     
-  #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"      
-  #- python: pypy     
-  #  env: PYRO="Pyro"  YAML="pyyaml"      
-  - python: '3.4'        
-    env: PYRO="Pyro4" YAML="pyyaml"      
-  - python: '3.5'        
-    env: PYRO="Pyro4" YAML="pyyaml"      
-  #- python: pypy3        
-  #  env: PYRO="Pyro4" YAML="pyyaml"      
-  - python: '3.5'        
-    env: PYRO="Pyro4" YAML=""
+    env:                             CATEGORY="nightly"
+  - python: '2.7'
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  - python: '2.7'
+    env: PYRO="Pyro"  YAML="pyyaml"  CATEGORY="parallel"
+  - python: '2.7'
+    env:                             CATEGORY="parallel" EXTRAS="yes"
+  #
+  - python: '3.4'
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  - python: '3.4'
+    env:                             CATEGORY="parallel" EXTRAS="yes"
+  #
+  - python: '3.5'
+    env:                             CATEGORY="nightly"
+  - python: '3.5'
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  - python: '3.5'
+    env:                             CATEGORY="parallel" EXTRAS="yes"
+  #
+  #- python: '2.7'
+  #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
+  #- python: pypy
+  #  env: PYRO="Pyro"  YAML="pyyaml"
+  #- python: pypy3
+  #  env: PYRO="Pyro4" YAML="pyyaml"
 install:
+- sudo apt-get update
+# We do this conditionally because it saves us some downloading if the
+# version is the same.
+- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+     wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+  else
+     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  fi
+- bash miniconda.sh -b -p $HOME/miniconda
+- export PATH="$HOME/miniconda/bin:$PATH"
+- hash -r
 - if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 - if [ -n "${YAML}" ]; then pip install pyyaml; fi
+- if [ -n "${PYRO}" ]; then pip install $PYRO; fi
+- if [ -n "${EXTRAS}" ]; then conda install -y --channel conda-forge pyomo.extras; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
-- pip install xlrd
-- pip install openpyxl
-- pip install $PYRO
+- conda install -y --channel conda-forge glpk
 - pip install coverage
-- pip install networkx
 - pip install git+https://github.com/PyUtilib/pyutilib
 - python setup.py develop
 script:
-- cd ..
 # The next three commands enable tracking of coverage
 # for any subprocesses launched by tests
 - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
-- test.pyomo -v --cat=nightly --cov
+#- which glpsol
+#- echo $PATH
+#- ls
+#- pwd
+- test.pyomo -v --cat=$CATEGORY --cov
 after_success:
 # Combine coverage reports over all subprocesses
+- cd $TRAVIS_BUILD_DIR
+#- ls
+#- pwd
 - coverage combine
 - pip install codecov
+- cp ../.coverage .
 - codecov
-- pip install python-coveralls
-- coveralls
+#- pip install python-coveralls
+#- coveralls
 - cd $TRAVIS_BUILD_DIR
 deploy:
 - provider: pypi

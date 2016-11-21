@@ -260,9 +260,8 @@ Error thrown for Complementarity "%s"
              ("Active", self.active),
              ],
             iteritems(self._data),
-            ( "Key","Arg0","Arg1","Active" ),
-            lambda k, v: [ k,
-                           v._args[0],
+            ( "Arg0","Arg1","Active" ),
+            lambda k, v: [ v._args[0],
                            v._args[1],
                            v.active,
                            ]

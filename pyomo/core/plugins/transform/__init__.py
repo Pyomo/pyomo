@@ -10,6 +10,7 @@
 import pyomo.core.plugins.transform.relax_integrality
 #import pyomo.core.plugins.transform.eliminate_fixed_vars
 #import pyomo.core.plugins.transform.standard_form
+import pyomo.core.plugins.transform.expand_connectors
 #import pyomo.core.plugins.transform.equality_transform
 import pyomo.core.plugins.transform.nonnegative_transform
 #import pyomo.core.plugins.transform.dual_transformation
