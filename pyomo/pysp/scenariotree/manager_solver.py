@@ -687,16 +687,16 @@ class ScenarioTreeManagerSolver(ScenarioTreeManager,
     #
 
     def _queue_object_solves(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _process_bundle_solve_result(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _process_scenario_solve_result(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _push_fix_queue_to_instances_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
 #
 # A partial implementation of the ScenarioTreeManagerSolver

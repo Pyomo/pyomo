@@ -255,7 +255,7 @@ class ScenarioTreeManager(PySPConfiguredObject):
     #
     class Async(object):
         def complete(self):
-            raise NotImplementedError(type(self).__name__+": This method is abstract")
+            raise NotImplementedError                  #pragma:nocover
 
     class AsyncResult(Async):
 
@@ -663,22 +663,22 @@ class ScenarioTreeManager(PySPConfiguredObject):
     #
 
     def _init(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _close_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_function_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_method_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _add_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _remove_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
 #
 # A base class and interface that is common to client-side scenario
@@ -1108,28 +1108,28 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
     #
 
     def _init_client(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_function_on_worker_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_method_on_worker_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _worker_names_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_worker_for_scenario_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_worker_for_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_scenarios_for_worker_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_bundles_for_worker_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
 #
 # A partial implementation of the ScenarioTreeManager
@@ -1305,10 +1305,10 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
         self._bundle_binding_instance_map = None
 
     def _invoke_function_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_method_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _add_bundle_impl(self, bundle_name, scenario_list):
 
@@ -1853,13 +1853,13 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
         return result
 
     def _worker_names_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_worker_for_scenario_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_worker_for_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _get_scenarios_for_worker_impl(self, worker_name):
         assert worker_name in self._pyro_worker_list
@@ -1888,16 +1888,16 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
                 caller_name=self.__class__.__name__)
 
     def _invoke_function_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _invoke_method_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _add_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     def _remove_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     #
     # Extended interface for Pyro
@@ -2982,11 +2982,11 @@ class ScenarioTreeManagerClientPyro(_ScenarioTreeManagerClientPyroAdvanced,
 
     # TODO
     def _add_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     # TODO
     def _remove_bundle_impl(self, *args, **kwds):
-        raise NotImplementedError(type(self).__name__+": This method is abstract")
+        raise NotImplementedError                  #pragma:nocover
 
     #
     # Extended Interface for Pyro
