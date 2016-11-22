@@ -418,6 +418,8 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
         ns_options = ["-r","-k","-n "+ns_host]
     elif using_pyro4:
         ns_options = ["--host="+ns_host]
+    # don't start the broadcast server
+    ns_options += ["-x"]
     ns_port = None
     ns_process = None
     for i in range(num_tries):
@@ -445,7 +447,10 @@ def _get_test_nameserver(ns_host="127.0.0.1", num_tries=20):
             ns_process = None
     return ns_process, ns_port
 
-def _get_test_dispatcher(ns_host=None, ns_port=None, num_tries=20):
+def _get_test_dispatcher(ns_host=None,
+                         ns_port=None,
+                         dispatcher_host="127.0.0.1",
+                         num_tries=20):
     if not (using_pyro3 or using_pyro4):
         return None, None
     dispatcher_port = None
@@ -459,6 +464,7 @@ def _get_test_dispatcher(ns_host=None, ns_port=None, num_tries=20):
                 subprocess.Popen(["dispatch_srvr"] + \
                                  ["--host="+str(ns_host)] + \
                                  ["--port="+str(ns_port)] + \
+                                 ["--daemon-host="+str(dispatcher_host)] + \
                                  ["--daemon-port="+str(dispatcher_port)],
                                  stdout=subprocess.PIPE)
             time.sleep(5)
