@@ -83,9 +83,12 @@ class SPSolver(PySPConfiguredObject):
                             num_na_continuous_variables += 1
 
             if kwds.get('output_solver_log', False):
+                print("\n")
                 print("-"*20)
                 print("Problem Statistics".center(20))
                 print("-"*20)
+                print("Total number of scenarios.................: %10s"
+                      % (num_scenarios))
                 print("Total number of time stages...............: %10s"
                       % (num_stages))
                 print("Total number of non-anticipative variables: %10s\n"
