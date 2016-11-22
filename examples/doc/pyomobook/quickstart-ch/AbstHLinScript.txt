@@ -1,0 +1,17 @@
+Model Simple Linear (H)
+
+  Variables:
+    x : Size=2, Index=A
+        Key        : Lower : Value : Upper : Fixed : Stale : Domain
+        I_C_Scoops :     0 :   0.0 :   100 : False : False :  Reals
+           Peanuts :     0 :  40.6 :  40.6 : False : False :  Reals
+
+  Objectives:
+    z : Size=1, Index=None, Active=True
+        Key  : Active : Value
+        None :   True : 3.83388751715
+
+  Constraints:
+    budgetconstr : Size=1
+        Key  : Lower : Body     : Upper
+        None :  None : 11.03508 :    12
