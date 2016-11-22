@@ -24,7 +24,7 @@ _init_url="$URL$"
 _major=5
 _minor=0
 _micro=1
-_releaselevel='invalid'
+_releaselevel='final'
 _serial=0
 
 if '/trunk/' in _init_url or len(_init_url) == 5:

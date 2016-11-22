@@ -2,25 +2,25 @@ language: python
 matrix:
   include:
   - python: '2.6'
-    env:              YAML="pyyaml"  CATEGORY="nightly"
-  - python: '2.6'
-    env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  #
   - python: '2.7'
-    env:              YAML="pyyaml"  CATEGORY="nightly"
+    env:                             CATEGORY="nightly"
   - python: '2.7'
-    env: PYRO="Pyro"  YAML="pyyaml"  CATEGORY="parallel"
-  - python: '2.7'
-    env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  #
   - python: '3.4'
-    env:              YAML="pyyaml"  CATEGORY="nightly"
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
   - python: '3.4'
-    env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
+    env:                             CATEGORY="parallel" EXTRAS="yes"
+  #
   - python: '3.5'
     env:                             CATEGORY="nightly"
   - python: '3.5'
-    env:              YAML="pyyaml"  CATEGORY="nightly"
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
   - python: '3.5'
-    env: PYRO="Pyro4" YAML="pyyaml"  CATEGORY="parallel"
+    env:                             CATEGORY="parallel" EXTRAS="yes"
+  #
   #- python: '2.7'
   #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
   #- python: pypy
@@ -42,12 +42,13 @@ install:
 - if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 - if [ -n "${YAML}" ]; then pip install pyyaml; fi
 - if [ -n "${PYRO}" ]; then pip install $PYRO; fi
+- if [ -n "${EXTRAS}" ]; then conda install -y --channel conda-forge pyomo.extras; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
 - conda install -y --channel conda-forge glpk
+- conda install -y --channel cachemeorg ipopt_bin
 - pip install xlrd
 - pip install openpyxl
 - pip install coverage
-- pip install networkx
 - pip install git+https://github.com/PyUtilib/pyutilib
 - python setup.py develop
 script:

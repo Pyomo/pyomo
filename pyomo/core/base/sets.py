@@ -803,7 +803,7 @@ class SimpleSetBase(Set):
              ("Domain", None if self.domain is None else self.domain.name),
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
-            iteritems( {None: self} ), 
+            iteritems( {None: self} ),
             None, #("Members",),
             lambda k, v: [
                 "Virtual" if not self.concrete or v.virtual \
@@ -1678,7 +1678,7 @@ class IndexedSet(Set):
              ("Bounds", self._bounds)],
             iteritems(self._data),
             ("Members",),
-            lambda k, v: [ 
+            lambda k, v: [
                 #"Virtual" if not v.concrete or v.virtual else \
                 v.value if self.ordered else sorted(v) ] )
 
