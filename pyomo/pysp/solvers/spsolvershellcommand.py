@@ -37,6 +37,12 @@ class SPSolverShellCommand(SPSolver):
         self._files[label] = filename
         return filename
 
+    def _add_tempfile(self, label, filename):
+        pyutilib.services.\
+            TempfileManager.add_tempfile(filename,
+                                         exists=False)
+        self._files[label] = filename
+
     @property
     def executable(self):
         """The executable used by this solver."""

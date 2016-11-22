@@ -12,15 +12,11 @@
 # TODO: Figure out what to do with working_directory, logfile, and output_solver_log
 #       when MPI_Comm_spawn is called.
 
-import hashlib
-import uuid
+import io
 import os
 import sys
 import time
 import array
-
-import pyutilib.subprocess
-import pyutilib.services
 
 from pyomo.core import (SymbolMap,
                         Block,
@@ -43,11 +39,14 @@ from pyomo.pysp.util.misc import (parse_command_line,
                                   launch_command)
 from pyomo.pysp.scenariotree.util import \
     scenario_tree_id_to_pint32
-from pyomo.pysp.scenariotree.manager import InvocationType
+from pyomo.pysp.scenariotree.manager import \
+    (InvocationType,
+     ScenarioTreeManagerClientPyro)
 from pyomo.pysp.scenariotree.manager_solver import \
     (ScenarioTreeManagerSolver,
      ScenarioTreeManagerSolverResults,
-     ScenarioTreeManagerFactory)
+     ScenarioTreeManagerFactory,
+     ScenarioTreeManagerSolverClientPyro)
 from pyomo.pysp.phutils import indexToString
 from pyomo.pysp.solvers.spsolver import (SPSolverResults,
                                          SPSolverFactory)
@@ -281,12 +280,13 @@ def EXTERNAL_invoke_solve(worker,
 
     args = []
     args.append(problem_list_filename)
+    args.append("-AMPL")
     args.append("use_problem_file=yes")
-    args.append("mpi_spawn_mode=yes")
     args.append("option_file_name="+options_filename)
-
+    args.append("mpi_spawn_mode=yes")
     if mpi4py.MPI.COMM_WORLD.rank == 0:
         args.append("output_file="+str(logfile))
+
     for key, val in command_line_options:
         key = key.strip()
         if key == "use_problem_file":
@@ -311,9 +311,7 @@ def EXTERNAL_invoke_solve(worker,
                 "option is disallowed.")
         else:
             args.append(key+"="+str(val))
-    args.append("-AMPL")
 
-    #print("Command: %s" % (' '.join([executable]+args)))
     start = time.time()
     spawn = mpi4py.MPI.COMM_WORLD.Spawn(
         executable,
@@ -328,6 +326,9 @@ def EXTERNAL_invoke_solve(worker,
                      root=mpi4py.MPI.ROOT)
     rc = mpi4py.MPI.COMM_WORLD.bcast(rc, root=0)
     spawn.Disconnect()
+    assert len(rc) == 1
+    assert rc[0] == 0
+
     stop = time.time()
     solve_time = stop - start
 
@@ -461,19 +462,32 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
             print("Sending solver invocation request to "
                   "workers")
 
-        worker_results = manager.invoke_function(
-            "EXTERNAL_invoke_solve",
-            thisfile,
-            invocation_type=InvocationType.Single,
-            function_args=(output_directory,
-                           subproblem_type,
-                           logfile,
-                           problem_list_filename,
-                           self.executable,
-                           output_solver_log,
-                           io_options,
-                           command_line_options,
-                           options_filename))
+        try:
+            worker_results = manager.invoke_function(
+                "EXTERNAL_invoke_solve",
+                thisfile,
+                invocation_type=InvocationType.Single,
+                function_args=(output_directory,
+                               subproblem_type,
+                               logfile,
+                               problem_list_filename,
+                               self.executable,
+                               output_solver_log,
+                               io_options,
+                               command_line_options,
+                               options_filename))
+        finally:
+            if isinstance(manager,
+                          (ScenarioTreeManagerClientPyro,
+                           ScenarioTreeManagerSolverClientPyro)) and \
+                output_solver_log:
+                # If this is Pyro the best we can do is
+                # dump the log file to the screen after the
+                # solve completes because subprocesses are
+                # spawned on the Pyro workers.
+                if os.path.exists(logfile):
+                    with io.open(logfile) as f:
+                        print(f.read())
 
         results = ScenarioTreeManagerSolverResults(subproblem_type)
         for worker_name in worker_results:
@@ -498,10 +512,13 @@ class SchurIpoptSolver(SPSolverShellCommand, PySPConfiguredObject):
         working_directory = self._create_tempdir("workdir",
                                                  dir=os.getcwd())
 
-        logfile = self._files["logfile"] = \
-            logfile if (logfile is not None) else \
-            os.path.join(working_directory,
-                         "schuripopt.log")
+        if logfile is None:
+            logfile = os.path.join(working_directory,
+                                   "schuripopt.log")
+            self._add_tempfile("logfile", logfile)
+        else:
+            self._files["logfile"] = logfile
+
         if verbose:
             print("Schuripopt solver working directory: %s"
                   % (working_directory))
