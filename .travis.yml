@@ -3,19 +3,11 @@ matrix:
   include:
   - python: '2.6'
     env:                             CATEGORY="nightly"  EXTRAS="yes"
-  - python: '2.6'
-    env:                             CATEGORY="parallel" EXTRAS="yes"
-  - python: '2.6'
-    env: PYRO="Pyro"  YAML="pyyaml"  CATEGORY="parallel"
   #
   - python: '2.7'
     env:                             CATEGORY="nightly"
   - python: '2.7'
     env:                             CATEGORY="nightly"  EXTRAS="yes"
-  - python: '2.7'
-    env:                             CATEGORY="parallel" EXTRAS="yes"
-  - python: '2.7'
-    env: PYRO="Pyro"  YAML="pyyaml"  CATEGORY="parallel"
   #
   - python: '3.4'
     env:                             CATEGORY="nightly"  EXTRAS="yes"
