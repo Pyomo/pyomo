@@ -1,5 +1,4 @@
-# File diet1.py
-
+# diet1.py
 from pyomo.environ import *
 
 infinity = float('inf')

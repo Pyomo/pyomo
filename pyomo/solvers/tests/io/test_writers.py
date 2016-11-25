@@ -37,122 +37,122 @@ ExpectedFailures = []
 #
 
 ExpectedFailures.append(
-	('glpk', 'lp', (4,52,0,0),
-	 model_types.discrete_var_bounds_MILP,
-	 "Glpk ignores bounds on Binary variables through the "
-	 "LP file interface. A ticket has been filed."))
+    ('glpk', 'lp', lambda v: v <= (4,52,0,0),
+     model_types.discrete_var_bounds_MILP,
+     "Glpk ignores bounds on Binary variables through the "
+     "LP file interface. A ticket has been filed."))
 ExpectedFailures.append(
-	('glpk', 'mps', _trunk_version,
-	 model_types.duals_maximize,
-	 "Glpk does not accept the OBJSENSE section of the Free MPS format. "
-         "Therefore maximization models are not explicitly handled."))
+    ('glpk', 'mps', lambda v: v <= _trunk_version,
+     model_types.duals_maximize,
+     "Glpk does not accept the OBJSENSE section of the Free MPS format. "
+     "Therefore maximization models are not explicitly handled."))
 
 #
 # CBC
 #
 
 ExpectedFailures.append(
-	('cbc', 'lp', _trunk_version,
-	 model_types.duals_maximize,
-	 "For a maximization problem where a variable is pushed to its "
-	 "lower bound, Cbc reports the reduced cost as a positive number. In "
-	 "practice this should be reported as a negative number. A ticket has "
-	 "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125"))
+    ('cbc', 'lp', lambda v: v <= _trunk_version,
+     model_types.duals_maximize,
+     "For a maximization problem where a variable is pushed to its "
+     "lower bound, Cbc reports the reduced cost as a positive number. In "
+     "practice this should be reported as a negative number. A ticket has "
+     "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125"))
 
 #
 # PICO
 #
 
 ExpectedFailures.append(
-	('pico', 'lp', _trunk_version,
-	 model_types.discrete_var_bounds_MILP,
-	 "Pico ignores bounds on Binary variables through the "
-	 "LP file interface. A ticket has been filed."))
+    ('pico', 'lp', lambda v: v <= _trunk_version,
+     model_types.discrete_var_bounds_MILP,
+     "Pico ignores bounds on Binary variables through the "
+     "LP file interface. A ticket has been filed."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.piecewise_LP,
-	 "Pico reports an incorrect dual solution for this "
-	 "problem when using the NL file interface."))
+    ('pico', 'nl', lambda v: v <= _trunk_version,
+     model_types.piecewise_LP,
+     "Pico reports an incorrect dual solution for this "
+     "problem when using the NL file interface."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.duals_maximize,
-	 "Pico classifies certain models with equality "
-	 "constraints as infeasible when using the NL "
-	 "file interface. A ticket has been filed."))
+    ('pico', 'nl', lambda v: v <= _trunk_version,
+     model_types.duals_maximize,
+     "Pico classifies certain models with equality "
+     "constraints as infeasible when using the NL "
+     "file interface. A ticket has been filed."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.duals_minimize,
-	 "Pico classifies certain models with equality "
-	 "constraints as infeasible when using the NL "
-	 "file interface. A ticket has been filed."))
+    ('pico', 'nl', lambda v: v <= _trunk_version,
+     model_types.duals_minimize,
+     "Pico classifies certain models with equality "
+     "constraints as infeasible when using the NL "
+     "file interface. A ticket has been filed."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.inactive_index_LP,
-	 "Pico reports the wrong objective function value."))
+    ('pico', 'nl', lambda v: v <= _trunk_version,
+     model_types.inactive_index_LP,
+     "Pico reports the wrong objective function value."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.simple_LP,
-	 "Pico just gets the wrong answer."))
+    ('pico', 'nl', lambda v: v <= _trunk_version,
+     model_types.simple_LP,
+     "Pico just gets the wrong answer."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.compiled_LP,
-	 "Pico just gets the wrong answer."))
+    ('pico', 'nl', lambda v: v <= _trunk_version,
+     model_types.compiled_LP,
+     "Pico just gets the wrong answer."))
 
 ExpectedFailures.append(
-	('pico', 'nl', _trunk_version,
-	 model_types.trivial_constraints_LP,
-	 "Pico just gets the wrong answer."))
+    ('pico', 'nl', lambda v: v <= _trunk_version,
+     model_types.trivial_constraints_LP,
+     "Pico just gets the wrong answer."))
 
 #
 # SCIP
 #
 
 ExpectedFailures.append(
-	('scip', 'nl', (3, 1, 0, 9),
-	 model_types.simple_SOS2,
-	 "SCIP (scipampl) does not recognize sos2 constraints "
-	 "inside NL files. A ticket has been filed."))
+    ('scip', 'nl', lambda v: v <= (3, 1, 0, 9),
+     model_types.simple_SOS2,
+     "SCIP (scipampl) does not recognize sos2 constraints "
+     "inside NL files. A ticket has been filed."))
 
 ExpectedFailures.append(
-	('scip', 'nl', (3, 1, 0, 9),
-	 model_types.simple_SOS1,
-	 "SCIP (scipampl) does not recognize sos1 constraints "
-	 "inside NL files. A ticket has been filed."))
+    ('scip', 'nl', lambda v: v <= (3, 1, 0, 9),
+     model_types.simple_SOS1,
+     "SCIP (scipampl) does not recognize sos1 constraints "
+     "inside NL files. A ticket has been filed."))
 
 #
 # CPLEX
 #
 
 ExpectedFailures.append(
-	('cplex', 'lp', _trunk_version,
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('cplex', 'lp', lambda v: v <= _trunk_version,
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('cplex', 'mps', _trunk_version,
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('cplex', 'mps', lambda v: v <= _trunk_version,
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('cplex', 'python', _trunk_version,
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('cplex', 'python', lambda v: v <= _trunk_version,
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('_cplex_persistent', 'python', _trunk_version,
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('_cplex_persistent', 'python', lambda v: v <= _trunk_version,
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 ExpectedFailures.append(
-	('cplex', 'nl', (12,5,9,9),
-	 model_types.simple_QCP,
-	 "Cplex does not report duals of quadratic constraints."))
+    ('cplex', 'nl', lambda v: v <= (12,5,9,9),
+     model_types.simple_QCP,
+     "Cplex does not report duals of quadratic constraints."))
 
 #
 # BARON
@@ -160,33 +160,91 @@ ExpectedFailures.append(
 
 """
 ExpectedFailures.append(
-    ('baron', 'bar', _trunk_version,
+    ('baron', 'bar', lambda v: v <= _trunk_version,
      model_types.duals_minimize,
      "The model is too large for a Baron trial license."))
 
 ExpectedFailures.append(
-    ('baron', 'bar', _trunk_version,
+    ('baron', 'bar', lambda v: v <= _trunk_version,
      model_types.duals_maximize,
      "The model is too large for a Baron trial license."))
 """
 
 ExpectedFailures.append(
-    ('baron', 'bar', (15,0,0,0),
+    ('baron', 'bar', lambda v: v <= (15,0,0,0),
      model_types.piecewise_LP,
      "Baron will not return dual solution when a solution is "
      "found during preprocessing."))
 
 ExpectedFailures.append(
-    ('baron', 'bar', (15,2,0,0),
+    ('baron', 'bar', lambda v: v <= (15,2,0,0),
      model_types.simple_QP,
      "Baron will not return dual solution when a solution is "
      "found during preprocessing."))
 
 ExpectedFailures.append(
-    ('baron', 'bar', _trunk_version,
+    ('baron', 'bar', lambda v: v <= _trunk_version,
      model_types.simple_QCP,
      "Baron will not return dual solution when a solution is "
      "found during preprocessing."))
+
+#
+# IPOPT
+#
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v == (3,10,3,0),
+     model_types.duals_maximize,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.4"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v == (3,10,3,0),
+     model_types.simple_QCP,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.4"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v <= (3,10,2,0),
+     model_types.block_LP,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.3"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v <= (3,10,2,0),
+     model_types.duals_minimize,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.3"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v <= (3,10,2,0),
+     model_types.inactive_index_LP,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.3"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v <= (3,10,2,0),
+     model_types.piecewise_LP,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.3"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v <= (3,10,2,0),
+     model_types.simple_LP,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.3"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v <= (3,10,2,0),
+     model_types.simple_QP,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.3"))
+
+ExpectedFailures.append(
+    ('ipopt', 'nl', lambda v: v <= (3,10,2,0),
+     model_types.trivial_constraints_LP,
+     "Ipopt returns duals with a different sign convention. "
+     "Fixed in Ipopt 3.10.3"))
 
 def check_expected_failures(test_case, model_class):
 
@@ -195,7 +253,7 @@ def check_expected_failures(test_case, model_class):
         if (case[0] == test_case.name) and \
            (case[1] == test_case.io) and \
            (test_case.solver.version() is not None) and \
-           (test_case.solver.version() <= case[2]) and \
+           (case[2](test_case.solver.version())) and \
            (case[3] is model_class) :
             return True, case[4]
     return False, ""

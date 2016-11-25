@@ -96,6 +96,12 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
+    def _polynomial_degree(self, result):
+        """
+        Returns 0 because this object can never reference variables.
+        """
+        return 0
+
     def __nonzero__(self):
         """Return True if the value is defined and non-zero."""
         if self.value:
@@ -866,9 +872,8 @@ This has resulted in the conversion of the source to dense form.
                   ("Mutable", self._mutable),
                   ],
                  self.sparse_iteritems(),
-                 ("Key","Value"),
-                 lambda k, v: [ k,
-                                value(v)
+                 ("Value",),
+                 lambda k, v: [ value(v)
                                 ]
                  )
 

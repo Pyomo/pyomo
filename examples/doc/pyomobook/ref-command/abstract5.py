@@ -1,4 +1,4 @@
-# File abstract5.py
+# abstract5.py
 from pyomo.environ import *
 
 model = AbstractModel()

@@ -21,10 +21,10 @@ _init_url="$URL$"
 
 # The micro number should be set when tagging a release or generating a
 # VOTD build
-_major=4
-_minor=4
+_major=5
+_minor=0
 _micro=1
-_releaselevel='invalid'
+_releaselevel='final'
 _serial=0
 
 if '/trunk/' in _init_url or len(_init_url) == 5:

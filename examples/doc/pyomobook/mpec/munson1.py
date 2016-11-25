@@ -1,5 +1,4 @@
-# file munson1.py
-
+# munson1.py
 from pyomo.environ import *
 from pyomo.mpec import *
 
