@@ -30,6 +30,8 @@ _level_opt = logger_opt.getEffectiveLevel()
 logger_opt.setLevel( logging.ERROR )
 
 
+# ----------------------------------------------------------------
+
 _test_solvers = {}
 
 def test_solvers(arg=None):
@@ -46,40 +48,53 @@ def test_solver_cases(*args):
     return _test_solver_cases[args]
 
 
-def solver_available(name):
+# ----------------------------------------------------------------
+
+def initialize(**kwds):
+    obj = Options(**kwds)
+    #
+    # Set obj.available
+    #
     opt = None
     try:
-        opt = SolverFactory(name)
+        opt = SolverFactory(obj.name)
     except:
         pass
     if opt is None or isinstance(opt, UnknownSolver):
-        return False
-
-    if (name == "gurobi") and \
+        obj.available = False
+    elif (obj.name == "gurobi") and \
        (not GUROBISHELL.license_is_valid()):
-        return False
-    if (name == "baron") and \
+        obj.available = False
+    elif (obj.name == "baron") and \
        (not BARONSHELL.license_is_valid()):
-        return False
-
-    return (opt.available(exception_flag=False)) and \
+        obj.available = False
+    else:
+        obj.available = \
+            (opt.available(exception_flag=False)) and \
             ((not hasattr(opt,'executable')) or \
             (opt.executable() is not None))
+    #
+    # Check capabilities
+    #
+    if obj.available:
+        for _c in obj.capabilities:
+            if not _c in opt._capabilities:
+                raise ValueError("Solver %s does not support capability %s!" % (obj.name, _c))
+    return obj
 
 
 #
 # CPLEX
 #
 
-_test_solvers['cplex'] = Options(
+_test_solvers['cplex'] = initialize(
         name='cplex', 
-        available = solver_available('cplex'),
-        capabilities= ['linear',
+        capabilities= set(['linear',
                        'integer',
                        'quadratic_objective',
                        'quadratic_constraint',
                        'sos1',
-                       'sos2'])
+                       'sos2']))
 
 _test_solver_cases['cplex', 'lp'] = Options(
         name='cplex',
@@ -112,15 +127,14 @@ _test_solver_cases['cplex', '_cplex_persistent'] = Options(
 # **NOTE: Gurobi does not handle quadratic constraints before
 #         Major Version 5
 #
-_test_solvers['gurobi'] = Options(
+_test_solvers['gurobi'] = initialize(
         name='gurobi', 
-        available = solver_available('gurobi'),
-        capabilities= ['linear',
+        capabilities= set(['linear',
                        'integer',
                        'quadratic_objective',
                        'quadratic_constraint',
                        'sos1',
-                       'sos2'])
+                       'sos2']))
 
 _test_solver_cases['gurobi', 'lp'] = Options(
         name='gurobi',
@@ -146,11 +160,10 @@ _test_solver_cases['gurobi', 'python'] = Options(
 #
 # GLPK
 #
-_test_solvers['glpk'] = Options(
+_test_solvers['glpk'] = initialize(
         name='glpk', 
-        available = solver_available('glpk'),
-        capabilities= ['linear',
-                       'integer'])
+        capabilities= set(['linear',
+                       'integer']))
 
 if 'GLPKSHELL_old' in str(pyomo.solvers.plugins.solvers.GLPK.GLPK().__class__):
     glpk_import_suffixes = ['dual']
@@ -176,13 +189,12 @@ _test_solver_cases['glpk', 'python'] = Options(
 #
 # CBC
 #
-_test_solvers['cbc'] = Options(
+_test_solvers['cbc'] = initialize(
         name='cbc', 
-        available = solver_available('cbc'),
-        capabilities = ['linear',
+        capabilities = set(['linear',
                         'integer',
                         'sos1',
-                        'sos2'])
+                        'sos2']))
 
 _test_solver_cases['cbc', 'lp'] = Options(
         name='cbc',
@@ -197,11 +209,10 @@ _test_solver_cases['cbc', 'nl'] = Options(
 #
 # PICO
 #
-_test_solvers['pico'] = Options(
+_test_solvers['pico'] = initialize(
         name='pico', 
-        available = solver_available('pico'),
-        capabilities = ['linear',
-                        'integer'])
+        capabilities = set(['linear',
+                        'integer']))
 
 _test_solver_cases['pico', 'lp'] = Options(
         name='pico',
@@ -216,15 +227,14 @@ _test_solver_cases['pico', 'nl'] = Options(
 #
 # XPRESS
 #
-_test_solvers['xpress'] = Options(
+_test_solvers['xpress'] = initialize(
         name='xpress', 
-        available = solver_available('xpress'),
-        capabilities= ['linear',
+        capabilities= set(['linear',
                        'integer',
                        'quadratic_objective',
                        'quadratic_constraint',
                        'sos1',
-                       'sos2'])
+                       'sos2']))
 
 _test_solver_cases['xpress', 'lp'] = Options(
         name='xpress',
@@ -244,12 +254,11 @@ _test_solver_cases['xpress', 'nl'] = Options(
 #
 # IPOPT
 #
-_test_solvers['ipopt'] = Options(
+_test_solvers['ipopt'] = initialize(
         name='ipopt', 
-        available = solver_available('ipopt'),
-        capabilities= ['linear',
+        capabilities= set(['linear',
                        'quadratic_objective',
-                       'quadratic_constraint'])
+                       'quadratic_constraint']))
 
 _test_solver_cases['ipopt', 'nl'] = Options(
         name='ipopt',
@@ -259,15 +268,14 @@ _test_solver_cases['ipopt', 'nl'] = Options(
 #
 # SCIP
 #
-_test_solvers['scip'] = Options(
+_test_solvers['scip'] = initialize(
         name='scip', 
-        available = solver_available('scip'),
-        capabilities= ['linear',
+        capabilities= set(['linear',
                        'integer',
                        'quadratic_objective',
                        'quadratic_constraint',
                        'sos1',
-                       'sos2'])
+                       'sos2']))
 
 _test_solver_cases['scip', 'nl'] = Options(
         name='scip',
@@ -277,13 +285,12 @@ _test_solver_cases['scip', 'nl'] = Options(
 #
 # BARON
 #
-_test_solvers['baron'] = Options(
+_test_solvers['baron'] = initialize(
         name='baron', 
-        available = solver_available('baron'),
-        capabilities= ['linear',
+        capabilities= set(['linear',
                        'integer',
                        'quadratic_objective',
-                       'quadratic_constraint'])
+                       'quadratic_constraint']))
 
 _test_solver_cases['baron', 'bar'] = Options(
         name='baron',
@@ -293,13 +300,12 @@ _test_solver_cases['baron', 'bar'] = Options(
 #
 # KNITROAMPL
 #
-_test_solvers['knitroampl'] = Options(
+_test_solvers['knitroampl'] = initialize(
         name='knitroampl', 
-        available = solver_available('knitroampl'),
-        capabilities= ['linear',
+        capabilities= set(['linear',
                        'integer',
                        'quadratic_objective',
-                       'quadratic_constraint'])
+                       'quadratic_constraint']))
 
 _test_solver_cases['knitroampl', 'nl'] = Options(
         name='knitroampl',
@@ -315,9 +321,9 @@ logger_solvers.setLevel( _level_solvers )
 #
 for solver in six.itervalues(_test_solvers):
     if solver.capabilities is None:
-        solver.capabilities = []
+        solver.capabilities = set([])
     assert (solver.name is not None) and (type(solver.name) is str)
-    assert type(solver.capabilities) in [list,tuple]
+    assert type(solver.capabilities) is set
     for tag in solver.capabilities:
         assert type(tag) is str
 

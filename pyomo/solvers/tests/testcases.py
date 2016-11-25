@@ -234,9 +234,16 @@ def test_scenarios():
     """
     for model in sorted(test_models()):
         for solver, io in sorted(test_solver_cases()):
-            _model       = test_models(model)
+            _model       = test_models(model)()
             _solver      = test_solvers(solver)
             _solver_case = test_solver_cases(solver, io)
+
+            # Skip this test case if the solver doesn't support the
+            # capabilities required by the model
+            if not _model.capabilities.issubset( _solver.capabilities ):
+                continue
+
+            # Set status values for expected failures
             status='ok'
             msg=""
             if not _solver.available:
@@ -250,6 +257,8 @@ def test_scenarios():
                     msg=case[1]
             except:
                 pass
+
+            # Return scenario dimensions and scenario information
             yield (model, solver, io), Options(status=status, msg=msg, model=_model, solver=_solver, testcase=_solver_case)
 
 
@@ -581,7 +590,21 @@ addfntests(WriterTests_duals_minimize,testCases, model_types.duals_minimize, sym
 """
 
 if __name__ == "__main__":
+    from pyomo.solvers.tests.models.base import test_models
+
+    print("")
+    print("Testing model generation")
+    print("-"*30)
+    for key in sorted(test_models()):
+        print(key)
+        obj = test_models(key)()
+        obj.generate_model()
+        obj.warmstart_model()
+
+    print("")
+    print("Testing scenario generation")
+    print("-"*30)
     for key, value in test_scenarios():
-        print ", ".join(key)
-        print value.status, value.msg
-        print ""
+        print(", ".join(key))
+        print("   %s: %s" % (value.status, value.msg))
+
