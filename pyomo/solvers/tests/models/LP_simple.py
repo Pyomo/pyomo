@@ -7,22 +7,22 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint
+from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 
 @register_model
-class simple_LP(_BaseTestModel):
+class LP_simple(_BaseTestModel):
     """
     A simple linear program
     """
 
-    description = "simple_LP"
+    description = "LP_simple"
 
     def __init__(self):
         _BaseTestModel.__init__(self)
         self.linear = True
-        self.add_results(description+".json")
+        self.add_results(self.description+".json")
 
     def generate_model(self):
         self.model = ConcreteModel()
@@ -50,7 +50,7 @@ class simple_LP(_BaseTestModel):
         model.c3 = Constraint(expr=0 <= model.z1 + 1 <= 10)
         model.c4 = Constraint(expr=-10 <= model.z2 + 1 <= 0)
 
-    def warmstartModel(self):
+    def warmstart_model(self):
         assert self.model is not None
         model = self.model
         model.x = None

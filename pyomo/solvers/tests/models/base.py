@@ -10,7 +10,7 @@
 
 from os.path import join, dirname, abspath
 import json
-#from pyomo.core import *
+import six
 
 thisDir = dirname(abspath( __file__ ))
 
@@ -270,11 +270,21 @@ class _BaseTestModel(object):
             return False
         return True
 
-    def disable_suffix_tests(self):
-        """ Disable suffix tests """
-        return self.disable_suffix_tests
-
     def post_solve_test_validation(self, tester, results):
         """ Perform post-solve validation tests """
         pass
+
+    def warmstart_model(self):
+        """ Initialize model parameters """
+        pass
+
+
+if __name__ == "__main__":
+    import pyomo.solvers.tests.models
+    print "HERE", _test_models
+    for key, value in six.iteritems(_test_models):
+        print(key)
+        obj = value()
+        obj.generate_model()
+        obj.warmstart_model()
 

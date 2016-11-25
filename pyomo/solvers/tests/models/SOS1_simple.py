@@ -7,22 +7,23 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint
+from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals, SOSConstraint, summation
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 
 @register_model
-class simple_MILP(_BaseTestModel):
+class SOS1_simple(_BaseTestModel):
     """
-    A simple mixed-integer linear program
+    A simple linear program
     """
 
-    description = "simple_MILP"
+    description = "SOS1_simple"
 
     def __init__(self):
         _BaseTestModel.__init__(self)
         self.linear = True
         self.integer = True
+        self.sos1 = True
         self.add_results(self.description+".json")
 
     def generate_model(self):
@@ -30,17 +31,25 @@ class simple_MILP(_BaseTestModel):
         model = self.model
         model._name = self.description
 
-        model.a = Param(initialize=1.0)
+        model.a = Param(initialize=0.1)
         model.x = Var(within=NonNegativeReals)
-        model.y = Var(within=Binary)
+        model.y = Var([1,2],within=NonNegativeReals)
 
-        model.obj = Objective(expr=model.x + 3.0*model.y)
-        model.c1 = Constraint(expr=model.a <= model.y)
-        model.c2 = Constraint(expr=2.0 <= model.x/model.a - model.y <= 10)
+        model.obj = Objective(expr=model.x + model.y[1]+2*model.y[2])
+        model.c1 = Constraint(expr=model.a <= model.y[2])
+        model.c2 = Constraint(expr=2.0 <= model.x <= 10.0)
+        model.c3 = SOSConstraint(var=model.y, index=[1,2], sos=1)
+        model.c4 = Constraint(expr=summation(model.y) == 1)
+
+        # Make an empty SOSConstraint
+        model.c5 = SOSConstraint(var=model.y, index=[1,2], sos=1)
+        model.c5.set_items([],[])
+        assert len(list(model.c5.get_items())) == 0
 
     def warmstart_model(self):
         assert self.model is not None
         model = self.model
-        model.x = 0.1
-        model.y = 0
+        model.x = 0
+        model.y[1] = 1
+        model.y[2] = None
 
