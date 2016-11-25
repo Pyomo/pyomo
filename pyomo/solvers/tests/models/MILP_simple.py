@@ -21,8 +21,8 @@ class MILP_simple(_BaseTestModel):
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.linear = True
-        self.integer = True
+        self.capabilities.add('linear')
+        self.capabilities.add('integer')
         self.add_results(self.description+".json")
 
     def generate_model(self):

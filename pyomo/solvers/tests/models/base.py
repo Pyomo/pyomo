@@ -39,12 +39,7 @@ class _BaseTestModel(object):
     description = "unknown"
 
     def __init__(self):
-        self.linear = False
-        self.integer = False
-        self.quadratic_objective = False
-        self.quadratic_constraint = False
-        self.sos1 = False
-        self.sos2 = False
+        self.capabilities = set([])
         self.model = None
         self.results_file = None
         self.disable_suffix_tests = False

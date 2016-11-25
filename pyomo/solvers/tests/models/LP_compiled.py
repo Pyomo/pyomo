@@ -23,7 +23,7 @@ class LP_compiled(_BaseTestModel):
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.linear = True
+        self.capabilities.add('linear')
         self.add_results(self.description+".json")
         self.disable_suffix_tests = True
 

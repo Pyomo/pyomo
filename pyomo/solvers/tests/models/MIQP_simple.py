@@ -21,9 +21,9 @@ class MIQP_simple(_BaseTestModel):
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.linear = True
-        self.integer = True
-        self.quadratic_objective = True
+        self.capabilities.add('linear')
+        self.capabilities.add('integer')
+        self.capabilities.add('quadratic_objective')
         self.add_results(self.description+".json")
 
     def generate_model(self):

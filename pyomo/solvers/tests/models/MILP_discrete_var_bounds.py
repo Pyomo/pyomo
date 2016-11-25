@@ -21,8 +21,8 @@ class MILP_discrete_var_bounds(_BaseTestModel):
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.linear = True
-        self.integer = True
+        self.capabilities.add('linear')
+        self.capabilities.add('integer')
         self.disable_suffix_tests = True
         self.add_results(self.description+".json")
 

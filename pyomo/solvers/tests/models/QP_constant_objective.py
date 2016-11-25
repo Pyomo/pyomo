@@ -25,8 +25,8 @@ class QP_constant_objective(_BaseTestModel):
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.linear = True
-        self.quadratic_objective = True
+        self.capabilities.add('linear')
+        self.capabilities.add('quadratic_objective')
         self.add_results(self.description+".json")
 
     def generate_model(self):
