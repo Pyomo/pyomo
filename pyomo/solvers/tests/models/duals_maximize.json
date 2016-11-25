@@ -1,0 +1,140 @@
+{
+  "c[10]": {
+    "dual": 1.0, 
+    "slack": 0.0, 
+    "value": -1.0
+  }, 
+  "c[11]": {
+    "dual": -1.0, 
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "c[12]": {
+    "dual": 1.0, 
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "c[3]": {
+    "dual": -1.0, 
+    "slack": 0.0, 
+    "value": -1.0
+  }, 
+  "c[4]": {
+    "dual": 1.0, 
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "c[5]": {
+    "dual": -1.0, 
+    "slack": 0.0, 
+    "value": -1.0
+  }, 
+  "c[6]": {
+    "dual": 1.0, 
+    "slack": 0.0, 
+    "value": -1.0
+  }, 
+  "c[7]": {
+    "dual": -1.0, 
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "c[8]": {
+    "dual": 1.0, 
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "c[9]": {
+    "dual": -1.0, 
+    "slack": 0.0, 
+    "value": -1.0
+  }, 
+  "c_inactive[3]": {
+    "dual": -0.0, 
+    "slack": -1.0, 
+    "value": -1.0
+  }, 
+  "c_inactive[4]": {
+    "dual": 0.0, 
+    "slack": 1.0, 
+    "value": 1.0
+  }, 
+  "duals_maximize": {}, 
+  "obj": {
+    "value": 4.0
+  }, 
+  "suffix defaults": {
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
+      0.0, 
+      null
+    ]
+  }, 
+  "x[10]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[11]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[12]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[1]": {
+    "rc": -1.0, 
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[2]": {
+    "rc": 1.0, 
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[3]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[4]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[5]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[6]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "x[7]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[8]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "x[9]": {
+    "rc": -0.0, 
+    "stale": false, 
+    "value": -1.0
+  }
+}

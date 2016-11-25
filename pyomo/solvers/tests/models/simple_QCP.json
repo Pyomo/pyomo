@@ -1,0 +1,74 @@
+{
+  "c0": {
+    "dual": 0.384875262173, 
+    "slack": 0.0,
+    "value": 1.0
+  }, 
+  "c[1]": {
+    "dual": -0.0, 
+    "slack": -0.16, 
+    "value": 0.16
+  }, 
+  "c[2]": {
+    "dual": 0.0, 
+    "slack": 0.8, 
+    "value": 4.2
+  }, 
+  "fixed_var": {
+    "stale": true, 
+    "value": 0.2
+  }, 
+  "obj": {
+    "value": 2.491562226247
+  }, 
+  "q1": {
+    "rc": 1.0, 
+    "stale": false, 
+    "value": 0.2
+  }, 
+  "q2": {
+    "rc": -1.0, 
+    "stale": false, 
+    "value": -2.0
+  }, 
+  "qc0": {
+    "dual": 0.233282484491, 
+    "slack": 0.0,
+    "value": 0.0
+  }, 
+  "qc1": {
+    "dual": 0.821594727882, 
+    "slack": 0.0,
+    "value": 0.0
+  }, 
+  "simple_QCP": {}, 
+  "x": {
+    "rc": 0.0,
+    "stale": false, 
+    "value": 0.291562226247
+  }, 
+  "y": {
+    "rc": 0.0,
+    "stale": false, 
+    "value": 0.15306604029
+  }, 
+  "z": {
+    "rc": 0.0,
+    "stale": false, 
+    "value": 0.555371733474
+  },
+  "suffix defaults": {
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
+      0.0, 
+      null
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "c1": {
+    "value": 1
+  }, 
+  "c2": {
+    "value": 2
+  }, 
+  "obj": {
+    "value": 6
+  }, 
+  "simple_MILP": {}, 
+  "suffix defaults": {
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
+      0.0, 
+      null
+    ]
+  }, 
+  "x": {
+    "stale": false, 
+    "value": 3
+  }, 
+  "y": {
+    "stale": false, 
+    "value": 1
+  }
+}

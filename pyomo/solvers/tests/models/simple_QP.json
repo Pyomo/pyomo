@@ -1,0 +1,43 @@
+{
+  "c1": {
+    "dual": 11.9999999999, 
+    "slack": 0.0, 
+    "value": 1.00000000008
+  }, 
+  "c2": {
+    "dual": 6.0, 
+    "slack": 7.99999999998, 
+    "value": 2.00000000002
+  }, 
+  "inactive_obj": {
+    "value": 1.00000000008
+  }, 
+  "obj": {
+    "value": 13.0000000011
+  }, 
+  "simple_QP": {}, 
+  "suffix defaults": {
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
+      0.0, 
+      null
+    ]
+  }, 
+  "x": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": 3.0000000001
+  }, 
+  "y": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": 1.00000000008
+  }
+}

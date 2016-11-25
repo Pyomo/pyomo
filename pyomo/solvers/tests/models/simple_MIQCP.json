@@ -1,0 +1,44 @@
+{
+  "c0": {
+    "slack": 0.0, 
+    "value": 1.0
+  }, 
+  "obj": {
+    "value": 0
+  }, 
+  "qc0": {
+    "slack": 1, 
+    "value": -1
+  }, 
+  "qc1": {
+    "slack": 0, 
+    "value": 0
+  }, 
+  "simple_MIQCP": {}, 
+  "suffix defaults": {
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
+      0.0, 
+      null
+    ]
+  }, 
+  "x": {
+    "stale": false, 
+    "value": 0
+  }, 
+  "y": {
+    "stale": false, 
+    "value": 0
+  }, 
+  "z": {
+    "stale": false, 
+    "value": 1
+  }
+}
