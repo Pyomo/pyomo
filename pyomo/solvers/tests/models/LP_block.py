@@ -18,10 +18,10 @@ class LP_block(_BaseTestModel):
     """
 
     description = "LP_block"
+    capabilities = set(['linear'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

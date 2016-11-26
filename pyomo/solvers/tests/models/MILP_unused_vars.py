@@ -19,11 +19,10 @@ class MILP_unused_vars(_BaseTestModel):
     """
 
     description = "MILP_unused_vars"
+    capabilities = set(['linear', 'integer'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
-        self.capabilities.add('integer')
         self.disable_suffix_tests = True
         self.add_results(self.description+".json")
 

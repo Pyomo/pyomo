@@ -30,10 +30,10 @@ class LP_inactive_index(_BaseTestModel):
     """
 
     description = "LP_inactive_index"
+    capabilities = set(['linear'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

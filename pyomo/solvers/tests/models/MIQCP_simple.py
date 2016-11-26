@@ -18,13 +18,11 @@ class MIQCP_simple(_BaseTestModel):
     """
 
     description = "MIQCP_simple"
+    level = ('nightly', 'expensive')
+    capabilities = set(['linear', 'integer', 'quadratic_constraint'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
-        self.capabilities.add('integer')
-        self.capabilities.add('quadratic_constraint')
-        self.level = ('nightly', 'expensive')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

@@ -22,11 +22,10 @@ class QP_constant_objective(_BaseTestModel):
     """
 
     description = "QP_constant_objective"
+    capabilities = set(['linear', 'quadratic_objective'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
-        self.capabilities.add('quadratic_objective')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

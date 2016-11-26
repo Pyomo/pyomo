@@ -44,9 +44,10 @@ def create_test_method(model, solver, io,
     #
     def writer_test(self):
 
-        model_class = test_case.model
-        save_filename = join(thisDir, ("%s.soln.json" % model_class.description))
+        # Create the model test class
+        model_class = test_case.model()
 
+        save_filename = join(thisDir, ("%s.soln.json" % model_class.description))
         # cleanup possibly existing old test files
         if os.path.exists(save_filename):
             os.remove(save_filename)
@@ -117,7 +118,7 @@ def create_test_method(model, solver, io,
 driver = {}
 for model in test_models():
     # Get the test case for the model 
-    case = test_models(model)()
+    case = test_models(model)
  
     # Create the test class
     name = "Test_%s" % model

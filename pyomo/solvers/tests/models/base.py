@@ -39,11 +39,11 @@ class _BaseTestModel(object):
     """
 
     description = "unknown"
+    level = ('smoke', 'nightly', 'expensive')
+    capabilities = set([])
 
     def __init__(self):
-        self.capabilities = set([])
         self.model = None
-        self.level = ('smoke', 'nightly', 'expensive')
         self.results_file = None
         self.disable_suffix_tests = False
         self.test_suffixes = []

@@ -219,14 +219,13 @@ def test_scenarios():
     """
     for model in sorted(test_models()):
         for solver, io in sorted(test_solver_cases()):
-            _model       = test_models(model)()
+            _model       = test_models(model)
             #_solver      = test_solvers(solver)
             _solver_case = test_solver_cases(solver, io)
 
             # Skip this test case if the solver doesn't support the
             # capabilities required by the model
             if not _model.capabilities.issubset( _solver_case.capabilities ):
-                print _model.description, solver, io
                 continue
 
             # Set status values for expected failures

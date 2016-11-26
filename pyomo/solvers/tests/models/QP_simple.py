@@ -18,12 +18,11 @@ class QP_simple(_BaseTestModel):
     """
 
     description = "QP_simple"
+    level = ('nightly', 'expensive')
+    capabilities = set(['linear', 'quadratic_objective'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
-        self.capabilities.add('quadratic_objective')
-        self.level = ('nightly', 'expensive')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

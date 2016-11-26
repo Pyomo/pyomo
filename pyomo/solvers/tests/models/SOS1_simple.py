@@ -18,13 +18,11 @@ class SOS1_simple(_BaseTestModel):
     """
 
     description = "SOS1_simple"
+    level = ('nightly', 'expensive')
+    capabilities = set(['linear', 'integer', 'sos1'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
-        self.capabilities.add('integer')
-        self.capabilities.add('sos1')
-        self.level = ('nightly', 'expensive')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

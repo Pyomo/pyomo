@@ -19,10 +19,10 @@ class LP_constant_objective2(_BaseTestModel):
     """
 
     description = "LP_constant_objective2"
+    capabilities = set(['linear'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

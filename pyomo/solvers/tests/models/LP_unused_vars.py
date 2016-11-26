@@ -19,10 +19,10 @@ class LP_unused_vars(_BaseTestModel):
     """
 
     description = "LP_unused_vars"
+    capabilities = set(['linear'])
 
     def __init__(self):
         _BaseTestModel.__init__(self)
-        self.capabilities.add('linear')
         self.disable_suffix_tests = True
         self.add_results(self.description+".json")
 
