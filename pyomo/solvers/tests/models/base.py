@@ -62,7 +62,7 @@ class _BaseTestModel(object):
         for suffix in self.test_suffixes:
             setattr(self.model, suffix, Suffix(direction=Suffix.IMPORT))
 
-    def solve(self, solver, io, io_options, symbolic_labels):
+    def solve(self, solver, io, io_options, symbolic_labels, load_solutions):
         """ Optimize the model """
         assert self.model is not None
 
@@ -78,24 +78,29 @@ class _BaseTestModel(object):
         #    print opt.problem_format()
         #    assert opt.problem_format() is None
 
-        if isinstance(opt, PersistentSolver):
-            opt.compile_instance(self.model, symbolic_solver_labels=symbolic_labels)
+        try:
+            if isinstance(opt, PersistentSolver):
+                opt.compile_instance(self.model, symbolic_solver_labels=symbolic_labels)
 
-        if opt.warm_start_capable():
-            results = opt.solve(
-                self.model,
-                symbolic_solver_labels=symbolic_labels,
-                warmstart=True,
-                load_solutions=False,
-                **io_options)
-        else:
-            results = opt.solve(
-                self.model,
-                symbolic_solver_labels=symbolic_labels,
-                load_solutions=False,
-                **io_options)
+            if opt.warm_start_capable():
+                results = opt.solve(
+                    self.model,
+                    symbolic_solver_labels=symbolic_labels,
+                    warmstart=True,
+                    load_solutions=load_solutions,
+                    **io_options)
+            else:
+                results = opt.solve(
+                    self.model,
+                    symbolic_solver_labels=symbolic_labels,
+                    load_solutions=load_solutions,
+                    **io_options)
 
-        return opt, results
+            return opt, results
+        finally:
+            opt.deactivate()
+        del opt
+        return None, None
 
     def save_current_solution(self, filename, **kwds):
         """ Save the solution in a specified file name """
