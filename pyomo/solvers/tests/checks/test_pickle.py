@@ -31,7 +31,9 @@ def create_test_method(model, solver, io,
                      test_case,
                      symbolic_labels):
 
-    is_expected_failure = test_case.status == 'expected failure'
+    # Ignore expected failures?
+    is_expected_failure = False
+    #is_expected_failure = test_case.status == 'expected failure'
 
     def pickle_test(self):
 
@@ -100,7 +102,7 @@ for model in test_models():
 #
 # Iterate through all test scenarios and add test methods
 #
-for key, value in test_scenarios():
+for key, value in test_scenarios(lambda c: c.test_pickling):
     model, solver, io = key
     cls = driver[model]
     # Symbolic labels

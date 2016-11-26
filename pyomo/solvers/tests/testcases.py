@@ -213,13 +213,15 @@ ExpectedFailures['baron', 'bar', 'QCP_simple'] = \
 #
 
 
-def test_scenarios():
+def test_scenarios(arg=None):
     """
     Generate scenarios
     """
     for model in sorted(test_models()):
+        _model = test_models(model)
+        if not arg is None and not arg(_model):
+            continue
         for solver, io in sorted(test_solver_cases()):
-            _model       = test_models(model)
             #_solver      = test_solvers(solver)
             _solver_case = test_solver_cases(solver, io)
 
