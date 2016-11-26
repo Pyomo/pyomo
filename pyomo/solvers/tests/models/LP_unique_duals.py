@@ -10,6 +10,26 @@
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, RangeSet, ConstraintList, NonNegativeReals, Suffix, summation
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
+def c_rule(model, j):
+    return 5 if j<5 else 9.0/2
+
+def b_rule(model, i):
+    if i == 4:
+        i = 5
+    elif i == 5:
+        i = 4
+    return 5 if i<5 else 7.0/2
+
+def A_rule(model, i, j):
+    if i == 4:
+        i = 5
+    elif i == 5:
+        i = 4
+    return 2 if i==j else 1
+
+def primalcon_rule(model, i):
+    return sum(model.A[i,j]*model.x[j] for j in model.N) >= model.b[i]
+
 
 @register_model
 class LP_unique_duals(_BaseTestModel):
@@ -35,24 +55,10 @@ class LP_unique_duals(_BaseTestModel):
         model.N = RangeSet(1,n)
         model.M = RangeSet(1,m)
 
-        def c_rule(model, j):
-            return 5 if j<5 else 9.0/2
         model.c = Param(model.N, rule=c_rule)
 
-        def b_rule(model, i):
-            if i == 4:
-                i = 5
-            elif i == 5:
-                i = 4
-            return 5 if i<5 else 7.0/2
         model.b = Param(model.M, rule=b_rule)
 
-        def A_rule(model, i, j):
-            if i == 4:
-                i = 5
-            elif i == 5:
-                i = 4
-            return 2 if i==j else 1
         model.A = Param(model.M, model.N, rule=A_rule)
 
         model.x = Var(model.N, within=NonNegativeReals)
@@ -60,8 +66,6 @@ class LP_unique_duals(_BaseTestModel):
 
         model.cost = Objective(expr=summation(model.c, model.x))
 
-        def primalcon_rule(model, i):
-            return sum(model.A[i,j]*model.x[j] for j in model.N) >= model.b[i]
         model.primalcon = Constraint(model.M, rule=primalcon_rule)
 
         #model.dual = Suffix(direction=Suffix.IMPORT)
