@@ -19,6 +19,7 @@ class LP_trivial_constraints(_BaseTestModel):
 
     description = "LP_trivial_constraints"
     capabilities = set(['linear'])
+    test_pickling = False
 
     def __init__(self):
         _BaseTestModel.__init__(self)

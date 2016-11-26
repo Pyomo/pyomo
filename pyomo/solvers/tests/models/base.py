@@ -41,6 +41,7 @@ class _BaseTestModel(object):
     description = "unknown"
     level = ('smoke', 'nightly', 'expensive')
     capabilities = set([])
+    test_pickling = True
 
     def __init__(self):
         self.model = None

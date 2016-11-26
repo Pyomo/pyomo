@@ -57,6 +57,7 @@ class QCP_simple(_BaseTestModel):
 class QCP_simple_nosuffixes(QCP_simple):
 
     description = "QCP_simple_nosuffixes"
+    test_pickling = False
 
     def __init__(self):
         QCP_simple.__init__(self)

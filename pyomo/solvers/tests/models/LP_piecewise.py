@@ -51,6 +51,7 @@ class LP_piecewise(_BaseTestModel):
 class LP_piecewise_nosuffixes(LP_piecewise):
 
     description = "LP_piecewise_nosuffixes"
+    test_pickling = False
 
     def __init__(self):
         LP_piecewise.__init__(self)
