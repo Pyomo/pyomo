@@ -31,7 +31,6 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _poll,
                                   _kill)
 from pyomo.pysp.tests.examples.ph_checker import main as validate_ph_main
-from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase, testCases
 from pyutilib.pyro import using_pyro3, using_pyro4
 
 has_yaml = False
@@ -238,14 +237,13 @@ class PHTester(object):
     @staticmethod
     def _setUpClass(cls):
         global testing_solvers
-        from pyomo.solvers.tests.io.writer_test_cases import testCases
-        testCases_copy = list(testCases)
-        testCases_copy.append(SolverTestCase(name='_cplex_persistent',
-                                             io='python'))
-        for test_case in testCases_copy:
-            if ((test_case.name,test_case.io) in testing_solvers) and \
-               (test_case.available):
-                testing_solvers[(test_case.name,test_case.io)] = True
+        from pyomo.solvers.tests.solvers import test_solver_cases
+        #testCases_copy = list(testCases)
+        #testCases_copy.append(SolverTestCase(name='_cplex_persistent', io='python'))
+        for _solver, _io in test_solver_cases():
+            if (_solver, _io) in testing_solvers and \
+                test_solver_cases(_solver, _io).available:
+                testing_solvers[_solver, _io] = True
 
     def setUp(self):
         assert self.baseline_group is not None
