@@ -1058,12 +1058,38 @@ class _LinearExpression(_ExpressionBase):
             ans += value(self._coef[id(v)]) * result[i]
         return ans
 
-    def __iadd__(self, other, _reversed=0):
+    def __iadd__(self, other, reverse=0, negate=False):
         if safe_mode and self._parent_expr:
-            raise EntangledExpressionError(self, other)
+            #raise EntangledExpressionError(self, other)
+            self = clone_expression(self)
         _type = other.__class__
 
+        if _type in native_numeric_types:
+            if negate:
+                self._const -= other
+            else:
+                self._const += other
+            return self
+
+        # Now everything should be a numeric type.  The exceptions are
+        # if other is a non-numeric type or numeric types that we
+        # haven't seen yet
+        if not hasattr(other, 'as_numeric'):
+            other = as_numeric(other)
+
+        if safe_mode and other.is_expression() and other._parent_expr:
+            #raise EntangledExpressionError(self, other)
+            other = clone_expression(other)
+
         if _type is _LinearExpression:
+            # adding 2 linear expressions should never reverse things:
+            # it would have hit the other's __iadd__ first.
+            assert not reverse
+            if negate:
+                other._const *= -1
+                for key in other._coef:
+                    other._coef[key] *= -1
+
             self._const += other._const
             for v in other._args:
                 _id = id(v)
@@ -1074,45 +1100,41 @@ class _LinearExpression(_ExpressionBase):
                     self._coef[_id] = other._coef[_id]
             other._const = 0
             other._args = []
-            other._coef = {}
+            other._coef.clear()
             if safe_mode:
                 other._parent_expr = None
             _LinearExpression_Pool.append(other)
             return self
-        elif isinstance(other, _VarData):
+        elif not other.is_expression() and other._potentially_variable():
             _id = id(other)
+            coef = -1 if negate else 1
             if _id in self._coef:
-                self._coef[_id] += 1
+                self._coef[_id] += coef
             else:
-                if _reversed:
+                if reverse:
                     self._args.insert(0,other)
                 else:
                     self._args.append(other)
-                self._coef[_id] = 1
+                self._coef[_id] = coef
             return self
-        elif _type in native_numeric_types:
-            if other:
+        elif other.is_fixed():
+            if negate:
+                self._const -= other
+            else:
                 self._const += other
             return self
-
-        try:
-            _is_expr = other.is_expression()
-        except AttributeError:
-            other = as_numeric(other)
-            _is_expr = other.is_expression()
-
-        if _is_expr:
-            if safe_mode and other._parent_expr:
-                raise EntangledExpressionError(self, other)
-            return super(_LinearExpression, self).__iadd__(other)
-        elif other.is_constant():
-            self._const += value(other)
-        elif isinstance(other, _ParamData):
-            self._const += other
+        elif other.is_expression():
+            if reverse:
+                other, self = self, other
+            if negate:
+                return generate_expression(_isub, self, other)
+            else:
+                return generate_expression(_iadd, self, other)
         else:
-            return super(_LinearExpression, self).__iadd__(other)
-
-        return self
+            # This should not be reachable
+            raise DeveloperError(
+                "Unexpected branch in _LinearExpression.add_impl for %s + %s"
+                % ( self, other ))
 
     # As we do all addition "in-place", all additions are the same as
     # in-place additions.
@@ -1122,58 +1144,11 @@ class _LinearExpression(_ExpressionBase):
     # called when other is not a NumericValue object ... that is, a
     # constant.  SO, we don't have to worry about preserving the
     # variable order.
-    __radd__ = __iadd__
+    def __radd__(self, other):
+        return self.__iadd__(other, reverse=True)
 
     def __isub__(self, other):
-        if safe_mode and self._parent_expr:
-            raise EntangledExpressionError(self, other)
-        _type = other.__class__
-        if _type in native_numeric_types:
-            if other:
-                self._const -= other
-            return self
-
-        try:
-            _is_expr = other.is_expression()
-        except AttributeError:
-            other = as_numeric(other)
-            _is_expr = other.is_expression()
-
-        if _is_expr:
-            if safe_mode and other._parent_expr:
-                raise EntangledExpressionError(self, other)
-            if _type is _LinearExpression:
-                self._const -= other._const
-                for v in other._args:
-                    _id = id(v)
-                    if _id in self._coef:
-                        self._coef[_id] -= other._coef[_id]
-                    else:
-                        self._args.append(v)
-                        self._coef[_id] = -other._coef[_id]
-                other._const = 0
-                other._args = []
-                other._coef = {}
-                if safe_mode:
-                    other._parent_expr = None
-                _LinearExpression_Pool.append(other)
-            else:
-                return super(_LinearExpression, self).__isub__(other)
-        elif isinstance(other, _VarData):
-            _id = id(other)
-            if _id in self._coef:
-                self._coef[_id] -= 1
-            else:
-                self._args.append(other)
-                self._coef[_id] = -1
-        elif other.is_constant():
-            self._const -= value(other)
-        elif isinstance(other, _ParamData):
-            self._const -= other
-        else:
-            return super(_LinearExpression, self).__iadd__(other)
-
-        return self
+        return self.__iadd__(other, negate=True)
 
     # As we do all subtraction "in-place", all subtractions are the same as
     # in-place subtractions.
@@ -1183,63 +1158,49 @@ class _LinearExpression(_ExpressionBase):
     # to do is just negate ourselves and add.
     def __rsub__(self, other):
         self *= -1
-        return self.__radd__(other, 1)
+        return self.__iadd__(other, reverse=True)
 
-    def __imul__(self, other):
+
+    def __imul__(self, other, divide=False):
         if safe_mode and self._parent_expr:
-            raise EntangledExpressionError(self, other)
-        _type = other.__class__
-        if _type in native_numeric_types:
-            if other != 1:
+            #raise EntangledExpressionError(self, other)
+            self = clone_expression(self)
+
+        if other.__class__ in native_numeric_types:
+            if not other:
+                if divide:
+                    raise ZeroDivisionError()
+                return other
+            not_var = True
+        else:
+            if not hasattr(other, 'as_numeric'):
+                other = as_numeric(other)
+
+            if safe_mode and other.is_expression() and other._parent_expr:
+                #raise EntangledExpressionError(self, other)
+                other = clone_expression(other)
+
+            not_var = not other._potentially_variable()
+            if not_var and other.is_constant() and not other():
+                if divide:
+                    raise ZeroDivisionError()
+                return other
+
+        if not_var:
+            if divide:
+                self._const /= other
+                for i in self._coef:
+                    self._coef[i] /= other
+            else:
                 self._const *= other
                 for i in self._coef:
                     self._coef[i] *= other
             return self
-        try:
-            _is_expr = other.is_expression()
-        except AttributeError:
-            other = as_numeric(other)
-            _is_expr = other.is_expression()
 
-        if _is_expr:
-            if safe_mode and other._parent_expr:
-                raise EntangledExpressionError(self, other)
-
-            if _type is _LinearExpression:
-                if self._args:
-                    if other._args:
-                        return super(_LinearExpression, self).__imul__(other)
-                else:
-                    self, other = other, self
-                self._const *= other._const
-                for i in self._coef:
-                    self._coef[i] *= other._const
-                other._const = 0
-                if safe_mode:
-                    other._parent_expr = None
-                _LinearExpression_Pool.append(other)
-            else:
-                return super(_LinearExpression, self).__imul__(other)
-        elif isinstance(other, _VarData):
-            if self._args:
-                return super(_LinearExpression, self).__imul__(other)
-            _id = id(other)
-            self._args.append(other)
-            self._coef[_id] = self._const
-            self._const = 0
-        elif other.is_constant():
-            other = value(other)
-            self._const *= other
-            for i in self._coef:
-                self._coef[i] *= other
-        elif isinstance(other, _ParamData):
-            self._const *= other
-            for i in self._coef:
-                self._coef[i] *= other
+        if divide:
+            return generate_expression(_idiv, self, other)
         else:
-            return super(_LinearExpression, self).__imul__(other)
-
-        return self
+            return generate_expression(_imul, self, other)
 
     # As we do all multiplication "in-place", all multiplications are
     # the same as in-place multiplications.
@@ -1248,68 +1209,15 @@ class _LinearExpression(_ExpressionBase):
     # Note: treating __rmul__ the same as imul is fine, as it will only be
     # called when other is not a NumericValue object ... that is, a
     # constant.  SO, we don't have to worry about preserving the
-    # variable order.
+    # variable order (too much).
     __rmul__ = __imul__
 
     def __idiv__(self, other):
-        if safe_mode and self._parent_expr:
-            raise EntangledExpressionError(self, other)
-        _type = other.__class__
-        if _type in native_numeric_types:
-            if other != 1:
-                self._const /= other
-                for i in self._coef:
-                    self._coef[i] /= other
-            return self
-
-        try:
-            _is_expr = other.is_expression()
-        except AttributeError:
-            other = as_numeric(other)
-            _is_expr = other.is_expression()
-
-        if _is_expr:
-            if _type is _LinearExpression:
-                if other._args:
-                    return super(_LinearExpression, self).__imul__(other)
-                if safe_mode and other._parent_expr:
-                    raise EntangledExpressionError(self, other)
-                self._const /= other._const
-                for i in self._coef:
-                    self._coef[i] /= other._const
-                other._const = 0
-                if safe_mode:
-                    other._parent_expr = None
-                _LinearExpression_Pool.append(other)
-            else:
-                return super(_LinearExpression, self).__imul__(other)
-        elif other.is_constant():
-            other = value(other)
-            self._const /= other
-            for i in self._coef:
-                self._coef[i] /= other
-        elif isinstance(other, _ParamData):
-            self._const /= other
-            for i in self._coef:
-                self._coef[i] /= other
-        else:
-            return super(_LinearExpression, self).__imul__(other)
-
-        return self
+        return self.__imul__(other, divide=True)
 
     # As we do all division "in-place", all divisions are
     # the same as in-place divisions.
-    __mul__ = __imul__
-
-    # Note: __rdiv__ must fall back on the underlying division operator,
-    # unless this is a constant "linear expression"
-    def __rdiv__(self, other):
-        if self._args:
-            return super(_LinearExpression, self).__rdiv__(other)
-        # We should only get here if this is a constant and other is a
-        # non-NumericValue object.
-        self._const = other / self._const
-        return self
+    __div__ = __idiv__
 
     def __neg__(self):
         self *= -1
