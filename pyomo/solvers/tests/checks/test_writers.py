@@ -101,14 +101,12 @@ def create_test_method(model, solver, io,
         return skipping_test
 
     if is_expected_failure:
-        #print "FAILURE", model, solver, io
         @unittest.expectedFailure
         def failing_writer_test(self):
             return writer_test(self)
         # Return a test that is expected to fail
         return failing_writer_test
 
-    #print "OK", model, solver, io
     # Return a normal test
     return writer_test
 
@@ -142,33 +140,15 @@ for key, value in test_scenarios():
     if test_method is not None:
         setattr(cls, test_name, test_method)
     # Non-symbolic labels
-    test_name = "test_"+name+"_"+io +"_nonsymbolic_labels"
+    test_name = "test_"+solver+"_"+io +"_nonsymbolic_labels"
     test_method = create_test_method(model, solver, io, value, False)
     if test_method is not None:
         setattr(cls, test_name, test_method)
 
+# Reset the cls variable, since it contains a unittest.TestCase subclass.
+# This prevents this class from being processed twice!
+cls = None
 
-# A "solver should fail" test, which I am archiving for now
-"""
-            # If the solver is not capable of handling this
-            # model class then we better get a failure here
-            try:
-                model.load(opt.solve(model))
-                model_class.saveCurrentSolution(save_filename,
-                                        suffixes=test_case.import_suffixes)
-            except:
-                pass
-            else:
-                # Okay so we may get to this point if we are using a
-                # plugin like ASL which must advertise having all capabilities
-                # since it supports many solvers. And its possible that
-                # sending something like a discrete model to ipopt can slip
-                # through the cracks without error or warning. Hopefully the test
-                # case was set up so that the solution check will turn up bad.
-                if model_class.validateCurrentSolution() is True:
-                    warnings.warn("Plugin "+test_case.name+' ('+test_case.io+") is not capable of handling model class "+test_model_name+" "\
-                                  "but no exception was thrown and solution matched baseline.")
-"""
 
 if __name__ == "__main__":
     unittest.main()

@@ -220,12 +220,13 @@ def test_scenarios():
     for model in sorted(test_models()):
         for solver, io in sorted(test_solver_cases()):
             _model       = test_models(model)()
-            _solver      = test_solvers(solver)
+            #_solver      = test_solvers(solver)
             _solver_case = test_solver_cases(solver, io)
 
             # Skip this test case if the solver doesn't support the
             # capabilities required by the model
-            if not _model.capabilities.issubset( _solver.capabilities ):
+            if not _model.capabilities.issubset( _solver_case.capabilities ):
+                print _model.description, solver, io
                 continue
 
             # Set status values for expected failures
@@ -233,7 +234,7 @@ def test_scenarios():
             msg=""
             if not _solver_case.available:
                 status='skip'
-                msg="Skipping test because solver %s is unavailable" % solver
+                msg="Skipping test because solver %s (%s) is unavailable" % (solver,io)
             if (solver, io, model) in ExpectedFailures:
                 case = ExpectedFailures[solver, io, model]
                 if _solver_case.version is not None and\
@@ -242,7 +243,7 @@ def test_scenarios():
                     msg=case[1]
 
             # Return scenario dimensions and scenario information
-            yield (model, solver, io), Options(status=status, msg=msg, model=_model, solver=_solver, testcase=_solver_case)
+            yield (model, solver, io), Options(status=status, msg=msg, model=_model, solver=None, testcase=_solver_case)
 
 
 
