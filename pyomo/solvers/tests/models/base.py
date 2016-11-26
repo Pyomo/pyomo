@@ -12,7 +12,7 @@ import json
 import six
 
 from pyomo.core import Suffix, Var, Constraint, Objective
-from pyomo.opt import ProblemFormat, PersistentSolver, SolverFactory
+from pyomo.opt import ProblemFormat, PersistentSolver, SolverFactory, TerminationCondition
 
 thisDir = dirname(abspath( __file__ ))
 
@@ -321,7 +321,7 @@ class _BaseTestModel(object):
 
     def post_solve_test_validation(self, tester, results):
         """ Perform post-solve validation tests """
-        pass
+        tester.assertEqual( results['Solver'][0]['termination condition'], TerminationCondition.optimal )
 
     def warmstart_model(self):
         """ Initialize model parameters """
