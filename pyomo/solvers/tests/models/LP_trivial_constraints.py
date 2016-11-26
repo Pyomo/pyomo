@@ -24,7 +24,7 @@ class LP_trivial_constraints(_BaseTestModel):
         self.capabilities.add('linear')
         self.add_results(self.description+".json")
 
-    def generate_model(self):
+    def _generate_model(self):
         self.model = None
         self.model = ConcreteModel()
         model = self.model

@@ -25,7 +25,7 @@ class QP_simple(_BaseTestModel):
         self.capabilities.add('quadratic_objective')
         self.add_results(self.description+".json")
 
-    def generate_model(self):
+    def _generate_model(self):
         self.model = None
         self.model = ConcreteModel()
         model = self.model
@@ -56,4 +56,5 @@ class QP_simple_nosuffixes(QP_simple):
     def __init__(self):
         QP_simple.__init__(self)
         self.disable_suffix_tests = True
+        self.add_results("QP_simple.json")
 

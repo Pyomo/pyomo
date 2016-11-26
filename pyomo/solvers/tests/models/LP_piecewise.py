@@ -24,7 +24,7 @@ class LP_piecewise(_BaseTestModel):
         self.capabilities.add('linear')
         self.add_results(self.description+".json")
 
-    def generate_model(self):
+    def _generate_model(self):
         self.model = ConcreteModel()
         model = self.model
         model._name = self.description
@@ -55,4 +55,5 @@ class LP_piecewise_nosuffixes(LP_piecewise):
     def __init__(self):
         LP_piecewise.__init__(self)
         self.disable_suffix_tests = True
+        self.add_results("LP_piecewise.json")
 

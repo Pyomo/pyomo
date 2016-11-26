@@ -7,10 +7,12 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-
 from os.path import join, dirname, abspath
 import json
 import six
+
+from pyomo.core import Suffix, Var, Constraint, Objective
+from pyomo.opt import ProblemFormat, PersistentSolver, SolverFactory
 
 thisDir = dirname(abspath( __file__ ))
 
@@ -41,17 +43,59 @@ class _BaseTestModel(object):
     def __init__(self):
         self.capabilities = set([])
         self.model = None
+        self.level = ('smoke', 'nightly', 'expensive')
         self.results_file = None
         self.disable_suffix_tests = False
+        self.test_suffixes = []
         self.diff_tol = 1e-4
 
     def add_results(self, filename):
         """ Add results file """
         self.results_file = join(thisDir, filename)
 
-    def generate_model():
+    def generate_model(self, import_suffixes=[]):
         """ Generate the model """
-        raise NotImplementedError
+        self._generate_model()
+        # Add suffixes
+        self.test_suffixes = [] if self.disable_suffix_tests else \
+                        import_suffixes
+        for suffix in self.test_suffixes:
+            setattr(self.model, suffix, Suffix(direction=Suffix.IMPORT))
+
+    def solve(self, solver, io, io_options, symbolic_labels):
+        """ Optimize the model """
+        assert self.model is not None
+
+        opt = SolverFactory(solver, solver_io=io)
+
+        if io == 'nl':
+            assert opt.problem_format() == ProblemFormat.nl
+        elif io == 'lp':
+            assert opt.problem_format() == ProblemFormat.cpxlp
+        elif io == 'mps':
+            assert opt.problem_format() == ProblemFormat.mps
+        #elif io == 'python':
+        #    print opt.problem_format()
+        #    assert opt.problem_format() is None
+
+        if isinstance(opt, PersistentSolver):
+            opt.compile_instance(self.model, symbolic_solver_labels=symbolic_labels)
+
+        if opt.warm_start_capable():
+            results = opt.solve(
+                self.model,
+                symbolic_solver_labels=symbolic_labels,
+                warmstart=True,
+                load_solutions=False,
+                **io_options)
+        else:
+            results = opt.solve(
+                self.model,
+                symbolic_solver_labels=symbolic_labels,
+                load_solutions=False,
+                **io_options)
+
+        return opt, results
 
     def save_current_solution(self, filename, **kwds):
         """ Save the solution in a specified file name """
@@ -220,7 +264,11 @@ class _BaseTestModel(object):
                                     solution[obj.name][suffix_name],
                                     suffix.get(obj)))
 
+        first=True
         for block in model.block_data_objects():
+            if first:
+                first=False
+                continue
             for suffix_name, suffix in suffixes.items():
                 if (solution[block.name] is not None) and \
                    (suffix_name in solution[block.name]):
@@ -276,7 +324,6 @@ class _BaseTestModel(object):
 
 if __name__ == "__main__":
     import pyomo.solvers.tests.models
-    print "HERE", _test_models
     for key, value in six.iteritems(_test_models):
         print(key)
         obj = value()

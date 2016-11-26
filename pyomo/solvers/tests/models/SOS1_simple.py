@@ -26,7 +26,7 @@ class SOS1_simple(_BaseTestModel):
         self.capabilities.add('sos1')
         self.add_results(self.description+".json")
 
-    def generate_model(self):
+    def _generate_model(self):
         self.model = ConcreteModel()
         model = self.model
         model._name = self.description

@@ -26,7 +26,7 @@ class QCP_simple(_BaseTestModel):
         self.capabilities.add('quadratic_constraint')
         self.add_results(self.description+".json")
 
-    def generate_model(self):
+    def _generate_model(self):
         self.model = ConcreteModel()
         model = self.model
         model._name = self.description
@@ -62,4 +62,5 @@ class QCP_simple_nosuffixes(QCP_simple):
     def __init__(self):
         QCP_simple.__init__(self)
         self.disable_suffix_tests = True
+        self.add_results("QCP_simple.json")
 

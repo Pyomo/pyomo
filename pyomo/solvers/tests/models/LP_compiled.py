@@ -27,7 +27,7 @@ class LP_compiled(_BaseTestModel):
         self.add_results(self.description+".json")
         self.disable_suffix_tests = True
 
-    def generate_model(self):
+    def _generate_model(self):
         self.model = ConcreteModel()
         model = self.model
         model._name = self.description

@@ -29,7 +29,7 @@ class QP_constant_objective(_BaseTestModel):
         self.capabilities.add('quadratic_objective')
         self.add_results(self.description+".json")
 
-    def generate_model(self):
+    def _generate_model(self):
         self.model = ConcreteModel()
         model = self.model
         model._name = self.description

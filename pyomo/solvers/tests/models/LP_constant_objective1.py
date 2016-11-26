@@ -24,7 +24,7 @@ class LP_constant_objective1(_BaseTestModel):
         self.capabilities.add('linear')
         self.add_results(self.description+".json")
 
-    def generate_model(self):
+    def _generate_model(self):
         self.model = ConcreteModel()
         model = self.model
         model._name = self.description
