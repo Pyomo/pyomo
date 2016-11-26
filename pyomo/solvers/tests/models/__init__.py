@@ -16,13 +16,19 @@ import pyomo.solvers.tests.models.LP_constant_objective2
 import pyomo.solvers.tests.models.LP_duals_maximize
 import pyomo.solvers.tests.models.LP_duals_minimize
 import pyomo.solvers.tests.models.LP_inactive_index
+import pyomo.solvers.tests.models.LP_infeasible1
+import pyomo.solvers.tests.models.LP_infeasible2
 import pyomo.solvers.tests.models.LP_piecewise
 import pyomo.solvers.tests.models.LP_simple
 import pyomo.solvers.tests.models.LP_trivial_constraints
+import pyomo.solvers.tests.models.LP_unbounded
 import pyomo.solvers.tests.models.LP_unused_vars
+import pyomo.solvers.tests.models.LP_unique_duals
 
 import pyomo.solvers.tests.models.MILP_discrete_var_bounds
+import pyomo.solvers.tests.models.MILP_infeasible1
 import pyomo.solvers.tests.models.MILP_simple
+import pyomo.solvers.tests.models.MILP_unbounded
 import pyomo.solvers.tests.models.MILP_unused_vars
 
 import pyomo.solvers.tests.models.MIQCP_simple

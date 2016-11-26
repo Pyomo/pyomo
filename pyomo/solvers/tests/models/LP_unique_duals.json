@@ -1,0 +1,90 @@
+{
+  "LP_unique_duals": {}, 
+  "cost": {
+    "value": 19.999999870278852
+  }, 
+  "primalcon[1]": {
+    "dual": 0.9999999964584348, 
+    "value": 4.999999967569714
+  }, 
+  "primalcon[2]": {
+    "dual": 0.9999999964584345, 
+    "value": 4.999999967569714
+  }, 
+  "primalcon[3]": {
+    "dual": 0.9999999964584343, 
+    "value": 4.999999967569713
+  }, 
+  "primalcon[4]": {
+    "dual": 5.068361243118006e-09, 
+    "value": 3.9999999740557706
+  }, 
+  "primalcon[5]": {
+    "dual": 0.999999996458434, 
+    "value": 4.999999967569713
+  }, 
+  "primalcon[6]": {
+    "dual": 5.068361243118006e-09, 
+    "value": 3.9999999740557706
+  }, 
+  "primalcon[7]": {
+    "dual": 5.068361243132405e-09, 
+    "value": 3.9999999740557706
+  }, 
+  "x[1]": {
+    "stale": false, 
+    "value": 0.9999999935139429
+  }, 
+  "x[2]": {
+    "stale": false, 
+    "value": 0.9999999935139429
+  }, 
+  "x[3]": {
+    "stale": false, 
+    "value": 0.9999999935139424
+  }, 
+  "x[4]": {
+    "stale": false, 
+    "value": 0.9999999935139426
+  }, 
+  "x[5]": {
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "x[6]": {
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "x[7]": {
+    "stale": false, 
+    "value": 0.0
+  }, 
+  "y[1]": {
+    "stale": true, 
+    "value": null
+  }, 
+  "y[2]": {
+    "stale": true, 
+    "value": null
+  }, 
+  "y[3]": {
+    "stale": true, 
+    "value": null
+  }, 
+  "y[4]": {
+    "stale": true, 
+    "value": null
+  }, 
+  "y[5]": {
+    "stale": true, 
+    "value": null
+  }, 
+  "y[6]": {
+    "stale": true, 
+    "value": null
+  }, 
+  "y[7]": {
+    "stale": true, 
+    "value": null
+  }
+}
