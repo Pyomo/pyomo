@@ -24,6 +24,7 @@ class SOS2_simple(_BaseTestModel):
         self.capabilities.add('linear')
         self.capabilities.add('integer')
         self.capabilities.add('sos2')
+        self.level = ('nightly', 'expensive')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

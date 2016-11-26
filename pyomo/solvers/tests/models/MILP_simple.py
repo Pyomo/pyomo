@@ -23,6 +23,7 @@ class MILP_simple(_BaseTestModel):
         _BaseTestModel.__init__(self)
         self.capabilities.add('linear')
         self.capabilities.add('integer')
+        self.level = ('nightly', 'expensive')
         self.add_results(self.description+".json")
 
     def _generate_model(self):

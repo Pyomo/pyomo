@@ -24,6 +24,7 @@ class QCP_simple(_BaseTestModel):
         self.capabilities.add('linear')
         self.capabilities.add('quadratic_objective')
         self.capabilities.add('quadratic_constraint')
+        self.level = ('nightly', 'expensive')
         self.add_results(self.description+".json")
 
     def _generate_model(self):
