@@ -57,7 +57,7 @@ def create_test_method(model, solver, io,
         model_class.warmstart_model()
 
         # solve
-        opt, results = model_class.solve(solver, io, test_case.testcase.io_options, symbolic_labels)
+        opt, results = model_class.solve(solver, io, test_case.testcase.io_options, symbolic_labels, False)
 
         # validate the solution returned by the solver
         model_class.post_solve_test_validation(self, results)
