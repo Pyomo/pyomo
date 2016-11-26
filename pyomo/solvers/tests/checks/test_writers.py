@@ -18,6 +18,7 @@ except:
     new_available=False
 
 import pyutilib.th as unittest
+from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.testcases import test_scenarios
 
@@ -58,9 +59,14 @@ def create_test_method(model, solver, io,
 
         # solve
         opt, results = model_class.solve(solver, io, test_case.testcase.io_options, symbolic_labels, False)
+        termination_condition = results['Solver'][0]['termination condition']
+
+        model_class.post_solve_test_validation(self, results)
+        if termination_condition == TerminationCondition.unbounded or \
+           termination_condition == TerminationCondition.infeasible:
+            return
 
         # validate the solution returned by the solver
-        model_class.post_solve_test_validation(self, results)
         model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
         model_class.save_current_solution(save_filename, suffixes=model_class.test_suffixes)
         rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
