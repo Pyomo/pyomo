@@ -188,59 +188,116 @@ class _ExpressionBase(NumericValue):
 
 
     def _bool_tree_walker(self, test, combiner, native_result):
-        _stack = [ (self, self._args, 0, len(self._args), []) ]
+        _stack = []
+        _combiner= getattr(self, combiner)()
+        _argList = self._args
+        _idx     = 0
+        _len     = len(_argList)
+        _result  = []
         while 1:  # Note: 1 is faster than True for Python 2.x
-            _obj, _argList, _idx, _len, _result = _stack.pop()
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
                 if type(_sub) in native_numeric_types:
                     _result.append( native_result )
                 elif _sub.is_expression():
-                    _stack.append( (_obj, _argList, _idx, _len, _result) )
-                    _obj     = _sub
+                    _stack.append( (_combiner, _argList, _idx, _len, _result) )
+                    _combiner= getattr(_sub, combiner)()
                     _argList = _sub._args
                     _idx     = 0
                     _len     = len(_argList)
                     _result  = []
                 else:
                     _result.append( getattr(_sub, test)() )
-            ans = getattr(_obj,combiner)(_result)
+                    if _combiner is all:
+                        if not _result[-1]:
+                            _idx = _len
+                    elif _combiner is any:
+                        if _result[-1]:
+                            _idx = _len
+
+            ans = _combiner(_result)
             if _stack:
-                _stack[-1][-1].append( ans )
+                _combiner, _argList, _idx, _len, _result = _stack.pop()
+                _result.append( ans )
+                if _combiner is all:
+                    if not _result[-1]:
+                        _idx = _len
+                elif _combiner is any:
+                    if _result[-1]:
+                        _idx = _len
             else:
                 return ans
 
-    #
-    # this method contrast with the is_fixed() method.  This method
-    # returns True if the expression is an atomic constant, that is it
-    # is composed exclusively of constants and immutable parameters.
-    # NumericValue objects returning is_constant() == True may be
-    # simplified to their numeric value at any point without warning.
-    # In contrast, the is_fixed() method returns iff there are no free
-    # variables within this expression (i.e., all arguments are
-    # constants, params, and fixed variables).  The parameter values can
-    # of course change over time, but at any point in time, they are
-    # "fixed". hence, the name.
-    #
     def is_constant(self):
-        return self._bool_tree_walker('is_constant', '_is_constant', True)
+        """Return True if this expression is an atomic constant
 
-    def _is_constant(self, ans):
-        return all(ans)
+        This method contrasts with the is_fixed() method.  This method
+        returns True if the expression is an atomic constant, that is it
+        is composed exclusively of constants and immutable parameters.
+        NumericValue objects returning is_constant() == True may be
+        simplified to their numeric value at any point without warning.
+
+        """
+        return self._bool_tree_walker(
+            'is_constant', '_is_constant_combiner', True )
+
+    def _is_constant_combiner(self):
+        """Private method to be overridden by derived classes requiring special
+        handling for computing is_constant()
+
+        This method should return a function that takes a list of the
+        results of the is_constant() for each of the arguments and
+        returns True/False for this expression.
+
+        """
+        return all
 
     def is_fixed(self):
-        return self._bool_tree_walker('is_fixed', '_is_fixed', True)
+        """Return True if this expression contains no free variables.
 
-    # the default _is_fixed implementation is identical to _is_constant:
-    _is_fixed = _is_constant
+        The is_fixed() method returns True iff there are no free
+        variables within this expression (i.e., all arguments are
+        constants, params, and fixed variables).  The parameter values
+        can of course change over time, but at any point in time, they
+        are "fixed". hence, the name.
+
+        """
+        return self._bool_tree_walker('is_fixed', '_is_fixed_combiner', True)
+
+    def _is_fixed_combiner(self):
+        """Private method to be overridden by derived classes requiring special
+        handling for computing is_fixed()
+
+        This method should return a function that takes a list of the
+        results of the is_fixed() for each of the arguments and
+        returns True/False for this expression.
+
+        """
+        return all
 
     def _potentially_variable(self):
+        """Return True if this expression can potentially contain a variable
+
+        The _potentially_variable() method returns True iff there are -
+        or could be - any variables within this expression (i.e., at any
+        point in the future, it is possible that is_fixed() might return
+        False).
+
+        """
         return self._bool_tree_walker(
             '_potentially_variable', '_potentially_variable_combiner', False)
 
-    def _potentially_variable_combiner(self, ans):
-        return any(ans)
+    def _potentially_variable_combiner(self):
+        """Private method to be overridden by derived classes requiring special
+        handling for computing _potentially_variable()
+
+        This method should return a function that takes a list of the
+        results of the _potentially_variable() for each of the arguments
+        and returns True/False for this expression.
+
+        """
+        return any
 
     def is_expression(self):
         return True
@@ -481,16 +538,19 @@ class _PowExpression(_ExpressionBase):
                 pass
         return None
 
-    def _is_constant(self, args):
-        if not args[1]:
-            return False
-        return args[0] or value(self._args[1]) == 0
+    def _is_constant_combiner(self):
+        def impl(args):
+            if not args[1]:
+                return False
+            return args[0] or value(self._args[1]) == 0
+        return impl
 
-    # the local _is_fixed override is identical to _is_constant:
-    _is_fixed = _is_constant
+    # the local _is_fixed_combiner override is identical to
+    # _is_constant_combiner:
+    _is_fixed_combiner = _is_constant_combiner
 
     # the base class implementation is fine
-    #def _potentially_variable(self)
+    #def _potentially_variable_combiner(self)
 
     def _precedence(self):
         return _PowExpression.PRECEDENCE
@@ -823,20 +883,23 @@ class Expr_if(_ExpressionBase):
     def getname(self, *args, **kwds):
         return "Expr_if"
 
-    def _is_constant(self, args):
-        if args[0]: #self._if.is_constant():
-            if self._if():
-                return args[1] #self._then.is_constant()
+    def _is_constant_combiner(self):
+        def impl(args):
+            if args[0]: #self._if.is_constant():
+                if self._if():
+                    return args[1] #self._then.is_constant()
+                else:
+                    return args[2] #self._else.is_constant()
             else:
-                return args[2] #self._else.is_constant()
-        else:
-            return False
+                return False
+        return impl
 
-    # the local _is_fixed override is identical to _is_constant:
-    _is_fixed = _is_constant
+    # the local _is_fixed_combiner override is identical to
+    # _is_constant_combiner:
+    _is_fixed_combiner = _is_constant_combiner
 
     # the base class implementation is fine
-    #def _potentially_variable(self)
+    #def _potentially_variable_combiner(self)
 
     def _polynomial_degree(self, result):
         _if, _then, _else = result
@@ -888,18 +951,24 @@ class _GetItemExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return self._base.getname(*args, **kwds)
 
-    def _is_constant(self, args):
+    def _is_constant_combiner(self):
         # This must be false to prevent automatic expression simplification
-        return False
+        def impl(args):
+            return False
+        return impl
 
-    def _is_fixed(self, args):
+    def _is_fixed_combiner(self):
         # FIXME: This is tricky.  I think the correct answer is that we
         # should iterate over the members of the args and make sure all
         # are constant
-        return not isinstance(self._base, Var)
+        def impl(args):
+            return not isinstance(self._base, Var)
+        return impl
 
-    def _potentially_variable_combiner(self, args):
-        return not isinstance(self._base, (Var, Connector))
+    def _potentially_variable_combiner(self):
+        def impl(args):
+            return not isinstance(self._base, (Var, Connector))
+        return impl
 
     def _polynomial_degree(self, result):
         return 0 if self.is_fixed() else 1
@@ -967,17 +1036,19 @@ class _LinearExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return 'linear'
 
-    def _is_constant(self, args):
-        if not all(args):
-            return False
-        if self._const.__class__ not in native_numeric_types \
-           and not self._const.is_constant():
-            return False
-        for coef in itervaluse(self._coef):
-            if coef.__class__ not in native_numeric_types \
-               and not coef.is_constant():
+    def _is_constant_combiner(self):
+        def impl(args):
+            if not all(args):
                 return False
-        return True
+            if self._const.__class__ not in native_numeric_types \
+               and not self._const.is_constant():
+                return False
+            for coef in itervaluse(self._coef):
+                if coef.__class__ not in native_numeric_types \
+                   and not coef.is_constant():
+                    return False
+            return True
+        return impl
 
     def _inline_operator(self):
         return ' + '
