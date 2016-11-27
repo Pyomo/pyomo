@@ -1,5 +1,5 @@
-y[1] 1.0
-y[2] 1.0
-y[3] 1.0
-y[4] 1.0
-y[5] 0.0
+Period: 1, Prod. Amount: 3.0
+Period: 2, Prod. Amount: 5.0
+Period: 3, Prod. Amount: 5.0
+Period: 4, Prod. Amount: 5.0
+Period: 5, Prod. Amount: 0.0

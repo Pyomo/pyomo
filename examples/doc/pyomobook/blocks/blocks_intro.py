@@ -3,10 +3,12 @@ from pyomo.environ import *
 # @hierarchy:
 model = ConcreteModel()
 model.x = Var()
-model.NumVars = Param(initialize=5)
+model.P = Param(initialize=5)
+model.S = RangeSet(model.P)
 model.b = Block()
-model.b.I = RangeSet(model.NumVars)
+model.b.I = RangeSet(model.P)
 model.b.x = Var(model.b.I)
+model.b.y = Var(model.S)
 model.b.b = Block()
 model.b.b.x = Var()
 # @:hierarchy
