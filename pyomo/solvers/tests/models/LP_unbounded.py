@@ -42,4 +42,4 @@ class LP_unbounded(_BaseTestModel):
         model.y = None
 
     def post_solve_test_validation(self, tester, results):
-        tester.assertEqual( results['Solver'][0]['termination condition'], TerminationCondition.unbounded )
+        assert results['Solver'][0]['termination condition'] == TerminationCondition.unbounded

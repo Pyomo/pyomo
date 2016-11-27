@@ -68,8 +68,14 @@ class LP_trivial_constraints(_BaseTestModel):
         pass
 
     def post_solve_test_validation(self, tester, results):
-        symbol_map = results._smap
-        tester.assertNotEqual(symbol_map, None)
-        for i in self.model.c:
-            tester.assertTrue(id(self.model.c[i]) in symbol_map.byObject)
+        if tester is None:
+            symbol_map = results._smap
+            assert not symbol_map is None
+            for i in self.model.c:
+                assert id(self.model.c[i]) in symbol_map.byObject
+        else:
+            symbol_map = results._smap
+            tester.assertNotEqual(symbol_map, None)
+            for i in self.model.c:
+                tester.assertTrue(id(self.model.c[i]) in symbol_map.byObject)
 

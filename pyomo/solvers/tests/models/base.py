@@ -321,7 +321,10 @@ class _BaseTestModel(object):
 
     def post_solve_test_validation(self, tester, results):
         """ Perform post-solve validation tests """
-        tester.assertEqual( results['Solver'][0]['termination condition'], TerminationCondition.optimal )
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] == TerminationCondition.optimal
+        else:
+            tester.assertEqual(results['Solver'][0]['termination condition'], TerminationCondition.optimal)
 
     def warmstart_model(self):
         """ Initialize model parameters """
