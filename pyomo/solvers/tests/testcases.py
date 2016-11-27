@@ -7,7 +7,10 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import sys
+import logging
 from pyutilib.misc import Options
+from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solvers, test_solver_cases
 
@@ -246,6 +249,117 @@ def test_scenarios(arg=None):
             # Return scenario dimensions and scenario information
             yield (model, solver, io), Options(status=status, msg=msg, model=_model, solver=None, testcase=_solver_case)
 
+
+def run_test_scenarios(options):
+    logger = logging.getLogger('pyomo.core')
+    _level = logger.getEffectiveLevel()
+    logger.setLevel( logging.ERROR )
+
+    solvers = set(options.solver)
+    stat = {}
+
+    for key, test_case in test_scenarios():
+        model, solver, io = key
+        if len(solvers) > 0 and not solver in solvers:
+            continue
+        if test_case.status == 'skip':
+            continue
+
+        # Create the model test class
+        model_class = test_case.model()
+        # Create the model instance
+        model_class.generate_model()
+        model_class.warmstart_model()
+        # Solve
+        opt, results = model_class.solve(solver, io, test_case.testcase.io_options, False, False)
+        termination_condition = results['Solver'][0]['termination condition']
+        # Validate solution status
+        try:
+            model_class.post_solve_test_validation(None, results)
+        except:
+            if test_case.status == 'expected failure':
+                stat[key] = (True, "Expected failure")
+            else:
+                stat[key] = (False, "Unexpected termination condition: %s" % str(termination_condition))
+            continue
+        if termination_condition == TerminationCondition.unbounded or \
+           termination_condition == TerminationCondition.infeasible:
+            # Unbounded or Infeasible
+            stat[key] = (True, "")
+        else:
+            # Validate the solution returned by the solver
+            model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
+            rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
+
+            if test_case.status == 'expected failure':
+                if rc[0] is True:
+                    stat[key] = (False, "Unexpected success")
+                else:
+                    stat[key] = (True, "Expected failure")
+            else:
+                if rc[0] is True:
+                    stat[key] = (True, "")
+                else:
+                    stat[key] = (False, "Unexpected failure")
+
+    if options.verbose:
+        print("---------------")
+        print(" Test Failures")
+        print("---------------")
+        nfail = 0
+    #
+    # Summarize the runtime statistics, by solver
+    #
+    summary = {}
+    total = Options(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
+    for key in stat:
+        model, solver, io = key
+        if not solver in summary:
+            summary[solver] = Options(NumEPass=0, NumEFail=0, NumUPass=0, NumUFail=0)
+        _pass, _str = stat[key]
+        if _pass:
+            if _str == "Expected failure":
+                summary[solver].NumEFail += 1
+            else:
+                summary[solver].NumEPass += 1
+        else:
+            nfail += 1
+            if _str == "Unexpected failure":
+                summary[solver].NumUFail += 1
+                if options.verbose:
+                    print("- Unexpected Test Failure: "+", ".join(model, solver, io))
+            else:
+                summary[solver].NumUPass += 1
+                if options.verbose:
+                    print("- Unexpected Test Success: "+", ".join(model, solver, io))
+    if options.verbose:
+        if nfail == 0:
+            print("- NONE")
+        print("")
+
+    stream = sys.stdout
+    maxSolverNameLen = max([max(len(name) for name in summary), len("Solver")])
+    fmtStr = "{{0:<{0}}}| {{1:>8}} | {{2:>8}} | {{3:>10}} | {{4:>10}} | {{5:>13}}\n".format(maxSolverNameLen + 2)        
+    #   
+    stream.write("\n")
+    stream.write("Solver Test Summary\n")
+    stream.write("=" * (maxSolverNameLen + 66) + "\n")
+    stream.write(fmtStr.format("Solver", "# Pass", "# Fail", "# OK Fail", "# Bad Pass", "% OK"))
+    stream.write("=" * (maxSolverNameLen + 66) + "\n")
+    # 
+    for _solver in sorted(summary):
+        ans = summary[_solver]
+        total.NumEPass += ans.NumEPass
+        total.NumEFail += ans.NumEFail
+        total.NumUPass += ans.NumUPass
+        total.NumUFail += ans.NumUFail
+        stream.write(fmtStr.format(_solver, str(ans.NumEPass), str(ans.NumUFail), str(ans.NumEFail), str(ans.NumUPass), str(100.0*(ans.NumEPass+ans.NumEFail)/(ans.NumEPass+ans.NumEFail+ans.NumUFail+ans.NumUPass))))
+    #
+    stream.write("=" * (maxSolverNameLen + 66) + "\n")
+    stream.write(fmtStr.format("TOTALS", str(total.NumEPass), str(total.NumUFail), str(total.NumEFail), str(total.NumUPass), str(100.0*(total.NumEPass+total.NumEFail)/(total.NumEPass+total.NumEFail+total.NumUFail+total.NumUPass))))
+    stream.write("=" * (maxSolverNameLen + 66) + "\n")
+
+    logger.setLevel( _level )
 
 
 if __name__ == "__main__":
