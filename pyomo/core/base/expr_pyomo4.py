@@ -46,7 +46,17 @@ def _const_to_string(*args):
     args[1].write("%s" % args[0])
 
 class EntangledExpressionError(Exception):
-    pass
+    def __init__(self, sub_expr):
+        msg = \
+"""Attempting to form an expression with a subexpression that is already
+part of another expression of component.  This would create two
+expressions that share common subexpressions, which is not allowed in
+Pyomo.  Either clone the subexpression using 'clone_expression' before
+creating the new expression, or if you want the two expressions to share
+a common subexpression, use an Expression component to store the
+subexpression and use the subexpression in each expression.  Common
+subexpression:\n\t%s""" % (str(sub_expr),)
+        super(EntangledExpressionError, self).__init__(msg)
 
 def identify_variables( expr,
                         include_fixed=True,
@@ -700,8 +710,7 @@ class _SumExpression(_LinearOperatorExpression):
 
     def __iadd__(self, other):
         if safe_mode and self._parent_expr:
-            #raise EntangledExpressionError(self, other)
-            self = clone_expression(self)
+            raise EntangledExpressionError(self)
         _type = other.__class__
         if _type in native_numeric_types:
             if other:
@@ -720,8 +729,7 @@ class _SumExpression(_LinearOperatorExpression):
 
         if _other_expr:
             if safe_mode and other._parent_expr:# is not None:
-                #raise EntangledExpressionError(self, other)
-                other = clone_expression(other)
+                raise EntangledExpressionError(other)
             if _type is _SumExpression:
                 if safe_mode:
                     # Switch the patenr pointer over to this _SumExpression
@@ -1028,8 +1036,7 @@ class _LinearExpression(_ExpressionBase):
 
     def __iadd__(self, other, reverse=0, negate=False):
         if safe_mode and self._parent_expr:
-            #raise EntangledExpressionError(self, other)
-            self = clone_expression(self)
+            raise EntangledExpressionError(self)
         _type = other.__class__
 
         if _type in native_numeric_types:
@@ -1046,8 +1053,7 @@ class _LinearExpression(_ExpressionBase):
             other = as_numeric(other)
 
         if safe_mode and other.is_expression() and other._parent_expr:
-            #raise EntangledExpressionError(self, other)
-            other = clone_expression(other)
+            raise EntangledExpressionError(other)
 
         if _type is _LinearExpression:
             # adding 2 linear expressions should never reverse things:
@@ -1131,8 +1137,7 @@ class _LinearExpression(_ExpressionBase):
 
     def __imul__(self, other, divide=False):
         if safe_mode and self._parent_expr:
-            #raise EntangledExpressionError(self, other)
-            self = clone_expression(self)
+            raise EntangledExpressionError(self)
 
         if other.__class__ in native_numeric_types:
             if not other:
@@ -1145,8 +1150,7 @@ class _LinearExpression(_ExpressionBase):
                 other = as_numeric(other)
 
             if safe_mode and other.is_expression() and other._parent_expr:
-                #raise EntangledExpressionError(self, other)
-                other = clone_expression(other)
+                raise EntangledExpressionError(other)
 
             not_var = not other._potentially_variable()
             if not_var and other.is_constant() and not other():
@@ -1202,9 +1206,7 @@ def generate_expression(etype, _self, _other):
     _self_expr = _self.is_expression()
     if _self_expr:
         if safe_mode and _self._parent_expr:# is not None:
-            raise EntangledExpressionError(_self, _other)
-            #_self = _self.clone()
-            #generate_expression.clone_counter += 1
+            raise EntangledExpressionError(_self)
     elif _self.is_constant():
         _self = _self()
 
@@ -1234,7 +1236,7 @@ def generate_expression(etype, _self, _other):
             _other_expr = _other.is_expression()
         if _other_expr:
             if safe_mode and _other._parent_expr:# is not None:
-                raise EntangledExpressionError(_self, _other)
+                raise EntangledExpressionError(_other)
         elif _other.is_indexed():
             raise TypeError(
                 "Argument for expression '%s' is an indexed numeric "
