@@ -700,7 +700,8 @@ class _SumExpression(_LinearOperatorExpression):
 
     def __iadd__(self, other):
         if safe_mode and self._parent_expr:
-            raise EntangledExpressionError(self, other)
+            #raise EntangledExpressionError(self, other)
+            self = clone_expression(self)
         _type = other.__class__
         if _type in native_numeric_types:
             if other:
@@ -716,15 +717,18 @@ class _SumExpression(_LinearOperatorExpression):
             # bit inefficient.
             other = as_numeric(other)
             _other_expr = other.is_expression()
+
         if _other_expr:
             if safe_mode and other._parent_expr:# is not None:
-                raise EntangledExpressionError(self, other)
+                #raise EntangledExpressionError(self, other)
+                other = clone_expression(other)
             if _type is _SumExpression:
-                self._args.extend(other._args)
                 if safe_mode:
+                    # Switch the patenr pointer over to this _SumExpression
                     for x in other._args:
-                        if x.is_expression():
+                        if x not in native_numeric_types and x.is_expression():
                             x._parent_expr = bypass_backreference or ref(self)
+                self._args.extend(other._args)
                 other._args = [] # for safety
                 return self
             if safe_mode:
@@ -753,56 +757,7 @@ class _SumExpression(_LinearOperatorExpression):
     __radd__ = __iadd__
 
     def __isub__(self, other):
-        if safe_mode and self._parent_expr:
-            raise EntangledExpressionError(self, other)
-        _type = other.__class__
-        if _type in native_numeric_types:
-            if other:
-                self._args.append(-other)
-            return self
-
-        try:
-            _other_expr = other.is_expression()
-        except AttributeError:
-            # This exception gets raised rarely in production models: to
-            # get here, other must be a numeric, but non-NumericValue,
-            # type that we haven't seen before.  Therefore, we can be a
-            # bit inefficient.
-            other = as_numeric(other)
-            _other_expr = other.is_expression()
-        if _other_expr:
-            if safe_mode and other._parent_expr:# is not None:
-                raise EntangledExpressionError(self, other)
-            if _type is _SumExpression:
-                if safe_mode:
-                    for x in other._args:
-                        if x.is_expression():
-                            x._parent_expr = None
-                _other_args = tuple(-i for i in other._args)
-                self._args.extend(_other_args)
-                if safe_mode:
-                    for x in _other_args:
-                        if x.is_expression():
-                            x._parent_expr = bypass_backreference or ref(self)
-                other._args = [] # for safety
-                return self
-            tmp = other
-            other = _NegationExpression((tmp,))
-            if safe_mode:
-                tmp._parent_expr = bypass_backreference or ref(other)
-                other._parent_expr = bypass_backreference or ref(self)
-        elif other.is_indexed():
-            raise TypeError(
-                "Argument for expression '%s' is an indexed numeric "
-                "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?"
-                % (etype, other.name, ) )
-        elif other.is_constant():
-            other = - ( other() )
-
-        self._args.append(other)
-        return self
-
+        return self.__iadd__(-other)
 
     # As we do all subtraction "in-place", all subtractions are the same as
     # in-place subtractions.
@@ -814,6 +769,19 @@ class _SumExpression(_LinearOperatorExpression):
     # construct sum(other, -self)
     #def __rsub__(self, other):
     #    return other + ( - self )
+
+    def __neg__(self):
+        if safe_mode:
+            for x in self._args:
+                if x not in native_numeric_types and x.is_expression():
+                    x._parent_expr = None
+        for i,x in enumerate(self._args):
+            self._args[i] = -x
+        if safe_mode:
+            for x in self._args:
+                if x not in native_numeric_types and x.is_expression():
+                    x._parent_expr = bypass_backreference or ref(self)
+        return self
 
 
 class Expr_if(_ExpressionBase):
@@ -1652,43 +1620,6 @@ def generate_intrinsic_function_expression(arg, name, fcn):
 generate_intrinsic_function_expression.clone_counter = 0
 
 generate_expression_bypassCloneCheck = generate_expression
-
-def _rmul_override(_self, _other):
-    _self_expr = _self.is_expression()
-    if _self_expr:
-        if safe_mode and _self._parent_expr:# is not None:
-            raise EntangledExpressionError(_self, _other)
-            #_self = _self.clone()
-            #generate_expression.clone_counter += 1
-    elif _self.is_constant():
-        _self = _self()
-
-    if _other.__class__ not in native_numeric_types:
-        _other = as_numeric(_other)
-        if _other.is_constant():
-            _other = _other()
-
-    if _self_expr:
-        ans = _ProductExpression((_self, _other))
-    else:
-        if isinstance(_self, _VarData):
-            if _LinearExpression_Pool:
-                ans = _LinearExpression_Pool.pop()
-            else:
-                ans = _LinearExpression()
-            ans._args.append(_self)
-            ans._coef[id(_self)] = _other
-            return ans
-        else:
-            if _LinearExpression_Pool:
-                ans = _LinearExpression_Pool.pop()
-            else:
-                ans = _LinearExpression()
-            ans._const = _ProductExpression((_self, _other))
-            return ans
-
-#NumericValue.__rmul__ = _rmul_override
-
 
 class TreeWalkerHelper(object):
     stack = []
