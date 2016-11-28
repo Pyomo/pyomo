@@ -23,4 +23,7 @@ ONE_VAR_CONSTANT = 1.0
 bounds
    0 <= x1 <= +inf
    0 <= x2 <= +inf
+general
+  x1
+  x2
 end
