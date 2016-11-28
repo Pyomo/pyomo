@@ -1,16 +1,12 @@
 
 *** suffixsimple ***
-3 Suffix Declarations
+2 Suffix Declarations
     dual : Direction=Suffix.IMPORT_EXPORT, Datatype=Suffix.FLOAT
-        Key : Value
-    junk : Direction=Suffix.LOCAL, Datatype=Suffix.FLOAT
         Key : Value
     priority : Direction=Suffix.EXPORT, Datatype=Suffix.INT
         Key : Value
 
-3 Declarations: priority dual junk
-2.0
-3.0
+2 Declarations: priority dual
 1 Var Declarations
     x : Size=0, Index=None
         Not constructed
@@ -26,15 +22,14 @@
 3 Declarations: x c foo
 
 *** suffix1 ***
-WARNING: As of Pyomo 4.0, Pyomo components no longer support implicit rules.
-	You defined a component (foo) that appears
-	to rely on an implicit rule (foo_rule).
-	Components must now specify their rules explicitly using 'rule=' keywords.
+suffix1a
 2.0
+suffix1b
 None
 3.0
 4.0
 3.0
+suffix1c
 5.0
 3.0
 4.0

@@ -31,6 +31,7 @@ model.foo = Suffix(initialize=foo_rule)
 # @:suffixinitrule
 model.pprint()
 
+del foo_rule # Needed to avoid implicit rule warning in next example
 
 print('')
 print('*** suffix1 ***')

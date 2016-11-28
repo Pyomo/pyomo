@@ -127,6 +127,7 @@ for tdir in testdirs:
         #print([dir_, name, suffix])
         #
         if not suffix is None:
+            print(tname)
             cwd = os.getcwd()
             os.chdir(dir_)
             if suffix_ in ['.txt2', '.yml2']:
@@ -152,6 +153,7 @@ for tdir in testdirs:
                 break
         #
         if not suffix is None:
+            print(tname)
             cwd = os.getcwd()
             os.chdir(dir_)
             if suffix_ in ['.txt2', '.yml2']:
