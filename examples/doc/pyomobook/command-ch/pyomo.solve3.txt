@@ -1,29 +1,5 @@
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
-1 Set Declarations
-    x_index : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=False, Bounds=(1, 2)
-        [1, 2]
-
-1 Var Declarations
-    x : Size=2, Index=x_index
-        Key : Lower : Value : Upper : Fixed : Stale : Domain
-          1 :     0 :  None :  None : False :  True : NonNegativeReals
-          2 :     0 :  None :  None : False :  True : NonNegativeReals
-
-1 Objective Declarations
-    obj : Size=1, Index=None, Active=True
-        Key  : Active : Sense    : Expression
-        None :   True : minimize : x[1] + 2*x[2]
-
-2 Constraint Declarations
-    con1 : Size=1, Index=None, Active=True
-        Key  : Lower : Body            : Upper : Active
-        None :   1.0 : 3*x[1] + 4*x[2] :  +Inf :   True
-    con2 : Size=1, Index=None, Active=True
-        Key  : Lower : Body            : Upper : Active
-        None :   2.0 : 2*x[1] + 5*x[2] :  +Inf :   True
-
-5 Declarations: x_index x obj con1 con2
 [    0.00] Creating model
 [    0.00] Applying solver
 [    0.01] Processing results
@@ -61,7 +37,7 @@ Solver:
       Number of bounded subproblems: 0
       Number of created subproblems: 0
   Error rc: 0
-  Time: 0.00516605377197
+  Time: 0.00610589981079
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
