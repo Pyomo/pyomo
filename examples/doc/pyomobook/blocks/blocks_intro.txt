@@ -4,3 +4,39 @@ x
 b.x
 x
 b.b.x
+1 Var Declarations
+    x : Size=10, Index=b.I
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          1 :  None :  None :  None : False :  True :  Reals
+          2 :  None :  None :  None : False :  True :  Reals
+          3 :  None :  None :  None : False :  True :  Reals
+          4 :  None :  None :  None : False :  True :  Reals
+          5 :  None :  None :  None : False :  True :  Reals
+          6 :  None :  None :  None : False :  True :  Reals
+          7 :  None :  None :  None : False :  True :  Reals
+          8 :  None :  None :  None : False :  True :  Reals
+          9 :  None :  None :  None : False :  True :  Reals
+         10 :  None :  None :  None : False :  True :  Reals
+
+1 Block Declarations
+    b : Size=1, Index=None, Active=True
+        1 RangeSet Declarations
+            I : Dim=0, Dimen=1, Size=10, Domain=Integers, Ordered=True, Bounds=(1, 10)
+                Virtual
+
+        1 Param Declarations
+            P : Size=1, Index=None, Domain=Any, Default=None, Mutable=False
+                Key  : Value
+                None :     5
+
+        1 Var Declarations
+            x : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :  None :  None :  None : False :  True :  Reals
+
+        3 Declarations: x P I
+
+2 Declarations: b x
+-1.0 + xy_blocks[1].x + xy_blocks[1].y[1]
+-1.0 + xy_blocks[2].x + xy_blocks[2].y[1] + xy_blocks[2].y[2]
+-1.0 + xy_blocks[3].x + xy_blocks[3].y[1] + xy_blocks[3].y[2] + xy_blocks[3].y[3]
