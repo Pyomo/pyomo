@@ -1,3 +1,4 @@
+#from __future__ import print_function
 from pyomo.environ import *
 
 model = ConcreteModel()
@@ -13,9 +14,9 @@ model.A = Set(initialize=[1,2,3])
 model.B = Set(initialize=[3, 2, 1], ordered=True)
 model.C = Set(model.A, initialize={1:[1], 2:[1,2]})
 
-print(type(model.A.data()))     # set
-print(type(model.B.data()))     # set
-print(type(model.C.data()))     # dict
+print(type(model.A.data()) is set)      # True
+print(type(model.B.data()) is set)      # True
+print(type(model.C.data()) is dict)     # True
 print(sorted(model.A.data()))   # [1,2,3]
 for index in sorted(model.C.data().keys()):
   print(sorted(model.C.data()[index]))

@@ -1,7 +1,7 @@
 3
-<type 'set'>
-<type 'set'>
-<type 'dict'>
+True
+True
+True
 [1, 2, 3]
 [1]
 [1, 2]

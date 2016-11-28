@@ -2,7 +2,7 @@
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
 [    0.00] Applying solver
-[    0.02] Processing results
+[    0.01] Processing results
     Number of solutions: 1
     Solution Information
       Gap: 0.0
@@ -37,7 +37,7 @@ Solver:
       Number of bounded subproblems: 0
       Number of created subproblems: 0
   Error rc: 0
-  Time: 0.00891613960266
+  Time: 0.00610589981079
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
@@ -51,11 +51,7 @@ Solution:
     obj:
       Value: 0.8
   Variable:
-    x[1]:
-      Rc: 0.2
-      Value: 0
     x[2]:
-      Rc: 0
       Value: 0.4
   Constraint:
     con2:
