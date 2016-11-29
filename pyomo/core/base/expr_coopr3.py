@@ -20,16 +20,6 @@ import traceback
 
 logger = logging.getLogger('pyomo.core')
 
-try:
-    from sys import getrefcount
-    _getrefcount_available = True
-except ImportError:
-    logger.warning(
-        "This python interpreter does not support sys.getrefcount()\n"
-        "Pyomo cannot automatically guarantee that expressions do not become\n"
-        "entangled (multiple expressions that share common subexpressions).\n")
-    _getrefcount_available = False
-
 from six import StringIO, next
 from six.moves import xrange
 try:
@@ -49,7 +39,8 @@ import pyomo.core.base.expr_common
 from pyomo.core.base.expr_common import \
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
     _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq, clone_expression, chainedInequalityErrorMessage as cIEM
+    _lt, _le, _eq, clone_expression, chainedInequalityErrorMessage as cIEM, \
+    _getrefcount_available, getrefcount
 
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \

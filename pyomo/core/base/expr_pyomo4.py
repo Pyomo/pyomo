@@ -24,12 +24,14 @@ from six import StringIO, next, string_types
 from six.moves import xrange
 from weakref import ref
 
-from pyomo.core import (
-    Component, NumericValue, NumericConstant, Var, Connector, as_numeric, value
+from pyomo.core.base.component import Component
+from pyomo.core.base.numvalue import (
+    NumericValue, NumericConstant, native_types, native_numeric_types,
+    as_numeric, value
 )
-from pyomo.core.base.numvalue import native_types, native_numeric_types
-from pyomo.core.base.var import _VarData
+from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.param import _ParamData
+from pyomo.core.base.connector import Connector
 import pyomo.core.base.expr_common
 from pyomo.core.base.expr_common import (
     ensure_independent_trees as safe_mode, bypass_backreference,
