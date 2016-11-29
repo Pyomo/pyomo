@@ -64,11 +64,11 @@ model.pprint()
 t = model.TIME.last()
 for g in model.GEN_UNITS:
     p = model.Generator[g].Power[t]
-    print("%s = %s" % (p.name, value(p)))
+    print('{0} = {1}'.format(p.name, value(p)))
 # @:finaltimepower
 
 # @finaltimepowerslice:
 t = model.TIME.last()
 for p in model.Generator[:].Power[t]:
-    print("%s = %s" % (p.name, value(p)))
+    print('{0} = {1}'.format(p.name, value(p)))
 # @:finaltimepowerslice

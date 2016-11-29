@@ -41,15 +41,15 @@ model = ConcreteModel()
 model.P = Param(initialize=3)
 model.T = RangeSet(model.P)
 
-def xy_block_rule(b, t):
+def xyb_rule(b, t):
     b.x = Var()
     b.I = RangeSet(t)
     b.y = Var(b.I)
     b.c = Constraint(expr = b.x == 1.0 - sum(b.y[i] for i in b.I))
-model.xy_blocks = Block(model.T, rule=xy_block_rule)
+model.xyb = Block(model.T, rule=xyb_rule)
 # @:blockrule
 
 # @blockruleprint:
 for t in model.T:
-    print(model.xy_blocks[t].c.body)
+    print(model.xyb[t].c.body)
 # @:blockruleprint

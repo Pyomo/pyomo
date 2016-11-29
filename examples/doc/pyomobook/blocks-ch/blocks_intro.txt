@@ -37,6 +37,6 @@ b.b.x
         3 Declarations: x P I
 
 2 Declarations: b x
--1.0 + xy_blocks[1].x + xy_blocks[1].y[1]
--1.0 + xy_blocks[2].x + xy_blocks[2].y[1] + xy_blocks[2].y[2]
--1.0 + xy_blocks[3].x + xy_blocks[3].y[1] + xy_blocks[3].y[2] + xy_blocks[3].y[3]
+-1.0 + xyb[1].x + xyb[1].y[1]
+-1.0 + xyb[2].x + xyb[2].y[1] + xyb[2].y[2]
+-1.0 + xyb[3].x + xyb[3].y[1] + xyb[3].y[2] + xyb[3].y[3]
