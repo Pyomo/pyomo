@@ -9,7 +9,7 @@ model.Y = Param(model.Z)
 
 try:
     instance = model.create_instance('ABCD8.dat')
-except pyutilib.common.ApplicationError, e:
+except pyutilib.common.ApplicationError as e:
     print("ERROR "+str(e))
     sys.exit(1)
 
