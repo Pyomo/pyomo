@@ -83,7 +83,7 @@ def filter(line):
         return True
     if 'Status: optimal' in line or 'Status: feasible' in line:
         return True
-    status = 'Time:' in line or line.startswith('[') or 'with format cpxlp' in line or 'usermodel = <module' in line or line.startswith('File') or 'execution time=' in line
+    status = 'time:' in line or 'Time:' in line or line.startswith('[') or 'with format cpxlp' in line or 'usermodel = <module' in line or line.startswith('File') or 'execution time=' in line
     return status
 
 for tdir in testdirs:
