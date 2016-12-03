@@ -1,0 +1,161 @@
+
+Problem: 
+- Name: unknown
+  Lower bound: 2.0
+  Upper bound: 2.0
+  Number of objectives: 1
+  Number of constraints: 17
+  Number of variables: 10
+  Number of nonzeros: 31
+  Sense: minimize
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 7
+      Number of created subproblems: 7
+  Error rc: 0
+  Time: 0.0269069671631
+Solution: 
+- number of solutions: 0
+  number of solutions displayed: 0
+
+Model unknown
+
+  Variables:
+    x : Size=3, Index=x_index
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          0 :     0 :   2.0 :    20 : False : False :  Reals
+          1 :     0 :   0.0 :    20 : False : False :  Reals
+          2 :     0 :   5.0 :    20 : False : False :  Reals
+
+  Objectives:
+    o : Size=1, Index=None, Active=True
+        Key  : Active : Value
+        None :   True :   2.0
+
+  Constraints:
+    c : Size=1
+        Key  : Lower : Body : Upper
+        None :   7.0 :  7.0 :  None
+
+  Blocks:
+    Block _gdp_relax_bigm
+    
+      Variables:
+        None
+    
+      Objectives:
+        None
+    
+      Constraints:
+        D : Size=3
+            Key : Lower : Body : Upper
+              0 :   1.0 :  1.0 :   1.0
+              1 :   1.0 :  1.0 :   1.0
+              2 :   1.0 :  1.0 :   1.0
+    
+      Blocks:
+        Block _gdp_relax_bigm.d[0,0]
+        
+          Variables:
+            indicator_var : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :     0 :   0.0 :     1 : False : False : Binary
+        
+          Objectives:
+            None
+        
+          Constraints:
+            c_lo : Size=1
+                Key  : Lower : Body : Upper
+                None :   0.0 :  2.0 :  None
+            c_hi : Size=1
+                Key  : Lower : Body  : Upper
+                None :  None : -18.0 :   0.0
+        Block _gdp_relax_bigm.d[0,1]
+        
+          Variables:
+            indicator_var : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :     0 :   1.0 :     1 : False : False : Binary
+        
+          Objectives:
+            None
+        
+          Constraints:
+            c_lo : Size=1
+                Key  : Lower : Body : Upper
+                None :   1.0 :  2.0 :  None
+            c_hi : Size=1
+                Key  : Lower : Body : Upper
+                None :  None :  2.0 :   2.0
+        Block _gdp_relax_bigm.d[1,0]
+        
+          Variables:
+            indicator_var : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :     0 :   1.0 :     1 : False : False : Binary
+        
+          Objectives:
+            None
+        
+          Constraints:
+            c_lo : Size=1
+                Key  : Lower : Body : Upper
+                None :   0.0 :  0.0 :  None
+            c_hi : Size=1
+                Key  : Lower : Body : Upper
+                None :  None :  0.0 :   0.0
+        Block _gdp_relax_bigm.d[1,1]
+        
+          Variables:
+            indicator_var : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :     0 :   0.0 :     1 : False : False : Binary
+        
+          Objectives:
+            None
+        
+          Constraints:
+            c_lo : Size=1
+                Key  : Lower : Body : Upper
+                None :   2.0 :  2.0 :  None
+            c_hi : Size=1
+                Key  : Lower : Body  : Upper
+                None :  None : -16.0 :   4.0
+        Block _gdp_relax_bigm.d[2,0]
+        
+          Variables:
+            indicator_var : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :     0 :   0.0 :     1 : False : False : Binary
+        
+          Objectives:
+            None
+        
+          Constraints:
+            c_lo : Size=1
+                Key  : Lower : Body : Upper
+                None :   0.0 :  5.0 :  None
+            c_hi : Size=1
+                Key  : Lower : Body  : Upper
+                None :  None : -15.0 :   0.0
+        Block _gdp_relax_bigm.d[2,1]
+        
+          Variables:
+            indicator_var : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :     0 :   1.0 :     1 : False : False : Binary
+        
+          Objectives:
+            None
+        
+          Constraints:
+            c_lo : Size=1
+                Key  : Lower : Body : Upper
+                None :   3.0 :  5.0 :  None
+            c_hi : Size=1
+                Key  : Lower : Body : Upper
+                None :  None :  5.0 :   6.0

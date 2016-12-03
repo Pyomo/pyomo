@@ -1,5 +1,5 @@
 #!/bin/sh
 
 # @cmd:
-pyomo solve jobshop.py jobshop.dat --transformation gdp.bigm --solver=glpk
+pyomo solve gdp_uc.py gdp_uc.dat --transform gdp.bigm --solver=glpk
 # @:cmd
