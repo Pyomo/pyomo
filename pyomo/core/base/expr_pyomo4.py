@@ -1110,7 +1110,7 @@ class _LinearExpression(_ExpressionBase):
             ans += value(self._coef[id(v)]) * result[i]
         return ans
 
-    def __iadd__(self, other, reverse=0, negate=False):
+    def __iadd__(self, other, reverse=False, negate=False):
         if safe_mode and self._parent_expr:
             raise EntangledExpressionError(self)
         _type = other.__class__
@@ -1132,9 +1132,6 @@ class _LinearExpression(_ExpressionBase):
             raise EntangledExpressionError(other)
 
         if _type is _LinearExpression:
-            # adding 2 linear expressions should never reverse things:
-            # it would have hit the other's __iadd__ first.
-            assert not reverse
             if negate:
                 other._const *= -1
                 for key in other._coef:
@@ -1146,7 +1143,10 @@ class _LinearExpression(_ExpressionBase):
                 if _id in self._coef:
                     self._coef[_id] += other._coef[_id]
                 else:
-                    self._args.append(v)
+                    if reverse:
+                        self._args.insert(0, v)
+                    else:
+                        self._args.append(v)
                     self._coef[_id] = other._coef[_id]
             other._const = 0
             other._args = []
@@ -1207,8 +1207,8 @@ class _LinearExpression(_ExpressionBase):
     # Note: __rsub__ of _LinearExpressions is rare, and the easiest thing
     # to do is just negate ourselves and add.
     def __rsub__(self, other):
-        self *= -1
-        return self.__iadd__(other, reverse=True)
+        tmp = -self
+        return tmp.__iadd__(other, reverse=True)
 
 
     def __imul__(self, other, divide=False):
@@ -1268,7 +1268,9 @@ class _LinearExpression(_ExpressionBase):
     __div__ = __idiv__
 
     def __neg__(self):
-        self *= -1
+        self._const *= -1
+        for k in self._coef:
+            self._coef[k] *= -1
         return self
 
 
