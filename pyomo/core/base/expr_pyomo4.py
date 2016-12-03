@@ -967,16 +967,28 @@ class _GetItemExpression(_ExpressionBase):
         # should iterate over the members of the args and make sure all
         # are fixed
         def impl(args):
-            return not isinstance(self._base, Var)
+            return all(args) and \
+                all(x.is_fixed() for x in itervalues(self._base))
         return impl
 
     def _potentially_variable_combiner(self):
         def impl(args):
+            return any(args) and \
+                any(x._potentially_variable() for x in itervalues(self._base))
             return not isinstance(self._base, (Var, Connector))
         return impl
 
     def _polynomial_degree(self, result):
-        return 0 if self.is_fixed() else 1
+        if any(x != 0 for x in result):
+            return None
+        ans = 0
+        for x in itervalues(self._base):
+            tmp = x.polynomial_degree()
+            if tmp is None:
+                return None
+            elif tmp > ans:
+                tmp = ans
+        return ans
 
     def _apply_operation(self, result):
         return value(self._base.__getitem__( tuple(result) ))
@@ -1155,7 +1167,9 @@ class _LinearExpression(_ExpressionBase):
                 other._parent_expr = None
             _LinearExpression_Pool.append(other)
             return self
-        elif not other.is_expression() and other._potentially_variable():
+
+        _potentially_var = other._potentially_variable()
+        if _potentially_var and not other.is_expression():
             _id = id(other)
             coef = -1 if negate else 1
             if _id in self._coef:
@@ -1167,19 +1181,18 @@ class _LinearExpression(_ExpressionBase):
                     self._args.append(other)
                 self._coef[_id] = coef
             return self
-        elif other.is_fixed():
+        elif not _potentially_var:
             if negate:
                 self._const -= other
             else:
                 self._const += other
             return self
         elif other.is_expression():
-            if reverse:
-                other, self = self, other
             if negate:
-                return generate_expression(_isub, self, other)
-            else:
-                return generate_expression(_iadd, self, other)
+                other = -other
+            if reverse:
+                self, other = other, self
+            return generate_expression(_add, self, other)
         else:
             # This should not be reachable
             raise DeveloperError(
@@ -1246,9 +1259,9 @@ class _LinearExpression(_ExpressionBase):
             return self
 
         if divide:
-            return generate_expression(_idiv, self, other)
+            return generate_expression(_div, self, other)
         else:
-            return generate_expression(_imul, self, other)
+            return generate_expression(_mul, self, other)
 
     # As we do all multiplication "in-place", all multiplications are
     # the same as in-place multiplications.
