@@ -569,7 +569,7 @@ class _PowExpression(_ExpressionBase):
 
 
 class _LinearOperatorExpression(_ExpressionBase):
-    """An 'abstract' class that defines the polynominal degree for a simple
+    """An 'abstract' class that defines the polynomial degree for a simple
     linear operator
     """
 
@@ -794,7 +794,7 @@ class _SumExpression(_LinearOperatorExpression):
                 raise EntangledExpressionError(other)
             if _type is _SumExpression:
                 if safe_mode:
-                    # Switch the patenr pointer over to this _SumExpression
+                    # Switch the parent pointer over to this _SumExpression
                     for x in other._args:
                         if x.__class__ not in native_numeric_types and \
                            x.is_expression():
@@ -965,7 +965,7 @@ class _GetItemExpression(_ExpressionBase):
     def _is_fixed_combiner(self):
         # FIXME: This is tricky.  I think the correct answer is that we
         # should iterate over the members of the args and make sure all
-        # are constant
+        # are fixed
         def impl(args):
             return not isinstance(self._base, Var)
         return impl
