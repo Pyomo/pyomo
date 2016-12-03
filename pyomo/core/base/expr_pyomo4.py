@@ -72,7 +72,7 @@ def identify_variables( expr,
         while _idx < _len:
             _sub = _argList[_idx]
             _idx += 1
-            if type(_sub) in native_types:
+            if _sub.__class__ in native_types:
                 pass
             elif _sub.is_expression():
                 _stack.append(( _argList, _idx, _len ))
@@ -159,7 +159,7 @@ class _ExpressionBase(NumericValue):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if type(_sub) in native_numeric_types:
+                if _sub.__class__ in native_numeric_types:
                     _result.append( _sub )
                 elif _sub.is_expression():
                     _stack.append( (_obj, _argList, _idx, _len, _result) )
@@ -200,7 +200,7 @@ class _ExpressionBase(NumericValue):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if type(_sub) in native_numeric_types:
+                if _sub.__class__ in native_numeric_types:
                     _result.append( native_result )
                 elif _sub.is_expression():
                     _stack.append( (_combiner, _argList, _idx, _len, _result) )
@@ -312,7 +312,7 @@ class _ExpressionBase(NumericValue):
             while _idx < _len:
                 _sub = _argList[_idx]
                 _idx += 1
-                if type(_sub) in native_numeric_types:
+                if _sub.__class__ in native_numeric_types:
                     _result.append( 0 )
                 elif _sub.is_expression():
                     _stack.append( (_obj, _argList, _idx, _len, _result) )
@@ -758,7 +758,7 @@ class _SumExpression(_LinearOperatorExpression):
         if verbose:
             ostream.write(" , ")
         else:
-            if type(self._args[idx]) is _NegationExpression:
+            if self._args[idx].__class__ is _NegationExpression:
                 ostream.write(' - ')
                 return True
             else:
@@ -796,7 +796,8 @@ class _SumExpression(_LinearOperatorExpression):
                 if safe_mode:
                     # Switch the patenr pointer over to this _SumExpression
                     for x in other._args:
-                        if x not in native_numeric_types and x.is_expression():
+                        if x.__class__ not in native_numeric_types and \
+                           x.is_expression():
                             x._parent_expr = bypass_backreference or ref(self)
                 self._args.extend(other._args)
                 other._args = [] # for safety
@@ -843,13 +844,15 @@ class _SumExpression(_LinearOperatorExpression):
     def __neg__(self):
         if safe_mode:
             for x in self._args:
-                if x not in native_numeric_types and x.is_expression():
+                if x.__class__ not in native_numeric_types \
+                   and x.is_expression():
                     x._parent_expr = None
         for i,x in enumerate(self._args):
             self._args[i] = -x
         if safe_mode:
             for x in self._args:
-                if x not in native_numeric_types and x.is_expression():
+                if x.__class__ not in native_numeric_types \
+                   and x.is_expression():
                     x._parent_expr = bypass_backreference or ref(self)
         return self
 
