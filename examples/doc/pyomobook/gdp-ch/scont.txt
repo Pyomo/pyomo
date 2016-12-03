@@ -2,56 +2,15 @@
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
 [    0.01] Applying solver
-GLPSOL: GLPK LP/MIP Solver, v4.60
-Parameter(s) specified in the command line:
- --write /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpOuUpIy.glpk.raw
- --wglp /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpcuB2Lj.glpk.glp
- --cpxlp /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp4JJ1vf.pyomo.lp
-Reading problem data from '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp4JJ1vf.pyomo.lp'...
-/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp4JJ1vf.pyomo.lp:103: warning: lower bound of variable 'x4' redefined
-/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp4JJ1vf.pyomo.lp:103: warning: upper bound of variable 'x4' redefined
-17 rows, 10 columns, 31 non-zeros
-6 integer variables, all of which are binary
-109 lines were read
-Writing problem data to '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpcuB2Lj.glpk.glp'...
-85 lines were written
-GLPK Integer Optimizer, v4.60
-17 rows, 10 columns, 31 non-zeros
-6 integer variables, all of which are binary
-Preprocessing...
-13 rows, 9 columns, 27 non-zeros
-6 integer variables, all of which are binary
-Scaling...
- A: min|aij| =  1.000e+00  max|aij| =  2.000e+01  ratio =  2.000e+01
-GM: min|aij| =  4.760e-01  max|aij| =  2.101e+00  ratio =  4.414e+00
-EQ: min|aij| =  2.311e-01  max|aij| =  1.000e+00  ratio =  4.327e+00
-2N: min|aij| =  2.500e-01  max|aij| =  1.125e+00  ratio =  4.500e+00
-Constructing initial basis...
-Size of triangular part is 13
-Solving LP relaxation...
-GLPK Simplex Optimizer, v4.60
-13 rows, 9 columns, 27 non-zeros
-      0: obj =   0.000000000e+00 inf =   1.750e+00 (1)
-      4: obj =   3.500000000e-01 inf =   0.000e+00 (0)
-OPTIMAL LP SOLUTION FOUND
-Integer optimization begins...
-+     4: mip =     not found yet >=              -inf        (1; 0)
-+     9: >>>>>   2.000000000e+00 >=   1.000000000e+00  50.0% (3; 1)
-+    11: mip =   2.000000000e+00 >=     tree is empty   0.0% (0; 7)
-INTEGER OPTIMAL SOLUTION FOUND
-Time used:   0.0 secs
-Memory used: 0.1 Mb (58473 bytes)
-Writing MIP solution to '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpOuUpIy.glpk.raw'...
-36 lines were written
-[    0.06] Processing results
+[    0.04] Processing results
     Number of solutions: 1
     Solution Information
       Gap: 0.0
       Status: optimal
       Function Value: 2.0
     Solver results file: results.yml
-[    0.07] Applying Pyomo postprocessing actions
-[    0.07] Pyomo Finished
+[    0.04] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
 # ==========================================================
 # = Solver Results                                         =
 # ==========================================================
@@ -78,7 +37,7 @@ Solver:
       Number of bounded subproblems: 7
       Number of created subproblems: 7
   Error rc: 0
-  Time: 0.0408999919891
+  Time: 0.0258898735046
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
