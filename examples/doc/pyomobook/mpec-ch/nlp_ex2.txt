@@ -1,12 +1,16 @@
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
-WARNING: DEPRECATION WARNING: Model.transform() is deprecated.  Use
-	TransformationFactory('mpec.simple_nonlinear') to construct a transformation object, or
-	TransformationFactory('mpec.simple_nonlinear').apply_to(model) to directly apply the
-	transformation to the model instance.
 [    0.00] Creating model
-[    0.00] Pyomo Finished
-Exiting pyomo solve: 'model' object is 'None' in module ex2.py
+[    0.00] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: -9.99943939749e-05
+    Solver results file: results.yml
+[    0.05] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
 # ==========================================================
 # = Solver Results                                         =
 # ==========================================================
@@ -14,24 +18,22 @@ Exiting pyomo solve: 'model' object is 'None' in module ex2.py
 #   Problem Information
 # ----------------------------------------------------------
 Problem: 
-- Name: unknown
-  Lower bound: -inf
+- Lower bound: -inf
   Upper bound: inf
   Number of objectives: 1
-  Number of constraints: 0
-  Number of variables: 5
-  Number of binary variables: None
-  Number of integer variables: None
-  Number of continuous variables: None
+  Number of constraints: 3
+  Number of variables: 3
   Sense: unknown
 # ----------------------------------------------------------
 #   Solver Information
 # ----------------------------------------------------------
 Solver: 
-- Name: None
-  Status: ok
-  Wallclock time: 0.0453538894653
-  Termination condition: unknown
+- Status: ok
+  Message: Ipopt 3.12.3\x3a Optimal Solution Found
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+  Time: 0.0408430099487
 # ----------------------------------------------------------
 #   Solution Information
 # ----------------------------------------------------------
@@ -42,17 +44,11 @@ Solution:
   Status: optimal
   Message: Ipopt 3.12.3\x3a Optimal Solution Found
   Objective:
-    f:
-      Value: 5.99999868365
+    f1:
+      Value: -9.99943939749e-05
   Variable:
-    x[1]:
-      Value: 0.99999989051
-    x[2]:
-      Value: 1.09542744934e-07
-    x[3]:
-      Value: 0.999999890145
-    x[4]:
-      Value: 1.097718383e-07
-    x[5]:
-      Value: 0.999999956206
+    compl.v:
+      Value: 9.99943939749e-05
+    y:
+      Value: 9.99943939749e-05
   Constraint: No values

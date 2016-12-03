@@ -6,3 +6,4 @@ pyomo solve --solver=bilevel_ld\
             interdiction.py
 # @:pyomo
 cat results.yml
+rm results.yml

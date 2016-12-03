@@ -15,6 +15,6 @@ model.compl = Complementarity(
                                  model.y >= model.x))
 
 # @transform:
-transformed = model.transform("mpec.simple_nonlinear")
+transformed = TransformationFactory("mpec.simple_nonlinear").create_using(model)
 # @:transform
 model = transformed

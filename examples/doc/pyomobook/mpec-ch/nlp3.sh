@@ -6,3 +6,4 @@ pyomo solve --solver=mpec_nlp \
                 epsilon_final=1e-7" \
             ex1a.py
 # @:pyomo
+rm results.yml

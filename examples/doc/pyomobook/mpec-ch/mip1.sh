@@ -4,3 +4,4 @@
 pyomo solve --solver=mpec_minlp \
             --solver-options="solver=glpk" ralph1.py
 # @:pyomo
+rm results.yml

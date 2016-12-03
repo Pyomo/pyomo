@@ -6,3 +6,4 @@ pyomo solve --solver=bilevel_blp_global \
             bard511.py
 # @:pyomo
 cat results.yml
+rm results.yml
