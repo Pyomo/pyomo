@@ -1,7 +1,7 @@
 from pyomo.environ import *
 
 time = range(5)
-genset = set(['G_MAIN', 'G_EAST'])
+genset = ['G_MAIN', 'G_EAST']
 gennom = {0: 120.0, 1: 145.0, 2: 119.0, 3: 42.0, 4: 190.0}
 maxpower = 500
 ramplimit = 50

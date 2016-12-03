@@ -214,7 +214,7 @@
         8 Declarations: MaxPower RampLimit Power UnitOn limit_ramp CostCoef_index CostCoef Cost
 
 3 Declarations: TIME GEN_UNITS Generator
-Generator[G_EAST].Power[4] = 190.0
 Generator[G_MAIN].Power[4] = 190.0
 Generator[G_EAST].Power[4] = 190.0
 Generator[G_MAIN].Power[4] = 190.0
+Generator[G_EAST].Power[4] = 190.0
