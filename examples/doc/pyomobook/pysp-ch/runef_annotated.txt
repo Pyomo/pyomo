@@ -1,10 +1,12 @@
-Loading scenario and instance data
-Creating extensive form binding instance
-Starting to write extensive form
-Output file written to file= efout.lp
-Total execution time=    0.56 seconds
-Queuing extensive form solve
-Waiting for extensive form solve
+Importing module=/Users/wehart/home/wehart/papers/2013/pyomo-book/trunk/pyomo/examples/doc/pyomobook/pysp-ch/models/ReferenceModel.py
+Module successfully loaded
+
+Initializing extensive form algorithm for stochastic programming problems.
+EF solve completed and solution status is feasible
+EF solve termination condition is optimal
+EF objective: -108390.00001
+EF gap:            0.00000
+EF bound:     -108390.00001
 
 Extensive form solution:
 ----------------------------------------------------
@@ -30,9 +32,9 @@ Tree Nodes:
 	Stage=SecondStage
 	Parent=RootNode
 	Variables: 
+		QuantityPurchased[CORN]=48.0
 		QuantitySubQuotaSold[SUGAR_BEETS]=4000.0
 		QuantitySubQuotaSold[WHEAT]=140.0
-		QuantityPurchased[CORN]=48.0
 
 	Name=RootNode
 	Stage=FirstStage
@@ -43,10 +45,8 @@ Tree Nodes:
 		DevotedAcreage[WHEAT]=170.0
 # @:var
 
-
 Extensive form costs:
 Scenario Tree Costs
-***WARNING***: Assumes full (or nearly so) convergence of scenario solutions at each node in the scenario tree - computed costs are invalid otherwise
 ----------------------------------------------------
 # @treecosts:
 Tree Nodes:
@@ -59,7 +59,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		AboveAverageScenario
-	Expected node cost=-275900.0000
+	Expected cost of (sub)tree rooted at node=-275900.0000
 
 	Name=AverageNode
 	Stage=SecondStage
@@ -69,7 +69,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		AverageScenario
-	Expected node cost=-218250.0000
+	Expected cost of (sub)tree rooted at node=-218250.0000
 
 	Name=BelowAverageNode
 	Stage=SecondStage
@@ -79,7 +79,7 @@ Tree Nodes:
 		None
 	Scenarios:
 		BelowAverageScenario
-	Expected node cost=-157720.0000
+	Expected cost of (sub)tree rooted at node=-157720.0000
 
 	Name=RootNode
 	Stage=FirstStage
@@ -93,7 +93,7 @@ Tree Nodes:
 		AboveAverageScenario
 		AverageScenario
 		BelowAverageScenario
-	Expected node cost=-108390.0000
+	Expected cost of (sub)tree rooted at node=-108390.0000
 # @:treecosts
 
 ----------------------------------------------------
@@ -132,3 +132,6 @@ Scenarios:
 # @:scenariocosts
 
 ----------------------------------------------------
+
+Total EF execution time=0.08 seconds
+

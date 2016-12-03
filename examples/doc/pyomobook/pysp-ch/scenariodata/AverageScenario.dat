@@ -1,4 +1,4 @@
-# AboveAverageScenario.dat
+# "mean" scenario
 
 set CROPS := WHEAT CORN SUGAR_BEETS ;
 
@@ -18,6 +18,6 @@ param PurchasePrice := WHEAT 238 CORN 210 SUGAR_BEETS 100000 ;
 
 param PlantingCostPerAcre := WHEAT 150 CORN 230 SUGAR_BEETS 260 ;
 
-param Yield := WHEAT 3.0 CORN 3.6 SUGAR_BEETS 24 ;
+param Yield := WHEAT 2.5 CORN 3 SUGAR_BEETS 20 ;
 
 

@@ -1,4 +1,4 @@
-Importing module=/Users/wehart/home/wehart/papers/2013/pyomo-book/trunk/examples/sp/models/ReferenceModel.py
+Importing module=/Users/wehart/home/wehart/papers/2013/pyomo-book/trunk/pyomo/examples/doc/pyomobook/pysp-ch/models/ReferenceModel.py
 Module successfully loaded
 
 Initializing extensive form algorithm for stochastic programming problems.
@@ -128,5 +128,5 @@ Scenarios:
 
 ----------------------------------------------------
 
-Total EF execution time=0.06 seconds
+Total EF execution time=0.08 seconds
 
