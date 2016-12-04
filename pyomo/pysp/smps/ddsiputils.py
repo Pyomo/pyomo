@@ -204,7 +204,7 @@ def _convert_external_setup_without_cleanup(
     #
     assert not hasattr(reference_model, "_canonical_repn")
     output_filename = os.path.join(output_directory,
-                                   scenario.name+".core.lp.setup")
+                                   scenario.name+".lp.setup")
     with WriterFactory("lp") as writer:
         assert 'column_order' not in io_options
         assert 'row_order' not in io_options
@@ -329,7 +329,9 @@ def _convert_external_setup_without_cleanup(
     # Write the ordered LP/MPS file
     #
     output_filename = os.path.join(output_directory,
-                                   scenario.name+".core.lp")
+                                   scenario.name+".lp")
+    symbols_filename = os.path.join(output_directory,
+                                    scenario.name+".lp.symbols")
     with WriterFactory("lp") as writer:
         assert 'column_order' not in io_options
         assert 'row_order' not in io_options
@@ -344,6 +346,16 @@ def _convert_external_setup_without_cleanup(
                                           lambda x: True,
                                           io_options)
         assert output_fname == output_filename
+        # write the lp file symbol paired with the scenario
+        # tree id for each variable in the root node
+        with open(symbols_filename, "w") as f:
+            st_symbol_map = reference_model._ScenarioTreeSymbolMap
+            for stage in worker.scenario_tree.stages[:-1]:
+                for node in stage.nodes:
+                    for id_ in sorted(node._variable_ids):
+                        var = st_symbol_map.bySymbol[id_]
+                        lp_label = symbol_map.byObject[id(var)]
+                        f.write("%s %s\n" % (lp_label, id_))
 
     # re-generate these maps as the LP/MPS symbol map
     # is likely different
@@ -652,7 +664,7 @@ def _convert_external_setup_without_cleanup(
     reference_model_name = reference_model.name
     reference_model._name = "ZeroStochasticData"
     det_output_filename = os.path.join(output_directory,
-                                       scenario.name+".pysp_model.lp.det")
+                                       scenario.name+".lp.det")
     with WriterFactory("lp") as writer:
         output_fname, symbol_map = writer(reference_model,
                                           det_output_filename,
@@ -682,7 +694,6 @@ def convert_external(output_directory,
                      io_options=None,
                      disable_consistency_checks=False,
                      keep_scenario_files=False,
-                     keep_auxiliary_files=False,
                      verbose=False):
     import pyomo.environ
     import pyomo.solvers.plugins.smanager.phpyro
@@ -728,19 +739,27 @@ def convert_external(output_directory,
     # to the output directory. The consistency checks will
     # verify that these files match across scenarios.
     #
-    input_files = []
+    input_files = {}
     lp_dst = os.path.join(output_directory, "core.lp")
     _safe_remove_file(lp_dst)
     lp_src = os.path.join(scenario_directory,
-                          reference_scenario_name+".core.lp")
+                          reference_scenario_name+".lp")
     shutil.copy2(lp_src, lp_dst)
-    input_files.append(lp_dst)
+    input_files["core"] = lp_dst
+
+    symbols_dst = os.path.join(output_directory, "core.lp.symbols")
+    _safe_remove_file(symbols_dst)
+    symbols_src = os.path.join(scenario_directory,
+                               reference_scenario_name+".lp.symbols")
+    shutil.copy2(symbols_src, symbols_dst)
+    input_files["symbols"] = symbols_dst
 
     #
     # Merge the per-scenario .sc files into one
     #
-    for basename in ["rhs.sc", "cost.sc", "matrix.sc"]:
+    for _type in ["rhs", "cost", "matrix"]:
 
+        basename = _type+".sc"
         if basename == "cost.sc":
             if stochastic_cost_count == 0:
                 continue
@@ -754,12 +773,12 @@ def convert_external(output_directory,
             #       probabilities
 
         dst = os.path.join(output_directory, basename)
-        input_files.append(dst)
+        input_files[_type] = dst
         _safe_remove_file(dst)
         with open(dst, "w") as fdst:
             # Note: If the RHS file is going to be empty
             #       then we must leave out the "Names" line
-            if not ((basename == "rhs.sc") and
+            if not ((_type == "rhs") and
                     (stochastic_rhs_count == 0)):
                 fdst.write("Names\n")
             assert reference_scenario is scenario_tree.scenarios[0]
@@ -797,7 +816,6 @@ def convert_external(output_directory,
         print("    - Stoch. Cost Entries: %d"
               % (stochastic_cost_count))
 
-    """
     if not disable_consistency_checks:
         if verbose:
             print("\nStarting scenario structure consistency checks "
@@ -815,119 +833,53 @@ def convert_external(output_directory,
                 has_diff = False
         except:
             has_diff = False
-        if verbose:
-            print(" - Checking row and column ordering...")
-        for scenario in scenario_tree.scenarios:
-            scenario_core_row_filename = \
-                os.path.join(scenario_directory,
-                             basename+".row."+scenario.name)
-            if has_diff:
-                rc = os.system('diff -q '+scenario_core_row_filename+' '+
-                               core_row_filename)
-            else:
-                rc = not filecmp.cmp(scenario_core_row_filename,
-                                     core_row_filename,
-                                     shallow=False)
-            if rc:
-                raise ValueError(
-                    "The row ordering indicated in file '%s' does not match "
-                    "that for scenario %s indicated in file '%s'. This "
-                    "suggests that the same constraint is being classified "
-                    "in different time stages across scenarios. Consider "
-                    "manually declaring constraint stages using the %s "
-                    "annotation if not already doing so, or report this "
-                    "issue to the PySP developers."
-                    % (core_row_filename,
-                       scenario.name,
-                       scenario_core_row_filename,
-                       ConstraintStageAnnotation.__name__))
-
-            scenario_core_col_filename = \
-                os.path.join(scenario_directory,
-                             basename+".col."+scenario.name)
-            if has_diff:
-                rc = os.system('diff -q '+scenario_core_col_filename+' '+
-                               core_col_filename)
-            else:
-                rc = not filecmp.cmp(scenario_core_col_filename,
-                                     core_col_filename,
-                                     shallow=False)
-            if rc:
-                raise ValueError(
-                    "The column ordering indicated in file '%s' does not "
-                    "match that for scenario %s indicated in file '%s'. "
-                    "This suggests that the set of variables on the model "
-                    "changes across scenarios. This is not allowed by the "
-                    "SMPS format. If you feel this is a developer error, "
-                    "please report this issue to the PySP developers."
-                    % (core_col_filename,
-                       scenario.name,
-                       scenario_core_col_filename))
 
         if verbose:
-            print(" - Checking time-stage classifications...")
-        for scenario in scenario_tree.scenarios:
-            scenario_tim_filename = \
-                os.path.join(scenario_directory,
-                             basename+".tim."+scenario.name)
-            if has_diff:
-                rc = os.system('diff -q '+scenario_tim_filename+' '+
-                               tim_filename)
-            else:
-                rc = not filecmp.cmp(scenario_tim_filename,
-                                     tim_filename,
-                                     shallow=False)
-            if rc:
-                raise ValueError(
-                    "Main .tim file '%s' does not match .tim file for "
-                    "scenario %s located at '%s'. This indicates there was "
-                    "a problem translating the reference model to SMPS "
-                    "format. Please make sure the problem structure is "
-                    "identical over all scenarios (e.g., no. of variables, "
-                    "no. of constraints), or report this issue to the PySP "
-                    "developers if you feel that it is a developer error."
-                    % (tim_filename,
-                       scenario.name,
-                       scenario_tim_filename))
-
-        if verbose:
-            print(" - Checking sparse locations of stochastic elements...")
-        for scenario in scenario_tree.scenarios:
-            scenario_sto_struct_filename = \
-                os.path.join(scenario_directory,
-                             basename+".sto.struct."+scenario.name)
-            if has_diff:
-                rc = os.system('diff -q '+scenario_sto_struct_filename+' '+
-                               sto_struct_filename)
-            else:
-                rc = not filecmp.cmp(scenario_sto_struct_filename,
-                                     sto_struct_filename,
-                                     shallow=False)
-            if rc:
-                raise ValueError(
-                    "The structure of stochastic entries indicated in file "
-                    "'%s' does not match that for scenario %s indicated in "
-                    "file '%s'. This suggests that the set of variables "
-                    "appearing in some expression declared as stochastic is "
-                    "changing across scenarios. If you feel this is a "
-                    "developer error, please report this issue to the PySP "
-                    "developers." % (sto_struct_filename,
-                                     scenario.name,
-                                     scenario_sto_struct_filename))
+            print(" - Checking structure in stochastic files...")
+        for basename in ["rhs.sc.struct", "cost.sc.struct", "matrix.sc.struct"]:
+            reference_struct_filename = os.path.join(
+                scenario_directory,
+                reference_scenario.name+"."+basename)
+            for scenario in scenario_tree.scenarios:
+                scenario_struct_filename = \
+                    os.path.join(scenario_directory,
+                                 scenario.name+"."+basename)
+                if has_diff:
+                    rc = os.system('diff -q '+scenario_struct_filename+' '+
+                                   reference_struct_filename)
+                else:
+                    rc = not filecmp.cmp(scenario_struct_filename,
+                                         reference_struct_filename,
+                                         shallow=False)
+                if rc:
+                    raise ValueError(
+                        "The structure indicated in file '%s' does not match "
+                        "that for scenario %s indicated in file '%s'. This "
+                        "suggests one or more locations of stachastic data "
+                        "have not been annotated. If you feel this message is "
+                        "in error, please report this issue to the PySP "
+                        "developers."
+                        % (reference_struct_filename,
+                           scenario.name,
+                           scenario_struct_filename))
 
         if verbose:
             print(" - Checking deterministic sections in the core "
                   "problem file...")
+        reference_lp_det_filename = \
+            os.path.join(scenario_directory,
+                         reference_scenario.name+".lp.det")
+
         for scenario in scenario_tree.scenarios:
-            scenario_core_det_filename = \
+            scenario_lp_det_filename = \
                 os.path.join(scenario_directory,
-                             basename+"."+core_format+".det."+scenario.name)
+                             scenario.name+".lp.det")
             if has_diff:
-                rc = os.system('diff -q '+scenario_core_det_filename+' '+
-                               core_det_filename)
+                rc = os.system('diff -q '+scenario_lp_det_filename+' '+
+                               reference_lp_det_filename)
             else:
-                rc = not filecmp.cmp(scenario_core_det_filename,
-                                     core_det_filename,
+                rc = not filecmp.cmp(scenario_lp_det_filename,
+                                     reference_lp_det_filename,
                                      shallow=False)
             if rc:
                 raise ValueError(
@@ -938,68 +890,25 @@ def convert_external(output_directory,
                     "reference Pyomo model. If this seems like a tolerance "
                     "issue or a developer error, please report this issue "
                     "to the PySP developers."
-                    % (core_det_filename,
+                    % (reference_lp_det_filename,
                        scenario.name,
-                       scenario_core_det_filename))
-
-    if not keep_auxiliary_files:
-        _safe_remove_file(core_row_filename)
-        _safe_remove_file(core_col_filename)
-        _safe_remove_file(sto_struct_filename)
-        _safe_remove_file(core_det_filename)
+                       scenario_lp_det_filename))
 
     if not keep_scenario_files:
         if verbose:
             print("Cleaning temporary per-scenario files")
+
         for scenario in scenario_tree.scenarios:
 
-            scenario_core_row_filename = \
-                os.path.join(scenario_directory,
-                             basename+".row."+scenario.name)
-            assert os.path.exists(scenario_core_row_filename)
-            _safe_remove_file(scenario_core_row_filename)
-
-            scenario_core_col_filename = \
-                os.path.join(scenario_directory,
-                             basename+".col."+scenario.name)
-            assert os.path.exists(scenario_core_col_filename)
-            _safe_remove_file(scenario_core_col_filename)
-
-            scenario_tim_filename = \
-                os.path.join(scenario_directory,
-                             basename+".tim."+scenario.name)
-            assert os.path.exists(scenario_tim_filename)
-            _safe_remove_file(scenario_tim_filename)
-
-            scenario_sto_struct_filename = \
-                os.path.join(scenario_directory,
-                             basename+".sto.struct."+scenario.name)
-            assert os.path.exists(scenario_sto_struct_filename)
-            _safe_remove_file(scenario_sto_struct_filename)
-
-            scenario_sto_filename = \
-                os.path.join(scenario_directory,
-                             basename+".sto."+scenario.name)
-            assert os.path.exists(scenario_sto_filename)
-            _safe_remove_file(scenario_sto_filename)
-
-            scenario_core_det_filename = \
-                os.path.join(scenario_directory,
-                             basename+"."+core_format+".det."+scenario.name)
-            assert os.path.exists(scenario_core_det_filename)
-            _safe_remove_file(scenario_core_det_filename)
-
-            scenario_core_setup_filename = \
-                os.path.join(scenario_directory,
-                             basename+".setup."+core_format+"."+scenario.name)
-            assert os.path.exists(scenario_core_setup_filename)
-            _safe_remove_file(scenario_core_setup_filename)
-
-            scenario_core_filename = \
-                os.path.join(scenario_directory,
-                             basename+"."+core_format+"."+scenario.name)
-            assert os.path.exists(scenario_core_filename)
-            _safe_remove_file(scenario_core_filename)
+            for basename in ["lp", "lp.det", "lp.symbols",
+                             "matrix.sc", "matrix.sc.struct",
+                             "cost.sc", "cost.sc.struct",
+                             "rhs.sc", "rhs.sc.struct"]:
+                scenario_filename = \
+                    os.path.join(scenario_directory,
+                                 scenario.name+"."+basename)
+                assert os.path.exists(scenario_filename)
+                _safe_remove_file(scenario_filename)
 
         # only delete this directory if it is empty,
         # it might have previously existed and contains
@@ -1011,14 +920,38 @@ def convert_external(output_directory,
             print("Temporary per-scenario files are retained in "
                   "scenario_files subdirectory")
         pass
-    """
 
-    return (ProblemStats(firststage_variable_count=firststage_variable_count,
-                         secondstage_variable_count=secondstage_variable_count,
-                         firststage_constraint_count=firststage_constraint_count,
-                         secondstage_constraint_count=secondstage_constraint_count,
-                         stochastic_cost_count=stochastic_cost_count,
-                         stochastic_rhs_count=stochastic_rhs_count,
-                         stochastic_matrix_count=stochastic_matrix_count,
-                         scenario_count=len(scenario_tree.scenarios)),
-            input_files)
+    config_filename = os.path.join(output_directory,
+                                   "ddsip.config")
+    with open(config_filename, 'w') as f:
+        f.write("BEGIN \n\n\n")
+        f.write("FIRSTCON "+str(firststage_constraint_count)+"\n")
+        f.write("FIRSTVAR "+str(firststage_variable_count)+"\n")
+        f.write("SECCON "+str(secondstage_constraint_count)+"\n")
+        f.write("SECVAR "+str(secondstage_variable_count)+"\n")
+        f.write("POSTFIX "+firststage_var_suffix+"\n")
+        f.write("SCENAR "+str(len(scenario_tree.scenarios))+"\n")
+        f.write("STOCRHS "+str(stochastic_rhs_count)+"\n")
+        f.write("STOCCOST "+str(stochastic_cost_count)+"\n")
+        f.write("STOCMAT "+str(stochastic_matrix_count)+"\n")
+        f.write("\n\nEND\n")
+    input_files["config"] = config_filename
+
+    script_filename = \
+        os.path.join(output_directory,
+                     "ddsip.stdin")
+    # hacked by DLW, November 2016: the model file is now
+    # first and the config file is second. So ddsiputils
+    # gets it almost right.
+    with open(script_filename, "w") as f:
+        f.write(input_files["core"]+"\n")
+        f.write(input_files["config"]+"\n")
+        assert "rhs" in input_files
+        f.write(input_files["rhs"]+"\n")
+        if "cost" in input_files:
+            f.write(input_files["cost"]+"\n")
+        if "matrix" in input_files:
+            f.write(input_files["matrix"]+"\n")
+    input_files["script"] = script_filename
+
+    return input_files
