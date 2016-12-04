@@ -24,7 +24,6 @@ from pyomo.core.base import TextLabeler, NumericLabeler
 from pyomo.repn import LinearCanonicalRepn
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.annotations import (locate_annotations,
-                                    _ConstraintStageAnnotation,
                                     StochasticConstraintBoundsAnnotation,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation,
@@ -185,7 +184,7 @@ def _convert_external_setup_without_cleanup(
         StochasticVariableBoundsAnnotation)
     if len(stochastic_varbounds) > 0:
         raise ValueError(
-            "The SMPS writer does not currently support "
+            "The DDSIP writer does not currently support "
             "stochastic variable bounds. Invalid annotation type: %s"
             % (StochasticVariableBoundsAnnotation.__name__))
 
@@ -193,7 +192,7 @@ def _convert_external_setup_without_cleanup(
        (stochastic_matrix is None) and \
        (stochastic_objective is None):
         raise RuntimeError(
-            "No stochastic annotations found. SMPS "
+            "No stochastic annotations found. DDSIP "
             "conversion requires at least one of the following "
             "annotation types:\n - %s\n - %s\n - %s"
             % (StochasticConstraintBoundsAnnotation.__name__,
@@ -404,18 +403,15 @@ def _convert_external_setup_without_cleanup(
                                 "The constraint %s has been declared "
                                 "in the %s annotation but it was not identified as "
                                 "a second-stage constraint. To correct this issue, "
-                                "either remove the constraint from this annotation "
-                                "or manually declare it as second-stage using the "
-                                "%s annotation."
+                                "remove the constraint from this annotation."
                                 % (con.name,
-                                   StochasticConstraintBoundsAnnotation.__name__,
-                                   ConstraintStageAnnotation.__name__))
+                                   StochasticConstraintBoundsAnnotation.__name__))
 
                     constraint_repn = \
                         canonical_repn_cache[id(con.parent_block())][con]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
                         raise RuntimeError("Only linear constraints are "
-                                           "accepted for conversion to SMPS format. "
+                                           "accepted for conversion to DDSIP format. "
                                            "Constraint %s is not linear."
                                            % (con.name))
 
@@ -515,17 +511,14 @@ def _convert_external_setup_without_cleanup(
                                 "The constraint %s has been declared "
                                 "in the %s annotation but it was not identified as "
                                 "a second-stage constraint. To correct this issue, "
-                                "either remove the constraint from this annotation "
-                                "or manually declare it as second-stage using the "
-                                "%s annotation."
+                                "remove the constraint from this annotation."
                                 % (con.name,
-                                   StochasticConstraintBodyAnnotation.__name__,
-                                   ConstraintStageAnnotation.__name__))
+                                   StochasticConstraintBodyAnnotation.__name__))
                     constraint_repn = \
                         canonical_repn_cache[id(con.parent_block())][con]
                     if not isinstance(constraint_repn, LinearCanonicalRepn):
                         raise RuntimeError("Only linear constraints are "
-                                           "accepted for conversion to SMPS format. "
+                                           "accepted for conversion to DDSIP format. "
                                            "Constraint %s is not linear."
                                            % (con.name))
                     assert len(constraint_repn.variables) > 0
@@ -600,7 +593,7 @@ def _convert_external_setup_without_cleanup(
 
                 if not isinstance(objective_repn, LinearCanonicalRepn):
                     raise RuntimeError("Only linear stochastic objectives are "
-                                       "accepted for conversion to SMPS format. "
+                                       "accepted for conversion to DDSIP format. "
                                        "Objective %s is not linear."
                                        % (objective_object.name))
                 if objective_variables is None:
@@ -610,7 +603,6 @@ def _convert_external_setup_without_cleanup(
                 # so that we have deterministic output
                 objective_variables = list(objective_variables)
                 objective_variables.sort(key=lambda _v: column_order[_v])
-                stochastic_lp_labels.add(stochastic_objective_label)
                 assert (len(objective_variables) > 0) or include_constant
                 new_coefs = list(objective_repn.linear)
                 for var in objective_variables:

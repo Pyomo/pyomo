@@ -29,7 +29,6 @@ from pyomo.repn import generate_canonical_repn
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.embeddedsp import EmbeddedSP
 from pyomo.pysp.annotations import (locate_annotations,
-                                    _ConstraintStageAnnotation,
                                     StochasticConstraintBoundsAnnotation,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation,
@@ -701,12 +700,9 @@ def _convert_external_setup_without_cleanup(
                                 "The constraint %s has been declared "
                                 "in the %s annotation but it was not identified as "
                                 "a second-stage constraint. To correct this issue, "
-                                "either remove the constraint from this annotation "
-                                "or manually declare it as second-stage using the "
-                                "%s annotation."
+                                "remove the constraint from this annotation."
                                 % (con.name,
-                                   StochasticConstraintBoundsAnnotation.__name__,
-                                   ConstraintStageAnnotation.__name__))
+                                   StochasticConstraintBoundsAnnotation.__name__))
 
                     constraint_repn = \
                         canonical_repn_cache[id(con.parent_block())][con]
@@ -808,12 +804,9 @@ def _convert_external_setup_without_cleanup(
                                 "The constraint %s has been declared "
                                 "in the %s annotation but it was not identified as "
                                 "a second-stage constraint. To correct this issue, "
-                                "either remove the constraint from this annotation "
-                                "or manually declare it as second-stage using the "
-                                "%s annotation."
+                                "remove the constraint from this annotation."
                                 % (con.name,
-                                   StochasticConstraintBodyAnnotation.__name__,
-                                   ConstraintStageAnnotation.__name__))
+                                   StochasticConstraintBodyAnnotation.__name__))
 
                     constraint_repn = \
                         canonical_repn_cache[id(con.parent_block())][con]
@@ -1162,15 +1155,13 @@ def convert_external(output_directory,
                 raise ValueError(
                     "The row ordering indicated in file '%s' does not match "
                     "that for scenario %s indicated in file '%s'. This "
-                    "suggests that the same constraint is being classified "
-                    "in different time stages across scenarios. Consider "
-                    "manually declaring constraint stages using the %s "
-                    "annotation if not already doing so, or report this "
-                    "issue to the PySP developers."
+                    "suggests that one or more locations of stochastic data "
+                    "have not been annotated. If you feel this message is "
+                    "in error, please report this issue to the PySP "
+                    "developers."
                     % (core_row_filename,
                        scenario.name,
-                       scenario_core_row_filename,
-                       ConstraintStageAnnotation.__name__))
+                       scenario_core_row_filename))
 
             scenario_core_col_filename = \
                 os.path.join(scenario_directory,
