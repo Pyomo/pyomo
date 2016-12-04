@@ -1,0 +1,189 @@
+\documentclass[12pt]{article}
+
+\usepackage[margin=1in]{geometry}  % set the margins to 1in on all sides
+\usepackage{graphicx}              % to include figures
+\usepackage{amsmath}               % great math stuff
+\usepackage{amsfonts}              % for blackboard bold, etc
+\usepackage{amsthm}                % better theorem environments
+\usepackage{url}
+
+% various theorems, numbered by section
+
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem{cor}[thm]{Corollary}
+\newtheorem{conj}[thm]{Conjecture}
+
+\DeclareMathOperator{\id}{id}
+\DeclareMathOperator*{\argmin}{argmin}
+
+\newcommand{\bd}[1]{\mathbf{#1}}  % for bolding symbols
+\newcommand{\RR}{\mathbb{R}}      % for Real numbers
+\newcommand{\ZZ}{\mathbb{Z}}      % for Integers
+\newcommand{\col}[1]{\left[\begin{matrix} #1 \end{matrix} \right]}
+\newcommand{\comb}[2]{\binom{#1^2 + #2^2}{#1+#2}}
+
+
+\begin{document}
+
+
+%\nocite{*}
+
+\title{bbph.py}
+
+\author{David L. Woodruff \\ Graduate School of Management, University of California Davis, \\ Davis, CA 95616-8609, USA \\ dlwoodruff@ucdavis.edu}
+\maketitle
+
+\section{Introduction}
+
+See \cite{bbphpaper} for
+background on bbph.
+This document gives some help running bbph.py
+that is part of the Pyomo (\url{www.pyomo.org}) family.
+The code and document are presently designed for
+use by {\em researchers} rather than modelers or
+end-users.
+The document assumes that you have expertise using PySP \cite{pyspmpc}
+and its \verb|runph| command as well as an ability read Python and bash scripts.
+
+The basic idea is that bbph.py manages an {\em outer} branch and bound tree with so-called outer branch and bound nodes.
+To see a list of command arguments, use the Unix shell (i.e. terminal) command
+\begin{verbatim}
+python bbph.py --help
+\end{verbatim}
+The software has some flexibilty to support multiple environments, but to
+simplify this document, we will assume a shared-memory bash system.
+
+It is very unfortunate that we use the word {\em outer} for two
+things, but we do. The word is used to refer to the branch and bound
+nodes managed by bbph.py and the word is used again to refer to {\em
+  outer bounds}, which are lower bounds for a minimization problem
+(and upper for a maximization problem). There are also {\em inner}
+bounds that are upper bounds for a minimization problem and
+lower bounds for a maximization problem.
+
+At each outer node, some integers are bounded. For binaries, this means they
+are fixed (as of November 2016, the code only supports binaries well
+and has only been tested with mixed and pure binary problems).
+
+\section{Script Options}
+
+As a practical matter of some importance, bbpy.py creates a sub-directory
+for each outer node and uses it for working space and output. The
+bbph.py option
+\begin{verbatim}
+--BBPH-working-dir
+\end{verbatim}
+gives the full path to a directory that will be created or emptied and then
+used for these sub-dictories and other storage.
+
+For each outer node, runph is invoked via a bash script; actually
+two similar batch scripts, whose names are given
+by the bbph.py arguments
+\begin{verbatim}
+--BBPH-ph-Script
+\end{verbatim}
+and the optional argument
+\begin{verbatim}
+--BBPH-ph-Script-BBND0
+\end{verbatim}
+The bbpy.py software will manipulate these scripts and, in particular, it will
+replace some tokens in the scripts. One token in the runph command
+line in the ph script is specified by the bbpy.py option
+\begin{verbatim}
+--BBPH-ph-options-token
+\end{verbatim}
+that will be replaced with runph options needed by bbph.py and another
+token is given by
+\begin{verbatim}
+  --BBPH-pyro-ns-port-token
+\end{verbatim}
+That will be replaced by the pyro name server port that is being used
+for the particular outer node that is invoking runph (cryptic aside:
+at the time of this writing in November 2016, bbph creates a full set of machinery
+for each runph. Shutdown of name servers and solver servers
+is a bit of a mess right now. So if you use this on a machine
+that does not have a batch manager, you may need to shut down
+servers ``yourself'' somehow.)
+
+\subsection{Brancher plugin}
+
+The code relies on a plugin to be invoked by runph that will transmit branching
+information to bbph.py in a pickle file. A plug-in called
+brancher.py has been provided to you, which you will want to use
+until some day you write your own. The name of the plugin
+is given by
+\begin{verbatim}
+--BBPH-brancher-plugin
+\end{verbatim}
+This plugin does {\em not} need to be named in the runph
+script whose name is provided to \verb|--BBPH-ph-Script|
+because bbph.py will ``put it in'' when it replaces the
+token given by \verb|--BBPH-ph-options-token|.
+
+The plugin needs to write a pickle file whose file name
+is given by the bbph.py option
+\begin{verbatim}
+--BBPH-brancher-output
+\end{verbatim}
+that simply gives a file name. It does {\em not} give
+a path because this file will be in the
+outer node's sub-directory.
+
+\subsection{Special case of Var bounds in a cfg script}
+
+If you have a script that sets Var bounds (and you probably don't), then you
+need to specify it using the bbph.py option
+\begin{verbatim}
+--BBPH-ph-bounds-cfgfile
+\end{verbatim}
+and do not put it in your runph script (because bbph.py needs
+to control bounds). Note: if the Var declarations in your
+model specify bounds, that is unaffected by this issue. This
+is only relevent for those few situations where a cfg script
+outside the model file is used to set Var bounds.
+
+\section{Example files}
+
+\subsection{bash Script to Drive bbph.py}
+
+This file is called test.bash in the release.
+
+\begin{verbatim}
+EDIR=/export/home/dlwoodruff/software/pyomo/src/pyomo/examples/pysp/sizes
+
+python BBPH.py -i $EDIR/SIZES3 -m $EDIR/models --default-rho=1 \
+--user-defined-extension=pyomo.pysp.plugins.phboundextension \
+--traceback --BBPH-working-dir=workingdir --BBPH-ph-Script=testphscript.bash \
+--BBPH-ph-options-token=BBPHTOKEN --BBPH-Verbose \
+--BBPH-brancher-plugin=/export/home/dlwoodruff/Documents/phbb/code/brancher \
+--BBPH-brancher-output=brancherout.p \
+--BBPH-OuterIterationLimit=4 --BBPH-PH-Launch-Limit=4
+\end{verbatim}
+
+\subsection{Script for runph at outer nodes}
+
+This file is called testphscript.bash.
+\begin{verbatim}
+#! /bin/bash
+EDIR=/export/home/dlwoodruff/software/pyomo/src/pyomo/examples/pysp/sizes
+
+export PYRO_NS_PORT=9090
+runph -i $EDIR/SIZES3 -m $EDIR/models --default-rho=1 \
+--user-defined-extension=pyomo.pysp.plugins.phboundextension BBPHTOKEN
+\end{verbatim}
+
+Notice that BBPHTOKEN makes this script invalid if run directly, but 
+
+\section{Installation}
+
+As of January 2017, the files for bbph.py are installed with Pyomo in the directory
+
+pyomo/pysp/bbph
+
+\bibliographystyle{plain}
+\bibliography{Refs}
+
+
+\end{document}

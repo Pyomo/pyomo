@@ -1,16 +1,10 @@
 #! /bin/bash
-# fast test of the bb code; mainly just looking for python error messages
+# test the bb code
 
-EDIR=../../../examples/pysp/sizes
-#EDIR=$BASEDIR/pyomo/src/pyomo/examples/pysp/farmerWintegers
-#EDIR=$BASEDIR/pyomo/src/pyomo/examples/pysp/networkflow
-#EDIR=/export/home/dlwoodruff/software/pyomo/src/pyomo/examples/pysp/sizes
-#EDIR=/home/dlwoodruff/data/pyomoexamples/pyomo_examples_1886/pysp/sizes
-#EDIR=$BASEDIR/pyomo/src/pyomo/pyomo/pysp/tests/examples/test_model/twovarslack
-#EDIR=$BASEDIR/pyomo/src/pyomo/pyomo/pysp/tests/examples/test_model/feas
-#EDIR=../impossible
+BDIR=/home/woodruff/software/pyomo
+EDIR=$BDIR/examples/pysp/sizes
 
-python bbph.py -i $EDIR/SIZES3 -m $EDIR/models --default-rho=1 --user-defined-extension=pyomo.pysp.plugins.phboundextension --traceback --BBPH-Verbose --BBPH-OuterIterationLimit=2 --max-iterations=30 --or-convergers --termdiff-threshold=0.005
+python BBPH.py -i $EDIR/SIZES3 -m $EDIR/models --default-rho=1 --user-defined-extension=pyomo.pysp.plugins.phboundextension --traceback --BBPH-working-dir=workingdir --BBPH-ph-Script=testphscript.bash --BBPH-ph-options-token=BBPHTOKEN --BBPH-Verbose --BBPH-brancher-plugin=/export/home/dlwoodruff/Documents/phbb/code/brancher --BBPH-brancher-output=brancherout.p --BBPH-OuterIterationLimit=4 --BBPH-PH-Launch-Limit=4
 
 #python BBPH.py -i $EDIR/SIZES3 -m $EDIR/models --default-rho=1 --user-defined-extension=pyomo.pysp.plugins.phboundextension --traceback --BBPH-OuterIterationLimit=5 --max-iterations=5 #--pyro-host=localhost --solver-manager=phpyro --phpyro-required-workers=3
 
