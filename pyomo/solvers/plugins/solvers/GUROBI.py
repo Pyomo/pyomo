@@ -307,7 +307,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         for x in ( problem_filename,
                    warmstart_filename,
                    solution_filename,
-                   self.options.mipgap,
+                   float(self.options.mipgap),
                    options_dict,
                    self._suffixes ):
             script += "%r," % x
