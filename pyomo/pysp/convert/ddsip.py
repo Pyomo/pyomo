@@ -8,6 +8,9 @@
 #  _________________________________________________________________________
 
 import os
+import time
+import sys
+import argparse
 import shutil
 import filecmp
 import logging
@@ -34,6 +37,15 @@ from pyomo.pysp.smps.smpsutils import (map_variable_stages,
                                        _no_negative_zero,
                                        _deterministic_check_value,
                                        ProblemStats)
+from pyomo.pysp.util.config import (PySPConfigValue,
+                                    PySPConfigBlock,
+                                    safe_register_common_option,
+                                    safe_register_unique_option,
+                                    _domain_must_be_str)
+from pyomo.pysp.scenariotree.manager import \
+    (ScenarioTreeManagerClientSerial,
+     ScenarioTreeManagerClientPyro)
+from pyomo.pysp.util.misc import launch_command
 
 from six import iteritems, itervalues
 
@@ -955,3 +967,181 @@ def convert_external(output_directory,
     input_files["script"] = script_filename
 
     return input_files
+
+def convertddsip_register_options(options=None):
+    if options is None:
+        options = PySPConfigBlock()
+    safe_register_common_option(options, "disable_gc")
+    safe_register_common_option(options, "profile")
+    safe_register_common_option(options, "traceback")
+    safe_register_common_option(options, "verbose")
+    safe_register_common_option(options, "symbolic_solver_labels")
+    safe_register_unique_option(
+        options,
+        "output_directory",
+        PySPConfigValue(
+            ".",
+            domain=_domain_must_be_str,
+            description=(
+                "The directory in which all DDSIP files "
+                "will be stored. Default is '.'."
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_unique_option(
+        options,
+        "first_stage_suffix",
+        PySPConfigValue(
+            "__DDSIP_FIRSTSTAGE",
+            domain=_domain_must_be_str,
+            description=(
+                "The suffix used to identify first-stage variables. "
+                "Default: '__DDSIP_FIRSTSTAGE'"
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_unique_option(
+        options,
+        "enforce_derived_nonanticipativity",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Adds nonanticipativity constraints for variables flagged "
+                "as derived within their respective time stage (except for "
+                "the final time stage). The default behavior behavior is "
+                "to treat derived variables as belonging to the final "
+                "time stage."
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_unique_option(
+        options,
+        "disable_consistency_checks",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Disables consistency checks that attempt to find issues "
+                "with the DDSIP conversion. By default, these checks are run "
+                "after conversion takes place and leave behind a temporary "
+                "directory with per-scenario output files if the checks fail. "
+                "This option is not recommended, but can be used if the "
+                "consistency checks are prohibitively slow."
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_unique_option(
+        options,
+        "keep_scenario_files",
+        PySPConfigValue(
+            False,
+            domain=bool,
+            description=(
+                "Keeps around the per-scenario DDSIP files created for testing "
+                "whether a conversion is valid (whether or not the validation "
+                "checks are performed). These files can be useful for "
+                "debugging purposes."
+            ),
+            doc=None,
+            visibility=0))
+    safe_register_common_option(options, "scenario_tree_manager")
+    ScenarioTreeManagerClientSerial.register_options(options)
+    ScenarioTreeManagerClientPyro.register_options(options)
+
+    return options
+
+#
+# Convert a PySP scenario tree formulation to DDSIP input files
+#
+
+def run_convertddsip(options):
+    import pyomo.environ
+
+    if not os.path.exists(options.output_directory):
+        os.makedirs(options.output_directory)
+
+    start_time = time.time()
+
+    io_options = {'symbolic_solver_labels':
+                  options.symbolic_solver_labels}
+
+    assert not options.compile_scenario_instances
+
+    manager_class = None
+    if options.scenario_tree_manager == 'serial':
+        manager_class = ScenarioTreeManagerClientSerial
+    elif options.scenario_tree_manager == 'pyro':
+        manager_class = ScenarioTreeManagerClientPyro
+
+    with manager_class(options) as scenario_tree_manager:
+        scenario_tree_manager.initialize()
+        files = convert_external(
+            options.output_directory,
+            options.first_stage_suffix,
+            scenario_tree_manager,
+            enforce_derived_nonanticipativity=\
+            options.enforce_derived_nonanticipativity,
+            io_options=io_options,
+            disable_consistency_checks=\
+            options.disable_consistency_checks,
+            keep_scenario_files=options.keep_scenario_files,
+            verbose=options.verbose)
+
+    end_time = time.time()
+
+    print("")
+    print("Total execution time=%.2f seconds"
+          % (end_time - start_time))
+
+#
+# the main driver routine for the convertddsip script.
+#
+
+def main(args=None):
+    #
+    # Top-level command that executes everything
+    #
+
+    #
+    # Import plugins
+    #
+    import pyomo.environ
+
+    #
+    # Parse command-line options.
+    #
+    options = PySPConfigBlock()
+    convertddsip_register_options(options)
+
+    #
+    # Prevent the compile_scenario_instances option from
+    # appearing on the command line. This script relies on
+    # the original constraints being present on the model
+    #
+    argparse_val = options.get('compile_scenario_instances')._argparse
+    options.get('compile_scenario_instances')._argparse = None
+
+    try:
+        ap = argparse.ArgumentParser(prog='pyomo.pysp.convert.ddsip')
+        options.initialize_argparse(ap)
+
+        # restore the option so the class validation does not
+        # raise an exception
+        options.get('compile_scenario_instances')._argparse = argparse_val
+
+        options.import_argparse(ap.parse_args(args=args))
+    except SystemExit as _exc:
+        # the parser throws a system exit if "-h" is specified
+        # - catch it to exit gracefully.
+        return _exc.code
+
+    return launch_command(run_convertddsip,
+                          options,
+                          error_label="pyomo.pysp.convert.ddsip: ",
+                          disable_gc=options.disable_gc,
+                          profile_count=options.profile,
+                          traceback=options.traceback)
+
+if __name__ == "__main__":
+    main(args=sys.argv[1:])
