@@ -341,11 +341,8 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
     def _solve_impl(self,
                     sp,
                     output_solver_log=False,
+                    verbose=False,
                     **kwds):
-
-        if len(sp.scenario_tree.stages) > 2:
-            raise ValueError("SD solver does not handle more "
-                             "than 2 time-stages")
 
         if sp.objective_sense == maximize:
             raise ValueError("SD solver does not yet handle "
@@ -368,6 +365,10 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
         logfile = self._files["logfile"] = \
                   os.path.join(working_directory, "sd.log")
 
+        if verbose:
+            print("Writing solver files in directory: %s"
+                  % (working_directory))
+
         os.makedirs(sdinput_directory)
         assert os.path.exists(sdinput_directory)
         assert not os.path.exists(sdoutput_directory)
@@ -386,27 +387,33 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
         # Create the SD input files
         #
 
-        symbol_map = None
         if isinstance(sp, EmbeddedSP):
-            symbol_map = pyomo.pysp.convert.smps.\
-                         convert_embedded(
-                             sdinput_directory,
-                             "pysp_model",
-                             sp,
-                             core_format='mps',
-                             io_options=kwds)
+            input_files, _ = pyomo.pysp.convert.smps.\
+                convert_embedded(
+                    sdinput_directory,
+                    "pysp_model",
+                    sp,
+                    core_format='mps',
+                    io_options=kwds)
         else:
-            pyomo.pysp.convert.smps.\
+            input_files = pyomo.pysp.convert.smps.\
                 convert_external(
                     sdinput_directory,
                     "pysp_model",
                     sp,
                     core_format='mps',
                     io_options=kwds)
+        for key in input_files:
+            self._add_tempfile(key, input_files[key])
 
         #
         # Launch SD
         #
+
+        _cmd_string = self.executable+" < pysp_model"
+        if verbose:
+            print("Launching DDSIP solver with command: %s"
+                  % (_cmd_string))
 
         start = time.time()
         rc, log = pyutilib.subprocess.run(
@@ -422,17 +429,15 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
         # Parse the SD solution
         #
 
-        xhat, results = self._read_solution(solution_filename)
+        xhat, results = self._read_solution(input_files["symbols"],
+                                            solution_filename)
 
-        results.solver_time = stop - start
-
-        if symbol_map is not None:
-            # load the first stage variable solution into
-            # the reference model
-            for symbol, varvalue in xhat.items():
-                symbol_map.bySymbol[symbol]().value = varvalue
+        if isinstance(sp, EmbeddedSP):
+            results.xhat = {sp.time_stages[0]: xhat}
         else:
             results.xhat = {sp.scenario_tree.findRootNode().name: xhat}
+
+        results.solver_time = stop - start
 
         return results
 
@@ -468,12 +473,21 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
             f.write("MAX_ITER %d\n" % (self.get_option("max_iterations")))
             f.write(sd_advanced_config_section)
 
-    def _read_solution(self, filename):
+    def _read_solution(self,
+                       symbols_filename,
+                       solution_filename):
         """ Parses an SD solution file """
+
+        # parse the symbol map
+        symbol_map = {}
+        with open(symbols_filename) as f:
+            for line in f:
+                lp_symbol, scenario_tree_id = line.strip().split()
+                symbol_map[lp_symbol] = scenario_tree_id
 
         results = SPSolverResults()
         xhat = {}
-        with open(filename, 'r') as f:
+        with open(solution_filename, 'r') as f:
             line = f.readline()
             assert line.startswith("Problem:")
             assert line.split()[1].strip() == "pysp_model"
@@ -557,7 +571,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                 varlabel, varvalue = line[1:3]
                 varlabel = varlabel.strip()
                 varvalue = float(varvalue)
-                xhat[varlabel] = varvalue
+                xhat[symbol_map[varlabel]] = varvalue
                 line = f.readline().strip().split()
 
         return xhat, results
@@ -575,6 +589,10 @@ def runsd_register_options(options=None):
                                "traceback")
     safe_register_common_option(options,
                                 "output_scenario_tree_solution")
+    safe_register_common_option(options,
+                                "keep_solver_files")
+    safe_register_common_option(options,
+                                "symbolic_solver_labels")
     ScenarioTreeManagerFactory.register_options(options)
     SDSolver.register_options(options)
 
@@ -593,7 +611,10 @@ def runsd(options):
               "programming problems")
         sd = SDSolver(options)
         results = sd.solve(manager,
-                           output_solver_log=True)
+                           output_solver_log=True,
+                           keep_solver_files=options.keep_solver_files,
+                           symbolic_solver_labels=options.symbolic_solver_labels,
+                           verbose=options.verbose)
         print(results)
 
         if options.output_scenario_tree_solution:
