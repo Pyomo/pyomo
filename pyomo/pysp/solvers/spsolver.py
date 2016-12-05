@@ -20,6 +20,7 @@ from pyomo.core import ComponentUID
 from pyomo.opt import undefined
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import PySPConfigBlock
+from pyomo.pysp.embeddedsp import EmbeddedSP
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -83,18 +84,31 @@ class SPSolver(PySPConfiguredObject):
                 self._solver_options[key] = val
 
         try:
-            scenario_tree = sp.scenario_tree
 
-            num_scenarios = len(scenario_tree.scenarios)
-            num_stages = len(scenario_tree.stages)
-            num_na_variables = 0
-            num_na_continuous_variables = 0
-            for stage in scenario_tree.stages[:-1]:
-                for tree_node in stage.nodes:
-                    num_na_variables += len(tree_node._standard_variable_ids)
-                    for id_ in tree_node._standard_variable_ids:
-                        if not tree_node.is_variable_discrete(id_):
-                            num_na_continuous_variables += 1
+            if isinstance(sp, EmbeddedSP):
+                num_scenarios = "<unknown>"
+                num_stages = len(sp.time_stages)
+                num_na_variables = 0
+                num_na_continuous_variables = 0
+                for stage in sp.time_stages[:-1]:
+                    for var,derived in sp.stage_to_variables_map[stage]:
+                        if not derived:
+                            num_na_variables += 1
+                            if var.is_continuous():
+                                num_na_continuous_variables += 1
+            else:
+                scenario_tree = sp.scenario_tree
+
+                num_scenarios = len(scenario_tree.scenarios)
+                num_stages = len(scenario_tree.stages)
+                num_na_variables = 0
+                num_na_continuous_variables = 0
+                for stage in scenario_tree.stages[:-1]:
+                    for tree_node in stage.nodes:
+                        num_na_variables += len(tree_node._standard_variable_ids)
+                        for id_ in tree_node._standard_variable_ids:
+                            if not tree_node.is_variable_discrete(id_):
+                                num_na_continuous_variables += 1
 
             if kwds.get('output_solver_log', False):
                 print("\n")
@@ -123,16 +137,16 @@ class SPSolver(PySPConfiguredObject):
 
         if reference_model is not None:
             xhat = results.xhat
-            for node_name in xhat:
-                node_solution = xhat[node_name]
-                for id_ in node_solution:
+            for tree_obj_name in xhat:
+                tree_obj_solution = xhat[tree_obj_name]
+                for id_ in tree_obj_solution:
                     var = ComponentUID(id_).\
                           find_component(reference_model)
                     if not var.is_expression():
-                        var.value = node_solution[id_]
+                        var.value = tree_obj_solution[id_]
                         var.stale = False
             del results.xhat
-            # TODO: node costs
+            # TODO: node/stage costs
 
         return results
 
