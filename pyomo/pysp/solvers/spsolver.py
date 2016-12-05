@@ -16,12 +16,25 @@ import logging
 
 import pyutilib.misc
 
+from pyomo.core import ComponentUID
 from pyomo.opt import undefined
-
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import PySPConfigBlock
 
 logger = logging.getLogger('pyomo.pysp')
+
+# TODO:
+# Things to test for particular solvers:
+#   - serial vs pyro scenario tree manager
+#   - behavior on multi-stage
+#   - access to xhat
+#   - access to derived variables in xhat
+#   - solve status (need an enum?)
+#   - solutions loaded into scenario instances
+#   - solution loaded into reference model
+#   - results.objective
+#   - results.bound
+#   - ddsip validate problem (like in smpsutils)
 
 class SPSolverResults(object):
 
@@ -59,6 +72,7 @@ class SPSolver(PySPConfiguredObject):
 
         start = time.time()
 
+        reference_model = kwds.pop('reference_model', None)
         tmp_options = kwds.pop('options', None)
         orig_options = self.options
         if tmp_options is not None:
@@ -106,6 +120,19 @@ class SPSolver(PySPConfiguredObject):
         finally:
             if tmp_options is not None:
                 self._solver_options = orig_options
+
+        if reference_model is not None:
+            xhat = results.xhat
+            for node_name in xhat:
+                node_solution = xhat[node_name]
+                for id_ in node_solution:
+                    var = ComponentUID(id_).\
+                          find_component(reference_model)
+                    if not var.is_expression():
+                        var.value = node_solution[id_]
+                        var.stale = False
+            del results.xhat
+            # TODO: node costs
 
         return results
 
