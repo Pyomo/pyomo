@@ -24,7 +24,9 @@ from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.numvalue import potentially_variable
-from pyomo.core.base.expr_pyomo4 import EntangledExpressionError
+from pyomo.core.base.expr_pyomo4 import (
+    EntangledExpressionError, _getrefcount_available
+)
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
@@ -697,8 +699,8 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         m.b = Var()
         m.c = Var()
         m.d = Var()
-        e1 = m.a * m.b
 
+        e1 = m.a * m.b
         e = e1 * 5
         self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(len(e._args), 2)
@@ -707,7 +709,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
 
-        e1._parent_expr = None
+        e1 = m.a * m.b
         e = 5 * e1
         self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(len(e._args), 2)
@@ -716,7 +718,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
 
-        e1._parent_expr = None
+        e1 = m.a * m.b
         e = e1 * m.c
         self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(len(e._args), 2)
@@ -725,7 +727,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
 
-        e1._parent_expr = None
+        e1 = m.a * m.b
         e = m.c * e1
         self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(len(e._args), 2)
@@ -734,7 +736,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
 
-        e1._parent_expr = None
+        e1 = m.a * m.b
         e2 = m.c * m.d
         e = e1 * e2
         self.assertIs(type(e), EXPR._ProductExpression)
@@ -802,6 +804,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         m.b = Var()
         m.c = Var()
         m.d = Var()
+
         e1 = m.a / m.b
         e = e1 / 5
         self.assertIs(type(e), EXPR._DivisionExpression)
@@ -811,7 +814,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
 
-        e1._parent_expr = None
+        e1 = m.a / m.b
         e = 5 / e1
         self.assertIs(type(e), EXPR._DivisionExpression)
         self.assertEqual(len(e._args), 2)
@@ -820,7 +823,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
 
-        e1._parent_expr = None
+        e1 = m.a / m.b
         e = e1 / m.c
         self.assertIs(type(e), EXPR._DivisionExpression)
         self.assertEqual(len(e._args), 2)
@@ -829,7 +832,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
 
-        e1._parent_expr = None
+        e1 = m.a / m.b
         e = m.c / e1
         self.assertIs(type(e), EXPR._DivisionExpression)
         self.assertEqual(len(e._args), 2)
@@ -838,7 +841,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
 
-        e1._parent_expr = None
+        e1 = m.a / m.b
         e2 = m.c / m.d
         e = e1 / e2
         self.assertIs(type(e), EXPR._DivisionExpression)
@@ -1580,112 +1583,112 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         m = self.m
         x = 0
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x += m.a
         self.assertIs(type(x), type(m.a))
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x += m.a
         self.assertIs(type(x), EXPR._LinearExpression)
         self.assertEqual(len(x._args), 1)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x += m.b
         self.assertIs(type(x), EXPR._LinearExpression)
         self.assertEqual(len(x._args), 2)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
 
     def test_isub(self):
         m = self.m
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x = m.a
         x -= 0
         self.assertIs(type(x), type(m.a))
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         x = 0
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x -= m.a
         self.assertIs(type(x), EXPR._LinearExpression)
         self.assertEqual(len(x._args), 1)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x -= m.a
         self.assertIs(type(x), EXPR._LinearExpression)
         self.assertEqual(len(x._args), 1)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x -= m.a
         self.assertIs(type(x), EXPR._LinearExpression)
         self.assertEqual(len(x._args), 1)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x -= m.b
         self.assertIs(type(x), EXPR._LinearExpression)
         self.assertEqual(len(x._args), 2)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
     def test_imul(self):
         m = self.m
         x = 1
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x *= m.a
         self.assertIs(type(x), type(m.a))
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x *= m.a
         self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._args), 2)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x *= m.a
         self.assertIs(type(x), EXPR._ProductExpression)
         self.assertEqual(len(x._args), 2)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
     def test_idiv(self):
         m = self.m
         x = 1
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x /= m.a
         self.assertIs(type(x), EXPR._DivisionExpression)
         self.assertEqual(len(x._args), 2)
         self.assertEqual(x._args[0], 1)
         self.assertIs(x._args[1], m.a)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x /= m.a
         self.assertIs(type(x), EXPR._DivisionExpression)
         self.assertIs(type(x._args[0]), EXPR._DivisionExpression)
         self.assertIs(x._args[1], m.a)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
 
     def test_ipow(self):
         m = self.m
         x = 1
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x **= m.a
         self.assertIs(type(x), EXPR._PowExpression)
         self.assertEqual(len(x._args), 2)
         self.assertEqual(value(x._args[0]), 1)
         self.assertIs(x._args[1], m.a)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x **= m.b
         self.assertIs(type(x), EXPR._PowExpression)
         self.assertEqual(len(x._args), 2)
@@ -1694,11 +1697,11 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.assertEqual(len(x._args), 2)
         self.assertEqual(value(x._args[0]._args[0]), 1)
         self.assertIs(x._args[0]._args[1], m.a)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
         # If someone else holds a reference to the expression, we still
         # need to clone it:
-        #count = EXPR.generate_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         x = 1 ** m.a
         y = x
         x **= m.b
@@ -1714,7 +1717,7 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.assertEqual(len(x._args), 2)
         self.assertEqual(value(x._args[0]._args[0]), 1)
         self.assertIs(x._args[0]._args[1], m.a)
-        #self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
+        self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
 class TestGeneralExpressionGeneration(unittest.TestCase):
     def setUp(self):
@@ -1775,9 +1778,12 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         m.b = Var()
 
         e = -m.a
-        self.assertIs(type(e), EXPR._NegationExpression)
+        self.assertIs(type(e), EXPR._LinearExpression)
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
+        self.assertEqual(len(e._coef), 1)
+        self.assertEqual(e._const, 0)
+        self.assertEqual(e._coef[id(m.a)], -1)
 
         e1 = m.a - m.b
         e = -e1
@@ -2303,6 +2309,9 @@ class TestPolynomialDegree(unittest.TestCase):
         m.a.fixed = False
 
 
+@unittest.skipIf(
+    _getrefcount_available,
+    "Entangled Errors not generated when sys.getrefcount() is available" )
 class EntangledExpressionErrors(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
