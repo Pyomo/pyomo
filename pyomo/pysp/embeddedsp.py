@@ -71,6 +71,7 @@ def _update_data(worker, scenario, data):
 #
 
 class Distribution(object):
+    __slots__ = ()
     def expectation(self, *args, **kwds):
         raise NotImplementedError
     def sample(self, *args, **kwds):
@@ -84,7 +85,7 @@ class TableDistribution(Distribution):
     weights are provided, the probability of each value is
     considered uniform.
     """
-
+    __slots = ("values", "weights")
     def __init__(self, values, weights=None):
         if len(values) == 0:
             raise ValueError("Empty tables are not allowed")
@@ -116,7 +117,7 @@ class UniformDistribution(Distribution):
 
     A random number in the range [a, b) or [a, b] depending on rounding.
     """
-
+    __slots__ = ("a", "b")
     def __init__(self, a, b):
         assert a <= b
         self.a = a
@@ -141,7 +142,7 @@ class NormalDistribution(Distribution):
     pdf(x) =  ----------------------------
                 sqrt(2 * pi * sigma^2)
     """
-
+    __slots__ = ("mu","sigma","_sampler")
     def __init__(self, mu, sigma, sampler=random.normalvariate):
         self.mu = mu
         self.sigma = sigma
@@ -168,7 +169,7 @@ class LogNormalDistribution(Distribution):
     pdf(x) =  ----------------------------
                 sigma * x * sqrt(2 * pi)
     """
-
+    __slots__ = ("mu","sigma","_sampler")
     def __init__(self, mu, sigma, sampler=random.lognormvariate):
         assert sigma > 0
         self.mu = mu
@@ -193,7 +194,7 @@ class GammaDistribution(Distribution):
     pdf(x) =  ----------------------------
               scale^shape * GammaFn(shape)
     """
-
+    __slots__ = ("shape","scale","_sampler")
     def __init__(self, scale, shape, sampler=random.gammavariate):
         assert scale > 0
         assert shape > 0
@@ -219,7 +220,7 @@ class BetaDistribution(Distribution):
     pdf(x) =  -----------------------------
                   BetaFn(alpha, beta)
     """
-
+    __slots__ = ("alpha","beta","_sampler")
     def __init__(self, alpha, beta, sampler=random.betavariate):
         assert alpha > 0
         assert alpha > 0
