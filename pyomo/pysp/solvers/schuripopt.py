@@ -98,13 +98,14 @@ def _write_bundle_nl(worker,
             # get the node of off the real scenario tree
             # as this has the linked variable information
             node = scenario_tree.get_node(_node.name)
+            node_name = node.name
             master_variable = bundle_instance.find_component(
                 "MASTER_BLEND_VAR_"+str(node.name))
             for variable_id in node._standard_variable_ids:
                 # Assumes ASL uses 4-byte, signed integers to store suffixes,
                 # and we need positive suffix values
                 linking_suffix[master_variable[variable_id]] = \
-                    scenario_tree_id_to_pint32(variable_id)
+                    scenario_tree_id_to_pint32(node_name, variable_id)
     # make sure the conversion from scenario tree id to int
     # did not have any collisions
     _ids = list(linking_suffix.values())
@@ -174,11 +175,12 @@ def _write_scenario_nl(worker,
     # Loop over all nodes for the scenario except the leaf node,
     # which has no blended variables
     for node in scenario._node_list[:-1]:
+        node_name = node.name
         for variable_id in node._standard_variable_ids:
             # Assumes ASL uses 4-byte, signed integers to store suffixes,
             # and we need positive suffix values
             linking_suffix[bySymbol[variable_id]] = \
-                scenario_tree_id_to_pint32(variable_id)
+                scenario_tree_id_to_pint32(node_name, variable_id)
     # make sure the conversion from scenario tree id to int
     # did not have any collisions
     _ids = list(linking_suffix.values())
