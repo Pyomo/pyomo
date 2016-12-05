@@ -28,11 +28,13 @@ from pyomo.environ import *
 from six import StringIO
 
 thisdir = dirname(abspath(__file__))
+baselinedir = os.path.join(thisdir, "smps_baselines")
 pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
 _run_verbose = True
 
+@unittest.category('nightly','expensive')
 class TestSMPSSimple(unittest.TestCase):
 
     @unittest.nottest
@@ -245,7 +247,7 @@ class _SMPSTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = ['pysp2smps']
+        cmd = ['python','-m','pyomo.pysp.convert.smps']
         for name, val in self.options.items():
             cmd.append(name)
             if val is not None:
@@ -299,7 +301,7 @@ class _SMPSTesterBase(object):
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_LP_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -309,7 +311,7 @@ class _SMPSTesterBase(object):
         self.options['--enforce-derived-nonanticipativity'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_ignore_derived_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_LP_ignore_derived_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -318,7 +320,7 @@ class _SMPSTesterBase(object):
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_MPS_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -328,7 +330,7 @@ class _SMPSTesterBase(object):
         self.options['--enforce-derived-nonanticipativity'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_ignore_derived_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_MPS_ignore_derived_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -338,7 +340,7 @@ class _SMPSTesterBase(object):
         self.options['--symbolic-solver-labels'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_symbolic_names_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -349,7 +351,7 @@ class _SMPSTesterBase(object):
         self.options['--enforce-derived-nonanticipativity'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_symbolic_names_ignore_derived_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_LP_symbolic_names_ignore_derived_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -359,7 +361,7 @@ class _SMPSTesterBase(object):
         self.options['--symbolic-solver-labels'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -370,7 +372,7 @@ class _SMPSTesterBase(object):
         self.options['--enforce-derived-nonanticipativity'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_symbolic_names_ignore_derived_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_MPS_symbolic_names_ignore_derived_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -456,7 +458,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--core-format'] = 'lp'
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_LP_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -466,7 +468,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--enforce-derived-nonanticipativity'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_ignore_derived_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_LP_ignore_derived_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -475,7 +477,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--core-format'] = 'mps'
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_MPS_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -485,7 +487,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--enforce-derived-nonanticipativity'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_ignore_derived_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_MPS_ignore_derived_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -495,7 +497,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--symbolic-solver-labels'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_symbolic_names_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_LP_symbolic_names_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -506,7 +508,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--enforce-derived-nonanticipativity'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_LP_symbolic_names_ignore_derived_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_LP_symbolic_names_ignore_derived_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -516,7 +518,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--symbolic-solver-labels'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_MPS_symbolic_names_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 
@@ -527,7 +529,7 @@ class _SMPSPyroTesterBase(_SMPSTesterBase):
         self.options['--enforce-derived-nonanticipativity'] = None
         cmd = self._get_cmd()
         self._run_cmd(cmd)
-        self._diff(os.path.join(thisdir, self.baseline_basename+'_MPS_symbolic_names_ignore_derived_baseline'),
+        self._diff(os.path.join(baselinedir, self.baseline_basename+'_MPS_symbolic_names_ignore_derived_baseline'),
                    self.options['--output-directory'])
         self._cleanup()
 

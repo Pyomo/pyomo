@@ -4,7 +4,7 @@
 # these can not be annotated so they must be
 # moved to a constraint
 #
-from pyomo.pysp.tests.smps.utils import *
+from pyomo.pysp.tests.convert.utils import *
 
 pysp_scenario_tree_model_callback = \
     simple_twostage_scenario_tree

@@ -2,7 +2,7 @@
 # a model that declares the wrong component type
 # within an annotation
 #
-from pyomo.pysp.tests.smps.utils import *
+from pyomo.pysp.tests.convert.utils import *
 
 pysp_scenario_tree_model_callback = \
     simple_twostage_scenario_tree
