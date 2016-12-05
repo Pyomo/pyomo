@@ -90,27 +90,39 @@ class Test(unittest.TestCase):
                                                        verbose=True)
         self.assertEqual(scenario_tree.contains_bundles(), True)
         self.assertEqual(len(scenario_tree.bundles), 3)
-        scenario_tree = factory.generate_scenario_tree(bundles=join(testdatadir, "bundles.dat"),
-                                                       verbose=True)
-        self.assertEqual(scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(scenario_tree.bundles), 3)
-        scenario_tree = factory.generate_scenario_tree(bundles=join(testdatadir, "bundles"),
-                                                       verbose=True)
-        self.assertEqual(scenario_tree.contains_bundles(), True)
-        self.assertEqual(len(scenario_tree.bundles), 3)
-        if (factory.data_directory() is not None) and \
-           exists(join(factory.data_directory(), "bundles.dat")):
-            scenario_tree = factory.generate_scenario_tree(bundles="bundles.dat",
-                                                           verbose=True)
+        if factory._scenario_tree is not None:
+            self.assertTrue(factory._scenario_tree_model is None)
+            with self.assertRaises(ValueError):
+                scenario_tree = factory.generate_scenario_tree(
+                    bundles=join(testdatadir, "bundles.dat"),
+                    verbose=True)
+        else:
+            scenario_tree = factory.generate_scenario_tree(
+                bundles=join(testdatadir, "bundles.dat"),
+                verbose=True)
             self.assertEqual(scenario_tree.contains_bundles(), True)
             self.assertEqual(len(scenario_tree.bundles), 3)
-            scenario_tree = factory.generate_scenario_tree(bundles="bundles",
-                                                           verbose=True)
+            scenario_tree = factory.generate_scenario_tree(
+                bundles=join(testdatadir, "bundles"),
+                verbose=True)
             self.assertEqual(scenario_tree.contains_bundles(), True)
             self.assertEqual(len(scenario_tree.bundles), 3)
-        with self.assertRaises(ValueError):
-            scenario_tree = factory.generate_scenario_tree(bundles="bundles.notexists",
-                                                           verbose=True)
+            if (factory.data_directory() is not None) and \
+               exists(join(factory.data_directory(), "bundles.dat")):
+                scenario_tree = factory.generate_scenario_tree(
+                    bundles="bundles.dat",
+                    verbose=True)
+                self.assertEqual(scenario_tree.contains_bundles(), True)
+                self.assertEqual(len(scenario_tree.bundles), 3)
+                scenario_tree = factory.generate_scenario_tree(
+                    bundles="bundles",
+                    verbose=True)
+                self.assertEqual(scenario_tree.contains_bundles(), True)
+                self.assertEqual(len(scenario_tree.bundles), 3)
+            with self.assertRaises(ValueError):
+                scenario_tree = factory.generate_scenario_tree(
+                    bundles="bundles.notexists",
+                    verbose=True)
 
     def test_init1(self):
         self.assertTrue("reference_test_model" not in sys.modules)
@@ -423,9 +435,28 @@ class Test(unittest.TestCase):
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)
 
+    def test_init14(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        scenario_tree_model = CreateAbstractScenarioTreeModel().\
+            create_instance(
+                join(testdatadir, "reference_test_scenario_tree.dat"))
+        with ScenarioTreeInstanceFactory(
+                model=reference_test_model,
+                scenario_tree=scenario_tree_model,
+                data=testdatadir) as factory:
+            scenario_tree = factory.generate_scenario_tree()
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+        # start with a scenario tree (not a scenario tree model)
+        with ScenarioTreeInstanceFactory(
+                model=reference_test_model,
+                scenario_tree=scenario_tree,
+                data=testdatadir) as factory:
+            self._check_factory(factory)
+        self.assertEqual(factory._closed, True)
+        self.assertEqual(len(factory._archives), 0)
+
 Test = unittest.category('smoke','nightly','expensive')(Test)
 
 if __name__ == "__main__":
-    #import logging
-    #logging.getLogger('pyomo.pysp').setLevel(logging.DEBUG)
     unittest.main()
