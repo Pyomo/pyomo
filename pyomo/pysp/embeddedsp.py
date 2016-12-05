@@ -19,7 +19,8 @@ import pyomo.core.base.param
 from pyomo.core.base import ComponentUID
 from pyomo.core.base.numvalue import is_fixed, is_constant
 from pyomo.core.base.block import (Block,
-                                   SortComponents)
+                                   SortComponents,
+                                   generate_cuid_names)
 from pyomo.core.base.var import Var, _VarData
 from pyomo.core.base.objective import (Objective,
                                        _ObjectiveData)
@@ -419,6 +420,8 @@ class EmbeddedSP(object):
         self.stochastic_data_to_variables_ub_map = ComponentMap()
         self.variable_to_stochastic_data_ub_map = ComponentMap()
 
+        self.variable_symbols = ComponentMap()
+
         if not isinstance(reference_model, Block):
             raise TypeError("reference model input must be a Pyomo model")
         self.reference_model = reference_model
@@ -440,6 +443,15 @@ class EmbeddedSP(object):
             _map_variable_stages(self.reference_model)
         self.time_stages = tuple(sorted(self.stage_to_variables_map))
         assert self.time_stages[0] == 1
+        self.variable_symbols = generate_cuid_names(self.reference_model,
+                                                    ctype=Var)
+        # remove the parent blocks from this map
+        keys_to_delete = []
+        for var in self.variable_symbols:
+            if var.parent_component().type() is not Var:
+                keys_to_delete.append(var)
+        for key in keys_to_delete:
+            del self.variable_symbols[key]
 
         #
         # Get the stage cost components from the StageCostAnnotation
