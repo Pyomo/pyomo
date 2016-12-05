@@ -14,6 +14,7 @@
 import os
 import sys
 import time
+import shutil
 
 import pyutilib.subprocess
 import pyutilib.services
@@ -53,10 +54,7 @@ _firststage_var_suffix = "__DDSIP_FIRSTSTAGE"
 def _load_solution(manager,
                    scenario,
                    solution_filename,
-                   scenario_id,
-                   return_xhat=False):
-
-    x = {}
+                   scenario_id):
     x_firststage = x[scenario.node_list[0].name] = {}
     assert scenario.node_list[0] is manager.scenario_tree.findRootNode()
     x_secondstage = x[scenario.node_list[1].name] = {}
@@ -278,12 +276,6 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         logfile = self._files['logfile'] = \
                   os.path.join(working_directory,
                                "ddsip.log")
-        config_filename = self._files['configfile'] = \
-                          os.path.join(working_directory,
-                                       "config.ddsip")
-        sipstdin_filename = self._files['runfile'] = \
-                            os.path.join(working_directory,
-                                         "sipstdin")
 
         os.makedirs(input_directory)
         assert os.path.exists(input_directory)
@@ -301,60 +293,52 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             print("Writing solver files in directory: %s"
                   % (working_directory))
 
-        # TODO: symbol_map
-        symbol_map = None
-        stats, input_files = pyomo.pysp.smps.ddsiputils.\
-                             convert_external(
-                                 input_directory,
-                                 _firststage_var_suffix,
-                                 sp,
-                                 io_options=kwds)
-        self._write_config(stats, config_filename)
+        input_files = pyomo.pysp.convert.ddsip.\
+            convert_external(
+                input_directory,
+                _firststage_var_suffix,
+                sp,
+                io_options=kwds)
+        for key in input_files:
+            self._add_tempfile(key, input_files[key])
 
-        # hacked by DLW, November 2016: the model file is now
-        # first and the config file is second. So ddsiputils
-        # gets it almost right.
-        with open(sipstdin_filename, "w") as f:
-            f.write(input_files[0]+"\n")
-            f.write(config_filename+"\n")
-            iterfiles = iter(input_files) # to step over the zeroth
-            next(iterfiles)
-            for fname in iterfiles:
-                f.write(fname+"\n")
-        sipstdin = None
-        with open(sipstdin_filename) as f:
-            sipstdin = f.read()
-        assert sipstdin is not None
+        self._update_config(input_files["config"])
 
         #
         # Launch DDSIP
         #
 
-        _cmd_string = self.executable+" < "+sipstdin_filename
+        _cmd_string = self.executable+" < "+input_files["script"]
         if verbose:
             print("Launching DDSIP solver with command: %s"
                   % (_cmd_string))
+        ddsipstdin = None
+        with open(input_files["script"]) as f:
+            ddsipstdin = f.read()
+        assert ddsipstdin is not None
 
         start = time.time()
         rc, log = pyutilib.subprocess.run(
             self.executable,
             cwd=working_directory,
-            stdin=sipstdin,
+            stdin=ddsipstdin,
             outfile=logfile,
             tee=output_solver_log)
         stop = time.time()
 
         if rc:
             if not self.available():
-                raise ValueError("Solver executable does not exist: '%s'. "
-                                 "(note that the default executable generated "
-                                 "by the DDSIP build system does not have this name)"
-                                 % (self.executable))
+                raise ValueError(
+                    "Solver executable does not exist: '%s'. "
+                    "(note that the default executable generated "
+                    "by the DDSIP build system does not have this name)"
+                    % (self.executable))
             else:
-                raise RuntimeError("A nonzero return code (%s) was encountered after "
-                                   "launching the command: %s. Check the solver log file "
-                                   "for more information: %s"
-                                   % (rc, _cmd_string, logfile))
+                raise RuntimeError(
+                    "A nonzero return code (%s) was encountered after "
+                    "launching the command: %s. Check the solver log file "
+                    "for more information: %s"
+                    % (rc, _cmd_string, logfile))
 
         #
         # Parse the DDSIP solution
@@ -367,56 +351,43 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
 
         async_xhat = None
         async_responses = []
-        for scenario_id, scenario in enumerate(sp.scenario_tree.scenarios, 1):
-            if scenario_id == 1:
-                async_xhat = sp.invoke_function(
-                    "_load_solution",
-                    thisfile,
-                    invocation_type=InvocationType.OnScenario(scenario.name),
-                    function_args=(solution_filename, scenario_id),
-                    function_kwds={'return_xhat': True},
-                    async=True)
-            else:
-                async_responses.append(sp.invoke_function(
-                    "_load_solution",
-                    thisfile,
-                    invocation_type=InvocationType.OnScenario(scenario.name),
-                    function_args=(solution_filename, scenario_id),
-                    function_kwds={'return_xhat': True},
-                    async=True))
 
-        xhat, results = self._read_solution(sp, info_filename, solution_filename)
+        # TODO: The solution symbols are not being translated
+        #       back to scenario tree ids. Fix this and also have
+        #       the first and second stage solutions be loaded into
+        #       the Pyomo models
+        #for scenario_id, scenario in enumerate(sp.scenario_tree.scenarios, 1):
+        #    async_responses.append(sp.invoke_function(
+        #        "_load_solution",
+        #        thisfile,
+        #        invocation_type=InvocationType.OnScenario(scenario.name),
+        #        function_args=(solution_filename, scenario_id),
+        #        async=True))
 
-        reference_xhat = async_xhat.complete()
+        results = self._read_solution(sp,
+                                      input_files["symbols"],
+                                      info_filename,
+                                      solution_filename)
+
         results.solver_time = stop - start
-
-        if symbol_map is not None:
-            # load the first stage variable solution into
-            # the reference model
-            for symbol, varvalue in xhat.items():
-                symbol_map.bySymbol[symbol]().value = varvalue
-        else:
-            results.xhat = {sp.scenario_tree.findRootNode().name: xhat}
 
         for res in async_responses:
             res.complete()
 
         return results
 
-    def _write_config(self, stats, filename):
+    def _update_config(self, config_filename):
         """ Writes an DDSIP config file """
-        with open(filename, "w") as f:
-            f.write("BEGIN \n\n\n")
-            f.write("FIRSTCON "+str(stats.firststage_constraint_count)+"\n")
-            f.write("FIRSTVAR "+str(stats.firststage_variable_count)+"\n")
-            f.write("SECCON "+str(stats.secondstage_constraint_count)+"\n")
-            f.write("SECVAR "+str(stats.secondstage_variable_count)+"\n")
-            f.write("POSTFIX "+_firststage_var_suffix+"\n")
-            f.write("SCENAR "+str(stats.scenario_count)+"\n")
 
-            f.write("STOCRHS "+str(stats.stochastic_rhs_count)+"\n")
-            f.write("STOCCOST "+str(stats.stochastic_cost_count)+"\n")
-            f.write("STOCMAT "+str(stats.stochastic_matrix_count)+"\n")
+        # remove "END" from the config file
+        new_config_filename = \
+            os.path.join(os.path.dirname(config_filename),
+                         os.path.basename(config_filename)+".tmp")
+        with open(new_config_filename, "w") as f:
+            with open(config_filename, "r") as forig:
+                for line in forig:
+                    if line.strip() != "END":
+                        f.write(line)
 
             f.write("\n\nCPLEXBEGIN\n")
             f.write("1035 0 * Output on screen indicator\n")
@@ -487,18 +458,30 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
 
             f.write("\n\nEND\n")
 
+        os.remove(config_filename)
+        shutil.copyfile(new_config_filename, config_filename)
+        os.remove(new_config_filename)
+
     def _read_solution(self,
                        sp,
+                       symbols_filename,
                        info_filename,
                        solution_filename):
         """Parses a DDSIP solution file."""
 
         results = SPSolverResults()
 
+        # parse the symbol map
+        symbol_map = {}
+        with open(symbols_filename) as f:
+            for line in f:
+                lp_symbol, scenario_tree_id = line.strip().split()
+                symbol_map[lp_symbol] = scenario_tree_id
+
         #
         # Xhat
         #
-        xhat = {}
+        xhat = results.xhat = {}
         with open(solution_filename, 'r') as f:
             line = f.readline()
             while line.strip() != "1. Best Solution":
@@ -510,9 +493,8 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             line = f.readline().strip()
             while line != "":
                 line = line.split()
-                varname, varsol = line
-                assert varname.endswith(_firststage_var_suffix)
-                xhat[varname[:-len(_firststage_var_suffix)]] = float(varsol)
+                varlabel, varsol = line
+                xhat[symbol_map[varlabel]] = float(varsol)
                 line = f.readline().strip()
 
         #
@@ -548,11 +530,8 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             line = f.readline().strip()
             assert line.startswith("Nodes")
             line = f.readline().strip()
-            assert line == ""
-            line = f.readline().strip()
-            assert line == ""
-            line = f.readline().strip()
-            assert line == "----------------------------------------------------------------------------------------"
+            while line != "----------------------------------------------------------------------------------------":
+                line = f.readline().strip()
             line = f.readline().strip()
             assert line.startswith("Best Value")
             results.objective = float(line.split()[2])
@@ -563,7 +542,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             assert line.startswith("Lower Bound")
             results.bound = float(line.split()[2])
 
-        return xhat, results
+        return results
 
 def runddsip_register_options(options=None):
     if options is None:
