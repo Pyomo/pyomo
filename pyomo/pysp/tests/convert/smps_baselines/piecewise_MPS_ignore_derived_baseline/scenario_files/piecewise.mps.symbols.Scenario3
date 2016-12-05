@@ -1,0 +1,16 @@
+x2 fx
+x10 p_first_stage.INC_bin_y:#1
+x11 p_first_stage.INC_bin_y:#2
+x12 p_first_stage.INC_bin_y:#3
+x6 p_first_stage.INC_delta:#1
+x7 p_first_stage.INC_delta:#2
+x8 p_first_stage.INC_delta:#3
+x9 p_first_stage.INC_delta:#4
+x17 p_second_stage:#1.INC_bin_y:#1
+x18 p_second_stage:#1.INC_bin_y:#2
+x19 p_second_stage:#1.INC_bin_y:#3
+x13 p_second_stage:#1.INC_delta:#1
+x14 p_second_stage:#1.INC_delta:#2
+x15 p_second_stage:#1.INC_delta:#3
+x16 p_second_stage:#1.INC_delta:#4
+x1 x
