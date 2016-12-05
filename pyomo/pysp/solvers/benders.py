@@ -637,7 +637,7 @@ class BendersAlgorithm(PySPConfiguredObject):
         # best objective
         self.incumbent_objective = None
         # incumbent first-stage solution with best objective
-        self.incumbent_xhat = None
+        self.xhat = None
         # |best_bound - best_objective| / (eps + |best_objective|)
         self.optimality_gap = None
         # no. of iterations completed
@@ -1168,7 +1168,7 @@ class BendersAlgorithm(PySPConfiguredObject):
         self.objective_history = OrderedDict()
         self.incumbent_objective = \
             float('inf') if (objective_sense is minimize) else float('-inf')
-        self.incumbent_xhat = None
+        self.xhat = None
         self.optimality_gap = float('inf')
         self.iterations = 0
 
@@ -1251,10 +1251,10 @@ class BendersAlgorithm(PySPConfiguredObject):
 
             if objective_sense == minimize:
                 if self.incumbent_objective < incumbent_objective_prev:
-                    self.incumbent_xhat = new_xhat
+                    self.xhat = new_xhat
             else:
                 if self.incumbent_objective > incumbent_objective_prev:
-                    self.incumbent_xhat = new_xhat
+                    self.xhat = new_xhat
 
             self.optimality_gap = \
                 abs(best_master_bound - self.incumbent_objective) / \
@@ -1290,12 +1290,6 @@ class BendersAlgorithm(PySPConfiguredObject):
                 print("-" * width_log_table)
                 print("Maximum number of iterations reached.")
 
-#        print("")
-#        print("Re-solving at best incumbent xhat and collecting full "
-#              "scenario tree solution.")
-#        self.update_fix_constraints(self.incumbent_xhat)
-#        self._manager.solve_subproblems()
-
         self.bound = float('-inf') if (objective_sense is minimize) else float('inf')
         if len(self.master_bound_history):
             if objective_sense is minimize:
@@ -1323,42 +1317,14 @@ class BendersSolver(SPSolver, PySPConfiguredObject):
 
     def _solve_impl(self,
                     sp,
-                    output_solver_log=False,
-                    reference_model=None):
+                    output_solver_log=False):
         with BendersAlgorithm(sp, self._options) as benders:
             benders.build_master_problem()
             objective = benders.solve(output_solver_log=output_solver_log)
         results = SPSolverResults()
         results.objective = benders.incumbent_objective
         results.bound = benders.bound
-        if reference_model is not None:
-            stages = tuple(stage.name for stage in sp.scenario_tree.stages[:-1])
-            scenario = sp.scenario_tree.scenarios[0]
-            tmp = {}
-            for stagenum, stage in enumerate(sp.scenario_tree.stages[:-1]):
-                cost_variable_name, cost_variable_index = \
-                    stage._cost_variable
-                stage_cost_obj = \
-                    instance.find_component(cost_variable_name)[cost_variable_index]
-                if not stage_cost_obj.is_expression():
-                    refvar = ComponentUID(stage_cost_obj,cuid_buffer=tmp).\
-                        find_component(reference_model)
-                    refvar.value = stage_cost_obj.value
-                    refvar.stale = stage_cost_obj.stale
-
-                # TODO (the multi-stage case is problematic)
-                node = scenario.node_list[stagenum]
-                assert node.stage is stage
-                master_var = getattr(benders.master,
-                                     "MASTER_BLEND_VAR_"+str(tree_node._name))
-                for variable_id in node._variable_ids:
-                    var = master_var[variable_id]
-                    if var.is_expression():
-                        continue
-                    refvar = ComponentUID(var, cuid_buffer=tmp).\
-                        find_component(reference_model)
-                    refvar.value = var.value
-                    refvar.stale = var.stale
+        results.xhat = {sp.scenario_tree.findRootNode().name: benders.xhat}
 
         return results
 
