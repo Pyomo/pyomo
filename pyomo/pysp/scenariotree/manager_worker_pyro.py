@@ -28,7 +28,7 @@ from six import iteritems, string_types
 try:
     import dill
     dill_available = True
-except ImportError:
+except ImportError:                               #pragma:nocover
     dill_available = False
 
 #
@@ -69,9 +69,12 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         self._modules_imported = None
         # The name of the scenario tree server owning this worker
         self._server_name = None
-        # So we have access to real scenario and bundle probabilities
-        self._full_scenario_tree = None
+        # The name of the worker on this server
         self._worker_name = None
+        # a reference to the mpi4py namespace
+        self.MPI = None
+        # a dict of intracommunicators for each tree node
+        self.mpi_comm_tree = {}
 
     def _collect_scenario_tree_data_for_client(self, tree_object_names):
 
@@ -108,10 +111,12 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
 
     def _init(self,
               server_name,
-              full_scenario_tree,
+              uncompressed_scenario_tree,
               worker_name,
               worker_init,
-              modules_imported):
+              modules_imported,
+              MPI,
+              root_comm):
         # check to make sure no base class has implemented _init
         try:
             super(ScenarioTreeManagerWorkerPyro, self)._init()
@@ -124,7 +129,7 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         # The name of the scenario tree server owning this worker
         self._server_name = server_name
         # So we have access to real scenario and bundle probabilities
-        self._full_scenario_tree = full_scenario_tree
+        self._uncompressed_scenario_tree = uncompressed_scenario_tree
         self._worker_name = worker_name
 
         scenarios_to_construct = []
@@ -158,10 +163,11 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         # compress the scenario tree to reflect those instances for
         # which this ph solver server is responsible for constructing.
         self._scenario_tree = \
-            self._full_scenario_tree.make_compressed(scenarios_to_construct,
-                                                     normalize=False)
+            self.uncompressed_scenario_tree.make_compressed(
+                scenarios_to_construct,
+                normalize=False)
         self._instances = \
-            self._full_scenario_tree._scenario_instance_factory.\
+            self.uncompressed_scenario_tree._scenario_instance_factory.\
             construct_instances_for_scenario_tree(
                 self._scenario_tree,
                 output_instance_construction_time=\
@@ -190,11 +196,34 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
                 self.add_bundle(bundle_name, worker_init.data[bundle_name])
                 assert self._scenario_tree.contains_bundle(bundle_name)
 
+        # now generate the process communicators
+        if MPI is None:
+            assert root_comm is None
+        else:
+            assert root_comm is not None
+            root_node = self._scenario_tree.findRootNode()
+            self.MPI = MPI
+            self.mpi_comm_tree[root_node.name] = root_comm
+            # loop over all nodes except the root and leaf
+            # nodes and create a communicator between all
+            # processes that reference a node
+            for stage in self.uncompressed_scenario_tree.stages[1:-1]:
+                for node in stage.nodes:
+                    if self._scenario_tree.contains_node(node.name):
+                        self.mpi_comm_tree[node.name] = \
+                            self.mpi_comm_tree[node.parent.name].\
+                            Split(0)
+                    elif node.parent.name in self.mpi_comm_tree:
+                        self.mpi_comm_tree[node.parent.name].\
+                            Split(self.MPI.UNDEFINED)
+
     # Override the implementation on _ScenarioTreeManagerWorker
     def _close_impl(self):
         super(ScenarioTreeManagerWorkerPyro, self)._close_impl()
         ignored_options = dict((_c._name, _c.value(False))
                                for _c in self._options.unused_user_values())
+        for comm in self.mpi_comm_tree.values():
+            comm.Free()
         if len(ignored_options):
             print("")
             print("*** WARNING: The following options were explicitly "
@@ -216,8 +245,12 @@ class ScenarioTreeManagerWorkerPyro(_ScenarioTreeManagerWorker,
         start_time = time.time()
 
         if self._options.verbose:
-            print("Received request to invoke function"
-                  "="+str(function)+" in module="+module_name)
+            if module_name is not None:
+                print("Received request to invoke function=%s "
+                      "in module=%s" % (str(function), str(module_name)))
+            else:
+                print("Received request to invoke anonymous "
+                      "function serialized using the dill module")
 
         # pyutilib.Enum can not be serialized depending on the
         # serializer type used by Pyro, so we just transmit it

@@ -51,13 +51,13 @@ from six.moves import xrange
 try:
     import dill
     dill_available = True
-except ImportError:
+except ImportError:                               #pragma:nocover
     dill_available = False
 
 try:
     from guppy import hpy
     guppy_available = True
-except ImportError:
+except ImportError:                               #pragma:nocover
     guppy_available = False
 
 logger = logging.getLogger('pyomo.pysp')
@@ -1160,9 +1160,23 @@ class _ScenarioTreeManagerWorker(PySPConfiguredObject):
 
         # scenario instance models
         self._instances = None
+        # So we have access to real scenario and bundle
+        # probabilities (in case this worker has a compressed tree)
+        self._uncompressed_scenario_tree = None
+
         # bundle instance models
         self._bundle_binding_instance_map = {}
         self._modules_imported = {}
+
+    #
+    # Extension of the manager interface so code can handle
+    # cases where multiple workers own a different portions of the
+    # scenario tree.
+    #
+
+    @property
+    def uncompressed_scenario_tree(self):
+        return self._uncompressed_scenario_tree
 
     def _invoke_function_by_worker(self,
                                    function,
@@ -1432,8 +1446,10 @@ class ScenarioTreeManagerClientSerial(_ScenarioTreeManagerWorker,
                 output_instance_construction_time=\
                    self._options.output_instance_construction_time,
                 profile_memory=self._options.profile_memory,
-                compile_scenario_instances=self._options.compile_scenario_instances,
+                compile_scenario_instances=\
+                    self._options.compile_scenario_instances,
                 verbose=self._options.verbose)
+        self._uncompressed_scenario_tree = self._scenario_tree
 
         if self._options.output_times or \
            self._options.verbose:
@@ -1689,7 +1705,6 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
                                "pyro_shutdown")
     safe_declare_common_option(_declared_options,
                                "pyro_shutdown_workers")
-    ScenarioTreeServerPyro.register_options(_declared_options)
 
     def __init__(self, *args, **kwds):
         # distributed worker information
@@ -1913,50 +1928,59 @@ class _ScenarioTreeManagerClientPyroAdvanced(ScenarioTreeManagerClient,
             host=self._options.pyro_host,
             port=self._options.pyro_port)
         self._action_manager.acquire_servers(num_servers, timeout=timeout)
-        # extract server options
-        server_options = ScenarioTreeServerPyro.\
-                         extract_user_options_to_dict(self._options)
 
         scenario_instance_factory = \
             self._scenario_tree._scenario_instance_factory
-        # override these options just in case this instance factory
-        # extracted from an archive
-        server_options['model_location'] = None
+        server_init = {}
         if scenario_instance_factory._model_filename is not None:
-            server_options['model'] = \
+            server_init['model'] = \
                 scenario_instance_factory._model_filename
         elif scenario_instance_factory._model_object is not None:
             # we are pickling a model!
-            server_options['model'] = \
+            server_init['model'] = \
                 scenario_instance_factory._model_object
         else:
-            # TODO: Maybe we can use dill?
-            assert False
+            assert scenario_instance_factory._model_callback is not None
+            if dill_available:
+                server_init['model_callback'] = \
+                    dill.dumps(scenario_instance_factory._model_callback)
+            else:
+                raise ValueError(
+                    "The dill module is required in order to "
+                    "initialize the Pyro-based scenario tree "
+                    "manager using a model callback function")
 
-        server_options['scenario_tree_location'] = None
-        if scenario_instance_factory._scenario_tree_filename is not None:
-            server_options['scenario_tree'] = \
-                scenario_instance_factory._scenario_tree_filename
-        elif scenario_instance_factory._scenario_tree_model:
-            # we are pickling a model!
-            server_options['scenario_tree'] = \
-                scenario_instance_factory._scenario_tree_model
-        else:
-            # TODO
-            assert False
+        # check if we need to define an MPI subgroup
+        if "MPIRank" in self._action_manager.server_pool[0]:
+            # extract the MPI rank from the server names
+            mpi_group = []
+            for server_name in self._action_manager.server_pool:
+                items = server_name.split('_')
+                assert items[-2] == "MPIRank"
+                mpi_group.append(int(items[-1]))
+            server_init["mpi_group"] = mpi_group
 
         # transmit setup requests
         action_handles = []
-        self.pause_transmit()
-        for server_name in self._action_manager.server_pool:
-            action_handles.append(
-                self._action_manager.queue(
-                    queue_name=server_name,
-                    action="ScenarioTreeServerPyro_setup",
-                    options=server_options,
-                    generate_response=True))
-            self._pyro_server_workers_map[server_name] = []
-        self.unpause_transmit()
+        # temporarily remove this attribute so that the
+        # scenario tree object can be pickled
+        instance_factory = self._scenario_tree._scenario_instance_factory
+        self._scenario_tree._scenario_instance_factory = None
+        server_init['scenario_tree'] = self._scenario_tree
+        server_init['data'] = instance_factory.data_directory()
+        try:
+            self.pause_transmit()
+            for server_name in self._action_manager.server_pool:
+                action_handles.append(
+                    self._action_manager.queue(
+                        queue_name=server_name,
+                        action="ScenarioTreeServerPyro_setup",
+                        options=server_init,
+                        generate_response=True))
+                self._pyro_server_workers_map[server_name] = []
+            self.unpause_transmit()
+        finally:
+            self._scenario_tree._scenario_instance_factory = instance_factory
         self._action_manager.wait_all(action_handles)
         for ah in action_handles:
             self._action_manager.get_results(ah)
