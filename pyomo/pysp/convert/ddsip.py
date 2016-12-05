@@ -31,12 +31,12 @@ from pyomo.pysp.annotations import (locate_annotations,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation,
                                     StochasticVariableBoundsAnnotation)
-from pyomo.pysp.smps.smpsutils import (map_variable_stages,
-                                       map_constraint_stages,
-                                       _safe_remove_file,
-                                       _no_negative_zero,
-                                       _deterministic_check_value,
-                                       ProblemStats)
+from pyomo.pysp.convert.smps import (map_variable_stages,
+                                     map_constraint_stages,
+                                     _safe_remove_file,
+                                     _no_negative_zero,
+                                     _deterministic_check_value,
+                                     ProblemStats)
 from pyomo.pysp.util.config import (PySPConfigValue,
                                     PySPConfigBlock,
                                     safe_register_common_option,

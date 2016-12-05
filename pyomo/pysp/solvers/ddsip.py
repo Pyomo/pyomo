@@ -38,7 +38,7 @@ from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.scenariotree.manager_solver import \
     (ScenarioTreeManagerSolver,
      ScenarioTreeManagerFactory)
-import pyomo.pysp.smps.ddsiputils
+import pyomo.pysp.convert.ddsip
 from pyomo.pysp.embeddedsp import EmbeddedSP
 from pyomo.pysp.solvers.spsolver import (SPSolverResults,
                                          SPSolverFactory)

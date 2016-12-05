@@ -40,7 +40,7 @@ from pyomo.pysp.util.misc import (parse_command_line,
 from pyomo.pysp.scenariotree.manager_solver import \
     (ScenarioTreeManagerSolver,
      ScenarioTreeManagerFactory)
-import pyomo.pysp.smps.smpsutils
+import pyomo.pysp.convert.smps
 from pyomo.pysp.embeddedsp import EmbeddedSP
 from pyomo.pysp.solvers.spsolver import (SPSolverResults,
                                          SPSolverFactory)
@@ -388,7 +388,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
 
         symbol_map = None
         if isinstance(sp, EmbeddedSP):
-            symbol_map = pyomo.pysp.smps.smpsutils.\
+            symbol_map = pyomo.pysp.convert.smps.\
                          convert_embedded(
                              sdinput_directory,
                              "pysp_model",
@@ -396,7 +396,7 @@ class SDSolver(SPSolverShellCommand, PySPConfiguredObject):
                              core_format='mps',
                              io_options=kwds)
         else:
-            pyomo.pysp.smps.smpsutils.\
+            pyomo.pysp.convert.smps.\
                 convert_external(
                     sdinput_directory,
                     "pysp_model",
