@@ -1369,6 +1369,13 @@ def convert_external(output_directory,
             assert os.path.exists(scenario_core_filename)
             _safe_remove_file(scenario_core_filename)
 
+            scenario_core_filename = \
+                os.path.join(scenario_directory,
+                             basename+"."+core_format+".symbols."+scenario.name)
+            assert os.path.exists(scenario_core_filename)
+            _safe_remove_file(scenario_core_filename)
+
+
         # only delete this directory if it is empty,
         # it might have previously existed and contains
         # user files
