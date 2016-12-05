@@ -83,7 +83,7 @@ def filter(line):
         return True
     if 'Status: optimal' in line or 'Status: feasible' in line:
         return True
-    status = 'Time:' in line or line.startswith('[') or 'with format cpxlp' in line or 'usermodel = <module' in line or line.startswith('File') or 'execution time=' in line
+    status = 'time:' in line or 'Time:' in line or line.startswith('[') or 'with format cpxlp' in line or 'usermodel = <module' in line or line.startswith('File') or 'execution time=' in line or 'Solver results file:' in line
     return status
 
 for tdir in testdirs:
@@ -127,6 +127,7 @@ for tdir in testdirs:
         #print([dir_, name, suffix])
         #
         if not suffix is None:
+            print(tname)
             cwd = os.getcwd()
             os.chdir(dir_)
             if suffix_ in ['.txt2', '.yml2']:
@@ -152,6 +153,7 @@ for tdir in testdirs:
                 break
         #
         if not suffix is None:
+            print(tname)
             cwd = os.getcwd()
             os.chdir(dir_)
             if suffix_ in ['.txt2', '.yml2']:
