@@ -300,6 +300,7 @@ def _convert_external_setup_without_cleanup(
     io_options = dict(io_options)
     scenario_tree = worker.scenario_tree
     reference_model = scenario._instance
+    rootnode = scenario_tree.findRootNode()
     firststage = scenario_tree.stages[0]
     secondstage = scenario_tree.stages[1]
     constraint_name_buffer = {}
@@ -521,6 +522,8 @@ def _convert_external_setup_without_cleanup(
     #
     output_filename = os.path.join(output_directory,
                                    basename+"."+file_format+"."+scenario.name)
+    symbols_filename = os.path.join(output_directory,
+                                    basename+"."+file_format+".symbols."+scenario.name)
     with WriterFactory(file_format) as writer:
         assert 'column_order' not in io_options
         assert 'row_order' not in io_options
@@ -532,6 +535,17 @@ def _convert_external_setup_without_cleanup(
                                           lambda x: True,
                                           io_options)
         assert output_fname == output_filename
+        # write the lp file symbol paired with the scenario
+        # tree id for each variable in the root node
+        with open(symbols_filename, "w") as f:
+            st_symbol_map = reference_model._ScenarioTreeSymbolMap
+            lines = []
+            for id_ in sorted(rootnode._variable_ids):
+                var = st_symbol_map.bySymbol[id_]
+                if not var.is_expression():
+                    lp_label = symbol_map.byObject[id(var)]
+                    lines.append("%s %s\n" % (lp_label, id_))
+            f.writelines(lines)
 
     # re-generate these maps as the LP/MPS symbol map
     # is likely different
@@ -1009,6 +1023,10 @@ def convert_external(output_directory,
 
     scenario_tree = scenario_tree_manager.scenario_tree
 
+    if len(scenario_tree.stages) > 2:
+        raise ValueError("SMPS conversion does not yet handle more "
+                         "than 2 time-stages")
+
     if scenario_tree.contains_bundles():
         raise ValueError(
             "SMPS conversion does not yet handle bundles")
@@ -1045,6 +1063,7 @@ def convert_external(output_directory,
     # to the output directory. The consistency checks will
     # verify that these files match across scenarios.
     #
+    input_files = {}
     core_filename = os.path.join(output_directory,
                                  basename+".cor")
     _safe_remove_file(core_filename)
@@ -1052,6 +1071,29 @@ def convert_external(output_directory,
                              (basename+"."+core_format+"."+
                               reference_scenario_name)),
                 core_filename)
+    input_files["core"] = core_filename
+
+    symbols_filename = os.path.join(output_directory,
+                                    basename+".cor.symbols")
+    _safe_remove_file(symbols_filename)
+    shutil.copy2(os.path.join(scenario_directory,
+                              (basename+"."+core_format+".symbols."+
+                               reference_scenario_name)),
+                 symbols_filename)
+    input_files["symbols"] = symbols_filename
+
+    tim_filename = os.path.join(output_directory,
+                                basename+".tim")
+    _safe_remove_file(tim_filename)
+    shutil.copy2(os.path.join(scenario_directory,
+                              (basename+".tim."+
+                               reference_scenario_name)),
+                 tim_filename)
+    input_files["time"] = tim_filename
+
+    #
+    # aux files used for checking
+    #
 
     core_row_filename = os.path.join(output_directory,
                                    basename+".row")
@@ -1068,14 +1110,6 @@ def convert_external(output_directory,
                               (basename+".col."+
                                reference_scenario_name)),
                  core_col_filename)
-
-    tim_filename = os.path.join(output_directory,
-                                basename+".tim")
-    _safe_remove_file(tim_filename)
-    shutil.copy2(os.path.join(scenario_directory,
-                              (basename+".tim."+
-                               reference_scenario_name)),
-                 tim_filename)
 
     sto_struct_filename = os.path.join(output_directory,
                                        basename+".sto.struct")
@@ -1110,6 +1144,7 @@ def convert_external(output_directory,
             with open(scenario_sto_filename, 'r') as fsrc:
                 shutil.copyfileobj(fsrc, fdst)
         fdst.write('ENDATA\n')
+    input_files["sto"] = sto_filename
 
     if verbose:
         print("\nSMPS Conversion Complete")
@@ -1345,14 +1380,7 @@ def convert_external(output_directory,
                   "scenario_files subdirectory")
         pass
 
-    return ProblemStats(firststage_variable_count=firststage_variable_count,
-                        secondstage_variable_count=secondstage_variable_count,
-                        firststage_constraint_count=firststage_constraint_count,
-                        secondstage_constraint_count=secondstage_constraint_count,
-                        stochastic_cost_count=stochastic_cost_count,
-                        stochastic_rhs_count=stochastic_rhs_count,
-                        stochastic_matrix_count=stochastic_matrix_count,
-                        scenario_count=len(scenario_tree.scenarios))
+    return input_files
 
 def convert_embedded(output_directory,
                      basename,
@@ -1369,6 +1397,11 @@ def convert_embedded(output_directory,
     assert core_format in ('lp', 'mps')
 
     io_options = dict(io_options)
+
+
+    if len(sp.time_stages) > 2:
+        raise ValueError("SMPS conversion does not yet handle more "
+                         "than 2 time-stages")
 
     if sp.has_stochastic_variable_bounds:
         raise ValueError("Problems with stochastic variables bounds "
@@ -1474,11 +1507,16 @@ def convert_embedded(output_directory,
         param_vals_orig[paramdata] = paramdata.value
         paramdata.value = 0
 
+    input_files = {}
     #
     # Write the ordered LP/MPS file
     #
     output_filename = os.path.join(output_directory,
                                    basename+".cor")
+    input_files["core"] = output_filename
+    symbols_filename = os.path.join(output_directory,
+                                    basename+".core.symbols")
+    input_files["symbols"] = symbols_filename
     with WriterFactory(core_format) as writer:
         assert 'column_order' not in io_options
         assert 'row_order' not in io_options
@@ -1490,6 +1528,16 @@ def convert_embedded(output_directory,
                                           lambda x: True,
                                           io_options)
         assert output_fname == output_filename
+        # write the lp file symbol paired with the scenario
+        # tree id for each variable in the root node
+        with open(symbols_filename, "w") as f:
+            lines = []
+            for var,_ in sp.stage_to_variables_map[firststage]:
+                id_ = sp.variable_symbols[var]
+                lp_label = symbol_map.byObject[id(var)]
+                lines.append("%s %s\n" % (lp_label, id_))
+            f.writelines(sorted(lines))
+
     canonical_repn_cache = {}
     for block in sp.reference_model.block_data_objects(
             active=True,
@@ -1524,62 +1572,12 @@ def convert_embedded(output_directory,
         aliases = _reverse_alias[symbol]
         constraint_symbols[con] = aliases
 
-    """
-    #
-    # Write the explicit column ordering (variables) used
-    # for the ordered LP/MPS file
-    #
-    with open(os.path.join(output_directory, basename+".col"), "w") as f_col:
-        # first-stage variables
-        for var in first_stage_variables:
-            varid = id(var)
-            if varid in symbol_map.byObject:
-                f_col.write(symbol_map.byObject[varid]+"\n")
-        # second-stage variables
-        for var in second_stage_variables:
-            varid = id(var)
-            if varid in symbol_map.byObject:
-                f_col.write(symbol_map.byObject[varid]+"\n")
-        # the writer will always add the dummy variable
-        # ONE_VAR_CONSTANT because we force to appear via
-        # objective constant (even if it is zero) using the
-        # 'force_objective_constant' io option
-        f_col.write("ONE_VAR_CONSTANT\n")
-
-    #
-    # Write the explicit row ordering (constraints) used
-    # for the ordered LP/MPS file
-    #
-    with open(os.path.join(output_directory, basename+".row"), "w") as f_row:
-        # the objective is always the first row in SMPS format
-        f_row.write(symbol_map.byObject[id(sp.objective)]+"\n")
-        # first-stage constraints
-        for con in first_stage_constraints:
-            symbols = constraint_symbols[con]
-            # because range constraints are split into two
-            # constraints (hopefully our ordering of the r_l_
-            # and r_u_ forms is the same as the LP/MPS file!)
-            for symbol in symbols:
-                f_row.write(symbol+"\n")
-        # second-stage constraints
-        for con in second_stage_constraints:
-            symbols = constraint_symbols[con]
-            # because range constraints are split into two
-            # constraints (hopefully our ordering of the r_l_
-            # and r_u_ forms is the same as the LP/MPS file!)
-            for symbol in symbols:
-                f_row.write(symbol+"\n")
-        # the writer will always add the dummy variable
-        # ONE_VAR_CONSTANT because we force to appear via
-        # objective constant (even if it is zero) using the
-        # 'force_objective_constant' io option
-        f_row.write("c_e_ONE_VAR_CONSTANT")
-    """
-
     #
     # Write the .tim file
     #
-    with open(os.path.join(output_directory, basename+".tim"), "w") as f_tim:
+    tim_filename = os.path.join(output_directory, basename+".tim")
+    input_files["time"] = tim_filename
+    with open(tim_filename, "w") as f_tim:
         f_tim.write("TIME %s\n" % (basename))
         if core_format == 'mps':
             f_tim.write("PERIODS IMPLICIT\n")
@@ -1652,10 +1650,12 @@ def convert_embedded(output_directory,
     #         of any range constraints are written before
     #         the upper part.
     #
+    sto_filename = os.path.join(output_directory,
+                                basename+".sto")
+    input_files["sto"] = sto_filename
     stochastic_data_seen = ComponentMap()
     line_template = "    %s    %s    %.17g    %.17g\n"
-    with open(os.path.join(output_directory,
-                           basename+".sto"),'w') as f_sto:
+    with open(sto_filename,'w') as f_sto:
         f_sto.write('STOCH '+basename+'\n')
         # TODO: For the time being, we are assuming all
         #       parameter distributions are discrete
@@ -1934,7 +1934,7 @@ def convert_embedded(output_directory,
 
         f_sto.write("ENDATA\n")
 
-    return symbol_map
+    return input_files, symbol_map
 
 def convertsmps_register_options(options=None):
     if options is None:

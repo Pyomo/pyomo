@@ -105,6 +105,7 @@ def _convert_external_setup_without_cleanup(
     io_options = dict(io_options)
     scenario_tree = worker.scenario_tree
     reference_model = scenario._instance
+    rootnode = scenario_tree.findRootNode()
     firststage = scenario_tree.stages[0]
     secondstage = scenario_tree.stages[1]
     constraint_name_buffer = {}
@@ -362,12 +363,13 @@ def _convert_external_setup_without_cleanup(
         # tree id for each variable in the root node
         with open(symbols_filename, "w") as f:
             st_symbol_map = reference_model._ScenarioTreeSymbolMap
-            for stage in worker.scenario_tree.stages[:-1]:
-                for node in stage.nodes:
-                    for id_ in sorted(node._variable_ids):
-                        var = st_symbol_map.bySymbol[id_]
-                        lp_label = symbol_map.byObject[id(var)]
-                        f.write("%s %s\n" % (lp_label, id_))
+            lines = []
+            for id_ in sorted(rootnode._variable_ids):
+                var = st_symbol_map.bySymbol[id_]
+                if not var.is_expression():
+                    lp_label = symbol_map.byObject[id(var)]
+                    lines.append("%s %s\n" % (lp_label, id_))
+            f.writelines(lines)
 
     # re-generate these maps as the LP/MPS symbol map
     # is likely different
