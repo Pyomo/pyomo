@@ -376,18 +376,6 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             raise ValueError("Failed to create solver of type="+
                              self.get_option("solver")+
                              " for use in extensive form solve")
-        if len(self.get_option("solver_options")) > 0:
-            if self.get_option("verbose"):
-                print("Initializing ef solver with options="
-                      +str(list(self.get_option("solver_options"))))
-            self._solver.set_options("".join(self.get_option("solver_options")))
-        if self.get_option("mipgap") is not None:
-            if (self.get_option("mipgap") < 0.0) or \
-               (self.get_option("mipgap") > 1.0):
-                raise ValueError("Value of the mipgap parameter for the EF "
-                                 "solve must be on the unit interval; "
-                                 "value specified="+str(self.get_option("mipgap")))
-            self._solver.options.mipgap = float(self.get_option("mipgap"))
 
         solver_manager_type = self.get_option("solver_manager")
         if solver_manager_type == "phpyro":
@@ -514,6 +502,20 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
             solve_kwds['symbolic_solver_labels'] = True
         if output_solver_log:
             solve_kwds['tee'] = True
+
+        solver_options = self.get_option("solver_options")
+        if len(solver_options) > 0:
+            if type(solver_options) is tuple:
+                solve_kwds["options"] = {}
+                for name_val in solver_options:
+                    assert "=" in name_val
+                    name, val = name_val.split("=")
+                    solve_kwds["options"][name.strip()] = val.strip()
+            else:
+                solve_kwds["options"] = solver_options
+        if self.get_option("mipgap") is not None:
+            solve_kwds.setdefault("options",{})["mipgap"] = \
+                float(self.get_option("mipgap"))
 
         if io_options is not None:
             solve_kwds.update(io_options)
@@ -653,11 +655,11 @@ class EFSolver(SPSolver, PySPConfiguredObject):
         super(EFSolver, self).__init__(*args, **kwds)
         self._name = "ef"
         ExtensiveFormAlgorithm.validate_options(self._options)
+        self._solver_options = self._options
 
     def _solve_impl(self,
                     sp,
-                    output_solver_log=False,
-                    reference_model=None):
+                    output_solver_log=False):
 
         with ExtensiveFormAlgorithm(sp, self._options) as ef:
             ef.build_ef()
