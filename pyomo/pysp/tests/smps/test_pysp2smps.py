@@ -71,7 +71,7 @@ class TestSMPSSimple(unittest.TestCase):
             shutil.rmtree(options['--output-directory'],
                           ignore_errors=True)
 
-        cmd = ['pysp2smps']
+        cmd = ['python','-m','pyomo.pysp.convert.smps']
         for name, val in options.items():
             cmd.append(name)
             if val is not None:
