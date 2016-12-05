@@ -19,6 +19,11 @@ import copy
 import math
 import logging
 
+try:
+    from collections import OrderedDict
+except ImportError:                         #pragma:nocover
+    from ordereddict import OrderedDict
+
 from pyomo.core import (value, minimize, maximize,
                         Var, Expression, Block,
                         CounterLabeler, IntegerSet,
@@ -1312,26 +1317,19 @@ class ScenarioTreeBundle(object):
 class ScenarioTree(object):
 
     # a utility to construct scenario bundles.
-    def _construct_scenario_bundles(self, scenario_tree_instance):
+    def _construct_scenario_bundles(self, bundles):
 
-        for bundle_name in scenario_tree_instance.Bundles:
+        for bundle_name in bundles:
 
             scenario_list = []
             bundle_probability = 0.0
-            for scenario_name in scenario_tree_instance.\
-                   BundleScenarios[bundle_name]:
+            for scenario_name in bundles[bundle_name]:
                 scenario_list.append(scenario_name)
                 bundle_probability += \
-                    self._scenario_map[scenario_name]._probability
+                    self._scenario_map[scenario_name].probability
 
-            # to stop recursion!
-            scenario_tree_instance.Bundling[None] = False
-
-            scenario_tree_for_bundle = ScenarioTree(
-                scenariotreeinstance=scenario_tree_instance,
-                scenariobundlelist=scenario_list)
-
-            scenario_tree_instance.Bundling[None] = True
+            scenario_tree_for_bundle = self.make_compressed(scenario_list,
+                                                            normalize=True)
 
             if not scenario_tree_for_bundle.validate():
                 raise RuntimeError("Bundled scenario tree is invalid")
@@ -1343,7 +1341,7 @@ class ScenarioTree(object):
             new_bundle._probability = bundle_probability
 
             self._scenario_bundles.append(new_bundle)
-            self._scenario_bundle_map[new_bundle._name] = new_bundle
+            self._scenario_bundle_map[new_bundle.name] = new_bundle
 
     #
     # a utility to construct the stage objects for this scenario tree.
@@ -1644,7 +1642,11 @@ class ScenarioTree(object):
 
         # NEW SCENARIO BUNDLING STARTS HERE
         if value(scenariotreeinstance.Bundling[None]):
-           self._construct_scenario_bundles(scenariotreeinstance)
+            bundles = OrderedDict()
+            for bundle_name in scenariotreeinstance.Bundles:
+                bundles[bundle_name] = \
+                    list(scenariotreeinstance.BundleScenarios[bundle_name])
+            self._construct_scenario_bundles(bundles)
 
     @property
     def scenarios(self):
@@ -2355,7 +2357,6 @@ class ScenarioTree(object):
             tree_node.snapshotSolutionFromScenarios()
 
     def create_random_bundles(self,
-                              scenario_tree_instance,
                               num_bundles,
                               random_seed):
 
@@ -2367,44 +2368,28 @@ class ScenarioTree(object):
             sequence = list(range(num_scenarios))
             random.shuffle(sequence)
 
-            scenario_tree_instance.Bundling[None] = True
-
             next_scenario_index = 0
 
             # this is a hack-ish way to re-initialize the Bundles set of a
             # scenario tree instance, which should already be there
             # (because it is defined in the abstract model).  however, we
             # don't have a "clear" method on a set, so...
-            scenario_tree_instance.del_component("Bundles")
-            scenario_tree_instance.add_component("Bundles", Set(ordered=True))
-            for i in xrange(1, num_bundles+1):
-                bundle_name = "Bundle"+str(i)
-                scenario_tree_instance.Bundles.add(bundle_name)
-
-            # ditto above comment regarding del_component/add_component
-            scenario_tree_instance.del_component("BundleScenarios")
-            scenario_tree_instance.add_component("BundleScenarios",
-                                                 Set(scenario_tree_instance.Bundles,
-                                                     ordered=True))
-
-            bundles = []
+            bundle_names = ["Bundle"+str(i)
+                            for i in xrange(1, num_bundles+1)]
+            bundles = OrderedDict()
             for i in xrange(num_bundles):
-                bundle_name = "Bundle"+str(i+1)
-                tmp = Set(ordered=True)
-                tmp.construct()
-                scenario_tree_instance.BundleScenarios[bundle_name] = tmp
-                bundles.append(scenario_tree_instance.BundleScenarios[bundle_name])
+                bundles[bundle_names[i]] = []
 
             scenario_index = 0
             while (scenario_index < num_scenarios):
                 for bundle_index in xrange(num_bundles):
                     if (scenario_index == num_scenarios):
                         break
-                    bundles[bundle_index].add(
-                        self._scenarios[sequence[scenario_index]]._name)
+                    bundles[bundle_names[bundle_index]].append(
+                        self._scenarios[sequence[scenario_index]].name)
                     scenario_index += 1
 
-            self._construct_scenario_bundles(scenario_tree_instance)
+            self._construct_scenario_bundles(bundles)
         finally:
             random.setstate(random_state)
 
