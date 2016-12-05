@@ -35,7 +35,7 @@ pysp_examples_dir = \
 _run_verbose = True
 
 @unittest.category('nightly','expensive')
-class TestDDSIPSimple(unittest.TestCase):
+class TestConvertDDSIPSimple(unittest.TestCase):
 
     @unittest.nottest
     def _assert_contains(self, filename, *checkstrs):

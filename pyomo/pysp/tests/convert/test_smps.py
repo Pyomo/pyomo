@@ -35,7 +35,7 @@ pysp_examples_dir = \
 _run_verbose = True
 
 @unittest.category('nightly','expensive')
-class TestSMPSSimple(unittest.TestCase):
+class TestConvertSMPSSimple(unittest.TestCase):
 
     @unittest.nottest
     def _assert_contains(self, filename, *checkstrs):
@@ -551,31 +551,31 @@ def create_test_classes(test_class_suffix,
     class_names = []
 
     @unittest.category(*categories)
-    class TestPySP2SMPS_Serial(_base,
+    class TestConvertSMPS_Serial(_base,
                                _SMPSTesterBase):
         pass
-    class_names.append(TestPySP2SMPS_Serial.__name__ + "_"+test_class_suffix)
+    class_names.append(TestConvertSMPS_Serial.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
-        class_names[-1], (TestPySP2SMPS_Serial, unittest.TestCase), {})
+        class_names[-1], (TestConvertSMPS_Serial, unittest.TestCase), {})
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
-    class TestPySP2SMPS_Pyro(_base,
+    class TestConvertSMPS_Pyro(_base,
                              unittest.TestCase,
                              _SMPSPyroTesterBase):
         def setUp(self):
             _SMPSPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
-    class_names.append(TestPySP2SMPS_Pyro.__name__ + "_"+test_class_suffix)
+    class_names.append(TestConvertSMPS_Pyro.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
-        class_names[-1], (TestPySP2SMPS_Pyro, unittest.TestCase), {})
+        class_names[-1], (TestConvertSMPS_Pyro, unittest.TestCase), {})
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
-    class TestPySP2SMPS_Pyro_MultipleWorkers(_base,
+    class TestConvertSMPS_Pyro_MultipleWorkers(_base,
                                              unittest.TestCase,
                                              _SMPSPyroTesterBase):
         def setUp(self):
@@ -583,14 +583,14 @@ def create_test_classes(test_class_suffix,
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-multiple-scenariotreeserver-workers'] = None
-    class_names.append(TestPySP2SMPS_Pyro_MultipleWorkers.__name__ + "_"+test_class_suffix)
+    class_names.append(TestConvertSMPS_Pyro_MultipleWorkers.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
-        class_names[-1], (TestPySP2SMPS_Pyro_MultipleWorkers, unittest.TestCase), {})
+        class_names[-1], (TestConvertSMPS_Pyro_MultipleWorkers, unittest.TestCase), {})
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
-    class TestPySP2SMPS_Pyro_HandshakeAtStartup(_base,
+    class TestConvertSMPS_Pyro_HandshakeAtStartup(_base,
                                                 unittest.TestCase,
                                                 _SMPSPyroTesterBase):
         def setUp(self):
@@ -598,14 +598,14 @@ def create_test_classes(test_class_suffix,
         def _setup(self, options, servers=None):
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-handshake-at-startup'] = None
-    class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup.__name__ + "_"+test_class_suffix)
+    class_names.append(TestConvertSMPS_Pyro_HandshakeAtStartup.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
-        class_names[-1], (TestPySP2SMPS_Pyro_HandshakeAtStartup, unittest.TestCase), {})
+        class_names[-1], (TestConvertSMPS_Pyro_HandshakeAtStartup, unittest.TestCase), {})
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
-    class TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers(_base,
+    class TestConvertSMPS_Pyro_HandshakeAtStartup_MultipleWorkers(_base,
                                                                 unittest.TestCase,
                                                                 _SMPSPyroTesterBase):
         def setUp(self):
@@ -614,10 +614,10 @@ def create_test_classes(test_class_suffix,
             _SMPSPyroTesterBase._setup(self, options, servers=servers)
             options['--pyro-handshake-at-startup'] = None
             options['--pyro-multiple-scenariotreeserver-workers'] = None
-    class_names.append(TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+test_class_suffix)
+    class_names.append(TestConvertSMPS_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
         class_names[-1],
-        (TestPySP2SMPS_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
+        (TestConvertSMPS_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
         {})
 
     return tuple(globals()[name] for name in class_names)
