@@ -364,10 +364,12 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         #        function_args=(solution_filename, scenario_id),
         #        async=True))
 
-        results = self._read_solution(sp,
-                                      input_files["symbols"],
-                                      info_filename,
-                                      solution_filename)
+        xhat, results = self._read_solution(sp,
+                                            input_files["symbols"],
+                                            info_filename,
+                                            solution_filename)
+
+        results.xhat = {sp.scenario_tree.findRootNode().name: xhat}
 
         results.solver_time = stop - start
 
@@ -481,7 +483,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         #
         # Xhat
         #
-        xhat = results.xhat = {}
+        xhat = {}
         with open(solution_filename, 'r') as f:
             line = f.readline()
             while line.strip() != "1. Best Solution":
@@ -542,7 +544,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
             assert line.startswith("Lower Bound")
             results.bound = float(line.split()[2])
 
-        return results
+        return xhat, results
 
 def runddsip_register_options(options=None):
     if options is None:
