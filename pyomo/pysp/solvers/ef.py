@@ -683,37 +683,27 @@ class EFSolver(SPSolver, PySPConfiguredObject):
         results = SPSolverResults()
         results.objective = ef.objective
         results.bound = ef.bound
-        # TODO
-        #results.solver_time
-        #results.pyomo_solve_time
-        if reference_model is not None:
-            scenario_name = sp.scenario_tree.scenarios[0].name
-            stages = tuple(stage.name for stage in sp.scenario_tree.stages[:-1])
-            scenario = sp.scenario_tree.scenarios[0]
-            instance = scenario.instance
-            bySymbol = instance._ScenarioTreeSymbolMap.bySymbol
-            tmp = {}
-            for stagenum, stage in enumerate(sp.scenario_tree.stages[:-1]):
-                cost_variable_name, cost_variable_index = \
-                    stage._cost_variable
-                stage_cost_obj = \
-                    instance.find_component(cost_variable_name)[cost_variable_index]
-                if not stage_cost_obj.is_expression():
-                    refvar = ComponentUID(stage_cost_obj,cuid_buffer=tmp).\
-                        find_component(reference_model)
-                    refvar.value = stage_cost_obj.value
-                    refvar.stale = stage_cost_obj.stale
-
-                node = scenario.node_list[stagenum]
-                assert node.stage is stage
-                for variable_id in node._variable_ids:
-                    var = bySymbol[variable_id]
-                    if var.is_expression():
-                        continue
-                    refvar = ComponentUID(var, cuid_buffer=tmp).\
-                        find_component(reference_model)
-                    refvar.value = var.value
-                    refvar.stale = var.stale
+        results.solver_time = ef.solve_time
+        results.pyomo_solve_time = ef.pyomo_solve_time
+        xhat = results.xhat = {}
+        for stage in sp.scenario_tree.stages[:-1]:
+            for node in stage.nodes:
+                node_xhat = xhat[node.name] = {}
+                reference_scenario = node.scenarios[0]
+                node_x = reference_scenario._x[node.name]
+                for id_ in node._variable_ids:
+                    node_xhat[id_] = node_x[id_]
+                # TODO: stage costs
+                #for stagenum, stage in enumerate(sp.scenario_tree.stages[:-1]):
+                #    cost_variable_name, cost_variable_index = \
+                #        stage._cost_variable
+                #    stage_cost_obj = \
+                #        instance.find_component(cost_variable_name)[cost_variable_index]
+                #    if not stage_cost_obj.is_expression():
+                #        refvar = ComponentUID(stage_cost_obj,cuid_buffer=tmp).\
+                #            find_component(reference_model)
+                #        refvar.value = stage_cost_obj.value
+                #        refvar.stale = stage_cost_obj.stale
 
         return results
 
