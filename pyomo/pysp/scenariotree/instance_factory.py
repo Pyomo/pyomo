@@ -14,6 +14,7 @@ import time
 import posixpath
 import tempfile
 import shutil
+import copy
 import logging
 
 from pyutilib.misc import (ArchiveReaderFactory,
@@ -249,12 +250,12 @@ class ScenarioTreeInstanceFactory(object):
                 can also be set to a directory name where it
                 is assumed a file named
                 ScenarioStructure.dat exists.
-            data: Directory containing .dat files
-                necessary for building the scenario
-                instances associated with the scenario
-                tree. This argument is required if no
-                directory information can be extracted from the first two
-                arguments and the reference model is an
+            data: Directory containing .dat files necessary
+                for building the scenario instances
+                associated with the scenario tree. This
+                argument is required if no directory
+                information can be extracted from the first
+                two arguments and the reference model is an
                 abstract Pyomo model. Otherwise, it is not
                 required or the location will be inferred
                 from the scenario tree location (first) or
@@ -274,6 +275,7 @@ class ScenarioTreeInstanceFactory(object):
         self._scenario_tree_filename = None
         self._scenario_tree_module = None
         self._scenario_tree_model = None
+        self._scenario_tree = None
         self._data_directory = None
         try:
             self._init(model, scenario_tree, data)
@@ -326,7 +328,16 @@ class ScenarioTreeInstanceFactory(object):
 
         self._scenario_tree_filename = None
         self._scenario_tree_model = None
-        if isinstance(scenario_tree, six.string_types):
+        self._scenario_tree = None
+        if isinstance(scenario_tree, ScenarioTree):
+            for scenario in scenario_tree.scenarios:
+                if scenario.instance is not None:
+                    raise ValueError(
+                        "The scenario tree can not be linked with instances")
+            if hasattr(scenario_tree, "_scenario_instance_factory"):
+                del scenario_tree._scenario_instance_factory
+            self._scenario_tree = scenario_tree
+        elif isinstance(scenario_tree, six.string_types):
             logger.debug("scenario tree input is a string, attempting "
                          "to load file specification: %s"
                          % (scenario_tree))
@@ -402,14 +413,15 @@ class ScenarioTreeInstanceFactory(object):
         else:
             self._scenario_tree_model = scenario_tree
 
-        if not isinstance(self._scenario_tree_model, (_BlockData, Block)):
-            raise TypeError(
-                "scenario tree model object has incorrect type: %s. "
-                "Must be a string type or a Pyomo model."
-                % (type(scenario_tree)))
-        if not self._scenario_tree_model.is_constructed():
-            raise ValueError(
-                "scenario tree model must be a concrete Pyomo model.")
+        if self._scenario_tree is None:
+            if not isinstance(self._scenario_tree_model, (_BlockData, Block)):
+                raise TypeError(
+                    "scenario tree model object has incorrect type: %s. "
+                    "Must be a string type or a Pyomo model."
+                    % (type(scenario_tree)))
+            if not self._scenario_tree_model.is_constructed():
+                raise ValueError(
+                    "scenario tree model must be a concrete Pyomo model.")
 
         self._data_directory = None
         if data is None:
@@ -691,6 +703,11 @@ class ScenarioTreeInstanceFactory(object):
         scenario_tree_model = self._scenario_tree_model
         if bundles is not None:
             if isinstance(bundles, six.string_types):
+                if scenario_tree_model is None:
+                    raise ValueError(
+                        "A bundles file can not be used when the "
+                        "scenario tree input was not a Pyomo "
+                        "model or ScenarioStructure.dat file.")
                 logger.debug("attempting to locate bundle file for input: %s"
                              % (bundles))
                 # we interpret the scenario bundle specification in one of
@@ -731,8 +748,22 @@ class ScenarioTreeInstanceFactory(object):
         #
         # construct the scenario tree
         #
-        scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_model,
-                                     scenariobundlelist=include_scenarios)
+        if scenario_tree_model is not None:
+            scenario_tree = ScenarioTree(scenariotreeinstance=scenario_tree_model,
+                                         scenariobundlelist=include_scenarios)
+        else:
+            assert self._scenario_tree is not None
+            if include_scenarios is None:
+                scenario_tree = copy.deepcopy(self._scenario_tree)
+            else:
+                # note: any bundles will be lost
+                if self._scenario_tree.contains_bundles():
+                    raise ValueError(
+                        "Can not compress a scenario tree that "
+                        "contains bundles")
+                scenario_tree = self._scenario_tree.make_compressed(
+                    include_scenarios,
+                    normalize=True)
 
         # compress/down-sample the scenario tree, if requested
         if (downsample_fraction is not None) and \
@@ -777,8 +808,7 @@ class ScenarioTreeInstanceFactory(object):
                   " random bundles using seed="
                   +str(random_seed))
 
-            scenario_tree.create_random_bundles(self._scenario_tree_model,
-                                                random_bundles,
+            scenario_tree.create_random_bundles(random_bundles,
                                                 random_seed)
 
         scenario_tree._scenario_instance_factory = self
