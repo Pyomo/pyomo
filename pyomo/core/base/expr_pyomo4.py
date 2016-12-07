@@ -46,9 +46,6 @@ UNREFERENCED_EXPR_COUNT = 9
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
-def _const_to_string(*args):
-    args[1].write("%s" % args[0])
-
 class EntangledExpressionError(Exception):
     def __init__(self, sub_expr):
         msg = \
@@ -97,14 +94,6 @@ def _generate_expression__clone_if_needed_parent_expr(self, obj, target):
         obj._parent_expr = bypass_backreference or ref(self)
     return obj
 
-# Statically determine the implementation of
-# _generate_expression__clone_if_needed based on the capabilities of the
-# current interpreter.
-_generate_expression__clone_if_needed \
-    = ( _generate_expression__clone_if_needed_getrefcount
-        if _getrefcount_available else
-        _generate_expression__clone_if_needed_parent_expr )
-
 def _generate_expression__noCloneCheck(self, obj, target):
     return obj
 
@@ -138,6 +127,13 @@ def generate_expression_bypassCloneCheck(etype, _self, other):
 
     return ans
 
+# Statically determine the implementation of
+# _generate_expression__clone_if_needed based on the capabilities of the
+# current interpreter.
+_generate_expression__clone_if_needed \
+    = ( _generate_expression__clone_if_needed_getrefcount
+        if _getrefcount_available else
+        _generate_expression__clone_if_needed_parent_expr )
 
 
 def identify_variables( expr,
@@ -427,8 +423,7 @@ class _ExpressionBase(NumericValue):
         _name_buffer = {}
         if ostream is None:
             ostream = sys.stdout
-        verbose = common.TO_STRING_VERBOSE \
-                   if verbose is None else verbose
+        verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
 
         _infix = False
         _bypass_prefix = False
