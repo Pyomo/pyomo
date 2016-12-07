@@ -62,6 +62,17 @@ subexpression and use the subexpression in each expression.  Common
 subexpression:\n\t%s""" % (str(sub_expr),)
         super(EntangledExpressionError, self).__init__(msg)
 
+
+def _sum_with_iadd(iterable):
+    ans = 0
+    for x in iterable:
+        ans += x
+    return ans
+
+import __builtin__
+sum = __builtin__.sum if _getrefcount_available else _sum_with_iadd
+
+
 def _generate_expression__clone_if_needed_getrefcount(self, obj, target):
     #print(getrefcount(obj) - UNREFERENCED_EXPR_COUNT, target)
     if getrefcount(obj) - UNREFERENCED_EXPR_COUNT == target:
