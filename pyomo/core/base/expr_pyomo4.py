@@ -286,7 +286,13 @@ class _ExpressionBase(NumericValue):
                 _idx += 1
                 if _sub.__class__ in native_numeric_types:
                     _result.append( native_result )
-                elif _sub.is_expression():
+                    continue
+                try:
+                    _isExpr = _sub.is_expression()
+                except AttributeError:
+                    _result.append( native_result )
+                    continue
+                if _isExpr:
                     _stack.append( (_combiner, _argList, _idx, _len, _result) )
                     _combiner= getattr(_sub, combiner)()
                     _argList = _sub._args
@@ -446,7 +452,7 @@ class _ExpressionBase(NumericValue):
                     if _my_precedence > _prec or not _my_precedence or verbose:
                         ostream.write("( ")
                     _infix = True
-                if hasattr(_sub, '_args'): # _args is a proxy for Expression
+                if hasattr(_sub, '_arguments'): # _args is a proxy for Expression
                     argList = _sub._arguments()
                     _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
                     _infix = False
@@ -469,8 +475,10 @@ class _ExpressionBase(NumericValue):
             ostream.write(str(_sub))
         elif _sub.__class__ is NumericConstant:
             ostream.write(str(_sub()))
-        else:
+        elif hasattr(_sub, 'getname'):
             ostream.write(_sub.getname(True, _name_buffer))
+        else:
+            ostream.write(str(_sub))
 
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
