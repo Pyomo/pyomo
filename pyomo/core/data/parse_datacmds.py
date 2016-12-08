@@ -401,7 +401,7 @@ def p_table_indices(p):
                      | WORDWITHEQBRACE WORD RBRACE
                      |
     '''
-    ans = {}
+    ans = OrderedDict()
     if len(p) == 6:
         ans.update(p[5])
         ans[ p[1][:-2] ] = [p[2]]+p[3]

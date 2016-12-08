@@ -1,0 +1,9 @@
+# allow slamming of b0 to any agreed-up value.
+RootNode: # or FirstStage
+  b0[*,*]:
+    CanSlamToLB: True
+    CanSlamToMin: True
+    CanSlamToAnywhere: True
+    CanSlamToMax: True
+    CanSlamToUB: True
+    SlammingPriority: 1 # equal priority for now.
