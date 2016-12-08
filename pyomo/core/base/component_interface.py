@@ -41,6 +41,36 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
     """
     __slots__ = ()
 
+    #
+    # The following method must be defined to allow
+    # expressions and blocks to be correctly cloned.
+    # (copied from JDS code in original component.py,
+    # comments removed for now)
+    #
+
+    def __deepcopy__(self, memo):
+        if '__block_scope__' in memo and \
+                id(self) not in memo['__block_scope__']:
+            _known = memo['__block_scope__']
+            _new = []
+            tmp = self.parent_block
+            tmpId = id(tmp)
+            while tmpId not in _known:
+                _new.append(tmpId)
+                tmp = tmp.parent_block
+                tmpId = id(tmp)
+
+            for _id in _new:
+                _known[_id] = _known[tmpId]
+
+            if not _known[tmpId]:
+                # component is out-of-scope.  shallow copy only
+                ans = memo[id(self)] = self
+                return ans
+
+        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
+        ans.__setstate__(copy.deepcopy(self.__getstate__(), memo))
+        return ans
 
     #
     # The following two methods allow implementations to be

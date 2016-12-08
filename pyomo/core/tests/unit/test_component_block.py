@@ -14,7 +14,18 @@ from pyomo.core.tests.unit.test_component_dict import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.base.component_map import ComponentMap
-from pyomo.core.base.component_constraint import constraint
+from pyomo.core.base.component_constraint import (constraint,
+                                                  constraint_dict,
+                                                  constraint_list)
+from pyomo.core.base.component_parameter import (parameter,
+                                                 parameter_dict,
+                                                 parameter_list)
+from pyomo.core.base.component_expression import (expression,
+                                                  expression_dict,
+                                                  expression_list)
+from pyomo.core.base.component_objective import (objective,
+                                                 objective_dict,
+                                                 objective_list)
 from pyomo.core.base.component_variable import (IVariable,
                                                 variable,
                                                 variable_dict,
@@ -27,7 +38,7 @@ from pyomo.core.base.component_block import (IBlockStorage,
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
-
+import pyomo.core.base.expr
 
 def _path_to_object_exists(obj, descendent):
     if descendent is obj:
@@ -52,6 +63,236 @@ def _active_path_to_object_exists(obj, descendent):
             else:
                 return False
 
+def _collect_expr_components(exp):
+    ans = {}
+    if isinstance(exp, IComponent):
+        ans[id(exp)] = exp
+    if exp.is_expression():
+        if exp.__class__ is pyomo.core.base.expr._ProductExpression:
+            for subexp in exp._numerator:
+                ans.update(_collect_expr_components(subexp))
+            for subexp in exp._denominator:
+                ans.update(_collect_expr_components(subexp))
+        else:
+            for subexp in exp._args:
+                ans.update(_collect_expr_components(subexp))
+    return ans
+
+class TestMisc(unittest.TestCase):
+
+    # test how clone behaves when there are
+    # references to components on a different block
+    def test_clone1(self):
+        b = block()
+        b.v = variable()
+        b.b = block()
+        b.b.e = expression(b.v**2)
+        b.b.v = variable()
+        b.bdict = block_dict()
+        b.bdict[0] = block()
+        b.bdict[0].e = expression(b.v**2)
+        b.blist = block_list()
+        b.blist.append(block())
+        b.blist[0].e = expression(b.v**2 + b.b.v**2)
+
+        bc = b.clone()
+        self.assertIsNot(b.v, bc.v)
+        self.assertIs(b.v.root_block, b)
+        self.assertIs(bc.v.root_block, bc)
+        self.assertIsNot(b.b.e, bc.b.e)
+        self.assertIs(b.b.e.root_block, b)
+        self.assertIs(bc.b.e.root_block, bc)
+        self.assertIsNot(b.bdict[0].e, bc.bdict[0].e)
+        self.assertIs(b.bdict[0].e.root_block, b)
+        self.assertIs(bc.bdict[0].e.root_block, bc)
+        self.assertIsNot(b.blist[0].e, bc.blist[0].e)
+        self.assertIs(b.blist[0].e.root_block, b)
+        self.assertIs(bc.blist[0].e.root_block, bc)
+
+        #
+        # check that the expressions on cloned sub-blocks
+        # reference the original variables for blocks "out-of-scope"
+        #
+        b_b = b.b.clone()
+        self.assertIsNot(b_b.e, b.b.e)
+        self.assertIs(b.b.e.root_block, b)
+        self.assertTrue(len(_collect_expr_components(b.b.e.expr)) == 1)
+        self.assertIs(list(_collect_expr_components(b.b.e.expr).values())[0],
+                      b.v)
+        self.assertIs(b_b.e.root_block, b_b)
+        self.assertTrue(len(_collect_expr_components(b_b.e.expr)) == 1)
+        self.assertIs(list(_collect_expr_components(b_b.e.expr).values())[0],
+                      b.v)
+
+        b_bdict0 = b.bdict[0].clone()
+        self.assertIsNot(b_bdict0.e, b.bdict[0].e)
+        self.assertIs(b.bdict[0].e.root_block, b)
+        self.assertTrue(len(_collect_expr_components(b.bdict[0].e.expr)) == 1)
+        self.assertIs(list(_collect_expr_components(b.bdict[0].e.expr).values())[0],
+                      b.v)
+        self.assertIs(b_bdict0.e.root_block, b_bdict0)
+        self.assertTrue(len(_collect_expr_components(b_bdict0.e.expr)) == 1)
+        self.assertIs(list(_collect_expr_components(b_bdict0.e.expr).values())[0],
+                      b.v)
+
+        b_blist0 = b.blist[0].clone()
+        self.assertIsNot(b_blist0.e, b.blist[0].e)
+        self.assertIs(b.blist[0].e.root_block, b)
+        self.assertTrue(len(_collect_expr_components(b.blist[0].e.expr)) == 2)
+        self.assertEqual(sorted(list(id(v_) for v_ in _collect_expr_components(b.blist[0].e.expr).values())),
+                         sorted(list(id(v_) for v_ in [b.v, b.b.v])))
+        self.assertIs(b_blist0.e.root_block, b_blist0)
+        self.assertTrue(len(_collect_expr_components(b_blist0.e.expr)) == 2)
+        self.assertEqual(sorted(list(id(v_) for v_ in _collect_expr_components(b_blist0.e.expr).values())),
+                         sorted(list(id(v_) for v_ in [b.v, b.b.v])))
+
+    # test bulk clone behavior
+    def test_clone2(self):
+        b = block()
+        b.v = variable()
+        b.vdict = variable_dict((i, variable())
+                                for i in range(10))
+        b.vlist = variable_list(variable()
+                                for i in range(10))
+        b.o = objective(b.v + b.vdict[0] + b.vlist[0])
+        b.odict = objective_dict((i, objective(b.v + b.vdict[i]))
+                                 for i in b.vdict)
+        b.olist = objective_list(objective(b.v + v_)
+                                 for i,v_ in enumerate(b.vdict))
+        b.c = constraint(b.v >= 1)
+        b.cdict = constraint_dict((i, constraint(b.vdict[i] == i))
+                                  for i in b.vdict)
+        b.clist = constraint_list(constraint(0 <= v_ <= i)
+                                  for i, v_ in enumerate(b.vlist))
+        b.p = parameter()
+        b.pdict = parameter_dict((i, parameter(i))
+                                 for i in b.vdict)
+        b.plist = parameter_list(parameter(i)
+                                 for i in range(len(b.vlist)))
+        b.e = expression(b.v * b.p + 1)
+        b.edict = expression_dict((i, expression(b.vdict[i] * b.pdict[i] + 1))
+                                  for i in b.vdict)
+        b.elist = expression_list(expression(v_ * b.plist[i] + 1)
+                                  for i,v_ in enumerate(b.vlist))
+
+        self.assertIs(b.parent, None)
+
+        #
+        # clone the block
+        #
+        bc = b.clone()
+        self.assertIs(bc.parent, None)
+        self.assertIsNot(b, bc)
+        self.assertTrue(len(list(b.children())) > 0)
+        self.assertEqual(len(list(b.children())),
+                         len(list(bc.children())))
+        for c1, c2 in zip(b.children(), bc.children()):
+            self.assertIs(c1.parent, b)
+            self.assertIs(c1.root_block, b)
+            self.assertIs(c2.parent, bc)
+            self.assertIs(c2.root_block, bc)
+            self.assertIsNot(c1, c2)
+            self.assertEqual(c1.name, c2.name)
+
+        self.assertEqual(len(list(b.components())),
+                         len(list(bc.components())))
+        for c1, c2 in zip(b.components(), bc.components()):
+            self.assertIs(c1.root_block, b)
+            self.assertIs(c2.root_block, bc)
+            self.assertIsNot(c1, c2)
+            self.assertEqual(c1.name, c2.name)
+            if hasattr(c1,'expr'):
+                self.assertIsNot(c1.expr, c2.expr)
+                self.assertEqual(str(c1.expr), str(c2.expr))
+                self.assertEqual(len(_collect_expr_components(c1.expr)),
+                                 len(_collect_expr_components(c2.expr)))
+                for subc1, subc2 in zip(_collect_expr_components(c1.expr).values(),
+                                        _collect_expr_components(c2.expr).values()):
+                    self.assertIsNot(subc1, subc2)
+                    self.assertEqual(subc1.name, subc2.name)
+                    self.assertIs(subc1.root_block, b)
+                    self.assertIs(subc2.root_block, bc)
+
+        bc_init = bc.clone()
+        b.bc = bc
+        self.assertIs(b.parent, None)
+        self.assertIs(bc.parent, b)
+        #
+        # clone the block with the newly added sub-block
+        #
+
+        bcc = b.clone()
+        self.assertIsNot(b, bcc)
+        self.assertEqual(len(list(b.children())),
+                         len(list(bcc.children())))
+        for c1, c2 in zip(b.children(), bcc.children()):
+            self.assertIs(c1.parent, b)
+            self.assertIs(c1.root_block, b)
+            self.assertIs(c2.parent, bcc)
+            self.assertIs(c2.root_block, bcc)
+            self.assertIsNot(c1, c2)
+            self.assertEqual(c1.name, c2.name)
+
+        self.assertEqual(len(list(b.components())),
+                         len(list(bcc.components())))
+        self.assertTrue(hasattr(bcc, 'bc'))
+        for c1, c2 in zip(b.components(), bcc.components()):
+            self.assertIs(c1.root_block, b)
+            self.assertIs(c2.root_block, bcc)
+            self.assertIsNot(c1, c2)
+            self.assertEqual(c1.name, c2.name)
+            if hasattr(c1,'expr'):
+                self.assertIsNot(c1.expr, c2.expr)
+                self.assertEqual(str(c1.expr), str(c2.expr))
+                self.assertEqual(len(_collect_expr_components(c1.expr)),
+                                 len(_collect_expr_components(c2.expr)))
+                for subc1, subc2 in zip(_collect_expr_components(c1.expr).values(),
+                                        _collect_expr_components(c2.expr).values()):
+                    self.assertIsNot(subc1, subc2)
+                    self.assertEqual(subc1.name, subc2.name)
+                    self.assertIs(subc1.root_block, b)
+                    self.assertIs(subc2.root_block, bcc)
+
+        #
+        # clone the sub-block
+        #
+        sub_bc = b.bc.clone()
+        self.assertIs(sub_bc.parent, None)
+        self.assertIs(bc_init.parent, None)
+        self.assertIs(bc.parent, b)
+        self.assertIs(b.parent, None)
+
+        self.assertIsNot(bc_init, sub_bc)
+        self.assertIsNot(bc, sub_bc)
+        self.assertEqual(len(list(bc_init.children())),
+                         len(list(sub_bc.children())))
+        for c1, c2 in zip(bc_init.children(), sub_bc.children()):
+            self.assertIs(c1.parent, bc_init)
+            self.assertIs(c1.root_block, bc_init)
+            self.assertIs(c2.parent, sub_bc)
+            self.assertIs(c2.root_block, sub_bc)
+            self.assertIsNot(c1, c2)
+            self.assertEqual(c1.name, c2.name)
+
+        self.assertEqual(len(list(bc_init.components())),
+                         len(list(sub_bc.components())))
+        for c1, c2 in zip(bc_init.components(), sub_bc.components()):
+            self.assertIs(c1.root_block, bc_init)
+            self.assertIs(c2.root_block, sub_bc)
+            self.assertIsNot(c1, c2)
+            self.assertEqual(c1.name, c2.name)
+            if hasattr(c1,'expr'):
+                self.assertIsNot(c1.expr, c2.expr)
+                self.assertEqual(str(c1.expr), str(c2.expr))
+                self.assertEqual(len(_collect_expr_components(c1.expr)),
+                                 len(_collect_expr_components(c2.expr)))
+                for subc1, subc2 in zip(_collect_expr_components(c1.expr).values(),
+                                        _collect_expr_components(c2.expr).values()):
+                    self.assertIsNot(subc1, subc2)
+                    self.assertEqual(subc1.name, subc2.name)
+                    self.assertIs(subc1.root_block, bc_init)
+                    self.assertIs(subc2.root_block, sub_bc)
+
 class _Test_block_base(object):
 
     _children = None
@@ -61,6 +302,28 @@ class _Test_block_base(object):
     _blocks_no_descend = None
     _blocks = None
     _block = None
+
+    def test_clone(self):
+        b = self._block
+        bc = b.clone()
+        self.assertIsNot(b, bc)
+        self.assertEqual(len(list(b.children())),
+                         len(list(bc.children())))
+        for c1, c2 in zip(b.children(), bc.children()):
+            self.assertIs(c1.parent, b)
+            self.assertIs(c1.root_block, b)
+            self.assertIs(c2.parent, bc)
+            self.assertIs(c2.root_block, bc)
+            self.assertIsNot(c1, c2)
+            self.assertEqual(c1.name, c2.name)
+
+        self.assertEqual(len(list(b.components())),
+                         len(list(bc.components())))
+        for c1, c2 in zip(b.components(), bc.components()):
+            self.assertIs(c1.root_block, b)
+            self.assertIs(c2.root_block, bc)
+            self.assertIsNot(c1, c2)
+            self.assertEqual(c1.name, c2.name)
 
     def test_pickle(self):
         b = pickle.loads(
@@ -568,10 +831,13 @@ class _Test_block_base(object):
                     if _b.active)
                 if getattr(obj, 'active', True) else set())
 
-class Test_block(_Test_block_base, unittest.TestCase):
+class _Test_block(_Test_block_base):
+
+    _do_clone = None
 
     @classmethod
     def setUpClass(cls):
+        assert cls._do_clone is not None
         model = cls._block = block()
         model.v_1 = variable()
         model.vdict_1 = variable_dict()
@@ -592,6 +858,9 @@ class Test_block(_Test_block_base, unittest.TestCase):
         model.blist_1.append(block())
         model.blist_1[0].v_2 = variable()
         model.blist_1[0].b_2 = block()
+
+        if cls._do_clone:
+            model = cls._block = model.clone()
 
         #
         # Manually encode the correct output
@@ -930,6 +1199,12 @@ class Test_block(_Test_block_base, unittest.TestCase):
         del b.x
         self.assertEqual(b.collect_ctypes(), set())
 
+class Test_block_noclone(_Test_block, unittest.TestCase):
+    _do_clone = False
+
+class Test_block_clone(_Test_block, unittest.TestCase):
+    _do_clone = True
+
 class _MyBlockBaseBase(StaticBlock):
     __slots__ = ()
     def __init__(self):
@@ -951,13 +1226,18 @@ class _MyBlock(_MyBlockBase):
         self.v = variable()
         self.n = 2.0
 
-class Test_StaticBlock(_Test_block_base, unittest.TestCase):
+class _Test_StaticBlock(_Test_block_base):
+
+    _do_clone = None
 
     @classmethod
     def setUpClass(cls):
-
+        assert cls._do_clone is not None
         cls._myblock_type = _MyBlock
         model = cls._block = _MyBlock()
+
+        if cls._do_clone:
+            model = cls._block = model.clone()
 
         #
         # Manually encode the correct output
@@ -1121,6 +1401,12 @@ class Test_StaticBlock(_Test_block_base, unittest.TestCase):
         self.assertEqual(len(list(b.blocks(active=True))), 0)
         self.assertNotEqual(len(list(b.generate_names())), 0)
         self.assertEqual(len(list(b.generate_names(active=True))), 0)
+
+class Test_StaticBlock_noclone(_Test_StaticBlock, unittest.TestCase):
+    _do_clone = False
+
+class Test_StaticBlock_clone(_Test_StaticBlock, unittest.TestCase):
+    _do_clone = True
 
 class Test_block_dict(_TestActiveComponentDictBase,
                       unittest.TestCase):

@@ -12,6 +12,7 @@ __all__ = ("block",
            "block_dict",
            "StaticBlock")
 
+import copy
 import abc
 import logging
 import weakref
@@ -36,6 +37,12 @@ from six import itervalues, iteritems
 logger = logging.getLogger('pyomo.core')
 
 _no_ctype = object()
+
+# TODO: Possibly take some additional steps in the basic block
+#       implementation to ensure that ordering is retained in
+#       a cloned / deepcopied / pickled block. I'm seeing some
+#       sporadic test failures that indicate that there might be
+#       a problem with this.
 
 class IBlockStorage(IComponent,
                     IComponentContainer,
@@ -64,6 +71,19 @@ class IBlockStorage(IComponent,
     #
     # Interface
     #
+
+    def clone(self):
+        """
+        Clones this block. Returns a new block with whose
+        parent pointer is set to None. Any components
+        encountered that are descendents of this
+        block will be deepcopied, otherwise a reference
+        to the original component is retained.
+        """
+        new_block = copy.deepcopy(
+            self, {'__block_scope__': {id(self):True, id(None):False}} )
+        new_block._parent = None
+        return new_block
 
     @abc.abstractmethod
     def blocks(self, *args, **kwds):
