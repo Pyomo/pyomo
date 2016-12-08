@@ -1,0 +1,57 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.06] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+    Solver results file: results.yml
+[    0.06] Applying Pyomo postprocessing actions
+[    0.06] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: None
+  Number of constraints: None
+  Number of variables: None
+  Number of binary variables: None
+  Number of integer variables: None
+  Number of continuous variables: None
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Name: None
+  Status: ok
+  Wallclock time: 0.0551769733429
+  Termination condition: optimal
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Message: None
+  Objective:
+    o:
+      Value: -12
+    sub.o:
+      Value: 4
+  Variable:
+    sub.y:
+      Value: 4
+    x:
+      Value: 4
+  Constraint: No values

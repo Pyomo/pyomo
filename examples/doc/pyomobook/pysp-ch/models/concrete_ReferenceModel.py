@@ -6,7 +6,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-
+#
 # Farmer: rent out version has a scalar root node var
 # note: this will minimize
 #
@@ -19,32 +19,29 @@ from pyomo.core import *
 # Model
 #
 
-model = AbstractModel()
+model = ConcreteModel()
 
 #
 # Parameters
 #
 
-model.CROPS = Set()
+model.CROPS = Set(initialize=['WHEAT','CORN','SUGAR_BEETS'])
 
-model.TOTAL_ACREAGE = Param(within=PositiveReals)
+model.TOTAL_ACREAGE = 500.0
 
-model.PriceQuota = Param(model.CROPS, within=PositiveReals)
+model.PriceQuota = {'WHEAT':100000.0,'CORN':100000.0,'SUGAR_BEETS':6000.0}
 
-model.SubQuotaSellingPrice = Param(model.CROPS, within=PositiveReals)
+model.SubQuotaSellingPrice = {'WHEAT':170.0,'CORN':150.0,'SUGAR_BEETS':36.0}
 
-def super_quota_selling_price_validate (model, value, i):
-    return model.SubQuotaSellingPrice[i] >= model.SuperQuotaSellingPrice[i]
+model.SuperQuotaSellingPrice = {'WHEAT':0.0,'CORN':0.0,'SUGAR_BEETS':10.0}
 
-model.SuperQuotaSellingPrice = Param(model.CROPS, validate=super_quota_selling_price_validate)
+model.CattleFeedRequirement = {'WHEAT':200.0,'CORN':240.0,'SUGAR_BEETS':0.0}
 
-model.CattleFeedRequirement = Param(model.CROPS, within=NonNegativeReals)
+model.PurchasePrice = {'WHEAT':238.0,'CORN':210.0,'SUGAR_BEETS':100000.0}
 
-model.PurchasePrice = Param(model.CROPS, within=PositiveReals)
+model.PlantingCostPerAcre = {'WHEAT':150.0,'CORN':230.0,'SUGAR_BEETS':260.0}
 
-model.PlantingCostPerAcre = Param(model.CROPS, within=PositiveReals)
-
-model.Yield = Param(model.CROPS, within=NonNegativeReals)
+model.Yield = Param(model.CROPS, within=NonNegativeReals, initialize=0.0, mutable=True)
 
 #
 # Variables
@@ -54,7 +51,6 @@ model.DevotedAcreage = Var(model.CROPS, bounds=(0.0, model.TOTAL_ACREAGE))
 
 model.QuantitySubQuotaSold = Var(model.CROPS, bounds=(0.0, None))
 model.QuantitySuperQuotaSold = Var(model.CROPS, bounds=(0.0, None))
-
 model.QuantityPurchased = Var(model.CROPS, bounds=(0.0, None))
 
 #
@@ -87,7 +83,6 @@ model.EnforceQuotas = Constraint(model.CROPS, rule=EnforceQuotas_rule)
 
 def ComputeFirstStageCost_rule(model):
     return summation(model.PlantingCostPerAcre, model.DevotedAcreage)
-
 model.FirstStageCost = Expression(rule=ComputeFirstStageCost_rule)
 
 def ComputeSecondStageCost_rule(model):
@@ -95,7 +90,6 @@ def ComputeSecondStageCost_rule(model):
     expr -= summation(model.SubQuotaSellingPrice, model.QuantitySubQuotaSold)
     expr -= summation(model.SuperQuotaSellingPrice, model.QuantitySuperQuotaSold)
     return expr
-
 model.SecondStageCost = Expression(rule=ComputeSecondStageCost_rule)
 
 #
@@ -109,3 +103,22 @@ def total_cost_rule(model):
     return model.FirstStageCost + model.SecondStageCost
 model.Total_Cost_Objective = Objective(rule=total_cost_rule, sense=minimize)
 
+#@pyomobook:
+#
+# Stochastic Data
+#
+Yield = {}
+Yield['BelowAverageScenario'] = \
+    {'WHEAT':2.0,'CORN':2.4,'SUGAR_BEETS':16.0}
+Yield['AverageScenario'] = \
+    {'WHEAT':2.5,'CORN':3.0,'SUGAR_BEETS':20.0}
+Yield['AboveAverageScenario'] = \
+    {'WHEAT':3.0,'CORN':3.6,'SUGAR_BEETS':24.0}
+
+def pysp_instance_creation_callback(scenario_name, node_names):
+
+    instance = model.clone()
+    instance.Yield.store_values(Yield[scenario_name])
+
+    return instance
+#@:pyomobook

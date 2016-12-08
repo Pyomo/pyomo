@@ -5,8 +5,9 @@ from pyomo.environ import *
 
 # read the data from excel using pandas
 df = pandas.read_excel(sys.argv[1], 'Delivery Costs', header=0, index_col=0)
-N = df.ix[:,0].index.tolist()
-M = df.ix[0,:].index.tolist()
+
+N = list(df.index.map(str))
+M = list(df.columns.map(str))
 d = {(r, c):df.at[r,c] for r in N for c in M}
 P = int(sys.argv[2])
 

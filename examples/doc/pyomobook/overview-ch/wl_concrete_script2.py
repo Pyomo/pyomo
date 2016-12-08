@@ -9,7 +9,7 @@ solver.solve(model)            # solve
 for wl in N:
     if value(model.y[wl]) > 0.5:
         customers = [str(cl) for cl in M if value(model.x[wl, cl] > 0.5)]
-        print(str(wl), 'serves customers:', customers)
+        print(str(wl)+' serves customers: '+str(customers))
     else:
         print(str(wl)+": do not build")
 # @:output
