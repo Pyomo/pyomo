@@ -1166,27 +1166,33 @@ class Piecewise(Block):
         # components on the fly so we make this Block behave concretely
         self._constructed=True
 
+        # cache this because it is apparently expensive
+        is_indexed = self.is_indexed()
+
         # construct each index of this component
-        if self.is_indexed() is False:
+        if not is_indexed:
             if generate_debug_messages:
                 logger.debug("  Constructing single Piecewise component (index=None)")
-            self.add( None )
+            self.add(None, _is_indexed=is_indexed)
         else:
             for index in self._index:
                 if generate_debug_messages:
                     logger.debug("  Constructing Piecewise index "+str(index))
-                self.add( index )
+                self.add(index, _is_indexed=is_indexed)
 
     def _default(self, idx):
         return self._data.setdefault(idx, _PiecewiseData(self))
 
-    def add(self, index ):
+    def add(self, index, _is_indexed=None):
+
+        if _is_indexed is None:
+            _is_indexed = self.is_indexed()
 
         _self_parent = self._parent()
         _self_xvar = None
         _self_yvar = None
         _self_domain_pts_index = None
-        if self.is_indexed() is False:
+        if not _is_indexed:
             # allows one to mix Var and _VarData as input to
             # non-indexed Piecewise, index would be None in this case
             # so for Var elements Var[None] is Var, but _VarData[None] would fail
@@ -1213,7 +1219,7 @@ class Piecewise(Block):
                 # with an indexed piecewise constraint. I assume this will fail if
                 # None is ever allowed as a valid index for an IndexedComponent,
                 # hence the assert below
-                assert not ((self.is_indexed() is True) and (index is None))
+                assert not (_is_indexed and (index is None))
                 _self_domain_pts_index = self._domain_points[None]
 
         if self._unbounded_domain_var is False:
@@ -1263,7 +1269,7 @@ class Piecewise(Block):
         # generate the list of range values using the function rule
         # check if convexity or concavity holds as well
         force_simple = False
-        if self.is_indexed() is False:
+        if not _is_indexed:
             character,range_pts,isStep=_characterize_function(self.name,
                                                               self._warning_tol,
                                                               self._f_rule,
@@ -1338,7 +1344,7 @@ class Piecewise(Block):
                           "piecewise representation: '%s'"
                     raise ValueError(msg % (self.name, index, self._pw_rep))
 
-        if self.is_indexed():
+        if _is_indexed:
             comp = _PiecewiseData(self)
         else:
             comp = self
