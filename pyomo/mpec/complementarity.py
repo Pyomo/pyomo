@@ -86,8 +86,8 @@ class _ComplementarityData(_BlockData):
         #
         #  c:   v == expression
         #
-        _e1 = self._canonical_expression(self._args[0])
-        _e2 = self._canonical_expression(self._args[1])
+        _e1 = self._canonical_expression(EXPR.clone_expression(self._args[0]))
+        _e2 = self._canonical_expression(EXPR.clone_expression(self._args[1]))
         if len(_e1) == 2:
             # Ignore _e2; _e1 is an equality constraint
             self.c = Constraint(expr=_e1)
