@@ -76,6 +76,7 @@ param DemandLB:
     12  5   5   5   5   5   5
     13  5   5   5   5   5   5 ;
 
+# TODO you are apparently here!!
 param OperatingCosts :=
         1   2   3   4   5   6 :=
     
