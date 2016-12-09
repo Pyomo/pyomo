@@ -38,8 +38,6 @@ def _component_map(self, *args, **kwds):
     kwds['return_key'] = True
     kwds['include_parent_blocks'] = False
     traversal = self.preorder_traversal(*args, **kwds)
-    # skip the root (this block)
-    six.next(traversal)
     d = {}
     for key, obj in traversal:
         if obj._is_component:
