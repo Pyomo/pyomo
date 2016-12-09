@@ -7,7 +7,11 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.opt import SolverFactory
+import pyomo.opt
+from pyomo.opt import (SolverFactory,
+                       SolverStatus,
+                       TerminationCondition)
+import pyomo.opt.base
 from pyomo.core.base.component_block import *
 from pyomo.core.base.component_variable import *
 from pyomo.core.base.component_constraint import *
@@ -77,8 +81,7 @@ del _component
 
 # Note sure where this gets used or why we need it
 def _valid_problem_types(self):
-    from pyomo.opt.base import ProblemFormat
-    return [ProblemFormat.pyomo]
+    return [pyomo.opt.base.ProblemFormat.pyomo]
 block.valid_problem_types = _valid_problem_types
 del _valid_problem_types
 
@@ -90,8 +93,6 @@ def _write(self,
     """
     Write the model to a file, with a given format.
     """
-    from pyomo.opt.base import ProblemFormat
-    import pyomo.opt
     #
     # Guess the format if none is specified
     #
@@ -101,9 +102,9 @@ def _write(self,
         # default, but this led to confusing behavior when a
         # user did something like 'model.write("f.nl")' and
         # expected guess_format to create an NL file.
-        format = ProblemFormat.cpxlp
+        format = pyomo.opt.base.ProblemFormat.cpxlp
     if (filename is not None) and (format is None):
-        format = guess_format(filename)
+        format = pyomo.opt.base.guess_format(filename)
     problem_writer = pyomo.opt.WriterFactory(format)
     if problem_writer is None:
         raise ValueError(
