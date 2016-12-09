@@ -31,8 +31,14 @@ from pyomo.core.base.var import SimpleVar, Var, _GeneralVarData, _VarData
 
 from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper
 
-from pyomo.core.base.component_expression import IExpression
-from pyomo.core.base.component_variable import IVariable
+from pyomo.core.base.component_expression import (IExpression,
+                                                  expression,
+                                                  data_expression)
+from pyomo.core.base.component_objective import objective
+from pyomo.core.base.component_variable import (IVariable,
+                                                variable)
+from pyomo.core.base.component_parameter import (IParameter,
+                                                 parameter)
 
 import six
 from six import iterkeys, itervalues, iteritems, StringIO
@@ -245,7 +251,8 @@ def collect_variables(exp, idMap):
         # NB: is_fixed() returns True for constants and variables with
         # fixed values
         return {}
-    elif (exp.__class__ is _GeneralVarData) or isinstance(exp, _VarData):
+    elif (exp.__class__ is _GeneralVarData) or \
+         isinstance(exp, (_VarData, IVariable)):
         id_ = id(exp)
         if id_ in idMap[None]:
             key = idMap[None][id_]
@@ -790,13 +797,18 @@ _linear_collectors = {
     param._ParamData        : _collect_linear_const,
     param.SimpleParam       : _collect_linear_const,
     param.Param             : _collect_linear_const,
+    parameter               : _collect_linear_const,
     _GeneralVarData         : _collect_linear_var,
     SimpleVar               : _collect_linear_var,
     Var                     : _collect_linear_var,
+    variable                : _collect_linear_var,
     _GeneralExpressionData  : _collect_identity,
     SimpleExpression        : _collect_identity,
+    expression              : _collect_identity,
+    data_expression         : _collect_identity,
     _GeneralObjectiveData  : _collect_identity,
-    SimpleObjective        : _collect_identity
+    SimpleObjective        : _collect_identity,
+    objective              : _collect_identity
     }
 
 def collect_linear_canonical_repn(exp, idMap, compute_values=True):
@@ -809,6 +821,8 @@ def collect_linear_canonical_repn(exp, idMap, compute_values=True):
     except KeyError:
         if isinstance(exp, (_VarData, IVariable)):
             _collect_linear_var(exp, idMap, 1, coef, varmap, compute_values)
+        elif isinstance(exp, (_ParamData, IParameter)):
+            _collect_linear_const(exp, idMap, 1, coef, varmap, compute_values)
         elif isinstance(exp, (_ExpressionData, IExpression)):
             _collect_identity(exp, idMap, 1, coef, varmap, compute_values)
         else:
