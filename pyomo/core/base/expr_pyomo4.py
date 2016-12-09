@@ -21,7 +21,7 @@ import traceback
 logger = logging.getLogger('pyomo.core')
 
 from six import StringIO, next, string_types, itervalues
-from six.moves import xrange
+from six.moves import xrange, builtins
 from weakref import ref
 
 from pyomo.core.base.component import Component
@@ -66,8 +66,7 @@ def _sum_with_iadd(iterable):
         ans += x
     return ans
 
-import __builtin__
-sum = __builtin__.sum if _getrefcount_available else _sum_with_iadd
+sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
 
 def _generate_expression__clone_if_needed_getrefcount(self, obj, target):

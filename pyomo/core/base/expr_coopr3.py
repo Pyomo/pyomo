@@ -21,7 +21,7 @@ import traceback
 logger = logging.getLogger('pyomo.core')
 
 from six import StringIO, next
-from six.moves import xrange
+from six.moves import xrange, builtins
 try:
     basestring
 except:
@@ -46,8 +46,7 @@ from pyomo.core.base.expr_common import \
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
-import __builtin__
-sum = __builtin__.sum
+sum = builtins.sum
 
 
 def identify_variables( expr,
