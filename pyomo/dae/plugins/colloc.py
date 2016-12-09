@@ -335,7 +335,7 @@ class Collocation_Discretization_Transformation(Transformation):
                      "must be a differential set")
             elif 'scheme' in tmpds.get_discretization_info():
                 raise ValueError("The discretization scheme '%s' has already been applied "\
-                     "to the ContinuousSet '%s'"%s(tmpds.get_discretization_info()['scheme'],tmpds.name))
+                     "to the ContinuousSet '%s'"%(tmpds.get_discretization_info()['scheme'],tmpds.name))
 
         if tmpnfe <=0:
             raise ValueError("The number of finite elements must be at least 1")
@@ -416,7 +416,7 @@ class Collocation_Discretization_Transformation(Transformation):
                         raise DAE_Error(
                             "Error discretizing '%s' with respect to '%s'. Current implementation "\
                             "only allows for taking the first or second derivative with respect to "\
-                            "a particular ContinuousSet" %s(d.name,i.name))
+                            "a particular ContinuousSet" %(d.name,i.name))
                     scheme = self._scheme[count-1]
                     # print("%s %s" % (i.name, scheme.__name__))
                     newexpr = create_partial_expression(scheme,oldexpr,i,loc)
@@ -487,7 +487,7 @@ class Collocation_Discretization_Transformation(Transformation):
         else:
             raise ValueError("ContinuousSet '%s' has not been discretized yet, please call "\
                 "the apply() method with this ContinuousSet to discretize it before calling "\
-                "this method" %s(ds.name))
+                "this method" %(ds.name))
 
         if var is None:
             raise TypeError("A variable must be specified")
