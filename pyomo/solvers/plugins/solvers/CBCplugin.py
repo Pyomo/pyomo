@@ -352,11 +352,19 @@ class CBCSHELL(SystemCallSolver):
                 soln.status = SolutionStatus.infeasible
                 soln.objective['__default_objective__']['Value'] = None
             if len(tokens) > 3 and tokens[0] == "Result" and tokens[2] == "Optimal":
+                # parser for log file generetated with discrete variable
                 soln.status = SolutionStatus.optimal
             if len(tokens) >= 3 and tokens[0] == "Objective" and tokens[1] == "value:":
-                soln.objective['__default_objective__']['Value'] = eval(tokens[2])
+                # parser for log file generetated with discrete variable
+                soln.objective['__default_objective__']['Value'] = float(tokens[2])
+            if len(tokens) > 4 and tokens[0] == "Optimal" and tokens[2] == "objective":
+                # parser for log file generetated without discrete variable
+                soln.status = SolutionStatus.optimal
+                soln.objective['__default_objective__']['Value'] = float(tokens[4])
             if len(tokens) > 6 and tokens[4] == "best" and tokens[5] == "objective":
-                soln.objective['__default_objective__']['Value'] = eval(tokens[6])
+                if tokens[6].endswith(','):
+                    tokens[6] = tokens[6][:-1]
+                soln.objective['__default_objective__']['Value'] = float(tokens[6])
             if len(tokens) > 9 and tokens[7] == "(best" and tokens[8] == "possible":
                 results.problem.lower_bound=tokens[9]
                 results.problem.lower_bound = eval(results.problem.lower_bound.split(")")[0])
@@ -364,21 +372,21 @@ class CBCSHELL(SystemCallSolver):
                 results.problem.lower_bound=eval(tokens[12])
             if len(tokens) > 3 and tokens[0] == "Result" and tokens[2] == "Finished":
                 soln.status = SolutionStatus.optimal
-                soln.objective['__default_objective__']['Value'] = eval(tokens[4])
+                soln.objective['__default_objective__']['Value'] = float(tokens[4])
             if len(tokens) > 10 and tokens[4] == "time" and tokens[9] == "nodes":
                 results.solver.statistics.branch_and_bound.number_of_created_subproblems=eval(tokens[8])
                 results.solver.statistics.branch_and_bound.number_of_bounded_subproblems=eval(tokens[8])
                 if eval(results.solver.statistics.branch_and_bound.number_of_bounded_subproblems) > 0:
-                    soln.objective['__default_objective__']['Value'] = eval(tokens[6])
+                    soln.objective['__default_objective__']['Value'] = float(tokens[6])
             if len(tokens) == 5 and tokens[1] == "Exiting" and tokens[4] == "time":
                 soln.status = SolutionStatus.stoppedByLimit
             if len(tokens) > 8 and tokens[7] == "nodes":
                 results.solver.statistics.branch_and_bound.number_of_created_subproblems=eval(tokens[6])
                 results.solver.statistics.branch_and_bound.number_of_bounded_subproblems=eval(tokens[6])
             if len(tokens) == 2 and tokens[0] == "sys":
-                results.solver.system_time=eval(tokens[1])
+                results.solver.system_time=float(tokens[1])
             if len(tokens) == 2 and tokens[0] == "user":
-                results.solver.user_time=eval(tokens[1])
+                results.solver.user_time=float(tokens[1])
             results.solver.user_time=-1.0
 
         if soln.objective['__default_objective__']['Value'] == "1e+50":
@@ -449,6 +457,7 @@ class CBCSHELL(SystemCallSolver):
 
         processing_constraints = None # None means header, True means constraints, False means variables.
         header_processed = False
+        optim_value = None
         range_duals = {}
         try:
             INPUT = open(self._soln_file,"r")
@@ -460,9 +469,7 @@ class CBCSHELL(SystemCallSolver):
             if tokens[0] == "Optimal":
                 solution.status = SolutionStatus.optimal
                 solution.gap = 0.0
-                solution.objective['__default_objective__']['Value'] = eval(tokens[-1])
-                if results.problem.sense == ProblemSense.maximize:
-                    solution.objective['__default_objective__']['Value'] *= -1
+                optim_value = float(tokens[-1])
 
             elif tokens[0] == "Unbounded" or (len(tokens)>2 and tokens[0] == "Problem" and tokens[2] == 'unbounded') or (len(tokens)>1 and tokens[0] ==    'Dual' and tokens[1] == 'infeasible'):
                 results.solver.termination_condition = TerminationCondition.unbounded
@@ -478,10 +485,26 @@ class CBCSHELL(SystemCallSolver):
                 INPUT.close()
                 return
 
+            elif len(tokens) > 2 and tokens[0:3] == ['Stopped','on','time']:
+                if tokens[4] == 'objective':
+                    results.solver.termination_condition = TerminationCondition.maxTimeLimit
+                    solution.gap = None
+                    optim_value = float(tokens[-1])
+                elif len(tokens) > 8 and tokens[3:9] == ['(no', 'integer', 'solution', '-', 'continuous', 'used)']:
+                    results.solver.termination_condition = TerminationCondition.intermediateNonInteger
+                    solution.gap = None
+                    optim_value = float(tokens[-1])
+                else:
+                    print("***WARNING: CBC plugin currently not processing this solution status correctly. Full status line is: "+line.strip())
+
             elif tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
                 print("***WARNING: CBC plugin currently not processing solution status="+tokens[0]+" correctly. Full status line is: "+line.strip())
 
             if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
+                if optim_value:
+                    solution.objective['__default_objective__']['Value'] = optim_value
+                    if results.problem.sense == ProblemSense.maximize:
+                        solution.objective['__default_objective__']['Value'] *= -1
                 header_processed = True
 
             elif tokens[0] == "0": # indicates section start.
