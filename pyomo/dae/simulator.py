@@ -29,6 +29,18 @@ from pyomo.core.base.template_expr import (
 
 from six import iterkeys, itervalues
 
+try:
+    import scipy.integrate as scipy
+    scipy_available = True
+except ImportError:
+    scipy_available = False
+
+try:
+    import casadi
+    casadi_available = True
+except ImportError:
+    casadi_available = False
+
 def _check_getitemexpression(expr,i):
     """
     Accepts an equality expression and an index value. Checks the
@@ -123,6 +135,112 @@ def _check_sumexpression(expr,i):
 
     return None
 
+def substitute_getitem_with_casadi_sym(expr, _map):
+
+    if type(expr) is IndexTemplate:
+        return expr
+
+    _id = _GetItemIndexer(expr)
+    if _id not in _map:
+        name = "%s[%s]" % (
+            expr._base.name, ','.join(str(x) for x in _id._args) )
+        _map[_id] = casadi.SX.sym(name)
+    return _map[_id]
+
+def substitute_intrinsic_function_with_casadi(expr):
+    
+    functionmap = {'log':casadi.log,
+                   'log10':casadi.log10,
+                   'sin':casadi.sin,
+                   'cos':casadi.cos,
+                   'tan':casadi.tan,
+                   'cosh':casadi.cosh, 
+                   'sinh':casadi.sinh, 
+                   'tanh':casadi.tanh,
+                   'asin':casadi.asin, 
+                   'acos':casadi.acos, 
+                   'atan':casadi.atan,
+                   'exp':casadi.exp,
+                   'sqrt':casadi.sqrt, 
+                   'asinh':casadi.asinh,
+                   'acosh':casadi.acosh, 
+                   'atanh':casadi.atanh,
+                   'ceil':casadi.ceil, 
+                   'floor':casadi.floor} 
+    expr._operator = functionmap[expr.name]
+    return expr
+
+def substitute_intrinsic_function(expr, substituter, *args):
+    """
+    This substituter is copied from template_expr.py with some minor
+    modifications to make it compatible with CasADi expressions. 
+    TODO: We need a generalized expression tree walker to avoid
+    copying code like this
+
+    This substition function is used to replace Pyomo intrinsic
+    functions with CasADi functions before sending expressions to a
+    CasADi integrator
+
+    """
+
+    # Again, due to circular imports, we cannot import expr at the
+    # module scope because this module gets imported by expr
+    from pyomo.core.base import expr as EXPR
+    from pyomo.core.base import expr_common as common
+    from pyomo.core.base.numvalue import (
+        NumericValue, native_numeric_types, as_numeric)
+
+    if type(expr) is casadi.SX:
+        return expr
+
+    _stack = [ [[expr.clone()], 0, 1, None] ]
+    _stack_idx = 0
+    while _stack_idx >= 0:
+        _ptr = _stack[_stack_idx]
+        while _ptr[1] < _ptr[2]:
+            _obj = _ptr[0][_ptr[1]]
+            _ptr[1] += 1            
+            _subType = type(_obj)
+            if _subType is EXPR._IntrinsicFunctionExpression:
+                if type(_ptr[0]) is tuple:
+                    _list = list(_ptr[0])
+                    _list[_ptr[1]-1] = substituter(_obj, *args)
+                    _ptr[0] = tuple(_list)
+                    _ptr[3]._args = _list
+                else:
+                    _ptr[0][_ptr[1]-1] = substituter(_obj, *args)
+            elif _subType in native_numeric_types or \
+                 type(_obj) is casadi.SX or not _obj.is_expression():
+                continue
+            elif _subType is EXPR._ProductExpression:
+                # _ProductExpression is fundamentally different in
+                # Coopr3 / Pyomo4 expression systems and must be handled
+                # specially.
+                if common.mode is common.Mode.coopr3_trees:
+                    _lists = (_obj._numerator, _obj._denominator)
+                else:
+                    _lists = (_obj._args,)
+                for _list in _lists:
+                    if not _list:
+                        continue
+                    _stack_idx += 1
+                    _ptr = [_list, 0, len(_list), _obj]
+                    if _stack_idx < len(_stack):
+                        _stack[_stack_idx] = _ptr
+                    else:
+                        _stack.append( _ptr )
+            else:
+                if not _obj._args:
+                    continue
+                _stack_idx += 1
+                _ptr = [_obj._args, 0, len(_obj._args), _obj]
+                if _stack_idx < len(_stack):
+                    _stack[_stack_idx] = _ptr
+                else:
+                    _stack.append( _ptr )
+        _stack_idx -= 1
+    return _stack[0][0][0]
+
 class Simulator:
     """
     Simulator objects allow a user to simulate a dynamic model
@@ -132,17 +250,24 @@ class Simulator:
     def __init__(self, m, **kwds):
         
         self._intpackage = kwds.pop('package','scipy')
-        if self._intpackage != 'scipy':
+        if self._intpackage not in ['scipy','casadi']:
             raise DAE_Error(
-                "The integrator package %s was specified using the "
-                "'package' keyword argument. SciPy is the only "
-                "package currently supported by the "
-                "Simulator."%(self._intpackage))
+                "Unrecognized simulator package %s. Please select from "
+                "%s" %(self._intpackage,['scipy','casadi']))
+
+        if self._intpackage == 'scipy':
+            if not scipy_available:
+                raise ImportError("Tried to import SciPy but failed")   
+            substituter = substitute_getitem_with_param
+        else:
+            if not casadi_available:
+                raise ImportError("Tried to import CasADi but failed")
+            substituter = substitute_getitem_with_casadi_sym
 
         temp = m.component_map(ContinuousSet)
         if len(temp) != 1:
             raise DAE_Error(
-                "Currently the scipy integrator may only be applied to "
+                "Currently the simulator may only be applied to "
                 "Pyomo models with a single ContinuousSet")
 
         # Get the ContinuousSet in the model
@@ -276,9 +401,15 @@ class Simulator:
                         "DerivativeVar %s" %(str(dvkey)))
             
                 derivlist.append(dvkey)
-                rhsdict[dvkey] = substitute_template_expression(
-                    RHS, substitute_getitem_with_param, templatemap)
-        
+                tempexp = substitute_template_expression(
+                    RHS, substituter, templatemap)
+                if self._intpackage is 'casadi':
+                    # After substituting GetItemExpression objects
+                    # replace intrinsic Pyomo functions with casadi
+                    # functions 
+                    tempexp = substitute_intrinsic_function(
+                        tempexp, substitute_intrinsic_function_with_casadi)
+                rhsdict[dvkey] = tempexp
         # Check to see if we found a RHS for every DerivativeVar in
         # the model
         # FIXME: Not sure how to rework this for multi-index case
@@ -312,18 +443,20 @@ class Simulator:
                     "Cannot simulate a differential equation with "
                     "algebraic variables")
 
-        # Function sent to scipy integrator
-        def _rhsfun(t,x):
-            residual = []
-            cstemplate.set_value(t)
-            for idx,v in enumerate(diffvars):
-                if v in templatemap:
-                    templatemap[v].set_value(x[idx])
+        if self._intpackage == 'scipy':
+            # Function sent to scipy integrator
+            def _rhsfun(t,x):
+                residual = []
+                cstemplate.set_value(t)
+                for idx,v in enumerate(diffvars):
+                    if v in templatemap:
+                        templatemap[v].set_value(x[idx])
 
-            for d in derivlist:
-                residual.append(rhsdict[d]())
+                for d in derivlist:
+                    residual.append(rhsdict[d]())
 
-            return residual
+                return residual
+            self._rhsfun = _rhsfun   
             
         self._contset = contset
         self._cstemplate = cstemplate
@@ -331,7 +464,6 @@ class Simulator:
         self._derivlist = derivlist
         self._templatemap = templatemap
         self._rhsdict = rhsdict
-        self._rhsfun = _rhsfun   
         self._model = m
         self._tsim = None
         self._simsolution = None
@@ -357,26 +489,25 @@ class Simulator:
         be specified as keyword arguments and will be passed on to the
         integrator.
         """
-        # 
-
-        try:
-            from scipy.integrate import ode
-        except ImportError:
-            raise ImportError("Tried to import SciPy but failed")
-
-        # Specify the scipy integrator to use for simulation
-        valid_integrators = ['vode','zvode','lsoda','dopri5','dop853']
-        integrator = kwds.pop('integrator', 'lsoda')
-        if integrator is 'odeint':
-            integrator = 'lsoda'
+        
+        if self._intpackage == 'scipy':
+            # Specify the scipy integrator to use for simulation
+            valid_integrators = ['vode','zvode','lsoda','dopri5','dop853']
+            integrator = kwds.pop('integrator', 'lsoda')
+            if integrator is 'odeint':
+                integrator = 'lsoda'
+        else:
+            # Specify the casadi integrator to use for simulation
+            valid_integrators = ['cvodes','idas']
+            integrator = kwds.pop('integrator', 'idas')
 
         if integrator not in valid_integrators:
-            raise DAE_Error(
-                "Unrecognized Scipy integrator \'%s\'. Please select "
-                "an integrator from %s"%(integrator,valid_integrators))
+            raise DAE_Error( "Unrecognized %s integrator "
+            "\'%s\'. Please select " "an integrator from "
+            "%s" %(self._intpackage,integrator,valid_integrators))
 
         # Set the time step or the number of points for the lists
-        # returned by the scipy integrator
+        # returned by the integrator
         tstep = kwds.pop('step', None)
         if tstep is not None and \
            tstep > (self._contset.last()-self._contset.first()):
@@ -427,22 +558,31 @@ class Simulator:
                 # This line will raise an error if no value was set
                 initcon.append(value(v._base[vidx]))
         
-        scipyint = ode(self._rhsfun).set_integrator(integrator,**kwds)
-        scipyint.set_initial_value(initcon,tsim[0])
+        if self._intpackage is 'scipy':
+            scipyint = scipy.ode(self._rhsfun).set_integrator(integrator,**kwds)
+            scipyint.set_initial_value(initcon,tsim[0])
 
-        profile = np.array(initcon)
-        i = 1
-        while scipyint.successful() and scipyint.t < tsim[-1]:
-            profilestep = scipyint.integrate(tsim[i])
-            profile = np.vstack([profile,profilestep])
-            i += 1
-            
-
-        # sol,infodict = odeint(self._rhsfun,initcon,tsim,**kwds)
-        
-        if not scipyint.successful():
-            raise DAE_Error("The Scipy integrator %s did not terminate "
+            profile = np.array(initcon)
+            i = 1
+            while scipyint.successful() and scipyint.t < tsim[-1]:
+                profilestep = scipyint.integrate(tsim[i])
+                profile = np.vstack([profile,profilestep])
+                i += 1
+                   
+            if not scipyint.successful():
+                raise DAE_Error("The Scipy integrator %s did not terminate "
                             "successfully."%(integrator))
+        else:
+            xalltemp = [self._templatemap[i] for i in self._diffvars]
+            xall = casadi.vertcat(*xalltemp)
+
+            odealltemp = [value(self._rhsdict[i]) for i in self._derivlist]
+            odeall = casadi.vertcat(*odealltemp)
+            dae = {'x':xall, 'ode':odeall}
+            opts = {'grid':tsim,'output_t0':True}
+            F = casadi.integrator('F',integrator,dae,opts)
+            sol = F(x0=initcon)
+            profile=sol['xf'].full().T
 
         self._tsim = tsim
         self._simsolution = profile

@@ -27,10 +27,16 @@ def _diffeq2(m,t):
     return m.dthetadt[t] == m.omega[t]
 m.diffeq2 = Constraint(m.t,rule=_diffeq2)
 
-# Simulate the model
-sim = Simulator(m, package='scipy')
-tsim, profiles = sim.simulate(numpoints=100,integrator='vode')
+# # Simulate the model using scipy
+# sim = Simulator(m, package='scipy')
+# tsim, profiles = sim.simulate(numpoints=100,integrator='vode')
+# varorder = sim.get_variable_order()
+
+# Simulate the model using casadi
+sim = Simulator(m, package='casadi')
+tsim, profiles = sim.simulate(numpoints=100,integrator='cvodes')
 varorder = sim.get_variable_order()
+
 
 # Discretize model using Orthogonal Collocation
 discretizer = TransformationFactory('dae.collocation')
