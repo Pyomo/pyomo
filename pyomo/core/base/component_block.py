@@ -650,8 +650,6 @@ class block(_block_base, IBlockStorage):
                            type(getattr(self, name)),
                            type(component)))
                     delattr(self, name)
-                if component.ctype not in self.__byctype:
-                    self.__byctype[component.ctype] = {}
                 self.__byctype[component.ctype][name] = component
                 self.__order[name] = component
                 component._parent = weakref.ref(self)
@@ -731,7 +729,6 @@ class block(_block_base, IBlockStorage):
 
     # TODO
     #def write(self, ...):
-    #def clone(self, ...):
 
 class block_list(ComponentList,
                  _IActiveComponentContainer):
