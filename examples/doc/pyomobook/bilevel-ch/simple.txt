@@ -1,0 +1,41 @@
+2 Var Declarations
+    v : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     1 :  None :     2 : False :  True :  Reals
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     1 :  None :     2 : False :  True :  Reals
+
+1 Objective Declarations
+    o : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : x + sub.y + v
+
+1 Constraint Declarations
+    c : Size=1, Index=None, Active=True
+        Key  : Lower : Body  : Upper : Active
+        None :   1.5 : x + v :  +Inf :   True
+
+1 SubModel Declarations
+    sub : Size=1, Index=None, Active=True
+        2 Var Declarations
+            w : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :    -1 :  None :     1 : False :  True :  Reals
+            y : Size=1, Index=None
+                Key  : Lower : Value : Upper : Fixed : Stale : Domain
+                None :     1 :  None :     2 : False :  True :  Reals
+
+        1 Objective Declarations
+            o : Size=1, Index=None, Active=True
+                Key  : Active : Sense    : Expression
+                None :   True : maximize : x + sub.w
+
+        1 Constraint Declarations
+            c : Size=1, Index=None, Active=True
+                Key  : Lower : Body          : Upper : Active
+                None :  -Inf : sub.y + sub.w :   2.5 :   True
+
+        4 Declarations: y w o c
+
+5 Declarations: x v sub o c

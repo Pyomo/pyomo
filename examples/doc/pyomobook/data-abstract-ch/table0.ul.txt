@@ -1,0 +1,12 @@
+1 Set Declarations
+    A : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['A1', 'A2', 'A3']
+
+1 Param Declarations
+    M : Size=3, Index=A, Domain=Any, Default=None, Mutable=False
+        Key : Value
+         A1 :   4.3
+         A2 :   4.4
+         A3 :   4.5
+
+2 Declarations: A M

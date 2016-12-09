@@ -1,0 +1,54 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.02] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: 4.13740959836
+    Solver results file: results.yml
+[    0.02] Applying Pyomo postprocessing actions
+[    0.02] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 1
+  Number of variables: 2
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Message: Ipopt 3.12.4\x3a Optimal Solution Found
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+  Time: 0.0112709999084
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: None
+  Status: optimal
+  Message: Ipopt 3.12.4\x3a Optimal Solution Found
+  Objective:
+    z:
+      Value: 4.13740959836
+  Variable:
+    x[I_C_Scoops]:
+      Value: 0.3072994118
+    x[Peanuts]:
+      Value: 40.5999998486
+  Constraint: No values
