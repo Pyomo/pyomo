@@ -81,6 +81,19 @@ class Test_parameter(unittest.TestCase):
         self.assertEqual(p._potentially_variable(), False)
         self.assertEqual(potentially_variable(p), False)
 
+    def test_polynomial_degree(self):
+        p = parameter()
+        self.assertEqual(p.polynomial_degree(), 0)
+        self.assertEqual((p**2).polynomial_degree(), 0)
+        self.assertEqual(p.value, None)
+        with self.assertRaises(ValueError):
+            (p**2)()
+        p.value = 1.0
+        self.assertEqual(p.polynomial_degree(), 0)
+        self.assertEqual((p**2).polynomial_degree(), 0)
+        self.assertEqual(p.value, 1.0)
+        self.assertEqual((p**2)(), 1.0)
+
 class Test_parameter_dict(_TestComponentDictBase,
                           unittest.TestCase):
     _container_type = parameter_dict
