@@ -1,7 +1,7 @@
 from pyomo.environ import *
 
 time = range(5)
-genset = set(['G_MAIN', 'G_EAST'])
+genset = ['G_MAIN', 'G_EAST']
 gennom = {0: 120.0, 1: 145.0, 2: 119.0, 3: 42.0, 4: 190.0}
 maxpower = 500
 ramplimit = 50
@@ -64,11 +64,11 @@ model.pprint()
 t = model.TIME.last()
 for g in model.GEN_UNITS:
     p = model.Generator[g].Power[t]
-    print("%s = %s" % (p.name, value(p)))
+    print('{0} = {1}'.format(p.name, value(p)))
 # @:finaltimepower
 
 # @finaltimepowerslice:
 t = model.TIME.last()
 for p in model.Generator[:].Power[t]:
-    print("%s = %s" % (p.name, value(p)))
+    print('{0} = {1}'.format(p.name, value(p)))
 # @:finaltimepowerslice
