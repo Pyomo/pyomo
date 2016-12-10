@@ -55,10 +55,10 @@ class IConstraint(IComponent, _IActiveComponent):
     body = _abstract_readonly_property(
         doc=("Access the body of the "
              "constraint expression."))
-    lower = _abstract_readonly_property(
+    lb = _abstract_readonly_property(
         doc=("Access the lower bound of the "
              "constraint expression."))
-    upper = _abstract_readonly_property(
+    ub = _abstract_readonly_property(
         doc=("Access the upper bound of the "
              "constraint expression."))
     equality = _abstract_readonly_property(
@@ -114,43 +114,62 @@ class constraint(IConstraint):
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
-                 "_body",
-                 "_lower",
-                 "_upper",
+                 "body",
+                 "lb",
+                 "ub",
                  "_equality",
                  "__weakref__")
-    def __init__(self, expr=None):
+    def __init__(self, expr=None, lb=None, body=None, ub=None):
         self._parent = None
         self._active = True
-        self._body = None
-        self._lower = None
-        self._upper = None
+        self.body = None
+        self.lb = None
+        self.ub = None
         self._equality = False
 
-        # call the setter
-        self.expr = expr
+        if expr is not None:
+            if body is not None:
+                raise ValueError("Both the 'expr' and 'body' "
+                                 "keywords can not be used to "
+                                 "initialize a constraint.")
+            if lb is not None:
+                raise ValueError("Both the 'expr' and 'lb' "
+                                 "keywords can not be used to "
+                                 "initialize a constraint.")
+            if ub is not None:
+                raise ValueError("Both the 'expr' and 'ub' "
+                                 "keywords can not be used to "
+                                 "initialize a constraint.")
+            # call the setter
+            self.expr = expr
+        else:
+            self.body = body
+            self.lb = lb
+            self.ub = ub
+
+    # temporary
+    @property
+    def lower(self):
+        return self.lb
+    @property
+    def upper(self):
+        return self.ub
 
     #
     # Define the IConstraint abstract methods
     #
 
     @property
-    def body(self):
-        return self._body
-    @property
-    def lower(self):
-        return self._lower
-    @property
-    def upper(self):
-        return self._upper
-    @property
     def equality(self):
+        """Returns True if this is an equality constraint"""
         return self._equality
     @property
     def strict_lower(self):
+        """Returns True if the lower bound is strict"""
         return False
     @property
     def strict_upper(self):
+        """Returns True if the upper bound is strict"""
         return False
 
     #
@@ -168,9 +187,9 @@ class constraint(IConstraint):
     def expr(self, expr):
         """Set the expression on this constraint."""
         if expr is None:
-            self._body = None
-            self._lower = None
-            self._upper = None
+            self.body = None
+            self.lb = None
+            self.ub = None
             self._equality = False
             return
 
@@ -189,14 +208,14 @@ class constraint(IConstraint):
 
                 self._equality = True
                 if arg1 is None or (not arg1._potentially_variable()):
-                    self._lower = self._upper = arg1
-                    self._body = arg0
+                    self.lb = self.ub = arg1
+                    self.body = arg0
                 elif arg0 is None or (not arg0._potentially_variable()):
-                    self._lower = self._upper = arg0
-                    self._body = arg1
+                    self.lb = self.ub = arg0
+                    self.body = arg1
                 else:
-                    self._lower = self._upper = ZeroConstant
-                    self._body = arg0 - arg1
+                    self.lb = self.ub = ZeroConstant
+                    self.body = arg0 - arg1
             #
             # Form inequality expression
             #
@@ -227,9 +246,9 @@ class constraint(IConstraint):
                             "restricted to storage of data."
                             % (self.name))
 
-                self._lower = arg0
-                self._body  = arg1
-                self._upper = arg2
+                self.lb = arg0
+                self.body  = arg1
+                self.ub = arg2
             else:
                 raise ValueError(
                     "Constructor rule for constraint '%s' returned "
@@ -292,14 +311,14 @@ class constraint(IConstraint):
                 except AttributeError:
                     _args = expr._args
                 if not _args[1]._potentially_variable():
-                    self._lower = self._upper = _args[1]
-                    self._body = _args[0]
+                    self.lb = self.ub = _args[1]
+                    self.body = _args[0]
                 elif not _args[0]._potentially_variable():
-                    self._lower = self._upper = _args[0]
-                    self._body = _args[1]
+                    self.lb = self.ub = _args[0]
+                    self.body = _args[1]
                 else:
-                    self._lower = self._upper = ZeroConstant
-                    self._body = \
+                    self.lb = self.ub = ZeroConstant
+                    self.body = \
                         EXPR.generate_expression_bypassCloneCheck(
                             _sub,
                             _args[0],
@@ -365,57 +384,57 @@ class constraint(IConstraint):
                             "restricted to storage of data."
                             % (self.name))
 
-                    self._lower = _args[0]
-                    self._body  = _args[1]
-                    self._upper = _args[2]
+                    self.lb = _args[0]
+                    self.body  = _args[1]
+                    self.ub = _args[2]
 
                 else:
 
                     if not _args[1]._potentially_variable():
-                        self._lower = None
-                        self._body  = _args[0]
-                        self._upper = _args[1]
+                        self.lb = None
+                        self.body  = _args[0]
+                        self.ub = _args[1]
                     elif not _args[0]._potentially_variable():
-                        self._lower = _args[0]
-                        self._body  = _args[1]
-                        self._upper = None
+                        self.lb = _args[0]
+                        self.body  = _args[1]
+                        self.ub = None
                     else:
-                        self._lower = None
-                        self._body  = \
+                        self.lb = None
+                        self.body = \
                             EXPR.\
                             generate_expression_bypassCloneCheck(
                                 _sub,
                                 _args[0],
                                 _args[1])
-                        self._upper = ZeroConstant
+                        self.ub = ZeroConstant
 
         #
         # Replace numeric bound values with a NumericConstant object,
         # and reset the values to 'None' if they are 'infinite'
         #
-        if (self._lower is not None) and \
-           is_constant(self._lower):
-            val = self._lower()
+        if (self.lb is not None) and \
+           is_constant(self.lb):
+            val = self.lb()
             if not pyutilib.math.is_finite(val):
                 if val > 0:
                     raise ValueError(
                         "Constraint '%s' created with a +Inf lower "
                         "bound." % (self.name))
-                self._lower = None
+                self.lb = None
             elif bool(val > 0) == bool(val <= 0):
                 raise ValueError(
                     "Constraint '%s' created with a non-numeric "
                     "lower bound." % (self.name))
 
-        if (self._upper is not None) and \
-           is_constant(self._upper):
-            val = self._upper()
+        if (self.ub is not None) and \
+           is_constant(self.ub):
+            val = self.ub()
             if not pyutilib.math.is_finite(val):
                 if val < 0:
                     raise ValueError(
                         "Constraint '%s' created with a -Inf upper "
                         "bound." % (self.name))
-                self._upper = None
+                self.ub = None
             elif bool(val > 0) == bool(val <= 0):
                 raise ValueError(
                     "Constraint '%s' created with a non-numeric "
@@ -429,11 +448,11 @@ class constraint(IConstraint):
         # constraint with 'infinite' RHS
         #
         if self._equality:
-            if self._lower is None:
+            if self.lb is None:
                 raise ValueError(
                     "Equality constraint '%s' defined with "
                     "non-finite term." % (self.name))
-            assert self._lower is self._upper
+            assert self.lb is self.ub
 
 class constraint_list(ComponentList,
                       _IActiveComponentContainer):

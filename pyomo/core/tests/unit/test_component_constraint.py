@@ -63,6 +63,23 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.lslack(), None)
         self.assertEqual(c.uslack(), None)
 
+    def test_init_nonexpr(self):
+        v = variable()
+        c = constraint(lb=0, body=v, ub=1)
+        self.assertEqual(c.lb, 0)
+        self.assertIs(c.body, v)
+        self.assertEqual(c.ub, 1)
+        with self.assertRaises(ValueError):
+            constraint(lb=0, expr=v <= 1)
+        with self.assertRaises(ValueError):
+            constraint(body=v, expr=v <= 1)
+        with self.assertRaises(ValueError):
+            constraint(ub=1, expr=v <= 1)
+        c = constraint(expr=v <= 1)
+        self.assertEqual(c.lb, None)
+        self.assertIs(c.body, v)
+        self.assertEqual(c.ub, 1)
+
     def test_type(self):
         c = constraint()
         self.assertTrue(isinstance(c, ICategorizedObject))
@@ -703,8 +720,22 @@ class Test_constraint(unittest.TestCase):
             c.expr
         v = variable()
         c.expr = 0 <= v <= 1
+        self.assertEqual(c.lb, 0)
+        self.assertIs(c.body, v)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.equality, False)
         with self.assertRaises(AttributeError):
             c.expr
+        c.expr = v == 1
+        self.assertEqual(c.lb, 1)
+        self.assertIs(c.body, v)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.equality, True)
+        c.expr = None
+        self.assertEqual(c.lb, None)
+        self.assertIs(c.body, None)
+        self.assertEqual(c.ub, None)
+        self.assertEqual(c.equality, False)
 
     def test_expr_wrong_type(self):
         c = constraint()
