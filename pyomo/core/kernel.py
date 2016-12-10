@@ -20,7 +20,23 @@ from pyomo.core.base.component_parameter import *
 from pyomo.core.base.component_expression import *
 from pyomo.core.base.component_suffix import *
 from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet)
+                                       IntegerSet,
+                                       Reals,
+                                       PositiveReals,
+                                       NonPositiveReals,
+                                       NegativeReals,
+                                       NonNegativeReals,
+                                       PercentFraction,
+                                       UnitInterval,
+                                       Integers,
+                                       PositiveIntegers,
+                                       NonPositiveIntegers,
+                                       NegativeIntegers,
+                                       NonNegativeIntegers,
+                                       Boolean,
+                                       Binary,
+                                       RealInterval,
+                                       IntegerInterval)
 from pyomo.core.base.objective import (minimize,
                                        maximize)
 
