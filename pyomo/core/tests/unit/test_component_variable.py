@@ -16,6 +16,7 @@ from pyomo.core.base.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
                                       potentially_variable)
+from pyomo.core.base.component_parameter import parameter
 from pyomo.core.base.component_variable import (IVariable,
                                                 variable,
                                                 variable_dict,
@@ -23,7 +24,17 @@ from pyomo.core.base.component_variable import (IVariable,
 from pyomo.core.base.var import Var
 from pyomo.core.base.component_block import block
 from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet)
+                                       IntegerSet,
+                                       Binary,
+                                       NonNegativeReals,
+                                       NegativeReals,
+                                       Reals,
+                                       RealInterval,
+                                       Integers,
+                                       NonNegativeIntegers,
+                                       NegativeIntegers,
+                                       IntegerInterval,
+                                       BooleanSet)
 
 import six
 from six import StringIO
@@ -64,8 +75,8 @@ class Test_variable(unittest.TestCase):
         self.assertTrue(v.parent is None)
         self.assertEqual(v.ctype, Var)
         self.assertEqual(v.domain_type, RealSet)
-        self.assertEqual(v.lb, -float('inf'))
-        self.assertEqual(v.ub, float('inf'))
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, None)
         self.assertEqual(v.fixed, False)
         self.assertEqual(v.value, None)
         self.assertEqual(v.stale, True)
@@ -209,33 +220,225 @@ class Test_variable(unittest.TestCase):
         v.to_string(ostream=out, verbose=True)
         self.assertEqual(out.getvalue(), "v")
 
+    def test_domain(self):
+        v = variable(domain=Reals)
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, None)
+        self.assertEqual(v.bounds, (None, None))
+
+        v = variable(domain=Reals, lb=0, ub=1)
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0, 1))
+
+        lb_param = parameter()
+        ub_param = parameter()
+        lb = lb_param
+        ub = ub_param
+        v = variable(domain=Reals, lb=lb, ub=ub)
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertIs(v.lb, lb)
+        self.assertIs(v.ub, ub)
+        self.assertIs(v.bounds[0], lb)
+        self.assertIs(v.bounds[1], ub)
+
+        lb = lb**2
+        ub = ub**2
+        v.lb = lb
+        v.ub = ub
+        lb_param.value = 2.0
+        ub_param.value = 3.0
+        self.assertIs(v.lb, lb)
+        self.assertEqual(v.lb(), 4.0)
+        self.assertIs(v.ub, ub)
+        self.assertEqual(v.ub(), 9.0)
+        self.assertIs(v.bounds[0], lb)
+        self.assertEqual(v.bounds[0](), 4.0)
+        self.assertIs(v.bounds[1], ub)
+        self.assertEqual(v.bounds[1](), 9.0)
+
+        # if the domain has a finite bound
+        # then you can not use the same bound
+        # keyword
+        variable(domain=NonNegativeReals, ub=0)
+        with self.assertRaises(ValueError):
+            variable(domain=NonNegativeReals, lb=0)
+
+        variable(domain=NonNegativeReals, ub=ub)
+        with self.assertRaises(ValueError):
+            variable(domain=NonNegativeReals, lb=lb)
+
+        variable(domain=NonNegativeIntegers, ub=0)
+        with self.assertRaises(ValueError):
+            variable(domain=NonNegativeIntegers, lb=0)
+
+        variable(domain=NonNegativeIntegers, ub=ub)
+        with self.assertRaises(ValueError):
+            variable(domain=NonNegativeIntegers, lb=lb)
+
+        variable(domain=NegativeReals, lb=0)
+        with self.assertRaises(ValueError):
+            variable(domain=NegativeReals, ub=0)
+
+        variable(domain=NegativeReals, lb=lb)
+        with self.assertRaises(ValueError):
+            variable(domain=NegativeReals, ub=ub)
+
+        variable(domain=NegativeIntegers, lb=0)
+        with self.assertRaises(ValueError):
+            variable(domain=NegativeIntegers, ub=0)
+
+        variable(domain=NegativeIntegers, lb=lb)
+        with self.assertRaises(ValueError):
+            variable(domain=NegativeIntegers, ub=ub)
+
+        unit_interval = RealInterval(bounds=(0,1))
+        self.assertEqual(unit_interval.bounds(), (0,1))
+        v = variable(domain=unit_interval)
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0, 1))
+        with self.assertRaises(ValueError):
+            variable(domain=unit_interval, lb=0)
+        with self.assertRaises(ValueError):
+            variable(domain=unit_interval, ub=0)
+
+        v = variable()
+        v.domain = unit_interval
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0, 1))
+
+        binary = IntegerInterval(bounds=(0,1))
+        self.assertEqual(binary.bounds(), (0,1))
+        v = variable(domain=binary)
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), True)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0, 1))
+        with self.assertRaises(ValueError):
+            variable(domain=binary, lb=0)
+        with self.assertRaises(ValueError):
+            variable(domain=binary, ub=0)
+
+        v = variable()
+        v.domain = binary
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), True)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0, 1))
+
+        variable(domain_type=RealSet)
+        variable(domain=Reals)
+        with self.assertRaises(ValueError):
+            variable(domain_type=RealSet,
+                     domain=Reals)
+        with self.assertRaises(ValueError):
+            variable(domain_type=BooleanSet)
+
     def test_domain_type(self):
         v = variable()
         self.assertEqual(v.domain_type, RealSet)
         self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, None)
+        self.assertEqual(v.bounds, (None, None))
 
         v.domain_type = IntegerSet
         self.assertEqual(v.domain_type, IntegerSet)
         self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, None)
+        self.assertEqual(v.bounds, (None, None))
+
+        v = variable(domain_type=IntegerSet, lb=0)
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, None)
+        self.assertEqual(v.bounds, (0, None))
+
+        v = variable(domain_type=IntegerSet, ub=0)
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, 0)
+        self.assertEqual(v.bounds, (None, 0))
+
+        v.domain_type = RealSet
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, 0)
+        self.assertEqual(v.bounds, (None, 0))
+
+        with self.assertRaises(ValueError):
+            v.domain_type = BooleanSet
 
     def test_binary_type(self):
         v = variable()
         v.domain_type = IntegerSet
         self.assertEqual(v.domain_type, IntegerSet)
         self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), False)
         self.assertEqual(v.is_integer(), True)
-        self.assertEqual(v.lb, -float('inf'))
-        self.assertEqual(v.ub, float('inf'))
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, None)
+        self.assertEqual(v.bounds, (None, None))
 
         v.lb = 0
         v.ub = 1
         self.assertEqual(v.domain_type, IntegerSet)
         self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), True)
         self.assertEqual(v.is_integer(), True)
         self.assertEqual(v.lb, 0)
@@ -246,6 +449,7 @@ class Test_variable(unittest.TestCase):
         v.ub = 0
         self.assertEqual(v.domain_type, IntegerSet)
         self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), True)
         self.assertEqual(v.is_integer(), True)
         self.assertEqual(v.lb, 0)
@@ -256,11 +460,82 @@ class Test_variable(unittest.TestCase):
         v.ub = 1
         self.assertEqual(v.domain_type, IntegerSet)
         self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
         self.assertEqual(v.is_binary(), True)
         self.assertEqual(v.is_integer(), True)
         self.assertEqual(v.lb, 1)
         self.assertEqual(v.ub, 1)
         self.assertEqual(v.bounds, (1,1))
+
+        v = variable(domain=Binary)
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), True)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0,1))
+
+        v.ub = 2
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 2)
+        self.assertEqual(v.bounds, (0,2))
+
+        v.lb = -1
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, -1)
+        self.assertEqual(v.ub, 2)
+        self.assertEqual(v.bounds, (-1,2))
+
+        v.domain = Binary
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), True)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0,1))
+
+        v.domain_type = RealSet
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0,1))
+
+        v.domain_type = IntegerSet
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), True)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub, 1)
+        self.assertEqual(v.bounds, (0,1))
+
+        v.domain = Reals
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.ub, None)
+        self.assertEqual(v.bounds, (None, None))
 
     def test_bounds_setter(self):
         v = variable()

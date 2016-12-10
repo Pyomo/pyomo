@@ -25,7 +25,10 @@ from pyomo.core.base.component_dict import ComponentDict
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet)
+                                       IntegerSet,
+                                       BooleanSet,
+                                       RealInterval,
+                                       IntegerInterval)
 
 import six
 
@@ -37,6 +40,8 @@ class IVariable(IComponent, NumericValue):
     The interface for optimization variables.
     """
     __slots__ = ()
+
+    _valid_domain_types = (RealSet, IntegerSet)
 
     #
     # Implementations can choose to define these
@@ -63,32 +68,13 @@ class IVariable(IComponent, NumericValue):
     def bounds(self, bounds_tuple):
         self.lb, self.ub = bounds_tuple
 
-    def is_integer(self):
-        """Returns True when the domain class is IntegerSet."""
-        return issubclass(self.domain_type, IntegerSet)
-
-    def is_binary(self):
-        """Returns True when the domain class is BooleanSet."""
-        return self.is_integer() and \
-            (self.lb >= 0) and \
-            (self.ub <= 1)
-
-# TODO?
-#    def is_semicontinuous(self):
-#        """
-#        Returns True when the domain class is SemiContinuous.
-#        """
-#        return issubclass(self.domain_type, SemiRealSet)
-
-#    def is_semiinteger(self):
-#        """
-#        Returns True when the domain class is SemiInteger.
-#        """
-#        return issubclass(self.domain_type, SemiIntegerSet)
-
     def is_continuous(self):
-        """Returns True when the domain is an instance of RealSet."""
+        """Returns True when the domain type is RealSet."""
         return issubclass(self.domain_type, RealSet)
+
+    def is_discrete(self):
+        """Returns True when the domain type is IntegerSet."""
+        return issubclass(self.domain_type, IntegerSet)
 
     def fix(self, *val):
         """
@@ -107,6 +93,35 @@ class IVariable(IComponent, NumericValue):
         self.fixed = False
 
     free=unfix
+
+    #
+    # Helper methods used by the writers
+    #
+
+    def is_integer(self):
+        """Returns True when the domain class is IntegerSet."""
+        return issubclass(self.domain_type, IntegerSet)
+
+    def is_binary(self):
+        """Returns True when the domain class is BooleanSet."""
+        return self.is_integer() and \
+            (self.lb is not None) and \
+            (self.ub is not None) and \
+            (self.lb >= 0) and \
+            (self.ub <= 1)
+
+# TODO?
+#    def is_semicontinuous(self):
+#        """
+#        Returns True when the domain class is SemiContinuous.
+#        """
+#        return issubclass(self.domain_type, SemiRealSet)
+
+#    def is_semiinteger(self):
+#        """
+#        Returns True when the domain class is SemiInteger.
+#        """
+#        return issubclass(self.domain_type, SemiIntegerSet)
 
     #
     # Implement the NumericValue abstract methods
@@ -145,26 +160,94 @@ class variable(IVariable):
     # property will be set in var.py
     _ctype = None
     __slots__ = ("_parent",
-                 "domain_type",
+                 "_domain_type",
                  "lb",
                  "ub",
                  "value",
                  "fixed",
                  "stale",
                  "__weakref__")
+
     def __init__(self,
-                 domain_type=RealSet,
-                 lb=_negative_infinity,
-                 ub=_infinity,
+                 domain_type=None,
+                 domain=None,
+                 lb=None,
+                 ub=None,
                  value=None,
                  fixed=False):
         self._parent = None
-        self.domain_type = domain_type
+        self._domain_type = None
         self.lb = lb
         self.ub = ub
         self.value = value
         self.fixed = fixed
         self.stale = True
+        if domain is not None:
+            if domain_type is not None:
+                raise ValueError(
+                    "At most one of the 'domain' and "
+                    "'domain_type' keywords can be changed "
+                    "from their default value when "
+                    "initializing a variable.")
+            domain_type = domain.__class__
+            # handle some edge cases
+            if domain_type is BooleanSet:
+                domain_type = IntegerSet
+            elif domain_type is RealInterval:
+                domain_type = RealSet
+            elif domain_type is IntegerInterval:
+                domain_type = IntegerSet
+            self._domain_type = domain_type
+            domain_lb, domain_ub = domain.bounds()
+            if domain_lb is not None:
+                if self.lb is not None:
+                    raise ValueError("")
+                self.lb = domain_lb
+            if domain_ub is not None:
+                if self.ub is not None:
+                    raise ValueError("")
+                self.ub = domain_ub
+        elif domain_type is None:
+            self._domain_type = RealSet
+        else:
+            self._domain_type = domain_type
+        if self._domain_type not in self._valid_domain_types:
+            raise ValueError(
+                "Domain type '%s' is not valid. Must be "
+                "one of: %s" % (self.domain_type,
+                                self._valid_domain_types))
+
+    @property
+    def domain_type(self):
+        """Return the domain type"""
+        return self._domain_type
+    @domain_type.setter
+    def domain_type(self, domain_type):
+        """Set the domain type"""
+        if domain_type not in self._valid_domain_types:
+            raise ValueError(
+                "Domain type '%s' is not valid. Must be "
+                "one of: %s" % (self.domain_type,
+                                self._valid_domain_types))
+        self._domain_type = domain_type
+
+    def _set_domain(self, domain):
+        """Set the domain. This method updates the
+        domain_type property and sets the upper and
+        lower bounds to the domain bounds."""
+        domain_lb, domain_ub = domain.bounds()
+        domain_type = type(domain)
+        if domain_type is BooleanSet:
+            domain_type = IntegerSet
+        elif domain_type is RealInterval:
+            domain_type = RealSet
+        elif domain_type is IntegerInterval:
+            domain_type = IntegerSet
+        self.domain_type = domain_type
+        self.lb = domain_lb
+        self.ub = domain_ub
+    domain = property(fset=_set_domain,
+                      doc=_set_domain.__doc__)
 
 class variable_list(ComponentList):
     """A list-style container for variables."""
