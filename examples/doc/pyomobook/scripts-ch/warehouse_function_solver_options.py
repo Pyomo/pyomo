@@ -10,7 +10,7 @@ solver = pe.SolverFactory('glpk')
 solver_opt = dict()
 solver_opt['log'] = 'warehouse.log'
 solver_opt['nointopt'] = None
-solver.solve(model, tee=True, options=solver_opt)
+solver.solve(model, options=solver_opt)
 
 # look at the solution
 model.y.pprint()

@@ -1,22 +1,24 @@
 from warehouse_data import *
 from pyomo.environ import *
+from pyomo.opt import TerminationCondition
 import warehouse_function as wf
+import matplotlib.pyplot as plt
 
 # call function to create model
 model = wf.create_wl_model(N, M, d, P)
 model.integer_cuts = ConstraintList()
+objective_values = list()
 done = False
 while not done:
     # solve the model
     solver = SolverFactory('glpk')
     results = solver.solve(model)
-    print(results)
-    status = str(results['Solver'][0]['Status'])
-    term_cond = str(results['Solver'][0]['Termination condition'])
+    objective_values.append(value(model.obj))
+    term_cond = results.solver.termination_condition
     print()
     print('--- Solver Status: {0} ---'.format(term_cond))
    
-    if status != 'ok' or term_cond != 'optimal':
+    if term_cond != TerminationCondition.optimal:
         done = True
     else:
         # look at the solution
@@ -32,4 +34,12 @@ while not done:
                                 - sum(model.y[i] for i in N_False) \
                                 <= len(N_True)-1 )
 
+
+x = range(len(objective_values))
+plt.bar(x, objective_values, align='center')
+plt.gca().set_xticks(x)
+plt.xlabel('Solution Number')
+plt.ylabel('Optimal Obj. Value')
+plt.savefig('warehouse_function_cuts.pdf')
+#plt.show()
 
