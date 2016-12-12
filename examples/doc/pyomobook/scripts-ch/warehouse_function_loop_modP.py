@@ -1,8 +1,9 @@
-from pyomo.environ import *
 from warehouse_data import *
+from pyomo.environ import *
 
 # create the model
 model = ConcreteModel(name="(WL)")
+model.P = Param(initialize=P, mutable=True)
 model.x = Var(N, M, bounds=(0,1))
 model.y = Var(N, within=Binary)
 
@@ -19,12 +20,18 @@ def warehouse_active_rule(model, n, m):
 model.warehouse_active = Constraint(N, M, rule=warehouse_active_rule)
 
 def num_warehouses_rule(model):
-    return sum(model.y[n] for n in N) <= P
+    return sum(model.y[n] for n in N) <= model.P
 model.num_warehouses = Constraint(rule=num_warehouses_rule)
 
-# solve the model
-solver = SolverFactory('glpk')
-solver.solve(model)
+# execute the loop
+for pp in [1,2,3]:
+    # change the value of the parameter P
+    model.P = pp
+    
+    # solve the model
+    solver = SolverFactory('glpk')
+    solver.solve(model)
 
-# look at the solution
-model.y.pprint()
+    # look at the solution
+    print('--- P = {0} ---'.format(pp))
+    model.y.pprint()

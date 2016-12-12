@@ -7,7 +7,10 @@ model = wf.create_wl_model(N, M, d, P)
 
 # solve the model
 solver = pe.SolverFactory('glpk')
-solver.solve(model)
+solver_opt = dict()
+solver_opt['log'] = 'warehouse.log'
+solver_opt['nointopt'] = None
+solver.solve(model, options=solver_opt)
 
 # look at the solution
 model.y.pprint()

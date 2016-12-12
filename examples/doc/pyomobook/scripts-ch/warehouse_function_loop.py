@@ -10,6 +10,6 @@ for pp in [1,2,3]:
     solver = pe.SolverFactory('glpk')
     solver.solve(model)
 
-    # look at the results
+    # look at the solution
     print('--- P = {0} ---'.format(pp))
     model.y.pprint()

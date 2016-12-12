@@ -5,6 +5,7 @@ from warehouse_data import *
 model = ConcreteModel(name="(WL)")
 model.x = Var(N, M, bounds=(0,1))
 model.y = Var(N, within=Binary)
+model.z = Var(initialize=1)
 
 def obj_rule(model):
     return sum(d[n,m]*model.x[n,m] for n in N for m in M)
@@ -27,4 +28,24 @@ solver = SolverFactory('glpk')
 solver.solve(model)
 
 # look at the solution
+# @print1:
 model.y.pprint()
+print(value(model.z))
+print(value(model.y['Ashland']))
+# @:print1
+
+# @print2:
+print(model.z)
+# @:print2
+
+
+# @printloop:
+for i in model.y:
+    print('{0} = {1}'.format(model.y[i], value(model.y[i])))
+# @:printloop
+
+# @generalprintloop:
+for v in model.component_objects(Var):
+    for index in v:
+        print('{0} = {1}'.format(v[index], value(v[index])))
+# @:generalprintloop
