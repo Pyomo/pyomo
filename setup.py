@@ -84,7 +84,7 @@ setup(name='Pyomo',
           ],
       packages=packages,
       keywords=['optimization'],
-      namespace_packages=['pyomo', 'pyomo.data', 'pyomo.aux'],
+      namespace_packages=['pyomo', 'pyomo.data'],
       install_requires=requires,
       entry_points="""
         [console_scripts]
