@@ -856,7 +856,7 @@ class block(_block_base, IBlockStorage):
     #
 
     def __setattr__(self, name, component):
-        if isinstance(component, (IComponent, IComponentContainer)):
+        if isinstance(component, ICategorizedObject):
             if component._parent is None:
                 if name in self.__dict__:
                     logger.warning(
@@ -896,7 +896,7 @@ class block(_block_base, IBlockStorage):
 
     def __delattr__(self, name):
         component = getattr(self, name)
-        if isinstance(component, (IComponent, IComponentContainer)):
+        if isinstance(component, ICategorizedObject):
             del self.__order[name]
             del self.__byctype[component.ctype][name]
             if len(self.__byctype[component.ctype]) == 0:
@@ -1026,7 +1026,7 @@ class StaticBlock(_block_base, IBlockStorage):
             yield item
 
     def __setattr__(self, name, component):
-        if isinstance(component, (IComponent, IComponentContainer)):
+        if isinstance(component, ICategorizedObject):
             if component._parent is None:
                 if hasattr(self, name):
                     logger.warning(
@@ -1064,7 +1064,7 @@ class StaticBlock(_block_base, IBlockStorage):
 
     def __delattr__(self, name):
         component = getattr(self, name)
-        if isinstance(component, (IComponent, IComponentContainer)):
+        if isinstance(component, ICategorizedObject):
             component._parent = None
         super(StaticBlock, self).__delattr__(name)
 

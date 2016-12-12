@@ -39,6 +39,8 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
     Interface for objects that maintain a weak reference to
     a parent storage object and have a category type.
     """
+    _is_component = False
+    _is_container = False
     __slots__ = ()
 
     #
