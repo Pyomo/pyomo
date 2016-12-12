@@ -24,9 +24,9 @@ class ComponentList(IComponentContainer,
     interface that presents list-like storage functionality.
 
     Complete implementations need to set the _ctype property
-    at the class level and declare the remaining required
+    at the class level, declare the remaining required
     abstract properties of the IComponentContainer base
-    class plus and additional _data property.
+    class, and declare an additional _data property.
 
     Note that this implementation allows nested storage of
     other IComponentContainer implementations that are
