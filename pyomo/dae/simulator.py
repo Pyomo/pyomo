@@ -29,15 +29,16 @@ from pyomo.core.base.template_expr import (
 
 from six import iterkeys, itervalues
 
+# Check integrator availability
+scipy_available = True
 try:
     import scipy.integrate as scipy
-    scipy_available = True
 except ImportError:
     scipy_available = False
 
+casadi_available = True
 try:
     import casadi
-    casadi_available = True
 except ImportError:
     casadi_available = False
 
@@ -148,7 +149,11 @@ def substitute_getitem_with_casadi_sym(expr, _map):
     return _map[_id]
 
 def substitute_intrinsic_function_with_casadi(expr):
-    
+    """
+    Replaces intrinsic functions in Pyomo expressions with casadi
+    versions of those functions.
+
+    """
     functionmap = {'log':casadi.log,
                    'log10':casadi.log10,
                    'sin':casadi.sin,
@@ -245,6 +250,10 @@ class Simulator:
     """
     Simulator objects allow a user to simulate a dynamic model
     formulated using pyomo.dae.
+
+    Constructor Arguments:
+        package         The simulator Python package to use. Currently
+                        scipy and casadi are the only supported packages 
     """
 
     def __init__(self, m, **kwds):
@@ -257,11 +266,13 @@ class Simulator:
 
         if self._intpackage == 'scipy':
             if not scipy_available:
-                raise ImportError("Tried to import SciPy but failed")   
+                raise ImportError("The scipy module is not available. "
+                                  "Cannot simulate model.")   
             substituter = substitute_getitem_with_param
         else:
             if not casadi_available:
-                raise ImportError("Tried to import CasADi but failed")
+                raise ImportError("The casadi module is not available. "
+                                  "Cannot simulate model.")
             substituter = substitute_getitem_with_casadi_sym
 
         temp = m.component_map(ContinuousSet)
@@ -471,10 +482,12 @@ class Simulator:
     def get_variable_order(self):
         """
         This function returns the ordered list of differential variable
-        names. The order corresponds to the order they are being sent
-        to the integrator function. Knowing the order allows users to
-        provide initial conditions for the differential equations
-        using a list.
+        names. The order corresponds to the order being sent to the
+        integrator function. Knowing the order allows users to provide
+        initial conditions for the differential equations using a
+        list or map the profiles returned by the simulate function to
+        the Pyomo variables.
+
         """        
         return self._diffvars
         
