@@ -50,6 +50,8 @@ install:
 - pip install openpyxl
 - pip install coverage
 - pip install git+https://github.com/PyUtilib/pyutilib
+- which python
+- python --version
 - python setup.py develop
 script:
 # The next three commands enable tracking of coverage
