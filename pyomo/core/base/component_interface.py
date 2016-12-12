@@ -155,6 +155,7 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
 
     def getname(self,
                 fully_qualified=False,
+                name_buffer={}, # HACK: ignored (required to work with some solver interfaces, but that code should change soon)
                 convert=str):
         """
         Dynamically generate a name for the object its storage

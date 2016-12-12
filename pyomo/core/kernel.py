@@ -43,7 +43,7 @@ from pyomo.core.base.objective import (minimize,
 
 
 #
-# Ducktyping to work a few solver plugins.
+# Ducktyping to work with a few solver interfaces
 #
 
 # This is ugly and bad (keys are local names
@@ -101,6 +101,9 @@ def _valid_problem_types(self):
 block.valid_problem_types = _valid_problem_types
 del _valid_problem_types
 
+# I would really like to see this method changed to
+# REQUIRE a filename as an argument and simply return
+# the symbol map.
 def _write(self,
           filename=None,
           format=None,
@@ -135,6 +138,11 @@ def _write(self,
                                       solver_capability,
                                       io_options)
     smap_id = id(smap)
+
+    # BIG HACK
+    if not hasattr(self, "._symbol_maps"):
+        setattr(self, "._symbol_maps", {})
+    getattr(self, "._symbol_maps")[smap_id] = smap
 
     return filename, smap_id
 block.write = _write

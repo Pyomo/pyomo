@@ -26,9 +26,14 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponent,
                                                  IComponentContainer,
                                                  _IActiveComponentContainer)
+from pyomo.core.base.component_objective import IObjective
+from pyomo.core.base.component_variable import IVariable
+from pyomo.core.base.component_constraint import IConstraint
 from pyomo.core.base.component_dict import ComponentDict
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.component_map import ComponentMap
+from pyomo.core.base.suffix import active_import_suffix_generator
+from pyomo.core.base.symbol_map import SymbolMap
 import pyomo.opt
 
 import six
@@ -548,6 +553,138 @@ class _block_base(object):
                 names[obj] = prefix + name
 
         return names
+
+    def load_solution(self,
+                      solution,
+                      allow_consistent_values_for_fixed_vars=False,
+                      comparison_tolerance_for_fixed_vars=1e-5):
+        """
+        Load a solution.
+
+        Args:
+            solution: A pyomo.opt.Solution object with
+                a symbol map.
+            allow_consistent_values_for_fixed_vars:
+                Indicates whether a solution can specify
+                consistent values for variables that are
+                fixed.
+            comparison_tolerance_for_fixed_vars: The
+                tolerance used to define whether or not a
+                value in the solution is consistent with the
+                value of a fixed variable.
+        """
+        symbol_map = solution.symbol_map
+
+        # Generate the list of active import suffixes on
+        # this top level model
+        valid_import_suffixes = \
+            dict(active_import_suffix_generator(self))
+        # To ensure that import suffix data gets properly
+        # overwritten (e.g., the case where nonzero dual
+        # values exist on the suffix and but only sparse
+        # dual values exist in the results object) we clear
+        # all active import suffixes.
+        for suffix in itervalues(valid_import_suffixes):
+            suffix.clear()
+
+        # Load problem (model) level suffixes. These would
+        # only come from ampl interfaced solution suffixes
+        # at this point in time.
+        for _attr_key, attr_value in iteritems(solution.problem):
+            attr_key = _attr_key[0].lower() + _attr_key[1:]
+            if attr_key in valid_import_suffixes:
+                valid_import_suffixes[attr_key][self] = \
+                    attr_value.value
+
+        #
+        # Load objective data (should simply be suffixes if
+        # they exist)
+        #
+        objective_skip_attrs = ['id','canonical_label','value']
+        for label,entry in iteritems(solution.objective):
+            obj_value = symbol_map.getObject(label)
+            if (obj_value is None) or \
+               (obj_value is SymbolMap.UnknownSymbol):
+                raise KeyError("Objective associated with symbol '%s' "
+                                "is not found on this block"
+                                % (label))
+            for _attr_key, attr_value in iteritems(entry):
+                attr_key = _attr_key[0].lower() + _attr_key[1:]
+                if attr_key in valid_import_suffixes:
+                    valid_import_suffixes[attr_key][obj_value] = \
+                        attr_value.value
+
+        #
+        # Load variable data
+        #
+        var_skip_attrs = ['id','canonical_label']
+        for label, entry in iteritems(solution.variable):
+            var_value = symbol_map.getObject(label)
+            if (var_value is None) or \
+               (var_value is SymbolMap.UnknownSymbol):
+                # NOTE: the following is a hack, to handle
+                #    the ONE_VAR_CONSTANT variable that is
+                #    necessary for the objective
+                #    constant-offset terms.  probably should
+                #    create a dummy variable in the model
+                #    map at the same time the objective
+                #    expression is being constructed.
+                if label == "ONE_VAR_CONSTANT":
+                    continue
+                else:
+                    raise KeyError("Variable associated with symbol '%s' "
+                                   "is not found on this block"
+                                   % (label))
+
+            if (not allow_consistent_values_for_fixed_vars) and \
+               var_value.fixed:
+                raise ValueError("Variable '%s' on this block is "
+                                "currently fixed - new value is "
+                                "not expected in solution"
+                                % (label))
+
+            for _attr_key, attr_value in iteritems(entry):
+                attr_key = _attr_key[0].lower() + _attr_key[1:]
+                if attr_key == 'value':
+                    if allow_consistent_values_for_fixed_vars and \
+                       var_value.fixed and \
+                       (math.fabs(attr_value - var_value.value) > \
+                        comparison_tolerance_for_fixed_vars):
+                        raise ValueError(
+                            "Variable %s on this block is currently "
+                            "fixed - a value of '%s' in solution is "
+                            "not within tolerance=%s of the current "
+                            "value of '%s'"
+                            % (label, str(attr_value),
+                               str(comparison_tolerance_for_fixed_vars),
+                               str(var_value.value)))
+                    var_value.value = attr_value
+                    var_value.stale = False
+                elif attr_key in valid_import_suffixes:
+                    valid_import_suffixes[attr_key][var_value] = attr_value
+
+        #
+        # Load constraint data
+        #
+        con_skip_attrs = ['id', 'canonical_label']
+        for label, entry in iteritems(solution.constraint):
+            con_value = symbol_map.getObject(label)
+            if con_value is SymbolMap.UnknownSymbol:
+                #
+                # This is a hack - see above.
+                #
+                if label.endswith('ONE_VAR_CONSTANT'):
+                    continue
+                else:
+                    raise KeyError("Constraint associated with symbol '%s' "
+                                   "is not found on this block"
+                                   % (label))
+
+            for _attr_key, attr_value in iteritems(entry):
+                attr_key = _attr_key[0].lower() + _attr_key[1:]
+                if attr_key in valid_import_suffixes:
+                    valid_import_suffixes[attr_key][con_value] = \
+                        attr_value
 
 class block(_block_base, IBlockStorage):
     """An implementation of the IBlockStorage interface."""

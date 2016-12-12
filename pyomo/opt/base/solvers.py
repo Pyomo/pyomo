@@ -524,10 +524,11 @@ class OptSolver(Plugin):
                         raise RuntimeError(
                             "Attempting to solve model=%s with unconstructed "
                             "component(s)" % (arg.name))
-                    _model = arg
+                _model = arg
 
                 model_suffixes = list(name for (name,comp) \
                                       in active_import_suffix_generator(arg))
+
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
                     for name in model_suffixes:
@@ -593,16 +594,28 @@ class OptSolver(Plugin):
             result._smap_id = self._smap_id
             result._smap = None
             if _model:
-                if self._load_solutions:
-                    _model.solutions.load_from(
-                        result,
-                        select=self._select_index,
-                        default_variable_value=self._default_variable_value)
-                    result._smap_id = None
-                    result.solution.clear()
+                if isinstance(_model, IBlockStorage):
+                    assert self._default_variable_value is None
+                    if len(result.solution) == 1:
+                        result.solution(0).symbol_map = \
+                            getattr(_model, "._symbol_maps")[result._smap_id]
+                        if self._load_solutions:
+                            _model.load_solution(result.solution(0))
+                            result.solution.clear()
+                    else:
+                        assert len(result.solution) == 0
+                    del result._smap_id
                 else:
-                    result._smap = _model.solutions.symbol_map[self._smap_id]
-                    _model.solutions.delete_symbol_map(self._smap_id)
+                    if self._load_solutions:
+                        _model.solutions.load_from(
+                            result,
+                            select=self._select_index,
+                            default_variable_value=self._default_variable_value)
+                        result._smap_id = None
+                        result.solution.clear()
+                    else:
+                        result._smap = _model.solutions.symbol_map[self._smap_id]
+                        _model.solutions.delete_symbol_map(self._smap_id)
             postsolve_completion_time = time.time()
 
             if self._report_timing:
