@@ -6,11 +6,13 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
+#
+# Conditionally adding sub-packages for Pyomo contributions that may
+# be installed alongside of Pyomo.
+#
 
-# this is a namespace package
 try:
-    import pkg_resources
-    pkg_resources.declare_namespace(__name__)
-except ImportError:
-    import pkgutil
-    __path__ = pkgutil.extend_path(__path__, __name__)
+    import pyomo_simplemodel as simplemodel
+except:
+    pass
+
