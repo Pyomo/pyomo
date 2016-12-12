@@ -777,6 +777,16 @@ class block(_block_base, IBlockStorage):
     def __init__(self):
         self.__parent = None
         self.__active = True
+        # This implementation is quite piggish at the
+        # moment. It can probably be streamlined by doing
+        # something similar to what _BlockData does in
+        # block.py (e.g., using _ctypes, _decl, and
+        # _decl_order). However, considering that we now
+        # have other means of producing lightweight blocks
+        # (StaticBlock) as well as the more lightweight
+        # implementation of singleton types, it is hard to
+        # justify making this implementation harder to
+        # follow until we do some more concrete profiling.
         self.__byctype = defaultdict(OrderedDict)
         self.__order = OrderedDict()
 
@@ -938,7 +948,9 @@ class block(_block_base, IBlockStorage):
                             active=True,
                             descend_into=False):
                         ctypes.add(ctype)
-                        break # just need 1 or more
+                        # just need 1 to appear in order to
+                        # count the ctype
+                        break
         else:
             for blk in self.blocks(active=active,
                                    descend_into=True):
@@ -1149,7 +1161,7 @@ class StaticBlock(_block_base, IBlockStorage):
                 ctypes.add(component.ctype)
         else:
             for blk in self.blocks(active=active,
-                                     descend_into=True):
+                                   descend_into=True):
                 ctypes.update(blk.collect_ctypes(
                     active=active,
                     descend_into=False))
