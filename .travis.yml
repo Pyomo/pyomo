@@ -52,6 +52,7 @@ install:
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
 - conda install -y --channel conda-forge glpk
 - conda install -y --channel cachemeorg ipopt_bin
+- which pip
 - pip install setuptools
 - pip install xlrd
 - pip install openpyxl
