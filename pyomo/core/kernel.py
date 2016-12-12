@@ -19,6 +19,7 @@ from pyomo.core.base.component_objective import *
 from pyomo.core.base.component_parameter import *
 from pyomo.core.base.component_expression import *
 from pyomo.core.base.component_suffix import *
+from pyomo.core.base.expr import *
 from pyomo.core.base.set_types import (RealSet,
                                        IntegerSet,
                                        Reals,
@@ -39,6 +40,7 @@ from pyomo.core.base.set_types import (RealSet,
                                        IntegerInterval)
 from pyomo.core.base.objective import (minimize,
                                        maximize)
+
 
 #
 # Ducktyping to work a few solver plugins.
