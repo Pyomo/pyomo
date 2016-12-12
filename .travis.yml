@@ -29,8 +29,9 @@ matrix:
   #  env: PYRO="Pyro4" YAML="pyyaml"
 install:
 - sudo apt-get update
-# We do this conditionally because it saves us some downloading if the
-# version is the same.
+#
+# Setup miniconda and activate the testenv environment
+#
 - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
   else
@@ -39,7 +40,12 @@ install:
 - bash miniconda.sh -b -p $HOME/miniconda
 - export PATH="$HOME/miniconda/bin:$PATH"
 - hash -r
-- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
+- conda create -f -y -n testenv python=${TRAVIS_PYTHON_VERSION}
+- source activate testenv
+#- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
+#
+# Install supporting packages
+#
 - if [ -n "${YAML}" ]; then pip install pyyaml; fi
 - if [ -n "${PYRO}" ]; then pip install $PYRO; fi
 - if [ -n "${EXTRAS}" ]; then conda install -y --channel conda-forge pyomo.extras; fi
@@ -49,7 +55,13 @@ install:
 - pip install xlrd
 - pip install openpyxl
 - pip install coverage
+#
+# Install PyUtilib (master branch)
+#
 - pip install git+https://github.com/PyUtilib/pyutilib
+#
+# Install this package
+#
 - which python
 - python --version
 - python setup.py develop
@@ -59,16 +71,10 @@ script:
 - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
-#- which glpsol
-#- echo $PATH
-#- ls
-#- pwd
 - test.pyomo -v --cat=$CATEGORY --cov
 after_success:
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
-#- ls
-#- pwd
 - coverage combine
 - pip install codecov
 - cp ../.coverage .
