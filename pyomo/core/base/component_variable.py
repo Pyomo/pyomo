@@ -31,9 +31,51 @@ from pyomo.core.base.set_types import (RealSet,
                                        IntegerInterval)
 
 import six
+from six.moves import xrange
 
-_infinity = pyutilib.math.infinity
-_negative_infinity = -pyutilib.math.infinity
+def _extract_domain_type_and_bounds(domain_type,
+                                    domain,
+                                    lb, ub):
+    if domain is not None:
+        if domain_type is not None:
+            raise ValueError(
+                "At most one of the 'domain' and "
+                "'domain_type' keywords can be changed "
+                "from their default value when "
+                "initializing a variable.")
+        domain_type = type(domain)
+        # handle some edge cases
+        if domain_type is BooleanSet:
+            domain_type = IntegerSet
+        elif domain_type is RealInterval:
+            domain_type = RealSet
+        elif domain_type is IntegerInterval:
+            domain_type = IntegerSet
+        domain_lb, domain_ub = domain.bounds()
+        if domain_lb is not None:
+            if lb is not None:
+                raise ValueError(
+                    "The 'lb' keyword can not be used "
+                    "to initialize a variable when the "
+                    "domain lower bound is finite.")
+            lb = domain_lb
+        if domain_ub is not None:
+            if ub is not None:
+                raise ValueError(
+                    "The 'ub' keyword can not be used "
+                    "to initialize a variable when the "
+                    "domain upper bound is finite.")
+            ub = domain_ub
+    elif domain_type is None:
+        domain_type = RealSet
+    if domain_type not in IVariable._valid_domain_types:
+        raise ValueError(
+            "Domain type '%s' is not valid. Must be "
+            "one of: %s" % (domain_type,
+                            IVariable._valid_domain_types))
+
+    return domain_type, lb, ub
+
 
 class IVariable(IComponent, NumericValue):
     """
@@ -66,15 +108,8 @@ class IVariable(IComponent, NumericValue):
         return (self.lb, self.ub)
     @bounds.setter
     def bounds(self, bounds_tuple):
+        """Returns the bounds using a tuple (lower bound, upper bound)."""
         self.lb, self.ub = bounds_tuple
-
-    def is_continuous(self):
-        """Returns True when the domain type is RealSet."""
-        return issubclass(self.domain_type, RealSet)
-
-    def is_discrete(self):
-        """Returns True when the domain type is IntegerSet."""
-        return issubclass(self.domain_type, IntegerSet)
 
     def fix(self, *val):
         """
@@ -95,15 +130,27 @@ class IVariable(IComponent, NumericValue):
     free=unfix
 
     #
-    # Helper methods used by the writers
+    # Convenience methods mainly used by the solver
+    # interfaces
     #
 
+    def is_continuous(self):
+        """Returns True when the domain type is RealSet."""
+        return issubclass(self.domain_type, RealSet)
+
+    # this could be expanded to include semi-continuous
+    # where as is_integer would not
+    def is_discrete(self):
+        """Returns True when the domain type is IntegerSet."""
+        return issubclass(self.domain_type, IntegerSet)
+
     def is_integer(self):
-        """Returns True when the domain class is IntegerSet."""
+        """Returns True when the domain type is IntegerSet."""
         return issubclass(self.domain_type, IntegerSet)
 
     def is_binary(self):
-        """Returns True when the domain class is BooleanSet."""
+        """Returns True when the domain type is IntegerSet
+        and the bounds are within [0,1]."""
         return self.is_integer() and \
             (self.lb is not None) and \
             (self.ub is not None) and \
@@ -182,41 +229,10 @@ class variable(IVariable):
         self.value = value
         self.fixed = fixed
         self.stale = True
-        if domain is not None:
-            if domain_type is not None:
-                raise ValueError(
-                    "At most one of the 'domain' and "
-                    "'domain_type' keywords can be changed "
-                    "from their default value when "
-                    "initializing a variable.")
-            domain_type = domain.__class__
-            # handle some edge cases
-            if domain_type is BooleanSet:
-                domain_type = IntegerSet
-            elif domain_type is RealInterval:
-                domain_type = RealSet
-            elif domain_type is IntegerInterval:
-                domain_type = IntegerSet
-            self._domain_type = domain_type
-            domain_lb, domain_ub = domain.bounds()
-            if domain_lb is not None:
-                if self.lb is not None:
-                    raise ValueError("")
-                self.lb = domain_lb
-            if domain_ub is not None:
-                if self.ub is not None:
-                    raise ValueError("")
-                self.ub = domain_ub
-        elif domain_type is None:
-            self._domain_type = RealSet
-        else:
-            self._domain_type = domain_type
-        if self._domain_type not in self._valid_domain_types:
-            raise ValueError(
-                "Domain type '%s' is not valid. Must be "
-                "one of: %s" % (self.domain_type,
-                                self._valid_domain_types))
-
+        self._domain_type, self.lb, self.ub = \
+            _extract_domain_type_and_bounds(domain_type,
+                                            domain,
+                                            lb, ub)
     @property
     def domain_type(self):
         """Return the domain type"""
@@ -224,28 +240,21 @@ class variable(IVariable):
     @domain_type.setter
     def domain_type(self, domain_type):
         """Set the domain type"""
-        if domain_type not in self._valid_domain_types:
+        if domain_type not in IVariable._valid_domain_types:
             raise ValueError(
                 "Domain type '%s' is not valid. Must be "
                 "one of: %s" % (self.domain_type,
-                                self._valid_domain_types))
+                                IVariable._valid_domain_types))
         self._domain_type = domain_type
 
     def _set_domain(self, domain):
         """Set the domain. This method updates the
         domain_type property and sets the upper and
         lower bounds to the domain bounds."""
-        domain_lb, domain_ub = domain.bounds()
-        domain_type = type(domain)
-        if domain_type is BooleanSet:
-            domain_type = IntegerSet
-        elif domain_type is RealInterval:
-            domain_type = RealSet
-        elif domain_type is IntegerInterval:
-            domain_type = IntegerSet
-        self.domain_type = domain_type
-        self.lb = domain_lb
-        self.ub = domain_ub
+        self.domain_type, self.lb, self.ub = \
+            _extract_domain_type_and_bounds(None,
+                                            domain,
+                                            None, None)
     domain = property(fset=_set_domain,
                       doc=_set_domain.__doc__)
 
