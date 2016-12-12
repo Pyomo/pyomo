@@ -255,8 +255,12 @@ class _block_base(object):
         # TODO
         from pyomo.core.base.block import Block
         _active_flag_name = "active"
+
+        # if this block is not active, then nothing below it
+        # can be active
         if active and (not self.active):
             return
+
         if include_parent_blocks or \
            (ctype is _no_ctype) or \
            (ctype is Block):
@@ -265,58 +269,68 @@ class _block_base(object):
             else:
                 yield self
         for key, child in self.children(return_key=True):
-            if (ctype is _no_ctype) or \
-               (child.ctype is ctype) or \
-               (child.ctype is Block):
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    if not child._is_container:
-                        # not a block and not a container
-                        if return_key:
-                            yield key, child
-                        else:
-                            yield child
-                    elif not child._is_component:
-                        # not a block (but possibly a container of blocks)
-                        if child.ctype is Block:
-                            for obj_key, obj in child.preorder_traversal(
-                                    active=active,
-                                    return_key=True,
-                                    root_key=key):
-                                if not obj._is_component:
-                                    # a container of blocks
-                                    if (ctype is _no_ctype) or \
-                                       (ctype is Block) or \
-                                       include_parent_blocks:
-                                        if return_key:
-                                            yield obj_key, obj
-                                        else:
-                                            yield obj
-                                else:
-                                    # a block
-                                    for item in obj.preorder_traversal(
-                                            ctype=ctype,
-                                            active=active,
-                                            include_parent_blocks=include_parent_blocks,
-                                            return_key=return_key,
-                                            root_key=obj_key):
-                                        yield item
 
+            # check for appropriate ctype
+            if (ctype is not _no_ctype) and \
+               (child.ctype is not ctype) and \
+               (child.ctype is not Block):
+                continue
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if not child._is_container:
+                # not a block and not a container,
+                # so it is a leaf node
+                if return_key:
+                    yield key, child
+                else:
+                    yield child
+            elif not child._is_component:
+                # not a block
+                if child.ctype is Block:
+                    # but a container of blocks
+                    for obj_key, obj in child.preorder_traversal(
+                            active=active,
+                            return_key=True,
+                            root_key=key):
+                        if not obj._is_component:
+                            # a container of blocks
+                            if (ctype is _no_ctype) or \
+                               (ctype is Block) or \
+                               include_parent_blocks:
+                                if return_key:
+                                    yield obj_key, obj
+                                else:
+                                    yield obj
                         else:
-                            for item in child.preorder_traversal(
+                            # a block
+                            for item in obj.preorder_traversal(
+                                    ctype=ctype,
                                     active=active,
+                                    include_parent_blocks=include_parent_blocks,
                                     return_key=return_key,
-                                    root_key=key):
+                                    root_key=obj_key):
                                 yield item
-                    else:
-                        # a block
-                        for item in child.preorder_traversal(
-                                ctype=ctype,
-                                active=active,
-                                include_parent_blocks=include_parent_blocks,
-                                return_key=return_key,
-                                root_key=key):
-                            yield item
+
+                else:
+                    # a simple container, call its traversal method
+                    for item in child.preorder_traversal(
+                            active=active,
+                            return_key=return_key,
+                            root_key=key):
+                        yield item
+            else:
+                # a block
+                for item in child.preorder_traversal(
+                        ctype=ctype,
+                        active=active,
+                        include_parent_blocks=include_parent_blocks,
+                        return_key=return_key,
+                        root_key=key):
+                    yield item
 
     def postorder_traversal(self,
                             ctype=_no_ctype,
@@ -357,61 +371,76 @@ class _block_base(object):
         # TODO
         from pyomo.core.base.block import Block
         _active_flag_name = "active"
+
+        # if this block is not active, then nothing below it
+        # can be active
         if active and (not self.active):
             return
-        for key, child in self.children(return_key=True):
-            if (ctype is _no_ctype) or \
-               (child.ctype is ctype) or \
-               (child.ctype is Block):
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    if not child._is_container:
-                        # not a block and not a container
-                        if return_key:
-                            yield key, child
-                        else:
-                            yield child
-                    elif not child._is_component:
-                        # not a block (but possibly a container of blocks)
-                        if child.ctype is Block:
-                            for obj_key, obj in child.postorder_traversal(
-                                    active=active,
-                                    return_key=True,
-                                    root_key=key):
-                                if not obj._is_component:
-                                    # a container of blocks
-                                    if (ctype is _no_ctype) or \
-                                       (ctype is Block) or \
-                                       include_parent_blocks:
-                                        if return_key:
-                                            yield obj_key, obj
-                                        else:
-                                            yield obj
-                                else:
-                                    # a block
-                                    for item in obj.postorder_traversal(
-                                            ctype=ctype,
-                                            active=active,
-                                            include_parent_blocks=include_parent_blocks,
-                                            return_key=return_key,
-                                            root_key=obj_key):
-                                        yield item
 
+        for key, child in self.children(return_key=True):
+
+            # check for appropriate ctype
+            if (ctype is not _no_ctype) and \
+               (child.ctype is not ctype) and \
+               (child.ctype is not Block):
+                continue
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if not child._is_container:
+                # not a block and not a container,
+                # so it is a leaf node
+                if return_key:
+                    yield key, child
+                else:
+                    yield child
+            elif not child._is_component:
+                # not a block
+                if child.ctype is Block:
+                    # but a container of blocks
+                    for obj_key, obj in child.postorder_traversal(
+                            active=active,
+                            return_key=True,
+                            root_key=key):
+                        if not obj._is_component:
+                            # a container of blocks
+                            if (ctype is _no_ctype) or \
+                               (ctype is Block) or \
+                               include_parent_blocks:
+                                if return_key:
+                                    yield obj_key, obj
+                                else:
+                                    yield obj
                         else:
-                            for item in child.postorder_traversal(
+                            # a block
+                            for item in obj.postorder_traversal(
+                                    ctype=ctype,
                                     active=active,
+                                    include_parent_blocks=include_parent_blocks,
                                     return_key=return_key,
-                                    root_key=key):
+                                    root_key=obj_key):
                                 yield item
-                    else:
-                        # a block
-                        for item in child.postorder_traversal(
-                                ctype=ctype,
-                                active=active,
-                                include_parent_blocks=include_parent_blocks,
-                                return_key=return_key,
-                                root_key=key):
-                            yield item
+
+                else:
+                    # a simple container, call its traversal method
+                    for item in child.postorder_traversal(
+                            active=active,
+                            return_key=return_key,
+                            root_key=key):
+                        yield item
+            else:
+                # a block
+                for item in child.postorder_traversal(
+                        ctype=ctype,
+                        active=active,
+                        include_parent_blocks=include_parent_blocks,
+                        return_key=return_key,
+                        root_key=key):
+                    yield item
+
         if include_parent_blocks or \
            (ctype is _no_ctype) or \
            (ctype is Block):
@@ -424,69 +453,119 @@ class _block_base(object):
                    ctype=_no_ctype,
                    active=None,
                    descend_into=True):
+        """
+        Generates an efficient traversal of all components
+        stored under this block. Components are leaf nodes
+        in a storage tree (not containers themselves, except
+        for blocks).
+
+        Args:
+            ctype: Indicate the type of components to
+                include. The default value indicates that
+                all types should be included.
+            active (True/None): Set to True to indicate that
+                only active objects should be included. The
+                default value of None indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*: This
+                flag is ignored for any objects that do not
+                have an active flag.
+            descend_into (bool): Indicates whether or not to
+                include components on sub-blocks. Default is
+                True.
+
+        Returns: an iterator of objects or (key,object) tuples
+        """
+
         assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
         _active_flag_name = "active"
+
+        # if this block is not active, then nothing below it
+        # can be active
         if active and (not self.active):
             return
 
+        # Generate components from immediate children first
         for child in self.children(ctype=ctype):
-            if (active is None) or \
-               getattr(child, _active_flag_name, True):
-                if child._is_component:
-                    yield child
-                else:
-                    # child is a container (but not a block)
-                    assert child._is_container
-                    if (active is not None) and \
-                       isinstance(child, _IActiveComponentContainer):
-                        for component in child.components():
-                            if getattr(component,
-                                       _active_flag_name,
-                                       True):
-                                yield component
-                    else:
-                        for component in child.components():
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if child._is_component:
+                # child is a component (includes blocks), so yield it
+                yield child
+            else:
+                assert child._is_container
+                # child is a container (but not a block)
+                if (active is not None) and \
+                   isinstance(child, _IActiveComponentContainer):
+                    for component in child.components():
+                        if getattr(component,
+                                   _active_flag_name,
+                                   True):
                             yield component
+                else:
+                    for component in child.components():
+                        yield component
 
         if descend_into:
+            # now recurse into subblocks
             for child in self.children(ctype=Block):
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    if child._is_component:
-                        # child is a block
-                        for component in child.components(
-                                ctype=ctype,
-                                active=active,
-                                descend_into=descend_into):
-                            yield component
-                    else:
-                        # child is a container of blocks,
-                        # but not a block itself
-                        for _comp in child.components():
-                            if (active is None) or \
-                               getattr(_comp,
-                                       _active_flag_name,
-                                       True):
-                                for component in _comp.components(
-                                        ctype=ctype,
-                                        active=active,
-                                        descend_into=descend_into):
-                                    yield component
+
+                # check active status (if appropriate)
+                if (active is not None) and \
+                   not getattr(child, _active_flag_name, True):
+                    continue
+
+                if child._is_component:
+                    # child is a block
+                    for component in child.components(
+                            ctype=ctype,
+                            active=active,
+                            descend_into=descend_into):
+                        yield component
+                else:
+                    # child is a container of blocks,
+                    # but not a block itself
+                    for _comp in child.components():
+                        if (active is None) or \
+                           getattr(_comp,
+                                   _active_flag_name,
+                                   True):
+                            for component in _comp.components(
+                                    ctype=ctype,
+                                    active=active,
+                                    descend_into=descend_into):
+                                yield component
 
     def blocks(self,
                active=None,
                descend_into=True):
+        """
+        Generates a traversal of all blocks associated with
+        this one (include itself). This method yields
+        identical behavior to calling the components()
+        method with ctype=Block, except that this block is
+        included (as the first item in the generator).
+        """
         assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
-        if (active is None) or self.active:
-            yield self
-            for component in self.components(ctype=Block,
-                                             active=active,
-                                             descend_into=descend_into):
-                yield component
+
+        # if this block is not active, then nothing below it
+        # can be active
+        if active and (not self.active):
+            return
+
+        yield self
+        for component in self.components(ctype=Block,
+                                         active=active,
+                                         descend_into=descend_into):
+            yield component
 
     def generate_names(self,
                        ctype=_no_ctype,
@@ -528,7 +607,11 @@ class _block_base(object):
         assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
+
         names = ComponentMap()
+
+        # if this block is not active, then nothing below it
+        # can be active
         if active and (not self.active):
             return names
 

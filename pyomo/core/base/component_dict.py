@@ -92,6 +92,8 @@ class ComponentDict(IComponentContainer,
                     yield component
 
     def child_key(self, child):
+        """Returns the lookup key associated with a child of this
+        container."""
         for key, val in iteritems(self._data):
             if val is child:
                 return key
@@ -142,27 +144,35 @@ class ComponentDict(IComponentContainer,
         """
         assert active in (None, True)
         _active_flag_name = "active"
-        if (active is None) or \
-           getattr(self, _active_flag_name, True):
-            if return_key:
-                yield root_key, self
+
+        # if not active, then no children can be active
+        if (active is not None) and \
+           not getattr(self, _active_flag_name, True):
+            return
+
+        if return_key:
+            yield root_key, self
+        else:
+            yield self
+        for key, child in self.children(return_key=True):
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if child._is_component:
+                if return_key:
+                    yield key, child
+                else:
+                    yield child
             else:
-                yield self
-            for key, child in self.children(return_key=True):
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    if child._is_component:
-                        if return_key:
-                            yield key, child
-                        else:
-                            yield child
-                    else:
-                        assert child._is_container
-                        for item in child.preorder_traversal(
-                                active=active,
-                                return_key=return_key,
-                                root_key=key):
-                            yield item
+                assert child._is_container
+                for item in child.preorder_traversal(
+                        active=active,
+                        return_key=return_key,
+                        root_key=key):
+                    yield item
 
     def postorder_traversal(self,
                             active=None,
@@ -192,27 +202,36 @@ class ComponentDict(IComponentContainer,
         """
         assert active in (None, True)
         _active_flag_name = "active"
-        if (active is None) or \
-           getattr(self, _active_flag_name, True):
-            for key, child in self.children(return_key=True):
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    if child._is_component:
-                        if return_key:
-                            yield key, child
-                        else:
-                            yield child
-                    else:
-                        assert child._is_container
-                        for item in child.postorder_traversal(
-                                active=active,
-                                return_key=return_key,
-                                root_key=key):
-                            yield item
-            if return_key:
-                yield root_key, self
+
+        # if not active, then no children can be active
+        if (active is not None) and \
+           not getattr(self, _active_flag_name, True):
+            return
+
+        for key, child in self.children(return_key=True):
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if child._is_component:
+                if return_key:
+                    yield key, child
+                else:
+                    yield child
             else:
-                yield self
+                assert child._is_container
+                for item in child.postorder_traversal(
+                        active=active,
+                        return_key=return_key,
+                        root_key=key):
+                    yield item
+
+        if return_key:
+            yield root_key, self
+        else:
+            yield self
 
     def generate_names(self,
                        active=None,
@@ -248,22 +267,26 @@ class ComponentDict(IComponentContainer,
         assert active in (None, True)
         _active_flag_name = "active"
         names = ComponentMap()
-        if (active is None) or \
-           getattr(self, _active_flag_name, True):
-            name_template = (prefix +
-                             self._child_storage_delimiter_string +
-                             self._child_storage_entry_string)
-            for key, child in self.children(return_key=True):
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    names[child] = name_template % convert(key)
-                    if descend_into and child._is_container and \
-                       (not child._is_component):
-                        names.update(child.generate_names(
-                            active=active,
-                            descend_into=True,
-                            convert=convert,
-                            prefix=names[child]))
+
+        # if not active, then no children can be active
+        if (active is not None) and \
+           not getattr(self, _active_flag_name, True):
+            return names
+
+        name_template = (prefix +
+                         self._child_storage_delimiter_string +
+                         self._child_storage_entry_string)
+        for key, child in self.children(return_key=True):
+            if (active is None) or \
+               getattr(child, _active_flag_name, True):
+                names[child] = name_template % convert(key)
+                if descend_into and child._is_container and \
+                   (not child._is_component):
+                    names.update(child.generate_names(
+                        active=active,
+                        descend_into=True,
+                        convert=convert,
+                        prefix=names[child]))
         return names
 
     #

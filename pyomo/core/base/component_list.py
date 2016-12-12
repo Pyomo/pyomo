@@ -66,6 +66,8 @@ class ComponentList(IComponentContainer,
                     yield component
 
     def child_key(self, child):
+        """Returns the lookup key associated with a child of this
+        container."""
         return self.index(child)
 
     def children(self, return_key=False):
@@ -113,27 +115,35 @@ class ComponentList(IComponentContainer,
         """
         assert active in (None, True)
         _active_flag_name = "active"
-        if (active is None) or \
-           getattr(self, _active_flag_name, True):
-            if return_key:
-                yield root_key, self
+
+        # if not active, then no children can be active
+        if (active is not None) and \
+           not getattr(self, _active_flag_name, True):
+            return
+
+        if return_key:
+            yield root_key, self
+        else:
+            yield self
+        for key, child in self.children(return_key=True):
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if child._is_component:
+                if return_key:
+                    yield key, child
+                else:
+                    yield child
             else:
-                yield self
-            for key, child in self.children(return_key=True):
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    if child._is_component:
-                        if return_key:
-                            yield key, child
-                        else:
-                            yield child
-                    else:
-                        assert child._is_container
-                        for item in child.preorder_traversal(
-                                active=active,
-                                return_key=return_key,
-                                root_key=key):
-                            yield item
+                assert child._is_container
+                for item in child.preorder_traversal(
+                        active=active,
+                        return_key=return_key,
+                        root_key=key):
+                    yield item
 
     def postorder_traversal(self,
                             active=None,
@@ -163,27 +173,36 @@ class ComponentList(IComponentContainer,
         """
         assert active in (None, True)
         _active_flag_name = "active"
-        if (active is None) or \
-           getattr(self, _active_flag_name, True):
-            for key, child in self.children(return_key=True):
-                if (active is None) or \
-                   getattr(child, _active_flag_name, True):
-                    if child._is_component:
-                        if return_key:
-                            yield key, child
-                        else:
-                            yield child
-                    else:
-                        assert child._is_container
-                        for item in child.postorder_traversal(
-                                active=active,
-                                return_key=return_key,
-                                root_key=key):
-                            yield item
-            if return_key:
-                yield root_key, self
+
+        # if not active, then no children can be active
+        if (active is not None) and \
+           not getattr(self, _active_flag_name, True):
+            return
+
+        for key, child in self.children(return_key=True):
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if child._is_component:
+                if return_key:
+                    yield key, child
+                else:
+                    yield child
             else:
-                yield self
+                assert child._is_container
+                for item in child.postorder_traversal(
+                        active=active,
+                        return_key=return_key,
+                        root_key=key):
+                    yield item
+
+        if return_key:
+            yield root_key, self
+        else:
+            yield self
 
     def generate_names(self,
                        active=None,
