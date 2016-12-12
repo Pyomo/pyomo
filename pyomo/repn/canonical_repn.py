@@ -26,8 +26,13 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         Expression)
 from pyomo.core.base.objective import (_GeneralObjectiveData,
                                        SimpleObjective)
-from pyomo.core.base.connector import _ConnectorData, SimpleConnector, Connector
-from pyomo.core.base.var import SimpleVar, Var, _GeneralVarData, _VarData
+from pyomo.core.base.connector import (_ConnectorData,
+                                       SimpleConnector,
+                                       Connector)
+from pyomo.core.base.var import (SimpleVar,
+                                 Var,
+                                 _GeneralVarData,
+                                 _VarData)
 
 from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper
 
@@ -384,7 +389,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
         #
         # Expression (the component)
         # (faster check)
-        elif isinstance(exp, _ExpressionData):
+        elif isinstance(exp, (_ExpressionData, IExpression)):
             return collect_general_canonical_repn(exp.expr,
                                                   idMap,
                                                   compute_values)
@@ -639,8 +644,11 @@ def _collect_linear_sum(exp, idMap, multiplier, coef, varmap, compute_values):
         # an arg can be anything - a product, a variable, whatever.
 
         # Special case... <sigh>
-        if ((arg.__class__ is _GeneralVarData) or isinstance(arg, _VarData)) and (not arg.fixed):
-            # save an expensive recursion - this is by far the most common case.
+        if ((arg.__class__ is _GeneralVarData) or \
+            isinstance(arg, (_VarData, IVariable))) and \
+            (not arg.fixed):
+            # save an expensive recursion - this is by far
+            # the most common case.
             id_ = id(arg)
             if id_ in idMap[None]:
                 key = idMap[None][id_]
@@ -821,7 +829,7 @@ def collect_linear_canonical_repn(exp, idMap, compute_values=True):
     except KeyError:
         if isinstance(exp, (_VarData, IVariable)):
             _collect_linear_var(exp, idMap, 1, coef, varmap, compute_values)
-        elif isinstance(exp, (_ParamData, IParameter)):
+        elif isinstance(exp, (param._ParamData, IParameter)):
             _collect_linear_const(exp, idMap, 1, coef, varmap, compute_values)
         elif isinstance(exp, (_ExpressionData, IExpression)):
             _collect_identity(exp, idMap, 1, coef, varmap, compute_values)
