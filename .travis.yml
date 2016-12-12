@@ -2,7 +2,7 @@ language: python
 matrix:
   include:
   - python: '2.6'
-    env:                             CATEGORY="nightly"  EXTRAS="yes"
+    env:                             CATEGORY="nightly"
   #
   - python: '2.7'
     env:                             CATEGORY="nightly"
@@ -52,6 +52,7 @@ install:
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
 - conda install -y --channel conda-forge glpk
 - conda install -y --channel cachemeorg ipopt_bin
+- pip install setuptools
 - pip install xlrd
 - pip install openpyxl
 - pip install coverage
