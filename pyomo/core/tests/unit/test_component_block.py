@@ -14,6 +14,7 @@ from pyomo.core.tests.unit.test_component_dict import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.base.component_map import ComponentMap
+from pyomo.core.base.component_suffix import suffix
 from pyomo.core.base.component_constraint import (constraint,
                                                   constraint_dict,
                                                   constraint_list)
@@ -21,6 +22,7 @@ from pyomo.core.base.component_parameter import (parameter,
                                                  parameter_dict,
                                                  parameter_list)
 from pyomo.core.base.component_expression import (expression,
+                                                  data_expression,
                                                   expression_dict,
                                                   expression_list)
 from pyomo.core.base.component_objective import (objective,
@@ -79,6 +81,113 @@ def _collect_expr_components(exp):
     return ans
 
 class TestMisc(unittest.TestCase):
+
+    # a temporary test to make sure solve and load
+    # functionality work (will be moved elsewhere in the
+    # future)
+    def test_solve_load(self):
+        b = block()
+        b.v = variable()
+        b.y = variable(value=1.0, fixed=True)
+        b.p = parameter(value=2.0)
+        b.e = expression(b.v * b.p + 1)
+        b.eu = data_expression(b.p**2 + 10)
+        b.el = data_expression(-b.p**2 - 10)
+        b.o = objective(b.v + b.y)
+        b.c1 = constraint(b.el + 1 <= b.e + 2 <= b.eu + 2)
+        b.c2 = constraint(lb=b.el, body=b.v)
+        b.c3 = constraint(body=b.v, ub=b.eu)
+        b.dual = suffix(direction=suffix.IMPORT)
+
+        import pyomo.environ
+        #import pyomo.opt.base
+        from pyomo.opt.base.solvers import UnknownSolver
+        from pyomo.opt import SolverFactory
+        from pyomo.opt import SolverStatus, TerminationCondition
+
+        opt = SolverFactory("glpk")
+        if isinstance(opt, UnknownSolver):
+            raise unittest.SkipTest("glpk solver not available")
+        status = opt.solve(b)
+        self.assertEqual(status.solver.status,
+                         SolverStatus.ok)
+        self.assertEqual(status.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertAlmostEqual(b.o(), -7, places=5)
+        self.assertAlmostEqual(b.v(), -8, places=5)
+        self.assertAlmostEqual(b.y(), 1.0, places=5)
+
+        opt = SolverFactory("glpk")
+        if isinstance(opt, UnknownSolver):
+            raise unittest.SkipTest("glpk solver not available")
+        status = opt.solve(b, symbolic_solver_labels=True)
+        self.assertEqual(status.solver.status,
+                         SolverStatus.ok)
+        self.assertEqual(status.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertAlmostEqual(b.o(), -7, places=5)
+        self.assertAlmostEqual(b.v(), -8, places=5)
+        self.assertAlmostEqual(b.y(), 1.0, places=5)
+
+        opt = SolverFactory("ipopt")
+        if isinstance(opt, UnknownSolver):
+            raise unittest.SkipTest("ipopt solver not available")
+        status = opt.solve(b)
+        self.assertEqual(status.solver.status,
+                         SolverStatus.ok)
+        self.assertEqual(status.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertAlmostEqual(b.o(), -7, places=5)
+        self.assertAlmostEqual(b.v(), -8, places=5)
+        self.assertAlmostEqual(b.y(), 1.0, places=5)
+
+        opt = SolverFactory("ipopt")
+        if isinstance(opt, UnknownSolver):
+            raise unittest.SkipTest("ipopt solver not available")
+        status = opt.solve(b, symbolic_solver_labels=True)
+        self.assertEqual(status.solver.status,
+                         SolverStatus.ok)
+        self.assertEqual(status.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertAlmostEqual(b.o(), -7, places=5)
+        self.assertAlmostEqual(b.v(), -8, places=5)
+        self.assertAlmostEqual(b.y(), 1.0, places=5)
+
+    def test_traversal(self):
+
+        b = block()
+        b.v = variable()
+        b.c1 = constraint()
+        b.c1.deactivate()
+        b.c2 = constraint()
+
+        self.assertEqual(
+            [obj.name for obj in b.preorder_traversal()],
+            [None, 'v', 'c1', 'c2'])
+        self.assertEqual(
+            [obj.name for obj in b.preorder_traversal(active=True)],
+            [None, 'v', 'c2'])
+        self.assertEqual(
+            [obj.name for obj in b.preorder_traversal(ctype=Constraint)],
+            [None, 'c1', 'c2'])
+        self.assertEqual(
+            [obj.name for obj in b.preorder_traversal(ctype=Constraint,
+                                                      active=True)],
+            [None, 'c2'])
+
+        self.assertEqual(
+            [obj.name for obj in b.postorder_traversal()],
+            ['v', 'c1', 'c2', None])
+        self.assertEqual(
+            [obj.name for obj in b.postorder_traversal(active=True)],
+            ['v', 'c2', None])
+        self.assertEqual(
+            [obj.name for obj in b.postorder_traversal(ctype=Constraint)],
+            ['c1', 'c2', None])
+        self.assertEqual(
+            [obj.name for obj in b.postorder_traversal(ctype=Constraint,
+                                                       active=True)],
+            ['c2', None])
 
     # test how clone behaves when there are
     # references to components on a different block
