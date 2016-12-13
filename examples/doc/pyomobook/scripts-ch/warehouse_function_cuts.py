@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore")
+# @all:
 from warehouse_data import *
 from pyomo.environ import *
 from pyomo.opt import TerminationCondition
@@ -15,7 +18,7 @@ while not done:
     results = solver.solve(model)
     objective_values.append(value(model.obj))
     term_cond = results.solver.termination_condition
-    print()
+    print('')
     print('--- Solver Status: {0} ---'.format(term_cond))
    
     if term_cond != TerminationCondition.optimal:
@@ -42,4 +45,4 @@ plt.xlabel('Solution Number')
 plt.ylabel('Optimal Obj. Value')
 plt.savefig('warehouse_function_cuts.pdf')
 #plt.show()
-
+# @:all
