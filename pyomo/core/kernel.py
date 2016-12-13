@@ -62,11 +62,9 @@ def _pprint(obj, indent=""):
                      obj.domain_type.__name__,
                      obj.fixed))
         elif obj.ctype is pyomo.core.base.Constraint:
-              print(indent+" - %s: constraint(lb=%s, body=%s, ub=%s)"
+              print(indent+" - %s: constraint(expr=%s)"
                   % (str(obj),
-                     str(obj.lb),
-                     str(obj.body),
-                     str(obj.ub)))
+                     str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Objective:
             print(indent+" - %s: objective(expr=%s)"
                   % (str(obj), str(obj.expr)))
