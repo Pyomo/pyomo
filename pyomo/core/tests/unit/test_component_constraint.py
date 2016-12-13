@@ -135,16 +135,30 @@ class Test_constraint(unittest.TestCase):
         eU.expr = 1.0
         with self.assertRaises(ValueError):
             c.expr = (eL <= e <= eU)
+        with self.assertRaises(ValueError):
+            c.lb = eL
+        with self.assertRaises(ValueError):
+            c.ub = eU
 
         vL = variable()
         vU = variable()
         with self.assertRaises(ValueError):
             c.expr = (vL <= e <= vU)
+        with self.assertRaises(ValueError):
+            c.lb = vL
+        with self.assertRaises(ValueError):
+            c.ub = vU
+
         e.expr = 1.0
         vL.value = 1.0
         vU.value = 1.0
         with self.assertRaises(ValueError):
             c.expr = (vL <= e <= vU)
+        with self.assertRaises(ValueError):
+            c.lb = vL
+        with self.assertRaises(ValueError):
+            c.ub = vU
+
         vL.value = 1.0
         vU.value = 1.0
         with self.assertRaises(ValueError):
@@ -714,24 +728,42 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.strict_lower, False)
         self.assertEqual(c.strict_upper, False)
 
-    def test_expr_no_getter(self):
+    def test_expr_getter(self):
         c = constraint()
-        with self.assertRaises(AttributeError):
-            c.expr
+        self.assertIs(c.expr, None)
+
         v = variable()
+
+        c.expr = 0 <= v
+        self.assertIsNot(c.expr, None)
+        self.assertEqual(c.lb, 0)
+        self.assertIs(c.body, v)
+        self.assertEqual(c.ub, None)
+        self.assertEqual(c.equality, False)
+
+        c.expr = v <= 1
+        self.assertIsNot(c.expr, None)
+        self.assertEqual(c.lb, None)
+        self.assertIs(c.body, v)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.equality, False)
+
         c.expr = 0 <= v <= 1
+        self.assertIsNot(c.expr, None)
         self.assertEqual(c.lb, 0)
         self.assertIs(c.body, v)
         self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, False)
-        with self.assertRaises(AttributeError):
-            c.expr
+
         c.expr = v == 1
+        self.assertIsNot(c.expr, None)
         self.assertEqual(c.lb, 1)
         self.assertIs(c.body, v)
         self.assertEqual(c.ub, 1)
         self.assertEqual(c.equality, True)
+
         c.expr = None
+        self.assertIs(c.expr, None)
         self.assertEqual(c.lb, None)
         self.assertIs(c.body, None)
         self.assertEqual(c.ub, None)

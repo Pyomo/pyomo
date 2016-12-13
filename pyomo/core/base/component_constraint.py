@@ -34,6 +34,7 @@ from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.numvalue import (ZeroConstant,
                                       is_constant,
                                       as_numeric,
+                                      potentially_variable,
                                       value,
                                       _sub)
 from pyomo.core.base import expr as EXPR
@@ -114,17 +115,17 @@ class constraint(IConstraint):
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
-                 "body",
-                 "lb",
-                 "ub",
+                 "_body",
+                 "_lb",
+                 "_ub",
                  "_equality",
                  "__weakref__")
     def __init__(self, expr=None, lb=None, body=None, ub=None):
         self._parent = None
         self._active = True
-        self.body = None
-        self.lb = None
-        self.ub = None
+        self._body = None
+        self._lb = None
+        self._ub = None
         self._equality = False
 
         if expr is not None:
@@ -160,6 +161,39 @@ class constraint(IConstraint):
     #
 
     @property
+    def body(self):
+        return self._body
+    @body.setter
+    def body(self, body):
+        if body is not None:
+            body = as_numeric(body)
+        self._body = body
+
+    @property
+    def lb(self):
+        return self._lb
+    @lb.setter
+    def lb(self, lb):
+        if lb is not None:
+            if potentially_variable(lb):
+                raise ValueError(
+                    "Constraint lower bounds must be "
+                    "expressions restricted to data.")
+        self._lb = lb
+
+    @property
+    def ub(self):
+        return self._ub
+    @ub.setter
+    def ub(self, ub):
+        if ub is not None:
+            if potentially_variable(ub):
+                raise ValueError(
+                    "Constraint lower bounds must be "
+                    "expressions restricted to data.")
+        self._ub = ub
+
+    @property
     def equality(self):
         """Returns True if this is an equality constraint"""
         return self._equality
@@ -180,9 +214,18 @@ class constraint(IConstraint):
 
     @property
     def expr(self):
-        raise AttributeError(
-            "The expr property method can only be used "
-            "to set the constraint expression.")
+        """Get the expression on this constraint."""
+        if self.body is None:
+            return None
+        if self.equality:
+            return self.body == self.lower
+        else:
+            if self.lower is None:
+                return self.body <= self.upper
+            elif self.upper is None:
+                return self.lower <= self.body
+            return self.lower <= self.body <= self.upper
+
     @expr.setter
     def expr(self, expr):
         """Set the expression on this constraint."""
