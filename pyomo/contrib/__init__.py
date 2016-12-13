@@ -6,13 +6,3 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-#
-# Conditionally adding sub-packages for Pyomo contributions that may
-# be installed alongside of Pyomo.
-#
-
-try:
-    import pyomocontrib_simplemodel as simplemodel
-except:
-    pass
-
