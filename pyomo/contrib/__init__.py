@@ -12,7 +12,7 @@
 #
 
 try:
-    import pyomo_simplemodel as simplemodel
+    import pyomocontrib_simplemodel as simplemodel
 except:
     pass
 
