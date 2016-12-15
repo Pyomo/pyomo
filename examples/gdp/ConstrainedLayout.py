@@ -11,6 +11,10 @@ from pyomo.gdp import *
 
 model = AbstractModel()
 
+# Have to specify M since this is nonlinear
+model.BigM = Suffix(direction=Suffix.LOCAL)
+model.BigM[None] = 7000
+
 model.BOXES = Set()
 model.CIRCLES = Set()
 
