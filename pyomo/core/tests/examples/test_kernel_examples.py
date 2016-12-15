@@ -19,10 +19,11 @@ import pyutilib.th as unittest
 
 currdir = dirname(abspath(__file__))
 topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
-examplesdir = join(topdir, "examples", "pyomo", "kernel")
+examplesdir = join(topdir, "examples", "kernel")
 
 examples = glob.glob(join(examplesdir,"*.py"))
 
+@unittest.nottest
 def create_test_method(example):
     def _method(self):
         rc, log = pyutilib.subprocess.run(['python',example])
