@@ -68,12 +68,14 @@ class IConstraint(IComponent, _IActiveComponent):
     equality = _abstract_readonly_property(
         doc=("A boolean indicating whether this "
              "is an equality constraint."))
-    strict_lower = _abstract_readonly_property(
-        doc=("A boolean indicating whether this "
-             "constraint has a strict lower bound."))
-    strict_upper = _abstract_readonly_property(
-        doc=("A boolean indicating whether this "
-             "constraint has a strict upper bound."))
+
+    # temporary (for backwards compatibility)
+    @property
+    def lower(self):
+        return self.lb
+    @property
+    def upper(self):
+        return self.ub
 
     #
     # Interface
@@ -85,23 +87,52 @@ class IConstraint(IComponent, _IActiveComponent):
             return None
         return self.body(exception=exception)
 
+    @property
     def lslack(self):
         """Lower slack (body - lb)"""
         if self.body is None:
             return None
-        elif self.lower is None:
-            return float('-inf')
+        elif self.lb is None:
+            return float('inf')
         else:
-            return value(self.lower)-value(self.body)
+            return value(self.body) - value(self.lb)
 
+    @property
     def uslack(self):
         """Upper slack (ub - body)"""
         if self.body is None:
             return None
-        elif self.upper is None:
+        elif self.ub is None:
             return float('inf')
         else:
-            return value(self.upper)-value(self.body)
+            return value(self.ub) - value(self.body)
+
+    @property
+    def slack(self):
+        """min(lslack, uslack)"""
+        if self.body is None:
+            return None
+        elif self.lb is None:
+            return self.uslack
+        elif self.ub is None:
+            return self.lslack
+        lslack = self.lslack
+        uslack = self.uslack
+        return min(lslack, uslack)
+
+    @property
+    def expr(self):
+        """Get the expression on this constraint."""
+        if self.body is None:
+            return None
+        if self.equality:
+            return self.body == self.rhs
+        else:
+            if self.lb is None:
+                return self.body <= self.ub
+            elif self.ub is None:
+                return self.lb <= self.body
+            return self.lb <= self.body <= self.ub
 
 class constraint(IConstraint):
     """An optimization constraint."""
@@ -115,7 +146,13 @@ class constraint(IConstraint):
                  "_ub",
                  "_equality",
                  "__weakref__")
-    def __init__(self, expr=None, lb=None, body=None, ub=None):
+
+    def __init__(self,
+                 expr=None,
+                 lb=None,
+                 body=None,
+                 ub=None,
+                 rhs=None):
         self._parent = None
         self._active = True
         self._body = None
@@ -136,20 +173,25 @@ class constraint(IConstraint):
                 raise ValueError("Both the 'expr' and 'ub' "
                                  "keywords can not be used to "
                                  "initialize a constraint.")
+            if rhs is not None:
+                raise ValueError("Both the 'expr' and 'rhs' "
+                                 "keywords can not be used to "
+                                 "initialize a constraint.")
             # call the setter
             self.expr = expr
         else:
             self.body = body
-            self.lb = lb
-            self.ub = ub
-
-    # temporary
-    @property
-    def lower(self):
-        return self.lb
-    @property
-    def upper(self):
-        return self.ub
+            if rhs is None:
+                self.lb = lb
+                self.ub = ub
+            else:
+                if ((lb is not None) or \
+                    (ub is not None)):
+                    raise ValueError("The 'rhs' keyword can not "
+                                     "be used with the 'lb' or "
+                                     "'ub' keywords to initialize"
+                                     " a constraint.")
+                self.rhs = rhs
 
     #
     # Define the IConstraint abstract methods
@@ -169,6 +211,10 @@ class constraint(IConstraint):
         return self._lb
     @lb.setter
     def lb(self, lb):
+        if self.equality:
+            raise ValueError(
+                "The lb property can not be set "
+                "when the equality property is True.")
         if lb is not None:
             if potentially_variable(lb):
                 raise ValueError(
@@ -181,6 +227,10 @@ class constraint(IConstraint):
         return self._ub
     @ub.setter
     def ub(self, ub):
+        if self.equality:
+            raise ValueError(
+                "The ub property can not be set "
+                "when the equality property is True.")
         if ub is not None:
             if potentially_variable(ub):
                 raise ValueError(
@@ -189,17 +239,36 @@ class constraint(IConstraint):
         self._ub = ub
 
     @property
+    def rhs(self):
+        if not self.equality:
+            raise ValueError(
+                "The rhs property can not be read "
+                "when the equality property is False.")
+        return self._lb
+    @rhs.setter
+    def rhs(self, rhs):
+        if rhs is not None:
+            if potentially_variable(rhs):
+                raise ValueError(
+                    "Constraint righthand must be "
+                    "expressions restricted to data.")
+        self._lb = rhs
+        self._ub = rhs
+        self._equality = True
+
+    @property
     def equality(self):
-        """Returns True if this is an equality constraint"""
         return self._equality
-    @property
-    def strict_lower(self):
-        """Returns True if the lower bound is strict"""
-        return False
-    @property
-    def strict_upper(self):
-        """Returns True if the upper bound is strict"""
-        return False
+    @equality.setter
+    def equality(self, equality):
+        if equality:
+            raise ValueError(
+                "The constraint equality flag can "
+                "only be set to True by assigning "
+                "an expression to the rhs property "
+                "(e.g., con.rhs = con.lb).")
+        assert not equality
+        self._equality = equality
 
     #
     # Extend the IConstraint interface to allow the
@@ -210,25 +279,16 @@ class constraint(IConstraint):
     @property
     def expr(self):
         """Get the expression on this constraint."""
-        if self.body is None:
-            return None
-        if self.equality:
-            return self.body == self.lower
-        else:
-            if self.lower is None:
-                return self.body <= self.upper
-            elif self.upper is None:
-                return self.lower <= self.body
-            return self.lower <= self.body <= self.upper
+        return super(constraint,self).expr
 
     @expr.setter
     def expr(self, expr):
         """Set the expression on this constraint."""
         if expr is None:
+            self._equality = False
             self.body = None
             self.lb = None
             self.ub = None
-            self._equality = False
             return
 
         _expr_type = expr.__class__
@@ -246,13 +306,13 @@ class constraint(IConstraint):
 
                 self._equality = True
                 if arg1 is None or (not arg1._potentially_variable()):
-                    self.lb = self.ub = arg1
+                    self.rhs = arg1
                     self.body = arg0
                 elif arg0 is None or (not arg0._potentially_variable()):
-                    self.lb = self.ub = arg0
+                    self.rhs = arg0
                     self.body = arg1
                 else:
-                    self.lb = self.ub = ZeroConstant
+                    self.rhs = ZeroConstant
                     self.body = arg0 - arg1
             #
             # Form inequality expression
@@ -349,13 +409,13 @@ class constraint(IConstraint):
                 except AttributeError:
                     _args = expr._args
                 if not _args[1]._potentially_variable():
-                    self.lb = self.ub = _args[1]
+                    self.rhs = _args[1]
                     self.body = _args[0]
                 elif not _args[0]._potentially_variable():
-                    self.lb = self.ub = _args[0]
+                    self.rhs = _args[0]
                     self.body = _args[1]
                 else:
-                    self.lb = self.ub = ZeroConstant
+                    self.rhs = ZeroConstant
                     self.body = \
                         EXPR.generate_expression_bypassCloneCheck(
                             _sub,
