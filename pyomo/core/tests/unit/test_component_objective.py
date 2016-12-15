@@ -74,6 +74,35 @@ class Test_objective(unittest.TestCase):
         self.assertTrue(isinstance(o, IObjective))
         self.assertTrue(isinstance(o, NumericValue))
 
+    def test_active(self):
+        o = objective()
+        self.assertEqual(o.active, True)
+        o.deactivate()
+        self.assertEqual(o.active, False)
+        o.activate()
+        self.assertEqual(o.active, True)
+
+        b = block()
+        self.assertEqual(b.active, True)
+        b.deactivate()
+        self.assertEqual(b.active, False)
+        b.o = o
+        # TODO figure out the semantics of
+        # this situation. I believe it involves
+        # keep track of an active counter
+        # rather than a boolean.
+        #self.assertEqual(o.active, True)
+        #self.assertEqual(b.active, True)
+        #o.deactivate()
+        #self.assertEqual(o.active, False)
+        #self.assertEqual(b.active, True)
+        b.activate()
+        self.assertEqual(o.active, True)
+        self.assertEqual(b.active, True)
+        b.deactivate()
+        self.assertEqual(o.active, False)
+        self.assertEqual(b.active, False)
+
 class Test_objective_dict(_TestActiveComponentDictBase,
                           unittest.TestCase):
     _container_type = objective_dict

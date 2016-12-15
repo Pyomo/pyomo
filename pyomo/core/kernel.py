@@ -15,9 +15,10 @@ import pyomo.opt.base
 from pyomo.core.base.component_block import *
 from pyomo.core.base.component_variable import *
 from pyomo.core.base.component_constraint import *
-from pyomo.core.base.component_objective import *
 from pyomo.core.base.component_parameter import *
 from pyomo.core.base.component_expression import *
+from pyomo.core.base.component_objective import *
+from pyomo.core.base.component_sos import *
 from pyomo.core.base.component_suffix import *
 from pyomo.core.base.expr import *
 from pyomo.core.base.set_types import (RealSet,

@@ -31,9 +31,10 @@ import pyomo.core.base.component_dict
 import pyomo.core.base.component_block
 import pyomo.core.base.component_variable
 import pyomo.core.base.component_constraint
-import pyomo.core.base.component_expression
 import pyomo.core.base.component_parameter
+import pyomo.core.base.component_expression
 import pyomo.core.base.component_objective
+import pyomo.core.base.component_sos
 import pyomo.core.base.component_suffix
 
 #

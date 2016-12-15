@@ -99,6 +99,35 @@ class Test_constraint(unittest.TestCase):
         self.assertTrue(isinstance(c, _IActiveComponent))
         self.assertTrue(isinstance(c, IConstraint))
 
+    def test_active(self):
+        c = constraint()
+        self.assertEqual(c.active, True)
+        c.deactivate()
+        self.assertEqual(c.active, False)
+        c.activate()
+        self.assertEqual(c.active, True)
+
+        b = block()
+        self.assertEqual(b.active, True)
+        b.deactivate()
+        self.assertEqual(b.active, False)
+        b.c = c
+        # TODO figure out the semantics of
+        # this situation. I believe it involves
+        # keep track of an active counter
+        # rather than a boolean.
+        #self.assertEqual(c.active, True)
+        #self.assertEqual(b.active, True)
+        #c.deactivate()
+        #self.assertEqual(c.active, False)
+        #self.assertEqual(b.active, True)
+        b.activate()
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, True)
+        b.deactivate()
+        self.assertEqual(c.active, False)
+        self.assertEqual(b.active, False)
+
     def test_equality(self):
         v = variable()
         c = constraint(v == 1)
