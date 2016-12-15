@@ -152,6 +152,7 @@ class expression(IExpression):
 class data_expression(expression):
     """A reusable expression that is restricted to storage
     of data expressions."""
+    __slots__ = ()
 
     #
     # Overload a few methods
