@@ -7,9 +7,9 @@
         None :     4
 
 1 Var Declarations
-    aVar : Size=1, Index=None, Domain=NonNegativeReals
-        Key  : Lower : Value : Upper : Fixed : Stale
-        None :     0 :  None :  None : False :  True
+    aVar : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :  None : False :  True : NonNegativeReals
 
 1 Objective Declarations
     MyObjective : Size=1, Index=None, Active=True

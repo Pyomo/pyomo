@@ -130,6 +130,12 @@ for tdir in testdirs:
             if os.path.exists(dir_+name+suffix_):
                 suffix = suffix_
                 break
+            elif os.path.exists(dir_+name+'.py2'+suffix_):
+                suffix = '.py2'+suffix_
+                break
+            elif os.path.exists(dir_+name+'.py3'+suffix_):
+                suffix = '.py3'+suffix_
+                break
         if not suffix is None:
             cwd = os.getcwd()
             os.chdir(dir_)
@@ -155,6 +161,12 @@ for tdir in testdirs:
         for suffix_ in ['.txt', '.yml']:
             if os.path.exists(dir_+name+suffix_):
                 suffix = suffix_
+                break
+            elif os.path.exists(dir_+name+'.py2'+suffix_):
+                suffix = '.py2'+suffix_
+                break
+            elif os.path.exists(dir_+name+'.py3'+suffix_):
+                suffix = '.py3'+suffix_
                 break
         if not suffix is None:
             cwd = os.getcwd()
