@@ -1,7 +1,7 @@
 import pyomo.core.kernel as pk
 
 #
-# Continous variables
+# Continuous variables
 #
 
 v = pk.variable()
