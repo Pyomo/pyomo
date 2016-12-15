@@ -76,6 +76,10 @@ class suffix(ComponentMap, IComponent, _IActiveComponent):
         self.datatype = kwds.pop('datatype', suffix.FLOAT)
         super(suffix, self).__init__(*args, **kwds)
 
+    #
+    # Interface
+    #
+
     def export_enabled(self):
         """
         Returns True when this suffix is enabled for export to
