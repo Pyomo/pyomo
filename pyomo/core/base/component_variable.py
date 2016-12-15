@@ -91,12 +91,19 @@ class IVariable(IComponent, NumericValue):
     # by overriding the @property method
     #
 
-    domain_type = _abstract_readwrite_property()
-    lb = _abstract_readwrite_property()
-    ub = _abstract_readwrite_property()
-    value = _abstract_readwrite_property()
-    fixed = _abstract_readwrite_property()
-    stale = _abstract_readwrite_property()
+    domain_type = _abstract_readwrite_property(
+        doc=("The domain type of the variable "
+             "(RealSet or IntegerSet)"))
+    lb = _abstract_readwrite_property(
+        doc="The lower bound of the variable")
+    ub = _abstract_readwrite_property(
+        doc="The upper bound of the variable")
+    value = _abstract_readwrite_property(
+        doc="The value of the variable")
+    fixed = _abstract_readwrite_property(
+        doc="The fixed status of the variable")
+    stale = _abstract_readwrite_property(
+        doc="The stale status of the variable")
 
     #
     # Interface
@@ -104,17 +111,17 @@ class IVariable(IComponent, NumericValue):
 
     @property
     def bounds(self):
-        """Returns the tuple (lower bound, upper bound)."""
+        """Get/Set the bounds as a tuple (lb, ub)."""
         return (self.lb, self.ub)
     @bounds.setter
     def bounds(self, bounds_tuple):
-        """Returns the bounds using a tuple (lower bound, upper bound)."""
         self.lb, self.ub = bounds_tuple
 
     def fix(self, *val):
         """
-        Sets the fixed indicator to True. An optional value argument
-        will update the variable's value before fixing.
+        Fix the variable. Sets the fixed indicator to
+        True. An optional value argument will update the
+        variable's value before fixing.
         """
         if len(val) == 1:
             self.value = val[0]
@@ -124,7 +131,7 @@ class IVariable(IComponent, NumericValue):
         self.fixed = True
 
     def unfix(self):
-        """Sets the fixed indicator to False."""
+        """Free the variable. Sets the fixed indicator to False."""
         self.fixed = False
 
     free=unfix

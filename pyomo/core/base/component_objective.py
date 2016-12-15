@@ -42,7 +42,8 @@ class IObjective(IExpression, _IActiveComponent):
     #
 
     sense = _abstract_readwrite_property(
-        doc="The optimization direction for the objective.")
+        doc=("The optimization direction for the "
+             "objective (minimize or maximize)"))
 
     #
     # Interface
@@ -96,9 +97,10 @@ class objective(IObjective):
            (sense == maximize):
             self._sense = sense
         else:
-            raise ValueError("Objective sense must be set to one of: "
-                             "[minimize (%s), maximize (%s)]. Invalid "
-                             "value: %s'" % (minimize, maximize, sense))
+            raise ValueError(
+                "Objective sense must be set to one of: "
+                "[minimize (%s), maximize (%s)]. Invalid "
+                "value: %s'" % (minimize, maximize, sense))
 
 class objective_list(ComponentList, _IActiveComponentContainer):
     """A list-style container for objectives."""

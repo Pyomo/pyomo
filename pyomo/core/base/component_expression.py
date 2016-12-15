@@ -35,7 +35,7 @@ import six
 
 class IExpression(IComponent, NumericValue):
     """
-    The interface for reusable expressions.
+    The interface for mutable expressions.
     """
     __slots__ = ()
 
@@ -46,7 +46,7 @@ class IExpression(IComponent, NumericValue):
     #
 
     expr = _abstract_readwrite_property(
-        doc="Access the stored expression")
+        doc="The stored expression")
 
     #
     # Implement the NumericValue abstract methods

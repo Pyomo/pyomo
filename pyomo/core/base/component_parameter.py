@@ -29,7 +29,7 @@ import six
 
 class IParameter(IComponent, NumericValue):
     """
-    The interface for reusable parameters.
+    The interface for mutable parameters.
     """
     __slots__ = ()
 
@@ -40,7 +40,7 @@ class IParameter(IComponent, NumericValue):
     #
 
     value = _abstract_readwrite_property(
-        doc="Access the stored value")
+        doc="The value of the parameter")
 
     #
     # Implement the NumericValue abstract methods
