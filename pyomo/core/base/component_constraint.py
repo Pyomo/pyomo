@@ -54,13 +54,16 @@ class IConstraint(IComponent, _IActiveComponent):
     #
 
     body = _abstract_readonly_property(
-        doc=("Access the body of the "
+        doc=("The body of the "
              "constraint expression."))
     lb = _abstract_readonly_property(
-        doc=("Access the lower bound of the "
+        doc=("The lower bound of the "
              "constraint expression."))
     ub = _abstract_readonly_property(
-        doc=("Access the upper bound of the "
+        doc=("The upper bound of the "
+             "constraint expression."))
+    rhs = _abstract_readonly_property(
+        doc=("The righthand side of the "
              "constraint expression."))
     equality = _abstract_readonly_property(
         doc=("A boolean indicating whether this "
@@ -83,11 +86,7 @@ class IConstraint(IComponent, _IActiveComponent):
         return self.body(exception=exception)
 
     def lslack(self):
-        """
-        Returns the value of L-f(x) for constraints of the form:
-            L <= f(x) (<= U)
-            (U >=) f(x) >= L
-        """
+        """Lower slack (body - lb)"""
         if self.body is None:
             return None
         elif self.lower is None:
@@ -96,11 +95,7 @@ class IConstraint(IComponent, _IActiveComponent):
             return value(self.lower)-value(self.body)
 
     def uslack(self):
-        """
-        Returns the value of U-f(x) for constraints of the form:
-            (L <=) f(x) <= U
-            U >= f(x) (>= L)
-        """
+        """Upper slack (ub - body)"""
         if self.body is None:
             return None
         elif self.upper is None:
