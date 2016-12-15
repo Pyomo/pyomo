@@ -209,6 +209,16 @@ class _ConstraintData(ActiveComponentData):
         else:
             return value(self.upper)-value(self.body)
 
+    def slack(self):
+        """
+        Returns the smaller of lslack and uslack values
+        """
+        if self.lower is None:
+            return value(self.upper)-value(self.body)
+        elif self.upper is None:
+            return value(self.lower)-value(self.body)
+        return min(value(self.upper)-value(self.body), value(self.lower)-value(self.body))
+
     #
     # Abstract Interface
     #
@@ -245,6 +255,10 @@ class _ConstraintData(ActiveComponentData):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
+        raise NotImplementedError
+
+    def get_value(self):
+        """Get the expression on this constraint."""
         raise NotImplementedError
 
 class _GeneralConstraintData(_ConstraintData):
@@ -338,6 +352,11 @@ class _GeneralConstraintData(_ConstraintData):
     def strict_upper(self):
         """A boolean indicating whether this constraint has a strict upper bound."""
         return False
+
+    @property
+    def expr(self):
+        """Return the expression associated with this constraint."""
+        return self.get_value()
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
@@ -609,6 +628,17 @@ class _GeneralConstraintData(_ConstraintData):
                     "Equality constraint '%s' defined with "
                     "non-finite term." % (self.name))
             assert self._lower is self._upper
+
+    def get_value(self):
+        """Get the expression on this constraint."""
+        if self._equality:
+            return self._body == self._lower
+        else:
+            if self._lower is None:
+                return self._body <= self._upper
+            elif self._upper is None:
+                return self._lower <= self._body
+            return self._lower <= self._body <= self._upper
 
 class Constraint(ActiveIndexedComponent):
     """
