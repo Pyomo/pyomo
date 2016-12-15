@@ -40,6 +40,7 @@ from pyomo.core.base.set_types import (RealSet,
                                        IntegerInterval)
 from pyomo.core.base.objective import (minimize,
                                        maximize)
+from pyomo.core.base import value
 
 # Short term helper method for debugging models
 def _pprint(obj, indent=""):
