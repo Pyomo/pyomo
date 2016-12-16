@@ -37,6 +37,49 @@ logger = logging.getLogger('pyomo.core')
 global Lineno
 global Filename
 
+
+def _process_token(token):
+    if token[0] == '[' and token[-1] == ']':
+        vals = []
+        token = token[1:-1]
+        for item in token.split(","):
+            if item[0] == "'" or item[0] == '"':
+                vals.append( item[1:-1] )
+            try:
+                vals.append( int(token) )
+                continue
+            except:
+                pass
+            try:
+                vals.append( float(token) )
+                continue
+            except:
+                pass
+            vals.append( token )
+        return tuple(vals)
+
+    elif token[0] == "'" or token[0] == '"':
+        return token[1:-1]
+
+    if type(token) is tuple:
+        return tuple(_process_token(i) for i in token)
+    if type(token) in numlist:
+        return token
+    if token in ('True','true','TRUE'):
+        return True
+    if token in ('False','false','FALSE'):
+        return False
+    try:
+        return int(token)
+    except:
+        pass
+    try:
+        return float(token)
+    except:
+        pass
+    return token
+
+
 def _preprocess_data(cmd):
     """
     Called by _process_data() to (1) combine tokens that comprise a tuple
@@ -45,32 +88,67 @@ def _preprocess_data(cmd):
     generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
     if generate_debug_messages:
         logger.debug("_preprocess_data(start) %s",cmd)
-    status=")"
+    state = 0
     newcmd=[]
+    tpl = []
     for token in cmd:
-        if type(token) in (str,unicode):
-            token=str(token)
-            if "(" in token and ")" in token:
+        if state == 0:
+            # Before the :=
+            if token == ':=':
+                state = 1
                 newcmd.append(token)
-                status=")"
-            elif "(" in token:
-                if status == "(":
-                    raise ValueError("Two '('s follow each other in data "+token)
-                status="("
-                newcmd.append(token)
-            elif ")" in token:
-                if status == ")":
-                    raise ValueError("Two ')'s follow each other in data")
-                status=")"
-                newcmd[-1] = newcmd[-1]+token
-            elif status == "(":
-                newcmd[-1] = newcmd[-1]+token
+            elif token == '[':
+                state = 3
             else:
                 newcmd.append(token)
-        else:
-            if type(token) is float and math.floor(token) == token:
-                token=int(token)
-            newcmd.append(token)
+
+        elif state == 1:
+            # After := and before a '('
+            if type(token) in numlist:
+                newcmd.append(token)
+            elif token == ',':
+                raise ValueError("Unexpected comma outside of a tuple declaration")
+            elif token == '(':
+                state = 2
+            elif token == ')':
+                raise ValueError("Unexpected ')' that does not follow a '('")
+            else:
+                newcmd.append(_process_token(token))
+
+        elif state == 2:
+            # After := and after a '('
+            if type(token) in numlist:
+                tpl.append(token)
+            elif token == ',':
+                pass
+            elif token == '(':
+                raise ValueError("Two '('s follow each other in the data")
+            elif token == ')':
+                newcmd.append( tuple(tpl) )
+                tpl = []
+                state = 1
+            else:
+                tpl.append(_process_token(token))
+   
+        elif state == 3: 
+            # Before := and after a '['
+            if type(token) in numlist:
+                tpl.append(token)
+            elif token == ',':
+                pass
+            elif token == '[':
+                raise ValueError("Two '['s follow each other in the data")
+            elif token == ']':
+                newcmd.append( tuple(tpl) )
+                tpl = []
+                state = 0
+            else:
+                tpl.append(_process_token(token))
+
+    if state == 2:
+        raise ValueError("Data ends without tuple ending")
+    elif state == 3:
+        raise ValueError("Data ends without bracket ending")
     if generate_debug_messages:
         logger.debug("_preprocess_data(end) %s", newcmd)
     return newcmd
@@ -80,26 +158,32 @@ def _process_set(cmd, _model, _data):
     """
     Called by _process_data() to process a set declaration.
     """
-    #print "SET",cmd
+    print("SET %s" % cmd)
     generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
     if generate_debug_messages:
         logger.debug("DEBUG: _process_set(start) %s",cmd)
     #
     # Process a set
     #
-    if "[" in cmd[1]:
-        # the set is indexed
-        tokens = re.split("[\[\]]",cmd[1])
-        ndx=tokens[1]
+    if type(cmd[2]) is tuple:
+        #
+        # An indexed set
+        #
+        ndx=cmd[2]
         if len(ndx) == 0:
-            # at this point, the index is a string. if the length of this string
-            # is 0, then there is a specification issue, as this is an indexed set.
+            # At this point, if the index is an empty tuple, then there is an
+            # issue with the specification of this indexed set.
             raise ValueError("Illegal indexed set specification encountered: "+str(cmd[1]))
-        ndx=tuple(_data_eval(ndx.split(",")))
-        if tokens[0] not in _data:
-            _data[tokens[0]] = {}
-        _data[tokens[0]][ndx] = _process_set_data(cmd[3:], tokens[0], _model)
+        elif len(ndx) == 1:
+            ndx=ndx[0]
+        if cmd[1] not in _data:
+            _data[cmd[1]] = {}
+        _data[cmd[1]][ndx] = _process_set_data(cmd[4:], cmd[1], _model)
+
     elif cmd[2] == ":":
+        #
+        # A tabular set
+        #
         _data[cmd[1]] = {}
         _data[cmd[1]][None] = []
         i=3
@@ -111,9 +195,13 @@ def _process_set(cmd, _model, _data):
             ndx=cmd[i]
             for j in xrange(0,len(ndx1)):
                 if cmd[i+j+1] == "+":
-                    _data[cmd[1]][None] += _process_set_data(["("+str(ndx1[j])+","+str(cmd[i])+")"], cmd[1], _model)
+                    print("DATA %s %s" % (ndx1[j], cmd[i]))
+                    _data[cmd[1]][None].append((ndx1[j], cmd[i]))
             i += len(ndx1)+1
     else:
+        #
+        # Processing a general set
+        #
         _data[cmd[1]] = {}
         _data[cmd[1]][None] = _process_set_data(cmd[3:], cmd[1], _model)
 
@@ -128,43 +216,37 @@ def _process_set_data(cmd, sname, _model):
     if len(cmd) == 0:
         return []
     sd = sname
-    #d = sd.dimen
-    cmd = _data_eval(cmd)
     ans=[]
     i=0
-    tmp=None
+    template=None
     ndx=[]
+    template = []
     while i<len(cmd):
         if type(cmd[i]) is not tuple:
-            if len(ndx) > 0:
-                #if type(cmd[i]) is not tuple:
-                #   raise ValueError, "Problem initializing set="+sname+" with input data="+str(cmd)+" - first element was interpreted as a tuple, but element="+str(i)+" is of type="+str(type(cmd[i]))+"; types must be consistent"
-                tmpval=tmp
+            if len(ndx) == 0:
+                ans.append(cmd[i])
+            else:
+                #
+                # Use the ndx to create a tuple.  This list
+                # contains the indices of the values that need
+                # to be filled-in
+                #
+                tmpval=template
                 for kk in range(len(ndx)):
                     if i == len(cmd):
                         raise IOError("Expected another set value to flush out a tuple pattern!")
-                    tmpval[ndx[kk]] = _data_eval([cmd[i]])[0]
+                    tmpval[ndx[kk]] = cmd[i]
                     i += 1
-                #
-                # WEH - I'm not sure what the next two lines are for
-                #        These are called when initializing a set with more than
-                #        one dimension
-                #if d > 1:
-                #   tmpval = util.tuplize(tmpval,d,sname)
                 ans.append(tuple(tmpval))
                 continue
-            else:
-                ans.append(cmd[i])
         elif "*" not in cmd[i]:
             ans.append(cmd[i])
         else:
-            j = i
-            tmp=list(cmd[j])
+            template=list(cmd[i])
             ndx=[]
             for kk in range(len(tmp)):
                 if tmp[kk] == '*':
                     ndx.append(kk)
-            #print 'NDX',ndx
         i += 1
     if generate_debug_messages:
         logger.debug("DEBUG: _process_set_data(end) %s",ans)
@@ -175,7 +257,7 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
     """
     Called by _process_data to process data for a Parameter declaration
     """
-    #print 'PARAM',cmd,index, ncolumns
+    print('PARAM %s index=%s ncolumns=%s' %(cmd, index, ncolumns))
     generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
     if generate_debug_messages:
         logger.debug("DEBUG: _process_param(start) %s",cmd)
@@ -193,7 +275,7 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
         pname = cmd[0]
         cmd = cmd[1:]
         if len(cmd) >= 2 and cmd[0] == "default":
-            dflt = _data_eval(cmd[1])[0]
+            dflt = cmd[1]
             cmd = cmd[2:]
         if dflt != None:
             _default[pname] = dflt
@@ -216,12 +298,12 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
                 if pname not in _data:
                     _data[pname] = {}
                 if not ncolumns is None:
-                    finaldata = _process_data_list(pname, ncolumns-1, _data_eval(cmd))
+                    finaldata = _process_data_list(pname, ncolumns-1, cmd)
                 elif not _model is None:
                     _param = getattr(_model, pname)
-                    finaldata = _process_data_list(pname, _param.dim(), _data_eval(cmd))
+                    finaldata = _process_data_list(pname, _param.dim(), cmd)
                 else:
-                    finaldata = _process_data_list(pname, 1, _data_eval(cmd))
+                    finaldata = _process_data_list(pname, 1, cmd)
                 for key in finaldata:
                     _data[pname][key]=finaldata[key]
             else:
@@ -406,7 +488,6 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
 
 
 def _apply_templates(cmd):
-    cmd = _data_eval(cmd)
     template = []
     ilist = set()
     ans = []
@@ -472,61 +553,6 @@ def _process_data_list(param_name, dim, cmd):
     return ans
 
 
-
-def _data_eval(values):
-    """
-    Evaluate the list of values to make them bool, integer or float,
-    or a tuple value.
-    """
-    generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
-    if generate_debug_messages:
-        logger.debug("DEBUG: _data_eval(start) %s",values)
-    ans = []
-    for val in values:
-        if type(val) in numlist:
-            ans.append(val)
-            continue
-        if val in ('True','true','TRUE'):
-            ans.append(True)
-            continue
-        if val in ('False','false','FALSE'):
-            ans.append(False)
-            continue
-        if type(val) is tuple:
-            vals = []
-            for item in val:
-                vals.append( _data_eval([item])[0] )
-            ans.append(tuple(vals))
-            continue
-        tmp = None
-        tval = val.strip()
-        if (tval[0] == "(" and tval[-1] == ")") or (tval[0] == '[' and tval[-1] == ']'):
-            vals = []
-            tval = tval[1:-1]
-            for item in tval.split(","):
-                tmp=_data_eval([item])
-                vals.append(tmp[0])
-            ans.append(tuple(vals))
-            continue
-        try:
-            tmp = int(val)
-            ans.append(tmp)
-        except ValueError:
-            pass
-        if tmp is None:
-            try:
-                tmp = float(val)
-                ans.append(tmp)
-            except ValueError:
-                if val[0] == "'" or val[0] == '"':
-                    ans.append(val[1:-1])
-                else:
-                    ans.append(val)
-    if generate_debug_messages:
-        logger.debug("DEBUG: _data_eval(end) %s",ans)
-    return ans
-
-
 def _process_include(cmd, _model, _data, _default, options=None):
     if len(cmd) == 1:
         raise IOError("Cannot execute 'include' command without a filename")
@@ -566,6 +592,7 @@ def _process_include(cmd, _model, _data, _default, options=None):
                         else:
                             raise IOError("Cannot define a scenario within another scenario")
             else:
+                print("HERE - X %s" % cmd)
                 _process_data(cmd, _model, _data[scenario], _default, Filename, Lineno)
     return True
 
@@ -887,7 +914,7 @@ def _process_data(cmd, _model, _data, _default, Filename_, Lineno_=0, index=None
     Called by import_file() to (1) preprocess data and (2) call
     subroutines to process different types of data
     """
-    #print "CMD",cmd
+    print("CMD %s" %cmd)
     global Lineno
     global Filename
     Lineno=Lineno_
