@@ -40,7 +40,7 @@ from pyomo.core.base.expr_common import (
 )
 from pyomo.core.base import expr_common as common
 
-UNREFERENCED_EXPR_COUNT = 9
+UNREFERENCED_EXPR_COUNT = 11
 
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \
@@ -49,14 +49,14 @@ chainedInequalityErrorMessage \
 class EntangledExpressionError(Exception):
     def __init__(self, sub_expr):
         msg = \
-"""Attempting to form an expression with a subexpression that is already
-part of another expression of component.  This would create two
-expressions that share common subexpressions, which is not allowed in
-Pyomo.  Either clone the subexpression using 'clone_expression' before
-creating the new expression, or if you want the two expressions to share
-a common subexpression, use an Expression component to store the
-subexpression and use the subexpression in each expression.  Common
-subexpression:\n\t%s""" % (str(sub_expr),)
+"""Attempting to form an expression with a
+subexpression that is already part of another expression of component.
+This would create two expressions that share common subexpressions,
+which is not allowed in Pyomo.  Either clone the subexpression using
+'clone_expression' before creating the new expression, or if you want
+the two expressions to share a common subexpression, use an Expression
+component to store the subexpression and use the subexpression in each
+expression.  Common subexpression:\n\t%s""" % (str(sub_expr),)
         super(EntangledExpressionError, self).__init__(msg)
 
 
@@ -69,32 +69,99 @@ def _sum_with_iadd(iterable):
 sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
 
-def _generate_expression__clone_if_needed_getrefcount(self, obj, target):
+def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
     #print(getrefcount(obj) - UNREFERENCED_EXPR_COUNT, target)
-    if getrefcount(obj) - UNREFERENCED_EXPR_COUNT == target:
-        return obj
-    elif getrefcount(obj) - UNREFERENCED_EXPR_COUNT > target:
-        generate_expression.clone_counter += 1
-        return obj.clone()
-    else: #pragma:nocover
-        raise RuntimeError(
+    if target is None:
+        return objs
+
+    ans = ()
+    for obj in objs:
+        if obj.__class__ in native_types:
+            ans = ans + (obj,)
+            continue
+
+        try:
+            obj_expr = obj.is_expression()
+        except AttributeError:
+            obj = as_numeric(obj)
+            obj_expr = obj.is_expression()
+
+        if not obj_expr:
+            if obj.is_indexed():
+                raise TypeError(
+                    "Argument for expression is an indexed numeric "
+                    "value\nspecified without an index:\n\t%s\nIs this "
+                    "value defined over an index that you did not specify?"
+                    % (obj.name, ) )
+
+            if obj.is_constant():
+                ans = ans + (obj(),)
+            else:
+                ans = ans + (obj,)
+            continue
+
+        if inplace:
+            inplace = False
+            test = getrefcount(obj) - UNREFERENCED_EXPR_COUNT
+        else:
+            test = getrefcount(obj) - UNREFERENCED_EXPR_COUNT + 1
+        #print str((test, target)),
+        if test == target:
+            ans = ans + (obj,)
+        elif test > target:
+            generate_expression.clone_counter += 1
+            ans = ans + (obj.clone(),)
+            #print str((test, target))
+            #print "".join(traceback.format_stack())
+        else: #pragma:nocover
+            raise RuntimeError(
 """Expression entered generate_expression() with (%s<%s) references;
 This is indicative of a SERIOUS ERROR in the expression reuse detection
 scheme.  Please report this error, along with the complete stack trace
-to the Pyomo developers."""
-            % ( getrefcount(obj) - UNREFERENCED_EXPR_COUNT, target ))
+to the Pyomo developers.  Offending subexpression:\n\t%s"""
+                % ( test, target, obj ))
+    return ans
 
-def _generate_expression__clone_if_needed_parent_expr(self, obj, target):
-    if not hasattr(obj, '_parent_expr'):
-        return obj
-    if obj._parent_expr:
-        raise EntangledExpressionError(obj)
-    if self is not obj:
-        obj._parent_expr = bypass_backreference or ref(self)
-    return obj
+def _generate_expression__clone_if_needed__parent_expr(target, inplace, *objs):
+    ans = ()
+    for obj in objs:
+        if obj.__class__ in native_types:
+            ans = ans + (obj,)
+            continue
 
-def _generate_expression__noCloneCheck(self, obj, target):
-    return obj
+        try:
+            obj_expr = obj.is_expression()
+            if obj.is_indexed():
+                raise TypeError(
+                    "Argument for expression is an indexed numeric "
+                    "value\nspecified without an index:\n\t%s\nIs this "
+                    "value defined over an index that you did not specify?"
+                    % (obj.name, ) )
+        except AttributeError:
+            obj = as_numeric(obj)
+            obj_expr = obj.is_expression()
+
+        if obj_expr:
+            if obj._parent_expr:
+                raise EntangledExpressionError(obj)
+            ans = ans + (obj,)
+        else:
+            if obj.is_constant():
+                ans = ans + (obj(),)
+            else:
+                ans = ans + (obj,)
+    return ans
+
+def _generate_expression__noCloneCheck(target, inplace, *objs):
+    return objs
+
+# Statically determine the implementation of
+# _generate_expression__clone_if_needed based on the capabilities of the
+# current interpreter.
+_generate_expression__clone_if_needed \
+    = ( _generate_expression__clone_if_needed__getrefcount
+        if _getrefcount_available else
+        _generate_expression__clone_if_needed__parent_expr )
 
 global _bypassing_clonecheck
 _bypassing_clonecheck = False
@@ -126,13 +193,6 @@ def generate_expression_bypassCloneCheck(etype, _self, other):
 
     return ans
 
-# Statically determine the implementation of
-# _generate_expression__clone_if_needed based on the capabilities of the
-# current interpreter.
-_generate_expression__clone_if_needed \
-    = ( _generate_expression__clone_if_needed_getrefcount
-        if _getrefcount_available else
-        _generate_expression__clone_if_needed_parent_expr )
 
 
 def identify_variables( expr,
@@ -183,8 +243,6 @@ class _ExpressionBase(NumericValue):
         self._args = args
         if not _getrefcount_available:
             self._parent_expr = None
-            for x in self._args:
-                _generate_expression__clone_if_needed(self, x, 0)
 
     def __getstate__(self):
         state = super(_ExpressionBase, self).__getstate__()
@@ -526,12 +584,10 @@ class _UnaryFunctionExpression(_ExpressionBase):
     def __init__(self, arg, name, fcn):
         """Construct an expression with an operation and a set of arguments"""
         self._args = arg
-        self._fcn = fcn
-        self._name = name
         if not _getrefcount_available:
             self._parent_expr = None
-            for x in self._args:
-                _generate_expression__clone_if_needed(self, x, 0)
+        self._fcn = fcn
+        self._name = name
 
     def __getstate__(self):
         result = super(_UnaryFunctionExpression, self).__getstate__()
@@ -563,13 +619,16 @@ class _ExternalFunctionExpression(_ExpressionBase):
 
     def __init__(self, fcn, args):
         """Construct a call to an external function"""
-        self._args = tuple( 
-            x if x.__class__ in native_types or not x.is_expression() 
-            else _generate_expression__clone_if_needed(self, x, 0)
-            for x in args )
-        self._fcn = fcn
+        # Because this node is created outside the "normal"
+        # generate_expression route, we will perform all refrence
+        # counting / parent_expr checking here.
+        self._args = _generate_expression__clone_if_needed(-2, False, *args)
         if not _getrefcount_available:
             self._parent_expr = None
+            for a in self._args:
+                if a.__class__ not in native_types and a.is_expression():
+                    a._parent_expr = bypass_backreference or ref(self)
+        self._fcn = fcn
 
     def getname(self, *args, **kwds):
         return self._fcn.getname(*args, **kwds)
@@ -858,81 +917,76 @@ class _SumExpression(_LinearOperatorExpression):
     def getname(self, *args, **kwds):
         return 'sum'
 
-    def __iadd__(self, other):
+    def __iadd__(self, other, targetRefs=-2):
         # I wonder if this is a reasonable test, or if we should just
         # assume that when people explicitly call += that they know what
         # they are doing?
-        self = _generate_expression__clone_if_needed(self, self, 0)
+        if targetRefs is not None:
+            self, other = _generate_expression__clone_if_needed(
+                targetRefs, True, self, other )
 
-        _type = other.__class__
-        if _type in native_numeric_types:
+        if other.__class__ in native_numeric_types:
             if other:
                 self._args.append(other)
             return self
 
-        try:
-            _other_expr = other.is_expression()
-        except AttributeError:
-            # This exception gets raised rarely in production models: to
-            # get here, other must be a numeric, but non-NumericValue,
-            # type that we haven't seen before.  Therefore, we can be a
-            # bit inefficient.
-            other = as_numeric(other)
-            _other_expr = other.is_expression()
-
-        if _other_expr:
+        if other.is_expression():
             # We can ONLY combine the _SumExpression objects if we are
             # using an interpreter that supports getrefcount (as we can
             # rely on it for expression detanglement)
-            if _getrefcount_available and _type is _SumExpression:
-                other = _generate_expression__clone_if_needed(self, other, 1000)
-                self._args.extend(other._args)
-                other._args = [] # for safety
-                return self
-        elif other.is_indexed():
-            raise TypeError(
-                "Argument for expression '%s' is an indexed numeric "
-                "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?"
-                % (etype, other.name, ) )
-        elif other.is_constant():
-            other = other()
+            if _getrefcount_available:
+                if other.__class__ is _SumExpression:
+                    self._args.extend(other._args)
+                    other._args = [] # for safety
+                    return self
+            else:
+                other._parent_expr = bypass_backreference or ref(self)
 
         self._args.append(other)
         return self
 
-    def __isub__(self, other):
-        return self.__iadd__(-other)
+    def __isub__(self, other, targetRefs=-2):
+        if targetRefs is not None:
+            self, other = _generate_expression__clone_if_needed(
+                targetRefs+1, True, self, other )
+        return self.__iadd__(-other, targetRefs=None)
 
     # If the system has getrefcount, then we can reliably treat all
     # additions as "in-place" additions.  Note that if we remove the
     # clone_if_needed check for self in __iadd__, then we will to add it
     # here.
     if _getrefcount_available:
-        __add__ = __iadd__
+        def __add__(self, other):
+            self, other = _generate_expression__clone_if_needed(
+                -2, False, self, other )
+            return self.__iadd__(other, None)
 
         # Note: treating __radd__ the same as iadd is fine, as it will
         # only be called when other is not a NumericValue object
         # ... that is, a constant.  SO, we don't have to worry about
         # preserving the variable order.
-        __radd__ = __iadd__
+        __radd__ = __add__
 
         # As we do all subtraction "in-place", all subtractions are the
         # same as in-place subtractions.
-        __sub__ = __isub__
+        def __sub__(self, other):
+            self, other = _generate_expression__clone_if_needed(
+                -2, False, self, other )
+            return self.__iadd__(-other, targetRefs=None)
 
         # Note: __rsub__ of _SumExpression is very rare (basically, it
-        # needs to be "non-NumericValue - _SumExpression"), and the
-        # easiest thing to do is to just use the underlying NumericValue
-        # logic to construct sum(other, -self)
+        # needs to be "non-NumericValue - _SumExpression"), Since Pyomo4
+        # expressions don't maintain an internal coefficient, the
+        # simplest & most efficient thing to do is just let the normal
+        # generate_expression() logic run its course
         #def __rsub__(self, other):
-        #    return other + ( - self )
+        #    N/A
 
-        def __neg__(self):
-            self = _generate_expression__clone_if_needed(self, self, 1000)
-            for i,x in enumerate(self._args):
-                self._args[i] = -x
-            return self
+        # Note: Since Pyomo4 expressions don't maintain an internal
+        # coefficient, the simplest & most efficient thing to do is just
+        # let the normal generate_expression() logic run its course
+        #def __neg__(self):
+        #    N/A
 
 
 class Expr_if(_ExpressionBase):
@@ -946,13 +1000,18 @@ class Expr_if(_ExpressionBase):
 
     def __init__(self, IF=None, THEN=None, ELSE=None):
         """Constructor"""
-        self._if = as_numeric(IF)
-        self._then = as_numeric(THEN)
-        self._else = as_numeric(ELSE)
-        self._args = (self._if, self._then, self._else)
+        # TODO: This used to unilaterally convert the args with
+        # as_numeric().  Verify if not doing that is OK.
+        self._args = _generate_expression__clone_if_needed(
+            -2, False, IF, THEN, ELSE )
         if not _getrefcount_available:
-            for x in self._args:
-                _generate_expression__clone_if_needed(self, x, 0)
+            self._parent_expr = None
+            for a in self._args:
+                if a.__class__ not in native_types and a.is_expression():
+                    a._parent_expr = bypass_backreference or ref(self)
+        self._if, self._then, self._else = self._args
+        if self._if.__class__ in native_types:
+            self._if = as_numeric(self._if)
 
     def __getstate__(self):
         state = super(Expr_if, self).__getstate__()
@@ -1020,12 +1079,13 @@ class _GetItemExpression(_ExpressionBase):
 
     def __init__(self, base, args):
         """Construct an expression with an operation and a set of arguments"""
-        self._args = args
-        self._base = base
+        self._args = _generate_expression__clone_if_needed(-2, False, *args)
         if not _getrefcount_available:
             self._parent_expr = None
-            for x in self._args:
-                _generate_expression__clone_if_needed(self, x, 100)
+            for a in self._args:
+                if a.__class__ not in native_types and a.is_expression():
+                    a._parent_expr = bypass_backreference or ref(self)
+        self._base = base
 
     def __getstate__(self):
         result = super(_GetItemExpression, self).__getstate__()
@@ -1090,20 +1150,13 @@ _LinearExpression_Pool = []
 class _LinearExpression(_ExpressionBase):
     __slots__ = ('_const', '_coef')
 
-    def __init__(self, const=None, args=None, coef=None):
-        if const is not None:
-            self._const = const
-            self._args = args
-            self._coef = dict((id(self._args[i]),c) for i,c in enumerate(coef))
-        else:
-            self._const = 0
-            self._args = []
-            self._coef = {}
+    def __init__(self):
+        self._const = 0
+        self._args = []
+        self._coef = {}
         if not _getrefcount_available:
             self._parent_expr = None
             # Note that the args can NOT be expressions
-            #for x in self._args:
-            #    _generate_expression__clone_if_needed(self, x, 100)
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()
@@ -1143,16 +1196,29 @@ class _LinearExpression(_ExpressionBase):
 
     def _is_constant_combiner(self):
         def impl(args):
-            if not all(args):
-                return False
+            # To be constant, the _const must be constant, PLUS either
+            # the coef AND the var are constant (how can the Var be
+            # constant??), OR the coef is constant AND ==0.
             if self._const.__class__ not in native_numeric_types \
                and not self._const.is_constant():
                 return False
-            for coef in itervaluse(self._coef):
-                if coef.__class__ not in native_numeric_types \
-                   and not coef.is_constant():
+            for i, v in enumerate(self._args):
+                coef = self._coef[id(v)]
+                if coef.__class__ not in native_numeric_types:
+                    if not coef.is_constant():
+                        return False
+                elif coef and not args[i]:
                     return False
             return True
+        return impl
+
+    def _is_fixed_combiner(self):
+        def impl(args):
+            # By definition, the const and all coef must be fixed.  The
+            # linear expression *might* be fixed if the variables are
+            # fixed, OR if the coeficient on a non-fixed variabel is 0.
+            return all( a or not value(self._coef[id(self._args[i])])
+                        for i,a in enumerate(args) )
         return impl
 
     def _inline_operator(self):
@@ -1210,35 +1276,26 @@ class _LinearExpression(_ExpressionBase):
             ans += value(self._coef[id(v)]) * result[i]
         return ans
 
-    def __iadd__(self, other, reverse=False, negate=False):
+    def __iadd__(self, other, reverse=False, negate=False, targetRefs=-2):
         # I wonder if this is a reasonable test, or if we should just
         # assume that when people explicitly call += that they know what
         # they are doing?
-        #self = _generate_expression__clone_if_needed(self, self, refTarget)
+        #print "LE: __iadd__(%s,%s)" % (getrefcount(self), getrefcount(other))
+        if targetRefs is not None:
+            self, other = _generate_expression__clone_if_needed(
+                targetRefs, True, self, other )
 
-        _type = other.__class__
-        if _type in native_numeric_types:
+        if other.__class__ in native_numeric_types:
             if negate:
                 self._const -= other
             else:
                 self._const += other
             return self
 
-        try:
-            _other_expr = other.is_expression()
-        except AttributeError:
-            # This exception gets raised rarely in production models: to
-            # get here, other must be a numeric, but non-NumericValue,
-            # type that we haven't seen before.  Therefore, we can be a
-            # bit inefficient.
-            other = as_numeric(other)
-            _other_expr = other.is_expression()
+        _other_expr = other.is_expression()
 
         if _other_expr and other.__class__ is _LinearExpression:
-            # TODO: I am 99% sure the following is not needed
-            #other = _generate_expression__clone_if_needed(self, other, 1000)
-
-            # NOTE: it is faster to test teh negate flag at each
+            # NOTE: it is faster to test the negate flag at each
             # iteration than it is to multiply by a 1/-1.  Plus, we
             # cannot just negate other because that is an undesirable
             # side effect for the case where getrefcount is not
@@ -1265,7 +1322,7 @@ class _LinearExpression(_ExpressionBase):
                     else:
                         self._args.append(v)
                     if negate:
-                        self._coef[_id] = -1*other._coef[_id]
+                        self._coef[_id] = -other._coef[_id]
                     else:
                         self._coef[_id] = other._coef[_id]
 
@@ -1282,7 +1339,7 @@ class _LinearExpression(_ExpressionBase):
             return self
 
         _potentially_var = other._potentially_variable()
-        if _potentially_var and not other.is_expression():
+        if _potentially_var and not _other_expr:
             _id = id(other)
             coef = -1 if negate else 1
             if _id in self._coef:
@@ -1300,83 +1357,74 @@ class _LinearExpression(_ExpressionBase):
             else:
                 self._const += other
             return self
-        elif other.is_expression():
+        elif _other_expr:
             if negate:
                 other = -other
             if reverse:
                 self, other = other, self
-            return generate_expression(_add, self, other)
+            return generate_expression(_add, self, other, targetRefs=None)
         else:
             # This should not be reachable
             raise DeveloperError(
                 "Unexpected branch in _LinearExpression.add_impl for %s + %s"
                 % ( self, other ))
 
-    def __isub__(self, other):
-        return self.__iadd__(other, negate=True)
+    def __isub__(self, other, targetRefs=-2):
+        self, other = _generate_expression__clone_if_needed(
+            targetRefs, True, self, other )
+        return self.__iadd__(other, negate=True, targetRefs=None)
 
     # If the system has getrefcount, then we can reliably treat all
     # additions as "in-place" additions.  Note that if we remove the
     # clone_if_needed check for self in __iadd__, then we will to add it
     # here.
     if _getrefcount_available:
-        def __add__(self, other, reverse=False):
-            # I wonder if this is a reasonable test, or if we should just
-            # assume that when people explicitly call += that they know what
-            # they are doing?
-            self = _generate_expression__clone_if_needed(self, self, 0)
-            return self.__iadd__(other)
+        def __add__(self, other):
+            #print "LE: __add__(%s,%s)" % (getrefcount(self), getrefcount(other))
+            self, other = _generate_expression__clone_if_needed(
+                -2, False, self, other )
+            return self.__iadd__(other, targetRefs=None)
 
         # Note: treating __radd__ the same as iadd is fine, as it will
         # only be called when other is not a NumericValue object
         # ... that is, a constant.  SO, we don't have to worry about
         # preserving the variable order.
-        def __radd__(self, other):
-            return self.__iadd__(other, reverse=True)
+        __radd__ = __add__
 
         # As we do all subtraction "in-place", all subtractions are the same as
         # in-place subtractions.
-        __sub__ = __isub__
+        def __sub__(self, other):
+            self, other = _generate_expression__clone_if_needed(
+                -2, False, self, other )
+            return self.__iadd__(other, negate=True, targetRefs=None)
 
-        # Note: __rsub__ of _LinearExpressions is rare, and the easiest
-        # thing to do is just negate ourselves and add.
-        def __rsub__(self, other):
-            tmp = -self
-            return tmp.__iadd__(other, reverse=True)
+        # Note: treating __radd__ the same as iadd is fine, as it will
+        # only be called when other is not a NumericValue object
+        # ... that is, a constant.  SO, we don't have to worry about
+        # preserving the variable order.
+        def __rsub__(self, other, targetRefs=-2):
+            if targetRefs is not None:
+                self, other = _generate_expression__clone_if_needed(
+                    targetRefs, False, self, other )
+            return self.__neg__(targetRefs=None).__iadd__(other, reverse=True, targetRefs=None)
 
 
-    def __imul__(self, other, divide=False):
+    def __imul__(self, other, divide=False, targetRefs=-2):
         # I wonder if this is a reasonable test, or if we should just
         # assume that when people explicitly call += that they know what
         # they are doing?
-        self = _generate_expression__clone_if_needed(self, self, 0)
+        if targetRefs is not None:
+            self, other = _generate_expression__clone_if_needed(
+                targetRefs, True, self, other )
 
-        _type = other.__class__
-        if _type in native_numeric_types:
+        if other.__class__ in native_numeric_types:
             if not other:
                 if divide:
                     raise ZeroDivisionError()
                 return other
             not_var = True
         else:
-            try:
-                _other_expr = other.is_expression()
-            except AttributeError:
-                # This exception gets raised rarely in production models: to
-                # get here, other must be a numeric, but non-NumericValue,
-                # type that we haven't seen before.  Therefore, we can be a
-                # bit inefficient.
-                other = as_numeric(other)
-                _other_expr = other.is_expression()
-
             not_var = not other._potentially_variable()
-            if not_var and other.is_constant():
-                other = value(other)
-                if not other:
-                    if divide:
-                        raise ZeroDivisionError()
-                    else:
-                        return other
 
         if not_var:
             if divide:
@@ -1388,37 +1436,46 @@ class _LinearExpression(_ExpressionBase):
                 for i in self._coef:
                     self._coef[i] *= other
             return self
-
-        if divide:
-            return generate_expression(_div, self, other, targetRefs=-1)
         else:
-            return generate_expression(_mul, self, other, targetRefs=-1)
+            return generate_expression(
+                _div if divide else _mul, self, other, targetRefs=None )
 
-    def __idiv__(self, other):
-        return self.__imul__(other, divide=True)
+    def __idiv__(self, other, targetRefs=-2):
+        if targetRefs is not None:
+            self, other = _generate_expression__clone_if_needed(
+                targetRefs, True, self, other )
+        return self.__imul__(other, divide=True, targetRefs=None)
 
     # If the system has getrefcount, then we can reliably treat all
     # multiplications as "in-place" multiplications.  Note that if we
     # remove the clone_if_needed check for self in __imul__, then we
     # will to add it here.
     if _getrefcount_available:
-        __mul__ = __imul__
+        def __mul__(self, other):
+            self, other = _generate_expression__clone_if_needed(
+                -2, False, self, other )
+            return self.__imul__(other, targetRefs=None)
 
         # Note: treating __rmul__ the same as imul is fine, as it will
         # only be called when other is not a NumericValue object
         # ... that is, a constant.  SO, we don't have to worry about
         # preserving the variable order (too much).
-        __rmul__ = __imul__
+        __rmul__ = __mul__
 
         # As we do all division "in-place", all divisions are the same
         # as in-place divisions.
-        __div__ = __idiv__
+        def __div__(self, other):
+            self, other = _generate_expression__clone_if_needed(
+                -2, False, self, other )
+            return self.__idiv__(other, targetRefs=None)
 
-        def __neg__(self):
+        def __neg__(self, targetRefs=-2):
             # I wonder if this is a reasonable test, or if we should
             # just assume that when people explicitly call += that they
             # know what they are doing?
-            self = _generate_expression__clone_if_needed(self, self, 1)
+            if targetRefs is not None:
+                self, = _generate_expression__clone_if_needed(
+                    targetRefs, False, self )
 
             self._const *= -1
             for k in self._coef:
@@ -1427,59 +1484,48 @@ class _LinearExpression(_ExpressionBase):
 
 
 
-def generate_expression(etype, _self, _other, targetRefs=2):
-    if etype > _inplace: #and etype < 2*_inplace:#etype[0] == 'i':
+def generate_expression(etype, _self, _other, targetRefs=0):
+    #print "GE: __%s__(%s,%s)" % (etype,getrefcount(_self), getrefcount(_other))
+    if targetRefs is not None:
+        _self, _other = _generate_expression__clone_if_needed(
+            targetRefs, etype > _inplace, _self, _other )
+
+    if etype > _inplace:
         etype -= _inplace
-        targetRefs += 1
 
     # Note: because generate_expression is called by the __op__ methods
     # on NumericValue, we are guaranteed that _self is a NumericValue.
-    _self_var = _self._potentially_variable()
-    _self_expr = _self.is_expression()
-    if _self_expr:
-        self = _generate_expression__clone_if_needed(_self, _self, targetRefs)
-
-    elif _self.is_constant():
-        _self = _self()
+    if _self.__class__ in native_numeric_types:
+        _self_expr = False
+        _self_var = False
+    else:
+        _self_expr = _self.is_expression()
+        _self_var = _self._potentially_variable()
 
     if etype >= _unary:
         if etype == _neg:
             if _self.__class__ in native_numeric_types:
                 ans = -_self
-            elif not _self.is_expression() and _self._potentially_variable():
-                ans = _LinearExpression(0, [_self], (-1,))
+            elif not _self_expr and _self._potentially_variable():
+                ans = _LinearExpression()
+                ans._args.append(_self)
+                ans._coef[id(_self)] = -1
             else:
                 ans = _NegationExpression((_self,))
+                if not _getrefcount_available and _self_expr:
+                    _self._parent_expr = bypass_backreference or ref(ans)
         elif etype == _abs:
             ans = _AbsExpression((_self,))
+            if not _getrefcount_available and _self_expr:
+                _self._parent_expr = bypass_backreference or ans(ans)
         return ans
 
     if _other.__class__ in native_numeric_types:
         _other_expr = False
         _other_var = False
     else:
-        try:
-            _other_expr = _other.is_expression()
-        except AttributeError:
-            # This exception gets raised rarely in production models: to
-            # get here, other must be a numeric, but non-NumericValue,
-            # type that we haven't seen before.  Therefore, we can be a
-            # bit inefficient.
-            _other = as_numeric(_other)
-            _other_expr = _other.is_expression()
-        if _other.is_indexed():
-            raise TypeError(
-                "Argument for expression '%s' is an indexed numeric "
-                "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?"
-                % (etype, _other.name, ) )
-
         _other_var = _other._potentially_variable()
-        if _other_expr:
-            _other = _generate_expression__clone_if_needed(
-                _other, _other, targetRefs )
-        elif not _other_var and _other.is_constant():
-            _other = _other()
+        _other_expr = _other.is_expression()
 
     if etype < 0:
         #
@@ -1526,7 +1572,7 @@ def generate_expression(etype, _self, _other, targetRefs=2):
                 ans._args.append(_self)
                 ans._coef[id(_self)] = _other
                 return ans
-        return _ProductExpression((_self, _other))
+        ans = _ProductExpression((_self, _other))
 
     elif etype == _add:
         if not _self_var and _self.__class__ in native_numeric_types:
@@ -1537,31 +1583,31 @@ def generate_expression(etype, _self, _other, targetRefs=2):
         elif not _other_var and _other.__class__ in native_numeric_types \
            and not _other:
             return _self
-        if _self_var and not _self_expr:
-            if _LinearExpression_Pool:
-                ans = _LinearExpression_Pool.pop()
-            else:
-                ans = _LinearExpression()
-            ans._args.append(_self)
-            ans._coef[id(_self)] = 1
-            ans += _other
-            return ans
-        if _other_var and not _other_expr:
-            if _LinearExpression_Pool:
-                ans = _LinearExpression_Pool.pop()
-            else:
-                ans = _LinearExpression()
-            ans._args.append(_other)
-            ans._coef[id(_other)] = 1
-            # Special handling for the relatively common case of "0 + x"
-            # This is imporant, as this is how the initial independent
-            # _LinearExpression frequently gets formed for simple sums
-            if not _self_var and _self.__class__ in native_numeric_types:
-                ans._const += _self
-                return ans
-            else:
-                return ans.__radd__(_self)
-        return _SumExpression([_self, _other])
+        if not _self_expr:
+            if _self_var:
+                if _LinearExpression_Pool:
+                    ans = _LinearExpression_Pool.pop()
+                else:
+                    ans = _LinearExpression()
+                ans._args.append(_self)
+                ans._coef[id(_self)] = 1
+                return ans.__iadd__(_other, targetRefs=None)
+            if _other_var and not _other_expr:
+                if _LinearExpression_Pool:
+                    ans = _LinearExpression_Pool.pop()
+                else:
+                    ans = _LinearExpression()
+                ans._args.append(_other)
+                ans._coef[id(_other)] = 1
+                # Special handling for the relatively common case of "0 + x"
+                # This is imporant, as this is how the initial independent
+                # _LinearExpression frequently gets formed for simple sums
+                if not _self_var and _self.__class__ in native_numeric_types:
+                    ans._const += _self
+                    return ans
+                else:
+                    return ans.__radd__(_self, targetRefs=None)
+        ans = _SumExpression([_self, _other])
 
     elif etype == _sub:
         if not _self_var and _self.__class__ in native_numeric_types:
@@ -1572,31 +1618,29 @@ def generate_expression(etype, _self, _other, targetRefs=2):
         elif not _other_var and _other.__class__ in native_numeric_types \
            and not _other:
             return _self
-        if _self_var and not _self_expr:
-            if _LinearExpression_Pool:
-                ans = _LinearExpression_Pool.pop()
-            else:
-                ans = _LinearExpression()
-            ans._args.append(_self)
-            ans._coef[id(_self)] = 1
-            ans -= _other
-            return ans
-        if _other_var and not _other_expr:
-            if _LinearExpression_Pool:
-                ans = _LinearExpression_Pool.pop()
-            else:
-                ans = _LinearExpression()
-            ans._args.append(_other)
-            ans._coef[id(_other)] = -1
-            # Special handling for the relatively common case of "0 - x"
-            # This is imporant, as this is how the initial independent
-            # _LinearExpression frequently gets formed for simple sums
-            if not _self_var and _self.__class__ in native_numeric_types:
+        if not _self_expr:
+            if _self_var:
+                if _LinearExpression_Pool:
+                    ans = _LinearExpression_Pool.pop()
+                else:
+                    ans = _LinearExpression()
+                ans._args.append(_self)
+                ans._coef[id(_self)] = 1
+                return ans.__isub__(_other, targetRefs=None)
+            if _other_var and not _other_expr:
+                if _LinearExpression_Pool:
+                    ans = _LinearExpression_Pool.pop()
+                else:
+                    ans = _LinearExpression()
+                ans._args.append(_other)
+                ans._coef[id(_other)] = -1
+                # Special handling for the relatively common case of "0 - x"
+                # This is imporant, as this is how the initial independent
+                # _LinearExpression frequently gets formed for simple sums
+                assert not _self_var
                 ans._const += _self
                 return ans
-            else:
-                return ans.__rsub__(_self)
-        return _SumExpression([_self, -_other])
+        ans = _SumExpression([_self, -_other])
 
     elif etype == _div:
         if not _other_var and _other.__class__ in native_numeric_types:
@@ -1618,7 +1662,7 @@ def generate_expression(etype, _self, _other, targetRefs=2):
         elif not _self_var and _self.__class__ in native_numeric_types:
             if not _self:
                 return _self
-        return _DivisionExpression((_self,_other))
+        ans = _DivisionExpression((_self,_other))
 
     elif etype == _pow:
         if not _other_var and _other.__class__ in native_numeric_types:
@@ -1628,7 +1672,9 @@ def generate_expression(etype, _self, _other, targetRefs=2):
                 return 1
             elif not _self_var and _self.__class__ in native_numeric_types:
                 return _self ** _other
-        return _PowExpression((_self, _other))
+            else:
+                _other = as_numeric(_other)
+        ans = _PowExpression((_self, _other))
     else:
         raise RuntimeError("Unknown expression type '%s'" % etype)
 
@@ -1657,29 +1703,17 @@ def generate_relational_expression(etype, lhs, rhs):
     # arguments in the relational Expression's _args will be guaranteed
     # to be NumericValues (just as they are for all other Expressions).
     #
-    lhs = as_numeric(lhs)
-    if lhs.is_indexed():
-        raise TypeError(
-            "Argument for expression '%s' is an indexed numeric value "
-            "specified without an index: %s\n    Is variable or parameter "
-            "'%s' defined over an index that you did not specify?"
-            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
-               lhs.name, lhs.name))
-    elif lhs.is_expression():
-        if lhs.is_relational():
-            lhs_is_relational = True
+    lhs, rhs = _generate_expression__clone_if_needed(0, False, lhs, rhs)
 
-    rhs = as_numeric(rhs)
-    if rhs.is_indexed():
-        raise TypeError(
-            "Argument for expression '%s' is an indexed numeric value "
-            "specified without an index: %s\n    Is variable or parameter "
-            "'%s' defined over an index that you did not specify?"
-            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
-               rhs.name, rhs.name))
-    elif rhs.is_expression():
-        if rhs.is_relational():
-            rhs_is_relational = True
+    if lhs.__class__ in native_numeric_types:
+        lhs = as_numeric(lhs)
+    elif lhs.is_relational():
+        lhs_is_relational = True
+
+    if rhs.__class__ in native_numeric_types:
+        rhs = as_numeric(rhs)
+    elif rhs.is_relational():
+        rhs_is_relational = True
 
     if generate_relational_expression.chainedInequality is not None:
         prevExpr = generate_relational_expression.chainedInequality
@@ -1741,7 +1775,13 @@ def generate_relational_expression(etype, lhs, rhs):
             raise TypeError("Cannot create an EqualityExpression where "\
                   "one of the sub-expressions is a relational expression:\n"\
                   "    " + buf.getvalue().strip())
-        return _EqualityExpression((lhs,rhs))
+        ans = _EqualityExpression((lhs,rhs))
+        if not _getrefcount_available:
+            if lhs.is_expression():
+                lhs._parent_expr = ans
+            if rhs.is_expression():
+                rhs._parent_expr = ans
+        return ans
     else:
         if etype == _le:
             strict = (False,)
@@ -1762,6 +1802,8 @@ def generate_relational_expression(etype, lhs, rhs):
                 lhs._args = lhs._args + (rhs,)
                 lhs._strict = lhs._strict + strict
                 lhs._cloned_from = cloned_from
+                if not _getrefcount_available and rhs.is_expression():
+                    rhs._parent_expr = lhs
                 return lhs
             else:
                 buf = StringIO()
@@ -1777,6 +1819,8 @@ def generate_relational_expression(etype, lhs, rhs):
                 rhs._args = (lhs,) + rhs._args
                 rhs._strict = strict + rhs._strict
                 rhs._cloned_from = cloned_from
+                if not _getrefcount_available and lhs.is_expression():
+                    lhs._parent_expr = rhs
                 return rhs
             else:
                 buf = StringIO()
@@ -1785,11 +1829,13 @@ def generate_relational_expression(etype, lhs, rhs):
                       "where one of the sub-expressions is an equality "\
                       "expression:\n    " + buf.getvalue().strip())
         else:
-            return _InequalityExpression((lhs, rhs), strict, cloned_from)
-
-# [debugging] clone_counter is a count of the number of calls to
-# expr.clone() made during expression generation.
-generate_relational_expression.clone_counter = 0
+            ans = _InequalityExpression((lhs, rhs), strict, cloned_from)
+            if not _getrefcount_available:
+                if lhs.is_expression():
+                    lhs._parent_expr = ans
+                if rhs.is_expression():
+                    rhs._parent_expr = ans
+            return ans
 
 # [functionality] chainedInequality allows us to generate symbolic
 # expressions of the type "a < b < c".  This provides a buffer to hold
@@ -1797,43 +1843,14 @@ generate_relational_expression.clone_counter = 0
 generate_relational_expression.chainedInequality = None
 
 def generate_intrinsic_function_expression(arg, name, fcn):
-    # Special handling: if there are no Pyomo Modeling Objects in the
-    # argument list, then evaluate the expression and return the result.
-    pyomo_expression = False
-    if isinstance(arg, NumericValue) or isinstance(arg, Component):
-        # TODO: efficiency: we already know this is a NumericValue -
-        # so we should be able to avoid the call to as_numeric()
-        # below (expecially since all intrinsic functions are unary
-        # operators.
-        pyomo_expression = True
-    if not pyomo_expression:
+    arg, = _generate_expression__clone_if_needed(-2, False, arg)
+    if arg.__class__ in native_types:
         return fcn(arg)
-    elif arg.is_constant():
-        return fcn(arg())
 
-    if arg.is_indexed():
-        raise ValueError("Argument for intrinsic function '%s' is an "\
-            "n-ary numeric value: %s\n    Have you given variable or "\
-            "parameter '%s' an index?" % (name, arg.name, arg.name))
-    return _UnaryFunctionExpression((arg,), name, fcn)
-
-# [debugging] clone_counter is a count of the number of calls to
-# expr.clone() made during expression generation.
-generate_intrinsic_function_expression.clone_counter = 0
-
-
-
-class TreeWalkerHelper(object):
-    stack = []
-    max = 0
-    inuse = False
-    typeList = { _SumExpression: 1,
-                 _InequalityExpression: 1,
-                 _EqualityExpression: 1,
-                 _ProductExpression: 2,
-                 _NegationExpression: 3,
-                 _LinearExpression: 4,
-    }
+    ans = _UnaryFunctionExpression((arg,), name, fcn)
+    if not _getrefcount_available:
+        ans._parent_expr = bypass_backreference or ref(self)
+    return ans
 
 def _clear_expression_pool():
     global _LinearExpression_Pool
