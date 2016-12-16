@@ -1003,7 +1003,7 @@ class Expr_if(_ExpressionBase):
         # TODO: This used to unilaterally convert the args with
         # as_numeric().  Verify if not doing that is OK.
         self._args = _generate_expression__clone_if_needed(
-            -2, False, IF, THEN, ELSE )
+            -3, False, IF, THEN, ELSE )
         if not _getrefcount_available:
             self._parent_expr = None
             for a in self._args:
