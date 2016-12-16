@@ -1,15 +1,15 @@
 GLPSOL: GLPK LP/MIP Solver, v4.60
 Parameter(s) specified in the command line:
- --nointopt --log warehouse.log --write /var/folders/h_/2_t9s0nx6750h_zrq8t6nh64000sc6/T/tmpKbLEx0.glpk.raw
- --wglp /var/folders/h_/2_t9s0nx6750h_zrq8t6nh64000sc6/T/tmpdu5gBZ.glpk.glp
- --cpxlp /var/folders/h_/2_t9s0nx6750h_zrq8t6nh64000sc6/T/tmpEJM3kH.pyomo.lp
-Reading problem data from '/var/folders/h_/2_t9s0nx6750h_zrq8t6nh64000sc6/T/tmpEJM3kH.pyomo.lp'...
-/var/folders/h_/2_t9s0nx6750h_zrq8t6nh64000sc6/T/tmpEJM3kH.pyomo.lp:130: warning: lower bound of variable 'x13' redefined
-/var/folders/h_/2_t9s0nx6750h_zrq8t6nh64000sc6/T/tmpEJM3kH.pyomo.lp:130: warning: upper bound of variable 'x13' redefined
+ --log warehouse.log --nointopt --write /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpllu27kp6.glpk.raw
+ --wglp /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpl3mhq7v5.glpk.glp
+ --cpxlp /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp1p1p8xam.pyomo.lp
+Reading problem data from '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp1p1p8xam.pyomo.lp'...
+/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp1p1p8xam.pyomo.lp:130: warning: lower bound of variable 'x13' redefined
+/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp1p1p8xam.pyomo.lp:130: warning: upper bound of variable 'x13' redefined
 18 rows, 16 columns, 40 non-zeros
 3 integer variables, all of which are binary
 133 lines were read
-Writing problem data to '/var/folders/h_/2_t9s0nx6750h_zrq8t6nh64000sc6/T/tmpdu5gBZ.glpk.glp'...
+Writing problem data to '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpl3mhq7v5.glpk.glp'...
 120 lines were written
 Scaling...
  A: min|aij| =  1.000e+00  max|aij| =  1.000e+00  ratio =  1.000e+00
@@ -39,5 +39,5 @@ Integer optimization begins...
 INTEGER OPTIMAL SOLUTION FOUND
 Time used:   0.0 secs
 Memory used: 0.0 Mb (45875 bytes)
-Writing MIP solution to '/var/folders/h_/2_t9s0nx6750h_zrq8t6nh64000sc6/T/tmpKbLEx0.glpk.raw'...
+Writing MIP solution to '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpllu27kp6.glpk.raw'...
 43 lines were written
