@@ -1,0 +1,43 @@
+GLPSOL: GLPK LP/MIP Solver, v4.60
+Parameter(s) specified in the command line:
+ --log warehouse.log --nointopt --write /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpllu27kp6.glpk.raw
+ --wglp /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpl3mhq7v5.glpk.glp
+ --cpxlp /var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp1p1p8xam.pyomo.lp
+Reading problem data from '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp1p1p8xam.pyomo.lp'...
+/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp1p1p8xam.pyomo.lp:130: warning: lower bound of variable 'x13' redefined
+/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmp1p1p8xam.pyomo.lp:130: warning: upper bound of variable 'x13' redefined
+18 rows, 16 columns, 40 non-zeros
+3 integer variables, all of which are binary
+133 lines were read
+Writing problem data to '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpl3mhq7v5.glpk.glp'...
+120 lines were written
+Scaling...
+ A: min|aij| =  1.000e+00  max|aij| =  1.000e+00  ratio =  1.000e+00
+Problem data seem to be well scaled
+Constructing initial basis...
+Size of triangular part is 18
+GLPK Simplex Optimizer, v4.60
+18 rows, 16 columns, 40 non-zeros
+Preprocessing...
+17 rows, 15 columns, 39 non-zeros
+Scaling...
+ A: min|aij| =  1.000e+00  max|aij| =  1.000e+00  ratio =  1.000e+00
+Problem data seem to be well scaled
+Constructing initial basis...
+Size of triangular part is 17
+      0: obj =   4.423000000e+03 inf =   4.000e+00 (4)
+      3: obj =   5.302000000e+03 inf =   0.000e+00 (0)
+*    12: obj =   2.745000000e+03 inf =   0.000e+00 (0)
+OPTIMAL LP SOLUTION FOUND
+GLPK Integer Optimizer, v4.60
+18 rows, 16 columns, 40 non-zeros
+3 integer variables, all of which are binary
+Integer optimization begins...
++    12: mip =     not found yet >=              -inf        (1; 0)
++    12: >>>>>   2.745000000e+03 >=   2.745000000e+03   0.0% (1; 0)
++    12: mip =   2.745000000e+03 >=     tree is empty   0.0% (0; 1)
+INTEGER OPTIMAL SOLUTION FOUND
+Time used:   0.0 secs
+Memory used: 0.0 Mb (45875 bytes)
+Writing MIP solution to '/var/folders/rk/s8ynpv0n28ngs7jjjnfwpw98000jhs/T/tmpllu27kp6.glpk.raw'...
+43 lines were written

@@ -1,0 +1,64 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.01] Creating model
+[    0.01] Applying solver
+[    0.04] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: optimal
+      Function Value: 2.0
+    Solver results file: results.yml
+[    0.05] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: 2.0
+  Upper bound: 2.0
+  Number of objectives: 1
+  Number of constraints: 17
+  Number of variables: 10
+  Number of nonzeros: 31
+  Sense: minimize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 7
+      Number of created subproblems: 7
+  Error rc: 0
+  Time: 0.0258951187134
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Message: None
+  Objective:
+    o:
+      Value: 2
+  Variable:
+    _gdp_relax_bigm.d[0,1].indicator_var:
+      Value: 1
+    _gdp_relax_bigm.d[1,0].indicator_var:
+      Value: 1
+    _gdp_relax_bigm.d[2,1].indicator_var:
+      Value: 1
+    x[0]:
+      Value: 2
+    x[2]:
+      Value: 5
+  Constraint: No values

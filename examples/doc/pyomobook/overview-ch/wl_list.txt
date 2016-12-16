@@ -1,0 +1,66 @@
+6 Set Declarations
+    one_per_cust_index : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+        [1, 2, 3, 4]
+    warehouse_active_index : Dim=0, Dimen=1, Size=12, Domain=None, Ordered=False, Bounds=None
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    x_index : Dim=0, Dimen=2, Size=12, Domain=None, Ordered=False, Bounds=None
+        Virtual
+    x_index_0 : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['Ashland', 'Harlingen', 'Memphis']
+    x_index_1 : Dim=0, Dimen=1, Size=4, Domain=None, Ordered=False, Bounds=None
+        ['Chicago', 'Houston', 'LA', 'NYC']
+    y_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=None
+        ['Ashland', 'Harlingen', 'Memphis']
+
+2 Var Declarations
+    x : Size=12, Index=x_index
+        Key                      : Lower : Value : Upper : Fixed : Stale : Domain
+          ('Ashland', 'Chicago') :     0 :  None :     1 : False :  True :  Reals
+          ('Ashland', 'Houston') :     0 :  None :     1 : False :  True :  Reals
+               ('Ashland', 'LA') :     0 :  None :     1 : False :  True :  Reals
+              ('Ashland', 'NYC') :     0 :  None :     1 : False :  True :  Reals
+        ('Harlingen', 'Chicago') :     0 :  None :     1 : False :  True :  Reals
+        ('Harlingen', 'Houston') :     0 :  None :     1 : False :  True :  Reals
+             ('Harlingen', 'LA') :     0 :  None :     1 : False :  True :  Reals
+            ('Harlingen', 'NYC') :     0 :  None :     1 : False :  True :  Reals
+          ('Memphis', 'Chicago') :     0 :  None :     1 : False :  True :  Reals
+          ('Memphis', 'Houston') :     0 :  None :     1 : False :  True :  Reals
+               ('Memphis', 'LA') :     0 :  None :     1 : False :  True :  Reals
+              ('Memphis', 'NYC') :     0 :  None :     1 : False :  True :  Reals
+    y : Size=3, Index=y_index
+        Key       : Lower : Value : Upper : Fixed : Stale : Domain
+          Ashland :     0 :  None :     1 : False :  True : Binary
+        Harlingen :     0 :  None :     1 : False :  True : Binary
+          Memphis :     0 :  None :     1 : False :  True : Binary
+
+1 Objective Declarations
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Sense    : Expression
+        None :   True : minimize : 1956*x[Harlingen,NYC] + 1606*x[Harlingen,LA] + 1410*x[Harlingen,Chicago] + 330*x[Harlingen,Houston] + 1096*x[Memphis,NYC] + 1792*x[Memphis,LA] + 531*x[Memphis,Chicago] + 567*x[Memphis,Houston] + 485*x[Ashland,NYC] + 2322*x[Ashland,LA] + 324*x[Ashland,Chicago] + 1236*x[Ashland,Houston]
+
+3 Constraint Declarations
+    num_warehouses : Size=1, Index=None, Active=True
+        Key  : Lower : Body                                   : Upper : Active
+        None :  -Inf : y[Harlingen] + y[Memphis] + y[Ashland] :   2.0 :   True
+    one_per_cust : Size=4, Index=one_per_cust_index, Active=True
+        Key : Lower : Body                                                           : Upper : Active
+          1 :   1.0 :             x[Harlingen,NYC] + x[Memphis,NYC] + x[Ashland,NYC] :   1.0 :   True
+          2 :   1.0 :                x[Harlingen,LA] + x[Memphis,LA] + x[Ashland,LA] :   1.0 :   True
+          3 :   1.0 : x[Harlingen,Chicago] + x[Memphis,Chicago] + x[Ashland,Chicago] :   1.0 :   True
+          4 :   1.0 : x[Harlingen,Houston] + x[Memphis,Houston] + x[Ashland,Houston] :   1.0 :   True
+    warehouse_active : Size=12, Index=warehouse_active_index, Active=True
+        Key : Lower : Body                                : Upper : Active
+          1 :  -Inf :     x[Harlingen,NYC] - y[Harlingen] :   0.0 :   True
+          2 :  -Inf :      x[Harlingen,LA] - y[Harlingen] :   0.0 :   True
+          3 :  -Inf : x[Harlingen,Chicago] - y[Harlingen] :   0.0 :   True
+          4 :  -Inf : x[Harlingen,Houston] - y[Harlingen] :   0.0 :   True
+          5 :  -Inf :         x[Memphis,NYC] - y[Memphis] :   0.0 :   True
+          6 :  -Inf :          x[Memphis,LA] - y[Memphis] :   0.0 :   True
+          7 :  -Inf :     x[Memphis,Chicago] - y[Memphis] :   0.0 :   True
+          8 :  -Inf :     x[Memphis,Houston] - y[Memphis] :   0.0 :   True
+          9 :  -Inf :         x[Ashland,NYC] - y[Ashland] :   0.0 :   True
+         10 :  -Inf :          x[Ashland,LA] - y[Ashland] :   0.0 :   True
+         11 :  -Inf :     x[Ashland,Chicago] - y[Ashland] :   0.0 :   True
+         12 :  -Inf :     x[Ashland,Houston] - y[Ashland] :   0.0 :   True
+
+12 Declarations: x_index_0 x_index_1 x_index x y_index y obj one_per_cust_index one_per_cust warehouse_active_index warehouse_active num_warehouses

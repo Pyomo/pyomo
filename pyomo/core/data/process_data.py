@@ -656,7 +656,8 @@ def _process_table(cmd, _model, _data, _default, options=None):
             if not col in cmap:
                 raise IOError("Unexpected table column '%s' for index set '%s'" % (col, sname))
             tmp.append(cmap[col])
-        cmap[sname] = tmp
+        if not sname in cmap:
+            cmap[sname] = tmp
         cols = tmp
         #
         _cmd = ['set', sname, ':=']
@@ -673,7 +674,6 @@ def _process_table(cmd, _model, _data, _default, options=None):
         _process_set(_cmd, _model, _data)
     #
     _i=0
-    #print "HERE ncol", ncolumns
     if ncolumns == 0:
         raise IOError
     for vname in cmd[3]:
