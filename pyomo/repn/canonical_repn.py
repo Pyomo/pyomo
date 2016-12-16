@@ -29,7 +29,22 @@ from pyomo.core.base.objective import (_GeneralObjectiveData,
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector, Connector
 from pyomo.core.base.var import SimpleVar, Var, _GeneralVarData, _VarData
 
-from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper
+from pyomo.core.base import expr_pyomo4
+
+class TreeWalkerHelper(object):
+    stack = []
+    max = 0
+    inuse = False
+    typeList = {
+        expr_pyomo4._SumExpression: 1,
+        expr_pyomo4._InequalityExpression: 1,
+        expr_pyomo4._EqualityExpression: 1,
+        expr_pyomo4._ProductExpression: 2,
+        expr_pyomo4._NegationExpression: 3,
+        expr_pyomo4._LinearExpression: 4,
+        expr_pyomo4._DivisionExpression: 5,
+        _GeneralExpressionData : 6,
+    }
 
 import six
 from six import iterkeys, itervalues, iteritems, StringIO
