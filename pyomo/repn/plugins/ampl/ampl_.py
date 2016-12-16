@@ -142,6 +142,14 @@ if _using_pyomo4_trees:
     _op_template[expr._NegationExpression] = "o16{C}\n"
     _op_comment[expr._NegationExpression] = "\t#-"
 
+
+def _get_bound(exp):
+    if exp is None:
+        return None
+    if is_fixed(exp):
+        return value(exp)
+    raise ValueError("non-fixed bound or weight: " + str(exp))
+
 class StopWatch(object):
 
     def __init__(self):
@@ -204,7 +212,12 @@ class ModelSOS(object):
         ampl_var_id = self.ampl_var_id
         varID_map = self.varID_map
 
-        if soscondata.num_variables() == 0:
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
+
+        if len(sos_items) == 0:
             return
 
         level = soscondata.level
@@ -224,9 +237,15 @@ class ModelSOS(object):
                              "which is not supported by the NL file interface" \
                                  % (soscondata.name, level))
 
-        for vardata, weight in soscondata.get_items():
+        for vardata, weight in sos_items:
+            weight = _get_bound(weight)
+            if weight < 0:
+                raise ValueError(
+                    "Cannot use negative weight %f "
+                    "for variable %s is special ordered "
+                    "set %s " % (weight, vardata.name, soscondata.name))
             if vardata.fixed:
-                raise RuntimeError(
+                raise ValueError(
                     "SOSConstraint '%s' includes a fixed Variable '%s'. "
                     "This is currently not supported. Deactivate this constraint "
                     "in order to proceed"
@@ -366,13 +385,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._varID_map = None
         self._op_string = None
         return filename, symbol_map
-
-    def _get_bound(self, exp):
-        if exp is None:
-            return None
-        if is_fixed(exp):
-            return value(exp)
-        raise ValueError("non-fixed bound: " + str(exp))
 
     def _print_nonlinear_terms_NL(self, exp):
         OUTPUT = self._OUTPUT
@@ -892,9 +904,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 L = None
                 U = None
                 if constraint_data.lower is not None:
-                    L = self._get_bound(constraint_data.lower)
+                    L = _get_bound(constraint_data.lower)
                 if constraint_data.upper is not None:
-                    U = self._get_bound(constraint_data.upper)
+                    U = _get_bound(constraint_data.upper)
 
                 offset = ampl_repn._constant
                 #if constraint_data.equality:
@@ -1528,27 +1540,24 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         "file." % (var.name, model.name))
                 if var.value is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
-                L = var.value
-                U = var.value
+                L = U = _get_bound(var.value)
             else:
-                L = var.lb
+                L = _get_bound(var.lb)
                 if L == -infinity:
                     L = None
-                U = var.ub
+                U = _get_bound(var.ub)
                 if U == infinity:
                     U = None
             if L is not None:
-                Lv = value(L)
                 if U is not None:
-                    Uv = value(U)
-                    if Lv == Uv:
-                        var_bound_list.append("4 %r\n" % (Lv))
+                    if L == U:
+                        var_bound_list.append("4 %r\n" % (L))
                     else:
-                        var_bound_list.append("0 %r %r\n" % (Lv, Uv))
+                        var_bound_list.append("0 %r %r\n" % (L, U))
                 else:
-                    var_bound_list.append("2 %r\n" % (Lv))
+                    var_bound_list.append("2 %r\n" % (L))
             elif U is not None:
-                var_bound_list.append("1 %r\n" % (value(U)))
+                var_bound_list.append("1 %r\n" % (U))
             else:
                 var_bound_list.append("3\n")
 

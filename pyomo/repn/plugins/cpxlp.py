@@ -41,6 +41,13 @@ def _no_negative_zero(val):
         return 0
     return val
 
+def _get_bound(exp):
+    if exp is None:
+        return None
+    if is_fixed(exp):
+        return value(exp)
+    raise ValueError("non-fixed bound or weight: " + str(exp))
+
 class ProblemWriter_cpxlp(AbstractProblemWriter):
 
     pyomo.util.plugin.alias('cpxlp', 'Generate the corresponding CPLEX LP file')
@@ -164,13 +171,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         self._referenced_variable_ids.clear()
 
         return output_filename, symbol_map
-
-    def _get_bound(self, exp):
-        if exp is None:
-            return None
-        if is_fixed(exp):
-            return value(exp)
-        raise ValueError("non-fixed bound: " + str(exp))
 
     def _print_expr_canonical(self,
                               x,
@@ -390,10 +390,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         """
         Prints the SOS constraint associated with the _SOSConstraintData object
         """
-        if soscondata.num_variables() == 0:
+
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
+
+        if len(sos_items) == 0:
             return
 
-        sos_items = list(soscondata.get_items())
         level = soscondata.level
 
         output_file.write('%s: S%s::\n'
@@ -401,6 +406,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         sos_template_string = "%s:%"+self._precision_string+"\n"
         for vardata, weight in sos_items:
+            weight = _get_bound(weight)
+            if weight < 0:
+                raise ValueError(
+                    "Cannot use negative weight %f "
+                    "for variable %s is special ordered "
+                    "set %s " % (weight, vardata.name, soscondata.name))
             if vardata.fixed:
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
@@ -672,7 +683,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                               False,
                                               column_order)
                 bound = constraint_data.lower
-                bound = self._get_bound(bound) - offset
+                bound = _get_bound(bound) - offset
                 output_file.write(eq_string_template
                                   % (_no_negative_zero(bound)))
                 output_file.write("\n")
@@ -691,7 +702,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   False,
                                                   column_order)
                     bound = constraint_data.lower
-                    bound = self._get_bound(bound) - offset
+                    bound = _get_bound(bound) - offset
                     output_file.write(geq_string_template
                                       % (_no_negative_zero(bound)))
                 if constraint_data.upper is not None:
@@ -708,7 +719,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   False,
                                                   column_order)
                     bound = constraint_data.upper
-                    bound = self._get_bound(bound) - offset
+                    bound = _get_bound(bound) - offset
                     output_file.write(leq_string_template
                                       % (_no_negative_zero(bound)))
 
@@ -815,8 +826,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 vardata_lb = value(vardata.value)
                 vardata_ub = value(vardata.value)
             else:
-                vardata_lb = self._get_bound(vardata.lb)
-                vardata_ub = self._get_bound(vardata.ub)
+                vardata_lb = _get_bound(vardata.lb)
+                vardata_ub = _get_bound(vardata.ub)
 
             name_to_output = variable_symbol_dictionary[id(vardata)]
 

@@ -26,6 +26,7 @@ class Test_sos(unittest.TestCase):
     def test_pickle(self):
         v = variable()
         s = sos([v],weights=[1])
+        self.assertEqual(len(s), 1)
         self.assertIs(s.variables[0], v)
         self.assertTrue(v in s)
         self.assertEqual(s.weights[0], 1)
@@ -33,6 +34,7 @@ class Test_sos(unittest.TestCase):
         self.assertEqual(s.parent, None)
         sup = pickle.loads(
             pickle.dumps(s))
+        self.assertEqual(len(sup), 1)
         self.assertIsNot(sup.variables[0], v)
         self.assertFalse(v in sup)
         self.assertEqual(sup.weights[0], 1)
@@ -47,6 +49,7 @@ class Test_sos(unittest.TestCase):
         bup = pickle.loads(
             pickle.dumps(b))
         sup = bup.s
+        self.assertEqual(len(sup), 1)
         self.assertIs(sup.variables[0], bup.v)
         self.assertTrue(bup.v in sup)
         self.assertEqual(sup.weights[0], 1)
@@ -57,6 +60,7 @@ class Test_sos(unittest.TestCase):
         s = sos([])
         self.assertTrue(s.parent is None)
         self.assertEqual(s.ctype, SOSConstraint)
+        self.assertEqual(len(s), 0)
         self.assertEqual(s.variables, ())
         self.assertEqual(s.weights, ())
         self.assertEqual(s.level, 1)
@@ -65,6 +69,7 @@ class Test_sos(unittest.TestCase):
         s = sos(vlist)
         self.assertTrue(s.parent is None)
         self.assertEqual(s.ctype, SOSConstraint)
+        self.assertEqual(len(s), 2)
         self.assertEqual(len(s.variables), 2)
         for v in vlist:
             self.assertTrue(v in s)
@@ -75,11 +80,15 @@ class Test_sos(unittest.TestCase):
         s = sos(vlist, weights=[3.5,4.5], level=2)
         self.assertTrue(s.parent is None)
         self.assertEqual(s.ctype, SOSConstraint)
+        self.assertEqual(len(s), 2)
         self.assertEqual(len(s.variables), 2)
         for v in vlist:
             self.assertTrue(v in s)
         self.assertEqual(s.weights, tuple([3.5, 4.5]))
         self.assertEqual(s.level, 2)
+        for i, (v,w) in enumerate(s.items()):
+            self.assertIs(v, vlist[i])
+            self.assertEqual(w, s.weights[i])
 
     def test_type(self):
         s = sos([])

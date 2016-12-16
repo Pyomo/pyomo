@@ -64,6 +64,10 @@ class ISOS(IComponent, _IActiveComponent):
             if id(x) == id(v):
                 return True
 
+    def __len__(self):
+        """The number of members in the set"""
+        return len(self.variables)
+
 class sos(ISOS):
     """A Special Ordered Set of type n."""
     # To avoid a circular import, for the time being, this
