@@ -586,15 +586,15 @@ def p_filename(p):
         p[0] = p[1]+p[2]+p[3]
 
 #
-# the ampl dat file lexer and yaccer only need to be
+# the DAT file lexer and yaccer only need to be
 # created once, so have the corresponding objects
 # accessible at module scope.
 #
 
 tabmodule = 'parse_table_datacmds'
 
-ampl_dat_lexer = None
-ampl_dat_yaccer = None
+dat_lexer = None
+dat_yaccer = None
 
 #
 # The function that performs the parsing
@@ -602,8 +602,8 @@ ampl_dat_yaccer = None
 def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
 
     global debugging
-    global ampl_dat_lexer
-    global ampl_dat_yaccer
+    global dat_lexer
+    global dat_yaccer
 
     if outputdir is None:
         # Try and write this into the module source...
@@ -614,7 +614,7 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
             outputdir = os.getcwd()
 
     # if the lexer/yaccer haven't been initialized, do so.
-    if ampl_dat_lexer is None:
+    if dat_lexer is None:
         #
         # Always remove the parser.out file, which is generated to
         # create debugging
@@ -632,11 +632,11 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
                 os.remove(tabmodule+".pyc")
             debugging=True
 
-        ampl_dat_lexer = lex.lex()
+        dat_lexer = lex.lex()
         #
         tmpsyspath = sys.path
         sys.path.append(outputdir)
-        ampl_dat_yaccer = yacc.yacc(debug=debug, 
+        dat_yaccer = yacc.yacc(debug=debug, 
                                     tabmodule=tabmodule, 
                                     outputdir=outputdir,
                                     optimize=True)
@@ -656,7 +656,7 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
     if not data is None:
         _parsedata=data
         ply_init(_parsedata)
-        ampl_dat_yaccer.parse(data, lexer=ampl_dat_lexer, debug=debug)
+        dat_yaccer.parse(data, lexer=dat_lexer, debug=debug)
     elif not filename is None:
         f = open(filename, 'r')
         try:
@@ -670,7 +670,7 @@ def parse_data_commands(data=None, filename=None, debug=0, outputdir=None):
         del f
         _parsedata=data
         ply_init(_parsedata)
-        ampl_dat_yaccer.parse(data, lexer=ampl_dat_lexer, debug=debug)
+        dat_yaccer.parse(data, lexer=dat_lexer, debug=debug)
     else:
         _parse_info = None
     #
