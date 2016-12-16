@@ -21,6 +21,11 @@ from pyomo.core.base.plugin import *
 from pyomo.core.base.sets import Set
 from pyomo.core.data.parse_datacmds import parse_data_commands
 
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
+
 from six.moves import xrange
 try:
     unicode
@@ -93,30 +98,27 @@ def _preprocess_data(cmd):
     tpl = []
     for token in cmd:
         if state == 0:
-            # Before the :=
-            if token == ':=':
-                state = 1
-                newcmd.append(token)
-            elif token == '[':
-                state = 3
-            else:
-                newcmd.append(token)
-
-        elif state == 1:
-            # After := and before a '('
             if type(token) in numlist:
                 newcmd.append(token)
             elif token == ',':
-                raise ValueError("Unexpected comma outside of a tuple declaration")
+                raise ValueError("Unexpected comma outside of (), {} or [] declarations")
             elif token == '(':
-                state = 2
+                state = 1
             elif token == ')':
                 raise ValueError("Unexpected ')' that does not follow a '('")
+            elif token == '{':
+                state = 2
+            elif token == '}':
+                raise ValueError("Unexpected '}' that does not follow a '{'")
+            elif token == '[':
+                state = 3
+            elif token == ']':
+                raise ValueError("Unexpected ']' that does not follow a '['")
             else:
                 newcmd.append(_process_token(token))
 
-        elif state == 2:
-            # After := and after a '('
+        elif state == 1:
+            # After a '('
             if type(token) in numlist:
                 tpl.append(token)
             elif token == ',':
@@ -126,12 +128,27 @@ def _preprocess_data(cmd):
             elif token == ')':
                 newcmd.append( tuple(tpl) )
                 tpl = []
-                state = 1
+                state = 0
             else:
                 tpl.append(_process_token(token))
    
+        elif state == 2: 
+            # After a '{'
+            if type(token) in numlist:
+                tpl.append(token)
+            elif token == ',':
+                pass
+            elif token == '{':
+                raise ValueError("Two '{'s follow each other in the data")
+            elif token == '}':
+                newcmd.append( tpl )    # Keep this as a list, so we can distinguish it while parsing tables
+                tpl = []
+                state = 0
+            else:
+                tpl.append(_process_token(token))
+
         elif state == 3: 
-            # Before := and after a '['
+            # After a '['
             if type(token) in numlist:
                 tpl.append(token)
             elif token == ',':
@@ -145,8 +162,10 @@ def _preprocess_data(cmd):
             else:
                 tpl.append(_process_token(token))
 
-    if state == 2:
+    if state == 1:
         raise ValueError("Data ends without tuple ending")
+    elif state == 2:
+        raise ValueError("Data ends without braces ending")
     elif state == 3:
         raise ValueError("Data ends without bracket ending")
     if generate_debug_messages:
@@ -158,7 +177,7 @@ def _process_set(cmd, _model, _data):
     """
     Called by _process_data() to process a set declaration.
     """
-    print("SET %s" % cmd)
+    #print("SET %s" % cmd)
     generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
     if generate_debug_messages:
         logger.debug("DEBUG: _process_set(start) %s",cmd)
@@ -195,7 +214,7 @@ def _process_set(cmd, _model, _data):
             ndx=cmd[i]
             for j in xrange(0,len(ndx1)):
                 if cmd[i+j+1] == "+":
-                    print("DATA %s %s" % (ndx1[j], cmd[i]))
+                    #print("DATA %s %s" % (ndx1[j], cmd[i]))
                     _data[cmd[1]][None].append((ndx1[j], cmd[i]))
             i += len(ndx1)+1
     else:
@@ -244,8 +263,8 @@ def _process_set_data(cmd, sname, _model):
         else:
             template=list(cmd[i])
             ndx=[]
-            for kk in range(len(tmp)):
-                if tmp[kk] == '*':
+            for kk in range(len(template)):
+                if template[kk] == '*':
                     ndx.append(kk)
         i += 1
     if generate_debug_messages:
@@ -257,7 +276,7 @@ def _process_param(cmd, _model, _data, _default, index=None, param=None, ncolumn
     """
     Called by _process_data to process data for a Parameter declaration
     """
-    print('PARAM %s index=%s ncolumns=%s' %(cmd, index, ncolumns))
+    #print('PARAM %s index=%s ncolumns=%s' %(cmd, index, ncolumns))
     generate_debug_messages = __debug__ and logger.isEnabledFor(logging.DEBUG)
     if generate_debug_messages:
         logger.debug("DEBUG: _process_param(start) %s",cmd)
@@ -576,7 +595,7 @@ def _process_include(cmd, _model, _data, _default, options=None):
         for cmd in scenarios[scenario]:
             if scenario not in _data:
                 _data[scenario] = {}
-            if cmd[0] in ('include', 'import', 'load'):
+            if cmd[0] in ('include', 'load'):
                 _tmpdata = {}
                 _process_data(cmd, _model, _tmpdata, _default, Filename, Lineno)
                 if scenario is None:
@@ -592,92 +611,114 @@ def _process_include(cmd, _model, _data, _default, options=None):
                         else:
                             raise IOError("Cannot define a scenario within another scenario")
             else:
-                print("HERE - X %s" % cmd)
                 _process_data(cmd, _model, _data[scenario], _default, Filename, Lineno)
     return True
 
 
-def X_process_include(cmd, _model, _data, _default):
-    if len(cmd) == 1:
-        raise IOError("Cannot execute 'include' command without a filename")
-    if len(cmd) > 2:
-        raise IOError("The 'include' command only accepts a single filename")
-
-    global Filename
-    Filename = cmd[1]
-    global Lineno
-    Lineno = 0
-    cmd=""
-    status=True
-    INPUT=open(Filename,'r')
-    for line in INPUT:
-        Lineno = Lineno + 1
-        line = re.sub(":"," :",line)
-        line = line.strip()
-        if line == "" or line[0] == '#':
-            continue
-        cmd = cmd + " " + line
-        if ';' in cmd:
-            #
-            # We assume that a ';' indicates an end-of-command declaration.
-            # However, the user might have put multiple commands on a single
-            # line, so we need to split the line based on these values.
-            # BUT, at the end of the line we should see an 'empty' command,
-            # which we ignore.
-            #
-            for item in cmd.split(';'):
-                item = item.strip()
-                if item != "":
-                    _process_data(quote_split("[\t ]+",item), _model, _data, _default, Filename, Lineno)
-                cmd = ""
-    if cmd != "":
-        INPUT.close()
-        raise IOError("ERROR: There was unprocessed text at the end of the data file!: \"" + cmd + "\"")
-    INPUT.close()
-    return status
-
-
 def _process_table(cmd, _model, _data, _default, options=None):
-    #print "TABLE", cmd
+    #print("TABLE %s" % cmd)
     #
-    options = Options(**cmd[1])
+    _options = {}
+    _set = OrderedDict()
+    _param = OrderedDict()
+    _labels = []
+
+    _cmd = cmd[1]
+    _cmd_len = len(_cmd)
+    name = None
+    i = 0
+    while i < _cmd_len:
+        try:
+            #print("CMD i=%s cmd=%s" % (i, _cmd[i:]))
+            #
+            # This should not be error prone, so we treat errors
+            # with a general exception
+            #
+
+            #
+            # Processing labels
+            #
+            if _cmd[i] == ':':
+                i += 1
+                while i < _cmd_len:
+                    _labels.append(_cmd[i])
+                    i += 1
+                continue
+            #
+            # Processing options
+            #
+            name = _cmd[i]
+            if i+1 == _cmd_len:
+                _param[name] = []
+                _labels = ['Z']
+                i += 1
+                continue
+            if _cmd[i+1] == '=':
+                if type(_cmd[i+2]) is list:
+                    _set[name] = _cmd[i+2]
+                else:
+                    _options[name] = _cmd[i+2]
+                i += 3
+                continue
+            # This should be a parameter declaration
+            if not type(_cmd[i+1]) is tuple:
+                raise IOError
+            if i+2 < _cmd_len and _cmd[i+2] == '=':
+                _param[name] = (_cmd[i+1], _cmd[i+3][0])
+                i += 4
+            else:
+                _param[name] = _cmd[i+1]
+                i += 2
+        except:
+            raise IOError("Error parsing table options: %s" % name)
+
+
+    #print("_options %s" % _options)
+    #print("_set %s" % _set)
+    #print("_param %s" % _param)
+    #print("_labels %s" % _labels)
+#
+    options = Options(**_options)
     for key in options:
         if not key in ['columns']:
             raise ValueError("Unknown table option '%s'" % key)
     #
     ncolumns=options.columns
     if ncolumns is None:
-        ncolumns = len(cmd[4])
+        ncolumns = len(_labels)
         if ncolumns == 0:
-            if not (len(cmd[3]) == 1 and len(cmd[3][cmd[3].keys()[0]]) == 0):
+            if not (len(_set) == 1 and len(_set[_set.keys()[0]]) == 0):
                 raise IOError("Must specify either the 'columns' option or column headers")
             else:
                 ncolumns=1
     else:
         ncolumns = int(ncolumns)
     #
-    data = cmd[5]
-    Ldata = len(cmd[5])
+    data = cmd[2]
+    Ldata = len(cmd[2])
     #
     cmap = {}
-    if len(cmd[4]) == 0:
+    if len(_labels) == 0:
         for i in range(ncolumns):
-            cmap[str(i+1)] = i
-        for label in cmd[3]:
-            ndx = int(cmd[3][label][1])-1
+            cmap[i+1] = i
+        for label in _param:
+            ndx = cmap[_param[label][1]]
             if ndx < 0 or ndx >= ncolumns:
                 raise IOError("Bad column value %s for data %s" % (str(ndx), label))
             cmap[label] = ndx
-            cmd[3][label] = cmd[3][label][0]
+            _param[label] = _param[label][0]
     else:
         i = 0
-        for label in cmd[4]:
+        for label in _labels:
             cmap[label] = i
             i += 1
+    #print("CMAP %s" % cmap)
     #
-    for sname in cmd[2]:
+    #print("_param %s" % _param)
+    #print("_set %s" % _set)
+    for sname in _set:
         # Creating set sname
-        cols = cmd[2][sname]
+        cols = _set[sname]
         tmp = []
         for col in cols:
             if not col in cmap:
@@ -685,56 +726,68 @@ def _process_table(cmd, _model, _data, _default, options=None):
             tmp.append(cmap[col])
         if not sname in cmap:
             cmap[sname] = tmp
-        cols = tmp
+        cols = flatten(tmp)
         #
         _cmd = ['set', sname, ':=']
         i = 0
         while i < Ldata:
             row = []
+            #print("COLS %s  NCOLS %d" % (cols, ncolumns))
             for col in cols:
+                #print("Y %s %s" % (i, col))
                 row.append( data[i+col] )
             if len(row) > 1:
                     _cmd.append( tuple(row) )
             else:
                     _cmd.append( row[0] )
             i += ncolumns
+        #print("_data %s" % _data)
         _process_set(_cmd, _model, _data)
     #
+    #print("CMAP %s" % cmap)
     _i=0
     if ncolumns == 0:
         raise IOError
-    for vname in cmd[3]:
+    for vname in _param:
         _i += 1
         # create value vname
-        cols = cmd[3][vname]
+        cols = _param[vname]
         tmp = []
         for col in cols:
+            #print("COL %s" % col)
             if not col in cmap:
                 raise IOError("Unexpected table column '%s' for table value '%s'" % (col, vname))
             tmp.append(cmap[col])
+        #print("X %s %s" % (len(cols), tmp))
         cols = flatten(tmp)
+        #print("X %s" % len(cols))
+        #print("VNAME %s %s" % (vname, cmap[vname]))
         if vname in cmap:
             cols.append(cmap[vname])
         else:
-            cols.append( ncolumns-1 - (len(cmd[3])-_i) )
+            cols.append( ncolumns-1 - (len(_param)-_i) )
+        #print("X %s" % len(cols))
         #
         _cmd = ['param', vname, ':=']
         i = 0
         while i < Ldata:
-            #print "HERE", i, cols, ncolumns
+            #print("HERE %s %s %s" % (i, cols, ncolumns))
             for col in cols:
                 _cmd.append( data[i+col] )
             i += ncolumns
+        #print("HERE %s" % _cmd)
+        #print("_data %s" % _data)
         _process_param(_cmd, _model, _data, None, ncolumns=len(cols))
+
 
 def _process_load(cmd, _model, _data, _default, options=None):
     if len(cmd) < 2:
-        raise IOError("The 'import' command must specify a filename")
+        raise IOError("The 'load' command must specify a filename")
 
     options = Options(**cmd[1])
     for key in options:
         if not key in ['range','filename','format','using','driver','query','table','user','password']:
-            raise ValueError("Unknown import option '%s'" % key)
+            raise ValueError("Unknown load option '%s'" % key)
 
     global Filename
     Filename = cmd[1]
@@ -762,7 +815,7 @@ def _process_load(cmd, _model, _data, _default, options=None):
     #
     symb_map = cmd[3]
     if len(symb_map) == 0:
-        raise IOError("Must specify at least one set or parameter name that will be imported")
+        raise IOError("Must specify at least one set or parameter name that will be loaded")
     #
     # Process index data
     #
@@ -819,102 +872,12 @@ def _process_load(cmd, _model, _data, _default, options=None):
     data.process(_model, _data, _default)
 
 
-def X_process_load(cmd, _model, _data, _default, options=None):
-    #logger.warning("WARNING: the 'import' data command is deprecated")
-
-    #print "LOAD",cmd
-    options = Options(**cmd[1])
-    for key in options:
-        if not key in ['range','filename','format','using','driver','query','table','user','password']:
-            raise ValueError("Unknown import option '%s'" % key)
-
-    global Filename
-    Filename = cmd[4]
-    global Lineno
-    Lineno = 0
-
-    #
-    # TODO: process mapping info
-    #
-    if options.using is None:
-        tmp = options.filename.split(".")[-1]
-        data = DataManagerFactory(tmp)
-        if data is None:
-            raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % tmp)
-    else:
-        data = DataManagerFactory(options.using)
-        if data is None:
-            raise pyutilib.common.ApplicationError("Data manager '%s' is not available." % options.using)
-    set_name=None
-    param_name=None
-    #
-    # Create symbol map
-    #
-    symb_map = cmd[3]
-    if len(symb_map) == 0:
-        raise IOError("Must specify at least one set or parameter name that will be imported")
-    #
-    # Process index data
-    #
-    _index=None
-    index_name=cmd[2][0]
-    _select = None
-    #
-    # Set the 'set name' based on the format
-    #
-    _set = None
-    if options.format == 'set' or options.format == 'set_array':
-        if len(cmd[3]) != 1:
-            raise IOError("A single set name must be specified when using format '%s'" % options.format)
-        set_name=cmd[3].keys()[0]
-        _set = set_name
-    #
-    # Set the 'param name' based on the format
-    #
-    _param = None
-    if options.format == 'transposed_array' or options.format == 'array' or options.format == 'param':
-        if len(cmd[3]) != 1:
-            raise IOError("A single parameter name must be specified when using format '%s'" % options.format)
-    if options.format in ('transposed_array', 'array', 'param', None):
-        if cmd[2][0] is None:
-            _index = None
-        else:
-            _index = cmd[2][0]
-        _param = []
-        _select = cmd[2][1]
-        for key in cmd[3]:
-            _param.append( cmd[3][key] )
-            _select.append( key )
-    if options.format in ('transposed_array', 'array'):
-        _select = None
-
-    #print "YYY", _param, options
-    if not _param is None and len(_param) == 1 and not _model is None and isinstance(getattr(_model, _param[0]), Set):
-        _select = None
-        _set = _param[0]
-        _param = None
-        _index = None
-
-    #print "SELECT", _param, _select
-    #
-    data.initialize(model=options.model, filename=options.filename, index=_index, index_name=index_name, param_name=symb_map, set=_set, param=_param, format=options.format, range=options.range, query=options.query, using=options.using, table=options.table, select=_select)
-    #
-    data.open()
-    try:
-        data.read()
-    except Exception:
-        data.close()
-        raise
-    data.close()
-    data.process(_model, _data, _default)
-
-
 def _process_data(cmd, _model, _data, _default, Filename_, Lineno_=0, index=None, set=None, param=None, ncolumns=None):
     """
     Called by import_file() to (1) preprocess data and (2) call
     subroutines to process different types of data
     """
-    print("CMD %s" %cmd)
+    #print("CMD %s" %cmd)
     global Lineno
     global Filename
     Lineno=Lineno_
@@ -925,22 +888,33 @@ def _process_data(cmd, _model, _data, _default, Filename_, Lineno_=0, index=None
     if len(cmd) == 0:                       #pragma:nocover
         raise ValueError("ERROR: Empty list passed to Model::_process_data")
 
-    cmd = _preprocess_data(cmd)
-
     if cmd[0] == "data":
         return True
+
     if cmd[0] == "end":
         return False
+
     if cmd[0].startswith('set'):
+        cmd = _preprocess_data(cmd)
         _process_set(cmd, _model, _data)
+
     elif cmd[0].startswith('param'):
+        cmd = _preprocess_data(cmd)
         _process_param(cmd, _model, _data, _default, index=index, param=param, ncolumns=ncolumns)
+
     elif cmd[0] == 'include':
+        cmd = _preprocess_data(cmd)
         _process_include(cmd, _model, _data, _default)
+
     elif cmd[0] == 'load':
+        cmd = _preprocess_data(cmd)
         _process_load(cmd, _model, _data, _default)
+
     elif cmd[0] == 'table':
+        cmd = [cmd[0], _preprocess_data(cmd[1]), _preprocess_data(cmd[2])]
         _process_table(cmd, _model, _data, _default)
+
     else:
         raise IOError("ERROR: Unknown data command: "+" ".join(cmd))
+
     return True

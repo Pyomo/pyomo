@@ -16,10 +16,6 @@ import ply.lex as lex
 import ply.yacc as yacc
 from inspect import getfile, currentframe
 from six.moves import xrange
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
 
 from pyutilib.misc import flatten_list
 from pyutilib.ply import t_newline, t_ignore, _find_column, p_error, ply_init
@@ -238,7 +234,7 @@ def p_statement(p):
     else:
         # Not necessary, but nice to document how statement could end up None
         p[0] = None 
-    print(p[0])
+    #print(p[0])
 
 def p_datastar(p):
     '''
