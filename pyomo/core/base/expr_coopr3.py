@@ -1332,7 +1332,7 @@ def _generate_relational_expression__clone_if_needed(obj):
     if count == 0:
         return obj
     elif count > 0:
-        generate_relational_expression.clone_counter += 1
+        generate_expression.clone_counter += 1
         return obj.clone()
     else:
         raise RuntimeError("Expression entered " \
@@ -1501,10 +1501,6 @@ def generate_relational_expression(etype, lhs, rhs):
 generate_relational_expression.chainedInequality = None
 generate_relational_expression.call_info = None
 
-# [debugging] clone_counter is a count of the number of calls to
-# expr.clone() made during expression generation.
-generate_relational_expression.clone_counter = 0
-
 # [configuration] UNREFERENCED_EXPR_COUNT is a "magic number" that
 # indicates the stack depth between "normal" modeling and
 # _clone_if_needed().  If an expression enters _clone_if_needed() with
@@ -1530,7 +1526,7 @@ def _generate_intrinsic_function_expression__clone_if_needed(obj):
     if getrefcount(obj) - UNREFERENCED_INTRINSIC_EXPR_COUNT == 0:
         return obj
     elif getrefcount(obj) - UNREFERENCED_INTRINSIC_EXPR_COUNT > 0:
-        generate_intrinsic_function_expression.clone_counter += 1
+        generate_expression.clone_counter += 1
         return obj.clone()
     else:
         raise RuntimeError("Expression entered " \
@@ -1564,10 +1560,6 @@ def generate_intrinsic_function_expression(arg, name, fcn):
             "n-ary numeric value: %s\n    Have you given variable or "\
             "parameter '%s' an index?" % (name, new_arg.name, new_arg.name))
     return _IntrinsicFunctionExpression(name, 1, (new_arg,), fcn)
-
-# [debugging] clone_counter is a count of the number of calls to
-# expr.clone() made during expression generation.
-generate_intrinsic_function_expression.clone_counter = 0
 
 # [configuration] UNREFERENCED_EXPR_COUNT is a "magic number" that
 # indicates the stack depth between "normal" modeling and
