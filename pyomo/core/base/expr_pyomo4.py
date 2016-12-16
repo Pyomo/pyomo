@@ -1379,10 +1379,11 @@ class _LinearExpression(_ExpressionBase):
     # clone_if_needed check for self in __iadd__, then we will to add it
     # here.
     if _getrefcount_available:
-        def __add__(self, other):
+        def __add__(self, other, targetRefs=-2):
             #print "LE: __add__(%s,%s)" % (getrefcount(self), getrefcount(other))
-            self, other = _generate_expression__clone_if_needed(
-                -2, False, self, other )
+            if targetRefs is not None:
+                self, other = _generate_expression__clone_if_needed(
+                    targetRefs, False, self, other )
             return self.__iadd__(other, targetRefs=None)
 
         # Note: treating __radd__ the same as iadd is fine, as it will
@@ -1584,6 +1585,9 @@ def generate_expression(etype, _self, _other, targetRefs=0):
            and not _other:
             return _self
         if not _self_expr:
+            # If _self is an expression, we know it is not a Linear or
+            # Sum expression (otherwise it should have hit the those
+            # objects __*add__ methods).
             if _self_var:
                 if _LinearExpression_Pool:
                     ans = _LinearExpression_Pool.pop()
