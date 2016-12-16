@@ -130,10 +130,10 @@ for tdir in testdirs:
             if os.path.exists(dir_+name+suffix_):
                 suffix = suffix_
                 break
-            elif os.path.exists(dir_+name+'.py2'+suffix_):
+            elif os.path.exists(dir_+name+'.py2'+suffix_) and sys.version_info[0] == 2:
                 suffix = '.py2'+suffix_
                 break
-            elif os.path.exists(dir_+name+'.py3'+suffix_):
+            elif os.path.exists(dir_+name+'.py3'+suffix_) and sys.version_info[0] == 3:
                 suffix = '.py3'+suffix_
                 break
         if not suffix is None:
@@ -162,10 +162,10 @@ for tdir in testdirs:
             if os.path.exists(dir_+name+suffix_):
                 suffix = suffix_
                 break
-            elif os.path.exists(dir_+name+'.py2'+suffix_):
+            elif os.path.exists(dir_+name+'.py2'+suffix_) and sys.version_info[0] == 2:
                 suffix = '.py2'+suffix_
                 break
-            elif os.path.exists(dir_+name+'.py3'+suffix_):
+            elif os.path.exists(dir_+name+'.py3'+suffix_) and sys.version_info[0] == 3:
                 suffix = '.py3'+suffix_
                 break
         if not suffix is None:
