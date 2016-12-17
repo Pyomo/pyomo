@@ -111,6 +111,7 @@ def _pprint(obj, indent=""):
 #
 # Ducktyping to work with a few solver interfaces
 #
+from pyomo.core.base.component_block import _block_base
 
 # This is ugly and bad (keys are local names
 # so they can overwrite each other). Not sure
@@ -127,7 +128,7 @@ def _component_map(self, *args, **kwds):
         if obj._is_component:
             d[key] = obj
     return d
-block.component_map = _component_map
+_block_base.component_map = _component_map
 del _component_map
 
 def _component_data_objects(self, *args, **kwds):
@@ -135,7 +136,7 @@ def _component_data_objects(self, *args, **kwds):
     kwds.pop('sort', None)
     for component in self.components(*args, **kwds):
         yield component
-block.component_data_objects = _component_data_objects
+_block_base.component_data_objects = _component_data_objects
 del _component_data_objects
 
 def _block_data_objects(self, *args, **kwds):
@@ -143,7 +144,7 @@ def _block_data_objects(self, *args, **kwds):
     kwds.pop('sort', None)
     for component in self.blocks(*args, **kwds):
         yield component
-block.block_data_objects = _block_data_objects
+_block_base.block_data_objects = _block_data_objects
 del _block_data_objects
 
 # This method no longer makes sense
@@ -152,19 +153,19 @@ def _component_objects(self, *args, **kwds):
     kwds.pop('sort', None)
     for component in self.components(*args, **kwds):
         yield component
-block.component_objects = _component_objects
+_block_base.component_objects = _component_objects
 del _component_objects
 
 # This method no longer makes sense
 def _component(self, name):
     return getattr(self, name, None)
-block.component = _component
+_block_base.component = _component
 del _component
 
 # Note sure where this gets used or why we need it
 def _valid_problem_types(self):
     return [pyomo.opt.base.ProblemFormat.pyomo]
-block.valid_problem_types = _valid_problem_types
+_block_base.valid_problem_types = _valid_problem_types
 del _valid_problem_types
 
 # I would really like to see this method changed to
@@ -211,7 +212,7 @@ def _write(self,
     getattr(self, "._symbol_maps")[smap_id] = smap
 
     return filename, smap_id
-block.write = _write
+_block_base.write = _write
 del _write
 
 # canonical repn checks type instead of ctype
