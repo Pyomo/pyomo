@@ -328,7 +328,7 @@ def p_arg(p):
     if single_item:
         tmp = p[1]
     else:
-        tmp = p[2]
+        tmp = p[3]
     if type(tmp) is str and tmp[0] == '"' and tmp[-1] == '"' and len(tmp) > 2 and not ' ' in tmp:
         tmp = tmp[1:-1]
 
