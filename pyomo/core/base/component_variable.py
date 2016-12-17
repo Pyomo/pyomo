@@ -230,16 +230,18 @@ class variable(IVariable):
                  value=None,
                  fixed=False):
         self._parent = None
-        self._domain_type = None
+        self._domain_type = RealSet
         self.lb = lb
         self.ub = ub
         self.value = value
         self.fixed = fixed
         self.stale = True
-        self._domain_type, self.lb, self.ub = \
-            _extract_domain_type_and_bounds(domain_type,
-                                            domain,
-                                            lb, ub)
+        if (domain_type is not None) or \
+           (domain is not None):
+            self._domain_type, self.lb, self.ub = \
+                _extract_domain_type_and_bounds(domain_type,
+                                                domain,
+                                                lb, ub)
     @property
     def domain_type(self):
         """Return the domain type"""
