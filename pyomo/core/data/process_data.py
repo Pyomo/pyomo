@@ -51,16 +51,16 @@ def _process_token(token):
             if item[0] == "'" or item[0] == '"':
                 vals.append( item[1:-1] )
             try:
-                vals.append( int(token) )
+                vals.append( int(item) )
                 continue
             except:
                 pass
             try:
-                vals.append( float(token) )
+                vals.append( float(item) )
                 continue
             except:
                 pass
-            vals.append( token )
+            vals.append( item )
         return tuple(vals)
 
     elif token[0] == "'" or token[0] == '"':
