@@ -104,6 +104,18 @@ def t_WORDWITHLBRACKET(t):
         t.type = reserved[t.value]    # Check for reserved words
     return t
 
+def t_WORD(t):
+    r'[a-zA-Z_0-9][a-zA-Z_0-9\.+\-]*'
+    if t.value in reserved:
+        t.type = reserved[t.value]    # Check for reserved words
+    return t
+
+def t_STRING(t):
+    r'[a-zA-Z0-9_\.+\-]+'
+    if t.value in reserved:
+        t.type = reserved[t.value]    # Check for reserved words
+    return t
+
 def t_FLOAT_VAL(t):
     '[-+]?[0-9]+(\.([0-9]+)?([eE][-+]?[0-9]+)?|[eE][-+]?[0-9]+)'
     try:
@@ -118,18 +130,6 @@ def t_INT_VAL(t):
     '[-+]?[0-9]+([eE][-+]?[0-9]+)?'
     #t.type = "INT_VAL"
     t.value = int(t.value)
-    return t
-
-def t_WORD(t):
-    r'[a-zA-Z_0-9][a-zA-Z_0-9\.+\-]*'
-    if t.value in reserved:
-        t.type = reserved[t.value]    # Check for reserved words
-    return t
-
-def t_STRING(t):
-    r'[a-zA-Z0-9_\.+\-]+'
-    if t.value in reserved:
-        t.type = reserved[t.value]    # Check for reserved words
     return t
 
 def t_data_BRACKETEDSTRING(t):
