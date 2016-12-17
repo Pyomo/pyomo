@@ -34,9 +34,11 @@ _cleanup_expected_failures = True
 # A function that function that returns a function that gets
 # added to a test class.
 #
-def create_test_method(model, solver, io,
-                     test_case,
-                     symbolic_labels):
+def create_test_method(model,
+                       solver,
+                       io,
+                       test_case,
+                       symbolic_labels):
 
     is_expected_failure = test_case.status == 'expected failure'
 
@@ -123,9 +125,9 @@ def create_test_method(model, solver, io,
 #
 driver = {}
 for model in test_models():
-    # Get the test case for the model 
+    # Get the test case for the model
     case = test_models(model)
- 
+
     # Create the test class
     name = "Test_%s" % model
     if new_available:
@@ -135,17 +137,20 @@ for model in test_models():
     cls = unittest.category(*case.level)(cls)
     driver[model] = cls
     globals()[name] = cls
+
 #
 # Iterate through all test scenarios and add test methods
 #
 for key, value in test_scenarios():
     model, solver, io = key
     cls = driver[model]
+
     # Symbolic labels
     test_name = "test_"+solver+"_"+io +"_symbolic_labels"
     test_method = create_test_method(model, solver, io, value, True)
     if test_method is not None:
         setattr(cls, test_name, test_method)
+
     # Non-symbolic labels
     test_name = "test_"+solver+"_"+io +"_nonsymbolic_labels"
     test_method = create_test_method(model, solver, io, value, False)

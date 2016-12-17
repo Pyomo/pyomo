@@ -31,7 +31,7 @@ def register_model(cls):
     global _test_models
     _test_models[cls.description] = cls
     return cls
-    
+
 
 class _BaseTestModel(object):
     """

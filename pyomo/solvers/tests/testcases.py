@@ -339,14 +339,14 @@ def run_test_scenarios(options):
 
     stream = sys.stdout
     maxSolverNameLen = max([max(len(name) for name in summary), len("Solver")])
-    fmtStr = "{{0:<{0}}}| {{1:>8}} | {{2:>8}} | {{3:>10}} | {{4:>10}} | {{5:>13}}\n".format(maxSolverNameLen + 2)        
-    #   
+    fmtStr = "{{0:<{0}}}| {{1:>8}} | {{2:>8}} | {{3:>10}} | {{4:>10}} | {{5:>13}}\n".format(maxSolverNameLen + 2)
+    #
     stream.write("\n")
     stream.write("Solver Test Summary\n")
     stream.write("=" * (maxSolverNameLen + 66) + "\n")
     stream.write(fmtStr.format("Solver", "# Pass", "# Fail", "# OK Fail", "# Bad Pass", "% OK"))
     stream.write("=" * (maxSolverNameLen + 66) + "\n")
-    # 
+    #
     for _solver in sorted(summary):
         ans = summary[_solver]
         total.NumEPass += ans.NumEPass
