@@ -63,11 +63,18 @@ class _BaseTestModel(object):
         for suffix in self.test_suffixes:
             setattr(self.model, suffix, Suffix(direction=Suffix.IMPORT))
 
-    def solve(self, solver, io, io_options, symbolic_labels, load_solutions):
+    def solve(self,
+              solver,
+              io,
+              io_options,
+              solver_options,
+              symbolic_labels,
+              load_solutions):
         """ Optimize the model """
         assert self.model is not None
 
         opt = SolverFactory(solver, solver_io=io)
+        opt.options.update(solver_options)
 
         if io == 'nl':
             assert opt.problem_format() == ProblemFormat.nl

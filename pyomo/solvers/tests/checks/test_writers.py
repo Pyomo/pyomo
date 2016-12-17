@@ -60,7 +60,14 @@ def create_test_method(model,
         model_class.warmstart_model()
 
         # solve
-        opt, results = model_class.solve(solver, io, test_case.testcase.io_options, symbolic_labels, False)
+        load_solutions = False
+        opt, results = model_class.solve(
+            solver,
+            io,
+            test_case.testcase.io_options,
+            test_case.testcase.options,
+            symbolic_labels,
+            load_solutions)
         termination_condition = results['Solver'][0]['termination condition']
 
         model_class.post_solve_test_validation(self, results)

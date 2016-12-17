@@ -51,11 +51,22 @@ def create_test_method(model, solver, io,
 
         # try to solve the original instance
         model_class.model = instance1
-        opt, results1 = model_class.solve(solver, io, test_case.testcase.io_options, symbolic_labels, True)
+        load_solutions = True
+        opt, results1 = model_class.solve(solver,
+                                          io,
+                                          test_case.testcase.io_options,
+                                          test_case.testcase.options,
+                                          symbolic_labels,
+                                          load_solutions)
 
         # try to solve the unpickled instance
         model_class.model = instance2
-        opt, results2 = model_class.solve(solver, io, test_case.testcase.io_options, symbolic_labels, True)
+        opt, results2 = model_class.solve(solver,
+                                          io,
+                                          test_case.testcase.io_options,
+                                          test_case.testcase.options,
+                                          symbolic_labels,
+                                          load_solutions)
 
         # try to pickle the instance and results,
         # then unpickle and load results
@@ -87,9 +98,9 @@ def create_test_method(model, solver, io,
 #
 driver = {}
 for model in test_models():
-    # Get the test case for the model 
+    # Get the test case for the model
     case = test_models(model)
- 
+
     # Create the test class
     name = "Test_%s" % model
     if new_available:

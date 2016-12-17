@@ -271,7 +271,14 @@ def run_test_scenarios(options):
         model_class.generate_model()
         model_class.warmstart_model()
         # Solve
-        opt, results = model_class.solve(solver, io, test_case.testcase.io_options, False, False)
+        symbolic_labels = False
+        load_solutions = False
+        opt, results = model_class.solve(
+            solver,
+            io,
+            test_case.testcase.io_options,
+            symbolic_labels,
+            load_solutions)
         termination_condition = results['Solver'][0]['termination condition']
         # Validate solution status
         try:
