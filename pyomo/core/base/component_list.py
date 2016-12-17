@@ -43,7 +43,7 @@ class ComponentList(IComponentContainer,
                     "got %s" % (self.__class__.__name__,
                                 len(args)))
             for item in args[0]:
-                self.append(item)
+                self.insert(len(self), item)
 
     #
     # Implementations can choose to define these
@@ -367,6 +367,9 @@ class ComponentList(IComponentContainer,
     #
     # We want to avoid generating Pyomo expressions due to
     # comparison of values.
+
+    def __iter__(self):
+        return self._data.__iter__()
 
     def __contains__(self, item):
         item_id = id(item)

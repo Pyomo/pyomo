@@ -354,6 +354,9 @@ class ComponentDict(IComponentContainer,
     # Override a few default implementations on MutableMapping
     #
 
+    def __contains__(self, key):
+        return self._data.__contains__(key)
+
     # We want to avoid generating Pyomo expressions due to
     # comparison of values, so we convert both objects to a
     # plain dictionary mapping key->(type(val), id(val)) and
