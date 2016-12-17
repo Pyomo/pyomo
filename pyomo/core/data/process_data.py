@@ -44,6 +44,15 @@ global Filename
 
 
 def _process_token(token):
+    if type(token) is tuple:
+        return tuple(_process_token(i) for i in token)
+    if type(token) in numlist:
+        return token
+    if token in ('True','true','TRUE'):
+        return True
+    if token in ('False','false','FALSE'):
+        return False
+
     if token[0] == '[' and token[-1] == ']':
         vals = []
         token = token[1:-1]
@@ -66,14 +75,6 @@ def _process_token(token):
     elif token[0] == "'" or token[0] == '"':
         return token[1:-1]
 
-    if type(token) is tuple:
-        return tuple(_process_token(i) for i in token)
-    if type(token) in numlist:
-        return token
-    if token in ('True','true','TRUE'):
-        return True
-    if token in ('False','false','FALSE'):
-        return False
     try:
         return int(token)
     except:
@@ -782,6 +783,7 @@ def _process_table(cmd, _model, _data, _default, options=None):
 
 def _process_load(cmd, _model, _data, _default, options=None):
     #print("LOAD %s" % cmd)
+    _cmd_len = len(cmd)
     _options = {}
     _options['filename'] = cmd[1]
     i=2
@@ -789,17 +791,21 @@ def _process_load(cmd, _model, _data, _default, options=None):
         _options[cmd[i]] = cmd[i+2]
         i += 3
     i += 1
+    _Index = (None, [])
     if type(cmd[i]) is tuple:
         _Index = (None, cmd[i])
         i += 1
-    else:
+    elif i+1 < _cmd_len and cmd[i+1] == '=':
         _Index = (cmd[i], cmd[i+2])
         i += 3
     _smap = OrderedDict()
-    while i<len(cmd):
-        # This needs to be fixed, but I need working examples...
-        _smap[cmd[i]] = cmd[i]
-        i += 1
+    while i<_cmd_len:
+        if i+2 < _cmd_len and cmd[i+1] == '=':
+            _smap[cmd[i+2]] = cmd[i]
+            i += 3
+        else:
+            _smap[cmd[i]] = cmd[i]
+            i += 1
 
     if len(cmd) < 2:
         raise IOError("The 'load' command must specify a filename")
