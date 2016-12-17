@@ -781,16 +781,37 @@ def _process_table(cmd, _model, _data, _default, options=None):
 
 
 def _process_load(cmd, _model, _data, _default, options=None):
+    #print("LOAD %s" % cmd)
+    _options = {}
+    _options['filename'] = cmd[1]
+    i=2
+    while cmd[i] != ':':
+        _options[cmd[i]] = cmd[i+2]
+        i += 3
+    i += 1
+    if type(cmd[i]) is tuple:
+        _Index = (None, cmd[i])
+        i += 1
+    else:
+        _Index = (cmd[i], cmd[i+2])
+        i += 3
+    _smap = OrderedDict()
+    while i<len(cmd):
+        # This needs to be fixed, but I need working examples...
+        _smap[cmd[i]] = cmd[i]
+        i += 1
+
     if len(cmd) < 2:
         raise IOError("The 'load' command must specify a filename")
 
-    options = Options(**cmd[1])
+    options = Options(**_options)
     for key in options:
         if not key in ['range','filename','format','using','driver','query','table','user','password']:
             raise ValueError("Unknown load option '%s'" % key)
 
     global Filename
-    Filename = cmd[1]
+    Filename = options.filename
+
     global Lineno
     Lineno = 0
     #
@@ -813,40 +834,40 @@ def _process_load(cmd, _model, _data, _default, options=None):
     #
     # Create symbol map
     #
-    symb_map = cmd[3]
+    symb_map = _smap
     if len(symb_map) == 0:
         raise IOError("Must specify at least one set or parameter name that will be loaded")
     #
     # Process index data
     #
     _index=None
-    index_name=cmd[2][0]
+    index_name=_Index[0]
     _select = None
     #
     # Set the 'set name' based on the format
     #
     _set = None
     if options.format == 'set' or options.format == 'set_array':
-        if len(cmd[3]) != 1:
+        if len(_smap) != 1:
             raise IOError("A single set name must be specified when using format '%s'" % options.format)
-        set_name=list(cmd[3].keys())[0]
+        set_name=list(_smap.keys())[0]
         _set = set_name
     #
     # Set the 'param name' based on the format
     #
     _param = None
     if options.format == 'transposed_array' or options.format == 'array' or options.format == 'param':
-        if len(cmd[3]) != 1:
+        if len(_smap) != 1:
             raise IOError("A single parameter name must be specified when using format '%s'" % options.format)
     if options.format in ('transposed_array', 'array', 'param', None):
-        if cmd[2][0] is None:
+        if _Index[0] is None:
             _index = None
         else:
-            _index = cmd[2][0]
+            _index = _Index[0]
         _param = []
-        _select = cmd[2][1]
-        for key in cmd[3]:
-            _param.append( cmd[3][key] )
+        _select = list(_Index[1])
+        for key in _smap:
+            _param.append( _smap[key] )
             _select.append( key )
     if options.format in ('transposed_array', 'array'):
         _select = None
