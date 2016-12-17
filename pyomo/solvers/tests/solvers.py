@@ -32,8 +32,8 @@ logger_opt.setLevel( logging.ERROR )
 
 # ----------------------------------------------------------------
 
+# GH: This doesn't seem to be used for anything
 _test_solvers = {}
-
 def test_solvers(arg=None):
     if arg is None:
         return _test_solvers.keys()
