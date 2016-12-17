@@ -33,8 +33,8 @@ model = ConcreteModel()
 model.b = new_b
 model.x = Var(model.b.I)
 # @:assignment
-
 model.pprint()
+
 model = None
 # @blockrule:
 model = ConcreteModel()
@@ -48,8 +48,36 @@ def xyb_rule(b, t):
     b.c = Constraint(expr = b.x == 1.0 - sum(b.y[i] for i in b.I))
 model.xyb = Block(model.T, rule=xyb_rule)
 # @:blockrule
+model.pprint()
+
+model = None
+model = ConcreteModel()
+model.P = Param(initialize=3)
+model.T = RangeSet(model.P)
+# @blockrule2:
+def xyb_rule(b, t):
+    b.x = Var()
+    b.I = RangeSet(t)
+    b.y = Var(b.I, initialize=1.0)
+    def _b_c_rule(_b):
+        return _b.x == 1.0 - sum(_b.y[i] for i in _b.I)
+    b.c = Constraint(rule=_b_c_rule)
+model.xyb = Block(model.T, rule=xyb_rule)
+# @:blockrule2
+model.pprint()
 
 # @blockruleprint:
 for t in model.T:
     print(model.xyb[t].c.body)
 # @:blockruleprint
+
+# @blockvalues1:
+for t in model.xyb:
+  for i in model.xyb[t].y:
+    print("%s %f" % (model.xyb[t].y[i], value(model.xyb[t].y[i])))
+# @:blockvalues1
+
+# @blockvalues2:
+for y in model.xyb[:].y[:]:
+    print("%s %f" % (y, value(y)))
+# @:blockvalues2

@@ -9,7 +9,7 @@ ramplimit = 50
 # @usepassedblock:
 model = ConcreteModel()
 model.TIME = Set(initialize=time, ordered=True)
-model.GEN_UNITS = Set(initialize=genset)
+model.GEN_UNITS = Set(initialize=genset, ordered=True)
 def generator_rule(b,g):
     m = b.model()
     b.MaxPower = Param(within=NonNegativeReals, initialize=maxpower)
@@ -35,7 +35,7 @@ model = None
 # @buildnewblock:
 model = ConcreteModel()
 model.TIME = Set(initialize=time, ordered=True)
-model.GEN_UNITS = Set(initialize=genset)
+model.GEN_UNITS = Set(initialize=genset, ordered=True)
 
 def generator_rule(b,g):
     m = b.model()
