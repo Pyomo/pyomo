@@ -9,5 +9,3 @@ M.o = Objective(expr=\
         2*pi*M.r*(M.r + M.h))
 M.c = Constraint(expr=\
         pi*M.h*M.r**2 == 355)
-
-model = M
