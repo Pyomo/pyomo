@@ -82,7 +82,7 @@ class _PiecewiseLinearFunction(StaticBlock):
 
     Assumes the breakpoints are in nondecreasing order.
     """
-    __slots__ = ("input", "output", "_breakpoints", "_values")
+    __slots__ = ("_input", "_output", "_breakpoints", "_values")
 
     def __init__(self,
                  breakpoints,
@@ -90,14 +90,17 @@ class _PiecewiseLinearFunction(StaticBlock):
                  input=None,
                  output=None):
         super(_PiecewiseLinearFunction, self).__init__()
-        self.input = expression(input)
-        self.output = expression(output)
+        self._input = expression()
+        self._output = expression()
         self._breakpoints = breakpoints
         self._values = values
         if type(self._breakpoints) is not tuple:
             self._breakpoints = tuple(self._breakpoints)
         if type(self._values) is not tuple:
             self._values = tuple(self._values)
+        # call the setters
+        self.set_input(input)
+        self.set_output(output)
         #if not is_nondecreasing(self._breakpoints):
         #    raise ValueError(
         #        "The list of breakpoints is not nondecreasing: %s"
@@ -107,6 +110,18 @@ class _PiecewiseLinearFunction(StaticBlock):
                 "The number of breakpoints (%s) differs from "
                 "the number of function values (%s)"
                 % (len(self._breakpoints), len(self._values)))
+
+    @property
+    def input(self):
+        return self._input
+    def set_input(self, input):
+        self._input.expr = input
+
+    @property
+    def output(self):
+        return self._output
+    def set_output(self, output):
+        self._output.expr = output
 
     @property
     def breakpoints(self):
