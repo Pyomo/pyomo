@@ -6,7 +6,6 @@ import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
-                                                 _IActiveComponent,
                                                  IComponentContainer,
                                                  _IActiveComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
@@ -1180,6 +1179,7 @@ class _Test_block(_Test_block_base):
         b = block()
         self.assertTrue(isinstance(b, ICategorizedObject))
         self.assertTrue(isinstance(b, IActiveObject))
+        self.assertTrue(isinstance(b, IComponent))
         self.assertTrue(isinstance(b, IComponentContainer))
         self.assertTrue(isinstance(b, _IActiveComponentContainer))
         self.assertTrue(isinstance(b, IBlockStorage))
