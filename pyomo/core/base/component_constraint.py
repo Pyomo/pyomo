@@ -566,6 +566,8 @@ class constraint(IConstraint):
                     "non-finite term." % (self.name))
             assert self.lb is self.ub
 
+# TODO: Where do we put this class? Trying to inheret from
+#       LinearCanonicalRepn causes a circular import.
 #from pyomo.repn.canonical_repn import LinearCanonicalRepn
 class linear_constraint(IConstraint): #, LinearCanonicalRepn):
     """
