@@ -138,4 +138,126 @@ class SCIPAMPL(SystemCallSolver):
 
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
+    def _postsolve(self):
+        results = super(SCIPAMPL, self)._postsolve()
+        if results.solver.message == "unknown":
+            results.solver.status = \
+                SolverStatus.unknown
+            results.solver.termination_condition = \
+                TerminationCondition.unknown
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unknown
+        elif results.solver.message == "user interrupt":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.userInterrupt
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unknown
+        elif results.solver.message == "node limit reached":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.maxEvaluations
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+        elif results.solver.message == "total node limit reached":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.maxEvaluations
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+        elif results.solver.message == "stall node limit reached":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.maxEvaluations
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+        elif results.solver.message == "time limit reached":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.maxTimeLimit
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+        elif results.solver.message == "memory limit reached":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.other
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+        elif results.solver.message == "gap limit reached":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.other
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+        elif results.solver.message == "solution limit reached":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.other
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+        elif results.solver.message == "solution improvement limit reached":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.other
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+        elif results.solver.message == "optimal solution found":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.optimal
+            results.solution(0).status = \
+                SolutionStatus.optimal
+        elif results.solver.message == "infeasible":
+            results.solver.status = \
+                SolverStatus.warning
+            results.solver.termination_condition = \
+                TerminationCondition.infeasible
+            results.solution(0).status = \
+                SolutionStatus.infeasible
+        elif results.solver.message == "unbounded":
+            results.solver.status = \
+                SolverStatus.warning
+            results.solver.termination_condition = \
+                TerminationCondition.unbounded
+            results.solution(0).status = \
+                SolutionStatus.unbounded
+        elif results.solver.message == "infeasible or unbounded":
+            results.solver.status = \
+                SolverStatus.warning
+            results.solver.termination_condition = \
+                TerminationCondition.infeasible
+            results.solution(0).status = \
+                SolutionStatus.infeasible
+        else:
+            logger.warning("Unexpected SCIP solver message: %s"
+                           % (results.solver.message))
+            results.solver.status = \
+                SolverStatus.unknown
+            results.solver.termination_condition = \
+                TerminationCondition.unknown
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unknown
+
+        return results
 pyutilib.services.register_executable(name="scipampl")
