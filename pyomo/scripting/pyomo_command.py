@@ -48,7 +48,7 @@ def add_model_group(parser):
         action='store',
         metavar='NAME',
         dest='model_name',
-        default='model')
+        default=None)
     group.add_argument('--model-options',
         help='Options passed into a create_model() function to construct the '\
              'model.',

@@ -52,11 +52,12 @@ testing_solvers['ipopt','nl'] = False
 def setUpModule():
     global testing_solvers
     import pyomo.environ
-    from pyomo.solvers.tests.io.writer_test_cases import testCases
-    for test_case in testCases:
-        if ((test_case.name,test_case.io) in testing_solvers) and \
-           (test_case.available):
-            testing_solvers[(test_case.name,test_case.io)] = True
+    from pyomo.solvers.tests.solvers import test_solver_cases
+    for _solver, _io in test_solver_cases():
+        if (_solver, _io) in testing_solvers and \
+            test_solver_cases(_solver, _io).available:
+            testing_solvers[_solver, _io] = True
+
 
 class _EvalXHATTesterBase(object):
 

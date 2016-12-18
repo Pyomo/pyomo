@@ -1,0 +1,3 @@
+Division of 200 by 400 gives 0.000000
+Casting the operands to float gives 0.500000
+Casting the result to float gives 0.000000

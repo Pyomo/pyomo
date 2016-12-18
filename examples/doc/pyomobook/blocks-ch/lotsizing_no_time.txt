@@ -1,0 +1,24 @@
+2 RangeSet Declarations
+    S : Dim=0, Dimen=1, Size=5, Domain=Integers, Ordered=True, Bounds=(1, 5)
+        Virtual
+    T : Dim=0, Dimen=1, Size=5, Domain=Integers, Ordered=True, Bounds=(1, 5)
+        Virtual
+
+5 Var Declarations
+    i : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :  None :  None :  None : False :  True :  Reals
+    i_neg : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :  None : False :  True : NonNegativeReals
+    i_pos : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :  None : False :  True : NonNegativeReals
+    x : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :  None : False :  True : NonNegativeReals
+    y : Size=1, Index=None
+        Key  : Lower : Value : Upper : Fixed : Stale : Domain
+        None :     0 :  None :     1 : False :  True : Binary
+
+7 Declarations: T S y x i i_pos i_neg

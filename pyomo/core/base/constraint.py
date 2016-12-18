@@ -209,6 +209,16 @@ class _ConstraintData(ActiveComponentData):
         else:
             return value(self.upper)-value(self.body)
 
+    def slack(self):
+        """
+        Returns the smaller of lslack and uslack values
+        """
+        if self.lower is None:
+            return value(self.upper)-value(self.body)
+        elif self.upper is None:
+            return value(self.lower)-value(self.body)
+        return min(value(self.upper)-value(self.body), value(self.lower)-value(self.body))
+
     #
     # Abstract Interface
     #
@@ -245,6 +255,10 @@ class _ConstraintData(ActiveComponentData):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
+        raise NotImplementedError
+
+    def get_value(self):
+        """Get the expression on this constraint."""
         raise NotImplementedError
 
 class _GeneralConstraintData(_ConstraintData):
@@ -339,6 +353,11 @@ class _GeneralConstraintData(_ConstraintData):
         """A boolean indicating whether this constraint has a strict upper bound."""
         return False
 
+    @property
+    def expr(self):
+        """Return the expression associated with this constraint."""
+        return self.get_value()
+
     def set_value(self, expr):
         """Set the expression on this constraint."""
 
@@ -371,7 +390,8 @@ class _GeneralConstraintData(_ConstraintData):
                     self._body = arg1
                 else:
                     self._lower = self._upper = ZeroConstant
-                    self._body = arg0 - arg1
+                    self._body = EXPR.generate_expression_bypassCloneCheck(
+                        _sub, arg0, arg1)
             #
             # Form inequality expression
             #
@@ -462,10 +482,11 @@ class _GeneralConstraintData(_ConstraintData):
             if _expr_type is EXPR._EqualityExpression:
                 # Equality expression: only 2 arguments!
                 self._equality = True
-                try:
-                    _args = (expr._lhs, expr._rhs)
-                except AttributeError:
-                    _args = expr._args
+                _args = expr._args
+                # Explicitly dereference the original arglist (otherwise
+                # this runs afoul of the getrefcount logic)
+                expr._args = []
+
                 if not _args[1]._potentially_variable():
                     self._lower = self._upper = _args[1]
                     self._body = _args[0]
@@ -474,18 +495,13 @@ class _GeneralConstraintData(_ConstraintData):
                     self._body = _args[1]
                 else:
                     self._lower = self._upper = ZeroConstant
-                    self._body = \
-                        EXPR.generate_expression_bypassCloneCheck(
-                            _sub,
-                            _args[0],
-                            _args[1])
+                    self._body = EXPR.generate_expression_bypassCloneCheck(
+                        _sub, _args[0], _args[1] )
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
                     try:
-                        _strict = \
-                            sum(1 if _s else 0
-                                for _s in expr._strict) > 0
+                        _strict = any(expr._strict)
                     except:
                         _strict = True
                     if _strict:
@@ -506,20 +522,10 @@ class _GeneralConstraintData(_ConstraintData):
                             "using '<=', '>=', or '=='."
                             % (self.name))
 
-                try:
-                    _args = (expr._lhs, expr._rhs)
-                    if expr._lhs.__class__ is \
-                       EXPR._InequalityExpression:
-                        _args = (expr._lhs._lhs,
-                                 expr._lhs._rhs,
-                                 expr._rhs)
-                    elif expr._lhs.__class__ is \
-                         EXPR._InequalityExpression:
-                        _args = (expr._lhs,
-                                 expr._rhs._lhs,
-                                 expr._rhs._rhs)
-                except AttributeError:
-                    _args = expr._args
+                _args = expr._args
+                # Explicitly dereference the original arglist (otherwise
+                # this runs afoul of the getrefcount logic)
+                expr._args = []
 
                 if len(_args) == 3:
 
@@ -545,7 +551,6 @@ class _GeneralConstraintData(_ConstraintData):
                     self._upper = _args[2]
 
                 else:
-
                     if not _args[1]._potentially_variable():
                         self._lower = None
                         self._body  = _args[0]
@@ -556,20 +561,15 @@ class _GeneralConstraintData(_ConstraintData):
                         self._upper = None
                     else:
                         self._lower = None
-                        self._body  = \
-                            EXPR.\
-                            generate_expression_bypassCloneCheck(
-                                _sub,
-                                _args[0],
-                                _args[1])
+                        self._body  = EXPR.generate_expression_bypassCloneCheck(
+                            _sub, _args[0], _args[1])
                         self._upper = ZeroConstant
 
         #
         # Replace numeric bound values with a NumericConstant object,
         # and reset the values to 'None' if they are 'infinite'
         #
-        if (self._lower is not None) and \
-           is_constant(self._lower):
+        if (self._lower is not None) and is_constant(self._lower):
             val = self._lower()
             if not pyutilib.math.is_finite(val):
                 if val > 0:
@@ -582,8 +582,7 @@ class _GeneralConstraintData(_ConstraintData):
                     "Constraint '%s' created with a non-numeric "
                     "lower bound." % (self.name))
 
-        if (self._upper is not None) and \
-           is_constant(self._upper):
+        if (self._upper is not None) and is_constant(self._upper):
             val = self._upper()
             if not pyutilib.math.is_finite(val):
                 if val < 0:
@@ -609,6 +608,17 @@ class _GeneralConstraintData(_ConstraintData):
                     "Equality constraint '%s' defined with "
                     "non-finite term." % (self.name))
             assert self._lower is self._upper
+
+    def get_value(self):
+        """Get the expression on this constraint."""
+        if self._equality:
+            return self._body == self._lower
+        else:
+            if self._lower is None:
+                return self._body <= self._upper
+            elif self._upper is None:
+                return self._lower <= self._body
+            return self._lower <= self._body <= self._upper
 
 class Constraint(ActiveIndexedComponent):
     """
@@ -848,7 +858,7 @@ class Constraint(ActiveIndexedComponent):
             # example, model.a < 1 > 0.
             #
             if EXPR.generate_relational_expression.\
-               chainedInequality is not None:
+                    chainedInequality is not None:
 
                 buf = StringIO()
                 EXPR.generate_relational_expression.\
