@@ -551,7 +551,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 degree = canonical_degree(canonical_repn)
 
                 if degree == 0:
-                    print("Warning: Constant objective detected, replacing "
+                    logger.warning("Constant objective detected, replacing "
                           "with a placeholder to prevent solver failure.")
                     force_objective_constant = True
                 elif degree == 2:
@@ -724,7 +724,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                       % (_no_negative_zero(bound)))
 
         if not have_nontrivial:
-            print('WARNING: Empty constraint block written in LP format '  \
+            logger.warning('Empty constraint block written in LP format '  \
                   '- solver may error')
 
         # the CPLEX LP format doesn't allow constants in the objective (or

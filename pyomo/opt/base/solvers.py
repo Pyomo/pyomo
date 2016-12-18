@@ -197,7 +197,7 @@ def __solver_call__(self, _name=None, args=[], **kwds):
                     opt.set_options('solver='+_name)
     except:
         err = sys.exc_info()[1]
-        logger.error("Failed to create solver with name '%s':\n%s"
+        logger.warning("Failed to create solver with name '%s':\n%s"
                      % (_name, err))
         opt = None
     if opt is not None and subsolver is not None:

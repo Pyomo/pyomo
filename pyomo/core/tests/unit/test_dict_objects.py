@@ -42,13 +42,13 @@ class _TestComponentDictBase(object):
     def test_init2(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         self.assertEqual(model.c.is_indexed(), True)
         self.assertEqual(model.c.is_constructed(), True)
         with self.assertRaises(TypeError):
             model.d = \
-                self._ctype(*tuple((i, self._cdatatype(self._arg))
+                self._ctype(*tuple((i, self._cdatatype(self._arg()))
                                    for i in index))
 
     def test_len1(self):
@@ -60,7 +60,7 @@ class _TestComponentDictBase(object):
     def test_len2(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         self.assertEqual(len(model.c), len(index))
 
@@ -72,7 +72,7 @@ class _TestComponentDictBase(object):
         for i in index:
             self.assertTrue(i not in model.c)
         for cnt, i in enumerate(index, 1):
-            model.c[i] = self._cdatatype(self._arg)
+            model.c[i] = self._cdatatype(self._arg())
             self.assertEqual(len(model.c), cnt)
             self.assertTrue(i in model.c)
 
@@ -84,28 +84,28 @@ class _TestComponentDictBase(object):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
         with self.assertRaises(TypeError):
-            model.c = self._ctype((i, self._arg) for i in index)
+            model.c = self._ctype((i, self._arg()) for i in index)
 
     def test_wrong_type_update(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
         model.c = self._ctype()
         with self.assertRaises(TypeError):
-            model.c.update((i, self._arg) for i in index)
+            model.c.update((i, self._arg()) for i in index)
 
     def test_wrong_type_setitem(self):
         model = self.model
         model.c = self._ctype()
         with self.assertRaises(TypeError):
-            model.c[1] = self._arg
-        model.c[1] = self._cdatatype(self._arg)
+            model.c[1] = self._arg()
+        model.c[1] = self._cdatatype(self._arg())
         with self.assertRaises(TypeError):
-            model.c[1] = self._arg
+            model.c[1] = self._arg()
 
     def test_has_parent_init(self):
         model = self.model
         model.c = self._ctype()
-        model.c[1] = self._cdatatype(self._arg)
+        model.c[1] = self._cdatatype(self._arg())
         with self.assertRaises(ValueError):
             model.d = self._ctype(model.c)
         with self.assertRaises(ValueError):
@@ -114,7 +114,7 @@ class _TestComponentDictBase(object):
     def test_has_parent_update(self):
         model = self.model
         model.c = self._ctype()
-        model.c[1] = self._cdatatype(self._arg)
+        model.c[1] = self._cdatatype(self._arg())
         model.c.update(model.c)
         self.assertEqual(len(model.c), 1)
         model.c.update(dict(model.c))
@@ -128,7 +128,7 @@ class _TestComponentDictBase(object):
     def test_has_parent_setitem(self):
         model = self.model
         model.c = self._ctype()
-        model.c[1] = self._cdatatype(self._arg)
+        model.c[1] = self._cdatatype(self._arg())
         model.c[1] = model.c[1]
         with self.assertRaises(ValueError):
             model.c[2] = model.c[1]
@@ -142,12 +142,12 @@ class _TestComponentDictBase(object):
     def test_setitem_exists(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._arg) for i in index)
+        model.c = self._ctype((i, self._arg()) for i in index)
         self.assertEqual(len(model.c), len(index))
         for i in index:
             self.assertTrue(i in model.c)
             cdata = model.c[i]
-            model.c[i] = self._arg
+            model.c[i] = self._arg()
             self.assertEqual(len(model.c), len(index))
             self.assertTrue(i in model.c)
             self.assertEqual(id(cdata), id(model.c[i]))
@@ -158,13 +158,13 @@ class _TestComponentDictBase(object):
     def test_setitem_exists_overwrite(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         self.assertEqual(len(model.c), len(index))
         for i in index:
             self.assertTrue(i in model.c)
             cdata = model.c[i]
-            model.c[i] = self._cdatatype(self._arg)
+            model.c[i] = self._cdatatype(self._arg())
             self.assertEqual(len(model.c), len(index))
             self.assertTrue(i in model.c)
             self.assertNotEqual(id(cdata), id(model.c[i]))
@@ -173,7 +173,7 @@ class _TestComponentDictBase(object):
     def test_delitem(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         self.assertEqual(len(model.c), len(index))
         for cnt, i in enumerate(index, 1):
@@ -189,7 +189,7 @@ class _TestComponentDictBase(object):
     def test_iter(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         self.assertEqual(len(model.c), len(index))
         comp_index = [i for i in model.c]
@@ -200,7 +200,7 @@ class _TestComponentDictBase(object):
     def test_model_clone(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         inst = model.clone()
         self.assertNotEqual(id(inst.c), id(model.c))
@@ -210,7 +210,7 @@ class _TestComponentDictBase(object):
     def test_keys(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._cdatatype(self._arg))
+        raw_constraint_dict = dict((i, self._cdatatype(self._arg()))
                                    for i in index)
         model.c = self._ctype(raw_constraint_dict)
         self.assertEqual(sorted(list(raw_constraint_dict.keys()), key=str),
@@ -219,7 +219,7 @@ class _TestComponentDictBase(object):
     def test_values(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._cdatatype(self._arg))
+        raw_constraint_dict = dict((i, self._cdatatype(self._arg()))
                                    for i in index)
         model.c = self._ctype(raw_constraint_dict)
         self.assertEqual(
@@ -233,7 +233,7 @@ class _TestComponentDictBase(object):
     def test_items(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._cdatatype(self._arg))
+        raw_constraint_dict = dict((i, self._cdatatype(self._arg()))
                                    for i in index)
         model.c = self._ctype(raw_constraint_dict)
         self.assertEqual(
@@ -247,7 +247,7 @@ class _TestComponentDictBase(object):
     def test_update(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        raw_constraint_dict = dict((i, self._cdatatype(self._arg))
+        raw_constraint_dict = dict((i, self._cdatatype(self._arg()))
                                    for i in index)
         model.c = self._ctype()
         model.c.update(raw_constraint_dict)
@@ -257,7 +257,7 @@ class _TestComponentDictBase(object):
     def test_name(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         index_to_string = {}
         index_to_string['a'] = '[a]'
@@ -278,7 +278,7 @@ class _TestComponentDictBase(object):
     def test_clear(self):
         model = self.model
         model.c = self._ctype()
-        model.c[1] = self._cdatatype(self._arg)
+        model.c[1] = self._cdatatype(self._arg())
         c1 = model.c[1]
         with self.assertRaises(ValueError):
             model.c[None] = c1
@@ -291,9 +291,9 @@ class _TestComponentDictBase(object):
     def test_eq(self):
         model = self.model
         model.c = self._ctype()
-        model.c[1] = self._cdatatype(self._arg)
+        model.c[1] = self._cdatatype(self._arg())
         model.d = self._ctype()
-        model.d[1] = self._cdatatype(self._arg)
+        model.d[1] = self._cdatatype(self._arg())
 
         self.assertNotEqual(model.c, [])
         self.assertFalse(model.c == [])
@@ -318,7 +318,7 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
     def test_activate(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         self.assertEqual(len(model.c), len(index))
         self.assertEqual(model.c.active, True)
@@ -334,7 +334,7 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
     def test_activate(self):
         model = self.model
         index = ['a', 1, None, (1,), (1,2)]
-        model.c = self._ctype((i, self._cdatatype(self._arg))
+        model.c = self._ctype((i, self._cdatatype(self._arg()))
                               for i in index)
         self.assertEqual(len(model.c), len(index))
         self.assertEqual(model.c.active, True)
@@ -355,7 +355,7 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual(model.c.active, True)
         model.c.deactivate()
         self.assertEqual(model.c.active, False)
-        model.c[1] = self._cdatatype(self._arg)
+        model.c[1] = self._cdatatype(self._arg())
         self.assertEqual(model.c.active, True)
 
 class TestVarDict(_TestComponentDictBase,
@@ -364,7 +364,7 @@ class TestVarDict(_TestComponentDictBase,
     _cdatatype = _GeneralVarData
     def setUp(self):
         _TestComponentDictBase.setUp(self)
-        self._arg = Reals
+        self._arg = lambda: Reals
 
 class TestExpressionDict(_TestComponentDictBase,
                          unittest.TestCase):
@@ -372,7 +372,7 @@ class TestExpressionDict(_TestComponentDictBase,
     _cdatatype = _GeneralExpressionData
     def setUp(self):
         _TestComponentDictBase.setUp(self)
-        self._arg = self.model.x**3
+        self._arg = lambda: self.model.x**3
 
 #
 # Test components that include activate/deactivate
@@ -385,7 +385,7 @@ class TestConstraintDict(_TestActiveComponentDictBase,
     _cdatatype = _GeneralConstraintData
     def setUp(self):
         _TestComponentDictBase.setUp(self)
-        self._arg = self.model.x >= 1
+        self._arg = lambda: self.model.x >= 1
 
 class TestObjectiveDict(_TestActiveComponentDictBase,
                         unittest.TestCase):
@@ -393,7 +393,7 @@ class TestObjectiveDict(_TestActiveComponentDictBase,
     _cdatatype = _GeneralObjectiveData
     def setUp(self):
         _TestComponentDictBase.setUp(self)
-        self._arg = self.model.x**2
+        self._arg = lambda: self.model.x**2
 
 if __name__ == "__main__":
     unittest.main()
