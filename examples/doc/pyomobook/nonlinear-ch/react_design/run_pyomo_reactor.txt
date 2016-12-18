@@ -1,0 +1,114 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+
+
+******************************************************************************
+This program contains Ipopt, a library for large-scale nonlinear optimization.
+ Ipopt is released as open source code under the Eclipse Public License (EPL).
+         For more information visit http://projects.coin-or.org/Ipopt
+******************************************************************************
+
+This is Ipopt version 3.12.3, running with linear solver ma27.
+
+Number of nonzeros in equality constraint Jacobian...:       11
+Number of nonzeros in inequality constraint Jacobian.:        0
+Number of nonzeros in Lagrangian Hessian.............:        5
+
+Total number of variables............................:        5
+                     variables with only lower bounds:        5
+                variables with lower and upper bounds:        0
+                     variables with only upper bounds:        0
+Total number of equality constraints.................:        4
+Total number of inequality constraints...............:        0
+        inequality constraints with only lower bounds:        0
+   inequality constraints with lower and upper bounds:        0
+        inequality constraints with only upper bounds:        0
+
+iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
+   0 -2.0000000e+03 7.50e+03 6.25e-01  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
+   1 -1.0801475e+03 5.54e+02 2.46e+00  -1.0 1.39e+03    -  5.54e-01 1.00e+00h  1
+   2 -1.0763574e+03 8.86e+01 1.87e+02  -1.0 3.66e+02    -  9.31e-01 1.00e+00h  1
+   3 -1.0727252e+03 1.07e+01 5.26e+00  -1.0 9.35e+01    -  9.71e-01 1.00e+00h  1
+   4 -1.0726714e+03 4.01e+00 1.22e-01  -1.0 6.03e+01    -  9.68e-01 1.00e+00h  1
+   5 -1.0724371e+03 3.44e-04 2.93e-05  -2.5 4.19e-01    -  1.00e+00 1.00e+00h  1
+   6 -1.0724372e+03 1.63e-08 3.93e-09  -3.8 3.85e-03    -  1.00e+00 1.00e+00h  1
+   7 -1.0724372e+03 5.46e-11 2.70e-11  -5.7 2.24e-04    -  1.00e+00 1.00e+00h  1
+   8 -1.0724372e+03 4.55e-13 3.56e-14  -8.6 2.78e-06    -  1.00e+00 1.00e+00h  1
+
+Number of Iterations....: 8
+
+                                   (scaled)                 (unscaled)
+Objective...............:  -1.0724372001086319e+03   -1.0724372001086319e+03
+Dual infeasibility......:   3.5606115145031445e-14    3.5606115145031445e-14
+Constraint violation....:   4.5474735088646414e-14    4.5474735088646412e-13
+Complementarity.........:   2.5059065225790179e-09    2.5059065225790179e-09
+Overall NLP error.......:   2.5059065225790179e-09    2.5059065225790179e-09
+
+
+Number of objective function evaluations             = 9
+Number of objective gradient evaluations             = 9
+Number of equality constraint evaluations            = 9
+Number of inequality constraint evaluations          = 0
+Number of equality constraint Jacobian evaluations   = 9
+Number of inequality constraint Jacobian evaluations = 0
+Number of Lagrangian Hessian evaluations             = 8
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.002
+Total CPU secs in NLP function evaluations           =      0.000
+
+EXIT: Optimal Solution Found.
+ 
+Ipopt 3.12.3: Optimal Solution Found
+[    0.07] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+      Function Value: 1072.43720011
+    Solver results file: results.yml
+
+==========================================================
+Solution Summary
+==========================================================
+
+Model unknown
+
+  Variables:
+    sv : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 1.34381176107 :  None : False : False : PositiveReals
+    ca : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 3874.25886723 :  None : False : False : PositiveReals
+    cb : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 1072.43720011 :  None : False : False : PositiveReals
+    cc : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 1330.09353341 :  None : False : False : PositiveReals
+    cd : Size=1, Index=None
+        Key  : Lower : Value         : Upper : Fixed : Stale : Domain
+        None :     0 : 1861.60519963 :  None : False : False : PositiveReals
+
+  Objectives:
+    obj : Size=1, Index=None, Active=True
+        Key  : Active : Value
+        None :   True : 1072.43720011
+
+  Constraints:
+    ca_bal : Size=1
+        Key  : Lower : Body : Upper
+        None :   0.0 :  0.0 :   0.0
+    cb_bal : Size=1
+        Key  : Lower : Body               : Upper
+        None :   0.0 : -2.27373675443e-13 :   0.0
+    cc_bal : Size=1
+        Key  : Lower : Body : Upper
+        None :   0.0 :  0.0 :   0.0
+    cd_bal : Size=1
+        Key  : Lower : Body               : Upper
+        None :   0.0 : -4.54747350886e-13 :   0.0
+
+[    0.07] Applying Pyomo postprocessing actions
+[    0.07] Pyomo Finished
