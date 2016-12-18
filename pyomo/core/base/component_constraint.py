@@ -15,6 +15,7 @@
 #        duplicated here)
 
 __all__ = ("constraint",
+           "linear_constraint",
            "constraint_list",
            "constraint_dict")
 
@@ -90,27 +91,39 @@ class IConstraint(IComponent, _IActiveComponent):
     @property
     def lslack(self):
         """Lower slack (body - lb)"""
-        if self.body is None:
+        # this method is written so that constraint
+        # types that build the body expression on the
+        # fly do not have to here
+        body = self()
+        if body is None:
             return None
         elif self.lb is None:
             return float('inf')
         else:
-            return value(self.body) - value(self.lb)
+            return body - value(self.lb)
 
     @property
     def uslack(self):
         """Upper slack (ub - body)"""
-        if self.body is None:
+        # this method is written so that constraint
+        # types that build the body expression on the
+        # fly do not have to here
+        body = self()
+        if body is None:
             return None
         elif self.ub is None:
             return float('inf')
         else:
-            return value(self.ub) - value(self.body)
+            return value(self.ub) - body
 
     @property
     def slack(self):
         """min(lslack, uslack)"""
-        if self.body is None:
+        # this method is written so that constraint
+        # types that build the body expression on the
+        # fly do not have to here
+        body = self()
+        if body is None:
             return None
         elif self.lb is None:
             return self.uslack
@@ -123,19 +136,20 @@ class IConstraint(IComponent, _IActiveComponent):
     @property
     def expr(self):
         """Get the expression on this constraint."""
-        if self.body is None:
+        body_expr = self.body
+        if body_expr is None:
             return None
         if self.equality:
-            return self.body == self.rhs
+            return body_expr == self.rhs
         else:
             if self.lb is None:
-                return self.body <= self.ub
+                return body_expr <= self.ub
             elif self.ub is None:
-                return self.lb <= self.body
-            return self.lb <= self.body <= self.ub
+                return self.lb <= body_expr
+            return self.lb <= body_expr <= self.ub
 
 class constraint(IConstraint):
-    """An optimization constraint."""
+    """An algebraic constraint."""
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py
     _ctype = None
@@ -551,6 +565,184 @@ class constraint(IConstraint):
                     "Equality constraint '%s' defined with "
                     "non-finite term." % (self.name))
             assert self.lb is self.ub
+
+#from pyomo.repn.canonical_repn import LinearCanonicalRepn
+class linear_constraint(IConstraint): #, LinearCanonicalRepn):
+    """
+    A linear constraint defined by a list of variables
+    and coefficients
+    """
+    # To avoid a circular import, for the time being, this
+    # property will be set in constraint.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_active",
+                 "_variables",
+                 "_coefficients",
+                 "_lb",
+                 "_ub",
+                 "_equality",
+                 "__weakref__")
+
+    def __init__(self,
+                 variables,
+                 coefficients,
+                 lb=None,
+                 ub=None,
+                 rhs=None):
+        self._parent = None
+        self._active = True
+        self._variables = variables
+        self._coefficients = coefficients
+        self._lb = None
+        self._ub = None
+        self._equality = False
+
+        if type(self._variables) is not tuple:
+            self._variables = tuple(self._variables)
+        if type(self._coefficients) is not tuple:
+            self._coefficients = tuple(self._coefficients)
+
+        if rhs is None:
+            self.lb = lb
+            self.ub = ub
+        else:
+            if ((lb is not None) or \
+                (ub is not None)):
+                raise ValueError("The 'rhs' keyword can not "
+                                 "be used with the 'lb' or "
+                                 "'ub' keywords to initialize"
+                                 " a constraint.")
+            self.rhs = rhs
+
+    @property
+    def terms(self):
+        """The linear terms in the body of this constraint
+        as (variable, coefficient) tuples"""
+        return tuple(zip(self._variables, self._coefficients))
+    @terms.setter
+    def terms(self, terms):
+        variables = []
+        coefficients = []
+        for v, c in terms:
+            variables.append(v)
+            coefficients.append(c)
+        self._coefficients = tuple(coefficients)
+        self._variables = tuple(variables)
+
+    #
+    # Define the IConstraint abstract methods
+    #
+
+    @property
+    def body(self):
+        return sum(c * v for c,v in zip(self._coefficients,
+                                        self._variables))
+
+    @property
+    def lb(self):
+        return self._lb
+    @lb.setter
+    def lb(self, lb):
+        if self.equality:
+            raise ValueError(
+                "The lb property can not be set "
+                "when the equality property is True.")
+        if lb is not None:
+            if potentially_variable(lb):
+                raise ValueError(
+                    "Constraint lower bounds must be "
+                    "expressions restricted to data.")
+        self._lb = lb
+
+    @property
+    def ub(self):
+        return self._ub
+    @ub.setter
+    def ub(self, ub):
+        if self.equality:
+            raise ValueError(
+                "The ub property can not be set "
+                "when the equality property is True.")
+        if ub is not None:
+            if potentially_variable(ub):
+                raise ValueError(
+                    "Constraint lower bounds must be "
+                    "expressions restricted to data.")
+        self._ub = ub
+
+    @property
+    def rhs(self):
+        if not self.equality:
+            raise ValueError(
+                "The rhs property can not be read "
+                "when the equality property is False.")
+        return self._lb
+    @rhs.setter
+    def rhs(self, rhs):
+        if rhs is not None:
+            if potentially_variable(rhs):
+                raise ValueError(
+                    "Constraint righthand must be "
+                    "expressions restricted to data.")
+        self._lb = rhs
+        self._ub = rhs
+        self._equality = True
+
+    @property
+    def equality(self):
+        return self._equality
+    @equality.setter
+    def equality(self, equality):
+        if equality:
+            raise ValueError(
+                "The constraint equality flag can "
+                "only be set to True by assigning "
+                "an expression to the rhs property "
+                "(e.g., con.rhs = con.lb).")
+        assert not equality
+        self._equality = equality
+
+    #
+    # Override a the default __call__ method on IConstraint
+    # to avoid calling building the body expression
+    #
+
+    def __call__(self, exception=True):
+        try:
+            return sum(value(c) * v() for c,v in zip(self._coefficients,
+                                                     self._variables))
+        except (ValueError, TypeError):
+            if exception:
+                raise
+            return None
+
+    #
+    # Define the LinearCanonicalRepn abstract methods
+    #
+
+    @property
+    def variables(self):
+        return tuple(v for v in self._variables
+                     if not v.fixed)
+
+    @property
+    def coefficients(self):
+        return tuple(c for c,v in zip(self._coefficients,
+                                      self._variables)
+                     if not v.fixed)
+
+    # for backwards compatibility
+    linear=coefficients
+
+    @property
+    def constant(self):
+        terms = tuple(value(c) * v() for c,v in zip(self._coefficients,
+                                                    self._variables)
+                      if v.fixed)
+        if len(terms) == 0:
+            return None
+        return sum(terms)
 
 class constraint_list(ComponentList,
                       _IActiveComponentContainer):

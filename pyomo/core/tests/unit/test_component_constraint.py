@@ -13,6 +13,7 @@ from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.base.component_constraint import (IConstraint,
                                                   constraint,
+                                                  linear_constraint,
                                                   constraint_dict,
                                                   constraint_list)
 from pyomo.core.base.component_variable import variable
@@ -994,6 +995,297 @@ class Test_constraint(unittest.TestCase):
         x = variable()
         with self.assertRaises(ValueError):
             constraint(x+x)
+
+class Test_linear_constraint(unittest.TestCase):
+
+    def test_pickle(self):
+        c = linear_constraint([],[])
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c.ub, None)
+        self.assertEqual(c.parent, None)
+        cup = pickle.loads(
+            pickle.dumps(c))
+        self.assertEqual(cup.lb, None)
+        self.assertEqual(cup.body, 0)
+        self.assertEqual(cup.ub, None)
+        self.assertEqual(cup.parent, None)
+        b = block()
+        b.c = c
+        self.assertIs(c.parent, b)
+        bup = pickle.loads(
+            pickle.dumps(b))
+        cup = bup.c
+        self.assertEqual(cup.lb, None)
+        self.assertEqual(cup.body, 0)
+        self.assertEqual(cup.ub, None)
+        self.assertIs(cup.parent, bup)
+
+    def test_init(self):
+        c = linear_constraint([],[])
+        self.assertTrue(c.parent is None)
+        self.assertEqual(c.ctype, Constraint)
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.ub, None)
+        self.assertEqual(c.equality, False)
+        self.assertEqual(c(), 0)
+        self.assertEqual(c.slack, float('inf'))
+        self.assertEqual(c.lslack, float('inf'))
+        self.assertEqual(c.uslack, float('inf'))
+
+    def test_init_nonexpr(self):
+        v = variable(value=3)
+        c = linear_constraint([v],[1],lb=0,ub=1)
+        self.assertEqual(len(c.terms), 1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.body(), 3)
+        self.assertEqual(c(), 3)
+        self.assertEqual(c.ub, 1)
+        with self.assertRaises(ValueError):
+            linear_constraint([v],[1],lb=0,rhs=0)
+        with self.assertRaises(ValueError):
+            linear_constraint([v],[1],ub=0,rhs=0)
+
+        c = linear_constraint([v],[1],rhs=1)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.body(), 3)
+        self.assertEqual(c(), 3)
+
+        c = linear_constraint([],[],rhs=1)
+        c.terms = ((v, 1),)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.body(), 3)
+        self.assertEqual(c(), 3)
+
+    def test_type(self):
+        c = linear_constraint([],[])
+        self.assertTrue(isinstance(c, ICategorizedObject))
+        self.assertTrue(isinstance(c, IActiveObject))
+        self.assertTrue(isinstance(c, IComponent))
+        self.assertTrue(isinstance(c, _IActiveComponent))
+        self.assertTrue(isinstance(c, IConstraint))
+
+    def test_active(self):
+        c = linear_constraint([],[])
+        self.assertEqual(c.active, True)
+        c.deactivate()
+        self.assertEqual(c.active, False)
+        c.activate()
+        self.assertEqual(c.active, True)
+
+        b = block()
+        self.assertEqual(b.active, True)
+        b.deactivate()
+        self.assertEqual(b.active, False)
+        b.c = c
+        # TODO figure out the semantics of
+        # this situation. I believe it involves
+        # keep track of an active counter
+        # rather than a boolean.
+        #self.assertEqual(c.active, True)
+        #self.assertEqual(b.active, True)
+        #c.deactivate()
+        #self.assertEqual(c.active, False)
+        #self.assertEqual(b.active, True)
+        b.activate()
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, True)
+        b.deactivate()
+        self.assertEqual(c.active, False)
+        self.assertEqual(b.active, False)
+
+    def test_equality(self):
+        v = variable()
+        c = linear_constraint([v],[1],rhs=1)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.equality, True)
+
+        c = linear_constraint([],[],rhs=1)
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.equality, True)
+
+        # can not set when equality is True
+        with self.assertRaises(ValueError):
+            c.lb = 2
+        # can not set when equality is True
+        with self.assertRaises(ValueError):
+            c.ub = 2
+
+        c.equality = False
+
+        # can not get when equality is False
+        with self.assertRaises(ValueError):
+            c.rhs
+
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.equality, False)
+
+        # can not set to True, must set rhs to a value
+        with self.assertRaises(ValueError):
+            c.equality = True
+
+        c.rhs = 3
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c.lb, 3)
+        self.assertEqual(c.ub, 3)
+        self.assertEqual(c.rhs, 3)
+        self.assertEqual(c.equality, True)
+
+    def test_nondata_bounds(self):
+        c = linear_constraint([],[])
+
+        eL = expression()
+        eU = expression()
+        with self.assertRaises(ValueError):
+            c.rhs = eL
+        with self.assertRaises(ValueError):
+            c.lb = eL
+        with self.assertRaises(ValueError):
+            c.ub = eU
+
+        vL = variable()
+        vU = variable()
+        with self.assertRaises(ValueError):
+            c.rhs = vL
+        with self.assertRaises(ValueError):
+            c.lb = vL
+        with self.assertRaises(ValueError):
+            c.ub = vU
+
+        vL.value = 1.0
+        vU.value = 1.0
+        with self.assertRaises(ValueError):
+            c.rhs = vL
+        with self.assertRaises(ValueError):
+            c.lb = vL
+        with self.assertRaises(ValueError):
+            c.ub = vU
+
+        # the fixed status of a variable
+        # does not change this restriction
+        vL.fixed = True
+        vU.fixed = True
+        with self.assertRaises(ValueError):
+            c.rhs = vL
+        with self.assertRaises(ValueError):
+            c.lb = vL
+        with self.assertRaises(ValueError):
+            c.ub = vU
+
+        vL.value = -1
+        vU.value = -1
+        c = linear_constraint([vL, vU],
+                              [1, 1],
+                              lb=1.0,
+                              ub=1.0)
+        self.assertEqual(c(), -2.0)
+        self.assertEqual(c.slack, -3.0)
+        self.assertEqual(c.lslack, -3.0)
+        self.assertEqual(c.uslack, 3.0)
+
+    def test_fixed_variable_stays_in_body(self):
+        x = variable(value=0.5)
+        c = linear_constraint([x],[1], lb=0, ub=1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.body(), 0.5)
+        self.assertEqual(c(), 0.5)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(len(c.variables), 1)
+        self.assertIs(c.variables[0], x)
+        self.assertEqual(c.coefficients, (1,))
+        self.assertEqual(c.constant, None)
+        x.value = 2
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.body(), 2)
+        self.assertEqual(c(), 2)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(len(c.variables), 1)
+        self.assertIs(c.variables[0], x)
+        self.assertEqual(c.coefficients, (1,))
+        self.assertEqual(c.constant, None)
+
+        x.fix(0.5)
+        c = linear_constraint([x],[2], lb=0, ub=1)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c(), 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.variables, ())
+        self.assertEqual(c.coefficients, ())
+        self.assertEqual(c.constant, 1)
+        x.value = 2
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.body(), 4)
+        self.assertEqual(c(), 4)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.variables, ())
+        self.assertEqual(c.coefficients, ())
+        self.assertEqual(c.constant, 4)
+
+        x.free()
+        x.value = 1
+        c = linear_constraint([x],[1], rhs=0)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c(), 1)
+        self.assertEqual(c.ub, 0)
+        self.assertEqual(len(c.variables), 1)
+        self.assertIs(c.variables[0], x)
+        self.assertEqual(c.coefficients, (1,))
+        self.assertEqual(c.constant, None)
+
+        x.fix()
+        c = linear_constraint([x],[1], rhs=0)
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c(), 1)
+        self.assertEqual(c.ub, 0)
+        self.assertEqual(c.variables, ())
+        self.assertEqual(c.coefficients, ())
+        self.assertEqual(c.constant, 1)
+
+        x.free()
+        c = linear_constraint([x],[1], rhs=0)
+        x.fix()
+        self.assertEqual(c.equality, True)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c(), 1)
+        self.assertEqual(c.ub, 0)
+        self.assertEqual(c.variables, ())
+        self.assertEqual(c.coefficients, ())
+        self.assertEqual(c.constant, 1)
+
+    def test_data_bounds(self):
+        c = linear_constraint([],[])
+        e = expression(expr=1.0)
+
+        c.lb = 1.0
+        c.ub = 2.0
+        pL = parameter()
+        pU = parameter()
+        c.lb = pL
+        c.ub = pU
+
+        e.expr = 1.0
+        eL = data_expression()
+        eU = data_expression()
+        c.lb = eL
+        c.ub = eU
 
 class Test_constraint_dict(_TestActiveComponentDictBase,
                            unittest.TestCase):
