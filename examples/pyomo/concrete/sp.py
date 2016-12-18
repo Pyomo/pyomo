@@ -17,5 +17,3 @@ M.B = Block(scenarios, rule=b_rule)
 def o_rule(M):
     return sum(M.B[i].y for i in scenarios)/5.0
 M.o = Objective(rule=o_rule)
-
-model = M

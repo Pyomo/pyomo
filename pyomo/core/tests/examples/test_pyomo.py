@@ -129,7 +129,8 @@ class Test(unittest.TestCase):
         self.pyomo('pmedian1.py pmedian.dat', root=currdir+'test3')
         def filter3(line):
             return line.startswith('[') or line.startswith('DEPRECATION')
-        self.assertFileEqualsBaseline(currdir+"test3.out", currdir+"test3.txt", filter=filter3)
+        self.assertMatchesJsonBaseline(currdir+"test3.jsn", currdir+"test1.txt",tolerance=_diff_tol)
+        os.remove(currdir+'test3.out')
 
     def test4_valid_modelname_option(self):
         # Run pyomo with good --model-name option value
