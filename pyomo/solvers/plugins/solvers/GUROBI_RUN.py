@@ -71,7 +71,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # output to see if it was accepted.
     for key, value in options.iteritems():
         model.setParam(key, value)
-        
+
     if 'relax_integrality' in options:
         for v in model.getVars():
             if v.vType != GRB.CONTINUOUS:
@@ -102,8 +102,8 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     elif (solver_status == GRB.INF_OR_UNBD):
         status = 'warning'
         message = 'Problem proven to be infeasible or unbounded.'
-        term_cond = 'infeasible' # Pyomo doesn't have an analog to "infeasible or unbounded", which is a weird concept anyway.
-        solution_status = 'infeasible'
+        term_cond = 'unbounded' # Pyomo doesn't have an analog to "infeasible or unbounded", which is a weird concept anyway.
+        solution_status = 'unbounded'
     elif (solver_status == GRB.UNBOUNDED):
         status = 'warning'
         message = 'Model was proven to be unbounded.'

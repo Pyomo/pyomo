@@ -245,9 +245,9 @@ class SCIPAMPL(SystemCallSolver):
             results.solver.status = \
                 SolverStatus.warning
             results.solver.termination_condition = \
-                TerminationCondition.infeasible
+                TerminationCondition.unbounded
             results.solution(0).status = \
-                SolutionStatus.infeasible
+                SolutionStatus.unbounded
         else:
             logger.warning("Unexpected SCIP solver message: %s"
                            % (results.solver.message))
