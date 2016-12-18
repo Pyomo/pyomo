@@ -20,15 +20,6 @@ from pyomo.core import ConcreteModel
 import pyomo.opt
 from pyomo.opt import ResultsFormat, ProblemFormat
 
-try:
-    pico_convert =  pyutilib.services.registered_executable("pico_convert")
-    pico_convert_available= (not pico_convert is None)
-except pyutilib.common.ApplicationError:
-    pico_convert_available=False
-
-def filter_cplex(line):
-    return line.startswith("Message:")
-
 old_ignore_time = None
 old_tempdir = None
 def setUpModule():
@@ -50,8 +41,8 @@ class mock_all(unittest.TestCase):
     def setUpClass(cls):
         global cplexamp_available
         import pyomo.environ
-        from pyomo.solvers.tests.io.writer_test_cases import SolverTestCase
-        cplexamp_available = SolverTestCase(name='cplex',io='nl').available
+        from pyomo.solvers.tests.solvers import test_solver_cases
+        cplexamp_available = test_solver_cases('cplex', 'nl').available
         
     def setUp(self):
         self.do_setup(False)
@@ -81,60 +72,6 @@ class mock_all(unittest.TestCase):
         if type(self.asl) == 'ASL':
             self.assertEqual(self.asl.executable.split(os.sep)[-1],
                              "ASL"+pyomo.util.executable_extension)
-
-    def Xtest_solve1(self):
-        """ Test ASL - test1.mps """
-        results = self.asl.solve(currdir+"test1.mps",
-                                 logfile=currdir+"test_solve1.log",
-                                 suffixes=['.*'])
-        results.write(filename=currdir+"test_solve1.txt",
-                      times=False,
-                      format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve1.txt",
-                                       currdir+"test1_asl.txt")
-        #os.remove(currdir+"test_solve1.log")
-
-    def Xtest_solve2a(self):
-        """ Test ASL - test1.mps """
-        results = self.asl.solve(currdir+"test1.mps",
-                                 rformat=ResultsFormat.soln,
-                                 logfile=currdir+"test_solve2a.log",
-                                 suffixes=['.*'])
-        results.write(filename=currdir+"test_solve2a.txt",
-                      times=False,
-                      format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve2a.txt",
-                                       currdir+"test1_asl.txt")
-        #os.remove(currdir+"test_solve2a.log")
-
-    def Xtest_solve2b(self):
-        """ Test ASL - test1.mps """
-        results = self.asl.solve(currdir+"test1.mps",
-                                 pformat=ProblemFormat.mps,
-                                 rformat=ResultsFormat.soln,
-                                 logfile=currdir+"test_solve2b.log",
-                                 suffixes=['.*'])
-        results.write(filename=currdir+"test_solve2b.txt",
-                      times=False,
-                      format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve2b.txt",
-                                       currdir+"test1_asl.txt")
-        #os.remove(currdir+"test_solve2b.log")
-
-    def Xtest_solve3(self):
-        """ Test ASL - test2.lp """
-        results = self.asl.solve(currdir+"test2.lp",
-                                 logfile=currdir+"test_solve3.log",
-                                 keepfiles=True,
-                                 suffixes=['.*'])
-        results.write(filename=currdir+"test_solve3.txt",
-                      times=False,
-                      format='json')
-        self.assertMatchesJsonBaseline(currdir+"test_solve3.txt",
-                                       currdir+"test2_asl.txt")
-        if os.path.exists(currdir+"test2.solution.dat"):
-            os.remove(currdir+"test2.solution.dat")
-        #os.remove(currdir+"test_solve3.log")
 
     def test_solve4(self):
         """ Test ASL - test4.nl """
@@ -167,19 +104,6 @@ class mock_all(unittest.TestCase):
                                       currdir+  "test4_asl.txt")
         #os.remove(currdir+"test4.sol")
         #os.remove(currdir+"test_solve4.log")
-
-    def Xtest_mock5(self):
-        """ Mock Test ASL - test5.mps """
-        results = self.asl.solve(currdir+"test4.nl",
-                                 logfile=currdir+"test_solve5.log",
-                                 keepfiles=True,
-                                 suffixes=['.*'])
-        results.write(filename=currdir+"test_mock5.txt",
-                      times=False)
-        self.assertFileEqualsBaseline(currdir+"test_mock5.txt",
-                                      currdir+"test4_asl.txt")
-        os.remove(currdir+"test4.sol")
-        os.remove(currdir+"test_solve5.log")
 
     def test_error1(self):
         """ Bad results format """

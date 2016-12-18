@@ -1,0 +1,9 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+WARNING: "[base]/pyomo/pyomo/mpec/plugins/pathampl.py", 47, _default_executable
+	Could not locate the 'pathampl' executable, which is required for solver path
+[    0.00] Pyomo Finished
+ERROR: Unexpected exception while running model:
+	No executable found for solver 'path'
