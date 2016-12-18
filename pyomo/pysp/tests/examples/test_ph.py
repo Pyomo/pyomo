@@ -238,8 +238,6 @@ class PHTester(object):
     def _setUpClass(cls):
         global testing_solvers
         from pyomo.solvers.tests.solvers import test_solver_cases
-        #testCases_copy = list(testCases)
-        #testCases_copy.append(SolverTestCase(name='_cplex_persistent', io='python'))
         for _solver, _io in test_solver_cases():
             if (_solver, _io) in testing_solvers and \
                 test_solver_cases(_solver, _io).available:
