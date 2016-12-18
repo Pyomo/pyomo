@@ -44,38 +44,60 @@ def create_test_method(model, solver, io,
         model_class.generate_model(test_case.testcase.import_suffixes)
         model_class.warmstart_model()
 
+        load_solutions = True
+        opt, status = model_class.solve(solver,
+                                        io,
+                                        test_case.testcase.io_options,
+                                        test_case.testcase.options,
+                                        symbolic_labels,
+                                        load_solutions)
+        m = pickle.loads(pickle.dumps(model_class.model))
+
+        #
+        # operate on a cloned model
+        #
+        instance1 = m.clone()
+        model_class.model = instance1
+        opt, status1 = model_class.solve(solver,
+                                         io,
+                                         test_case.testcase.io_options,
+                                         test_case.testcase.options,
+                                         symbolic_labels,
+                                         load_solutions)
+        inst, res = pickle.loads(pickle.dumps([instance1,status1]))
+
+        #
+        # operate on an unpickled model
+        #
         # try to pickle then unpickle instance
-        instance1 = model_class.model.clone()
         instance2 = pickle.loads(pickle.dumps(instance1))
         self.assertNotEqual(id(instance1),id(instance2))
-
-        # try to solve the original instance
-        model_class.model = instance1
-        load_solutions = True
-        opt, results1 = model_class.solve(solver,
-                                          io,
-                                          test_case.testcase.io_options,
-                                          test_case.testcase.options,
-                                          symbolic_labels,
-                                          load_solutions)
-
-        # try to solve the unpickled instance
         model_class.model = instance2
-        opt, results2 = model_class.solve(solver,
-                                          io,
-                                          test_case.testcase.io_options,
-                                          test_case.testcase.options,
-                                          symbolic_labels,
-                                          load_solutions)
+        opt, status2 = model_class.solve(solver,
+                                         io,
+                                         test_case.testcase.io_options,
+                                         test_case.testcase.options,
+                                         symbolic_labels,
+                                         load_solutions)
+        # try to pickle the instance and status,
+        # then unpickle and load status
+        inst, res = pickle.loads(pickle.dumps([instance2,status2]))
 
-        # try to pickle the instance and results,
-        # then unpickle and load results
-        inst, res = pickle.loads(pickle.dumps([instance1,results1]))
-        #inst.solutions.load(res)
-
-        # try to pickle the instance and results,
-        # then unpickle and load results
-        inst, res = pickle.loads(pickle.dumps([instance2,results2]))
+        #
+        # operate on a clone of an unpickled model
+        #
+        instance3 = instance2.clone()
+        self.assertNotEqual(id(instance2),id(instance3))
+        model_class.model = instance3
+        opt, status3 = model_class.solve(solver,
+                                         io,
+                                         test_case.testcase.io_options,
+                                         test_case.testcase.options,
+                                         symbolic_labels,
+                                         load_solutions)
+        # try to pickle the instance and status,
+        # then unpickle and load status
+        inst, res = pickle.loads(pickle.dumps([instance3,status3]))
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
