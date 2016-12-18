@@ -20,6 +20,7 @@ from pyomo.core.base.component_expression import *
 from pyomo.core.base.component_objective import *
 from pyomo.core.base.component_sos import *
 from pyomo.core.base.component_suffix import *
+from pyomo.core.base.component_piecewise import *
 from pyomo.core.base.expr import *
 from pyomo.core.base.set_types import (RealSet,
                                        IntegerSet,

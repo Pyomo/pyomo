@@ -36,6 +36,7 @@ import pyomo.core.base.component_expression
 import pyomo.core.base.component_objective
 import pyomo.core.base.component_sos
 import pyomo.core.base.component_suffix
+import pyomo.core.base.component_piecewise
 
 #
 # Components
