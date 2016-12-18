@@ -15,9 +15,9 @@ from collections import namedtuple
 from pyomo.core import *
 from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.expr import _InequalityExpression, _EqualityExpression, generate_expression_bypassCloneCheck
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.indexed_component import UnindexedComponent_set
+import pyomo.core.base.expr as EXPR
 
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -38,7 +38,7 @@ class _ComplementarityData(_BlockData):
 
     def _canonical_expression(self, e):
         e_ = None
-        if e.__class__ is _EqualityExpression:
+        if e.__class__ is EXPR._EqualityExpression:
             if e._args[1].is_fixed():
                 _e = (e._args[1], e._args[0])
             #
@@ -47,9 +47,9 @@ class _ComplementarityData(_BlockData):
             #elif e._args[0].is_fixed():
             #    _e = (e._args[0], e._args[1])
             else:
-                tmp = generate_expression_bypassCloneCheck(_sub, e._args[0], e._args[1])
+                tmp = EXPR.generate_expression_bypassCloneCheck(_sub, e._args[0], e._args[1])
                 _e = ( ZeroConstant, tmp)
-        elif e.__class__ is _InequalityExpression:
+        elif e.__class__ is EXPR._InequalityExpression:
             if len(e._args) == 3:
                 _e = (e._args[0], e._args[1], e._args[2])
             else:
@@ -58,7 +58,7 @@ class _ComplementarityData(_BlockData):
                 elif e._args[0].is_fixed():
                     _e = (e._args[0], e._args[1], None)
                 else:
-                    _e = ( ZeroConstant, generate_expression_bypassCloneCheck(
+                    _e = ( ZeroConstant, EXPR.generate_expression_bypassCloneCheck(
                             _sub, e._args[1], e._args[0]), None )
         else:
             _e = (None, e, None)
@@ -86,8 +86,8 @@ class _ComplementarityData(_BlockData):
         #
         #  c:   v == expression
         #
-        _e1 = self._canonical_expression(self._args[0])
-        _e2 = self._canonical_expression(self._args[1])
+        _e1 = self._canonical_expression(EXPR.clone_expression(self._args[0]))
+        _e2 = self._canonical_expression(EXPR.clone_expression(self._args[1]))
         if len(_e1) == 2:
             # Ignore _e2; _e1 is an equality constraint
             self.c = Constraint(expr=_e1)
