@@ -18,7 +18,7 @@ import pyomo.opt
 from pyomo.core.base import Var
 from pyomo.core.base.objective import minimize, maximize
 from pyomo.core.base.piecewise import Bound, PWRepn
-from pyomo.solvers.tests.io.writer_test_cases import testCases
+from pyomo.solvers.tests.solvers import test_solver_cases
 
 yaml_available=False
 try:
@@ -43,10 +43,12 @@ testing_solvers['cplex','nl'] = False
 #testing_solvers['ipopt','nl'] = False
 #testing_solvers['cplex','python'] = False
 #testing_solvers['_cplex_persistent','python'] = False
-for test_case in testCases:
-    if ((test_case.name,test_case.io) in testing_solvers) and \
-       test_case.available:
-        testing_solvers[(test_case.name,test_case.io)] = True
+for _solver, _io in test_solver_cases():
+    if (_solver, _io) in testing_solvers and \
+        test_solver_cases(_solver, _io).available:
+        testing_solvers[_solver, _io] = True
+
+
 
 def createTestMethod(pName,problem,solver,writer,kwds):
 
