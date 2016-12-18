@@ -17,10 +17,12 @@ from pyomo.core.base.numvalue import (NumericValue,
                                       is_constant,
                                       potentially_variable)
 from pyomo.core.base.component_parameter import parameter
-from pyomo.core.base.component_variable import (IVariable,
-                                                variable,
-                                                variable_dict,
-                                                variable_list)
+from pyomo.core.base.component_variable import \
+    (IVariable,
+     variable,
+     variable_dict,
+     variable_list,
+     _extract_domain_type_and_bounds)
 from pyomo.core.base.var import Var
 from pyomo.core.base.component_block import block
 from pyomo.core.base.set_types import (RealSet,
@@ -40,6 +42,13 @@ import six
 from six import StringIO
 
 class Test_variable(unittest.TestCase):
+
+    def test_extract_domain_type_and_bounds(self):
+        # test an edge case
+        domain_type, lb, ub = _extract_domain_type_and_bounds(None, None, None, None)
+        self.assertIs(domain_type, RealSet)
+        self.assertIs(lb, None)
+        self.assertIs(ub, None)
 
     def test_pickle(self):
         v = variable(lb=1,
