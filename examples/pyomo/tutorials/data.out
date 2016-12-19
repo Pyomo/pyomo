@@ -94,7 +94,7 @@
          H1 :   3.3
          H2 :   3.4
          H3 :   3.5
-    S : Size=3, Index=A, Domain=Any, Default=0, Mutable=False
+    S : Size=3, Index=A, Domain=Any, Default=0.0, Mutable=False
         Key : Value
          A1 :   3.3
          A3 :   3.5

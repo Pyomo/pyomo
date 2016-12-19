@@ -14,11 +14,11 @@ import random
 from six.moves import xrange
 
 def print_model_stats(options,model):
-    print "-"*40
+    print("-"*40)
     if options is None:
-        print "DEFAULT"
+        print("DEFAULT")
     else:
-        print options.type
+        print(options.type)
     rowc = {}
     for i in model.I:
         rowc[i] = 0
@@ -28,21 +28,19 @@ def print_model_stats(options,model):
     for (i,j) in model.S:
             rowc[i] += 1        
             colc[j] += 1        
-    print "Row Counts"
+    print("Row Counts")
     s = 0.0
     for i in sorted(rowc):
-        #print i, rowc[i]
         s += rowc[i]
-    print "Average:",s/len(rowc)
-    print "Col Counts"
+    print("Average: %s" % str(s/len(rowc)))
+    print("Col Counts")
     s = 0.0
     for i in sorted(colc):
-        #print i, colc[i]
         s += colc[i]
-    print "Average:",s/len(colc)
-    print "I",len(model.I)
-    print "J",len(model.J)
-    print "-"*40
+    print("Average: %s" % str(s/len(colc)))
+    print("I %d" % len(model.I))
+    print("J %d" % len(model.J))
+    print("-"*40)
 
 def pyomo_create_model(options=None, model_options=None):
     if model_options is None:
@@ -75,7 +73,7 @@ def pyomo_create_model(options=None, model_options=None):
         def S_rule(model):
             ans = set()
             for j in xrange(1,n+1):
-                tmp = range(1,m+1)
+                tmp = list(range(1,m+1))
                 random.shuffle( tmp )
                 for i in range(0,p):
                     ans.add( (tmp[i], j) )
@@ -95,7 +93,7 @@ def pyomo_create_model(options=None, model_options=None):
         def S_rule(model):
             ans = set()
             for i in xrange(1,m+1):
-                tmp = range(1,n+1)
+                tmp = list(range(1,n+1))
                 random.shuffle( tmp )
                 for j in range(0,p):
                     ans.add( (i, tmp[j]) )
@@ -157,8 +155,7 @@ def pyomo_create_model(options=None, model_options=None):
     #
     def cost_rule(model):
         return summation(model.w, model.x)
-
-    model.cost = Objective()
+    model.cost = Objective(rule=cost_rule)
 
     #
     # Constraint
@@ -174,8 +171,7 @@ def pyomo_create_model(options=None, model_options=None):
         #if expr is 0:
             #return Constraint.Skip
         return expr >= 1
-
-    model.cover = Constraint(model.I)
+    model.cover = Constraint(model.I, rule=cover_rule)
 
     #
     print_model_stats(model_options, model)
