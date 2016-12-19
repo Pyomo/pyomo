@@ -31,3 +31,24 @@ assert p(2.5) == 1.5
 assert p(3) == 1
 assert p(2.5) == 1.5
 assert p(4) == 2
+
+#
+# Example model (piecewise linear objective)
+#
+import pyomo.environ
+
+breakpoints = [-1.0, 0.0, 1.0, 2.0]
+function_points = [2.0, -2.5, 3.0, 1.0]
+
+m = pk.block()
+
+m.x = pk.variable()
+m.y = pk.variable()
+
+m.o = pk.objective(m.y)
+
+m.pw = pk.piecewise(breakpoints,
+                    function_points,
+                    input=m.x,
+                    output=m.y,
+                    repn='inc')

@@ -86,33 +86,23 @@ d[1].expr = p[0] + p[1]
 assert tuple(pk.value(w) for w in s.weights) == (2, 3)
 
 #
-# Example model (piecewise linear objective)
+# Example model (discontiguous variable domain)
 #
 import pyomo.environ
 
-breakpoints = [-1.0, 0.0, 1.0, 2.0]
-function_points = [2.0, -2.5, 3.0, 1.0]
+domain = [-1.1, 4.49, 8.1, -30.2, 12.5]
 
 m = pk.block()
 
 m.z = pk.variable_list(
-    pk.variable(domain=pk.NonNegativeReals)
-    for i in range(4))
-m.x = pk.variable()
+    pk.variable(lb=0)
+    for i in range(len(domain)))
 m.y = pk.variable()
 
-m.o = pk.objective(m.y)
+m.o = pk.objective(m.y, sense=pk.maximize)
 
 m.c1 = pk.constraint(
-    m.y == sum(f*z for f,z in zip(m.z, function_points)))
+    m.y == sum(v*z for v,z in zip(m.z, domain)))
 m.c2 = pk.constraint(
-    m.x == sum(w*z for w,z in zip(m.z, breakpoints)))
-m.c3 = pk.constraint(sum(m.z) == 1)
-m.s = pk.sos2(m.z)
-
-opt = pk.SolverFactory("cplex")
-status = opt.solve(m)
-assert status.solver.status == \
-    pk.SolverStatus.ok
-assert status.solver.termination_condition == \
-    pk.TerminationCondition.optimal
+    sum(m.z) == 1)
+m.s = pk.sos1(m.z)

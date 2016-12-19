@@ -25,10 +25,15 @@ examples = glob.glob(join(examplesdir,"*.py"))
 
 @unittest.nottest
 def create_test_method(example):
-    def _method(self):
+    # It is important that this inner function has a name that
+    # starts with 'test' in order for nose to discover it
+    # after we assign it to the class. I have _no_ idea why
+    # this is the case since we are returing the function object
+    # and placing it on the class with a different name.
+    def testmethod(self):
         rc, log = pyutilib.subprocess.run(['python',example])
         self.assertEqual(rc, 0, msg=log)
-    return _method
+    return testmethod
 
 @unittest.category("smoke", "nightly", "expensive")
 class TestKernelExamples(unittest.TestCase):
