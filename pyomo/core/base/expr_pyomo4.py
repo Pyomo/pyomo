@@ -948,8 +948,8 @@ class _SumExpression(_LinearOperatorExpression):
     def __isub__(self, other, targetRefs=-2):
         if targetRefs is not None:
             self, other = _generate_expression__clone_if_needed(
-                targetRefs+1, True, self, other )
-        return self.__iadd__(-other, targetRefs=None)
+                targetRefs, True, self, other )
+        return self.__iadd__(other.__neg__(targetRefs=None), targetRefs=None)
 
     # If the system has getrefcount, then we can reliably treat all
     # additions as "in-place" additions.  Note that if we remove the
