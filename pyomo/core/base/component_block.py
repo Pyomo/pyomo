@@ -893,24 +893,52 @@ class block_dict(ComponentDict,
         self._active = True
         super(block_dict, self).__init__(*args, **kwds)
 
+#
+# TODO: This class should probably be renamed. It turns out
+#       that the real speed and memory savings are not
+#       necessarily due to the use of slots, but rather from
+#       the fact that we are not categorizing components.
+#       In cases like piecewise, where we are instantiating
+#       many small blocks with 4-5 components per-block, the
+#       extra categorization is simply overhead. The name
+#       of this class should somehow reflect this use case.
+#
+#       __slots__ can still be useful for other things (like
+#       enforcing ordering and restricting attributes), but
+#       without a __dict__, it is actually difficult to get
+#       an instance of this class through our solver
+#       interfaces because they want to store attributes
+#       like "_ampl_repn" and "_canonical_repn" on each
+#       block. I am not a fan of this behavior, but it gets
+#       used extensively by PySP at the moment.
+#
+#       Since it doesn't seem to affect memory usage or
+#       instantiation time very much in real use cases, I am
+#       declaring this class with a __dict__ slot (nearly
+#       equivalent to declaring it without __slots__), so
+#       that it can be used with the solver interfaces.
+#       Implementors should realize that this means the
+#       class is no longer static (even if subclasses
+#       declare slots), but it still seems to be superior to
+#       using the standard 'block' for cases similar to
+#       piecewise (2x less memory). Instantiation time also
+#       seems to be about 2x faster, but it does increase
+#       the time to write the model because components are
+#       not categorized. More profiling is needed.
+#
+
 class StaticBlock(_block_base, IBlockStorage):
     """
-    A helper class for implementing blocks with a static
-    set of components using __slots__. Derived classes
-    should assign a static set of components to the instance
-    in the __init__ method before calling this base class's
-    __init__ method. The set of components should be
-    identified using __slots__.
-
-    This implementation can be used in class hierarchies
-    that extend more than one level beyond this base class.
+    A helper class for implementing blocks with a small,
+    static set of child components.
     """
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
-                 "__weakref__")
+                 "__weakref__",
+                 "__dict__")
     def __init__(self):
         self._parent = None
         self._active = True
