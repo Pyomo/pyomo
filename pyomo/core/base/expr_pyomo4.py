@@ -1471,7 +1471,7 @@ class _LinearExpression(_ExpressionBase):
                 self._coef[k] *= -1
             return self
 
-
+zero_or_one = set([0,1])
 
 def generate_expression(etype, _self, _other, targetRefs=0):
     #print "GE: __%s__(%s,%s)" % (etype,getrefcount(_self), getrefcount(_other))
@@ -1531,20 +1531,22 @@ def generate_expression(etype, _self, _other, targetRefs=0):
     if etype == _mul:
         if not _self_var:
             if _self.__class__ in native_numeric_types:
-                if not _self:
-                    return 0
-                if _self == 1:
-                    return _other
+                if _self in zero_or_one:
+                    if not _self:
+                        return 0
+                    else:
+                        return _other
                 if not _other_var and _other.__class__ in native_numeric_types:
                     return _self * _other
             if _other_var and not _other_expr:
                 return _LinearExpression(_other, _self)
         elif not _other_var:
             if _other.__class__ in native_numeric_types:
-                if not _other:
-                    return 0
-                if _other == 1:
-                    return _self
+                if _other in zero_or_one:
+                    if not _other:
+                        return 0
+                    else:
+                        return _self
             if _self_var and not _self_expr:
                 return _LinearExpression(_self, _other)
         ans = _ProductExpression((_self, _other))
