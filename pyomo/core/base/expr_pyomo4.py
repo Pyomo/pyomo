@@ -71,8 +71,6 @@ sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
 def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
     #print(getrefcount(obj) - UNREFERENCED_EXPR_COUNT, target)
-    if target is None:
-        return objs
 
     ans = ()
     for obj in objs:
@@ -1358,8 +1356,9 @@ class _LinearExpression(_ExpressionBase):
                 % ( self, other ))
 
     def __isub__(self, other, targetRefs=-2):
-        self, other = _generate_expression__clone_if_needed(
-            targetRefs, True, self, other )
+        if targetRefs is not None:
+            self, other = _generate_expression__clone_if_needed(
+                targetRefs, True, self, other )
         return self.__iadd__(other, negate=True, targetRefs=None)
 
     # If the system has getrefcount, then we can reliably treat all
