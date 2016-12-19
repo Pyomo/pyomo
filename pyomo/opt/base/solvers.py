@@ -12,7 +12,7 @@ __all__ = ('IOptSolver',
            'PersistentSolver',
            'SolverFactory',
            'UnknownSolver',
-           'load_solvers')
+           'check_available_solvers')
 
 import re
 import os
@@ -219,8 +219,19 @@ pyutilib.misc.add_method(SolverFactory, __solver_call__, name='__call__')
 #       this is NOT asl:cbc (same with PICO)
 # WEH:  Why is there a distinction between SolverFactory('asl:cbc') and SolverFactory('cbc', solver_io='nl')???   This is bad.
 #
-def load_solvers(*args):
-    ans = {}
+def check_available_solvers(*args):
+    from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
+    from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
+
+    logger_solvers = logging.getLogger('pyomo.solvers')
+    _level_solvers = logger_solvers.getEffectiveLevel()
+    logger_solvers.setLevel( logging.ERROR )
+
+    logger_opt = logging.getLogger('pyomo.opt')
+    _level_opt = logger_opt.getEffectiveLevel()
+    logger_opt.setLevel( logging.ERROR )
+
+    ans = []
     for arg in args:
         if not isinstance(arg,tuple):
             name = arg
@@ -228,9 +239,25 @@ def load_solvers(*args):
         else:
             name = arg[0]
         opt = SolverFactory(*arg)
-        if not opt is None and not opt.available():
-            opt = None
-        ans[name] = opt
+        if opt is None or isinstance(opt, UnknownSolver):
+            available = False
+        elif (arg[0] == "gurobi") and \
+           (not GUROBISHELL.license_is_valid()):
+            available = False
+        elif (arg[0] == "baron") and \
+           (not BARONSHELL.license_is_valid()):
+            available = False
+        else:
+            available = \
+                (opt.available(exception_flag=False)) and \
+                ((not hasattr(opt,'executable')) or \
+                (opt.executable() is not None))
+        if available:
+            ans.append(name)
+
+    logger_opt.setLevel( _level_opt )
+    logger_solvers.setLevel( _level_solvers )
+
     return ans
 
 def _raise_ephemeral_error(name, keyword=""):

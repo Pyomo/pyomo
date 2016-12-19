@@ -18,7 +18,7 @@ currdir= dirname(abspath(__file__))
 import pyutilib.th as unittest
 from pyutilib.misc import setup_redirect, reset_redirect
 
-from pyomo.opt import load_solvers
+from pyomo.opt import check_available_solvers
 import pyomo.scripting.pyomo_command as main
 from pyomo.core import *
 
@@ -30,14 +30,14 @@ def rule2(model,i):
     return (1,model.x+model.y[1]+i,2)
 
 
-solver = None
+solvers = None
 class PyomoModel(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global solver
+        global solvers
         import pyomo.environ
-        solver = load_solvers('glpk', 'cplex')
+        solvers = check_available_solvers('glpk', 'cplex')
 
     def test_construct(self):
         model = AbstractModel()
@@ -106,9 +106,9 @@ class PyomoBadModels ( unittest.TestCase ):
 
     @classmethod
     def setUpClass(cls):
-        global solver
+        global solvers
         import pyomo.environ
-        solver = load_solvers('glpk', 'cplex')
+        solvers = check_available_solvers('glpk', 'cplex')
 
     def pyomo ( self, cmd, **kwargs):
         args = re.split('[ ]+', cmd )
@@ -126,7 +126,7 @@ class PyomoBadModels ( unittest.TestCase ):
     def test_uninstantiated_model_linear ( self ):
         """Run pyomo with "bad" model file.  Should fail gracefully, with
         a perhaps useful-to-the-user message."""
-        if solver['glpk'] is None:
+        if not 'glpk' in solvers:
             self.skipTest("glpk solver is not available")
         return # ignore for now
         base = '%s/test_uninstantiated_model' % currdir
@@ -137,7 +137,7 @@ class PyomoBadModels ( unittest.TestCase ):
     def test_uninstantiated_model_quadratic ( self ):
         """Run pyomo with "bad" model file.  Should fail gracefully, with
         a perhaps useful-to-the-user message."""
-        if solver['cplex'] is None:
+        if not 'cplex' in solvers:
             self.skipTest("The 'cplex' executable is not available")
         return # ignore for now
         base = '%s/test_uninstantiated_model' % currdir

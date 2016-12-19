@@ -198,7 +198,7 @@ solver['cbc','lp'] = False
 solver['ipopt','nl'] = False
 
 def _setUpClass(cls):
-    global solver
+    global solvers
     import pyomo.environ
     from pyomo.solvers.tests.solvers import test_solver_cases
     for _solver, _io in test_solver_cases():
