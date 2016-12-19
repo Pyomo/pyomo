@@ -1320,7 +1320,7 @@ class _LinearExpression(_ExpressionBase):
                     else:
                         self._args.append(v)
                     if negate:
-                        self._coef[_id] = -other._coef[_id]
+                        self._coef[_id] = -other._coef.pop(_id)
                     else:
                         self._coef[_id] = other._coef[_id]
 
