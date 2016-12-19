@@ -20,7 +20,7 @@ from six.moves import xrange
 import pyomo.opt
 from pyomo.environ import *
 
-solver = pyomo.opt.load_solvers('glpk')
+solvers = pyomo.opt.check_available_solvers('glpk')
 
 # GAH: These tests been temporarily disabled. It is no longer the job of Var
 #      to validate its domain at the time of construction. It only needs to
@@ -31,8 +31,7 @@ solver = pyomo.opt.load_solvers('glpk')
 
 class TestVarSetBounds(unittest.TestCase):
 
-    #Test within=RangeSet()
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def Xtest_rangeset_domain(self):
         self.model = ConcreteModel()
         self.model.s = RangeSet(3) #Set(initialize=[1,2,3])
@@ -43,7 +42,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con2 = Constraint(expr=self.model.y[2] <= 2.9)
         
         self.instance = self.model.create_instance()
-        self.opt = solver["glpk"]
+        self.opt = SolverFactory("glpk")
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
 
@@ -51,7 +50,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.assertEqual(self.instance.y[2],2)
  
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def Xtest_pyomo_Set_domain(self):
         self.model = ConcreteModel()
         self.model.s = Set(initialize=[1,2,3])
@@ -62,7 +61,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con2 = Constraint(expr=self.model.y[2] <= 2.9)
         
         self.instance = self.model.create_instance()
-        self.opt = solver["glpk"]
+        self.opt = SolverFactory("glpk")
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
 
@@ -94,7 +93,7 @@ class TestVarSetBounds(unittest.TestCase):
             self.model.y = Var([1,2], within=self.model.s)
  
 
-    @unittest.skipIf(solver["glpk"] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def Xtest_pyomo_Set_dat_file_domain(self):
         self.model = AbstractModel()
         self.model.s = Set()
@@ -106,7 +105,7 @@ class TestVarSetBounds(unittest.TestCase):
         self.model.con = Constraint([1,2],rule=lambda model, i : model.y[i]*(-1)**(i-1) >= (1.1)**(2-i) * (-2.9)**(i-1))
         
         self.instance = self.model.create_instance(currdir+"vars_dat_file.dat")
-        self.opt = solver["glpk"]
+        self.opt = SolverFactory("glpk")
         self.results = self.opt.solve(self.instance)
         self.instance.load(self.results)
 
@@ -142,7 +141,7 @@ class TestVarSetBounds(unittest.TestCase):
  
 
     #Test within=list -- this works for range() since range() returns a list
-    @unittest.skipIf(solver["glpk"] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def Xtest_list_domain(self):
         self.model = ConcreteModel()
         self.model.y = Var([1,2], within=[1,2,3])
@@ -189,7 +188,7 @@ class TestVarSetBounds(unittest.TestCase):
    
 
     #Test within=set() -- python native set, not pyomo Set object
-    @unittest.skipIf(solver["glpk"] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def Xtest_set_domain(self):
         self.model = ConcreteModel()
         self.model.y = Var([1,2], within=set([1,2,3]))
@@ -236,7 +235,7 @@ class TestVarSetBounds(unittest.TestCase):
    
 
     #Test within=xrange()
-    @unittest.skipIf(solver["glpk"] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def Xtest_rangeset_domain(self):
         self.model = ConcreteModel()
         self.model.y = Var([1,2], within=xrange(4))

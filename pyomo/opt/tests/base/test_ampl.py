@@ -34,9 +34,9 @@ class Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global solver
+        global solvers
         import pyomo.environ
-        solver = pyomo.opt.load_solvers('glpk')
+        solvers = pyomo.opt.check_available_solvers('glpk')
 
     def setUp(self):
         pyutilib.services.TempfileManager.tempdir = currdir
@@ -158,19 +158,19 @@ class Test(unittest.TestCase):
         self.assertFileEqualsBaseline(currdir+'test3a.mps', currdir+'test3.baseline.mps', filter=filter, tolerance=1e-6)
 
     def test3_solve(self):
-        if solver['glpk'] is None:
+        if not 'glpk' in solvers:
             self.skipTest("glpk solver is not available")
         self.model = pyomo.opt.AmplModel(currdir+'test3.mod')
-        opt = solver['glpk']
+        opt = pyomo.opt.SolverFactory('glpk')
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=currdir+'test3.out', format='json')
         self.assertMatchesJsonBaseline(currdir+'test3.out', currdir+'test3.baseline.out', tolerance=1e-6)
 
     def test3a_solve(self):
-        if solver['glpk'] is None:
+        if not 'glpk' in solvers:
             self.skipTest("glpk solver is not available")
         self.model = pyomo.opt.AmplModel(currdir+'test3a.mod', currdir+'test3a.dat')
-        opt = solver['glpk']
+        opt = pyomo.opt.SolverFactory('glpk')
         results = opt.solve(self.model, keepfiles=False)
         results.write(filename=currdir+'test3a.out', format='json')
         self.assertMatchesJsonBaseline(currdir+'test3a.out', currdir+'test3.baseline.out', tolerance=1e-6)

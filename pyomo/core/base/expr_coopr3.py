@@ -12,7 +12,6 @@ from __future__ import division
 #__all__ = ( 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
 #            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
 #            'atanh', 'ceil', 'floor' )
-
 import logging
 import math
 import sys
@@ -1067,6 +1066,8 @@ def generate_expression(etype, _self, other):
                      and not other._denominator:
                 _self._args += other._numerator
                 _self._coef.append(multiplier*other._coef)
+                other._coef = 1
+                other._numerator = None
                 _ProdExpression_Pool.append(other)
             elif other_type is _SumExpression:
                 if multiplier < 0:
@@ -1074,10 +1075,15 @@ def generate_expression(etype, _self, other):
                 _self._args += other._args
                 _self._coef += other._coef
                 _self._const += other._const
+                other._args = []
+                other._coef = []
+                other._const = 0
                 _SumExpression_Pool.append(other)
             elif other_type is None: #NumericConstant:
                 _self._const += multiplier * other
-                if _self._const==0 and len(_self._coef)==1 and _self._coef[0]==1:
+                if _self._const==0 and len(_self._coef)==1 and \
+                        _self._coef[0]==1:
+                    _self._coef = []
                     _SumExpression_Pool.append(_self)
                     return _self._args.pop()
             else:
@@ -1093,10 +1099,14 @@ def generate_expression(etype, _self, other):
                 _self._numerator += other._args
                 other._args = _self._numerator
                 other._coef.insert(0,_self._coef)
+                _self._coef = 1
+                _self._numerator = None
                 _ProdExpression_Pool.append(_self)
             elif self_type is None: #NumericConstant:
                 other._const += _self
-                if other._const==0 and len(other._coef)==1 and other._coef[0]==1:
+                if other._const==0 and len(other._coef)==1 and \
+                        other._coef[0]==1:
+                    other._coef = []
                     _SumExpression_Pool.append(other)
                     return other._args.pop()
             else:
@@ -1119,6 +1129,8 @@ def generate_expression(etype, _self, other):
                        not _self._denominator:
                     ans._coef = [ _self._coef ]
                     ans._args = _self._numerator
+                    _self._coef = 1
+                    _self._numerator = None
                     _ProdExpression_Pool.append(_self)
                 else:
                     ans._coef = [ 1 ]
@@ -1136,6 +1148,8 @@ def generate_expression(etype, _self, other):
                        not other._denominator:
                     ans._coef = [ multiplier * other._coef ]
                     ans._args = other._numerator
+                    other._coef = 1
+                    other._numerator = None
                     _ProdExpression_Pool.append(other)
                 else:
                     ans._coef = [ multiplier ]
@@ -1151,6 +1165,8 @@ def generate_expression(etype, _self, other):
                        not _self._denominator:
                     ans._coef = [ _self._coef ]
                     ans._args = _self._numerator
+                    _self._coef = 1
+                    _self._numerator = None
                     _ProdExpression_Pool.append(_self)
                 else:
                     ans._coef = [ 1 ]
@@ -1160,6 +1176,8 @@ def generate_expression(etype, _self, other):
                        not other._denominator:
                     ans._coef.append( multiplier * other._coef )
                     ans._args += other._numerator
+                    other._coef = 1
+                    other._numerator = None
                     _ProdExpression_Pool.append(other)
                 else:
                     ans._coef.append( multiplier )
@@ -1177,6 +1195,9 @@ def generate_expression(etype, _self, other):
                 _self._numerator += other._numerator
                 _self._denominator += other._denominator
                 _self._coef *= other._coef
+                other._coef = 1
+                other._numerator = None
+                other._denominator = None
                 _ProdExpression_Pool.append(other)
             else:
                 _self._numerator.append(other)
@@ -1221,6 +1242,9 @@ def generate_expression(etype, _self, other):
 
         # Special cases for simplifying expressions
         if ans._coef == 0:
+            ans._coef = 1
+            ans._numerator = None
+            ans._denominator = None
             _ProdExpression_Pool.append(ans)
             return 0 #ZeroConstant
         return ans
@@ -1236,6 +1260,9 @@ def generate_expression(etype, _self, other):
                 _self._numerator += other._denominator
                 _self._denominator += other._numerator
                 _self._coef /= other._coef
+                other._coef = 1
+                other._numerator = None
+                other._denominator = None
                 _ProdExpression_Pool.append(other)
             else:
                 _self._denominator.append(other)

@@ -51,7 +51,7 @@ def minlp_config_block(init=False):
                 'The Python module that specifies the model',
                 None ) )
     model.declare('object name', ConfigValue(
-                'model', 
+                None, 
                 str,
                 'The name of the model object that is created in the specified Pyomo module',
                 None ) ).declare_as_argument('--model-name', dest='model_name') 

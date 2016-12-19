@@ -341,8 +341,7 @@ class GLPKSHELL(SystemCallSolver):
         with open(psoln, 'r') as csvfile:
             reader = csv.reader(csvfile, delimiter=' ')
             row = next(reader)
-            if True:
-            #try:
+            try:
                 row = next(reader)
                 while (row[0] == 'c'):
                     row = next(reader)
@@ -355,8 +354,7 @@ class GLPKSHELL(SystemCallSolver):
                     self._process_soln_ipt(row, reader, results, obj_name, variable_names, constraint_names)
                 elif row[1] == 'mip':
                     self._process_soln_mip(row, reader, results, obj_name, variable_names, constraint_names)
-            else:
-            #except Exception:
+            except Exception:
                 print("ERROR: " + str(sys.exc_info()[1]))
                 msg = "Error parsing solution data file, line %d" % reader.line_num
                 raise ValueError(msg)
@@ -372,7 +370,9 @@ class GLPKSHELL(SystemCallSolver):
         obj_val = float(row[6])
 
         solv = results.solver
-        if pstat == 'n':
+        if dstat == 'n':
+            solv.termination_condition = TerminationCondition.unbounded
+        elif pstat == 'n':
             solv.termination_condition = TerminationCondition.unbounded
         elif pstat == 'i':
             solv.termination_condition = TerminationCondition.infeasible
@@ -475,6 +475,10 @@ class GLPKSHELL(SystemCallSolver):
                 solv.termination_condition = TerminationCondition.other
 
         elif status == 'f' or status == 'o':
+            if obj_val > 1e18 or obj_val < -1e18:
+                solv.termination_condition = TerminationCondition.unbounded
+                return
+
             soln   = results.solution.add()
             if status == 'f':
                 soln.status = SolutionStatus.feasible
