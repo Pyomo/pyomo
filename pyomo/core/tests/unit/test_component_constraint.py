@@ -1205,7 +1205,7 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(len(c.variables), 1)
         self.assertIs(c.variables[0], x)
         self.assertEqual(c.coefficients, (1,))
-        self.assertEqual(c.constant, None)
+        self.assertEqual(c.constant, 0)
         x.value = 2
         self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 2)
@@ -1214,7 +1214,7 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(len(c.variables), 1)
         self.assertIs(c.variables[0], x)
         self.assertEqual(c.coefficients, (1,))
-        self.assertEqual(c.constant, None)
+        self.assertEqual(c.constant, 0)
 
         x.fix(0.5)
         c = linear_constraint([x],[2], lb=0, ub=1)
@@ -1245,7 +1245,7 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(len(c.variables), 1)
         self.assertIs(c.variables[0], x)
         self.assertEqual(c.coefficients, (1,))
-        self.assertEqual(c.constant, None)
+        self.assertEqual(c.constant, 0)
 
         x.fix()
         c = linear_constraint([x],[1], rhs=0)

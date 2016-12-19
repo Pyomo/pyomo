@@ -730,26 +730,38 @@ class linear_constraint(IConstraint):
 
     @property
     def variables(self):
-        return tuple(v for v in self._variables
-                     if not v.fixed)
+        variables = []
+        for v in self._variables:
+            if v.is_expression():
+                v = v.expr
+            if not v.fixed:
+                variables.append(v)
+        return tuple(variables)
 
     @property
     def coefficients(self):
-        return tuple(c for c,v in zip(self._coefficients,
-                                      self._variables)
-                     if not v.fixed)
+        coefficients = []
+        for c, v in zip(self._coefficients,
+                        self._variables):
+            if v.is_expression():
+                v = v.expr
+            if not v.fixed:
+                coefficients.append(c)
+        return tuple(coefficients)
 
     # for backwards compatibility
     linear=coefficients
 
     @property
     def constant(self):
-        terms = tuple(value(c) * v() for c,v in zip(self._coefficients,
-                                                    self._variables)
-                      if v.fixed)
-        if len(terms) == 0:
-            return None
-        return sum(terms)
+        constant = 0
+        for c, v in zip(self._coefficients,
+                        self._variables):
+            if v.is_expression():
+                v = v.expr
+            if v.fixed:
+                constant += value(c) * v()
+        return constant
 
 class constraint_list(ComponentList,
                       _IActiveComponentContainer):
