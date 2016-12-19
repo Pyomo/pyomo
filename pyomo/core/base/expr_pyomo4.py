@@ -1145,15 +1145,13 @@ class _GetItemExpression(_ExpressionBase):
         return self._base.__getitem__(tuple(value(i) for i in self._args))
 
 
-_LinearExpression_Pool = []
-
 class _LinearExpression(_ExpressionBase):
     __slots__ = ('_const', '_coef')
 
-    def __init__(self):
+    def __init__(self, var, coef):
         self._const = 0
-        self._args = []
-        self._coef = {}
+        self._args = [var]
+        self._coef = {id(var): coef}
         if not _getrefcount_available:
             self._parent_expr = None
             # Note that the args can NOT be expressions
@@ -1325,16 +1323,6 @@ class _LinearExpression(_ExpressionBase):
                         self._coef[_id] = -other._coef[_id]
                     else:
                         self._coef[_id] = other._coef[_id]
-
-            if _getrefcount_available:
-                # We can only cache _LinearExpression objects in the
-                # case of getrefcount, as otherwise we could not
-                # guarantee that someone else isn't holding a reference
-                # to the object.
-                other._const = 0
-                other._args = []
-                other._coef.clear()
-                _LinearExpression_Pool.append(other)
 
             return self
 
@@ -1508,9 +1496,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
             if _self.__class__ in native_numeric_types:
                 ans = -_self
             elif not _self_expr and _self._potentially_variable():
-                ans = _LinearExpression()
-                ans._args.append(_self)
-                ans._coef[id(_self)] = -1
+                ans = _LinearExpression(_self, -1)
             else:
                 ans = _NegationExpression((_self,))
                 if not _getrefcount_available and _self_expr:
@@ -1552,13 +1538,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
                 if not _other_var and _other.__class__ in native_numeric_types:
                     return _self * _other
             if _other_var and not _other_expr:
-                if _LinearExpression_Pool:
-                    ans = _LinearExpression_Pool.pop()
-                else:
-                    ans = _LinearExpression()
-                ans._args.append(_other)
-                ans._coef[id(_other)] = _self
-                return ans
+                return _LinearExpression(_other, _self)
         elif not _other_var:
             if _other.__class__ in native_numeric_types:
                 if not _other:
@@ -1566,13 +1546,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
                 if _other == 1:
                     return _self
             if _self_var and not _self_expr:
-                if _LinearExpression_Pool:
-                    ans = _LinearExpression_Pool.pop()
-                else:
-                    ans = _LinearExpression()
-                ans._args.append(_self)
-                ans._coef[id(_self)] = _other
-                return ans
+                return _LinearExpression(_self, _other)
         ans = _ProductExpression((_self, _other))
 
     elif etype == _add:
@@ -1589,28 +1563,12 @@ def generate_expression(etype, _self, _other, targetRefs=0):
             # Sum expression (otherwise it should have hit the those
             # objects __*add__ methods).
             if _self_var:
-                if _LinearExpression_Pool:
-                    ans = _LinearExpression_Pool.pop()
-                else:
-                    ans = _LinearExpression()
-                ans._args.append(_self)
-                ans._coef[id(_self)] = 1
-                return ans.__iadd__(_other, targetRefs=None)
+                return _LinearExpression(_self, 1).__iadd__(
+                    _other, targetRefs=None)
             if _other_var and not _other_expr:
-                if _LinearExpression_Pool:
-                    ans = _LinearExpression_Pool.pop()
-                else:
-                    ans = _LinearExpression()
-                ans._args.append(_other)
-                ans._coef[id(_other)] = 1
-                # Special handling for the relatively common case of "0 + x"
-                # This is imporant, as this is how the initial independent
-                # _LinearExpression frequently gets formed for simple sums
-                if not _self_var and _self.__class__ in native_numeric_types:
-                    ans._const += _self
-                    return ans
-                else:
-                    return ans.__radd__(_self, targetRefs=None)
+                ans = _LinearExpression(_other, 1)
+                ans._const += _self
+                return ans
         ans = _SumExpression([_self, _other])
 
     elif etype == _sub:
@@ -1624,24 +1582,10 @@ def generate_expression(etype, _self, _other, targetRefs=0):
             return _self
         if not _self_expr:
             if _self_var:
-                if _LinearExpression_Pool:
-                    ans = _LinearExpression_Pool.pop()
-                else:
-                    ans = _LinearExpression()
-                ans._args.append(_self)
-                ans._coef[id(_self)] = 1
-                return ans.__isub__(_other, targetRefs=None)
+                return _LinearExpression(_self, 1).__isub__(
+                    _other, targetRefs=None )
             if _other_var and not _other_expr:
-                if _LinearExpression_Pool:
-                    ans = _LinearExpression_Pool.pop()
-                else:
-                    ans = _LinearExpression()
-                ans._args.append(_other)
-                ans._coef[id(_other)] = -1
-                # Special handling for the relatively common case of "0 - x"
-                # This is imporant, as this is how the initial independent
-                # _LinearExpression frequently gets formed for simple sums
-                assert not _self_var
+                ans = _LinearExpression(_other, -1)
                 ans._const += _self
                 return ans
         ans = _SumExpression([_self, -_other])
@@ -1654,13 +1598,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
                 raise ZeroDivisionError()
             elif _self_var:
                 if not _self_expr:
-                    if _LinearExpression_Pool:
-                        ans = _LinearExpression_Pool.pop()
-                    else:
-                        ans = _LinearExpression()
-                    ans._args.append(_self)
-                    ans._coef[id(_self)] = 1./_other
-                    return ans
+                    return _LinearExpression(_self, 1./_other)
             elif _self.__class__ in native_numeric_types:
                 return _self / _other
         elif not _self_var and _self.__class__ in native_numeric_types:
@@ -1857,5 +1795,4 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     return ans
 
 def _clear_expression_pool():
-    global _LinearExpression_Pool
-    _LinearExpression_Pool = []
+    pass
