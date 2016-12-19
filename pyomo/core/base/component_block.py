@@ -755,7 +755,7 @@ class block(_block_base, IBlockStorage):
     #
 
     def __setattr__(self, name, component):
-        if isinstance(component, ICategorizedObject):
+        if hasattr(component, '_is_categorized_object'):
             if component._parent is None:
                 if name in self.__dict__:
                     logger.warning(
@@ -795,7 +795,7 @@ class block(_block_base, IBlockStorage):
 
     def __delattr__(self, name):
         component = getattr(self, name)
-        if isinstance(component, ICategorizedObject):
+        if hasattr(component, '_is_categorized_object'):
             del self.__order[name]
             del self.__byctype[component.ctype][name]
             if len(self.__byctype[component.ctype]) == 0:
@@ -927,7 +927,7 @@ class StaticBlock(_block_base, IBlockStorage):
             yield item
 
     def __setattr__(self, name, component):
-        if isinstance(component, ICategorizedObject):
+        if hasattr(component, '_is_categorized_object'):
             if component._parent is None:
                 if hasattr(self, name):
                     logger.warning(
@@ -965,7 +965,7 @@ class StaticBlock(_block_base, IBlockStorage):
 
     def __delattr__(self, name):
         component = getattr(self, name)
-        if isinstance(component, ICategorizedObject):
+        if hasattr(component, '_is_categorized_object'):
             component._parent = None
         super(StaticBlock, self).__delattr__(name)
 
@@ -1008,8 +1008,9 @@ class StaticBlock(_block_base, IBlockStorage):
         Returns: an iterator objects or (key,object) tuples
         """
         for key, child in self._getattrs():
-            if isinstance(child, ICategorizedObject) and \
-               ((ctype is _no_ctype) or (child.ctype == ctype)):
+            if hasattr(child, '_is_categorized_object') and \
+               ((ctype is _no_ctype) or \
+                (child.ctype == ctype)):
                 if return_key:
                     yield key, child
                 else:

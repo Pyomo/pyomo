@@ -47,9 +47,16 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
 
     This class is abstract.
     """
+    __slots__ = ()
+
+    # These flags can be used by implementations to speed up
+    # code. The use of ABCMeta as a metaclass slows down
+    # isinstance calls by an order of magnitude! So for
+    # instance, use hasattr(obj, '_is_categorized') as
+    # opposed to isinstance(obj, ICategorizedObject)
+    _is_categorized_object = True
     _is_component = False
     _is_container = False
-    __slots__ = ()
 
     #
     # Implementations can choose to define these
