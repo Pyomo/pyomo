@@ -147,8 +147,8 @@ class CONOPT(SystemCallSolver):
         # 100 in this case, which is reserved for cases
         # where "optimal solution indicated, but error likely".
         if results.solver.id == 100 and \
-            res.solver.message.endswith('Locally optimal'):
-            res.solver.status = SolverStatus.ok
+            'Locally optimal' in results.solver.message:
+            results.solver.status = SolverStatus.ok
         return results
 
 pyutilib.services.register_executable(name="conopt")
