@@ -31,7 +31,7 @@ from pyomo.core.base import \
      ComponentMap, is_fixed)
 from pyomo.repn import (generate_canonical_repn,
                         canonical_degree,
-                        LinearCanonicalRepn)
+                        GeneralCanonicalRepn)
 
 logger = logging.getLogger('pyomo.core')
 
@@ -194,16 +194,18 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         assert (not force_objective_constant) or (is_objective)
 
         # cache - this is referenced numerous times.
-        if isinstance(x, LinearCanonicalRepn):
+        if not isinstance(x, GeneralCanonicalRepn):
             var_hashes = None # not needed
+            linear_canonical = True
         else:
             var_hashes = x[-1]
+            linear_canonical = False
 
         #
         # Linear
         #
         linear_coef_string_template = '%+'+self._precision_string+' %s\n'
-        if isinstance(x, LinearCanonicalRepn):
+        if linear_canonical:
 
             #
             # optimization (these might be generated on the fly)
@@ -356,7 +358,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # Constant offset
         #
-        if isinstance(x, LinearCanonicalRepn):
+        if linear_canonical:
             constant = x.constant
         else:
             if 0 in x:
@@ -617,7 +619,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         sort=sortOrder,
                         descend_into=False):
 
-                    if isinstance(constraint_data, LinearCanonicalRepn):
+                    if constraint_data._linear_canonical_form:
                         canonical_repn = constraint_data
                     else:
                         if gen_con_canonical_repn:

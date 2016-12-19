@@ -70,6 +70,12 @@ class IConstraint(IComponent, _IActiveComponent):
         doc=("A boolean indicating whether this "
              "is an equality constraint."))
 
+    _linear_canonical_form = _abstract_readonly_property(
+        doc=("Indicates whether or not the class or "
+             "instance provides the properties that "
+             "define the linear canonical form of a "
+             "constraint"))
+
     # temporary (for backwards compatibility)
     @property
     def lower(self):
@@ -153,6 +159,7 @@ class constraint(IConstraint):
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py
     _ctype = None
+    _linear_canonical_form = False
     __slots__ = ("_parent",
                  "_active",
                  "_body",
@@ -566,10 +573,7 @@ class constraint(IConstraint):
                     "non-finite term." % (self.name))
             assert self.lb is self.ub
 
-# TODO: Where do we put this class? Trying to inheret from
-#       LinearCanonicalRepn causes a circular import.
-#from pyomo.repn.canonical_repn import LinearCanonicalRepn
-class linear_constraint(IConstraint): #, LinearCanonicalRepn):
+class linear_constraint(IConstraint):
     """
     A linear constraint defined by a list of variables
     and coefficients
@@ -577,6 +581,7 @@ class linear_constraint(IConstraint): #, LinearCanonicalRepn):
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py
     _ctype = None
+    _linear_canonical_form = True
     __slots__ = ("_parent",
                  "_active",
                  "_variables",

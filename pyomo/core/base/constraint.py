@@ -166,6 +166,10 @@ class _ConstraintData(ActiveComponentData):
 
     __slots__ = ()
 
+    # Set to true when a constraint class stores its expression
+    # in linear canonical form
+    _linear_canonical_form = False
+
     def __init__(self, component=None):
         #
         # These lines represent in-lining of the
