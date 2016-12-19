@@ -1470,8 +1470,9 @@ class _Test_StaticBlock(_Test_block_base):
             b.b = b.b.v
         self.assertIs(b.b.parent, b)
         self.assertIs(b.b.v.parent, b.b)
-        with self.assertRaises(AttributeError):
-            b.not_an_attribute = 2
+# added a __dict__ in recent commit
+#        with self.assertRaises(AttributeError):
+#            b.not_an_attribute = 2
         c = b.b
         self.assertIs(c.parent, b)
         # test the edge case in setattr
