@@ -293,16 +293,31 @@ _test_solver_cases['ipopt', 'nl'] = initialize(
 # SCIP
 #
 _scip_capabilities= set(['linear',
-                       'integer',
-                       'quadratic_objective',
-                       'quadratic_constraint',
-                       'sos1',
-                       'sos2'])
+                         'integer',
+                         'quadratic_objective',
+                         'quadratic_constraint',
+                         'sos1',
+                         'sos2'])
 
 _test_solver_cases['scip', 'nl'] = initialize(
         name='scip',
         io='nl',
         capabilities=_scip_capabilities,
+        import_suffixes=[])
+
+#
+# CONOPT
+#
+_conopt_capabilities= set(['linear',
+                           'integer',
+                           'quadratic_objective',
+                           'quadratic_constraint',
+                           'sos1',
+                           'sos2'])
+_test_solver_cases['conopt', 'nl'] = initialize(
+        name='conopt',
+        io='nl',
+        capabilities=_conopt_capabilities,
         import_suffixes=[])
 
 #
