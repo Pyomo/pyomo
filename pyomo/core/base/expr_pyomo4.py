@@ -947,7 +947,11 @@ class _SumExpression(_LinearOperatorExpression):
         if targetRefs is not None:
             self, other = _generate_expression__clone_if_needed(
                 targetRefs, True, self, other )
-        return self.__iadd__(other.__neg__(targetRefs=None), targetRefs=None)
+        if other.__class__ in native_types:
+            return self.__iadd__( -other, targetRefs=None )
+        else:
+            return self.__iadd__(
+                other.__neg__(targetRefs=None), targetRefs=None )
 
     # If the system has getrefcount, then we can reliably treat all
     # additions as "in-place" additions.  Note that if we remove the
@@ -970,7 +974,11 @@ class _SumExpression(_LinearOperatorExpression):
         def __sub__(self, other):
             self, other = _generate_expression__clone_if_needed(
                 -2, False, self, other )
-            return self.__iadd__(-other, targetRefs=None)
+            if other.__class__ in native_types:
+                return self.__iadd__( -other, targetRefs=None )
+            else:
+                return self.__iadd__(
+                    other.__neg__(targetRefs=None), targetRefs=None )
 
         # Note: __rsub__ of _SumExpression is very rare (basically, it
         # needs to be "non-NumericValue - _SumExpression"), Since Pyomo4
