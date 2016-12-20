@@ -952,7 +952,7 @@ _old_relational_strings = {
     '==' : _eq,
     }
 
-def generate_expression(etype, _self, other):
+def generate_expression(etype, _self, other, targetRefs=None):
     if _self.is_indexed():
         raise TypeError("Argument for expression '%s' is an indexed "\
               "numeric value specified without an index: %s\n    Is "\
