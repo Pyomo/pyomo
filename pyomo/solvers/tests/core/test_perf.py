@@ -14,7 +14,7 @@ import pyomo.scripting.pyomo_command as main
 import pyomo.opt
 import pyomo.environ
 
-solver = pyomo.opt.load_solvers('cplex')
+solvers = pyomo.opt.check_available_solvers('cplex')
 
 #def tearDownModule():
 #    gc.collect()
@@ -155,7 +155,7 @@ for name in ['diagA100000', 'diagB100000', 'diagC100000', 'bilinearA100000', 'bi
 
 # added with-solve tests to identify potential issues with loading solutions (which we have previously observed).
 # using cplex to ensure that the solves themselves are not the bottleneck.
-if not solver['cplex'] is None:
+if 'cplex' in solvers:
     for i in [6,7,8]:
         name = 'test'+str(i)
         Test4.add_fn_test(fn=lp_with_cplex_solve_test, name='lp_with_cplex_solve_pmedian.'+name, options=[datadir+'pmedian.py'])

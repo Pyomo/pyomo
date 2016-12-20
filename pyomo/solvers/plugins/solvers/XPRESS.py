@@ -149,10 +149,11 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             script += "maxtime=%s\n" % (self._timelimit,)
 
         if (self.options.mipgap is not None) and (self.options.mipgap > 0.0):
-            script += "miprelstop=%s\n" % (self.options.mipgap,)
+            mipgap = self.options.pop('mipgap')
+            script += "miprelstop=%s\n" % (mipgap,)
 
         for option_name in self.options:
-            script += "%s=%s" % (option_name, self.options[option_name])
+            script += "%s=%s\n" % (option_name, self.options[option_name])
 
         script += "readprob %s\n" % (problem_files[0],)
 

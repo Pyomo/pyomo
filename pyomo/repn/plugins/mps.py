@@ -410,7 +410,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
 
                 degree = canonical_degree(canonical_repn)
                 if degree == 0:
-                    print("Warning: Constant objective detected, replacing "
+                    logger.warning("Constant objective detected, replacing "
                           "with a placeholder to prevent solver failure.")
                     force_objective_constant = True
                 elif (degree != 1) and (degree != 2):

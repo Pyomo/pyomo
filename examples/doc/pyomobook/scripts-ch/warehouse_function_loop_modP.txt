@@ -1,0 +1,18 @@
+--- P = 1 ---
+y : Size=3, Index=y_index
+    Key       : Lower : Value : Upper : Fixed : Stale : Domain
+      Ashland :     0 :   0.0 :     1 : False : False : Binary
+    Harlingen :     0 :   0.0 :     1 : False : False : Binary
+      Memphis :     0 :   1.0 :     1 : False : False : Binary
+--- P = 2 ---
+y : Size=3, Index=y_index
+    Key       : Lower : Value : Upper : Fixed : Stale : Domain
+      Ashland :     0 :   1.0 :     1 : False : False : Binary
+    Harlingen :     0 :   1.0 :     1 : False : False : Binary
+      Memphis :     0 :   0.0 :     1 : False : False : Binary
+--- P = 3 ---
+y : Size=3, Index=y_index
+    Key       : Lower : Value : Upper : Fixed : Stale : Domain
+      Ashland :     0 :   1.0 :     1 : False : False : Binary
+    Harlingen :     0 :   1.0 :     1 : False : False : Binary
+      Memphis :     0 :   0.0 :     1 : False : False : Binary

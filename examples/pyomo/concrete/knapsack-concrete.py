@@ -18,12 +18,12 @@ w = {'hammer':5, 'wrench':7, 'screwdriver':4, 'towel':3}
 
 limit = 14
 
-model = ConcreteModel()
+M = ConcreteModel()
 
-model.ITEMS = Set(initialize=v.keys())
+M.ITEMS = Set(initialize=v.keys())
 
-model.x = Var(model.ITEMS, within=Binary)
+M.x = Var(M.ITEMS, within=Binary)
 
-model.value = Objective(expr=sum(v[i]*model.x[i] for i in model.ITEMS), sense=maximize)
+M.value = Objective(expr=sum(v[i]*M.x[i] for i in M.ITEMS), sense=maximize)
 
-model.weight = Constraint(expr=sum(w[i]*model.x[i] for i in model.ITEMS) <= limit)
+M.weight = Constraint(expr=sum(w[i]*M.x[i] for i in M.ITEMS) <= limit)

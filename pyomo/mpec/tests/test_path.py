@@ -32,7 +32,7 @@ try:
 except ImportError:
     yaml_available=False
 
-solver = pyomo.opt.load_solvers('path')
+solvers = pyomo.opt.check_available_solvers('path')
 
 class CommonTests:
 
@@ -125,7 +125,7 @@ class CommonTests:
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(solver['path'] is None, "The 'path' executable is not available")
+@unittest.skipIf(not 'path' in solvers, "The 'path' executable is not available")
 class Solve_PATH(unittest.TestCase, CommonTests):
 
     def tearDown(self):

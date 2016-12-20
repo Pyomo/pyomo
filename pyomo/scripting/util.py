@@ -16,7 +16,7 @@ import traceback
 import types
 import time
 import json
-from six import itervalues, iterkeys
+from six import itervalues, iterkeys, iteritems
 from six.moves import xrange
 from pyomo.util import pyomo_api
 
@@ -267,36 +267,52 @@ def create_model(data):
         data.local.max_memory = mem_used
         print("   Total memory = %d bytes prior to model construction" % mem_used)
     #
-    # Create Model
+    # Find the Model objects
     #
+    _models = {}
+    for _name, _obj in iteritems(data.local.usermodel.__dict__):
+        if isinstance(_obj, Model):
+            _models[_name] = _obj
+    model_name = data.options.model.object_name
+    if len(_models) == 1:
+        _name  = list(_models.keys())[0]
+        if model_name is None:
+            model_name  = _name
+        elif model_name != _name:
+            msg = "Model '%s' is not defined in file '%s'!"
+            raise SystemExit(msg % (model_name, data.options.model.filename))
+    elif len(_models) > 1:
+        msg = "Multiple models defined in file '%s'!"
+        raise SystemExit(msg % data.options.model.filename)
+
     ep = ExtensionPoint(IPyomoScriptCreateModel)
-    model_name = 'model'
-    if data.options.model.object_name is not None: model_name = data.options.model.object_name
 
-    if model_name in dir(data.local.usermodel):
-        if len(ep) > 0:
-            msg = "Model construction function 'create_model' defined in "    \
-                  "file '%s', but model is already constructed!"
+    if model_name is None:
+        if len(ep) == 0:
+            msg = "A model is not defined and the 'pyomo_create_model' is not "\
+                  "provided in module %s"
             raise SystemExit(msg % data.options.model.filename)
-        model = getattr(data.local.usermodel, data.options.model.object_name)
-
+        elif len(ep) > 1:
+            msg = 'Multiple model construction plugins have been registered in module %s!'
+            raise SystemExit(msg % data.options.model.filename)
+        else:
+            model_options = data.options.model.options.value()
+            model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
+    else:
+        if model_name not in _models:
+            msg = "Model '%s' is not defined in file '%s'!"
+            raise SystemExit(msg % (model_name, data.options.model.filename))
+        model = _models[model_name]
         if model is None:
             msg = "'%s' object is 'None' in module %s"
             raise SystemExit(msg % (model_name, data.options.model.filename))
+        elif len(ep) > 0:
+            msg = "Model construction function 'create_model' defined in "    \
+                  "file '%s', but model is already constructed!"
+            raise SystemExit(msg % data.options.model.filename)
 
-    else:
-        if len(ep) == 0:
-            msg = "Neither '%s' nor 'pyomo_create_model' are available in "    \
-                  'module %s'
-            raise SystemExit(msg % ( model_name, data.options.model.filename ))
-        elif len(ep) > 1:
-            msg = 'Multiple model construction plugins have been registered!'
-            raise SystemExit(msg)
-        else:
-            model_options = data.options.model.options.value()
-            #if model_options is None:
-                #model_options = []
-            model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
+    #
+    # Print model
     #
     for ep in ExtensionPoint(IPyomoScriptPrintModel):
         ep.apply( options=data.options, model=model )
