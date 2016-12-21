@@ -28,7 +28,7 @@ import six
 
 currdir = dirname(abspath(__file__))+os.sep
 
-solver = pyomo.opt.load_solvers('glpk')
+solvers = pyomo.opt.check_available_solvers('glpk')
 
 class TestWorker(pyomo.scripting.pyro_mip_server.PyomoMIPWorker):
 
@@ -45,7 +45,7 @@ class Test(unittest.TestCase):
         pyutilib.services.TempfileManager.clear_tempfiles()
         del self.worker
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_t1(self):
         # Run a simple model
         model = ConcreteModel()

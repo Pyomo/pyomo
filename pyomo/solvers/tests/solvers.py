@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['test_solvers', 'test_solver_cases']
+__all__ = ['test_solver_cases', 'available_solvers']
 
 import os
 import six
@@ -32,17 +32,12 @@ logger_opt.setLevel( logging.ERROR )
 
 # ----------------------------------------------------------------
 
-# GH: This doesn't seem to be used for anything
-_test_solvers = {}
-def test_solvers(arg=None):
-    if arg is None:
-        return _test_solvers.keys()
-    return _test_solvers[arg]
-
-
 _test_solver_cases = {}
 
 def test_solver_cases(*args):
+    """
+    A function for accessing _test_solver_casess as global state
+    """
     if len(args) == 0:
         return _test_solver_cases.keys()
     return _test_solver_cases[args]
@@ -355,9 +350,6 @@ logger_solvers.setLevel( _level_solvers )
 #
 # Error Checks
 #
-for solver in six.itervalues(_test_solvers):
-    assert (solver.name is not None) and (type(solver.name) is str)
-
 for sc in six.itervalues(_test_solver_cases):
     if sc.capabilities is None:
         sc.capabilities = set([])

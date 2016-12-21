@@ -30,7 +30,6 @@ from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.expr import identify_variables
 from pyomo.opt import *
 
-solver = load_solvers('glpk')
 
 class DerivedBlock(SimpleBlock):
     def __init__(self, *args, **kwargs):

@@ -440,6 +440,16 @@ def extractComponentIndices(component, index_template):
 
     if len(iterator_range) == 0:
         return list(component)
+    elif len(iterator_range) == component_index_dimension:
+        if (len(index_template) == 1) and \
+           (index_template[0] in component):
+            return index_template
+        elif index_template in component:
+            return [index_template]
+        else:
+            raise ValueError(
+                "The index %s is not valid for component named: %s"
+                % (str(tuple(index_template)), component.name))
 
     result = []
 
