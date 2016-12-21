@@ -334,7 +334,8 @@ class constraint(IConstraint):
                     self.body = arg1
                 else:
                     self.rhs = ZeroConstant
-                    self.body = arg0 - arg1
+                    self.body = EXPR.generate_expression_bypassCloneCheck(
+                        _sub, arg0, arg1)
             #
             # Form inequality expression
             #
@@ -437,18 +438,13 @@ class constraint(IConstraint):
                     self.body = _args[1]
                 else:
                     self.rhs = ZeroConstant
-                    self.body = \
-                        EXPR.generate_expression_bypassCloneCheck(
-                            _sub,
-                            _args[0],
-                            _args[1])
+                    self.body = EXPR.generate_expression_bypassCloneCheck(
+                        _sub, _args[0], _args[1] )
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
                     try:
-                        _strict = \
-                            sum(1 if _s else 0
-                                for _s in expr._strict) > 0
+                        _strict = any(expr._strict)
                     except:
                         _strict = True
                     if _strict:
@@ -469,20 +465,10 @@ class constraint(IConstraint):
                             "using '<=', '>=', or '=='."
                             % (self.name))
 
-                try:
-                    _args = (expr._lhs, expr._rhs)
-                    if expr._lhs.__class__ is \
-                       EXPR._InequalityExpression:
-                        _args = (expr._lhs._lhs,
-                                 expr._lhs._rhs,
-                                 expr._rhs)
-                    elif expr._lhs.__class__ is \
-                         EXPR._InequalityExpression:
-                        _args = (expr._lhs,
-                                 expr._rhs._lhs,
-                                 expr._rhs._rhs)
-                except AttributeError:
-                    _args = expr._args
+                _args = expr._args
+                # Explicitly dereference the original arglist (otherwise
+                # this runs afoul of the getrefcount logic)
+                expr._args = []
 
                 if len(_args) == 3:
 
@@ -508,7 +494,6 @@ class constraint(IConstraint):
                     self.ub = _args[2]
 
                 else:
-
                     if not _args[1]._potentially_variable():
                         self.lb = None
                         self.body  = _args[0]
@@ -519,20 +504,15 @@ class constraint(IConstraint):
                         self.ub = None
                     else:
                         self.lb = None
-                        self.body = \
-                            EXPR.\
-                            generate_expression_bypassCloneCheck(
-                                _sub,
-                                _args[0],
-                                _args[1])
+                        self.body  = EXPR.generate_expression_bypassCloneCheck(
+                            _sub, _args[0], _args[1])
                         self.ub = ZeroConstant
 
         #
         # Replace numeric bound values with a NumericConstant object,
         # and reset the values to 'None' if they are 'infinite'
         #
-        if (self.lb is not None) and \
-           is_constant(self.lb):
+        if (self.lb is not None) and is_constant(self.lb):
             val = self.lb()
             if not pyutilib.math.is_finite(val):
                 if val > 0:
@@ -545,8 +525,7 @@ class constraint(IConstraint):
                     "Constraint '%s' created with a non-numeric "
                     "lower bound." % (self.name))
 
-        if (self.ub is not None) and \
-           is_constant(self.ub):
+        if (self.ub is not None) and is_constant(self.ub):
             val = self.ub()
             if not pyutilib.math.is_finite(val):
                 if val < 0:
