@@ -154,7 +154,89 @@ class IConstraint(IComponent, _IActiveComponent):
                 return self.lb <= body_expr
             return self.lb <= body_expr <= self.ub
 
-class constraint(IConstraint):
+class _mutable_bounds_mixin(object):
+    """
+    Use as a base class for IConstraint implementations
+    that allow adjusting the lb, ub, rhs, and equality
+    properties.
+
+    Assumes the derived class has _lb, _ub, and _equality
+    attributes that can be modified.
+    """
+    __slots__ = ()
+
+    #
+    # Define some of the IConstraint abstract methods
+    #
+
+    @property
+    def lb(self):
+        return self._lb
+    @lb.setter
+    def lb(self, lb):
+        if self.equality:
+            raise ValueError(
+                "The lb property can not be set "
+                "when the equality property is True.")
+        if lb is not None:
+            lb = as_numeric(lb)
+            if lb._potentially_variable():
+                raise ValueError(
+                    "Constraint lower bounds must be "
+                    "expressions restricted to data.")
+        self._lb = lb
+
+    @property
+    def ub(self):
+        return self._ub
+    @ub.setter
+    def ub(self, ub):
+        if self.equality:
+            raise ValueError(
+                "The ub property can not be set "
+                "when the equality property is True.")
+        if ub is not None:
+            ub = as_numeric(ub)
+            if ub._potentially_variable():
+                raise ValueError(
+                    "Constraint lower bounds must be "
+                    "expressions restricted to data.")
+        self._ub = ub
+
+    @property
+    def rhs(self):
+        if not self.equality:
+            raise ValueError(
+                "The rhs property can not be read "
+                "when the equality property is False.")
+        return self._lb
+    @rhs.setter
+    def rhs(self, rhs):
+        if rhs is not None:
+            rhs = as_numeric(rhs)
+            if rhs._potentially_variable():
+                raise ValueError(
+                    "Constraint righthand must be "
+                    "expressions restricted to data.")
+        self._lb = rhs
+        self._ub = rhs
+        self._equality = True
+
+    @property
+    def equality(self):
+        return self._equality
+    @equality.setter
+    def equality(self, equality):
+        if equality:
+            raise ValueError(
+                "The constraint equality flag can "
+                "only be set to True by assigning "
+                "an expression to the rhs property "
+                "(e.g., con.rhs = con.lb).")
+        assert not equality
+        self._equality = equality
+
+class constraint(_mutable_bounds_mixin, IConstraint):
     """An algebraic constraint."""
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py
@@ -227,70 +309,6 @@ class constraint(IConstraint):
             body = as_numeric(body)
         self._body = body
 
-    @property
-    def lb(self):
-        return self._lb
-    @lb.setter
-    def lb(self, lb):
-        if self.equality:
-            raise ValueError(
-                "The lb property can not be set "
-                "when the equality property is True.")
-        if lb is not None:
-            if potentially_variable(lb):
-                raise ValueError(
-                    "Constraint lower bounds must be "
-                    "expressions restricted to data.")
-        self._lb = lb
-
-    @property
-    def ub(self):
-        return self._ub
-    @ub.setter
-    def ub(self, ub):
-        if self.equality:
-            raise ValueError(
-                "The ub property can not be set "
-                "when the equality property is True.")
-        if ub is not None:
-            if potentially_variable(ub):
-                raise ValueError(
-                    "Constraint lower bounds must be "
-                    "expressions restricted to data.")
-        self._ub = ub
-
-    @property
-    def rhs(self):
-        if not self.equality:
-            raise ValueError(
-                "The rhs property can not be read "
-                "when the equality property is False.")
-        return self._lb
-    @rhs.setter
-    def rhs(self, rhs):
-        if rhs is not None:
-            if potentially_variable(rhs):
-                raise ValueError(
-                    "Constraint righthand must be "
-                    "expressions restricted to data.")
-        self._lb = rhs
-        self._ub = rhs
-        self._equality = True
-
-    @property
-    def equality(self):
-        return self._equality
-    @equality.setter
-    def equality(self, equality):
-        if equality:
-            raise ValueError(
-                "The constraint equality flag can "
-                "only be set to True by assigning "
-                "an expression to the rhs property "
-                "(e.g., con.rhs = con.lb).")
-        assert not equality
-        self._equality = equality
-
     #
     # Extend the IConstraint interface to allow the
     # expression on this constraint to be changed
@@ -305,8 +323,9 @@ class constraint(IConstraint):
     @expr.setter
     def expr(self, expr):
         """Set the expression on this constraint."""
+
+        self._equality = False
         if expr is None:
-            self._equality = False
             self.body = None
             self.lb = None
             self.ub = None
@@ -325,7 +344,8 @@ class constraint(IConstraint):
                 if arg1 is not None:
                     arg1 = as_numeric(arg1)
 
-                self._equality = True
+                # assigning to the rhs property
+                # will set the equality flag to True
                 if arg1 is None or (not arg1._potentially_variable()):
                     self.rhs = arg1
                     self.body = arg0
@@ -371,11 +391,11 @@ class constraint(IConstraint):
                 self.ub = arg2
             else:
                 raise ValueError(
-                    "Constructor rule for constraint '%s' returned "
-                    "a tuple of length %d. Expecting a tuple of "
+                    "Constraint '%s' assigned a tuple "
+                    "of length %d. Expecting a tuple of "
                     "length 2 or 3:\n"
-                    "Equality:   (left, right)\n"
-                    "Inequality: (lower, expression, upper)"
+                    "Equality:   (body, rhs)\n"
+                    "Inequality: (lb, body, ub)"
                     % (self.name, len(expr)))
 
             relational_expr = False
@@ -425,11 +445,12 @@ class constraint(IConstraint):
         if relational_expr:
             if _expr_type is EXPR._EqualityExpression:
                 # Equality expression: only 2 arguments!
-                self._equality = True
-                try:
-                    _args = (expr._lhs, expr._rhs)
-                except AttributeError:
-                    _args = expr._args
+                _args = expr._args
+                # Explicitly dereference the original arglist (otherwise
+                # this runs afoul of the getrefcount logic)
+                expr._args = []
+                # assigning to the rhs property
+                # will set the equality flag to True
                 if not _args[1]._potentially_variable():
                     self.rhs = _args[1]
                     self.body = _args[0]
@@ -520,10 +541,6 @@ class constraint(IConstraint):
                         "Constraint '%s' created with a +Inf lower "
                         "bound." % (self.name))
                 self.lb = None
-            elif bool(val > 0) == bool(val <= 0):
-                raise ValueError(
-                    "Constraint '%s' created with a non-numeric "
-                    "lower bound." % (self.name))
 
         if (self.ub is not None) and is_constant(self.ub):
             val = self.ub()
@@ -533,10 +550,6 @@ class constraint(IConstraint):
                         "Constraint '%s' created with a -Inf upper "
                         "bound." % (self.name))
                 self.ub = None
-            elif bool(val > 0) == bool(val <= 0):
-                raise ValueError(
-                    "Constraint '%s' created with a non-numeric "
-                    "upper bound." % (self.name))
 
         #
         # Error check, to ensure that we don't have a constraint that
@@ -552,7 +565,7 @@ class constraint(IConstraint):
                     "non-finite term." % (self.name))
             assert self.lb is self.ub
 
-class linear_constraint(IConstraint):
+class linear_constraint(_mutable_bounds_mixin, IConstraint):
     """
     A linear constraint defined by a list of variables
     and coefficients
@@ -617,81 +630,8 @@ class linear_constraint(IConstraint):
         self._variables = tuple(variables)
 
     #
-    # Define the IConstraint abstract methods
-    #
-
-    @property
-    def body(self):
-        return sum(c * v for c,v in zip(self._coefficients,
-                                        self._variables))
-
-    @property
-    def lb(self):
-        return self._lb
-    @lb.setter
-    def lb(self, lb):
-        if self.equality:
-            raise ValueError(
-                "The lb property can not be set "
-                "when the equality property is True.")
-        if lb is not None:
-            if potentially_variable(lb):
-                raise ValueError(
-                    "Constraint lower bounds must be "
-                    "expressions restricted to data.")
-        self._lb = lb
-
-    @property
-    def ub(self):
-        return self._ub
-    @ub.setter
-    def ub(self, ub):
-        if self.equality:
-            raise ValueError(
-                "The ub property can not be set "
-                "when the equality property is True.")
-        if ub is not None:
-            if potentially_variable(ub):
-                raise ValueError(
-                    "Constraint lower bounds must be "
-                    "expressions restricted to data.")
-        self._ub = ub
-
-    @property
-    def rhs(self):
-        if not self.equality:
-            raise ValueError(
-                "The rhs property can not be read "
-                "when the equality property is False.")
-        return self._lb
-    @rhs.setter
-    def rhs(self, rhs):
-        if rhs is not None:
-            if potentially_variable(rhs):
-                raise ValueError(
-                    "Constraint righthand must be "
-                    "expressions restricted to data.")
-        self._lb = rhs
-        self._ub = rhs
-        self._equality = True
-
-    @property
-    def equality(self):
-        return self._equality
-    @equality.setter
-    def equality(self, equality):
-        if equality:
-            raise ValueError(
-                "The constraint equality flag can "
-                "only be set to True by assigning "
-                "an expression to the rhs property "
-                "(e.g., con.rhs = con.lb).")
-        assert not equality
-        self._equality = equality
-
-    #
     # Override a the default __call__ method on IConstraint
-    # to avoid calling building the body expression
+    # to avoid building the body expression
     #
 
     def __call__(self, exception=True):
@@ -702,6 +642,15 @@ class linear_constraint(IConstraint):
             if exception:
                 raise
             return None
+
+    #
+    # Define the IConstraint abstract methods
+    #
+
+    @property
+    def body(self):
+        return sum(c * v for c,v in zip(self._coefficients,
+                                        self._variables))
 
     #
     # Define the LinearCanonicalRepn abstract methods
