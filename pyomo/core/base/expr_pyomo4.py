@@ -1480,9 +1480,6 @@ def generate_expression(etype, _self, _other, targetRefs=0):
         _self, _other = _generate_expression__clone_if_needed(
             targetRefs, etype > _inplace, _self, _other )
 
-    if etype > _inplace:
-        etype -= _inplace
-
     # Note: because generate_expression is called by the __op__ methods
     # on NumericValue, we are guaranteed that _self is a NumericValue.
     if _self.__class__ in native_numeric_types:
@@ -1491,6 +1488,9 @@ def generate_expression(etype, _self, _other, targetRefs=0):
     else:
         _self_expr = _self.is_expression()
         _self_var = _self._potentially_variable()
+
+    if etype > _inplace:
+        etype -= _inplace
 
     if etype >= _unary:
         if etype == _neg:
