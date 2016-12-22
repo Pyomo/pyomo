@@ -70,8 +70,6 @@ sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
 
 def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
-    #print(getrefcount(obj) - UNREFERENCED_EXPR_COUNT, target)
-
     ans = ()
     for obj in objs:
         if obj.__class__ in native_types:
@@ -103,14 +101,11 @@ def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
             test = getrefcount(obj) - UNREFERENCED_EXPR_COUNT
         else:
             test = getrefcount(obj) - UNREFERENCED_EXPR_COUNT + 1
-        #print str((test, target)),
         if test == target:
             ans = ans + (obj,)
         elif test > target:
             generate_expression.clone_counter += 1
             ans = ans + (obj.clone(),)
-            #print str((test, target))
-            #print "".join(traceback.format_stack())
         else: #pragma:nocover
             raise RuntimeError(
 """Expression entered generate_expression() with (%s<%s) references;
@@ -515,7 +510,6 @@ class _ExpressionBase(NumericValue):
                     _parent._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
             else:
                 _stack.pop()
-                #print _stack
                 if (_my_precedence > _prec) or not _my_precedence or verbose:
                     ostream.write(" )")
 
@@ -1375,7 +1369,6 @@ class _LinearExpression(_ExpressionBase):
     # here.
     if _getrefcount_available:
         def __add__(self, other, targetRefs=-2):
-            #print "LE: __add__(%s,%s)" % (getrefcount(self), getrefcount(other))
             if targetRefs is not None:
                 self, other = _generate_expression__clone_if_needed(
                     targetRefs, False, self, other )
@@ -1481,7 +1474,6 @@ class _LinearExpression(_ExpressionBase):
 zero_or_one = set([0,1])
 
 def generate_expression(etype, _self, _other, targetRefs=0):
-    #print "GE: __%s__(%s,%s)" % (etype,getrefcount(_self), getrefcount(_other))
     if targetRefs is not None:
         _self, _other = _generate_expression__clone_if_needed(
             targetRefs, etype > _inplace, _self, _other )
