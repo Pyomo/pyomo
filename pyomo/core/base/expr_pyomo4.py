@@ -1574,7 +1574,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
                     _other, targetRefs=None)
             if _other_var and not _other_expr:
                 ans = _LinearExpression(_other, 1)
-                ans._const += _self
+                ans._const = _self
                 return ans
         ans = _SumExpression([_self, _other])
 
@@ -1593,7 +1593,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
                     _other, targetRefs=None )
             if _other_var and not _other_expr:
                 ans = _LinearExpression(_other, -1)
-                ans._const += _self
+                ans._const = _self
                 return ans
         ans = _SumExpression([_self, -_other])
 
