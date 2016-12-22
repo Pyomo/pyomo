@@ -371,7 +371,7 @@ class piecewise_cc(_PiecewiseLinearFunction):
 
         self._c3 = linear_constraint(
             variables=lmbda_tuple,
-            coefficients=(-1,)*len(lmbda),
+            coefficients=(1,)*len(lmbda),
             rhs=1)
 
         self._c4 = constraint_list()
@@ -449,7 +449,7 @@ class piecewise_mc(_PiecewiseLinearFunction):
                 ub=0))
             self._c4.append(linear_constraint(
                 variables=(lmbda[p], y[p]),
-                coefficients=(1, self.breakpoints[p+1]),
+                coefficients=(1, -self.breakpoints[p+1]),
                 ub=0))
 
         self._c5 = linear_constraint(
@@ -538,7 +538,7 @@ class piecewise_dlog(_PiecewiseLinearFunction):
         # create branching schemes
         L = log2floor(len(self.breakpoints)-1)
         assert 2**L == len(self.breakpoints)-1
-        B_ZERO,B_ONE = self._branching_scheme(L)
+        B_LEFT, B_RIGHT = self._branching_scheme(L)
 
         # create indexers
         polytopes = range(len(self.breakpoints)-1)
@@ -550,7 +550,7 @@ class piecewise_dlog(_PiecewiseLinearFunction):
         lmbda = self._lmbda = variable_dict(
             ((p,v), variable(lb=0))
             for p in polytopes
-            for v in vertices)
+            for v in polytope_verts(p))
         y = self._y = variable_list(
             variable(domain=Binary)
             for i in range(L))
@@ -591,7 +591,7 @@ class piecewise_dlog(_PiecewiseLinearFunction):
         self._c4 = constraint_list()
         for i in range(L):
             variables = tuple(lmbda[p,v]
-                              for p in B_ZERO[i]
+                              for p in B_LEFT[i]
                               for v in polytope_verts(p))
             self._c4.append(linear_constraint(
                 variables=variables + (y[i],),
@@ -601,7 +601,7 @@ class piecewise_dlog(_PiecewiseLinearFunction):
         self._c5 = constraint_list()
         for i in range(L):
             variables = tuple(lmbda[p,v]
-                              for p in B_ONE[i]
+                              for p in B_RIGHT[i]
                               for v in polytope_verts(p))
             self._c5.append(linear_constraint(
                 variables=variables + (y[i],),
@@ -610,27 +610,27 @@ class piecewise_dlog(_PiecewiseLinearFunction):
 
     def _branching_scheme(self, L):
         N = 2**L
-        mylists1 = []
-        for i in range(L):
-            mylists1.append([])
-            start = 0
-            step = int(N/(2**i))
+        B_LEFT = []
+        for i in range(1,L+1):
+            start = 1
+            step = N//(2**i)
+            tmp = []
             while start < N:
-                mylists1[i].extend(j for j in xrange(start,start+step))
+                tmp.extend(j-1 for j in xrange(start,start+step))
                 start += 2*step
+            B_LEFT.append(tmp)
 
         biglist = range(N)
-        mylists2 = []
-        for i in range(len(mylists1)):
+        B_RIGHT = []
+        for i in range(len(B_LEFT)):
             tmp = []
             for j in biglist:
-                if j not in mylists1[i]:
+                if j not in B_LEFT[i]:
                     tmp.append(j)
-            mylists2.append(sorted(tmp))
+            B_RIGHT.append(sorted(tmp))
 
-        return mylists1, mylists2
+        return B_LEFT, B_RIGHT
 registered_transforms['dlog'] = piecewise_dlog
-
 
 class piecewise_log(_PiecewiseLinearFunction):
     """
@@ -708,166 +708,12 @@ class piecewise_log(_PiecewiseLinearFunction):
     def _branching_scheme(self, n):
         N = 2**n
         S = range(n)
-        # turn the GrayCode into a dictionary indexed
-        # starting at 1
         G = generate_gray_code(n)
-
-        L = tuple([k for k in xrange(N)
-                   if ((k == 0) or (G[k][s] == 1))
-                   and ((k == N-1) or (G[k+1][s] == 1))] for s in S)
-        R = tuple([k for k in xrange(N)
-                   if ((k == 0) or (G[k][s] == 0))
-                   and ((k == N-1) or (G[k+1][s] == 0))] for s in S)
-
+        L = tuple([k for k in xrange(N+1)
+                   if ((k == 0) or (G[k-1][s] == 1))
+                   and ((k == N) or (G[k][s] == 1))] for s in S)
+        R = tuple([k for k in xrange(N+1)
+                   if ((k == 0) or (G[k-1][s] == 0))
+                   and ((k == N) or (G[k][s] == 0))] for s in S)
         return S, L, R
 registered_transforms['log'] = piecewise_log
-
-if False:           #pragma:nocover
-    class piecewise_bigm(_PiecewiseLinearFunction):
-        """
-        Expresses a piecewise linear function using
-        the BIGM formulation
-        """
-        __slots__ = ("_x", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
-
-        def __init__(self, *args, **kwds):
-            bound = kwds.pop('bound', 'eq')
-            binary = kwds.pop('binary', True)
-            super(piecewise_bigm, self).__init__(*args, **kwds)
-            self.binary = binary
-            if not (self.binary in [True,False]):
-                raise ValueError("_BIGMPiecewise must be initialized with the binary "\
-                                  "flag set to True or False (choose one).")
-
-        def construct(self,pblock,input,output):
-            # The BIGM methods currently determine tightest possible M
-            # values. This method is implemented in such a way that
-            # binary/sos1 variables are not created when this M is zero
-            tag = ""
-            breakpoints = pblock._domain_pts
-            values = pblock._range_pts
-            bound = pblock._bound
-            if None in [breakpoints,values,bound]:
-                raise RuntimeError("_BIGMPiecewise: construct() called during "\
-                                    "invalid state.")
-            len_breakpoints = len(self.breakpoints)
-
-            if self.binary is True:
-                tag += "bin"
-            else:
-                tag += "sos1"
-
-            # generate tightest bigM values
-            OPT_M = {}
-            OPT_M['UB'] = {}
-            OPT_M['LB'] = {}
-
-            if bound in ['ub','eq']:
-                OPT_M['UB'] = self._find_M(self.breakpoints, self.values, 'ub')
-            if bound in ['lb','eq']:
-                OPT_M['LB'] = self._find_M(self.breakpoints, self.values, 'lb')
-
-            all_keys = set(iterkeys(OPT_M['UB'])).union(iterkeys(OPT_M['LB']))
-            full_indices = []
-            full_indices.extend(range(1,len_breakpoints))
-            bigm_y_index = None
-            bigm_y = None
-            if len(all_keys) > 0:
-                bigm_y_index = all_keys
-
-                def y_domain():
-                    if self.binary is True:
-                        return Binary
-                    else:
-                        return NonNegativeReals
-                setattr(pblock,tag+'_y', Var(bigm_y_index,within=y_domain()))
-                bigm_y = getattr(pblock,tag+'_y')
-
-            def con1_rule(model,i):
-                if bound in ['ub','eq']:
-                    rhs = 1.0
-                    if i not in OPT_M['UB']:
-                        rhs *= 0.0
-                    else:
-                        rhs *= OPT_M['UB'][i]*(1-bigm_y[i])
-                    # using future division
-                    return output - self.values[i-1] - \
-                    ((self.values[i]-self.values[i-1])/(self.breakpoints[i]-self.breakpoints[i-1]))*(input-self.breakpoints[i-1])\
-                    <= rhs
-                elif bound == 'lb':
-                    rhs = 1.0
-                    if i not in OPT_M['LB']:
-                        rhs *= 0.0
-                    else:
-                        rhs *= OPT_M['LB'][i]*(1-bigm_y[i])
-                    # using future division
-                    return output - self.values[i-1] - \
-                    ((self.values[i]-self.values[i-1])/(self.breakpoints[i]-self.breakpoints[i-1]))*(input-self.breakpoints[i-1])\
-                    >= rhs
-
-            def con2_rule(model):
-                expr = [bigm_y[i] for i in xrange(1,len_breakpoints) if i in all_keys]
-                if len(expr) > 0:
-                    return sum(expr) == 1
-                else:
-                    return Constraint.Skip
-
-            def conAFF_rule(model,i):
-                rhs = 1.0
-                if i not in OPT_M['LB']:
-                    rhs *= 0.0
-                else:
-                    rhs *= OPT_M['LB'][i]*(1-bigm_y[i])
-                # using future division
-                return output - self.values[i-1] - \
-                ((self.values[i]-self.values[i-1])/(self.breakpoints[i]-self.breakpoints[i-1]))*(input-breakpoints[i-1]) \
-                >= rhs
-
-            pblock.BIGM_constraint1 = Constraint(full_indices,rule=con1_rule)
-            if len(all_keys) > 0:
-                pblock.BIGM_constraint2 = Constraint(rule=con2_rule)
-            if bound == 'eq':
-                pblock.BIGM_constraint3 = Constraint(full_indices,rule=conAFF_rule)
-
-            if len(all_keys) > 0:
-                if self.binary is False:
-                    pblock.BIGM_constraint4 = SOSConstraint(var=bigm_y, sos=1)
-
-            # In order to enforce the same behavior as actual piecewise
-            # constraints, we constrain the domain variable between the
-            # outer domain pts. But in order to prevent filling the model
-            # with unecessary constraints, we only do this when absolutely
-            # necessary.
-            if not input.lb is None and input.lb < self.breakpoints[0]:
-                pblock.bigm_domain_constraint_lower = Constraint(expr=self.breakpoints[0] <= input)
-            if not input.ub is None and input.ub > self.breakpoints[-1]:
-                pblock.bigm_domain_constraint_upper = Constraint(expr=input <= self.breakpoints[-1])
-
-        def _M_func(self,a,Fa,b,Fb,c,Fc):
-            # using future division
-            return Fa - Fb - ((a-b) * ((Fc-Fb) / (c-b)))
-
-        def _find_M(self,breakpoints,values,bound):
-            len_breakpoints = len(breakpoints)
-            _self_M_func = self._M_func
-
-            M_final = {}
-            for j in xrange(1,len_breakpoints):
-                index = j
-                if bound == 'lb':
-                    M_final[index] = min( [0.0, min([_self_M_func(breakpoints[k],values[k],
-                                                                  breakpoints[j-1],values[j-1],
-                                                                  breakpoints[j],values[j]) \
-                                                for k in xrange(len_breakpoints)])] )
-                elif bound == 'ub':
-                    M_final[index] = max( [0.0, max([_self_M_func(breakpoints[k],values[k],
-                                                                  breakpoints[j-1],values[j-1],
-                                                                  breakpoints[j],values[j]) \
-                                                 for k in xrange(len_breakpoints)])] )
-                else:
-                    raise ValueError("Invalid Bound passed to _find_M function")
-                if M_final[index] == 0.0:
-                    del M_final[index]
-            return M_final
-    registered_transforms['bigm'] = piecewise_bigm
-
