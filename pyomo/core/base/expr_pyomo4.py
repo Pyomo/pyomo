@@ -1274,7 +1274,7 @@ class _LinearExpression(_ExpressionBase):
             ans += value(self._coef[id(v)]) * result[i]
         return ans
 
-    def __iadd__(self, other, reverse=False, targetRefs=-2):
+    def __iadd__(self, other, targetRefs=-2):
         if targetRefs is not None:
             self, other = _generate_expression__clone_if_needed(
                 targetRefs, True, self, other )
@@ -1291,15 +1291,10 @@ class _LinearExpression(_ExpressionBase):
                     if _id in self._coef:
                         self._coef[_id] += other._coef[_id]
                     else:
-                        if reverse:
-                            self._args.insert(0, v)
-                        else:
-                            self._args.append(v)
+                        self._args.append(v)
                         self._coef[_id] = other._coef[_id]
                 return self
             if other._potentially_variable():
-                if reverse:
-                    self, other = other, self
                 return generate_expression(_add, self, other, targetRefs=None)
             # Then this is NOT potentially variable
             self._const += other
@@ -1309,17 +1304,14 @@ class _LinearExpression(_ExpressionBase):
             if _id in self._coef:
                 self._coef[_id] += 1
             else:
-                if reverse:
-                    self._args.insert(0,other)
-                else:
-                    self._args.append(other)
+                self._args.append(other)
                 self._coef[_id] = 1
             return self
         else:
             self._const += other
             return self
 
-    def __isub__(self, other, reverse=False, targetRefs=-2):
+    def __isub__(self, other, targetRefs=-2):
         if targetRefs is not None:
             self, other = _generate_expression__clone_if_needed(
                 targetRefs, True, self, other )
@@ -1336,16 +1328,11 @@ class _LinearExpression(_ExpressionBase):
                     if _id in self._coef:
                         self._coef[_id] -= other._coef[_id]
                     else:
-                        if reverse:
-                            self._args.insert(0, v)
-                        else:
-                            self._args.append(v)
+                        self._args.append(v)
                         self._coef[_id] = -other._coef.pop(_id)
                 return self
             if other._potentially_variable():
                 other = other.__neg__(targetRefs=None)
-                if reverse:
-                    self, other = other, self
                 return generate_expression(_add, self, other, targetRefs=None)
             # Then this is NOT potentially variable
             self._const -= other
@@ -1355,10 +1342,7 @@ class _LinearExpression(_ExpressionBase):
             if _id in self._coef:
                 self._coef[_id] -= 1
             else:
-                if reverse:
-                    self._args.insert(0,other)
-                else:
-                    self._args.append(other)
+                self._args.append(other)
                 self._coef[_id] = -1
             return self
         else:
