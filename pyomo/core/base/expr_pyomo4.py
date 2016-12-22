@@ -1506,6 +1506,10 @@ def generate_expression(etype, _self, _other, targetRefs=0):
             ans = _AbsExpression((_self,))
             if not _getrefcount_available and _self_expr:
                 _self._parent_expr = bypass_backreference or ans(ans)
+        else: #pragma:nocover
+            raise DeveloperError(
+                "Unexpected unary operator id (%s)" % ( etype, ))
+
         return ans
 
     if _other.__class__ in native_numeric_types:
