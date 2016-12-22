@@ -1397,7 +1397,7 @@ class _LinearExpression(_ExpressionBase):
             if targetRefs is not None:
                 self, other = _generate_expression__clone_if_needed(
                     targetRefs, False, self, other )
-            return self.__neg__(targetRefs=None).__iadd__(other, reverse=True, targetRefs=None)
+            return self.__neg__(targetRefs=None).__iadd__(other, targetRefs=None)
 
 
     def __imul__(self, other, divide=False, targetRefs=-2):
