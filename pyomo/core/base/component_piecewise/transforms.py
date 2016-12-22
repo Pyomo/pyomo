@@ -16,6 +16,7 @@ Mixed-Integer Models for Non-separable Piecewise Linear
 Optimization: Unifying framework and Extensions (Vielma,
 Nemhauser 2008).
 """
+
 # ****** NOTE: Nothing in this file relies on integer division *******
 #              I predict this will save numerous headaches as
 #              well as gratuitous calls to float() in this code
@@ -61,7 +62,50 @@ def piecewise(breakpoints,
               output=None,
               bound='eq',
               repn='sos2'):
+    """
+    Transforms a list of breakpoints and values into a mixed-integer
+    representation of a piecewise function.
 
+    Args:
+        breakpoints: The list of breakpoints of the
+            piecewise linear function. This can be a list of
+            number or a list of objects that store mutable
+            data (e.g., mutable parameters). It is assumed
+            that the points in this list are in
+            non-decreasing order.
+        values: The list of values of the piecewise linear
+            function at each of the breakpoints. This list
+            must be the same length as the breakpoints
+            argument.
+        input: The variable constrained to be the input of
+            the piecewise linear function.
+        output: The variable constrained to be the output of
+            the piecewise linear function.
+        bound: The type of bound on the output to
+            generate. Can be one of:
+                - 'lb': y <= f(x)
+                - 'eq': y  = f(x)
+                - 'ub': y >= f(x)
+        repn: The type of piecewise representation to
+            use. Can be one of:
+                - 'sos2': standard representation using sos2 constraints (+)
+                -  'dcc': disaggregated convex combination (*+)
+                - 'dlog': logarithmic disaggregated convex combination (*+)
+                -   'cc': convex combination (*+)
+                -  'log': logarithmic branching convex combination (*+)
+                -   'mc': multiple choice (*)
+                -  'inc': incremental method (*+)
+           + supports step functions
+           * source: "Mixed-Integer Models for Non-separable
+                      Piecewise Linear Optimization:
+                      Unifying framework and Extensions"
+                      (Vielma, Nemhauser 2008)
+
+    Returns: A block containing the necessary auxiliary
+        variables and constraints that enforce the piecewise
+        linear relationship between the input and output
+        variable.
+    """
     transorm = None
     try:
         transform = registered_transforms[repn]
@@ -84,7 +128,9 @@ class _PiecewiseLinearFunction(StaticBlock):
     A piecewise linear function defined by a list of
     breakpoints and values.
 
-    Assumes the breakpoints are in nondecreasing order.
+    Assumes the breakpoints are in nondecreasing order, but this
+    is not validated because the list of breakpoints and values
+    can be expressions (e.g., mutable parameters).
     """
     __slots__ = ("_input", "_output", "_breakpoints", "_values")
 
