@@ -1274,94 +1274,96 @@ class _LinearExpression(_ExpressionBase):
             ans += value(self._coef[id(v)]) * result[i]
         return ans
 
-    def __iadd__(self, other, reverse=False, negate=False, targetRefs=-2):
-        # I wonder if this is a reasonable test, or if we should just
-        # assume that when people explicitly call += that they know what
-        # they are doing?
-        #print "LE: __iadd__(%s,%s)" % (getrefcount(self), getrefcount(other))
+    def __iadd__(self, other, reverse=False, targetRefs=-2):
         if targetRefs is not None:
             self, other = _generate_expression__clone_if_needed(
                 targetRefs, True, self, other )
 
         if other.__class__ in native_numeric_types:
-            if negate:
-                self._const -= other
-            else:
-                self._const += other
+            self._const += other
             return self
 
-        _other_expr = other.is_expression()
-
-        if _other_expr and other.__class__ is _LinearExpression:
-            # NOTE: it is faster to test the negate flag at each
-            # iteration than it is to multiply by a 1/-1.  Plus, we
-            # cannot just negate other because that is an undesirable
-            # side effect for the case where getrefcount is not
-            # available.
-            #if negate:
-            #    other._const *= -1
-            #    for key in other._coef:
-            #        other._coef[key] *= -1
-
-            if negate:
-                self._const += other._const
-            else:
+        if other.is_expression():
+            if other.__class__ is _LinearExpression:
                 self._const -= other._const
-            for v in other._args:
-                _id = id(v)
-                if _id in self._coef:
-                    if negate:
-                        self._coef[_id] -= other._coef[_id]
-                    else:
+                for v in other._args:
+                    _id = id(v)
+                    if _id in self._coef:
                         self._coef[_id] += other._coef[_id]
-                else:
-                    if reverse:
-                        self._args.insert(0, v)
                     else:
-                        self._args.append(v)
-                    if negate:
-                        self._coef[_id] = -other._coef.pop(_id)
-                    else:
+                        if reverse:
+                            self._args.insert(0, v)
+                        else:
+                            self._args.append(v)
                         self._coef[_id] = other._coef[_id]
-
+                return self
+            if other._potentially_variable():
+                if reverse:
+                    self, other = other, self
+                return generate_expression(_add, self, other, targetRefs=None)
+            # Then this is NOT potentially variable
+            self._const += other
             return self
-
-        _potentially_var = other._potentially_variable()
-        if _potentially_var and not _other_expr:
+        elif other._potentially_variable():
             _id = id(other)
-            coef = -1 if negate else 1
             if _id in self._coef:
-                self._coef[_id] += coef
+                self._coef[_id] += 1
             else:
                 if reverse:
                     self._args.insert(0,other)
                 else:
                     self._args.append(other)
-                self._coef[_id] = coef
+                self._coef[_id] = 1
             return self
-        elif not _potentially_var:
-            if negate:
-                self._const -= other
-            else:
-                self._const += other
-            return self
-        elif _other_expr:
-            if negate:
-                other = -other
-            if reverse:
-                self, other = other, self
-            return generate_expression(_add, self, other, targetRefs=None)
         else:
-            # This should not be reachable
-            raise DeveloperError(
-                "Unexpected branch in _LinearExpression.add_impl for %s + %s"
-                % ( self, other ))
+            self._const += other
+            return self
 
-    def __isub__(self, other, targetRefs=-2):
+    def __isub__(self, other, reverse=False, targetRefs=-2):
         if targetRefs is not None:
             self, other = _generate_expression__clone_if_needed(
                 targetRefs, True, self, other )
-        return self.__iadd__(other, negate=True, targetRefs=None)
+
+        if other.__class__ in native_numeric_types:
+            self._const -= other
+            return self
+
+        if other.is_expression():
+            if other.__class__ is _LinearExpression:
+                self._const += other._const
+                for v in other._args:
+                    _id = id(v)
+                    if _id in self._coef:
+                        self._coef[_id] -= other._coef[_id]
+                    else:
+                        if reverse:
+                            self._args.insert(0, v)
+                        else:
+                            self._args.append(v)
+                        self._coef[_id] = -other._coef.pop(_id)
+                return self
+            if other._potentially_variable():
+                other = other.__neg__(targetRefs=None)
+                if reverse:
+                    self, other = other, self
+                return generate_expression(_add, self, other, targetRefs=None)
+            # Then this is NOT potentially variable
+            self._const -= other
+            return self
+        elif other._potentially_variable():
+            _id = id(other)
+            if _id in self._coef:
+                self._coef[_id] -= 1
+            else:
+                if reverse:
+                    self._args.insert(0,other)
+                else:
+                    self._args.append(other)
+                self._coef[_id] = -1
+            return self
+        else:
+            self._const -= other
+            return self
 
     # If the system has getrefcount, then we can reliably treat all
     # additions as "in-place" additions.  Note that if we remove the
@@ -1385,9 +1387,9 @@ class _LinearExpression(_ExpressionBase):
         def __sub__(self, other):
             self, other = _generate_expression__clone_if_needed(
                 -2, False, self, other )
-            return self.__iadd__(other, negate=True, targetRefs=None)
+            return self.__isub__(other, targetRefs=None)
 
-        # Note: treating __radd__ the same as iadd is fine, as it will
+        # Note: treating __rsub__ the same as iadd is fine, as it will
         # only be called when other is not a NumericValue object
         # ... that is, a constant.  SO, we don't have to worry about
         # preserving the variable order.
