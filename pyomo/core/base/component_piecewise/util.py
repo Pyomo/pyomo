@@ -48,6 +48,15 @@ def is_postive_power_of_two(x):
     else:
         return ( (x & (x - 1)) == 0 )
 
+def log2floor(n):
+    """
+    Returns the exact value of floor(log2(n)).
+    No floating point calculations are used.
+    Requires positive integer type.
+    """
+    assert n > 0
+    return n.bit_length() - 1
+
 def generate_gray_code(nbits):
     """Generates a Gray code of nbits as list of lists"""
     bitset = [0 for i in xrange(nbits)]

@@ -95,6 +95,25 @@ class Test_util(unittest.TestCase):
         self.assertEqual(util.is_postive_power_of_two(31), False)
         self.assertEqual(util.is_postive_power_of_two(32), True)
 
+    def test_log2floor(self):
+        self.assertEqual(util.log2floor(1), 0)
+        self.assertEqual(util.log2floor(2), 1)
+        self.assertEqual(util.log2floor(3), 1)
+        self.assertEqual(util.log2floor(4), 2)
+        self.assertEqual(util.log2floor(5), 2)
+        self.assertEqual(util.log2floor(6), 2)
+        self.assertEqual(util.log2floor(7), 2)
+        self.assertEqual(util.log2floor(8), 3)
+        self.assertEqual(util.log2floor(9), 3)
+        self.assertEqual(util.log2floor(2**10), 10)
+        self.assertEqual(util.log2floor(2**10 + 1), 10)
+        self.assertEqual(util.log2floor(2**20), 20)
+        self.assertEqual(util.log2floor(2**20 + 1), 20)
+        self.assertEqual(util.log2floor(2**30), 30)
+        self.assertEqual(util.log2floor(2**30 + 1), 30)
+        self.assertEqual(util.log2floor(2**40), 40)
+        self.assertEqual(util.log2floor(2**40 + 1), 40)
+
     def test_generate_gray_code(self):
         self.assertEqual(util.generate_gray_code(0),
                          [[]])
@@ -261,17 +280,28 @@ class Test_piecewise(unittest.TestCase):
     def test_init(self):
         for key in registered_transforms:
             for bound in ['lb','ub','eq','bad']:
-                args = ([1,2,3], [1,2,1])
-                kwds = {'repn': key, 'bound': bound}
-                if bound == 'bad':
-                    with self.assertRaises(ValueError):
-                        piecewise(*args, **kwds)
-                else:
-                    p = piecewise(*args, **kwds)
-                    self.assertTrue(isinstance(p, registered_transforms[key]))
-                    self.assertTrue(isinstance(p, _PiecewiseLinearFunction))
-                    self.assertEqual(p.active, True)
-                    self.assertIs(p.parent, None)
+                for args in [([1,2,3], [1,2,1]),
+                             ([1,2,3,4,5],[1,2,1,2,1]),
+                             ([1,2,3,4,5,6,7,8,9],[1,2,1,2,1,2,1,2,1])]:
+                    kwds = {'repn': key, 'bound': bound}
+                    if bound == 'bad':
+                        with self.assertRaises(ValueError):
+                            piecewise(*args, **kwds)
+                    else:
+                        p = piecewise(*args, **kwds)
+                        self.assertTrue(
+                            isinstance(p, registered_transforms[key]))
+                        self.assertTrue(
+                            isinstance(p, _PiecewiseLinearFunction))
+                        self.assertEqual(p.active, True)
+                        self.assertIs(p.parent, None)
+
+    def test_bad_init_log_types(self):
+        # lists are not of length: (2^n) + 1
+        with self.assertRaises(ValueError):
+            piecewise([1,2,3,4],[1,2,3,4],repn='dlog')
+        with self.assertRaises(ValueError):
+            piecewise([1,2,3,4],[1,2,3,4],repn='log')
 
 class Test_piecewise_dict(_TestActiveComponentDictBase,
                           unittest.TestCase):

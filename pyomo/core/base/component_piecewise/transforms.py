@@ -41,7 +41,11 @@ from pyomo.core.base.component_constraint import (constraint,
                                                   linear_constraint)
 from pyomo.core.base.component_sos import sos2
 from pyomo.core.base.component_piecewise.util import \
-    is_nondecreasing
+    (is_nondecreasing,
+     is_postive_power_of_two,
+     log2floor,
+     generate_gray_code)
+
 import six
 from six.moves import xrange, zip
 
@@ -468,191 +472,211 @@ class piecewise_inc(_PiecewiseLinearFunction):
                 ub=0))
 registered_transforms['inc'] = piecewise_inc
 
+class piecewise_dlog(_PiecewiseLinearFunction):
+    """
+    Expresses a piecewise linear function using
+    the DLOG formulation
+    """
+    __slots__ = ("_lmbda", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
+
+    def __init__(self, *args, **kwds):
+        bound = kwds.pop('bound', 'eq')
+        super(piecewise_dlog, self).__init__(*args, **kwds)
+
+        if not is_postive_power_of_two(len(self.breakpoints)-1):
+            raise ValueError("The list of breakpoints must be "
+                             "of length (2^n)+1 for some positive "
+                             "integer n. Invalid length: %s"
+                             % (len(self.breakpoints)))
+
+        # create branching schemes
+        L = log2floor(len(self.breakpoints)-1)
+        assert 2**L == len(self.breakpoints)-1
+        B_ZERO,B_ONE = self._branching_scheme(L)
+
+        # create indexers
+        polytopes = range(len(self.breakpoints)-1)
+        vertices = range(len(self.breakpoints))
+        def polytope_verts(p):
+            return xrange(p,p+2)
+
+        # create vars
+        lmbda = self._lmbda = variable_dict(
+            ((p,v), variable(lb=0))
+            for p in polytopes
+            for v in vertices)
+        y = self._y = variable_list(
+            variable(domain=Binary)
+            for i in range(L))
+
+        # create piecewise constraints
+        self._c1 = linear_constraint(
+            variables=(self.input,) + tuple(lmbda[p,v]
+                                            for p in polytopes
+                                            for v in polytope_verts(p)),
+            coefficients=(-1,) + tuple(self.breakpoints[v]
+                                       for p in polytopes
+                                       for v in polytope_verts(p)),
+            rhs=0)
+
+        self._c2 = linear_constraint(
+            variables=(self.output,) + tuple(lmbda[p,v]
+                                             for p in polytopes
+                                             for v in polytope_verts(p)),
+            coefficients=(-1,) + tuple(self.values[v]
+                                       for p in polytopes
+                                       for v in polytope_verts(p)))
+        if bound == 'ub':
+            self._c2.lb = 0
+        elif bound == 'lb':
+            self._c2.ub = 0
+        elif bound == 'eq':
+            self._c2.rhs = 0
+        else:
+            raise ValueError("Invalid bound type %r. Must be "
+                             "one of: ['lb','ub','eq']"
+                             % (bound))
+
+        self._c3 = linear_constraint(
+            variables=tuple(lmbda.values()),
+            coefficients=(1,)*len(lmbda),
+            rhs=1)
+
+        self._c4 = constraint_list()
+        for i in range(L):
+            variables = tuple(lmbda[p,v]
+                              for p in B_ZERO[i]
+                              for v in polytope_verts(p))
+            self._c4.append(linear_constraint(
+                variables=variables + (y[i],),
+                coefficients=(1,)*len(variables) + (-1,),
+                ub=0))
+
+        self._c5 = constraint_list()
+        for i in range(L):
+            variables = tuple(lmbda[p,v]
+                              for p in B_ONE[i]
+                              for v in polytope_verts(p))
+            self._c5.append(linear_constraint(
+                variables=variables + (y[i],),
+                coefficients=(1,)*len(variables) + (1,),
+                ub=1))
+
+    def _branching_scheme(self, L):
+        N = 2**L
+        mylists1 = []
+        for i in range(L):
+            mylists1.append([])
+            start = 0
+            step = int(N/(2**i))
+            while start < N:
+                mylists1[i].extend(j for j in xrange(start,start+step))
+                start += 2*step
+
+        biglist = range(N)
+        mylists2 = []
+        for i in range(len(mylists1)):
+            tmp = []
+            for j in biglist:
+                if j not in mylists1[i]:
+                    tmp.append(j)
+            mylists2.append(sorted(tmp))
+
+        return mylists1, mylists2
+registered_transforms['dlog'] = piecewise_dlog
+
+
+class piecewise_log(_PiecewiseLinearFunction):
+    """
+    Expresses a piecewise linear function using
+    the LOG formulation
+    """
+    __slots__ = ("_lmbda", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
+
+    def __init__(self, *args, **kwds):
+        bound = kwds.pop('bound', 'eq')
+        super(piecewise_log, self).__init__(*args, **kwds)
+
+        if not is_postive_power_of_two(len(self.breakpoints)-1):
+            raise ValueError("The list of breakpoints must be "
+                             "of length (2^n)+1 for some positive "
+                             "integer n. Invalid length: %s"
+                             % (len(self.breakpoints)))
+
+        # create branching schemes
+        L = log2floor(len(self.breakpoints)-1)
+        S,B_LEFT,B_RIGHT = self._branching_scheme(L)
+
+        # create indexers
+        polytopes = range(len(self.breakpoints) - 1)
+        vertices = range(len(self.breakpoints))
+
+        # create vars
+        lmbda = self._lmbda = variable_list(
+            variable(lb=0)
+            for v in vertices)
+        y = self._y = variable_list(variable(domain=Binary)
+                                    for s in S)
+
+        # create piecewise constraints
+        self._c1 = linear_constraint(
+            variables=(self.input,) + tuple(lmbda),
+            coefficients=(-1,) + self.breakpoints,
+            rhs=0)
+
+        self._c2 = linear_constraint(
+            variables=(self.output,) + tuple(lmbda),
+            coefficients=(-1,) + self.values)
+        if bound == 'ub':
+            self._c2.lb = 0
+        elif bound == 'lb':
+            self._c2.ub = 0
+        elif bound == 'eq':
+            self._c2.rhs = 0
+        else:
+            raise ValueError("Invalid bound type %r. Must be "
+                             "one of: ['lb','ub','eq']"
+                             % (bound))
+
+        self._c3 = linear_constraint(
+            variables=tuple(lmbda),
+            coefficients=(1,)*len(lmbda),
+            rhs=1)
+
+        self._c4 = constraint_list()
+        for s in S:
+            variables=tuple(lmbda[v] for v in B_LEFT[s])
+            self._c4.append(linear_constraint(
+                variables=variables + (y[s],),
+                coefficients=(1,)*len(variables) + (-1,),
+                ub=0))
+
+        self._c5 = constraint_list()
+        for s in S:
+            variables=tuple(lmbda[v] for v in B_RIGHT[s])
+            self._c5.append(linear_constraint(
+                variables=variables + (y[s],),
+                coefficients=(1,)*len(variables) + (1,),
+                ub=1))
+
+    def _branching_scheme(self, n):
+        N = 2**n
+        S = range(n)
+        # turn the GrayCode into a dictionary indexed
+        # starting at 1
+        G = generate_gray_code(n)
+
+        L = tuple([k for k in xrange(N)
+                   if ((k == 0) or (G[k][s] == 1))
+                   and ((k == N-1) or (G[k+1][s] == 1))] for s in S)
+        R = tuple([k for k in xrange(N)
+                   if ((k == 0) or (G[k][s] == 0))
+                   and ((k == N-1) or (G[k+1][s] == 0))] for s in S)
+
+        return S, L, R
+registered_transforms['log'] = piecewise_log
+
 if False:           #pragma:nocover
-    class piecewise_dlog(_PiecewiseLinearFunction):
-        """
-        Expresses a piecewise linear function using
-        the DLOG formulation
-        """
-        __slots__ = ("_x", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
-
-        def __init__(self, *args, **kwds):
-            bound = kwds.pop('bound', 'eq')
-            super(piecewise_dlog, self).__init__(*args, **kwds)
-
-        def _Branching_Scheme(self,L):
-            """
-            Branching scheme for DLOG
-            """
-            MAX = 2**L
-            mylists1 = {}
-            for i in xrange(1,L+1):
-                mylists1[i] = []
-                start = 1
-                step = int(MAX/(2**i))
-                while(start < MAX):
-                    mylists1[i].extend([j for j in xrange(start,start+step)])
-                    start += 2*step
-
-            biglist = xrange(1,MAX+1)
-            mylists2 = {}
-            for i in sorted(mylists1.keys()):
-                mylists2[i] = []
-                for j in biglist:
-                    if j not in mylists1[i]:
-                        mylists2[i].append(j)
-                mylists2[i] = sorted(mylists2[i])
-
-            return mylists1, mylists2
-
-        def construct(self,pblock,input,output):
-            if not _isPowerOfTwo(len(pblock._domain_pts)-1):
-                msg = "'%s' does not have a list of domain points "\
-                      "with length (2^n)+1"
-                raise ValueError(msg % (pblock.name,))
-            breakpoints = pblock._domain_pts
-            values = pblock._range_pts
-            bound = pblock._bound
-            if None in [breakpoints,values,bound]:
-                raise RuntimeError("_DLOGPiecewise: construct() called during "\
-                                    "invalid state.")
-            len_breakpoints = len(breakpoints)
-
-            # create branching schemes
-            L_i = int(math.log(len_breakpoints-1,2))
-            B_ZERO,B_ONE = self._Branching_Scheme(L_i)
-
-            # create indexers
-            polytopes = range(1,len_breakpoints)
-            vertices = range(1,len_breakpoints+1)
-            bin_y_index = range(1,L_i+1)
-            def polytope_verts(p):
-                return xrange(p,p+2)
-
-            # create vars
-            pblock.DLOG_lambda = Var(polytopes,vertices,within=PositiveReals)
-            x = pblock.DLOG_lambda
-            pblock.DLOG_bin_y = Var(bin_y_index,within=Binary)
-            bin_y = pblock.DLOG_bin_y
-            # create piecewise constraints
-            pblock.DLOG_constraint1 = Constraint(expr=input==sum(x[p,v]*breakpoints[v-1] \
-                                                             for p in polytopes \
-                                                             for v in polytope_verts(p)))
-
-            LHS = output
-            RHS = sum(x[p,v]*self.values[v-1] for p in polytopes for v in polytope_verts(p))
-            expr = None
-            if bound == 'ub':
-                expr= LHS <= RHS
-            elif bound == 'lb':
-                expr= LHS >= RHS
-            elif bound == 'eq':
-                expr= LHS == RHS
-            else:
-                raise ValueError("Invalid bound type %r. Must be "
-                                 "one of: ['lb','ub','eq']"
-                                 % (bound))
-            pblock.DLOG_constraint2 = Constraint(expr=expr)
-            pblock.DLOG_constraint3 = Constraint(expr=sum(x[p,v] \
-                                                      for p in polytopes \
-                                                      for v in polytope_verts(p)) == 1)
-            def con4_rule(model,l):
-                return sum(x[p,v] for p in B_ZERO[l] \
-                                     for v in polytope_verts(p)) \
-                       <= bin_y[l]
-            pblock.DLOG_constraint4 = Constraint(bin_y_index,rule=con4_rule)
-            def con5_rule(model,l):
-                return sum(x[p,v] for p in B_ONE[l] \
-                                     for v in polytope_verts(p)) \
-                       <= (1-bin_y[l])
-            pblock.DLOG_constraint5 = Constraint(bin_y_index,rule=con5_rule)
-    registered_transforms['dlog'] = piecewise_dlog
-
-    class piecewise_log(_PiecewiseLinearFunction):
-        """
-        Expresses a piecewise linear function using
-        the LOG formulation
-        """
-        __slots__ = ("_x", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
-
-        def __init__(self, *args, **kwds):
-            bound = kwds.pop('bound', 'eq')
-            super(piecewise_log, self).__init__(*args, **kwds)
-
-        def _Branching_Scheme(self,n):
-            """
-            Branching scheme for LOG, requires a gray code
-            """
-            BIGL = 2**n
-            S = range(1,n+1)
-            # turn the GrayCode into a dictionary indexed
-            # starting at 1
-            G = dict(enumerate(_GrayCode(n),start=1))
-
-            L = dict((s,[k+1 for k in xrange(BIGL+1) \
-                             if ((k == 0) or (G[k][s-1] == 1)) \
-                             and ((k == BIGL) or (G[k+1][s-1] == 1))]) for s in S)
-            R = dict((s,[k+1 for k in xrange(BIGL+1) \
-                             if ((k == 0) or (G[k][s-1] == 0)) \
-                             and ((k == BIGL) or (G[k+1][s-1] == 0))]) for s in S)
-
-            return S,L,R
-
-        def construct(self,pblock,input,output):
-            if not _isPowerOfTwo(len(pblock._domain_pts)-1):
-                msg = "'%s' does not have a list of domain points "\
-                      "with length (2^n)+1"
-                raise ValueError(msg % (pblock.name,))
-            breakpoints = pblock._domain_pts
-            values = pblock._range_pts
-            bound = pblock._bound
-            if None in [breakpoints,values,bound]:
-                raise RuntimeError("_LOGPiecewise: construct() called during "\
-                                    "invalid state.")
-            len_breakpoints = len(self.breakpoints)
-
-            # create branching schemes
-            L_i = int(math.log(len_breakpoints-1,2))
-            S_i,B_LEFT,B_RIGHT = self._Branching_Scheme(L_i)
-
-            # create indexers
-            polytopes = range(1,len_breakpoints)
-            vertices = range(1,len_breakpoints+1)
-            bin_y_index = S_i
-
-            # create vars
-            pblock.LOG_lambda = Var(vertices,within=NonNegativeReals)
-            x = pblock.LOG_lambda
-            pblock.LOG_bin_y = Var(bin_y_index,within=Binary)
-            bin_y = pblock.LOG_bin_y
-            # create piecewise constraints
-            pblock.LOG_constraint1 = Constraint(expr=input==sum(x[v]*self.breakpoints[v-1] \
-                                                             for v in vertices))
-
-            LHS = output
-            RHS = sum(x[v]*self.values[v-1] for v in vertices)
-            expr = None
-            if bound == 'ub':
-                expr= LHS <= RHS
-            elif bound == 'lb':
-                expr= LHS >= RHS
-            elif bound == 'eq':
-                expr= LHS == RHS
-            else:
-                raise ValueError("Invalid bound type %r. Must be "
-                                 "one of: ['lb','ub','eq']"
-                                 % (bound))
-            pblock.LOG_constraint2 = Constraint(expr=expr)
-            pblock.LOG_constraint3 = Constraint(expr=sum(x[v] \
-                                                      for v in vertices) == 1)
-            def con4_rule(model,s):
-                return sum(x[v] for v in B_LEFT[s]) <= bin_y[s]
-            pblock.LOG_constraint4 = Constraint(bin_y_index,rule=con4_rule)
-            def con5_rule(model,s):
-                return sum(x[v] for v in B_RIGHT[s]) <= (1-bin_y[s])
-            pblock.LOG_constraint5 = Constraint(bin_y_index,rule=con5_rule)
-    registered_transforms['log'] = piecewise_log
-
     class piecewise_bigm(_PiecewiseLinearFunction):
         """
         Expresses a piecewise linear function using
