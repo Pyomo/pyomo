@@ -978,10 +978,9 @@ class _SumExpression(_LinearOperatorExpression):
             self, other = _generate_expression__clone_if_needed(
                 targetRefs, True, self, other )
         if other.__class__ in native_types:
-            return self.__iadd__( -other, targetRefs=None )
+            return self.__iadd__( -other, None )
         else:
-            return self.__iadd__(
-                other.__neg__(targetRefs=None), targetRefs=None )
+            return self.__iadd__( other.__neg__(None), None )
 
     # If the system has getrefcount, then we can reliably treat all
     # additions as "in-place" additions.  Note that if we remove the
@@ -1005,10 +1004,9 @@ class _SumExpression(_LinearOperatorExpression):
             self, other = _generate_expression__clone_if_needed(
                 -2, False, self, other )
             if other.__class__ in native_types:
-                return self.__iadd__( -other, targetRefs=None )
+                return self.__iadd__( -other, None )
             else:
-                return self.__iadd__(
-                    other.__neg__(targetRefs=None), targetRefs=None )
+                return self.__iadd__( other.__neg__(None), None )
 
         # Note: __rsub__ of _SumExpression is very rare (basically, it
         # needs to be "non-NumericValue - _SumExpression"), Since Pyomo4
@@ -1331,7 +1329,7 @@ class _LinearExpression(_ExpressionBase):
                         self._coef[_id] = other._coef[_id]
                 return self
             if other._potentially_variable():
-                return generate_expression(_add, self, other, targetRefs=None)
+                return generate_expression(_add, self, other, None)
             # Then this is NOT potentially variable
             self._const += other
             return self
@@ -1368,8 +1366,8 @@ class _LinearExpression(_ExpressionBase):
                         self._coef[_id] = -other._coef.pop(_id)
                 return self
             if other._potentially_variable():
-                other = other.__neg__(targetRefs=None)
-                return generate_expression(_add, self, other, targetRefs=None)
+                other = other.__neg__(None)
+                return generate_expression(_add, self, other, None)
             # Then this is NOT potentially variable
             self._const -= other
             return self
@@ -1394,7 +1392,7 @@ class _LinearExpression(_ExpressionBase):
             if targetRefs is not None:
                 self, other = _generate_expression__clone_if_needed(
                     targetRefs, False, self, other )
-            return self.__iadd__(other, targetRefs=None)
+            return self.__iadd__(other, None)
 
         # Note: treating __radd__ the same as iadd is fine, as it will
         # only be called when other is not a NumericValue object
@@ -1407,7 +1405,7 @@ class _LinearExpression(_ExpressionBase):
         def __sub__(self, other):
             self, other = _generate_expression__clone_if_needed(
                 -2, False, self, other )
-            return self.__isub__(other, targetRefs=None)
+            return self.__isub__(other, None)
 
         # Note: treating __rsub__ the same as iadd is fine, as it will
         # only be called when other is not a NumericValue object
@@ -1417,7 +1415,7 @@ class _LinearExpression(_ExpressionBase):
             if targetRefs is not None:
                 self, other = _generate_expression__clone_if_needed(
                     targetRefs, False, self, other )
-            return self.__neg__(targetRefs=None).__iadd__(other, targetRefs=None)
+            return self.__neg__(None).__iadd__(other, None)
 
 
     def __imul__(self, other, divide=False, targetRefs=-2):
@@ -1449,7 +1447,7 @@ class _LinearExpression(_ExpressionBase):
             return self
         else:
             return generate_expression(
-                _div if divide else _mul, self, other, targetRefs=None )
+                _div if divide else _mul, self, other, None )
 
     def __idiv__(self, other, targetRefs=-2):
         if targetRefs is not None:
@@ -1591,7 +1589,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
             # objects __*add__ methods).
             if _self_var:
                 return _LinearExpression(_self, 1).__iadd__(
-                    _other, targetRefs=None)
+                    _other, None)
             if _other_var and not _other_expr:
                 ans = _LinearExpression(_other, 1)
                 ans._const = _self
@@ -1610,7 +1608,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
         if not _self_expr:
             if _self_var:
                 return _LinearExpression(_self, 1).__isub__(
-                    _other, targetRefs=None )
+                    _other, None )
             if _other_var and not _other_expr:
                 ans = _LinearExpression(_other, -1)
                 ans._const = _self
