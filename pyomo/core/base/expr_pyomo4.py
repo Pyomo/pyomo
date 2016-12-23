@@ -1566,8 +1566,12 @@ def generate_expression(etype, _self, _other, targetRefs=0):
                         return _other
                 if not _other_var and _other.__class__ in native_numeric_types:
                     return _self * _other
-            if _other_var and not _other_expr:
-                return _LinearExpression(_other, _self)
+            if _other_var:
+                if not _other_expr:
+                    return _LinearExpression(_other, _self)
+                elif _getrefcount_available and \
+                     _other.__class__ is _LinearExpression:
+                    return _other.__imul__(_self, targetRefs=None)
         elif not _other_var:
             if _other.__class__ in native_numeric_types:
                 if _other in zero_or_one:
