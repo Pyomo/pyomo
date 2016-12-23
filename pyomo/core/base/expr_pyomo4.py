@@ -1190,7 +1190,6 @@ class _LinearExpression(_ExpressionBase):
         self._coef = {id(var): coef}
         if not _getrefcount_available:
             self._parent_expr = None
-            # Note that the args can NOT be expressions
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()
