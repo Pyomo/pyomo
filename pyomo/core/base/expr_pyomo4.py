@@ -959,14 +959,16 @@ class _SumExpression(_LinearOperatorExpression):
             return self
 
         if other.is_expression():
-            # We can ONLY combine the _SumExpression objects if we are
-            # using an interpreter that supports getrefcount (as we can
-            # rely on it for expression detanglement)
-            if _getrefcount_available:
-                if other.__class__ is _SumExpression:
-                    self._args.extend(other._args)
-                    other._args = [] # for safety
-                    return self
+            if other.__class__ is _SumExpression:
+                self._args.extend(other._args)
+                return self
+            if other.__class__ is _LinearExpression and \
+               not self._potentially_variable():
+                if not _getrefcount_available:
+                    other = other.clone()
+                with bypass_clone_check():
+                    other._const += self
+                return other
             else:
                 other._parent_expr = bypass_backreference or ref(self)
 
