@@ -1321,19 +1321,21 @@ class _LinearExpression(_ExpressionBase):
 
         if other.is_expression():
             if other.__class__ is _LinearExpression:
-                self._const -= other._const
-                for v in other._args:
-                    _id = id(v)
-                    if _id in self._coef:
-                        self._coef[_id] += other._coef[_id]
-                    else:
-                        self._args.append(v)
-                        self._coef[_id] = other._coef[_id]
+                with bypass_clone_check():
+                    self._const += other._const
+                    for v in other._args:
+                        _id = id(v)
+                        if _id in self._coef:
+                            self._coef[_id] += other._coef[_id]
+                        else:
+                            self._args.append(v)
+                            self._coef[_id] = other._coef[_id]
                 return self
             if other._potentially_variable():
                 return generate_expression(_add, self, other, None)
             # Then this is NOT potentially variable
-            self._const += other
+            with bypass_clone_check():
+                self._const += other
             return self
         elif other._potentially_variable():
             _id = id(other)
@@ -1358,20 +1360,22 @@ class _LinearExpression(_ExpressionBase):
 
         if other.is_expression():
             if other.__class__ is _LinearExpression:
-                self._const += other._const
-                for v in other._args:
-                    _id = id(v)
-                    if _id in self._coef:
-                        self._coef[_id] -= other._coef[_id]
-                    else:
-                        self._args.append(v)
-                        self._coef[_id] = -other._coef.pop(_id)
+                with bypass_clone_check():
+                    self._const -= other._const
+                    for v in other._args:
+                        _id = id(v)
+                        if _id in self._coef:
+                            self._coef[_id] -= other._coef[_id]
+                        else:
+                            self._args.append(v)
+                            self._coef[_id] = -other._coef.pop(_id)
                 return self
             if other._potentially_variable():
                 other = other.__neg__(None)
                 return generate_expression(_add, self, other, None)
             # Then this is NOT potentially variable
-            self._const -= other
+            with bypass_clone_check():
+                self._const -= other
             return self
         elif other._potentially_variable():
             _id = id(other)
