@@ -1268,7 +1268,7 @@ class _LinearExpression(_ExpressionBase):
                 coef = coef._args[0]
                 _coeftype = coef.__class__
             if _coeftype in native_numeric_types:
-                if _idx:
+                if _idx and not verbose:
                     coef = abs(coef)
                 if coef == 1:
                     ostream.write(_sub.getname(True, _name_buffer))
