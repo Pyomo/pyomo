@@ -351,3 +351,26 @@ class OuterBoundConvergence(ConvergenceBase):
     def computeMetric(self, ph, scenario_tree, instances):
 
         return ph._best_reported_outer_bound
+# 
+# Implements a convergence criterion that is based on exceeding 
+# the gap between the best inner and best outer bound
+#
+
+class InnerOuterConvergence(ConvergenceBase):
+
+    """ Constructor
+        Arguments: None beyond those in the base class.
+
+    """
+    def __init__(self, *args, **kwds):
+
+        ConvergenceBase.__init__(self, *args, **kwds)
+        self._name = "Inner Outer gap bound"
+
+    def computeMetric(self, ph, scenario_tree, instances):
+        if ph._best_reported_outer_bound is None \
+           or ph._best_reported_inner_bound is None:
+            return float('inf')
+        else:
+            return abs(ph._best_reported_outer_bound \
+                       - ph._best_reported_inner_bound)
