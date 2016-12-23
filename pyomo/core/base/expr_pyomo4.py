@@ -1575,7 +1575,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
                         return 0
                     else:
                         return _self
-            if _self_var and not _self_expr:
+            if not _self_expr:
                 return _LinearExpression(_self, _other)
         ans = _ProductExpression((_self, _other))
 
