@@ -913,6 +913,41 @@ def _generate_expression__clone_if_needed(obj, target):
 def _generate_expression__noCloneCheck(obj, target):
     return obj
 
+
+class bypass_clone_check(object):
+    currently_bypassing = False
+
+    def __init__(self):
+        self._bypassing = None
+
+    def __enter__(self):
+        self._bypassing = bypass_clone_check.currently_bypassing
+        if self._bypassing:
+            return
+
+        global _generate_expression__clone_if_needed
+        global _generate_expression__noCloneCheck
+
+        bypass_clone_check.currently_bypassing = True
+        # Swap the cloneCheck and no cloneCheck functions
+        _generate_expression__noCloneCheck, \
+            _generate_expression__clone_if_needed \
+            = _generate_expression__clone_if_needed, \
+              _generate_expression__noCloneCheck
+
+    def __exit__(self, *args):
+        if self._bypassing:
+           return
+        global _generate_expression__clone_if_needed
+        global _generate_expression__noCloneCheck
+
+        _generate_expression__noCloneCheck, \
+            _generate_expression__clone_if_needed \
+            = _generate_expression__clone_if_needed, \
+              _generate_expression__noCloneCheck
+        bypass_clone_check.currently_bypassing = False
+
+
 global _bypassing_clonecheck
 _bypassing_clonecheck = False
 def generate_expression_bypassCloneCheck(etype, _self, other):
