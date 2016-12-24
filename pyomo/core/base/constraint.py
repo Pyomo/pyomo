@@ -391,7 +391,8 @@ class _GeneralConstraintData(_ConstraintData):
                 else:
                     with EXPR.bypass_clone_check():
                         self._lower = self._upper = ZeroConstant
-                        self._body = arg0 - arg1
+                        self._body = arg0
+                        self._body -= arg1
                     #self._body = EXPR.generate_expression_bypassCloneCheck(
                     #    _sub, arg0, arg1)
             #
@@ -498,7 +499,8 @@ class _GeneralConstraintData(_ConstraintData):
                 else:
                     with EXPR.bypass_clone_check():
                         self._lower = self._upper = ZeroConstant
-                        self._body = _args[0] - _args[1]
+                        self._body = _args[0]
+                        self._body -= _args[1]
                     #self._body = EXPR.generate_expression_bypassCloneCheck(
                     #    _sub, _args[0], _args[1] )
             else:
@@ -566,7 +568,8 @@ class _GeneralConstraintData(_ConstraintData):
                     else:
                         with EXPR.bypass_clone_check():
                             self._lower = None
-                            self._body = _args[0] - _args[1]
+                            self._body = _args[0]
+                            self._body -= _args[1]
                             self._upper = ZeroConstant
                         #self._body  = EXPR.generate_expression_bypassCloneCheck(
                         #    _sub, _args[0], _args[1])
