@@ -491,12 +491,15 @@ class _ExpressionBase(NumericValue):
                 if _sub.__class__ in native_numeric_types:
                     _result.append( 0 )
                 elif _sub.is_expression():
-                    _stack.append( (_obj, _argList, _idx, _len, _result) )
-                    _obj     = _sub
-                    _argList = _sub._args
-                    _idx     = 0
-                    _len     = len(_argList)
-                    _result  = []
+                    if _sub is _LinearExpression:
+                        _result.append( _sub.polynomial_degree() )
+                    else:
+                        _stack.append( (_obj, _argList, _idx, _len, _result) )
+                        _obj     = _sub
+                        _argList = _sub._args
+                        _idx     = 0
+                        _len     = len(_argList)
+                        _result  = []
                 else:
                     _result.append( 0 if _sub.is_fixed() else 1 )
             ans = _obj._polynomial_degree(_result)
@@ -1296,11 +1299,15 @@ class _LinearExpression(_ExpressionBase):
             else:
                 ostream.write(' + ')
 
+    def polynomial_degree(self, result):
+        # Because _LinearExpression is a special "terminal node", we
+        # will define a specialized polynomial_degree() to avoid
+        # building up a potentially large list of 0/1, just to find out
+        # that one of them is 1.
+        return 0 if all(a.is_fixed() for a in self._args) else 1
+
     def _polynomial_degree(self, result):
-        if result:
-            return max(result)
-        else:
-            return 0
+        return 1 if any(result) else 0
 
     def _apply_operation(self, result):
         assert( len(result) == len(self._args) )
