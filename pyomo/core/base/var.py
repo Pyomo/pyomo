@@ -866,14 +866,6 @@ class SimpleVar(_GeneralVarData, Var):
 class IndexedVar(Var):
     """An array of variables."""
 
-    # These methods are normally found on the NumericValue
-    # interface, but they are here to trick the expression
-    # system into reporting errors about trying to use
-    # "indexed NumericValue" objects in expressions
-    def as_numeric(self): return self
-    def is_expression(self): return False
-    def is_relational(self): return False
-
     def fix(self, *val):
         """
         Set the fixed indicator to True. Value argument is optional,

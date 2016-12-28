@@ -79,17 +79,19 @@ def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
         try:
             obj_expr = obj.is_expression()
         except AttributeError:
+            try:
+                if obj.is_indexed():
+                    raise TypeError(
+                        "Argument for expression is an indexed numeric "
+                        "value\nspecified without an index:\n\t%s\nIs this "
+                        "value defined over an index that you did not specify?"
+                        % (obj.name, ) )
+            except AttributeError:
+                pass
             obj = as_numeric(obj)
             obj_expr = obj.is_expression()
 
         if not obj_expr:
-            if obj.is_indexed():
-                raise TypeError(
-                    "Argument for expression is an indexed numeric "
-                    "value\nspecified without an index:\n\t%s\nIs this "
-                    "value defined over an index that you did not specify?"
-                    % (obj.name, ) )
-
             if obj.is_constant():
                 ans = ans + (obj(),)
             else:
@@ -124,13 +126,16 @@ def _generate_expression__clone_if_needed__parent_expr(target, inplace, *objs):
 
         try:
             obj_expr = obj.is_expression()
-            if obj.is_indexed():
-                raise TypeError(
-                    "Argument for expression is an indexed numeric "
-                    "value\nspecified without an index:\n\t%s\nIs this "
-                    "value defined over an index that you did not specify?"
-                    % (obj.name, ) )
         except AttributeError:
+            try:
+                if obj.is_indexed():
+                    raise TypeError(
+                        "Argument for expression is an indexed numeric "
+                        "value\nspecified without an index:\n\t%s\nIs this "
+                        "value defined over an index that you did not specify?"
+                        % (obj.name, ) )
+            except AttributeError:
+                pass
             obj = as_numeric(obj)
             obj_expr = obj.is_expression()
 

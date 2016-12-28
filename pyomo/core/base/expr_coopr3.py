@@ -1044,14 +1044,17 @@ def generate_expression(etype, _self, other, targetRefs=None):
         try:
             other = other.as_numeric()
         except AttributeError:
+            try:
+                if other.is_indexed():
+                    raise TypeError(
+                        "Argument for expression '%s' is an indexed numeric "
+                        "value\nspecified without an index:\n\t%s\nIs this "
+                        "value defined over an index that you did not specify?"
+                        % (etype, other.name, ) )
+            except AttributeError:
+                pass
             other = as_numeric(other)
         other_type = other.__class__
-        if other.is_indexed():
-            raise TypeError(
-                "Argument for expression '%s' is an indexed numeric "
-                "value\nspecified without an index:\n\t%s\nIs this "
-                "value defined over an index that you did not specify?"
-                % (etype, other.name, ) )
         if other.is_expression():
             other = _generate_expression__clone_if_needed(other, 0)
         elif other.is_constant():
@@ -1420,28 +1423,41 @@ def generate_relational_expression(etype, lhs, rhs):
     # arguments in the relational Expression's _args will be guaranteed
     # to be NumericValues (just as they are for all other Expressions).
     #
-    lhs = as_numeric(lhs)
-    if lhs.is_indexed():
-        raise TypeError(
-            "Argument for expression '%s' is an indexed numeric value "
-            "specified without an index: %s\n    Is variable or parameter "
-            "'%s' defined over an index that you did not specify?"
-            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
-               lhs.name, lhs.name))
-    elif lhs.is_expression():
+    try:
+        lhs = as_numeric(lhs)
+    except TypeError as e:
+        try:
+            if lhs.is_indexed():
+                raise TypeError(
+                    "Argument for expression '%s' is an indexed numeric value "
+                    "specified without an index: %s\n    Is variable or "
+                    "parameter '%s' defined over an index that you did not "
+                    "specify?" % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
+                                  lhs.name, lhs.name))
+        except AttributeError:
+            pass
+        raise e
+
+    if lhs.is_expression():
         lhs = _generate_relational_expression__clone_if_needed(lhs)
         if lhs.is_relational():
             lhs_is_relational = True
 
-    rhs = as_numeric(rhs)
-    if rhs.is_indexed():
-        raise TypeError(
-            "Argument for expression '%s' is an indexed numeric value "
-            "specified without an index: %s\n    Is variable or parameter "
-            "'%s' defined over an index that you did not specify?"
-            % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
-               rhs.name, rhs.name))
-    elif rhs.is_expression():
+    try:
+        rhs = as_numeric(rhs)
+    except TypeError as e:
+        try:
+            if rhs.is_indexed():
+                raise TypeError(
+                    "Argument for expression '%s' is an indexed numeric value "
+                    "specified without an index: %s\n    Is variable or "
+                    "parameter '%s' defined over an index that you did not "
+                    "specify?" % ({_eq:'==',_lt:'<',_le:'<='}.get(etype, etype),
+                                  rhs.name, rhs.name))
+        except AttributeError:
+            pass
+        raise e
+    if rhs.is_expression():
         rhs = _generate_relational_expression__clone_if_needed(rhs)
         if rhs.is_relational():
             rhs_is_relational = True
@@ -1595,7 +1611,7 @@ def _generate_intrinsic_function_expression__clone_if_needed(obj):
               "generate_intrinsic_function_expression() " \
               "with too few references (%s<0); this is indicative of a " \
               "SERIOUS ERROR in the expression reuse detection scheme." \
-              % ( count, ))
+              % ( getrefcount(obj) - UNREFERENCED_INTRINSIC_EXPR_COUNT, ))
 
 def _generate_intrinsic_function_expression__noCloneCheck(obj):
     return obj
@@ -1614,14 +1630,22 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     if not pyomo_expression:
         return fcn(arg)
 
-    new_arg = as_numeric(arg)
-    if new_arg.is_expression():
-        new_arg = _generate_intrinsic_function_expression__clone_if_needed(new_arg)
-    elif new_arg.is_indexed():
-        raise ValueError("Argument for intrinsic function '%s' is an "\
-            "n-ary numeric value: %s\n    Have you given variable or "\
-            "parameter '%s' an index?" % (name, new_arg.name, new_arg.name))
-    return _IntrinsicFunctionExpression(name, 1, (new_arg,), fcn)
+    try:
+        arg = as_numeric(arg)
+    except TypeError as e:
+        try:
+            if arg.is_indexed():
+                raise ValueError(
+                    "Argument for intrinsic function '%s' is an "
+                    "n-ary numeric value: %s\n    Have you given variable or "
+                    "parameter '%s' an index?" % (name, arg.name, arg.name))
+        except AttributeError:
+            pass
+        raise e
+
+    if arg.is_expression():
+        arg = _generate_intrinsic_function_expression__clone_if_needed(arg)
+    return _IntrinsicFunctionExpression(name, 1, (arg,), fcn)
 
 # [configuration] UNREFERENCED_EXPR_COUNT is a "magic number" that
 # indicates the stack depth between "normal" modeling and
@@ -1632,7 +1656,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
 # must clone the expression before operating on it.  It should be an
 # error to hit _clone_if_needed() with fewer than
 # UNREFERENCED_EXPR_COUNT references.
-UNREFERENCED_INTRINSIC_EXPR_COUNT = 8
+UNREFERENCED_INTRINSIC_EXPR_COUNT = 7
 
 #
 # If you want to completely disable clone checking (e.g., for
