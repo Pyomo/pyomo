@@ -937,6 +937,11 @@ class _SumExpression(_LinearOperatorExpression):
         if other.is_expression():
             if other.__class__ is _SumExpression:
                 self._args.extend(other._args)
+                if not _getrefcount_available and not bypass_backreference:
+                    for arg in other._args:
+                        if arg.__class__ not in native_types \
+                           and arg.is_expression():
+                            arg._parent_expr = self
                 return self
             if other.__class__ is _LinearExpression and \
                not self._potentially_variable():
