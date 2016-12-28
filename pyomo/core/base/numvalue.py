@@ -576,7 +576,7 @@ functions.""" % (self.name,))
 
         (Called in response to '- self'.)
         """
-        return generate_expression(_neg,self, None, targetRefs=targetRefs)
+        return generate_expression(_neg, self, None, targetRefs)
 
     def __pos__(self):
         """ Positive expression
