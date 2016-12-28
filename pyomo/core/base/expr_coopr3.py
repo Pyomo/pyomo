@@ -948,38 +948,6 @@ class bypass_clone_check(object):
         bypass_clone_check.currently_bypassing = False
 
 
-global _bypassing_clonecheck
-_bypassing_clonecheck = False
-def generate_expression_bypassCloneCheck(etype, _self, other):
-    global _bypassing_clonecheck
-    global _generate_expression__noCloneCheck
-    global _generate_expression__clone_if_needed
-
-    if _bypassing_clonecheck:
-        return generate_expression(etype, _self, other)
-
-    try:
-        _bypassing_clonecheck = True
-        # Swap the cloneCheck and no cloneCheck functions
-        _generate_expression__noCloneCheck, \
-            _generate_expression__clone_if_needed \
-            = _generate_expression__clone_if_needed, \
-              _generate_expression__noCloneCheck
-
-        ans = generate_expression(etype, _self, other)
-
-    finally:
-        # Swap the cloneCheck and no cloneCheck functions back
-        _generate_expression__noCloneCheck, \
-            _generate_expression__clone_if_needed \
-            = _generate_expression__clone_if_needed, \
-              _generate_expression__noCloneCheck
-        _bypassing_clonecheck = False
-
-    return ans
-
-
-
 
 _old_relational_strings = {
     '<'  : _lt,
