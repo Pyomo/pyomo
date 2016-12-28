@@ -943,14 +943,14 @@ class _SumExpression(_LinearOperatorExpression):
                            and arg.is_expression():
                             arg._parent_expr = self
                 return self
-            if other.__class__ is _LinearExpression and \
+            elif other.__class__ is _LinearExpression and \
                not self._potentially_variable():
                 if not _getrefcount_available:
                     other = other.clone()
                 with bypass_clone_check():
                     other._const += self
                 return other
-            else:
+            elif not _getrefcount_available:
                 other._parent_expr = bypass_backreference or ref(self)
 
         self._args.append(other)
@@ -1504,7 +1504,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
         if etype == _neg:
             if _self.__class__ in native_numeric_types:
                 ans = -_self
-            elif not _self_expr and _self._potentially_variable():
+            elif not _self_expr and _self_var:
                 ans = _LinearExpression(_self, -1)
             else:
                 ans = _NegationExpression((_self,))
