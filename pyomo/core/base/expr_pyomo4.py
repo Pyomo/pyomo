@@ -1277,7 +1277,7 @@ class _LinearExpression(_ExpressionBase):
             else:
                 ostream.write(' + ')
 
-    def polynomial_degree(self, result):
+    def polynomial_degree(self):
         # Because _LinearExpression is a special "terminal node", we
         # will define a specialized polynomial_degree() to avoid
         # building up a potentially large list of 0/1, just to find out
