@@ -565,22 +565,14 @@ class OptSolver(Plugin):
         # dictionary, but we will reset these options to
         # their original value at the end of this method.
         #
-        tmp_solver_options = kwds.pop('options', {})
-        tmp_solver_options.update(
-            self._options_string_to_dict(kwds.pop('options_string', '')))
-        options_to_reset = {}
-        options_to_delete = []
-        if tmp_solver_options is not None:
-            for key in tmp_solver_options:
-                if key in self.options:
-                    options_to_reset[key] = self.options[key]
-                else:
-                    options_to_delete.append(key)
-            # only modify the options dict after the above loop
-            # completes, so that we only detect the original state
-            for key in tmp_solver_options:
-                self.options[key] = tmp_solver_options[key]
 
+        orig_options = self.options
+
+        self.options = pyutilib.misc.Options()
+        self.options.update(orig_options)
+        self.options.update(kwds.pop('options', {}))
+        self.options.update(
+            self._options_string_to_dict(kwds.pop('options_string', '')))
         try:
 
             # we're good to go.
@@ -640,14 +632,9 @@ class OptSolver(Plugin):
 
         finally:
             #
-            # Reset the options dict (remove any ephemeral solver options
-            # passed into this method)
+            # Reset the options dict
             #
-            for key in options_to_reset:
-                self.options[key] = options_to_reset[key]
-            for key in options_to_delete:
-                if key in self.options:
-                    del self.options[key]
+            self.options = orig_options
 
         return result
 
