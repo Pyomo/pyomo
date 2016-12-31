@@ -18,4 +18,3 @@ model.compl = Complementarity(
 xfrm = TransformationFactory("mpec.simple_nonlinear")
 transformed = xfrm.create_using(model)
 # @:transform
-model = transformed

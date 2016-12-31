@@ -38,5 +38,3 @@ def c_rule(M, i, j):
     model = M.model()
     return M.y[i,j] <= A[i,j]*(1-model.x[i,j])
 M.sub.c = Constraint(INDEX, rule=c_rule)
-
-model = M
