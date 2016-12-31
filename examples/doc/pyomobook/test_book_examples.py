@@ -6,6 +6,12 @@ import os.path
 import sys
 import pyomo.environ
 
+try:
+    import yaml
+    yaml_available=True
+except:
+    yaml_available=False
+
 # Find all *.txt files, and use them to define baseline tests
 currdir = os.path.dirname(os.path.abspath(__file__))+os.sep
 datadir = currdir
@@ -35,7 +41,15 @@ package_dependencies =  {
 solver_available = {}
 package_available = {}
 
+only_book_tests = set(['Test_nonlinear_ch', 'Test_scripts_ch'])
+
+
 def check_skip(tfname_, name):
+    #
+    # Skip if YAML isn't installed
+    #
+    if not yaml_available:
+        return True
     #
     # Initialize the availability data
     #
@@ -113,7 +127,10 @@ for tdir in testdirs:
     fname_ = fname.replace('-','_')
     tfname_ = 'Test_'+fname_.split("pyomobook"+os.sep)[1]
     Test = globals()[tfname_] = type(tfname_, (unittest.TestCase,), {})
-    Test = unittest.category("book","smoke","nightly")(Test)
+    if tfname_ in only_book_tests:
+        Test = unittest.category("book")(Test)
+    else:
+        Test = unittest.category("book","smoke","nightly")(Test)
     
     # Find all .py files in the test directory
     for file in list(glob.glob(fname+'/*.py')) + list(glob.glob(fname+'/*/*.py')):
@@ -173,7 +190,6 @@ for tdir in testdirs:
             os.chdir(dir_)
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
-            # print(tname)
             forceskip = check_skip(tfname_, 'test_'+tname)
             Test.add_baseline_test(cmd='cd %s; %s' % (dir_,
                                                       os.path.abspath(bname)), baseline=dir_+name+suffix,
