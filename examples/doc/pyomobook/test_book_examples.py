@@ -113,7 +113,7 @@ for tdir in testdirs:
     fname_ = fname.replace('-','_')
     tfname_ = 'Test_'+fname_.split("pyomobook"+os.sep)[1]
     Test = globals()[tfname_] = type(tfname_, (unittest.TestCase,), {})
-    Test = unittest.category("book")(Test)
+    Test = unittest.category("book","smoke")(Test)
     
     # Find all .py files in the test directory
     for file in list(glob.glob(fname+'/*.py')) + list(glob.glob(fname+'/*/*.py')):
