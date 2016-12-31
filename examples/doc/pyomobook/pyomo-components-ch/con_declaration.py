@@ -70,9 +70,9 @@ print(value(model.c1.body))     #  0.0
 
 print(model.c1.lslack())        # -inf
 print(model.c1.uslack())        #  7.5
-print(model.c2.lslack())        # -2.5
+print(model.c2.lslack())        #  2.5
 print(model.c2.uslack())        #  inf
-print(model.c3.lslack())        # -3.0
+print(model.c3.lslack())        #  3.0
 print(model.c3.uslack())        #  7.0
 # @:slack
 

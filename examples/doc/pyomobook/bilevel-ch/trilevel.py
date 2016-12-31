@@ -17,8 +17,6 @@ M.s.c1 = Constraint(expr=-2*M.x +   M.s.y - 2*M.s.s.z <=  -1)
 M.s.c2 = Constraint(expr= 2*M.x +   M.s.y + 4*M.s.s.z <=  14)
 M.s.s.o = Objective(expr=   M.x - 2*M.s.y - 2*M.s.s.z)
 M.s.s.c = Constraint(expr=2*M.x -   M.s.y -   M.s.s.z <=   2)
-
-model = M
 # @:pyomo
 
 M.pprint()
