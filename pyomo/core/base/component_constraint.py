@@ -179,8 +179,8 @@ class _mutable_bounds_mixin(object):
                 "The lb property can not be set "
                 "when the equality property is True.")
         if lb is not None:
-            lb = as_numeric(lb)
-            if lb._potentially_variable():
+            tmp = as_numeric(lb)
+            if tmp._potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -196,8 +196,8 @@ class _mutable_bounds_mixin(object):
                 "The ub property can not be set "
                 "when the equality property is True.")
         if ub is not None:
-            ub = as_numeric(ub)
-            if ub._potentially_variable():
+            tmp = as_numeric(ub)
+            if tmp._potentially_variable():
                 raise ValueError(
                     "Constraint lower bounds must be "
                     "expressions restricted to data.")
@@ -213,10 +213,10 @@ class _mutable_bounds_mixin(object):
     @rhs.setter
     def rhs(self, rhs):
         if rhs is not None:
-            rhs = as_numeric(rhs)
-            if rhs._potentially_variable():
+            tmp = as_numeric(rhs)
+            if tmp._potentially_variable():
                 raise ValueError(
-                    "Constraint righthand must be "
+                    "Constraint righthand side must be "
                     "expressions restricted to data.")
         self._lb = rhs
         self._ub = rhs
@@ -567,8 +567,9 @@ class constraint(_mutable_bounds_mixin, IConstraint):
 
 class linear_constraint(_mutable_bounds_mixin, IConstraint):
     """
-    A linear constraint defined by a list of variables
-    and coefficients
+    A linear constraint defined by a list of variables and
+    coefficients. Objects in the variables list can also be
+    expression components that point to a variable.
     """
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py
@@ -636,8 +637,9 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     def __call__(self, exception=True):
         try:
-            return sum(value(c) * v() for c,v in zip(self._coefficients,
-                                                     self._variables))
+            return sum(value(c) * v()
+                       for c,v in zip(self._coefficients,
+                                      self._variables))
         except (ValueError, TypeError):
             if exception:
                 raise
