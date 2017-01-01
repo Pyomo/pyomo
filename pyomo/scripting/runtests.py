@@ -83,7 +83,7 @@ def runPyomoTests():
     if len(args) > 1:
         mydirs = args[1:]
     else:
-        mydirs = ['pyomo', 'pyomo-model-libraries']
+        mydirs = [os.path.join('pyomo','pyomo'), 'pyomo-model-libraries']
     #
     dirs=[]
     for dir in mydirs:

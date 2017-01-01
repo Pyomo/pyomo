@@ -282,8 +282,12 @@ def create_model(data):
             msg = "Model '%s' is not defined in file '%s'!"
             raise SystemExit(msg % (model_name, data.options.model.filename))
     elif len(_models) > 1:
-        msg = "Multiple models defined in file '%s'!"
-        raise SystemExit(msg % data.options.model.filename)
+        if model_name is None:
+            msg = "Multiple models defined in file '%s'!"
+            raise SystemExit(msg % data.options.model.filename)
+        elif not model_name in _models:
+            msg = "Unknown model '%s' in file '%s'!"
+            raise SystemExit(msg % (model_name, data.options.model.filename))
 
     ep = ExtensionPoint(IPyomoScriptCreateModel)
 
