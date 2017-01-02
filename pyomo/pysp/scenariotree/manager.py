@@ -805,11 +805,9 @@ class ScenarioTreeManagerClient(ScenarioTreeManager,
                 self._scenario_tree.pprint()
 
             # validate the tree prior to doing anything serious
-            if not self._scenario_tree.validate():
-                raise RuntimeError("Scenario tree is invalid")
-            else:
-                if self._options.verbose:
-                    print("Scenario tree is valid!")
+            self._scenario_tree.validate()
+            if self._options.verbose:
+                print("Scenario tree is valid!")
 
         except:
             print("Failed to generate scenario tree")

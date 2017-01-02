@@ -1331,8 +1331,7 @@ class ScenarioTree(object):
             scenario_tree_for_bundle = self.make_compressed(scenario_list,
                                                             normalize=True)
 
-            if not scenario_tree_for_bundle.validate():
-                raise RuntimeError("Bundled scenario tree is invalid")
+            scenario_tree_for_bundle.validate()
 
             new_bundle = ScenarioTreeBundle()
             new_bundle._name = bundle_name
@@ -1513,12 +1512,12 @@ class ScenarioTree(object):
 
             if tree_node_name not in node_stage_ids:
                 raise ValueError("No stage is assigned to tree node=%s"
-                                 % (tree_node._name))
+                                 % (tree_node.name))
 
             stage_name = value(node_stage_ids[tree_node_name])
             if stage_name not in self._stage_map:
                 raise ValueError("Unknown stage=%s assigned to tree node=%s"
-                                 % (stage_name, tree_node._name))
+                                 % (stage_name, tree_node.name))
 
             new_tree_node = ScenarioTreeNode(
                 tree_node_name,
@@ -1557,8 +1556,8 @@ class ScenarioTree(object):
         for this_node in self._tree_nodes:
             this_node._children = []
             # otherwise, you're at a leaf and all is well.
-            if this_node._name in node_child_ids:
-                child_ids = node_child_ids[this_node._name]
+            if this_node.name in node_child_ids:
+                child_ids = node_child_ids[this_node.name]
                 for child_id in child_ids:
                     if child_id in self._tree_node_map:
                         child_node = self._tree_node_map[child_id]
@@ -1571,18 +1570,18 @@ class ScenarioTree(object):
                                 "existing parent node=%s; conflicting parent "
                                 "node=%s"
                                 % (child_id,
-                                   child_node._parent._name,
-                                   this_node._name))
+                                   child_node._parent.name,
+                                   this_node.name))
                     else:
                         raise ValueError("Unknown child tree node=%s specified "
                                          "for tree node=%s"
-                                         % (child_id, this_node._name))
+                                         % (child_id, this_node.name))
 
         # at this point, the scenario tree nodes and the stages are set - no
         # two-pass logic necessary when constructing scenarios.
         for scenario_name in scenario_ids:
             new_scenario = Scenario()
-            new_scenario._name=scenario_name
+            new_scenario._name = scenario_name
 
             if scenario_name not in scenario_leaf_ids:
                 raise ValueError("No leaf tree node specified for scenario=%s"
@@ -1614,12 +1613,12 @@ class ScenarioTree(object):
                 #       for some nodes will be redundantly computed. But this works.
                 current_node._probability = probability
 
-                new_scenario._stage_costs[current_node._stage._name] = None
-                new_scenario._x[current_node._name] = {}
-                new_scenario._w[current_node._name] = {}
-                new_scenario._rho[current_node._name] = {}
-                new_scenario._fixed[current_node._name] = set()
-                new_scenario._stale[current_node._name] = set()
+                new_scenario._stage_costs[current_node.stage.name] = None
+                new_scenario._x[current_node.name] = {}
+                new_scenario._w[current_node.name] = {}
+                new_scenario._rho[current_node.name] = {}
+                new_scenario._fixed[current_node.name] = set()
+                new_scenario._stale[current_node.name] = set()
 
             new_scenario._probability = probability
 
@@ -1824,12 +1823,12 @@ class ScenarioTree(object):
                 labeler.update_cache(scenario.instance)
 
         for stage in self._stages:
-            tree_node_list = sorted(stage._tree_nodes, key=lambda x: x._name)
+            tree_node_list = sorted(stage._tree_nodes, key=lambda x: x.name)
             for tree_node in tree_node_list:
                 name_index_to_id_map = None
                 if master_scenario_tree is not None:
                     name_index_to_id_map = master_scenario_tree.\
-                                           get_node(tree_node._name).\
+                                           get_node(tree_node.name).\
                                            _name_index_to_id
                 tree_node.populateVariableIndicesAndValues(
                     id_labeler=labeler,
@@ -1918,14 +1917,14 @@ class ScenarioTree(object):
                 delattr(scenario, "retain")
             else:
                 scenarios_to_delete.append(scenario)
-                del self._scenario_map[scenario._name]
+                del self._scenario_map[scenario.name]
 
         for tree_node in self._tree_nodes:
             if hasattr(tree_node, "retain"):
                 delattr(tree_node, "retain")
             else:
                 tree_nodes_to_delete.append(tree_node)
-                del self._tree_node_map[tree_node._name]
+                del self._tree_node_map[tree_node.name]
 
         # JPW does not claim the following routines are
         # the most efficient. rather, they get the job
@@ -2011,7 +2010,7 @@ class ScenarioTree(object):
         bundles_to_delete.reverse()
         for i in bundles_to_delete:
             deleted_bundle = self._scenario_bundles.pop(i)
-            del self._scenario_bundle_map[deleted_bundle._name]
+            del self._scenario_bundle_map[deleted_bundle.name]
 
         sum_bundle_probabilities = \
             sum(bundle._probability for bundle in self._scenario_bundles)
@@ -2040,7 +2039,7 @@ class ScenarioTree(object):
             # copy everything but the list of tree nodes
             # and the reference to the scenario tree
             compressed_tree_stage = ScenarioTreeStage()
-            compressed_tree_stage._name = stage._name
+            compressed_tree_stage._name = stage.name
             compressed_tree_stage._variable_templates = copy.deepcopy(stage._variable_templates)
             compressed_tree_stage._derived_variable_templates = \
                 copy.deepcopy(stage._derived_variable_templates)
@@ -2050,7 +2049,7 @@ class ScenarioTree(object):
             compressed_tree._stages[-1]._scenario_tree = compressed_tree
 
         compressed_tree._stage_map = \
-            dict((stage._name, stage) for stage in compressed_tree._stages)
+            dict((stage.name, stage) for stage in compressed_tree._stages)
 
         #
         # Copy Scenario and Node Data
@@ -2060,16 +2059,16 @@ class ScenarioTree(object):
             full_tree_scenario = self.get_scenario(scenario_name)
 
             compressed_tree_scenario = Scenario()
-            compressed_tree_scenario._name = full_tree_scenario._name
+            compressed_tree_scenario._name = full_tree_scenario.name
             compressed_tree_scenario._probability = full_tree_scenario._probability
             compressed_tree._scenarios.append(compressed_tree_scenario)
 
             full_tree_node = full_tree_scenario._leaf_node
             ### copy the node
             compressed_tree_node = ScenarioTreeNode(
-                full_tree_node._name,
+                full_tree_node.name,
                 full_tree_node._conditional_probability,
-                compressed_tree._stage_map[full_tree_node._stage._name])
+                compressed_tree._stage_map[full_tree_node._stage.name])
             compressed_tree_node._variable_templates = \
                 copy.deepcopy(full_tree_node._variable_templates)
             compressed_tree_node._derived_variable_templates = \
@@ -2082,18 +2081,18 @@ class ScenarioTree(object):
             compressed_tree_scenario._node_list.append(compressed_tree_node)
             compressed_tree_scenario._leaf_node = compressed_tree_node
             compressed_tree._tree_nodes.append(compressed_tree_node)
-            compressed_tree._tree_node_map[compressed_tree_node._name] = \
+            compressed_tree._tree_node_map[compressed_tree_node.name] = \
                 compressed_tree_node
 
             previous_compressed_tree_node = compressed_tree_node
             full_tree_node = full_tree_node._parent
-            while full_tree_node._name not in compressed_tree._tree_node_map:
+            while full_tree_node.name not in compressed_tree._tree_node_map:
 
                 ### copy the node
                 compressed_tree_node = ScenarioTreeNode(
-                    full_tree_node._name,
+                    full_tree_node.name,
                     full_tree_node._conditional_probability,
-                    compressed_tree._stage_map[full_tree_node._stage._name])
+                    compressed_tree._stage_map[full_tree_node.stage.name])
                 compressed_tree_node._variable_templates = \
                     copy.deepcopy(full_tree_node._variable_templates)
                 compressed_tree_node._derived_variable_templates = \
@@ -2105,7 +2104,7 @@ class ScenarioTree(object):
 
                 compressed_tree_scenario._node_list.append(compressed_tree_node)
                 compressed_tree._tree_nodes.append(compressed_tree_node)
-                compressed_tree._tree_node_map[compressed_tree_node._name] = \
+                compressed_tree._tree_node_map[compressed_tree_node.name] = \
                     compressed_tree_node
                 previous_compressed_tree_node._parent = compressed_tree_node
                 compressed_tree_node._children.append(previous_compressed_tree_node)
@@ -2120,7 +2119,7 @@ class ScenarioTree(object):
             # tree structure elements
             if full_tree_node is not None:
                 compressed_tree_node = \
-                    compressed_tree._tree_node_map[full_tree_node._name]
+                    compressed_tree._tree_node_map[full_tree_node.name]
                 previous_compressed_tree_node._parent = compressed_tree_node
                 compressed_tree_node._scenarios.append(compressed_tree_scenario)
                 compressed_tree_node._children.append(previous_compressed_tree_node)
@@ -2141,15 +2140,15 @@ class ScenarioTree(object):
 
             # initialize solution related dictionaries
             for compressed_tree_node in compressed_tree_scenario._node_list:
-                compressed_tree_scenario._stage_costs[compressed_tree_node._stage._name] = None
-                compressed_tree_scenario._x[compressed_tree_node._name] = {}
-                compressed_tree_scenario._w[compressed_tree_node._name] = {}
-                compressed_tree_scenario._rho[compressed_tree_node._name] = {}
-                compressed_tree_scenario._fixed[compressed_tree_node._name] = set()
-                compressed_tree_scenario._stale[compressed_tree_node._name] = set()
+                compressed_tree_scenario._stage_costs[compressed_tree_node._stage.name] = None
+                compressed_tree_scenario._x[compressed_tree_node.name] = {}
+                compressed_tree_scenario._w[compressed_tree_node.name] = {}
+                compressed_tree_scenario._rho[compressed_tree_node.name] = {}
+                compressed_tree_scenario._fixed[compressed_tree_node.name] = set()
+                compressed_tree_scenario._stale[compressed_tree_node.name] = set()
 
         compressed_tree._scenario_map = \
-            dict((scenario._name, scenario) for scenario in compressed_tree._scenarios)
+            dict((scenario.name, scenario) for scenario in compressed_tree._scenarios)
 
         #
         # Handle re-normalization of probabilities if requested
@@ -2249,7 +2248,7 @@ class ScenarioTree(object):
 
             scenario_bundle_list = []
             for i in xrange(number_to_retain):
-                scenario_bundle_list.append(self._scenarios[random_list[i]]._name)
+                scenario_bundle_list.append(self._scenarios[random_list[i]].name)
 
             if verbose:
                 print("Downsampling scenario tree - retained %s "
@@ -2282,8 +2281,8 @@ class ScenarioTree(object):
 
         self._max_scenario_id_length = 0
         for scenario in self._scenarios:
-            if len(str(scenario._name)) > self._max_scenario_id_length:
-                self._max_scenario_id_length = len(str(scenario._name))
+            if len(str(scenario.name)) > self._max_scenario_id_length:
+                self._max_scenario_id_length = len(str(scenario.name))
 
     #
     # a utility function to (partially, at the moment) validate a scenario tree
@@ -2298,9 +2297,12 @@ class ScenarioTree(object):
                 for child in tree_node._children:
                     sum_probabilities += child._conditional_probability
                 if abs(1.0 - sum_probabilities) > 0.000001:
-                    print("The child conditional probabilities for tree node=%s "
-                          " sum to %s" % (tree_node._name, sum_probabilities))
-                    return False
+                    raise ValueError("ScenarioTree validation failed. "
+                                     "Reason: child conditional "
+                                     "probabilities for tree node=%s "
+                                     " sum to %s"
+                                     % (tree_node.name,
+                                        sum_probabilities))
 
         # ensure that there is only one root node in the tree
         num_roots = 0
@@ -2308,17 +2310,20 @@ class ScenarioTree(object):
         for tree_node in self._tree_nodes:
             if tree_node._parent is None:
                 num_roots += 1
-                root_ids.append(tree_node._name)
+                root_ids.append(tree_node.name)
 
         if num_roots != 1:
-            print("Illegal set of root nodes detected: " + str(root_ids))
-            return False
+            raise ValueError("ScenarioTree validation failed. "
+                             "Reason: illegal set of root "
+                             "nodes detected: " + str(root_ids))
 
         # there must be at least one scenario passing through each tree node.
         for tree_node in self._tree_nodes:
             if len(tree_node._scenarios) == 0:
-                print("There are no scenarios associated with tree node=%s"
-                      % (tree_node._name))
+                raise ValueError("ScenarioTree validation failed. "
+                                 "Reason: there are no scenarios "
+                                 "associated with tree node=%s"
+                                 % (tree_node.name))
                 return False
 
         return True

@@ -616,11 +616,9 @@ def GenerateScenarioTreeForPH(options,
     #
     # validate the tree prior to doing anything serious
     #
-    if not scenario_tree.validate():
-        raise RuntimeError("Scenario tree is invalid")
-    else:
-        if options.verbose:
-            print("Scenario tree is valid!")
+    scenario_tree.validate()
+    if options.verbose:
+        print("Scenario tree is valid!")
 
     if options.solver_manager_type != "phpyro":
 
