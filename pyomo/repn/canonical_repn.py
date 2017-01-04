@@ -946,7 +946,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                             if _l:
                                 for _id in _l:
                                     _l[_id] *= _sub
-                        elif _type == 1:
+                        elif _type == 1 or _type == 6:
                             _stackPtr[5].constant += _sub
                         elif _type == 3:
                             _stackPtr[5].constant = -1. * _sub
@@ -1042,9 +1042,6 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                         else:
                             new.variables.append(v)
                             _nl[_id] = old.linear[_id]
-                    old.constant = 0.
-                    old.variables = []
-                    old.linear = {}
                 elif _type == 2:
                     if old.variables:
                         old.variables, new.variables = new.variables, old.variables
@@ -1064,8 +1061,15 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                     _nl = new.linear
                     for _id in _nl:
                         _nl[_id] *= -1
+                elif _type == 6:
+                    old.variables, new.variables = new.variables, old.variables
+                    old.linear, new.linear = new.linear, old.linear
+                    new.constant = old.constant
                 else:
                     raise RuntimeError("HELP")
+                old.constant = 0.
+                old.variables = []
+                old.linear = {}
 
     elif degree == 0:
         if CompiledLinearCanonicalRepn_Pool:
