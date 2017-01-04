@@ -959,7 +959,8 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                         elif _type == 3:
                             _stackPtr[5].constant = -1. * _sub
                         else:
-                            raise RuntimeError("HELP")
+                            raise RuntimeError(
+                                "HELP (const with parent type=%s)" % (_type,))
                     else:
                         _id = id(_sub)
                         if _type == 2:
@@ -978,7 +979,8 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                             _lcr.variables.append(_sub)
                             _lcr.linear[_id] = -1.
                         else:
-                            raise RuntimeError("HELP")
+                            raise RuntimeError(
+                                "HELP (fixed with parent type %s)" % (_type,))
                 else:
                     _stackIdx += 1
                     if _stackMax == _stackIdx:
@@ -1081,7 +1083,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                     old.linear, new.linear = new.linear, old.linear
                     new.constant = old.constant
                 else:
-                    raise RuntimeError("HELP")
+                    raise RuntimeError("HELP (popping node type=%s)" % (_type,))
                 old.constant = 0.
                 old.variables = []
                 old.linear = {}
