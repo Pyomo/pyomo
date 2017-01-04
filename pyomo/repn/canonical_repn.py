@@ -898,8 +898,8 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                     idMap[_key] = v
                     _key += 1
         return ans
-    else:
-        degree = exp.polynomial_degree()
+
+    degree = exp.polynomial_degree()
 
     if degree == 1:
         _typeList = TreeWalkerHelper.typeList
