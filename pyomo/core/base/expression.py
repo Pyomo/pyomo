@@ -53,11 +53,6 @@ class _ExpressionData(NumericValue):
             return None
         return self.expr(exception=exception)
 
-    def _apply_operation(self, result):
-        # This "expression" is a no-op wrapper, so just return the inner
-        # result
-        return result[0]
-
     #
     # Ducktyping _ExpressionBase functionality
     #
@@ -78,6 +73,22 @@ class _ExpressionData(NumericValue):
     def clone(self):
         """Return a clone of this expression (no-op)."""
         return self
+
+    def _apply_operation(self, result):
+        # This "expression" is a no-op wrapper, so just return the inner
+        # result
+        return result[0]
+
+    def _is_constant_combiner(self):
+        # We cannot allow elimination/simplification of Expression objects
+        return lambda x: False
+
+    def _is_fixed_combiner(self):
+        return lambda x: x
+
+    def _potentially_variable_combiner(self):
+        # Expression objects are potentially variable by definition
+        return lambda x: True
 
     def polynomial_degree(self):
         """A tuple of subexpressions involved in this expressions operation."""
