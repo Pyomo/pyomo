@@ -882,7 +882,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
         ans.linear = []
         for v in exp._args:
             if v.is_fixed():
-                ans.constant += v.value() * value(exp._coef[id(v)])
+                ans.constant += v.value * value(exp._coef[id(v)])
             else:
                 ans.variables.append(v)
                 ans.linear.append(value(exp._coef[id(v)]))
@@ -1009,7 +1009,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                         for v in _sub._args:
                             _id = id(v)
                             if v.is_fixed():
-                                _stackPtr[5].constant += value(_sub._coef[_id]) * v.value()
+                                _stackPtr[5].constant += value(_sub._coef[_id]) * v.value
                             elif _id in _stackPtr[5].linear:
                                 _stackPtr[5].linear[_id] += value(_sub._coef[_id])
                             else:
