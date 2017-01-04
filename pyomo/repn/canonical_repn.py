@@ -874,21 +874,25 @@ _stack = [[0,0,0,0,0,pyomo4_CompiledLinearCanonicalRepn()]]
 
 def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
     # A **very** special case
-    if TreeWalkerHelper.typeList.get(exp.__class__,0) == 4: # _LinearExpression:
+    if exp.__class__ is expr._LinearExpression:
         ans = CompiledLinearCanonicalRepn()
 
         # old format
-        ans.constant = exp._const
-        ans.variables = list( exp._args )
-        _l = exp._coef
-        ans.linear = [_l[id(v)] for v in exp._args]
+        ans.constant = value(exp._const)
+        ans.linear = []
+        for v in exp._args:
+            if v.is_fixed():
+                ans.constant += v.value() * value(exp._coef[id(v)])
+            else:
+                ans.variables.append(v)
+                ans.linear.append(value(exp._coef[id(v)]))
 
         if idMap:
             if None not in idMap:
                 idMap[None] = {}
             _test = idMap[None]
             _key = len(idMap) - 1
-            for v in exp._args:
+            for v in ans.variables:
                 if id(v) not in _test:
                     _test[id(v)] = _key
                     idMap[_key] = v
@@ -926,9 +930,13 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
 
         if _type == 4: # _LinearExpression
             _stackPtr[4] = _stackPtr[3]
-            _stackPtr[5].constant = exp._const
-            _stackPtr[5].linear = dict(exp._coef)
-            _stackPtr[5].variables = list(exp._args)
+            _stackPtr[5].constant = value(exp._const)
+            for v in exp._args:
+                if v.is_fixed():
+                    _stackPtr[5].constant += value(exp._coef[id(v)]) * value(v)
+                else:
+                    _stackPtr[5].linear[id(v)] = value(exp._coef[id(v)])
+                    _stackPtr[5].variables.append(v)
 
         while 1: # Note: 1 is faster than True for Python 2.x
             if _stackPtr[4] < _stackPtr[3]:
@@ -995,9 +1003,16 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
 
                     if _type == 4: # _LinearExpression
                         _stackPtr[4] = _stackPtr[3]
-                        _stackPtr[5].constant = _sub._const
-                        _stackPtr[5].linear = dict(_sub._coef)
-                        _stackPtr[5].variables = list(_sub._args)
+                        _stackPtr[5].constant = value(_sub._const)
+                        for v in _sub._args:
+                            _id = id(v)
+                            if v.is_fixed():
+                                _stackPtr[5].constant += value(_sub._coef[_id]) * v.value()
+                            elif _id in _stackPtr[5].linear:
+                                _stackPtr[5].linear[_id] += value(_sub._coef[_id])
+                            else:
+                                _stackPtr[5].linear[_id] = value(_sub._coef[_id])
+                                _stackPtr[5].variables.append(v)
             else:
                 old = _stackPtr[5]
                 if not _type:
@@ -1029,7 +1044,7 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
                 _stackPtr = _stack[_stackIdx]
                 new = _stackPtr[5]
                 _type = _stackPtr[2]
-                if _type == 1:
+                if _type == 1 or _type == 4:
                     new.constant += old.constant
                     _nl = new.linear
                     # Note: append the variables in the order that they
