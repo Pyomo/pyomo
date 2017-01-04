@@ -53,6 +53,11 @@ class _ExpressionData(NumericValue):
             return None
         return self.expr(exception=exception)
 
+    def _apply_operation(self, result):
+        # This "expression" is a no-op wrapper, so just return the inner
+        # result
+        return result[0]
+
     #
     # Ducktyping _ExpressionBase functionality
     #
