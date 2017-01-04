@@ -701,19 +701,21 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self.external_byFcn = {}
         external_Libs = set()
         for fcn in model.component_objects(ExternalFunction, active=True):
-            if fcn._function in self.external_byFcn and \
-                    self.external_byFcn[fcn._function][0]._library != fcn._library:
-                raise RuntimeError(
-                    "The same external function name (%s) is associated "
-                    "with two different libraries (%s through %s, and %s "
-                    "through %s).  The ASL solver will fail to link "
-                    "correctly." %
-                    (fcn._function,
-                     self.external_byFcn[fcn._function]._library,
-                     self.external_byFcn[fcn._function]._library.name,
-                     fcn._library,
-                     fcn.name))
-            self.external_byFcn[fcn._function] = (fcn, len(self.external_byFcn))
+            if fcn._function in self.external_byFcn:
+                if self.external_byFcn[fcn._function][0]._library != fcn._library:
+                    raise RuntimeError(
+                        "The same external function name (%s) is associated "
+                        "with two different libraries (%s through %s, and %s "
+                        "through %s).  The ASL solver will fail to link "
+                        "correctly." %
+                        (fcn._function,
+                         self.external_byFcn[fcn._function]._library,
+                         self.external_byFcn[fcn._function]._library.name,
+                         fcn._library,
+                         fcn.name))
+            else:
+                self.external_byFcn[fcn._function] = \
+                    (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
             os.environ["PYOMO_AMPLFUNC"] = "\n".join(sorted(external_Libs))
