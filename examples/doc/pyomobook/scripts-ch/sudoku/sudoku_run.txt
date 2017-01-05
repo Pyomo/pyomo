@@ -1,4 +1,4 @@
-Warning: Constant objective detected, replacing with a placeholder to prevent solver failure.
+WARNING: Constant objective detected, replacing with a placeholder to prevent solver failure.
 Solution #1
 5   3   4   6   7   8   9   1   2
 6   7   2   1   9   5   3   4   8
@@ -9,5 +9,5 @@ Solution #1
 9   6   1   5   3   7   2   8   4
 2   8   7   4   1   9   6   3   5
 3   4   5   2   8   6   1   7   9
-Warning: Constant objective detected, replacing with a placeholder to prevent solver failure.
+WARNING: Constant objective detected, replacing with a placeholder to prevent solver failure.
 All board solutions have been found

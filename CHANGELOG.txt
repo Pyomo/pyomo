@@ -3,6 +3,30 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.1
+-------------------------------------------------------------------------------
+
+- Added a CONOPT plugin to handle a custom SOL file output (#88)
+- Changed 'pyomo solve' to use any Model object that is found, rather than
+  requiring the default object to be named 'model' (#80)
+- Reworked the solver testing infrastructure to enable enumeration of all
+  test scenarios, which is used by 'pyomo test-solvers' (#78)
+- Fixes for xpress solver options writer (#79)
+- Resolved an issue where Pyomo was unnecessarily cloning most inequality 
+  expressions (#80)
+- Reworked the Pyomo *.DAT file parser and post-parse processing logic. This
+  eliminates parse ambiguities that were causing test failures.
+- Finalized book test examples for the new edition of the Pyomo book
+- Added pyomo.contrib to support integration of third-party Pyomo libraries
+  in a standard manner
+- Fixed TravisCI testing issues where the incorrect version of Python was being
+  tested
+- Fixed error messages in pyomo.dae (#81)
+- Revised CBC interface to recognize intermediate non-integer solutions (#77)
+- Added checks for IPOPT test failures based on version info (#72)
+- Removed support for OpenOpt
+
+-------------------------------------------------------------------------------
 Pyomo 5.0.1
 -------------------------------------------------------------------------------
 

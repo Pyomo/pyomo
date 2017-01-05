@@ -21,7 +21,7 @@ import pyomo.opt
 from pyomo.util.plugin import Plugin
 from pyomo.environ import *
 
-solver = pyomo.opt.load_solvers('glpk')
+solvers = pyomo.opt.check_available_solvers('glpk')
 
 
 class Test(unittest.TestCase):
@@ -213,7 +213,7 @@ class Test(unittest.TestCase):
                 for ndx in var._index:
                     self.assertTrue(self.nonnegativeBounds(var[ndx]))
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.expectedFailure
     def test_nonnegative_transform_3(self):
         self.model.S = RangeSet(0,10)
@@ -287,7 +287,7 @@ class Test(unittest.TestCase):
         instance=self.model.create_instance()
         transformed = transform(instance)
 
-        opt = solver["glpk"]
+        opt = SolverFactory("glpk")
 
         instance_sol = opt.solve(instance)
         transformed_sol = opt.solve(transformed)
@@ -297,7 +297,7 @@ class Test(unittest.TestCase):
             transformed_sol["Solution"][0]["Objective"]['obj']["value"]
             )
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.expectedFailure
     def test_nonnegative_transform_4(self):
         """ Same as #3, but adds constraints """
@@ -404,7 +404,7 @@ class Test(unittest.TestCase):
         instance=self.model.create_instance()
         transformed = transform(instance)
 
-        opt = solver["glpk"]
+        opt = SolverFactory("glpk")
 
         instance_sol = opt.solve(instance)
         transformed_sol = opt.solve(transformed)
@@ -415,7 +415,7 @@ class Test(unittest.TestCase):
             )
 
     @unittest.category('nightly', 'expensive')
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.expectedFailure
     def test_standard_form_transform_1(self):
         self.model.S = RangeSet(0,10)
@@ -489,7 +489,7 @@ class Test(unittest.TestCase):
         instance=self.model.create_instance()
         transformed = transform(instance)
 
-        opt = solver["glpk"]
+        opt = SolverFactory("glpk")
 
         instance_sol = opt.solve(instance)
         transformed_sol = opt.solve(transformed)
@@ -500,7 +500,7 @@ class Test(unittest.TestCase):
             )
 
     @unittest.category('nightly', 'expensive')
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.expectedFailure
     def test_standard_form_transform_2(self):
         """ Same as #1, but adds constraints """
@@ -607,7 +607,7 @@ class Test(unittest.TestCase):
         instance=self.model.create_instance()
         transformed = transform(instance)
 
-        opt = solver["glpk"]
+        opt = SolverFactory("glpk")
 
         instance_sol = opt.solve(instance)
         transformed_sol = opt.solve(transformed)

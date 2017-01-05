@@ -189,14 +189,14 @@ class _ConstraintData(ActiveComponentData):
 
     def lslack(self):
         """
-        Returns the value of L-f(x) for constraints of the form:
+        Returns the value of f(x)-L for constraints of the form:
             L <= f(x) (<= U)
             (U >=) f(x) >= L
         """
         if self.lower is None:
             return float('-inf')
         else:
-            return value(self.lower)-value(self.body)
+            return value(self.body)-value(self.lower)
 
     def uslack(self):
         """
@@ -216,8 +216,9 @@ class _ConstraintData(ActiveComponentData):
         if self.lower is None:
             return value(self.upper)-value(self.body)
         elif self.upper is None:
-            return value(self.lower)-value(self.body)
-        return min(value(self.upper)-value(self.body), value(self.lower)-value(self.body))
+            return value(self.body)-value(self.lower)
+        return min(value(self.upper)-value(self.body),
+                   value(self.body)-value(self.lower))
 
     #
     # Abstract Interface
