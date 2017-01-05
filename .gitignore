@@ -5,3 +5,4 @@
 *.pyc
 *.pyo
 *.spy
+pyomo/core/data/parse_table_datacmds.py
