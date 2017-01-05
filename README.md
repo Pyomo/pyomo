@@ -3,6 +3,7 @@
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/master/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Pyomo/pyomo/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/Pyomo/pyomo/?branch=master)
 [![Research software impact](http://depsy.org/api/package/pypi/Pyomo/badge.svg)](http://depsy.org/package/python/Pyomo)
+[![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
 
 ## Pyomo Overview
 
