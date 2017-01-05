@@ -551,19 +551,26 @@ def _generate_ampl_repn(exp):
             #
 
             # build up the ampl_repn for the numerator
-            ampl_repn = _generate_ampl_repn(numerator)
+            numerator_repn = _generate_ampl_repn(numerator)
             # check if the expression is not nonlinear else it is nonlinear
-            if ampl_repn._nonlinear_expr is not None:
+            if numerator_repn._nonlinear_expr is not None:
                 # do like AMPL and simply return the expression
                 # without extracting the potentially linear part
                 # (be sure to set this to the original expression,
                 # not just the numerators)
+                ampl_repn = AmplRepn()
                 ampl_repn._nonlinear_expr = exp
+                ampl_repn._nonlinear_vars.update(numerator_repn._linear_vars)
+                ampl_repn._nonlinear_vars.update(numerator_repn._nonlinear_vars)
+#                print("_DivisionExpression (nonlinear numerator - fixed denominator)")
+#                print(ampl_repn)
                 return ampl_repn
 
             #
             # OK, we have a linear numerator with a constant denominator
             #
+            ampl_repn = numerator_repn
+            del numerator_repn
 
             # update any constants and coefficients by dividing
             # by the fixed denominator
