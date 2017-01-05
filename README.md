@@ -29,6 +29,7 @@ Pyomo is available under the BSD License.
 
 ### Getting Help
 
+* [Ask a Pyomo Question on StackExchange](https://stackoverflow.com/questions/ask?tags=pyomo)
 * [Pyomo Forum](https://groups.google.com/forum/?hl=en#!forum/pyomo-forum)
 * [Add a Ticket](https://github.com/Pyomo/pyomo/issues/new)
 * [Find a Ticket](https://github.com/Pyomo/pyomo/issues) and **Vote On It**!
