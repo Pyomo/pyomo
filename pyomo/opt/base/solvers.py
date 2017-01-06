@@ -623,6 +623,11 @@ class OptSolver(Plugin):
                             result.solution.clear()
                     else:
                         assert len(result.solution) == 0
+                    # see the hack in the write method
+                    # we don't want this to stick around on the model
+                    # after the solve
+                    assert len(getattr(_model, "._symbol_maps")) == 1
+                    delattr(_model, "._symbol_maps")
                     del result._smap_id
                 else:
                     if self._load_solutions:
