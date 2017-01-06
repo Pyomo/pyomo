@@ -1,3 +1,4 @@
+# @script:
 from warehouse_data import *
 import pyomo.environ as pe
 import warehouse_function as wf
@@ -14,3 +15,7 @@ solver.solve(model, options=solver_opt)
 
 # look at the solution
 model.y.pprint()
+# @:script
+
+import os
+os.remove('warehouse.log')
