@@ -1040,6 +1040,8 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
 
     # **Py3k: degree > 1 comparision will error if degree is None
     elif degree and degree > 1:
+        raise RuntimeError("generate_canonical_repn does not support nonlinear Pyomo4 expressions")
+
         ans = collect_general_canonical_repn(exp, idMap, compute_values)
         if 1 in ans:
             linear_terms = {}
