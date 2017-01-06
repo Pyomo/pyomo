@@ -583,11 +583,14 @@ def _generate_ampl_repn(exp):
         elif _using_pyomo4_trees and (exp_type is Expr._NegationExpression):
             assert len(exp._args) == 1
             ampl_repn = _generate_ampl_repn(exp._args[0])
-            if ampl_repn._nonlinear_expr is not None:
-                # do like AMPL and simply return the expression
-                # without extracting the potentially linear part
-                ampl_repn._nonlinear_expr = exp
-                return ampl_repn
+            # here it is easy enough to preserve separation of
+            # any linear and nonlinear subexpressions
+            if type(ampl_repn._nonlinear_expr) is list:
+                ampl_repn._nonlinear_expr = \
+                    [(-c_, e_) for c_,e_ in ampl_repn._nonlinear_expr]
+            elif ampl_repn._nonlinear_expr is not None:
+                ampl_repn._nonlinear_expr = Expr._NegationExpression(
+                    (ampl_repn._nonlinear_expr,))
 
             # this subexpression is linear, so update any
             # constants and coefficients by negating them
