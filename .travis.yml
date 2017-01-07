@@ -59,7 +59,7 @@ install:
 #
 # Clone but don't install pyomo-model-libraries
 #
-git clone https://github.com/Pyomo/pyomo-model-libraries.git
+- git clone https://github.com/Pyomo/pyomo-model-libraries.git
 #
 # Install PyUtilib (master branch)
 #
