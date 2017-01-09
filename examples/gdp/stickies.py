@@ -34,20 +34,31 @@ def screen_node_filter(model, s, n):
     return s != n
 model.ScreenNodePairs = Set(initialize=model.Screens * model.Nodes, dimen=2, filter=screen_node_filter)
 
+def screen_filter(model, s, sprime):
+    return s != sprime
+model.ScreenPairs = Set(initialize = model.Screens * model.Screens, dimen=2, filter=screen_filter)
+
 
 ######################
 # Parameters
 ######################
 
-# exponent coefficient for cost in screen s
+# exponent coefficient for cost in screen s (alpha(s))
 model.ExpScreenCostCoeff = Param(model.Screens)
+# beta(s, k)
 model.AcceptanceFactor = Param(model.Screens, model.Components)
+# C_s^1
 model.ScreenCostCoeff1 = Param(model.Screens)
+# C_s^2
 model.ScreenCostCoeff2 = Param(model.Screens, default=0)
-# max percentage inlet stickies accepted in total flow
+# max percentage inlet stickies accepted in total flow (C_{st}^{up}, q(kb))
 model.AcceptedLeftover = Param(model.BadComponents)
-model.InitialFlow = Param(model.Components)
+# F_j^0, m_src(k)
+model.InitialFlow = Param(model.Components, default=0)
 
+# bounds
+
+# F_s^{in, lo} and F_s^{in, up}
 def flow_ub_rule(model, s):
     return sum(model.InitialFlow[k] for k in model.Components)
 model.FlowLB = Param(model.Screens)
@@ -59,8 +70,8 @@ def component_flow_ub_rule(model, k, n):
     return model.InitialFlow[k]
 model.InletComponentFlowUB = Param(model.Components, model.Nodes, initialize=component_flow_ub_rule)
 
-model.ScreenCostUB = Param(model.Screens)
-model.ScreenCostLB = Param(model.Screens, default=0)
+# model.ScreenCostUB = Param(model.Screens)
+# model.ScreenCostLB = Param(model.Screens, default=0)
 
 model.RejectRateLB = Param(model.Screens)
 model.RejectRateUB = Param(model.Screens)
@@ -75,7 +86,7 @@ def accepted_component_flow_bound(model, k, s):
     return model.InitialFlow[k]*(1 - model.RejectRateLB[s]**model.AcceptanceFactor[s, k])
 model.AcceptedComponentFlowUB = Param(model.Components, model.Screens, initialize=accepted_component_flow_bound)
 
-# constants for objective function
+# constants for objective function (W^1, W^2, W^3)
 model.FiberWeight = Param()
 model.StickiesWeight = Param()
 model.CostWeight = Param()
@@ -85,15 +96,21 @@ model.CostWeight = Param()
 # Variables
 ######################
 
-def get_screen_cost_bounds(model, s):
-    return (model.ScreenCostLB[s], model.ScreenCostUB[s])
-model.screenCost = Var(model.Screens, within=NonNegativeReals, bounds=get_screen_cost_bounds)
+# c_s, C(s), cost of selecting screen
+# TODO: I did make trivial bounds for this, but since this problem is non-convex anyway, I guess
+# we don't *need* them.
+# def get_screen_cost_bounds(model, s):
+#     return (model.ScreenCostLB[s], model.ScreenCostUB[s])
+model.screenCost = Var(model.Screens, within=NonNegativeReals)#, bounds=get_screen_cost_bounds)
 
-# total inlet flow into screen s
+# total inlet flow into screen s (F_IN(s))
+# QUESTION: In gams, the bounds are enforced all the time, I think. In the model formulation, 
+# that constraint is in the disjunction. Does this matter?
 def get_inlet_flow_bounds(model, s):
     return (model.FlowLB[s], model.FlowUB[s])
 model.inletScreenFlow = Var(model.Screens, within=NonNegativeReals, bounds=get_inlet_flow_bounds)
-# inlet flow of component j into node n
+
+# inlet flow of component j into node n, (f_{n,j}^I, M_IN
 def get_inlet_component_flow_bounds(model, j, n):
     return (model.InletComponentFlowLB[j, n], model.InletComponentFlowUB[j, n])
 model.inletComponentFlow = Var(model.Components, model.Nodes, within=NonNegativeReals, 
@@ -165,9 +182,9 @@ def source_flow_rule(model, j):
     return model.InitialFlow[j] == sum(model.flowFromSource[j, n] for n in model.Nodes)
 model.source_flow = Constraint(model.Components, rule=source_flow_rule)
 
-
+#################
 ## Disjunctions
-
+#################
 
 def screen_disjunct_rule(disjunct, selectScreen, s):
     model = disjunct.model()
@@ -234,19 +251,93 @@ model.flow_rejection_disjunction = Disjunction(model.ScreenNodePairs, rule=rejec
 
 def flow_from_source_disjunct_rule(disjunct, n):
     model = disjunct.model()
-
     def sourceFlow_balance_rule(disjunct, j):
         return model.flowFromSource[j, n] == model.InitialFlow[j]
-    def no_flow_rule(disjunct, j, nprime):
-        if nprime == n:
-            return Constraint.Skip
+    def no_sourceFlow_rule(disjunct, j, nprime):
+        print 'j: ' + str(j)
+        print 'n: ' + str(n)
+        print 'nprime: ' + str(nprime)
+        #if nprime == n:
+         #   return Constraint.Skip
         return model.flowFromSource[j, nprime] == 0
 
     disjunct.flow_balance = Constraint(model.Components, rule=sourceFlow_balance_rule)
-    # TODO: the line below is the source of the BigM error 
-    disjunct.no_flow = Constraint(model.Components, model.Nodes, rule=no_flow_rule)
+    # TODO: the constraint below is the source of the BigM error 
+    #disjunct.no_flow = Constraint(model.Components, model.Nodes-[n], rule=no_sourceFlow_rule)
 model.flow_from_source_disjunct = Disjunct(model.Nodes, rule=flow_from_source_disjunct_rule)
 
-def flow_from_source_disjunction_rule(model, n):
-    return [model.flow_from_source_disjunct[n]]
-model.flow_from_source_disjunction = Disjunction(model.Nodes, rule=flow_from_source_disjunction_rule)
+def flow_from_source_disjunction_rule(model):
+    return [model.flow_from_source_disjunct[n] for n in model.Nodes]
+model.flow_from_source_disjunction = Disjunction(rule=flow_from_source_disjunction_rule)
+
+
+######################
+# Boolean Constraints
+######################
+
+# YA_{s,n} v YR_{s,n} implies Y_s
+def flow_existence_rule1(model, s, n):
+    return model.screen_selection_disjunct[1, s].indicator_var >= \
+        model.flow_acceptance_disjunct[s, n, 1].indicator_var
+model.flow_existence1 = Constraint(model.ScreenNodePairs, rule=flow_existence_rule1)
+
+def flow_existence_rule2(model, s, n):
+    return model.screen_selection_disjunct[1,s].indicator_var >= \
+        model.flow_rejection_disjunct[s, n, 1].indicator_var
+model.flow_existence2 = Constraint(model.ScreenNodePairs, rule = flow_existence_rule2)
+
+
+# YA_{s,s'} v YR_{s',s} implies Y_s
+def screen_flow_existence_rule1(model, s, sprime):
+    return model.screen_selection_disjunct[1, s].indicator_var >= \
+        model.flow_acceptance_disjunct[s, sprime, 1].indicator_var
+model.flow_existence1 = Constraint(model.ScreenPairs, rule=screen_flow_existence_rule1)
+
+def screen_flow_existence_rule2(model, s, sprime):
+    return model.screen_selection_disjunct[1,s].indicator_var >= \
+        model.flow_rejection_disjunct[sprime, s, 1].indicator_var
+model.flow_existence2 = Constraint(model.ScreenPairs, rule=screen_flow_existence_rule2)
+
+
+# YA_{s', s} XOR YA_{s, s'}
+def accept_rule1(model, s, sprime):
+    return 1 <= model.flow_acceptance_disjunct[s, sprime, 1].indicator_var + \
+        model.flow_acceptance_disjunct[sprime, s, 1].indicator_var
+model.accept1 = Constraint(model.ScreenPairs, rule=accept_rule1)
+
+def accept_rule2(model, s, sprime):
+    return 1 >= model.flow_acceptance_disjunct[s, sprime, 1].indicator_var - \
+        model.flow_acceptance_disjunct[sprime, s, 1].indicator_var
+model.accept2 = Constraint(model.ScreenPairs, rule=accept_rule2)
+
+def accept_rule3(model, s, sprime):
+    return 1 >= model.flow_acceptance_disjunct[sprime, s, 1].indicator_var - \
+        model.flow_acceptance_disjunct[s, sprime, 1].indicator_var
+#model.accept3 = Constraint(model.ScreenPairs, rule=accept_rule3)
+
+def accept_rule4(model, s, sprime):
+    return 1 <= 2 - model.flow_acceptance_disjunct[s, sprime, 1].indicator_var - \
+        model.flow_acceptance_disjunct[sprime, s, 1].indicator_var
+model.accept4 = Constraint(model.ScreenPairs, rule=accept_rule4)
+
+
+# YA_{s,n} XOR YR_{s,n}
+def accept_or_reject_rule1(model, s, n):
+    return 1 <= model.flow_acceptance_disjunct[s, n, 1].indicator_var + \
+        model.flow_rejection_disjunct[s, n, 1].indicator_var
+#model.accept_or_reject1 = Constraint(model.ScreenNodePairs, rule=accept_or_reject_rule1)
+
+def accept_or_reject_rule2(model, s, n):
+    return 1 >= model.flow_acceptance_disjunct[s, n, 1].indicator_var - \
+        model.flow_rejection_disjunct[s, n, 1].indicator_var
+#model.accept_or_reject2 = Constraint(model.ScreenNodePairs, rule=accept_or_reject_rule2)
+
+def accept_or_reject_rule3(model, s, n):
+    return 1 >= model.flow_rejection_disjunct[s, n, 1].indicator_var - \
+        model.flow_acceptance_disjunct[s, n, 1].indicator_var
+#model.accept_or_reject3 = Constraint(model.ScreenNodePairs, rule=accept_or_reject_rule3)
+
+def accept_or_reject_rule4(model, s, n):
+    return 1 <= 2 - model.flow_acceptance_disjunct[s, n, 1].indicator_var - \
+        model.flow_rejection_disjunct[s, n, 1].indicator_var
+#model.accept_or_reject4 = Constraint(model.ScreenNodePairs, rule=accept_or_reject_rule4)
