@@ -17,8 +17,8 @@ import pyutilib.math
 
 from pyomo.core.base.component_interface import \
     (IComponent,
-     _IActiveComponent,
-     _IActiveComponentContainer,
+     _IActiveComponentMixin,
+     _IActiveComponentContainerMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
@@ -29,7 +29,7 @@ from pyomo.core.base import minimize, maximize
 
 import six
 
-class IObjective(IExpression, _IActiveComponent):
+class IObjective(IExpression, _IActiveComponentMixin):
     """
     The interface for optimization objectives.
     """
@@ -102,7 +102,7 @@ class objective(IObjective):
                 "[minimize (%s), maximize (%s)]. Invalid "
                 "value: %s'" % (minimize, maximize, sense))
 
-class objective_list(ComponentList, _IActiveComponentContainer):
+class objective_list(ComponentList, _IActiveComponentContainerMixin):
     """A list-style container for objectives."""
     # To avoid a circular import, for the time being, this
     # property will be set in objective.py
@@ -122,7 +122,7 @@ class objective_list(ComponentList, _IActiveComponentContainer):
         self._active = True
         super(objective_list, self).__init__(*args, **kwds)
 
-class objective_dict(ComponentDict, _IActiveComponentContainer):
+class objective_dict(ComponentDict, _IActiveComponentContainerMixin):
     """A dict-style container for objectives."""
     # To avoid a circular import, for the time being, this
     # property will be set in objective.py

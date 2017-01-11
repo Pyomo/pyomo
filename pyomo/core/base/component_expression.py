@@ -20,8 +20,6 @@ import pyutilib.math
 import pyomo.core.base.expr_common
 from pyomo.core.base.component_interface import \
     (IComponent,
-     _IActiveComponent,
-     _IActiveComponentContainer,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict

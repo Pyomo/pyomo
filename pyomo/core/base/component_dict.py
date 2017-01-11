@@ -24,6 +24,10 @@ from pyomo.core.base.component_map import ComponentMap
 import six
 from six import itervalues, iteritems
 
+# used frequently in this file,
+# so I'm caching it here
+_active_flag_name = "active"
+
 # Note that prior to Python 3, collections.MutableMappping
 # is not defined with an empty __slots__
 # attribute. Therefore, in Python 2, all implementations of
@@ -70,6 +74,24 @@ class ComponentDict(IComponentContainer,
                     "got %s" % (self.__class__.__name__,
                                 len(args)))
             self.update(args[0])
+
+    def _prepare_for_add(self, obj):
+        obj._parent = weakref.ref(self)
+        # children that are not of type
+        # IActiveObject retain the active status
+        # of their parent, which is why the default
+        # return value from getattr is False
+        if getattr(obj, _active_flag_name, False):
+            self._increment_active()
+
+    def _prepare_for_delete(self, obj):
+        obj._parent = None
+        # children that are not of type
+        # IActiveObject retain the active status
+        # of their parent, which is why the default
+        # return value from getattr is False
+        if getattr(obj, _active_flag_name, False):
+            self._decrement_active()
 
     #
     # Implementations can choose to define these
@@ -143,7 +165,6 @@ class ComponentDict(IComponentContainer,
         Returns: an iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
-        _active_flag_name = "active"
 
         # if not active, then no children can be active
         if (active is not None) and \
@@ -201,7 +222,6 @@ class ComponentDict(IComponentContainer,
         Returns: an iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
-        _active_flag_name = "active"
 
         # if not active, then no children can be active
         if (active is not None) and \
@@ -265,7 +285,6 @@ class ComponentDict(IComponentContainer,
             mapping component objects to names.
         """
         assert active in (None, True)
-        _active_flag_name = "active"
         names = ComponentMap()
 
         # if not active, then no children can be active
@@ -296,17 +315,11 @@ class ComponentDict(IComponentContainer,
     def __setitem__(self, key, item):
         if item.ctype == self.ctype:
             if item._parent is None:
-                item._parent = weakref.ref(self)
                 if key in self._data:
-                    # release the current component
-                    # * see __delitem__ for explanation
-                    self._data[key]._parent = None
+                    self._prepare_for_delete(
+                        self._data[key])
+                self._prepare_for_add(item)
                 self._data[key] = item
-                if (not getattr(self, "_active", True)) and \
-                   getattr(item, "_active", False):
-                    # this will notify all inactive
-                    # ancestors that they are now active
-                    item.activate()
                 return
             elif (key in self._data) and (self._data[key] is item):
                 # a very special case that makes sense to handle
@@ -338,7 +351,7 @@ class ComponentDict(IComponentContainer,
 
     def __delitem__(self, key):
         obj = self._data[key]
-        obj._parent = None
+        self._prepare_for_delete(obj)
         del self._data[key]
 
     def __getitem__(self, key):

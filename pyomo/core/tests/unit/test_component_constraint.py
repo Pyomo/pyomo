@@ -4,9 +4,8 @@ import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
-                                                 _IActiveComponent,
-                                                 IComponentContainer,
-                                                 _IActiveComponentContainer)
+                                                 _IActiveComponentMixin,
+                                                 IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
@@ -97,7 +96,7 @@ class Test_constraint(unittest.TestCase):
         self.assertTrue(isinstance(c, ICategorizedObject))
         self.assertTrue(isinstance(c, IActiveObject))
         self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _IActiveComponent))
+        self.assertTrue(isinstance(c, _IActiveComponentMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):
@@ -113,19 +112,18 @@ class Test_constraint(unittest.TestCase):
         b.deactivate()
         self.assertEqual(b.active, False)
         b.c = c
-        # TODO figure out the semantics of
-        # this situation. I believe it involves
-        # keep track of an active counter
-        # rather than a boolean.
-        #self.assertEqual(c.active, True)
-        #self.assertEqual(b.active, True)
-        #c.deactivate()
-        #self.assertEqual(c.active, False)
-        #self.assertEqual(b.active, True)
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, False)
+        c.deactivate()
+        self.assertEqual(c.active, False)
+        self.assertEqual(b.active, False)
         b.activate()
+        self.assertEqual(c.active, False)
+        self.assertEqual(b.active, True)
+        b.activate(shallow=False)
         self.assertEqual(c.active, True)
         self.assertEqual(b.active, True)
-        b.deactivate()
+        b.deactivate(shallow=False)
         self.assertEqual(c.active, False)
         self.assertEqual(b.active, False)
 
@@ -1077,7 +1075,7 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertTrue(isinstance(c, ICategorizedObject))
         self.assertTrue(isinstance(c, IActiveObject))
         self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _IActiveComponent))
+        self.assertTrue(isinstance(c, _IActiveComponentMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):
@@ -1093,19 +1091,18 @@ class Test_linear_constraint(unittest.TestCase):
         b.deactivate()
         self.assertEqual(b.active, False)
         b.c = c
-        # TODO figure out the semantics of
-        # this situation. I believe it involves
-        # keep track of an active counter
-        # rather than a boolean.
-        #self.assertEqual(c.active, True)
-        #self.assertEqual(b.active, True)
-        #c.deactivate()
-        #self.assertEqual(c.active, False)
-        #self.assertEqual(b.active, True)
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, False)
+        c.deactivate()
+        self.assertEqual(c.active, False)
+        self.assertEqual(b.active, False)
         b.activate()
+        self.assertEqual(c.active, False)
+        self.assertEqual(b.active, True)
+        b.activate(shallow=False)
         self.assertEqual(c.active, True)
         self.assertEqual(b.active, True)
-        b.deactivate()
+        b.deactivate(shallow=False)
         self.assertEqual(c.active, False)
         self.assertEqual(b.active, False)
 

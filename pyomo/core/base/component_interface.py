@@ -285,11 +285,15 @@ class IComponent(ICategorizedObject):
             ostream = sys.stdout
         ostream.write(self.__str__())
 
-class _IActiveComponent(IActiveObject):
+class _IActiveComponentMixin(IActiveObject):
     """
     To be used as an additional base class in IComponent
     implementations to add fuctionality for activating and
     deactivating the component.
+
+    Any container that stores implementations of this type
+    should use _IActiveComponentContainerMixin as a base
+    class.
 
     This class is abstract.
     """
@@ -302,9 +306,8 @@ class _IActiveComponent(IActiveObject):
     #
 
     _active = _abstract_readwrite_property(
-        doc=("A boolean indicating whethor or not any "
-             "components stored below this container "
-             "are active."))
+        doc=("A boolean indicating whethor or not "
+             "this component is active."))
 
     #
     # Interface
@@ -321,19 +324,24 @@ class _IActiveComponent(IActiveObject):
             "Assignment not allowed. Use the "
             "(de)activate method")
 
-    def activate(self):
-        """Activate this component. The active flag on the
-        parent container (if one exists) is set to True."""
+    def activate(self, _from_parent_=False):
+        """Activate this component."""
+        if (not self._active) and \
+           (not _from_parent_):
+            # inform the parent
+            parent = self.parent
+            if parent is not None:
+                parent._increment_active()
         self._active = True
-        # the parent must also become active
-        parent = self.parent
-        while (parent is not None) and \
-              (not parent._active):
-            parent._active = True
-            parent = parent.parent
 
-    def deactivate(self):
+    def deactivate(self, _from_parent_=False):
         """Deactivate this component."""
+        if self._active and \
+           (not _from_parent_):
+            # inform the parent
+            parent = self.parent
+            if parent is not None:
+                parent._decrement_active()
         self._active = False
 
 class IComponentContainer(ICategorizedObject):
@@ -378,7 +386,7 @@ class IComponentContainer(ICategorizedObject):
         """A generator over all descendents in postfix order."""
         raise NotImplementedError     #pragma:nocover
 
-class _IActiveComponentContainer(IActiveObject):
+class _IActiveComponentContainerMixin(IActiveObject):
     """
     To be used as an additional base class in
     IComponentContainer implementations to add fuctionality
@@ -389,13 +397,28 @@ class _IActiveComponentContainer(IActiveObject):
     """
     __slots__ = ()
 
-    #
-    # Implementations can choose to define these
-    # properties as using __slots__, __dict__, or
-    # by overriding the @property method
-    #
+    # Should be called any time a new active child is added
+    # or any timing an existing child's active status
+    # changes from False to True
+    def _increment_active(self):
+        assert self._active >= 0
+        if self._active == 0:
+            # the container itself is currently
+            # inactive, so activate it
+            self._active = 1
+            # this includes notifying any parent
+            # of the change in status
+            parent = self.parent
+            if parent is not None:
+                parent._increment_active()
+        self._active += 1
 
-    _active = _abstract_readwrite_property()
+    # Should be called any time an active is child removed
+    # or any timing an existing child's active status
+    # changes from True to False
+    def _decrement_active(self):
+        self._active -= 1
+        assert self._active >= 1
 
     #
     # Interface
@@ -404,7 +427,7 @@ class _IActiveComponentContainer(IActiveObject):
     @property
     def active(self):
         """The active status of this container."""
-        return self._active
+        return bool(self._active)
 
     @active.setter
     def active(self, value):
@@ -412,27 +435,36 @@ class _IActiveComponentContainer(IActiveObject):
             "Assignment not allowed. Use the "
             "(de)activate method.")
 
-    def activate(self):
+    def activate(self, _from_parent_=False):
         """Activate this container. All children of this
         container will be activated and the active flag on
         all ancestors of this container will be set to
         True."""
-        self._active = True
-        # all of ancestors must also become active
-        parent = self.parent
-        while (parent is not None) and \
-              (not parent._active):
-            parent._active = True
-            parent = parent.parent
-        # all children must be activated
+        assert self._active >= 0
+        if (not self.active) and \
+           (not _from_parent_):
+            # inform the parent
+            parent = self.parent
+            if parent is not None:
+                parent._increment_active()
+        # activate all children
+        self._active = 1
         for child in self.children():
+            self._active += 1
             if isinstance(child, IActiveObject):
-                child.activate()
+                child.activate(_from_parent_=True)
 
-    def deactivate(self):
+    def deactivate(self, descend_into=True, _from_parent_=False):
         """Deactivate this container and all of its children."""
-        self._active = False
-        # all children must be deactivated
+        assert self._active >= 0
+        if self.active and \
+           (not _from_parent_):
+            # inform the parent
+            parent = self.parent
+            if parent is not None:
+                parent._decrement_active()
+        self._active = 0
+        # deactivate all children
         for child in self.children():
             if isinstance(child, IActiveObject):
-                child.deactivate()
+                child.deactivate(_from_parent_=True)

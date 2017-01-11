@@ -7,7 +7,7 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
                                                  IComponentContainer,
-                                                 _IActiveComponentContainer)
+                                                 _IActiveComponentContainerMixin)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
@@ -405,6 +405,62 @@ class TestMisc(unittest.TestCase):
                     self.assertEqual(subc1.name, subc2.name)
                     self.assertIs(subc1.root_block, bc_init)
                     self.assertIs(subc2.root_block, sub_bc)
+
+    def test_activate(self):
+        b = block()
+        self.assertEqual(b.active, True)
+        b.deactivate()
+        self.assertEqual(b.active, False)
+        c = constraint()
+        v = variable()
+        self.assertEqual(c.active, True)
+        c.deactivate()
+        self.assertEqual(c.active, False)
+        b.c = c
+        b.v = v
+        self.assertEqual(c.active, False)
+        self.assertEqual(b.active, False)
+        del b.c
+        c.activate()
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, False)
+        b.c = c
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, False)
+
+        bdict = block_dict()
+        self.assertEqual(bdict.active, True)
+        bdict.deactivate()
+        self.assertEqual(bdict.active, False)
+        bdict[None] = b
+        self.assertEqual(bdict.active, False)
+        del bdict[None]
+        self.assertEqual(bdict.active, False)
+        b.activate()
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, True)
+        bdict[None] = b
+        self.assertEqual(bdict.active, True)
+
+        bdict.deactivate()
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, False)
+        self.assertEqual(bdict.active, False)
+
+        b.activate()
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, True)
+        self.assertEqual(bdict.active, True)
+
+        bdict.deactivate()
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, False)
+        self.assertEqual(bdict.active, False)
+
+        bdict.activate()
+        self.assertEqual(c.active, True)
+        self.assertEqual(b.active, True)
+        self.assertEqual(bdict.active, True)
 
 class _Test_block_base(object):
 
@@ -965,7 +1021,7 @@ class _Test_block(_Test_block_base):
         model.b_1.b_2.v_3 = variable()
         model.b_1.b_2.vlist_3 = variable_list()
         model.b_1.b_2.vlist_3.append(variable())
-        model.b_1.b_2.deactivate()
+        model.b_1.b_2.deactivate(shallow=False)
         model.bdict_1 = block_dict()
         model.blist_1 = block_list()
         model.blist_1.append(block())
@@ -1181,7 +1237,7 @@ class _Test_block(_Test_block_base):
         self.assertTrue(isinstance(b, IActiveObject))
         self.assertTrue(isinstance(b, IComponent))
         self.assertTrue(isinstance(b, IComponentContainer))
-        self.assertTrue(isinstance(b, _IActiveComponentContainer))
+        self.assertTrue(isinstance(b, _IActiveComponentContainerMixin))
         self.assertTrue(isinstance(b, IBlockStorage))
 
     def test_overwrite(self):

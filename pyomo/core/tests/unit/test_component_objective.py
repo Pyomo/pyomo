@@ -4,9 +4,8 @@ import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
-                                                 _IActiveComponent,
-                                                 IComponentContainer,
-                                                 _IActiveComponentContainer)
+                                                 _IActiveComponentMixin,
+                                                 IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
@@ -70,7 +69,7 @@ class Test_objective(unittest.TestCase):
         self.assertTrue(isinstance(o, ICategorizedObject))
         self.assertTrue(isinstance(o, IActiveObject))
         self.assertTrue(isinstance(o, IComponent))
-        self.assertTrue(isinstance(o, _IActiveComponent))
+        self.assertTrue(isinstance(o, _IActiveComponentMixin))
         self.assertTrue(isinstance(o, IObjective))
         self.assertTrue(isinstance(o, NumericValue))
 
@@ -87,19 +86,18 @@ class Test_objective(unittest.TestCase):
         b.deactivate()
         self.assertEqual(b.active, False)
         b.o = o
-        # TODO figure out the semantics of
-        # this situation. I believe it involves
-        # keep track of an active counter
-        # rather than a boolean.
-        #self.assertEqual(o.active, True)
-        #self.assertEqual(b.active, True)
-        #o.deactivate()
-        #self.assertEqual(o.active, False)
-        #self.assertEqual(b.active, True)
+        self.assertEqual(o.active, True)
+        self.assertEqual(b.active, False)
+        o.deactivate()
+        self.assertEqual(o.active, False)
+        self.assertEqual(b.active, False)
         b.activate()
+        self.assertEqual(o.active, False)
+        self.assertEqual(b.active, True)
+        b.activate(shallow=False)
         self.assertEqual(o.active, True)
         self.assertEqual(b.active, True)
-        b.deactivate()
+        b.deactivate(shallow=False)
         self.assertEqual(o.active, False)
         self.assertEqual(b.active, False)
 

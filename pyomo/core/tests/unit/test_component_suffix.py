@@ -6,9 +6,8 @@ import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
-                                                 _IActiveComponent,
-                                                 IComponentContainer,
-                                                 _IActiveComponentContainer)
+                                                 _IActiveComponentMixin,
+                                                 IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
@@ -67,7 +66,7 @@ class Test_suffix(unittest.TestCase):
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IActiveObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _IActiveComponent))
+        self.assertTrue(isinstance(s, _IActiveComponentMixin))
         self.assertTrue(isinstance(s, collections.Mapping))
         self.assertTrue(isinstance(s, collections.MutableMapping))
         self.assertTrue(issubclass(type(s), collections.Mapping))
@@ -220,7 +219,8 @@ class Test_suffix(unittest.TestCase):
         self.assertEqual(model.active, True)
         self.assertEqual(s.active, True)
 
-        m.deactivate()
+        m.deactivate(shallow=False,
+                     descend_into=True)
 
         self.assertEqual(m.active, False)
         self.assertEqual(bdict.active, False)
@@ -229,7 +229,28 @@ class Test_suffix(unittest.TestCase):
         self.assertEqual(model.active, False)
         self.assertEqual(s.active, False)
 
-        m.activate()
+        m.activate(shallow=False,
+                   descend_into=True)
+
+        self.assertEqual(m.active, True)
+        self.assertEqual(bdict.active, True)
+        self.assertEqual(bdict[None].active, True)
+        self.assertEqual(b.active, True)
+        self.assertEqual(model.active, True)
+        self.assertEqual(s.active, True)
+
+        m.deactivate(shallow=True,
+                     descend_into=True)
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(bdict.active, True)
+        self.assertEqual(bdict[None].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(s.active, True)
+
+        m.activate(shallow=True,
+                   descend_into=True)
 
         self.assertEqual(m.active, True)
         self.assertEqual(bdict.active, True)

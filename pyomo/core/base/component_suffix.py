@@ -16,8 +16,7 @@ import pyutilib.math
 
 from pyomo.core.base.component_interface import \
     (IComponent,
-     _IActiveComponent,
-     _IActiveComponentContainer,
+     _IActiveComponentMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.numvalue import NumericValue
@@ -29,7 +28,7 @@ import six
 
 logger = logging.getLogger('pyomo.core')
 
-class suffix(ComponentMap, IComponent, _IActiveComponent):
+class suffix(ComponentMap, IComponent, _IActiveComponentMixin):
     """
     A container for storing extranious model data that can
     be imported to or exported from a solver.

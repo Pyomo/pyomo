@@ -15,9 +15,9 @@ import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
-                                                 _IActiveComponent,
+                                                 _IActiveComponentMixin,
                                                  IComponentContainer,
-                                                 _IActiveComponentContainer)
+                                                 _IActiveComponentContainerMixin)
 from pyomo.core.base.component_block import (IBlockStorage,
                                              block,
                                              block_list)
@@ -621,10 +621,10 @@ class _TestActiveComponentListBase(_TestComponentListBase):
     def test_active_type(self):
         clist = self._container_type()
         self.assertTrue(isinstance(clist, IComponentContainer))
-        self.assertTrue(isinstance(clist, _IActiveComponentContainer))
+        self.assertTrue(isinstance(clist, _IActiveComponentContainerMixin))
         self.assertTrue(isinstance(clist, ICategorizedObject))
         self.assertFalse(isinstance(clist, IComponent))
-        self.assertFalse(isinstance(clist, _IActiveComponent))
+        self.assertFalse(isinstance(clist, _IActiveComponentMixin))
 
     def test_active(self):
         index = list(range(4))
@@ -655,7 +655,8 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         for c in clist:
             self.assertEqual(c.active, True)
 
-        m.deactivate()
+        m.deactivate(shallow=False,
+                     descend_into=True)
 
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
@@ -685,11 +686,11 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, False)
         clist.append(test_c)
 
-        self.assertEqual(m.active, True)
-        self.assertEqual(blist.active, True)
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
         self.assertEqual(blist[1].active, False)
-        self.assertEqual(b.active, True)
-        self.assertEqual(model.active, True)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
         self.assertEqual(clist.active, True)
         for c in clist:
             if c is test_c:
@@ -697,7 +698,8 @@ class _TestActiveComponentListBase(_TestComponentListBase):
             else:
                 self.assertEqual(c.active, False)
 
-        m.activate()
+        m.activate(shallow=False,
+                   descend_into=True)
 
         self.assertEqual(m.active, True)
         self.assertEqual(blist.active, True)
@@ -708,7 +710,8 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         for c in clist:
             self.assertEqual(c.active, True)
 
-        m.deactivate()
+        m.deactivate(shallow=False,
+                     descend_into=True)
 
         self.assertEqual(m.active, False)
         self.assertEqual(blist.active, False)
@@ -721,17 +724,65 @@ class _TestActiveComponentListBase(_TestComponentListBase):
 
         clist[len(clist)-1] = self._ctype_factory()
 
-        self.assertEqual(m.active, True)
-        self.assertEqual(blist.active, True)
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
         self.assertEqual(blist[1].active, False)
-        self.assertEqual(b.active, True)
-        self.assertEqual(model.active, True)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
         self.assertEqual(clist.active, True)
         for i, c in enumerate(clist):
             if i == len(clist)-1:
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+
+        clist.activate()
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(clist.active, True)
+        for i, c in enumerate(clist):
+            self.assertEqual(c.active, True)
+
+        clist.deactivate()
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(clist.active, False)
+        for i, c in enumerate(clist):
+            self.assertEqual(c.active, False)
+
+        clist[-1].activate()
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(clist.active, True)
+        for i, c in enumerate(clist):
+            if i == len(clist)-1:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+
+        clist.deactivate()
+        clist.activate()
+
+        self.assertEqual(m.active, False)
+        self.assertEqual(blist.active, False)
+        self.assertEqual(blist[1].active, False)
+        self.assertEqual(b.active, False)
+        self.assertEqual(model.active, False)
+        self.assertEqual(clist.active, True)
+        for i, c in enumerate(clist):
+            self.assertEqual(c.active, True)
 
     def test_preorder_traversal(self):
         clist, traversal = \

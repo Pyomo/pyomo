@@ -19,8 +19,8 @@ import pyutilib.math
 
 from pyomo.core.base.component_interface import \
     (IComponent,
-     _IActiveComponent,
-     _IActiveComponentContainer,
+     _IActiveComponentMixin,
+     _IActiveComponentContainerMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
@@ -31,7 +31,7 @@ from pyomo.core.base.numvalue import (NumericValue,
 import six
 from six.moves import zip
 
-class ISOS(IComponent, _IActiveComponent):
+class ISOS(IComponent, _IActiveComponentMixin):
     """
     The interface for Special Ordered Sets.
     """
@@ -123,7 +123,7 @@ def sos2(variables, weights=None):
     return sos(variables, weights=weights, level=2)
 
 class sos_list(ComponentList,
-               _IActiveComponentContainer):
+               _IActiveComponentContainerMixin):
     """A list-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
     # property will be set in sos.py
@@ -144,7 +144,7 @@ class sos_list(ComponentList,
         super(sos_list, self).__init__(*args, **kwds)
 
 class sos_dict(ComponentDict,
-               _IActiveComponentContainer):
+               _IActiveComponentContainerMixin):
     """A dict-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
     # property will be set in sos.py

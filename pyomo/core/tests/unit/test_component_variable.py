@@ -5,9 +5,7 @@ import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
-                                                 _IActiveComponent,
-                                                 IComponentContainer,
-                                                 _IActiveComponentContainer)
+                                                 IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
@@ -596,6 +594,17 @@ class Test_variable(unittest.TestCase):
             v.fix(1,2)
         self.assertEqual(v.value, 0)
         self.assertEqual(v.fixed, False)
+
+    def test_active(self):
+        v = variable()
+        b = block()
+        self.assertEqual(b.active, True)
+        b.deactivate()
+        self.assertEqual(b.active, False)
+        b.v = v
+        self.assertEqual(b.active, False)
+        b.activate()
+        self.assertEqual(b.active, True)
 
 class Test_variable_dict(_TestComponentDictBase,
                          unittest.TestCase):

@@ -25,8 +25,8 @@ import pyutilib.math
 
 from pyomo.core.base.component_interface import \
     (IComponent,
-     _IActiveComponent,
-     _IActiveComponentContainer,
+     _IActiveComponentMixin,
+     _IActiveComponentContainerMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
@@ -42,7 +42,7 @@ from pyomo.core.base import expr as EXPR
 
 import six
 
-class IConstraint(IComponent, _IActiveComponent):
+class IConstraint(IComponent, _IActiveComponentMixin):
     """
     The interface for optimization constraints.
     """
@@ -694,7 +694,7 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
         return constant
 
 class constraint_list(ComponentList,
-                      _IActiveComponentContainer):
+                      _IActiveComponentContainerMixin):
     """A list-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py
@@ -714,7 +714,7 @@ class constraint_list(ComponentList,
         super(constraint_list, self).__init__(*args, **kwds)
 
 class constraint_dict(ComponentDict,
-                      _IActiveComponentContainer):
+                      _IActiveComponentContainerMixin):
     """A dict-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py

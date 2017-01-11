@@ -17,6 +17,10 @@ from pyomo.core.base.component_interface import \
      _abstract_readwrite_property)
 from pyomo.core.base.component_map import ComponentMap
 
+# used frequently in this file,
+# so I'm caching it here
+_active_flag_name = "active"
+
 class ComponentList(IComponentContainer,
                     collections.MutableSequence):
     """
@@ -44,6 +48,24 @@ class ComponentList(IComponentContainer,
                                 len(args)))
             for item in args[0]:
                 self.insert(len(self), item)
+
+    def _prepare_for_add(self, obj):
+        obj._parent = weakref.ref(self)
+        # children that are not of type
+        # IActiveObject retain the active status
+        # of their parent, which is why the default
+        # return value from getattr is False
+        if getattr(obj, _active_flag_name, False):
+            self._increment_active()
+
+    def _prepare_for_delete(self, obj):
+        obj._parent = None
+        # children that are not of type
+        # IActiveObject retain the active status
+        # of their parent, which is why the default
+        # return value from getattr is False
+        if getattr(obj, _active_flag_name, False):
+            self._decrement_active()
 
     #
     # Implementations can choose to define these
@@ -114,7 +136,6 @@ class ComponentList(IComponentContainer,
         Returns: an iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
-        _active_flag_name = "active"
 
         # if not active, then no children can be active
         if (active is not None) and \
@@ -172,7 +193,6 @@ class ComponentList(IComponentContainer,
         Returns: an iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
-        _active_flag_name = "active"
 
         # if not active, then no children can be active
         if (active is not None) and \
@@ -236,7 +256,6 @@ class ComponentList(IComponentContainer,
             mapping component objects to names.
         """
         assert active in (None, True)
-        _active_flag_name = "active"
         names = ComponentMap()
         if (active is None) or \
            getattr(self, _active_flag_name, True):
@@ -263,16 +282,11 @@ class ComponentList(IComponentContainer,
     def __setitem__(self, i, item):
         if item.ctype == self.ctype:
             if item._parent is None:
-                # be sure to "delete" the current
-                # item by resetting its ._parent
-                self._data[i]._parent = None
-                item._parent = weakref.ref(self)
+                # be sure the current object is properly
+                # removed
+                self._prepare_for_delete(self._data[i])
+                self._prepare_for_add(item)
                 self._data[i] = item
-                if (not getattr(self, "_active", True)) and \
-                   getattr(item, "_active", False):
-                    # this will notify all inactive
-                    # ancestors that they are now active
-                    item.activate()
                 return
             elif self._data[i] is item:
                 # a very special case that makes sense to handle
@@ -304,13 +318,8 @@ class ComponentList(IComponentContainer,
     def insert(self, i, item):
         if item.ctype == self.ctype:
             if item._parent is None:
-                item._parent = weakref.ref(self)
+                self._prepare_for_add(item)
                 self._data.insert(i, item)
-                if (not getattr(self, "_active", True)) and \
-                   getattr(item, "_active", False):
-                    # this will notify all inactive
-                    # ancestors that they are now active
-                    item.activate()
                 return
             # see note about allowing components to live
             # in more than one container
@@ -332,7 +341,7 @@ class ComponentList(IComponentContainer,
 
     def __delitem__(self, i):
         obj = self._data[i]
-        obj._parent = None
+        self._prepare_for_delete(obj)
         del self._data[i]
 
     def __getitem__(self, i):

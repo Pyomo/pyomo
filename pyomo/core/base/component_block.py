@@ -22,10 +22,11 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyomo.core.base.component_interface import (ICategorizedObject,
+from pyomo.core.base.component_interface import (IActiveObject,
+                                                 ICategorizedObject,
                                                  IComponent,
                                                  IComponentContainer,
-                                                 _IActiveComponentContainer)
+                                                 _IActiveComponentContainerMixin)
 from pyomo.core.base.component_objective import IObjective
 from pyomo.core.base.component_variable import IVariable
 from pyomo.core.base.component_constraint import IConstraint
@@ -43,15 +44,13 @@ logger = logging.getLogger('pyomo.core')
 
 _no_ctype = object()
 
-# TODO: Possibly take some additional steps in the basic block
-#       implementation to ensure that ordering is retained in
-#       a cloned / deepcopied / pickled block. I'm seeing some
-#       sporadic test failures that indicate that there might be
-#       a problem with this.
+# used frequently in this file,
+# so I'm caching it here
+_active_flag_name = "active"
 
 class IBlockStorage(IComponent,
                     IComponentContainer,
-                    _IActiveComponentContainer):
+                    _IActiveComponentContainerMixin):
     """A container that stores multiple types."""
     _is_component = True
     _is_container = True
@@ -100,10 +99,87 @@ class IBlockStorage(IComponent,
 
 class _block_base(object):
     """
-    A base class shared by 'block' and StaticBlock that
+    A base class shared by 'block' and 'tiny_block' that
     implements a few IBlockStorage abstract methods.
     """
     __slots__ = ()
+
+    # Blocks do not change their active status
+    # based on changes in status of their children
+    def _increment_active(self):
+        pass
+    def _decrement_active(self):
+        pass
+
+    def activate(self,
+                 shallow=True,
+                 descend_into=False,
+                 _from_parent_=False):
+        """Activate this block.
+
+        Args:
+            shallow (bool): If False, all children of the
+                block will be activated. By default, the
+                active status of children are not changed.
+            descend_into (bool): Indicates whether or not to
+                perform the same action on sub-blocks. The
+                default is False, as a shallow operation on
+                the top-level block is sufficient.
+        """
+        # TODO
+        from pyomo.core.base.block import Block
+        if (not self.active) and \
+           (not _from_parent_):
+            # inform the parent
+            parent = self.parent
+            if parent is not None:
+                parent._increment_active()
+        self._active = True
+        if not shallow:
+            for child in self.children():
+                if isinstance(child, IActiveObject):
+                    child.activate(_from_parent_=True)
+        if descend_into:
+            for block in self.components(ctype=Block):
+                block.activate(shallow=shallow,
+                               descend_into=False,
+                               _from_parent_=True)
+
+    def deactivate(self,
+                   shallow=True,
+                   descend_into=False,
+                   _from_parent_=False):
+        """Deactivate this block.
+
+        Args:
+            shallow (bool): If False, all children of the
+                block will be deactivated. By default, the
+                active status of children are not changed,
+                but they become effectively inactive for
+                anything above this block.
+            descend_into (bool): Indicates whether or not to
+                perform the same action on sub-blocks. The
+                default is False, as a shallow operation on
+                the top-level block is sufficient.
+        """
+        # TODO
+        from pyomo.core.base.block import Block
+        if self.active and \
+           (not _from_parent_):
+            # inform the parent
+            parent = self.parent
+            if parent is not None:
+                parent._decrement_active()
+        self._active = False
+        if not shallow:
+            for child in self.children():
+                if isinstance(child, IActiveObject):
+                    child.deactivate(_from_parent_=True)
+        if descend_into:
+            for block in self.components(ctype=Block):
+                block.deactivate(shallow=shallow,
+                                 descend_into=False,
+                                 _from_parent_=True)
 
     def preorder_traversal(self,
                            ctype=_no_ctype,
@@ -143,7 +219,6 @@ class _block_base(object):
         assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
-        _active_flag_name = "active"
 
         # if this block is not active, then nothing below it
         # can be active
@@ -259,7 +334,6 @@ class _block_base(object):
         assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
-        _active_flag_name = "active"
 
         # if this block is not active, then nothing below it
         # can be active
@@ -369,7 +443,6 @@ class _block_base(object):
         assert active in (None, True)
         # TODO
         from pyomo.core.base.block import Block
-        _active_flag_name = "active"
 
         # if this block is not active, then nothing below it
         # can be active
@@ -391,7 +464,7 @@ class _block_base(object):
                 assert child._is_container
                 # child is a container (but not a block)
                 if (active is not None) and \
-                   isinstance(child, _IActiveComponentContainer):
+                   isinstance(child, _IActiveComponentContainerMixin):
                     for component in child.components():
                         if getattr(component,
                                    _active_flag_name,
@@ -436,7 +509,7 @@ class _block_base(object):
                descend_into=True):
         """
         Generates a traversal of all blocks associated with
-        this one (include itself). This method yields
+        this one (including itself). This method yields
         identical behavior to calling the components()
         method with ctype=Block, except that this block is
         included (as the first item in the generator).
@@ -772,6 +845,12 @@ class block(_block_base, IBlockStorage):
                 self.__byctype[component.ctype][name] = component
                 self.__order[name] = component
                 component._parent = weakref.ref(self)
+                # children that are not of type
+                # _IActiveComponentMixin retain the active status
+                # of their parent, which is why the default
+                # return value from getattr is False
+                if getattr(component, _active_flag_name, False):
+                    self._increment_active()
             elif hasattr(self, name) and \
                  (getattr(self, name) is component):
                 # a very special case that makes sense to handle
@@ -801,6 +880,12 @@ class block(_block_base, IBlockStorage):
             if len(self.__byctype[component.ctype]) == 0:
                 del self.__byctype[component.ctype]
             component._parent = None
+            # children that are not of type
+            # IActiveObject retain the active status
+            # of their parent, which is why the default
+            # return value from getattr is False
+            if getattr(component, _active_flag_name, False):
+                self._decrement_active()
         super(block, self).__delattr__(name)
 
     def collect_ctypes(self,
@@ -852,7 +937,7 @@ class block(_block_base, IBlockStorage):
     #def write(self, ...):
 
 class block_list(ComponentList,
-                 _IActiveComponentContainer):
+                 _IActiveComponentContainerMixin):
     """A list-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
@@ -873,7 +958,7 @@ class block_list(ComponentList,
         super(block_list, self).__init__(*args, **kwds)
 
 class block_dict(ComponentDict,
-                 _IActiveComponentContainer):
+                 _IActiveComponentContainerMixin):
     """A dict-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
@@ -894,19 +979,17 @@ class block_dict(ComponentDict,
         super(block_dict, self).__init__(*args, **kwds)
 
 #
-# TODO: This class should probably be renamed. It turns out
-#       that the real speed and memory savings are not
-#       necessarily due to the use of slots, but rather from
-#       the fact that we are not categorizing components.
-#       In cases like piecewise, where we are instantiating
-#       many small blocks with 4-5 components per-block, the
-#       extra categorization is simply overhead. The name
-#       of this class should somehow reflect this use case.
+# TODO: Remove __slots__ declaration from this class. It
+#       turns out that the real speed and memory savings are
+#       not necessarily due to the use of slots, but rather
+#       from the fact that we are not categorizing
+#       components.  In cases like piecewise, where we are
+#       instantiating many small blocks with 4-5 components
+#       per-block, the extra categorization is simply
+#       overhead.
 #
-#       __slots__ can still be useful for other things (like
-#       enforcing ordering and restricting attributes), but
-#       without a __dict__, it is actually difficult to get
-#       an instance of this class through our solver
+#       Also, without a __dict__, it is actually difficult
+#       to get an instance of this class through our solver
 #       interfaces because they want to store attributes
 #       like "_ampl_repn" and "_canonical_repn" on each
 #       block. I am not a fan of this behavior, but it gets
@@ -989,7 +1072,17 @@ class tiny_block(_block_base, IBlockStorage):
         component = getattr(self, name)
         if hasattr(component, '_is_categorized_object'):
             component._parent = None
-        super(StaticBlock, self).__delattr__(name)
+            for ndx, key in enumerate(self._order):
+                if getattr(self, key) is component:
+                    del self._order[ndx]
+                    break
+            # children that are not of type
+            # IActiveObject retain the active status
+            # of their parent, which is why the default
+            # return value from getattr is False
+            if getattr(component, _active_flag_name, False):
+                self._decrement_active()
+        super(tiny_block, self).__delattr__(name)
 
     #
     # Define the IComponentContainer abstract methods

@@ -6,7 +6,7 @@ from pyomo.core.base.component_interface import \
      IActiveObject,
      IComponent,
      IComponentContainer,
-     _IActiveComponentContainer)
+     _IActiveComponentContainerMixin)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
@@ -259,8 +259,8 @@ class Test_piecewise(unittest.TestCase):
             self.assertTrue(isinstance(p, IActiveObject))
             self.assertTrue(isinstance(p, IComponent))
             self.assertTrue(isinstance(p, IComponentContainer))
-            self.assertTrue(isinstance(p, _IActiveComponentContainer))
-            self.assertTrue(isinstance(p, StaticBlock))
+            self.assertTrue(isinstance(p, _IActiveComponentContainerMixin))
+            self.assertTrue(isinstance(p, tiny_block))
             self.assertTrue(isinstance(p, IBlockStorage))
 
     def test_bad_repn(self):

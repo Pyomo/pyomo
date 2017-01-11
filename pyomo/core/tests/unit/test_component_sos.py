@@ -3,7 +3,7 @@ import pickle
 import pyutilib.th as unittest
 from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponent,
-                                                 _IActiveComponent)
+                                                 _IActiveComponentMixin)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
@@ -94,19 +94,19 @@ class Test_sos(unittest.TestCase):
         s = sos([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _IActiveComponent))
+        self.assertTrue(isinstance(s, _IActiveComponentMixin))
         self.assertTrue(isinstance(s, ISOS))
 
         s = sos1([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _IActiveComponent))
+        self.assertTrue(isinstance(s, _IActiveComponentMixin))
         self.assertTrue(isinstance(s, ISOS))
 
         s = sos2([])
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _IActiveComponent))
+        self.assertTrue(isinstance(s, _IActiveComponentMixin))
         self.assertTrue(isinstance(s, ISOS))
 
     def test_bad_weights(self):
@@ -141,19 +141,18 @@ class Test_sos(unittest.TestCase):
         b.deactivate()
         self.assertEqual(b.active, False)
         b.s = s
-        # TODO figure out the semantics of
-        # this situation. I believe it involves
-        # keep track of an active counter
-        # rather than a boolean.
-        #self.assertEqual(s.active, True)
-        #self.assertEqual(b.active, True)
-        #s.deactivate()
-        #self.assertEqual(s.active, False)
-        #self.assertEqual(b.active, True)
+        self.assertEqual(s.active, True)
+        self.assertEqual(b.active, False)
+        s.deactivate()
+        self.assertEqual(s.active, False)
+        self.assertEqual(b.active, False)
         b.activate()
+        self.assertEqual(s.active, False)
+        self.assertEqual(b.active, True)
+        b.activate(shallow=False)
         self.assertEqual(s.active, True)
         self.assertEqual(b.active, True)
-        b.deactivate()
+        b.deactivate(shallow=False)
         self.assertEqual(s.active, False)
         self.assertEqual(b.active, False)
 
