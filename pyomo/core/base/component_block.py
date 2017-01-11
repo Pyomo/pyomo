@@ -1014,22 +1014,18 @@ class tiny_block(_block_base, IBlockStorage):
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
+                 "_order",
                  "__weakref__",
                  "__dict__")
     def __init__(self):
         self._parent = None
         self._active = True
+        self._order = []
 
     def _getattrs(self):
-        """Returns all attributes that may appear on this
-        class in the inheritance hierarchy."""
-        # Get all slots in the inheritance chain
-        # (base classes first)
-        for cls in reversed(self.__class__.__mro__):
-            for key in cls.__dict__.get("__slots__",()):
-                yield key, getattr(self, key)
-        for item in getattr(self, "__dict__",{}).items():
-            yield item
+        """Returns all modeling objects on this block."""
+        for key in self._order:
+            yield key, getattr(self, key)
 
     def __setattr__(self, name, component):
         if hasattr(component, '_is_categorized_object'):
@@ -1047,6 +1043,13 @@ class tiny_block(_block_base, IBlockStorage):
                            type(component)))
                     delattr(self, name)
                 component._parent = weakref.ref(self)
+                self._order.append(name)
+                # children that are not of type
+                # IActiveObject retain the active status
+                # of their parent, which is why the default
+                # return value from getattr is False
+                if getattr(component, _active_flag_name, False):
+                    self._increment_active()
             elif hasattr(self, name) and \
                  (getattr(self, name) is component):
                 # a very special case that makes sense to handle
