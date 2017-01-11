@@ -40,11 +40,12 @@ b.o = pk.objective(
     b.x + sum(b.xlist) + sum(b.xdict.values()))
 
 #
-# Define a custom StaticBlock
+# Define a custom tiny_block
 #
 
-class Widget(pk.StaticBlock):
-    __slots__ = ("p", "input", "output", "c")
+# The tiny_block class uses more efficient storage for the
+# case where there are a small number children on a block.
+class Widget(pk.tiny_block):
     def __init__(self, p, input=None):
         super(Widget, self).__init__()
         self.p = pk.parameter(value=p)

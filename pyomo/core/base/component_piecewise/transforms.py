@@ -32,7 +32,7 @@ import pyutilib.enum
 
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.set_types import Binary
-from pyomo.core.base.component_block import (block, StaticBlock)
+from pyomo.core.base.component_block import (block, tiny_block)
 from pyomo.core.base.component_expression import expression
 from pyomo.core.base.component_variable import (variable_list,
                                                 variable_dict,
@@ -123,7 +123,7 @@ def piecewise(breakpoints,
                      output=output,
                      bound=bound)
 
-class _PiecewiseLinearFunction(StaticBlock):
+class _PiecewiseLinearFunction(tiny_block):
     """
     A piecewise linear function defined by a list of
     breakpoints and values.

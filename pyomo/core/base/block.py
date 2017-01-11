@@ -1815,10 +1815,11 @@ register_component(
 # Setting these properties here avoids a circular import.
 # This is temporary.
 from pyomo.core.base.component_block import (block,
+                                             tiny_block,
                                              block_list,
-                                             block_dict,
-                                             StaticBlock)
+                                             block_dict)
+
 block._ctype = Block
 block_list._ctype = Block
 block_dict._ctype = Block
-StaticBlock._ctype = Block
+tiny_block._ctype = Block

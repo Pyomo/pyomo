@@ -15,7 +15,7 @@ from pyomo.core.base.component_block import (IBlockStorage,
                                              block,
                                              block_dict,
                                              block_list,
-                                             StaticBlock)
+                                             tiny_block)
 from pyomo.core.base.component_variable import variable
 from pyomo.core.base.component_piecewise.transforms import \
     (registered_transforms,

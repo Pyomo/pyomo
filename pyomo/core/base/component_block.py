@@ -8,9 +8,9 @@
 #  _________________________________________________________________________
 
 __all__ = ("block",
+           "tiny_block",
            "block_list",
-           "block_dict",
-           "StaticBlock")
+           "block_dict")
 
 import copy
 import abc
@@ -672,7 +672,7 @@ class block(_block_base, IBlockStorage):
         # block.py (e.g., using _ctypes, _decl, and
         # _decl_order). However, considering that we now
         # have other means of producing lightweight blocks
-        # (StaticBlock) as well as the more lightweight
+        # (tiny_block) as well as the more lightweight
         # implementation of singleton types, it is hard to
         # justify making this implementation harder to
         # follow until we do some more concrete profiling.
@@ -914,23 +914,17 @@ class block_dict(ComponentDict,
 #
 #       Since it doesn't seem to affect memory usage or
 #       instantiation time very much in real use cases, I am
-#       declaring this class with a __dict__ slot (nearly
-#       equivalent to declaring it without __slots__), so
-#       that it can be used with the solver interfaces.
-#       Implementors should realize that this means the
-#       class is no longer static (even if subclasses
-#       declare slots), but it still seems to be superior to
-#       using the standard 'block' for cases similar to
-#       piecewise (2x less memory). Instantiation time also
-#       seems to be about 2x faster, but it does increase
-#       the time to write the model because components are
-#       not categorized. More profiling is needed.
+#       declaring this class with a __dict__ slot for now
+#       (nearly equivalent to declaring it without
+#       __slots__). However, it would making subclassing
+#       easier to elimintate the __slots__ declaration
+#       completely.
 #
 
-class StaticBlock(_block_base, IBlockStorage):
+class tiny_block(_block_base, IBlockStorage):
     """
-    A helper class for implementing blocks with a small,
-    static set of child components.
+    A memory efficient block for storing a small number
+    of child components.
     """
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
@@ -989,7 +983,7 @@ class StaticBlock(_block_base, IBlockStorage):
                        self.name,
                        name,
                        component.parent.name))
-        super(StaticBlock, self).__setattr__(name, component)
+        super(tiny_block, self).__setattr__(name, component)
 
     def __delattr__(self, name):
         component = getattr(self, name)

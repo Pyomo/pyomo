@@ -35,7 +35,7 @@ from pyomo.core.base.component_block import (IBlockStorage,
                                              block,
                                              block_dict,
                                              block_list,
-                                             StaticBlock)
+                                             tiny_block)
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
@@ -1319,7 +1319,7 @@ class Test_block_noclone(_Test_block, unittest.TestCase):
 class Test_block_clone(_Test_block, unittest.TestCase):
     _do_clone = True
 
-class _MyBlockBaseBase(StaticBlock):
+class _MyBlockBaseBase(tiny_block):
     __slots__ = ()
     def __init__(self):
         super(_MyBlockBaseBase, self).__init__()
@@ -1340,7 +1340,7 @@ class _MyBlock(_MyBlockBase):
         self.v = variable()
         self.n = 2.0
 
-class _Test_StaticBlock(_Test_block_base):
+class _Test_tiny_block(_Test_block_base):
 
     _do_clone = None
 
@@ -1517,10 +1517,10 @@ class _Test_StaticBlock(_Test_block_base):
         self.assertNotEqual(len(list(b.generate_names())), 0)
         self.assertEqual(len(list(b.generate_names(active=True))), 0)
 
-class Test_StaticBlock_noclone(_Test_StaticBlock, unittest.TestCase):
+class Test_tiny_block_noclone(_Test_tiny_block, unittest.TestCase):
     _do_clone = False
 
-class Test_StaticBlock_clone(_Test_StaticBlock, unittest.TestCase):
+class Test_tiny_block_clone(_Test_tiny_block, unittest.TestCase):
     _do_clone = True
 
 class Test_block_dict(_TestActiveComponentDictBase,
