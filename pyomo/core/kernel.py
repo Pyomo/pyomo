@@ -77,6 +77,13 @@ def _pprint(obj, indent=""):
         elif obj.ctype is pyomo.core.base.Param:
             print(indent+" - %s: parameter(value=%s)"
                   % (str(obj), str(obj.value)))
+        elif obj.ctype is pyomo.core.base.SOSConstraint:
+            print(indent+" - %s: sos(level=%s, entries=%s)"
+                  % (str(obj),
+                     obj.level,
+                     str(["(%s,%s)" % (str(v), w)
+                          for v,w in zip(obj.variables,
+                                         obj.weights)])))
         else:
             assert obj.ctype is pyomo.core.base.Suffix
             print(indent+" - %s: suffix(size=%s)"
