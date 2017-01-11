@@ -24,8 +24,8 @@ _init_url="$URL$"
 # development and set to 'final' for releases.
 _major=5
 _minor=1
-_micro=0
-_releaselevel='invalid'
+_micro=1
+_releaselevel='final'
 _serial=0
 
 if _releaselevel == 'final':

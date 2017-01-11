@@ -57,6 +57,10 @@ install:
 - pip install openpyxl
 - pip install coverage
 #
+# Clone but don't install pyomo-model-libraries
+#
+- git clone https://github.com/Pyomo/pyomo-model-libraries.git
+#
 # Install PyUtilib (master branch)
 #
 - pip install git+https://github.com/PyUtilib/pyutilib
