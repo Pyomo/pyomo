@@ -41,6 +41,7 @@ from pyomo.core.base.numvalue import (ZeroConstant,
 from pyomo.core.base import expr as EXPR
 
 import six
+from six.moves import zip
 
 class IConstraint(IComponent, _IActiveComponentMixin):
     """
@@ -565,6 +566,10 @@ class constraint(_mutable_bounds_mixin, IConstraint):
                     "non-finite term." % (self.name))
             assert self.lb is self.ub
 
+#
+# Note: This class is experimental. The implementation may
+#       change or it may go away.
+#
 class linear_constraint(_mutable_bounds_mixin, IConstraint):
     """
     A linear constraint defined by a list of variables and
@@ -592,16 +597,11 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
                  rhs=None):
         self._parent = None
         self._active = True
-        self._variables = variables
-        self._coefficients = coefficients
+        self._variables = list(variables)
+        self._coefficients = list(coefficients)
         self._lb = None
         self._ub = None
         self._equality = False
-
-        if type(self._variables) is not tuple:
-            self._variables = tuple(self._variables)
-        if type(self._coefficients) is not tuple:
-            self._coefficients = tuple(self._coefficients)
 
         if rhs is None:
             self.lb = lb
@@ -619,16 +619,22 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
     def terms(self):
         """The linear terms in the body of this constraint
         as (variable, coefficient) tuples"""
-        return tuple(zip(self._variables, self._coefficients))
+        return zip(self._variables, self._coefficients)
     @terms.setter
     def terms(self, terms):
-        variables = []
-        coefficients = []
+        """Set the linear terms in the body of this constraint
+        using an iterable (variable, coefficient) tuples"""
+        self._variables = []
+        self._coefficients = []
         for v, c in terms:
-            variables.append(v)
-            coefficients.append(c)
-        self._coefficients = tuple(coefficients)
-        self._variables = tuple(variables)
+            self._variables.append(v)
+            self._coefficients.append(c)
+
+    def add_term(self, var, coef):
+        """Add the term coef*var to the body of this
+        constraint."""
+        self._variables.append(var)
+        self._coefficients.append(coef)
 
     #
     # Override a the default __call__ method on IConstraint
@@ -660,6 +666,8 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def variables(self):
+        """Returns the list of non-fixed variables in the
+        body of this constraint."""
         variables = []
         for v in self._variables:
             if v.is_expression():
@@ -670,6 +678,9 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def coefficients(self):
+        """Returns the list of coefficients associated with
+        the non-fixed variables in the body of this
+        constraint."""
         coefficients = []
         for c, v in zip(self._coefficients,
                         self._variables):
@@ -684,6 +695,9 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def constant(self):
+        """Returns the constant term associated with the
+        body of this constraint (i.e., from fixed
+        variables)."""
         constant = 0
         for c, v in zip(self._coefficients,
                         self._variables):

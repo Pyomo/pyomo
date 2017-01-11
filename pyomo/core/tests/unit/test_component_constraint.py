@@ -1045,7 +1045,7 @@ class Test_linear_constraint(unittest.TestCase):
     def test_init_nonexpr(self):
         v = variable(value=3)
         c = linear_constraint([v],[1],lb=0,ub=1)
-        self.assertEqual(len(c.terms), 1)
+        self.assertEqual(len(list(c.terms)), 1)
         self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 3)
         self.assertEqual(c(), 3)
@@ -1077,6 +1077,16 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertTrue(isinstance(c, IComponent))
         self.assertTrue(isinstance(c, _IActiveComponentMixin))
         self.assertTrue(isinstance(c, IConstraint))
+
+    def test_terms(self):
+        c = linear_constraint([],[])
+        self.assertEqual(list(c.terms), [])
+        v1 = variable()
+        c.add_term(v1, 10)
+        self.assertEqual(list(c.terms), [(v1,10)])
+        v2 = variable()
+        c.add_term(v2, 20)
+        self.assertEqual(list(c.terms), [(v1,10),(v2,20)])
 
     def test_active(self):
         c = linear_constraint([],[])
