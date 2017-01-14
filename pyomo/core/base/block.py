@@ -20,7 +20,7 @@ from operator import itemgetter, attrgetter
 from six import iteritems, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
-from pyomo.core.base.plugin import *
+from pyomo.core.base.plugin import * # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID, register_component
 from pyomo.core.base.sets import Set,  _SetDataBase
@@ -66,6 +66,50 @@ if sys.version_info[0] == 2 and sys.version_info[1] <= 6:
         return new
     weakref.WeakKeyDictionary.__copy__ = weakref.WeakKeyDictionary.copy
     weakref.WeakKeyDictionary.__deepcopy__ = dcwkd
+
+
+class _generic_component_decorator(object):
+    """A generic decorator that wraps Block.__setattr__()
+
+    Arguments
+    ---------
+        component: the Pyomo Component class to construct
+        block: the block onto which to add the new component
+        *args: positional arguments to the Component constructor
+               (*excluding* the block argument)
+        **kwds: keyword arguments to the Component constructor
+    """
+    def __init__(self, component, block, *args, **kwds):
+        self._component = component
+        self._block = block
+        self._args = args
+        self._kwds = kwds
+
+    def __call__(self, rule):
+        setattr(
+            self._block,
+            rule.__name__,
+            self._component(*self._args, rule=rule, **(self._kwds))
+        )
+
+
+class _component_decorator(object):
+    """A class that wraps the _generic_component_decorator, which remembers
+    and provides the Block and component type to the decorator.
+
+    Arguments
+    ---------
+        component: the Pyomo Component class to construct
+        block: the block onto which to add the new component
+
+    """
+    def __init__(self, block, component):
+        self._block = block
+        self._component = component
+
+    def __call__(self, *args, **kwds):
+        return _generic_component_decorator(
+            self._component, self._block, *args, **kwds )
 
 
 class SortComponents(object):
@@ -463,6 +507,15 @@ class _BlockData(ActiveComponentData):
         for (slot_name, value) in iteritems(state):
             super(_BlockData, self).__setattr__(slot_name, value)
         super(_BlockData, self).__setstate__(state)
+
+    def __getattr__(self, val):
+        if val in ModelComponentFactory.services():
+            return _component_decorator(
+                self, ModelComponentFactory.get_class(val).component )
+        # Since the base classes don't support getattr, we can just
+        # throw the "normal" AttributeError
+        raise AttributeError("'%s' object has no attribute '%s'"
+                             % (self.__class__.__name__, val))
 
     def __setattr__(self, name, val):
         """
