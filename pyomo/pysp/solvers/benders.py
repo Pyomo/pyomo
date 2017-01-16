@@ -81,25 +81,25 @@ logger = logging.getLogger('pyomo.pysp')
 
 _benders_group_label = "Benders Options"
 
-def EXTERNAL_deactivate_firststage_costs(manager,
-                                         scenario):
-    assert len(manager.scenario_tree.stages) == 2
-    assert scenario in manager.scenario_tree.scenarios
-    firststage = manager.scenario_tree.findRootNode().stage
-    scenario._instance.find_component(
-        "PYSP_BENDERS_STAGE_COST_TERM_"+firststage.name).set_value(0.0)
-    if manager.preprocessor is not None:
-        manager.preprocessor.objective_updated[scenario.name] = True
-
-def EXTERNAL_activate_firststage_costs(manager,
+def EXTERNAL_deactivate_rootnode_costs(manager,
                                        scenario):
     assert len(manager.scenario_tree.stages) == 2
     assert scenario in manager.scenario_tree.scenarios
-    firststage = manager.scenario_tree.findRootNode().stage
-    stagecost_var = instance.find_component(
-        firststage._cost_variable[0])[firststage._cost_variable[1]]
+    rootnode = manager.scenario_tree.findRootNode()
     scenario._instance.find_component(
-        "PYSP_BENDERS_STAGE_COST_TERM_"+firststage.name).set_value(stagecost_var)
+        "PYSP_BENDERS_NODE_COST_TERM_"+rootnode.name).set_value(0.0)
+    if manager.preprocessor is not None:
+        manager.preprocessor.objective_updated[scenario.name] = True
+
+def EXTERNAL_activate_rootnode_costs(manager,
+                                     scenario):
+    assert len(manager.scenario_tree.stages) == 2
+    assert scenario in manager.scenario_tree.scenarios
+    rootnode = manager.scenario_tree.findRootNode()
+    nodecost_var = instance.find_component(
+        rootnode._cost_variable[0])[rootnode._cost_variable[1]]
+    scenario._instance.find_component(
+        "PYSP_BENDERS_NODE_COST_TERM_"+rootnode.name).set_value(nodecost_var)
     if manager.preprocessor is not None:
         manager.preprocessor.objective_updated[scenario.name] = True
 
@@ -130,10 +130,9 @@ def EXTERNAL_cleanup_from_benders(manager,
 
     instance = scenario._instance
 
-    # restore stage cost expressions
+    # restore node cost expressions
     for node in scenario.node_list:
-        stage = node.stage
-        cost_term_name = "PYSP_BENDERS_STAGE_COST_TERM_"+stage.name
+        cost_term_name = "PYSP_BENDERS_NODE_COST_TERM_"+node.name
         assert hasattr(instance, cost_term_name)
         instance.del_component(cost_term_name)
     assert hasattr(scenario, "_instance_cost_expression_old")
@@ -198,10 +197,9 @@ def EXTERNAL_initialize_for_benders(manager,
     # disaggregate the objective into stage costs
     cost_terms = 0.0
     for node in scenario.node_list:
-        stage = node.stage
         stagecost_var = instance.find_component(
-            stage._cost_variable[0])[stage._cost_variable[1]]
-        cost_term_name = "PYSP_BENDERS_STAGE_COST_TERM_"+stage.name
+            node._cost_variable[0])[node._cost_variable[1]]
+        cost_term_name = "PYSP_BENDERS_NODE_COST_TERM_"+node.name
         assert not hasattr(instance, cost_term_name)
         instance.add_component(cost_term_name,
                                Expression(initialize=stagecost_var))
@@ -315,7 +313,7 @@ def EXTERNAL_initialize_for_benders(manager,
     instance.find_component(fix_constraint_name).deactivate()
 
     # These will flag the necessary preprocessor info
-    EXTERNAL_deactivate_firststage_costs(manager, scenario)
+    EXTERNAL_deactivate_rootnode_costs(manager, scenario)
     EXTERNAL_activate_fix_constraints(manager, scenario)
 
 def EXTERNAL_update_fix_constraints(manager,
@@ -653,16 +651,16 @@ class BendersAlgorithm(PySPConfiguredObject):
         self.cut_pool = []
         self._num_first_stage_constraints = None
 
-    def deactivate_firststage_costs(self):
-        self._manager.invoke_function(
-            "EXTERNAL_deactivate_firststage_costs",
+    def deactivate_rootnode_costs(self):
+        self._manager_solver.invoke_function(
+            "EXTERNAL_deactivate_rootnode_costs",
             thisfile,
             invocation_type=InvocationType.PerScenario,
             oneway=True)
 
-    def activate_firststage_costs(self):
-        self._manager.invoke_function(
-            "EXTERNAL_activate_firststage_costs",
+    def activate_rootnode_costs(self):
+        self._manager_solver.invoke_function(
+            "EXTERNAL_activate_rootnode_costs",
             thisfile,
             invocation_type=InvocationType.PerScenario,
             oneway=True)

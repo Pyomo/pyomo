@@ -4874,8 +4874,12 @@ class ProgressiveHedging(_PHBase):
             # cost variables aren't blended, so go through the gory
             # computation of min/max/avg.  we currently always print
             # these.
-            cost_variable_name = stage._cost_variable[0]
-            cost_variable_index = stage._cost_variable[1]
+            # TODO: This loop needs to change to handle
+            #       per-node cost declarations (they may
+            #       have different component names across
+            #       the same time stage)
+            cost_variable_name = stage.nodes[0]._cost_variable[0]
+            cost_variable_index = stage.nodes[0]._cost_variable[1]
             print("      Cost Variable: "
                   +cost_variable_name+indexToString(cost_variable_index))
             for tree_node in stage._tree_nodes:

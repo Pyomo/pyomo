@@ -477,6 +477,67 @@ class TestScenarioTreeFromNetworkX(unittest.TestCase):
         model.StageVariables["Stage1"].add("x")
         ScenarioTree(scenariotreeinstance=model)
 
+    def test_two_stage_more_node_attributes(self):
+        G = networkx.DiGraph()
+        G.add_node("Root",
+                   cost="c1",
+                   variables=["x"],
+                   derived_variables=["y"])
+        G.add_node("Child1",
+                   cost="c2",
+                   variables=["q"],
+                   derived_variables=["z"])
+        G.add_edge("Root", "Child1", probability=0.8)
+        G.add_node("Child2",
+                   cost="c2",
+                   variables=["q"],
+                   derived_variables=["z"])
+        G.add_edge("Root", "Child2", probability=0.2)
+        model = ScenarioTreeModelFromNetworkX(G)
+        self.assertEqual(
+            sorted(list(model.Stages)),
+            sorted(["Stage1", "Stage2"]))
+        self.assertEqual(
+            sorted(list(model.Nodes)),
+            sorted(["Root", "Child1", "Child2"]))
+        self.assertEqual(
+            sorted(list(model.Children["Root"])),
+            sorted(["Child1", "Child2"]))
+        self.assertEqual(
+            sorted(list(model.Children["Child1"])),
+            sorted([]))
+        self.assertEqual(
+            sorted(list(model.Children["Child2"])),
+            sorted([]))
+        self.assertEqual(
+            sorted(list(model.Scenarios)),
+            sorted(["Child1", "Child2"]))
+        self.assertEqual(model.ConditionalProbability["Root"], 1.0)
+        self.assertEqual(model.ConditionalProbability["Child1"], 0.8)
+        self.assertEqual(model.ConditionalProbability["Child2"], 0.2)
+
+        self.assertEqual(model.StageCost["Stage1"].value, None)
+        self.assertEqual(list(model.StageVariables["Stage1"]), [])
+        self.assertEqual(list(model.StageDerivedVariables["Stage1"]), [])
+
+        self.assertEqual(model.NodeCost["Root"].value, "c1")
+        self.assertEqual(list(model.NodeVariables["Root"]), ["x"])
+        self.assertEqual(list(model.NodeDerivedVariables["Root"]), ["y"])
+
+        self.assertEqual(model.StageCost["Stage2"].value, None)
+        self.assertEqual(list(model.StageVariables["Stage2"]), [])
+        self.assertEqual(list(model.StageDerivedVariables["Stage2"]), [])
+
+        self.assertEqual(model.NodeCost["Child1"].value, "c2")
+        self.assertEqual(list(model.NodeVariables["Child1"]), ["q"])
+        self.assertEqual(list(model.NodeDerivedVariables["Child1"]), ["z"])
+
+        self.assertEqual(model.NodeCost["Child2"].value, "c2")
+        self.assertEqual(list(model.NodeVariables["Child2"]), ["q"])
+        self.assertEqual(list(model.NodeDerivedVariables["Child2"]), ["z"])
+
+        ScenarioTree(scenariotreeinstance=model)
+
     def test_two_stage_custom_names(self):
         G = networkx.DiGraph()
         G.add_node("R", label="Root")

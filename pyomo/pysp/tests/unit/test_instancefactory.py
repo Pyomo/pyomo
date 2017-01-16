@@ -456,6 +456,19 @@ class Test(unittest.TestCase):
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)
 
+    def test_init15(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "reference_test_model.py"),
+                scenario_tree=join(testdatadir,
+                                   "ScenarioStructure.py")) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is not None)
+            self._check_factory(factory)
+        self.assertTrue("reference_test_model" in sys.modules)
+
 Test = unittest.category('smoke','nightly','expensive')(Test)
 
 if __name__ == "__main__":

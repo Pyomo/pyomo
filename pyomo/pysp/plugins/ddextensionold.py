@@ -271,7 +271,7 @@ class ddextension_base(object):
 
         for stage in ph._scenario_tree._stages:
             cost_variable_name, cost_variable_index = \
-                stage._cost_variable
+                stage.nodes[0]._cost_variable
             stage_cost_component = \
                 self._reference_scenario_instance.\
                 find_component(cost_variable_name)
@@ -300,7 +300,7 @@ class ddextension_base(object):
             cost_vars = set()
             for stage in ph._scenario_tree._stages:
                 cost_variable_name, cost_variable_index = \
-                    stage._cost_variable
+                    stage.nodes[0]._cost_variable
                 stage_cost_component = \
                     self._reference_scenario_instance.\
                     find_component(cost_variable_name)

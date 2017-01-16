@@ -9,7 +9,10 @@
 
 __all__ = ()
 
-from pyomo.core import value
+import pyomo.core
+
+import six
+
 try:
     import networkx
     has_networkx = True
@@ -52,6 +55,9 @@ def CreateAbstractScenarioTreeModel():
 
     model.StageCost = Param(model.Stages,
                             mutable=True)
+    model.NodeCost = Param(model.Nodes,
+                           mutable=True)
+
     # DEPRECATED
     model.StageCostVariable = Param(model.Stages,
                                     mutable=True)
@@ -137,42 +143,62 @@ def ScenarioTreeModelFromNetworkX(
     height of the tree must be at least 1 (meaning at least
     2 stages).
 
-    Optional Arguments:
-      - node_name_attribute:
-           By default, node names are the same as the node
-           hash in the networkx tree. This keyword can be
-           set to the name of some property of nodes in the
-           graph that will be used for their name in the
-           PySP scenario tree.
-      - edge_probability_attribute:
-           Can be set to the name of some property of edges
-           in the graph that defines the conditional
-           probability of that branch (default: 'probability').
-           If this keyword is set to None, then all branches
-           leaving a node are assigned equal conditional
-           probabilities.
-      - stage_names:
-           Can define a list of stage names to use (assumed
-           in time order). The length of this list much
-           match the number of stages in the tree.
-      - scenario_name_attribute:
-           By default, scenario names are the same as the
-           leaf-node hash in the networkx tree. This keyword
-           can be set to the name of some property of
-           leaf-nodes in the graph that will be used for
-           their corresponding scenario in the PySP scenario
-           tree.
+    Node attributes:
+        - variables (list): A list of variable identifiers
+              that will be tracked by the node. If the node
+              is not a leaf node, these indicate variables
+              with non-anticipativity constraints.
+        - derived_variables (list): A list of variable or
+              expression identifiers that will be tracked by
+              the node (but will never have
+              non-anticipativity constraints enforced).
+        - cost (str): A string identifying a component on
+              the model whose value indicates the cost at
+              the time stage of the node for any scenario
+              traveling through it.
+              **Always required**
+
+    Edge attributes:
+        - probability (float): The conditional probablity of
+              moving from the parent node to the child node
+              in the directed edge. If not present, it will
+              be assumed that all edges leaving the parent
+              node have equal probability (normalized to sum
+              to one).
+
+    Args:
+        node_name_attribute: By default, node names are the
+           same as the node hash in the networkx tree. This
+           keyword can be set to the name of some property
+           of nodes in the graph that will be used for their
+           name in the PySP scenario tree.
+        edge_probability_attribute: Can be set to the name
+           of some property of edges in the graph that
+           defines the conditional probability of that
+           branch (default: 'probability'). If this keyword
+           is set to None, then all branches leaving a node
+           are assigned equal conditional probabilities.
+        stage_names: Can define a list of stage names to use
+           (assumed in time order). The length of this list
+           much match the number of stages in the tree.
+        scenario_name_attribute: By default, scenario names
+           are the same as the leaf-node hash in the
+           networkx tree. This keyword can be set to the
+           name of some property of leaf-nodes in the graph
+           that will be used for their corresponding
+           scenario in the PySP scenario tree.
 
     Examples:
 
       - A 2-stage scenario tree with 10 scenarios:
            G = networkx.DiGraph()
-           G.add_node("Root")
+           G.add_node("root",
+                      variables=["x"])
            N = 10
            for i in range(N):
-               node_name = "Leaf"+str(i)
+               node_name = "s"+str(i)
                G.add_node(node_name)
-               G.add_edge("Root",node_name,probability=1.0/N)
+               G.add_edge("root", node_name, probability=1.0/N)
            model = ScenarioTreeModelFromNetworkX(G)
 
        - A 4-stage scenario tree with 125 scenarios:
@@ -286,6 +312,20 @@ def ScenarioTreeModelFromNetworkX(
             else:
                 probability = 1.0/len(succ[pred[u]])
             m.ConditionalProbability[node_name] = probability
+        # get node variables
+        if "variables" in tree.node[u]:
+            node_variables = tree.node[u]["variables"]
+            assert type(node_variables) in [tuple, list]
+            for varstring in node_variables:
+                m.NodeVariables[node_name].add(varstring)
+        if "derived_variables" in tree.node[u]:
+            node_derived_variables = tree.node[u]["derived_variables"]
+            assert type(node_derived_variables) in [tuple, list]
+            for varstring in node_derived_variables:
+                m.NodeDerivedVariables[node_name].add(varstring)
+        if "cost" in tree.node[u]:
+            assert isinstance(tree.node[u]["cost"], six.string_types)
+            m.NodeCost[node_name].value = tree.node[u]["cost"]
         if u in succ:
             child_names = []
             for v in succ[u]:
@@ -295,7 +335,7 @@ def ScenarioTreeModelFromNetworkX(
             for child_name in child_names:
                 m.Children[node_name].add(child_name)
                 total_probability += \
-                    value(m.ConditionalProbability[child_name])
+                    pyomo.core.value(m.ConditionalProbability[child_name])
             if abs(total_probability - 1.0) > 1e-5:
                 raise ValueError(
                     "edge probabilities leaving node '%s' "

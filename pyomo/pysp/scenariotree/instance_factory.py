@@ -30,7 +30,8 @@ from pyomo.util.plugin import ExtensionPoint
 from pyomo.pysp.phutils import _OLD_OUTPUT
 from pyomo.pysp.util.misc import load_external_module
 from pyomo.pysp.scenariotree.tree_structure_model import \
-    CreateAbstractScenarioTreeModel
+    (CreateAbstractScenarioTreeModel,
+     ScenarioTreeModelFromNetworkX)
 from pyomo.pysp.scenariotree.tree_structure import \
     ScenarioTree
 
@@ -41,7 +42,14 @@ try:
     import yaml
     has_yaml = True
 except:                #pragma:nocover
-    has_yaml = False   #pragma:nocover
+    has_yaml = False
+
+has_networkx = False
+try:
+    import networkx
+    has_networkx = True
+except:                #pragma:nocover
+    has_networkx = False
 
 logger = logging.getLogger('pyomo.pysp')
 
@@ -246,10 +254,13 @@ class ScenarioTreeInstanceFactory(object):
                 model, or a .dat file containing data for an
                 abstract scenario tree model representation,
                 which defines the structure of the scenario
-                tree. For historical reasons, this argument
-                can also be set to a directory name where it
-                is assumed a file named
-                ScenarioStructure.dat exists.
+                tree. It can also be a .py file that
+                contains a networkx scenario tree or a
+                networkx scenario tree object.  For
+                historical reasons, this argument can also
+                be set to a directory name where it is
+                assumed a file named ScenarioStructure.dat
+                exists.
             data: Directory containing .dat files necessary
                 for building the scenario instances
                 associated with the scenario tree. This
@@ -263,7 +274,6 @@ class ScenarioTreeInstanceFactory(object):
                 where it is assumed the data files reside in
                 the same directory.
         """
-
         self._closed = True
 
         self._archives = []
@@ -337,6 +347,10 @@ class ScenarioTreeInstanceFactory(object):
             if hasattr(scenario_tree, "_scenario_instance_factory"):
                 del scenario_tree._scenario_instance_factory
             self._scenario_tree = scenario_tree
+        elif has_networkx and \
+             isinstance(scenario_tree, networkx.Graph):
+            self._scenario_tree = \
+                ScenarioTreeModelFromNetworkX(obj)
         elif isinstance(scenario_tree, six.string_types):
             logger.debug("scenario tree input is a string, attempting "
                          "to load file specification: %s"
@@ -382,18 +396,34 @@ class ScenarioTreeInstanceFactory(object):
                         _import_model_or_callback(
                             self._scenario_tree_filename,
                             "pysp_scenario_tree_model_callback")
-                if (scenario_tree_model is None) and \
-                   (scenario_tree_callback is None):
-                    raise AttributeError(
-                        "No 'model' object or "
-                        "'pysp_scenario_tree_model_callback' function "
-                        "object found in src: %s"
-                        % (self._scenario_tree_filename))
-                elif scenario_tree_callback is not None:
-                    self._scenario_tree_model = scenario_tree_callback()
-                else:
-                    assert scenario_tree_model is not None
+                if scenario_tree_callback is not None:
+                    obj = scenario_tree_callback()
+                    if isinstance(obj, ScenarioTree):
+                        self._scenario_tree = obj
+                    else:
+                        self._scenario_tree_model = obj
+                elif scenario_tree_model is not None:
                     self._scenario_tree_model = scenario_tree_model
+                else:
+                    for attr_name in dir(self._scenario_tree_module):
+                        obj = getattr(self._scenario_tree_module,
+                                      attr_name)
+                        if isinstance(obj, ScenarioTree):
+                            self._scenario_tree = obj
+                            break
+                        elif has_networkx and \
+                             isinstance(obj, networkx.Graph):
+                            self._scenario_tree_model = \
+                                ScenarioTreeModelFromNetworkX(obj)
+                            break
+                if (self._scenario_tree is None) and \
+                   (self._scenario_tree_model is None):
+                    raise AttributeError(
+                        "No scenario tree object or "
+                        "'pysp_scenario_tree_model_callback' "
+                        "function found in src: %s"
+                        % (self._scenario_tree_filename))
+
             elif self._scenario_tree_filename.endswith(".dat"):
                 self._scenario_tree_model = \
                     CreateAbstractScenarioTreeModel().\
@@ -401,15 +431,33 @@ class ScenarioTreeInstanceFactory(object):
             else:
                 assert False
         elif scenario_tree is None:
-            if (self._model_module is not None) and \
-               ("pysp_scenario_tree_model_callback" in dir(self._model_module)):
-                self._scenario_tree_model = \
-                    self._model_module.pysp_scenario_tree_model_callback()
+            if self._model_module is not None:
+                if ("pysp_scenario_tree_model_callback" in dir(self._model_module)):
+                    self._scenario_tree_model = \
+                        self._model_module.pysp_scenario_tree_model_callback()
+                else:
+                    for attr_name in dir(self._model_module):
+                        obj = getattr(self._model_module, attr_name)
+                        if isinstance(obj, ScenarioTree):
+                            self._scenario_tree = obj
+                            break
+                        elif has_networkx and \
+                             isinstance(obj, networkx.Graph):
+                            self._scenario_tree_model = \
+                                ScenarioTreeModelFromNetworkX(obj)
+                            break
+                if (self._scenario_tree_model is None) and \
+                   (self._scenario_tree is None):
+                    raise ValueError(
+                        "No input was provided for the scenario tree "
+                        "and no callback or scenario tree object was "
+                        "found with the model")
             else:
                 raise ValueError(
-                    "No input was provided for the scenario tree model but "
-                    "there is no module to search for a "
-                    "'pysp_scenario_tree_model_callback' function.")
+                    "No input was provided for the scenario tree "
+                    "but there is no module to search for a "
+                    "'pysp_scenario_tree_model_callback' function "
+                    "or a ScenarioTree object.")
         else:
             self._scenario_tree_model = scenario_tree
 

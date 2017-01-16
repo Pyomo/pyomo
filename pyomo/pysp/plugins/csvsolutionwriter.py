@@ -72,9 +72,9 @@ class CSVSolutionWriter(pyomo.util.plugin.SingletonPlugin):
         cost_filename = output_file_prefix + "_StageCostDetail.csv"
         with open(cost_filename, "w") as f:
             for stage in scenario_tree.stages:
-                cost_name, cost_index = stage._cost_variable
                 for tree_node in sorted(stage.nodes,
                                         key=lambda x: x.name):
+                    cost_name, cost_index = node._cost_variable
                     for scenario in sorted(tree_node.scenarios,
                                            key=lambda x: x.name):
                         stage_cost = scenario._stage_costs[stage.name]

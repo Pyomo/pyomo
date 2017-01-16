@@ -136,6 +136,13 @@ class ScenarioTreeNode(object):
         self._binary = set()
         self._semicontinuous = set()
 
+        # a tuple consisting of (1) the name of the variable that
+        # stores the stage-specific cost in all scenarios and (2) the
+        # corresponding index *string* - this is converted in the tree
+        # node to a real index.
+        # TODO: Change the code so that this is a ComponentUID string
+        self._cost_variable = None
+
         # a list of _VarData objects, representing the cost variables
         # for each scenario passing through this tree node.
         # NOTE: This list actually contains tuples of
@@ -509,8 +516,8 @@ class ScenarioTreeNode(object):
                 id_labeler=id_labeler,
                 name_index_to_id_map=name_index_to_id_map)
 
-        self.updateCostVariableIndexAndValue(self._stage._cost_variable[0],
-                                             self._stage._cost_variable[1])
+        self.updateCostVariableIndexAndValue(self._cost_variable[0],
+                                             self._cost_variable[1])
 
         if not initialize_solution_data:
             return
@@ -873,7 +880,7 @@ class ScenarioTreeStage(object):
         # stores the stage-specific cost in all scenarios and (2) the
         # corresponding index *string* - this is converted in the tree
         # node to a real index.
-        self._cost_variable = (None, None)
+        self._cost_variable = None
 
     @property
     def name(self):
@@ -1018,7 +1025,7 @@ class Scenario(object):
         self._cost = self._instance_cost_expression(exception=False)
         for tree_node in self._node_list:
             cost_variable_name, cost_variable_index = \
-                tree_node.stage._cost_variable
+                tree_node._cost_variable
             stage_cost_component = \
                 self._instance.find_component(cost_variable_name)
             self._stage_costs[tree_node.stage.name] = \
@@ -1074,7 +1081,7 @@ class Scenario(object):
         for tree_node in self._node_list:
             stage_name = tree_node._stage.name
             cost_variable_name, cost_variable_index = \
-                tree_node._stage._cost_variable
+                tree_node._cost_variable
             stage_cost_component = \
                 self._instance.find_component(cost_variable_name)[cost_variable_index]
             # Some of these might be Expression objects so we check
@@ -1194,11 +1201,11 @@ class Scenario(object):
                     return this_node
         except KeyError:
             for this_node in self._node_list:
-                stage_cost_variable = this_node._stage._cost_variable
-                if stage_cost_variable[0] is not None:
+                cost_variable = this_node._cost_variable
+                if cost_variable[0] is not None:
                     if vardata is \
                        instance.find_component(
-                           stage_cost_variable[0])[stage_cost_variable[1]]:
+                           cost_variable[0])[cost_variable[1]]:
                         return this_node
 
         raise KeyError("Variable="+str(vardata.name)+" does "
@@ -1213,7 +1220,7 @@ class Scenario(object):
                 return this_node
 
         for this_node in self._node_list:
-            if tuple_to_check == this_node._stage._cost_variable:
+            if tuple_to_check == this_node._cost_variable:
                 return this_node
 
         raise KeyError("Variable="+str(variable_name)+", "
@@ -1387,14 +1394,15 @@ class ScenarioTree(object):
                     new_stage._derived_variable_templates[variable_name].append(match_template)
 
             # de-reference is required to access the parameter value
-            cost_variable_string = value(stage_cost_variable_names[stage_name])
-            if isVariableNameIndexed(cost_variable_string):
-                cost_variable_name, cost_variable_index = \
-                    extractVariableNameAndIndex(cost_variable_string)
-            else:
-                cost_variable_name = cost_variable_string
-                cost_variable_index = None
-            new_stage._cost_variable = (cost_variable_name, cost_variable_index)
+            cost_variable_string = stage_cost_variable_names[stage_name].value
+            if cost_variable_string is not None:
+                if isVariableNameIndexed(cost_variable_string):
+                    cost_variable_name, cost_variable_index = \
+                        extractVariableNameAndIndex(cost_variable_string)
+                else:
+                    cost_variable_name = cost_variable_string
+                    cost_variable_index = None
+                new_stage._cost_variable = (cost_variable_name, cost_variable_index)
 
             self._stages.append(new_stage)
             self._stage_map[stage_name] = new_stage
@@ -1453,16 +1461,28 @@ class ScenarioTree(object):
         stage_variable_ids = scenariotreeinstance.StageVariables
         node_variable_ids = scenariotreeinstance.NodeVariables
         stage_cost_variable_ids = scenariotreeinstance.StageCost
-        if len(scenariotreeinstance.StageCostVariable):
+        node_cost_variable_ids = scenariotreeinstance.NodeCost
+        if any(scenariotreeinstance.StageCostVariable[i].value is not None
+               for i in scenariotreeinstance.StageCostVariable):
             logger.warning("DEPRECATED: The 'StageCostVariable' scenario tree "
                            "model parameter has been renamed to 'StageCost'. "
                            "Please update your scenario tree structure model.")
-            if len(stage_cost_variable_ids):
-                raise ValueError("Both the 'StageCostVariable' and 'StageCost' "
-                                 "parameters can not be used on a scenario tree "
+            if any(stage_cost_variable_ids[i].value is not None
+                   for i in stage_cost_variable_ids):
+                raise ValueError("The 'StageCostVariable' and 'StageCost' "
+                                 "parameters can not both be used on a scenario "
                                  "tree structure model.")
             else:
                 stage_cost_variable_ids = scenariotreeinstance.StageCostVariable
+
+        if any(stage_cost_variable_ids[i].value is not None
+               for i in stage_cost_variable_ids) and \
+           any(node_cost_variable_ids[i].value is not None
+               for i in node_cost_variable_ids):
+            raise ValueError(
+                "The 'StageCost' and 'NodeCost' parameters "
+                "can not both be used on a scenario tree "
+                "structure model.")
         stage_derived_variable_ids = scenariotreeinstance.StageDerivedVariables
         node_derived_variable_ids = scenariotreeinstance.NodeDerivedVariables
         scenario_ids = scenariotreeinstance.Scenarios
@@ -1519,10 +1539,11 @@ class ScenarioTree(object):
                 raise ValueError("Unknown stage=%s assigned to tree node=%s"
                                  % (stage_name, tree_node.name))
 
+            node_stage = self._stage_map[stage_name]
             new_tree_node = ScenarioTreeNode(
                 tree_node_name,
                 value(node_probability_map[tree_node_name]),
-                self._stage_map[stage_name])
+                node_stage)
 
             # extract the node variable match templates
             for variable_string in node_variable_ids[tree_node_name]:
@@ -1535,6 +1556,21 @@ class ScenarioTree(object):
                 if variable_name not in new_tree_node._variable_templates:
                     new_tree_node._variable_templates[variable_name] = []
                 new_tree_node._variable_templates[variable_name].append(match_template)
+
+            cost_variable_string = node_cost_variable_ids[tree_node_name].value
+            if cost_variable_string is not None:
+                assert node_stage._cost_variable is None
+                if isVariableNameIndexed(cost_variable_string):
+                    cost_variable_name, cost_variable_index = \
+                        extractVariableNameAndIndex(cost_variable_string)
+                else:
+                    cost_variable_name = cost_variable_string
+                    cost_variable_index = None
+            else:
+                assert node_stage._cost_variable is not None
+                cost_variable_name, cost_variable_index = \
+                    node_stage._cost_variable
+            new_tree_node._cost_variable = (cost_variable_name, cost_variable_index)
 
             # extract the node derived variable match templates
             for variable_string in node_derived_variable_ids[tree_node_name]:
@@ -1775,11 +1811,11 @@ class ScenarioTree(object):
                         user_objective.deactivate()
 
                     cost = 0.0
-                    for stage in self._stages:
+                    for node in scenario.node_list:
                         stage_cost_var = \
                             scenario_instance.\
-                            find_component(stage._cost_variable[0])\
-                            [stage._cost_variable[1]]
+                            find_component(node._cost_variable[0])\
+                            [node._cost_variable[1]]
                         cost += stage_cost_var
                     cost_expr_name = "_PySP_CostExpression"
                     cost_expr = Expression(name=cost_expr_name,
@@ -2076,6 +2112,7 @@ class ScenarioTree(object):
             compressed_tree_node._scenarios.append(compressed_tree_scenario)
             compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
             compressed_tree_node._probability = full_tree_node._probability
+            compressed_tree_node._cost_variable = full_tree_node._cost_variable
             ###
 
             compressed_tree_scenario._node_list.append(compressed_tree_node)
@@ -2098,6 +2135,7 @@ class ScenarioTree(object):
                 compressed_tree_node._derived_variable_templates = \
                     copy.deepcopy(full_tree_node._derived_variable_templates)
                 compressed_tree_node._probability = full_tree_node._probability
+                compressed_tree_node._cost_variable = full_tree_node._cost_variable
                 compressed_tree_node._scenarios.append(compressed_tree_scenario)
                 compressed_tree_node._stage._tree_nodes.append(compressed_tree_node)
                 ###
@@ -2479,10 +2517,16 @@ class ScenarioTree(object):
                        sys.stdout.write(indexToString(match_template)+' ')
                     print("")
             print("\tCost Variable: ")
-            if stage._cost_variable[1] is None:
-                print("\t\t" + stage._cost_variable[0])
+            if stage._cost_variable is not None:
+                cost_variable_name, cost_variable_index = stage._cost_variable
             else:
-                print("\t\t" + stage._cost_variable[0] + indexToString(stage._cost_variable[1]))
+                # kind of a hackish way to get around the fact that we are transitioning
+                # away from storing the cost_variable identifier on the stages
+                cost_variable_name, cost_variable_index = stage.nodes[0]._cost_variable
+            if cost_variable_index is None:
+                print("\t\t" + cost_variable_name)
+            else:
+                print("\t\t" + cost_variable_name + indexToString(cost_variable_index))
             print("")
         print("----------------------------------------------------")
         print("Scenarios:")
@@ -2579,7 +2623,6 @@ class ScenarioTree(object):
     def pprintCosts(self):
 
         print("Scenario Tree Costs")
-
         print("----------------------------------------------------")
         print("Tree Nodes:")
         print("")

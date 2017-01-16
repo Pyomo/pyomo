@@ -91,9 +91,10 @@ def EXTERNAL_activate_firststage_costs(manager,
                                        scenario):
     assert len(manager.scenario_tree.stages) == 2
     assert scenario in manager.scenario_tree.scenarios
-    firststage = manager.scenario_tree.findRootNode().stage
+    rootnode = manager.scenario_tree.findRootNode()
+    firststage = rootnode.stage
     stagecost_var = instance.find_component(
-        firststage._cost_variable[0])[firststage._cost_variable[1]]
+        rootnode._cost_variable[0])[rootnode._cost_variable[1]]
     scenario._instance.find_component(
         "PYSP_BENDERS_STAGE_COST_TERM_"+firststage.name).set_value(stagecost_var)
     if manager.preprocessor is not None:
@@ -195,12 +196,12 @@ def EXTERNAL_initialize_for_benders(manager,
     cost_terms = 0.0
     for node in scenario.node_list:
         stage = node.stage
-        stagecost_var = instance.find_component(
-            stage._cost_variable[0])[stage._cost_variable[1]]
+        cost_var = instance.find_component(
+            node._cost_variable[0])[node._cost_variable[1]]
         cost_term_name = "PYSP_BENDERS_STAGE_COST_TERM_"+stage.name
         assert not hasattr(instance, cost_term_name)
         instance.add_component(cost_term_name,
-                               Expression(initialize=stagecost_var))
+                               Expression(initialize=cost_var))
         cost_terms += instance.find_component(cost_term_name)
     assert not hasattr(scenario, "_instance_cost_expression_old")
     scenario._instance_cost_expression_old = \
@@ -906,8 +907,8 @@ class BendersAlgorithm(PySPConfiguredObject):
             assert len(master_scenario_tree.scenarios) == 1
             master_cost_expr = master.find_component(
                 master_scenario_tree.scenarios[0].name).find_component(
-                    master_firststage._cost_variable[0])\
-                    [master_firststage._cost_variable[1]]
+                    master_rootnode._cost_variable[0])\
+                    [master_rootnode._cost_variable[1]]
         else:
             # NOTE: We include the first-stage cost expression for
             #       each of the scenarios included in the master with
@@ -920,11 +921,11 @@ class BendersAlgorithm(PySPConfiguredObject):
                                 for scenario in master_scenario_tree.scenarios)
             for scenario in master_scenario_tree.scenarios:
                 firststage_cost_expr = scenario._instance.find_component(
-                    master_firststage._cost_variable[0])\
-                    [master_firststage._cost_variable[1]]
+                    master_rootnode._cost_variable[0])\
+                    [master_rootnode._cost_variable[1]]
                 secondstage_cost_expr = scenario._instance.find_component(
-                    master_secondstage._cost_variable[0])\
-                    [master_secondstage._cost_variable[1]]
+                    scenario.leaf_node._cost_variable[0])\
+                    [scenario.leaf_node._cost_variable[1]]
                 master_cost_expr += scenario._probability * \
                                     (firststage_cost_expr / normalization + \
                                      secondstage_cost_expr)
