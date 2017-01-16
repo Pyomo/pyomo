@@ -9,6 +9,7 @@
 
 
 import re
+import six
 
 from gurobipy import *
 
@@ -69,7 +70,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # GUROBI doesn't throw an exception if an unknown
     # key is specified, so you have to stare at the
     # output to see if it was accepted.
-    for key, value in options.iteritems():
+    for key, value in six.iteritems(options):
         model.setParam(key, value)
 
     if 'relax_integrality' in options:
