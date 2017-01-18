@@ -67,8 +67,14 @@ class _ExpressionData(NumericValue):
         return (self.expr,)
 
     def _arguments(self):
-        """A generator of subexpressions involved in this expressions operation."""
-        yield self.expr
+        """A tuple of subexpressions involved in this expressions operation."""
+        return (self.expr,)
+
+    def _precedence(self):
+        return 0
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.name)
 
     def clone(self):
         """Return a clone of this expression (no-op)."""

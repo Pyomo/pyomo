@@ -518,8 +518,10 @@ class _ExpressionBase(NumericValue):
                     argList = _sub._arguments()
                     _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
                     _infix = False
-                else:
+                elif hasattr(_parent, '_to_string_term'):
                     _parent._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
+                else:
+                    self._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
             else:
                 _stack.pop()
                 if (_my_precedence > _prec) or not _my_precedence or verbose:
