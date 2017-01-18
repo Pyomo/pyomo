@@ -699,8 +699,7 @@ class Var(IndexedComponent):
     def _pprint(self):
         """Print component information."""
         return ( [("Size", len(self)),
-                  ("Index", self._index \
-                       if self._index != UnindexedComponent_set else None),
+                  ("Index", self._index if self.is_indexed() else None),
                   ],
                  iteritems(self._data),
                  ( "Lower","Value","Upper","Fixed","Stale","Domain"),

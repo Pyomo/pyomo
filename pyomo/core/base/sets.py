@@ -1608,7 +1608,7 @@ class IndexedSet(Set):
         """
         Clear that data in this component.
         """
-        if UnindexedComponent_set != self._index:
+        if self.is_indexed():
             self._data = {}
         else:
             #

@@ -369,8 +369,7 @@ class Objective(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index \
-                       if self._index != UnindexedComponent_set else None),
+             ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active)
              ],
             iteritems(self._data),
@@ -391,8 +390,7 @@ class Objective(ActiveIndexedComponent):
         ostream.write(prefix+self.local_name+" : ")
         ostream.write(", ".join("%s=%s" % (k,v) for k,v in [
                     ("Size", len(self)),
-                    ("Index", self._index \
-                     if self._index != UnindexedComponent_set else None),
+                    ("Index", self._index if self.is_indexed() else None),
                     ("Active", self.active),
                     ] ))
 

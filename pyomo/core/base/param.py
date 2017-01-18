@@ -864,8 +864,7 @@ This has resulted in the conversion of the source to dense form.
         Return data that will be printed for this component.
         """
         return ( [("Size", len(self)),
-                  ("Index", self._index \
-                       if self._index != UnindexedComponent_set else None),
+                  ("Index", self._index if self.is_indexed() else None),
                   ("Domain", self.domain.name),
                   ("Default", "(function)" if type(self._default_val) \
                        is types.FunctionType else self._default_val),
