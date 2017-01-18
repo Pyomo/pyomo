@@ -45,7 +45,11 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
     Interface for objects that maintain a weak reference to
     a parent storage object and have a category type.
 
-    This class is abstract.
+    This class is abstract. It assumes any derived class
+    declares the following attributes (with or without __slots__):
+        - _ctype: The objects category type.
+        - _parent: A weak reference to the object's
+                   parent or None.
     """
     __slots__ = ()
 
@@ -63,14 +67,6 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
     # properties as using __slots__, __dict__, or
     # by overriding the @property method
     #
-
-    _ctype = _abstract_readonly_property(
-        doc=("A category type. Used by the parent of "
-             "this component to categorize it."))
-
-    _parent = _abstract_readwrite_property(
-        doc=("A weak reference to parent object of "
-             "type IComponentContainer or None."))
 
     #
     # Interface
@@ -295,19 +291,12 @@ class _IActiveComponentMixin(IActiveObject):
     should use _IActiveComponentContainerMixin as a base
     class.
 
-    This class is abstract.
+    This class is abstract. It assumes any derived class
+    declares the following attributes (with or without __slots__):
+        - _active: A boolean indicating whethor or not this
+                   component is active.
     """
     __slots__ = ()
-
-    #
-    # Implementations can choose to define these
-    # properties as using __slots__, __dict__, or
-    # by overriding the @property method
-    #
-
-    _active = _abstract_readwrite_property(
-        doc=("A boolean indicating whethor or not "
-             "this component is active."))
 
     #
     # Interface
@@ -393,7 +382,10 @@ class _IActiveComponentContainerMixin(IActiveObject):
     for activating and deactivating the container and its
     children.
 
-    This class is abstract.
+    This class is abstract. It assumes any derived class
+    declares the following attributes (with or without __slots__):
+        - _active: A boolean indicating whethor or not this
+                   component is active.
     """
     __slots__ = ()
 

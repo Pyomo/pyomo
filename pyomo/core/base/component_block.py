@@ -737,8 +737,8 @@ class block(_block_base, IBlockStorage):
     # property will be set in block.py
     _ctype = None
     def __init__(self):
-        self.__parent = None
-        self.__active = True
+        self._parent = None
+        self._active = True
         # This implementation is quite piggish at the
         # moment. It can probably be streamlined by doing
         # something similar to what _BlockData does in
@@ -749,33 +749,8 @@ class block(_block_base, IBlockStorage):
         # implementation of singleton types, it is hard to
         # justify making this implementation harder to
         # follow until we do some more concrete profiling.
-        self.__byctype = defaultdict(OrderedDict)
-        self.__order = OrderedDict()
-
-    # The base class implementation of __getstate__ handles
-    # the parent weakref assumed to be stored with the
-    # attribute name: _parent.  We need to remove the
-    # duplicate reference to the parent stored at
-    # _block__parent to avoid letting a weakref object
-    # remain in the final state dictionary.
-    def __getstate__(self):
-        state = super(block, self).__getstate__()
-        state['_block__parent'] = state.pop('_parent')
-        return state
-
-    @property
-    def _parent(self):
-        return self.__parent
-    @_parent.setter
-    def _parent(self, parent):
-        self.__parent = parent
-
-    @property
-    def _active(self):
-        return self.__active
-    @_active.setter
-    def _active(self, active):
-        self.__active = active
+        self._byctype = defaultdict(OrderedDict)
+        self._order = OrderedDict()
 
     #
     # Define the IComponentContainer abstract methods
@@ -786,8 +761,8 @@ class block(_block_base, IBlockStorage):
     #    pass
 
     def child_key(self, child):
-        if child.ctype in self.__byctype:
-            for key, val in iteritems(self.__byctype[child.ctype]):
+        if child.ctype in self._byctype:
+            for key, val in iteritems(self._byctype[child.ctype]):
                 if val is child:
                     return key
         raise ValueError("No child entry: %s"
@@ -819,40 +794,40 @@ class block(_block_base, IBlockStorage):
         else:
             itermethod = itervalues
         if ctype is _no_ctype:
-            return itermethod(self.__order)
+            return itermethod(self._order)
         else:
-            return itermethod(self.__byctype.get(ctype,{}))
+            return itermethod(self._byctype.get(ctype,{}))
 
     #
     # Interface
     #
 
-    def __setattr__(self, name, component):
-        if hasattr(component, '_is_categorized_object'):
-            if component._parent is None:
+    def __setattr__(self, name, obj):
+        if hasattr(obj, '_is_categorized_object'):
+            if obj._parent is None:
                 if name in self.__dict__:
                     logger.warning(
-                        "Implicitly replacing the component attribute "
-                        "%s (type=%s) on block with a new Component "
+                        "Implicitly replacing the categorized attribute "
+                        "%s (type=%s) on block with a new object "
                         "(type=%s).\nThis is usually indicative of a "
                         "modeling error.\nTo avoid this warning, delete "
-                        "the original component from the block before "
-                        "assigning a new component with the same name."
+                        "the original object from the block before "
+                        "assigning a new object with the same name."
                         % (name,
                            type(getattr(self, name)),
-                           type(component)))
+                           type(obj)))
                     delattr(self, name)
-                self.__byctype[component.ctype][name] = component
-                self.__order[name] = component
-                component._parent = weakref.ref(self)
+                self._byctype[obj.ctype][name] = obj
+                self._order[name] = obj
+                obj._parent = weakref.ref(self)
                 # children that are not of type
                 # _IActiveComponentMixin retain the active status
                 # of their parent, which is why the default
                 # return value from getattr is False
-                if getattr(component, _active_flag_name, False):
+                if getattr(obj, _active_flag_name, False):
                     self._increment_active()
             elif hasattr(self, name) and \
-                 (getattr(self, name) is component):
+                 (getattr(self, name) is obj):
                 # a very special case that makes sense to handle
                 # because the implied order should be: (1) delete
                 # the object at the current index, (2) insert the
@@ -864,27 +839,26 @@ class block(_block_base, IBlockStorage):
                 raise ValueError(
                     "Invalid assignment to %s type with name '%s' "
                     "at entry %s. A parent container has already "
-                    "been assigned to the component being "
-                    "inserted: %s"
+                    "been assigned to the object being inserted: %s"
                     % (self.__class__.__name__,
                        self.name,
                        name,
-                       component.parent.name))
-        super(block, self).__setattr__(name, component)
+                       obj.parent.name))
+        super(block, self).__setattr__(name, obj)
 
     def __delattr__(self, name):
-        component = getattr(self, name)
-        if hasattr(component, '_is_categorized_object'):
-            del self.__order[name]
-            del self.__byctype[component.ctype][name]
-            if len(self.__byctype[component.ctype]) == 0:
-                del self.__byctype[component.ctype]
-            component._parent = None
+        obj = getattr(self, name)
+        if hasattr(obj, '_is_categorized_object'):
+            del self._order[name]
+            del self._byctype[obj.ctype][name]
+            if len(self._byctype[obj.ctype]) == 0:
+                del self._byctype[obj.ctype]
+            obj._parent = None
             # children that are not of type
             # IActiveObject retain the active status
             # of their parent, which is why the default
             # return value from getattr is False
-            if getattr(component, _active_flag_name, False):
+            if getattr(obj, _active_flag_name, False):
                 self._decrement_active()
         super(block, self).__delattr__(name)
 
@@ -913,10 +887,10 @@ class block(_block_base, IBlockStorage):
         ctypes = set()
         if not descend_into:
             if active is None:
-                ctypes.update(ctype for ctype in self.__byctype)
+                ctypes.update(ctype for ctype in self._byctype)
             else:
                 assert active is True
-                for ctype in self.__byctype:
+                for ctype in self._byctype:
                     for component in self.components(
                             ctype=ctype,
                             active=True,
@@ -978,32 +952,6 @@ class block_dict(ComponentDict,
         self._active = True
         super(block_dict, self).__init__(*args, **kwds)
 
-#
-# TODO: Remove __slots__ declaration from this class. It
-#       turns out that the real speed and memory savings are
-#       not necessarily due to the use of slots, but rather
-#       from the fact that we are not categorizing
-#       components.  In cases like piecewise, where we are
-#       instantiating many small blocks with 4-5 components
-#       per-block, the extra categorization is simply
-#       overhead.
-#
-#       Also, without a __dict__, it is actually difficult
-#       to get an instance of this class through our solver
-#       interfaces because they want to store attributes
-#       like "_ampl_repn" and "_canonical_repn" on each
-#       block. I am not a fan of this behavior, but it gets
-#       used extensively by PySP at the moment.
-#
-#       Since it doesn't seem to affect memory usage or
-#       instantiation time very much in real use cases, I am
-#       declaring this class with a __dict__ slot for now
-#       (nearly equivalent to declaring it without
-#       __slots__). However, it would making subclassing
-#       easier to elimintate the __slots__ declaration
-#       completely.
-#
-
 class tiny_block(_block_base, IBlockStorage):
     """
     A memory efficient block for storing a small number
@@ -1012,11 +960,6 @@ class tiny_block(_block_base, IBlockStorage):
     # To avoid a circular import, for the time being, this
     # property will be set in block.py
     _ctype = None
-    __slots__ = ("_parent",
-                 "_active",
-                 "_order",
-                 "__weakref__",
-                 "__dict__")
     def __init__(self):
         self._parent = None
         self._active = True
@@ -1027,31 +970,31 @@ class tiny_block(_block_base, IBlockStorage):
         for key in self._order:
             yield key, getattr(self, key)
 
-    def __setattr__(self, name, component):
-        if hasattr(component, '_is_categorized_object'):
-            if component._parent is None:
+    def __setattr__(self, name, obj):
+        if hasattr(obj, '_is_categorized_object'):
+            if obj._parent is None:
                 if hasattr(self, name):
                     logger.warning(
-                        "Implicitly replacing the component attribute "
-                        "%s (type=%s) on block with a new Component "
+                        "Implicitly replacing the categorized attribute "
+                        "%s (type=%s) on block with a new object "
                         "(type=%s).\nThis is usually indicative of a "
                         "modeling error.\nTo avoid this warning, delete "
-                        "the original component from the block before "
-                        "assigning a new component with the same name."
+                        "the original object from the block before "
+                        "assigning a new object with the same name."
                         % (name,
                            type(getattr(self, name)),
-                           type(component)))
+                           type(obj)))
                     delattr(self, name)
-                component._parent = weakref.ref(self)
+                obj._parent = weakref.ref(self)
                 self._order.append(name)
                 # children that are not of type
                 # IActiveObject retain the active status
                 # of their parent, which is why the default
                 # return value from getattr is False
-                if getattr(component, _active_flag_name, False):
+                if getattr(obj, _active_flag_name, False):
                     self._increment_active()
             elif hasattr(self, name) and \
-                 (getattr(self, name) is component):
+                 (getattr(self, name) is obj):
                 # a very special case that makes sense to handle
                 # because the implied order should be: (1) delete
                 # the object at the current index, (2) insert the
@@ -1063,27 +1006,26 @@ class tiny_block(_block_base, IBlockStorage):
                 raise ValueError(
                     "Invalid assignment to %s type with name '%s' "
                     "at entry %s. A parent container has already "
-                    "been assigned to the component being "
-                    "inserted: %s"
+                    "been assigned to the object being inserted: %s"
                     % (self.__class__.__name__,
                        self.name,
                        name,
-                       component.parent.name))
-        super(tiny_block, self).__setattr__(name, component)
+                       obj.parent.name))
+        super(tiny_block, self).__setattr__(name, obj)
 
     def __delattr__(self, name):
-        component = getattr(self, name)
-        if hasattr(component, '_is_categorized_object'):
-            component._parent = None
+        obj = getattr(self, name)
+        if hasattr(obj, '_is_categorized_object'):
+            obj._parent = None
             for ndx, key in enumerate(self._order):
-                if getattr(self, key) is component:
+                if getattr(self, key) is obj:
                     del self._order[ndx]
                     break
             # children that are not of type
             # IActiveObject retain the active status
             # of their parent, which is why the default
             # return value from getattr is False
-            if getattr(component, _active_flag_name, False):
+            if getattr(obj, _active_flag_name, False):
                 self._decrement_active()
         super(tiny_block, self).__delattr__(name)
 
