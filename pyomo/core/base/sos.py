@@ -225,11 +225,11 @@ class SOSConstraint(ActiveIndexedComponent):
         self._constructed = True
 
         if self._rule is None:
-            if self._sosSet is None and not None in self._index:
+            if self._sosSet is None and self.is_indexed():
                 if generate_debug_messages:     #pragma:nocover
                     logger.debug("  Cannot construct "+self.name+".  No rule is defined and no SOS sets are defined.")
             else:
-                if None in self._index:
+                if not self.is_indexed():
                     if self._sosSet is None:
                         if getattr(self._sosVars.index_set(), 'ordered', False):
                             _sosSet = {None: list(self._sosVars.index_set())}

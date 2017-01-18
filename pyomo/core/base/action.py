@@ -53,7 +53,7 @@ class BuildAction(IndexedComponent):
             return
         self._constructed=True
         #
-        if None in self._index:
+        if not self.is_indexed():
             # Scalar component
             self._rule(self._parent())
         else:
