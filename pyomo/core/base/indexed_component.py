@@ -329,7 +329,7 @@ class IndexedComponent(Component):
 
     def clear(self):
         """Clear the data in this component"""
-        if UnindexedComponent_set != self._index:
+        if self.is_indexed():
             self._data = {}
         else:
             raise DeveloperError(
@@ -346,7 +346,7 @@ class IndexedComponent(Component):
 
     def dim(self):
         """Return the dimension of the index"""
-        if id(UnindexedComponent_set) == id(self._index):
+        if self.is_indexed():
             return 0
         return getattr(self._index, 'dimen', 0)
 
@@ -656,7 +656,7 @@ the value() function.""" % ( self.name, i ))
 
     def set_value(self, value):
         """Set the value of a scalar component."""
-        if UnindexedComponent_set != self._index:
+        if self.is_indexed()
             raise ValueError(
                 "Cannot set the value for the indexed component '%s' "
                 "without specifying an index value.\n"
