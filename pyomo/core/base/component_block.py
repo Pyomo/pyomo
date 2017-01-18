@@ -61,7 +61,7 @@ class IBlockStorage(IComponent,
     #
     # These methods are already declared abstract on
     # IComponentContainer, but we redeclare them here to
-    # point out that the can accept a ctype
+    # point out that they can accept a ctype
     #
 
     @abc.abstractmethod
@@ -437,7 +437,7 @@ class _block_base(object):
                 include components on sub-blocks. Default is
                 True.
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns: an iterator of objects
         """
 
         assert active in (None, True)
@@ -892,22 +892,22 @@ class block(_block_base, IBlockStorage):
                        active=None,
                        descend_into=True):
         """
-        Count all component types stored on or under this
-        block.
+        Count all object category types stored on or under
+        this block.
 
         Args:
             active (True/None): Set to True to indicate that
-                only active components should be
+                only active categorized objects should be
                 counted. The default value of None indicates
-                that all components (including those that
-                have been deactivated) should be
+                that all categorized objects (including
+                those that have been deactivated) should be
                 counted. *Note*: This flag is ignored for
                 any objects that do not have an active flag.
             descend_into (bool): Indicates whether or not
-                component types should be counted on
+                category types should be counted on
                 sub-blocks. Default is True.
 
-        Returns: a set of component types.
+        Returns: a set of category types.
         """
         assert active in (None, True)
         ctypes = set()
@@ -1144,22 +1144,22 @@ class tiny_block(_block_base, IBlockStorage):
                        active=None,
                        descend_into=True):
         """
-        Count all component types stored on or under this
-        block.
+        Count all object category types stored on or under
+        this block.
 
         Args:
             active (True/None): Set to True to indicate that
-                only active components should be
+                only active categorized objects should be
                 counted. The default value of None indicates
-                that all components (including those that
-                have been deactivated) should be
+                that all categorized objects (including
+                those that have been deactivated) should be
                 counted. *Note*: This flag is ignored for
                 any objects that do not have an active flag.
             descend_into (bool): Indicates whether or not
-                component types should be counted on
+                category types should be counted on
                 sub-blocks. Default is True.
 
-        Returns: a set object of component types.
+        Returns: a set of category types.
         """
         assert active in (None, True)
         ctypes = set()

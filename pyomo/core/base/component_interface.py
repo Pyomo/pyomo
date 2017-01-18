@@ -78,7 +78,7 @@ class ICategorizedObject(six.with_metaclass(abc.ABCMeta, object)):
 
     @property
     def ctype(self):
-        """The object's category"""
+        """The object's category type."""
         return self._ctype
 
     @property
