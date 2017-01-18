@@ -306,6 +306,21 @@ class IndexedComponent(Component):
             self._implicit_subsets = tmp
             self._index = tmp[0].cross(*tmp[1:])
 
+    def __getstate__(self):
+        # Special processing of getstate so that we never copy the
+        # UnindexedComponent_set set
+        state = super(IndexedComponent, self).__getstate__()
+        if not self.is_indexed():
+            state['_index'] = None
+        return state
+
+    def __setstate__(self, state):
+        # Special processing of setstate so that we never copy the
+        # UnindexedComponent_set set
+        if state['_index'] is None:
+            state['_index'] = UnindexedComponent_set
+        return super(IndexedComponent, self).__setstate__(state)
+
     def to_dense_data(self):
         """TODO"""
         for ndx in self._index:
@@ -327,7 +342,7 @@ class IndexedComponent(Component):
 
     def is_indexed(self):
         """Return true if this component is indexed"""
-        return UnindexedComponent_set != self._index
+        return self._index is not UnindexedComponent_set
 
     def dim(self):
         """Return the dimension of the index"""
