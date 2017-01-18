@@ -656,7 +656,7 @@ the value() function.""" % ( self.name, i ))
 
     def set_value(self, value):
         """Set the value of a scalar component."""
-        if self.is_indexed()
+        if self.is_indexed():
             raise ValueError(
                 "Cannot set the value for the indexed component '%s' "
                 "without specifying an index value.\n"
