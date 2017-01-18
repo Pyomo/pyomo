@@ -198,11 +198,17 @@ class Test_piecewise(unittest.TestCase):
             self.assertIs(pup.parent, bup)
 
     def test_call(self):
+        # lists not the same length
         with self.assertRaises(ValueError):
             _PiecewiseLinearFunction([1,2,3],
                                      [1,2,1,1])
+        # lists not the same length
         with self.assertRaises(ValueError):
             _PiecewiseLinearFunction([1,2,3,4],
+                                     [1,2,1])
+        # breakpoints list not nondecreasing
+        with self.assertRaises(ValueError):
+            _PiecewiseLinearFunction([1,3,2],
                                      [1,2,1])
 
         f = _PiecewiseLinearFunction([1,2,3],

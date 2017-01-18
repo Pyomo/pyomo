@@ -151,10 +151,10 @@ class _PiecewiseLinearFunction(tiny_block):
         # call the setters
         self.set_input(input)
         self.set_output(output)
-        #if not is_nondecreasing(self._breakpoints):
-        #    raise ValueError(
-        #        "The list of breakpoints is not nondecreasing: %s"
-        #        % (str(self._breakpoints)
+        if not is_nondecreasing(self._breakpoints):
+            raise ValueError(
+                "The list of breakpoints is not nondecreasing: %s"
+                % (str(self._breakpoints)))
         if len(self._breakpoints) != len(self._values):
             raise ValueError(
                 "The number of breakpoints (%s) differs from "
