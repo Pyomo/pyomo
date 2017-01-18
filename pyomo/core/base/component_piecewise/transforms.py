@@ -132,7 +132,6 @@ class _PiecewiseLinearFunction(tiny_block):
     is not validated because the list of breakpoints and values
     can be expressions (e.g., mutable parameters).
     """
-    __slots__ = ("_input", "_output", "_breakpoints", "_values")
 
     def __init__(self,
                  breakpoints,
@@ -210,7 +209,6 @@ class piecewise_sos2(_PiecewiseLinearFunction):
     Expresses a piecewise linear function using
     the SOS2 formulation
     """
-    __slots__ = ("_y", "_c1", "_c2", "_c3", "_c4")
 
     def __init__(self, *args, **kwds):
         bound = kwds.pop('bound', 'eq')
@@ -252,7 +250,6 @@ class piecewise_dcc(_PiecewiseLinearFunction):
     Expresses a piecewise linear function using
     the DCC formulation
     """
-    __slots__ = ("_lmbda", "_y", "_c1", "_c2", "_c3", "_c4")
 
     def __init__(self, *args, **kwds):
         bound = kwds.pop('bound', 'eq')
@@ -323,7 +320,6 @@ class piecewise_cc(_PiecewiseLinearFunction):
     Expresses a piecewise linear function using
     the CC formulation
     """
-    __slots__ = ("_lmbda", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
 
     def __init__(self, *args, **kwds):
         bound = kwds.pop('bound', 'eq')
@@ -393,7 +389,6 @@ class piecewise_mc(_PiecewiseLinearFunction):
     Expresses a piecewise linear function using
     the MC formulation
     """
-    __slots__ = ("_lmbda", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
 
     def __init__(self, *args, **kwds):
         bound = kwds.pop('bound', 'eq')
@@ -463,7 +458,6 @@ class piecewise_inc(_PiecewiseLinearFunction):
     Expresses a piecewise linear function using
     the INC formulation
     """
-    __slots__ = ("_delta", "_y", "_c1", "_c2", "_c3", "_c4")
 
     def __init__(self, *args, **kwds):
         bound = kwds.pop('bound', 'eq')
@@ -523,7 +517,6 @@ class piecewise_dlog(_PiecewiseLinearFunction):
     Expresses a piecewise linear function using
     the DLOG formulation
     """
-    __slots__ = ("_lmbda", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
 
     def __init__(self, *args, **kwds):
         bound = kwds.pop('bound', 'eq')
@@ -637,7 +630,6 @@ class piecewise_log(_PiecewiseLinearFunction):
     Expresses a piecewise linear function using
     the LOG formulation
     """
-    __slots__ = ("_lmbda", "_y", "_c1", "_c2", "_c3", "_c4", "_c5")
 
     def __init__(self, *args, **kwds):
         bound = kwds.pop('bound', 'eq')
