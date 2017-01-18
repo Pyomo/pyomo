@@ -138,7 +138,7 @@ class Param(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Param:
             return super(Param, cls).__new__(cls)
-        if args == () or (type(args[0]) is set and args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleParam.__new__(SimpleParam)
         else:
             return IndexedParam.__new__(IndexedParam)
