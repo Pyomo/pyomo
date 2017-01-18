@@ -346,7 +346,7 @@ class IndexedComponent(Component):
 
     def dim(self):
         """Return the dimension of the index"""
-        if self.is_indexed():
+        if not self.is_indexed():
             return 0
         return getattr(self._index, 'dimen', 0)
 
