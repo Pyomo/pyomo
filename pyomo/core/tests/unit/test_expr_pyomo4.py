@@ -23,7 +23,7 @@ from pyutilib.th import nottest
 from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.numvalue import potentially_variable
+from pyomo.core.base.numvalue import potentially_variable, native_types
 from pyomo.core.base.expr_pyomo4 import (
     EntangledExpressionError, _getrefcount_available, UNREFERENCED_EXPR_COUNT
 )
@@ -2467,13 +2467,22 @@ class TrapRefCount(object):
         assert(TrapRefCount.inst == None)
         TrapRefCount.inst = self
 
-    def fcn(self, count, target, obj):
-        self.refCount.append((count - self.ref, target))
+    def fcn(self, count, target, inplace, obj):
+        test = count - self.ref
+        if inplace > 0:
+            test += 1
+        self.refCount.append((test, target))
 
 
 def TrapRefCount_fcn(target, inplace, *objs):
+    _inplace = -1 if inplace else 0
     for obj in objs:
-        TrapRefCount.inst.fcn(sys.getrefcount(obj),target, obj)
+        _inplace += 1
+        if obj.__class__ in native_types:
+            continue
+        if not obj.is_expression():
+            continue
+        TrapRefCount.inst.fcn(sys.getrefcount(obj),target,_inplace,obj)
     return TrapRefCount.inst.saved_fcn(target, inplace, *objs)
 
 @unittest.skipIf(
