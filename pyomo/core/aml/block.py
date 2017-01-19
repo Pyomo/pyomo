@@ -24,8 +24,8 @@ from pyomo.core.aml.indexed_component_container import \
 logger = logging.getLogger('pyomo.core')
 
 class _AddToConstructBlock(IConstructedObject, block):
-    """A block that constructs objects when they are
-    added to it."""
+    """A block that constructs objects when they are added
+    to it, unless the block itself is not constructed."""
 
     def __init__(self):
         self._constructed = True
@@ -82,7 +82,8 @@ class Block(IConstructedObject):
             return
 
         for child in self.children():
-            if not child.constructed():
+            if isinstance(child, IConstructedObject) and \
+               (not child.constructed):
                 child.construct(data=data)
 
         self._construct_impl()
@@ -130,37 +131,3 @@ class IndexedBlock(_IndexedComponentContainerMixin,
             obj = apply_indexed_rule(
                 None, self._rule, _obj, idx, self._options)
             assert obj is None
-
-if __name__ == "__main__":
-    import pyomo.environ
-    from pyomo.core.aml.block import Block
-    from pyomo.core.aml.var import Var
-
-    x = Var()
-    print(x.is_constructed())
-
-    b = Block(concrete=True)
-    b.x = x
-
-    print(x.is_constructed())
-
-    X = Var([1,2])
-    print(X.is_constructed())
-    print(X._index)
-    print(len(X))
-
-    b.X = X
-    print(X.is_constructed())
-    print(X._index)
-    print(len(X))
-
-    m = Block()
-    print(m.is_constructed())
-
-    b.m = m
-    print(m.is_constructed())
-
-    def B_rule(blk, i):
-        blk.x = Var()
-    b.B = Block([1,2,3], rule=B_rule)
-    print([c.name for c in b.B.components()])
