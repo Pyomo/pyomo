@@ -10,6 +10,13 @@ import pyomo.core.kernel as pk
 import pyomo.core.base as core_old
 
 #
+# Note: Right now, indexed objects only support a single set
+# argument that needs to be something concrete (e.g., a set,
+# list, tuple). Otherwise, testing this would have required
+# reimplementing Set.
+#
+
+#
 # AbstractModel
 #
 

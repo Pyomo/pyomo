@@ -1,11 +1,15 @@
+#
+# Note, right now this class only supports a concrete
+# set-like object (e.g., set, list, tuple) passed in
+# as a single argument.
+#
 class _IndexedComponentContainerMixin(object):
     """Interface for modeling objects that are indexed
     by an external set object."""
     __slots__ = ()
 
-    def __init__(self, *args):
-        assert len(args) == 1
-        self._index = args[0]
+    def __init__(self, arg):
+        self._index = arg
 
     @property
     def index(self):
