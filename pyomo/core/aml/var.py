@@ -9,6 +9,8 @@
 
 import logging
 
+from pyomo.core.base import value
+from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.set_types import Reals
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.util import is_functor
@@ -25,6 +27,7 @@ from pyomo.core.aml.indexed_component_container import \
 logger = logging.getLogger('pyomo.core')
 
 class Var(IConstructedObject):
+    __slots__ = ()
 
     def __new__(cls, *args, **kwds):
         if cls != Var:
@@ -44,6 +47,7 @@ class Var(IConstructedObject):
         domain = kwd.pop('within', Reals)
         domain = kwd.pop('domain', domain)
         bounds = kwd.pop('bounds', None)
+        assert len(kwd) == 0
         self._constructed = False
 
         #
@@ -109,7 +113,13 @@ class Var(IConstructedObject):
 
 class SimpleVar(variable, Var):
     """A single variable."""
-
+    __slots__ = ("_constructed",
+                 "_domain_init_value",
+                 "_domain_init_rule",
+                 "_value_init_rule",
+                 "_value_init_value",
+                 "_bounds_init_rule",
+                 "_bounds_init_value")
     def __init__(self, *args, **kwds):
         assert len(args) == 0
         variable.__init__(self)
@@ -125,9 +135,9 @@ class SimpleVar(variable, Var):
         # Initialize values
         if self._value_init_rule is not None:
             val = self._value_init_rule(self._parent())
-            self.set_value(value(val))
+            self.value = value(val)
         elif self._value_init_value is not None:
-            self.set_value(value(self._value_init_value))
+            self.value = value(self._value_init_value)
 
         # Initialize bounds
         if self._bounds_init_rule is not None:
@@ -149,6 +159,9 @@ class IndexedVar(_IndexedComponentContainerMixin,
         # Initialize domains
         if self._domain_init_rule is not None:
             for ndx in init_set:
+                # because apply_indxed_rule will not pass it
+                # to the function
+                assert ndx is not None
                 self[ndx].domain = \
                     apply_indexed_rule(self,
                                        self._domain_init_rule,
@@ -167,12 +180,14 @@ class IndexedVar(_IndexedComponentContainerMixin,
         if self._value_init_rule is not None:
             for key in init_set:
                 vardata = self[key]
+                # because apply_indxed_rule will not pass it
+                # to the function
+                assert key is not None
                 val = apply_indexed_rule(self,
                                          self._value_init_rule,
                                          self._parent(),
                                          key)
-                val = value(val)
-                vardata.set_value(val)
+                vardata.value = value(val)
         elif self._value_init_value is not None:
             if self._value_init_value.__class__ is dict:
                 for key in init_set:
@@ -183,19 +198,20 @@ class IndexedVar(_IndexedComponentContainerMixin,
                     if not key in self._value_init_value:
                         continue
                     val = self._value_init_value[key]
-                    vardata = self[key]
-                    vardata.set_value(val)
+                    self[key].value = val
             else:
                 val = value(self._value_init_value)
                 for key in init_set:
-                    vardata = self._data[key]
-                    vardata.set_value(val)
+                    self[key].value = val
 
         # Initialize bounds
         if self._bounds_init_rule is not None:
             for key in init_set:
                 vardata = self[key]
-                (vardata.lb, varadata.ub) = \
+                # because apply_indxed_rule will not pass it
+                # to the function
+                assert key is not None
+                (vardata.lb, vardata.ub) = \
                     apply_indexed_rule(self,
                                        self._bounds_init_rule,
                                        self._parent(),

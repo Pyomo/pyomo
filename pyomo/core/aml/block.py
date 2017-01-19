@@ -108,7 +108,8 @@ class SimpleBlock(_AddToConstructBlock,
             return
 
         obj = apply_indexed_rule(
-            None, self._rule, self, idx, self._options)
+            None, self._rule, self, None, self._options)
+        # does not support a return value right now
         assert obj is None
 
 class IndexedBlock(_IndexedComponentContainerMixin,
@@ -128,6 +129,10 @@ class IndexedBlock(_IndexedComponentContainerMixin,
 
         for idx in self.index:
             self[idx] = _obj = _AddToConstructBlock()
+            # because apply_indxed_rule will not pass it
+            # to the function
+            assert idx is not None
             obj = apply_indexed_rule(
                 None, self._rule, _obj, idx, self._options)
+            # does not support a return value right now
             assert obj is None
