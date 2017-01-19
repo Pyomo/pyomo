@@ -52,14 +52,3 @@ Organization
     - The main list for help and announcements
   * pyomo-developers@googlegroups.com
     - Where developers of Pyomo discuss new features
-
---------------------
-Third Party Software
---------------------
-
-The following software is bundled with Pyomo, and it release under BSD-compatible licenses:
-
-. pyomo/scripts/pyomo_install
-
-    https://github.com/pypa/pip/blob/develop/LICENSE.txt
-
