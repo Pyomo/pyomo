@@ -21,6 +21,7 @@ Nemhauser 2008).
 #              I predict this will save numerous headaches as
 #              well as gratuitous calls to float() in this code
 from __future__ import division
+import logging
 
 # TODO: Figure out of the 'log' and 'dlog' representations
 # really do require (2^n)+1 points or if there is a way to
@@ -42,18 +43,20 @@ from pyomo.core.base.component_constraint import (constraint,
                                                   linear_constraint)
 from pyomo.core.base.component_sos import sos2
 from pyomo.core.base.component_piecewise.util import \
-    (is_nondecreasing,
-     is_postive_power_of_two,
+    (characterize_function,
+     is_nondecreasing,
+     is_positive_power_of_two,
      log2floor,
      generate_gray_code)
 
 import six
 from six.moves import xrange, zip
 
+logger = logging.getLogger('pyomo.core')
+
 registered_transforms = {}
 
 #TODO: (simplify,
-#       warning_tol,
 #       warning_domain_coverage,
 #       unbounded_domain_var,
 def piecewise(breakpoints,
@@ -61,19 +64,22 @@ def piecewise(breakpoints,
               input=None,
               output=None,
               bound='eq',
-              repn='sos2'):
+              repn='sos2',
+              validate=True,
+              warning_tol=1e-8):
     """
     Transforms a list of breakpoints and values into a mixed-integer
     representation of a piecewise function.
 
     Args:
-        breakpoints: The list of breakpoints of the
+        breakpoints (list): The list of breakpoints of the
             piecewise linear function. This can be a list of
-            number or a list of objects that store mutable
-            data (e.g., mutable parameters). It is assumed
-            that the points in this list are in
-            non-decreasing order.
-        values: The list of values of the piecewise linear
+            numbers or a list of objects that store mutable
+            data (e.g., mutable parameters). If mutable data
+            is used validation might need to be delayed
+            using the 'validate' keyword. The breakpoints
+            list must be in non-decreasing order.
+        values (list): The list of values of the piecewise linear
             function at each of the breakpoints. This list
             must be the same length as the breakpoints
             argument.
@@ -81,12 +87,12 @@ def piecewise(breakpoints,
             the piecewise linear function.
         output: The variable constrained to be the output of
             the piecewise linear function.
-        bound: The type of bound on the output to
+        bound (str): The type of bound on the output to
             generate. Can be one of:
                 - 'lb': y <= f(x)
                 - 'eq': y  = f(x)
                 - 'ub': y >= f(x)
-        repn: The type of piecewise representation to
+        repn (str): The type of piecewise representation to
             use. Can be one of:
                 - 'sos2': standard representation using sos2 constraints (+)
                 -  'dcc': disaggregated convex combination (*+)
@@ -100,6 +106,17 @@ def piecewise(breakpoints,
                       Piecewise Linear Optimization:
                       Unifying framework and Extensions"
                       (Vielma, Nemhauser 2008)
+        validate (bool): Indicates whether or not to perform
+            validation of the data in the breakpoints and
+            values lists. The default is True. Validation
+            can be performed manually after the piecewise
+            object is created by calling the validate()
+            method. Validation should be performed anytime
+            the data in the breakpoints or values lists
+            changes (e.g., when using mutable parameters)
+        warning_tol (float): Passed to the validate method
+            when validation is performed to control the
+            tolerance for checking consecutive slopes.
 
     Returns: A block containing the necessary auxiliary
         variables and constraints that enforce the piecewise
@@ -121,23 +138,21 @@ def piecewise(breakpoints,
                      values,
                      input=input,
                      output=output,
-                     bound=bound)
+                     bound=bound,
+                     validate=validate)
 
 class _PiecewiseLinearFunction(tiny_block):
     """
     A piecewise linear function defined by a list of
     breakpoints and values.
-
-    Assumes the breakpoints are in nondecreasing order, but this
-    is not validated because the list of breakpoints and values
-    can be expressions (e.g., mutable parameters).
     """
 
     def __init__(self,
                  breakpoints,
                  values,
                  input=None,
-                 output=None):
+                 output=None,
+                 validate=True):
         super(_PiecewiseLinearFunction, self).__init__()
         self._input = expression()
         self._output = expression()
@@ -150,15 +165,55 @@ class _PiecewiseLinearFunction(tiny_block):
         # call the setters
         self.set_input(input)
         self.set_output(output)
-        if not is_nondecreasing(self._breakpoints):
-            raise ValueError(
-                "The list of breakpoints is not nondecreasing: %s"
-                % (str(self._breakpoints)))
         if len(self._breakpoints) != len(self._values):
             raise ValueError(
                 "The number of breakpoints (%s) differs from "
                 "the number of function values (%s)"
                 % (len(self._breakpoints), len(self._values)))
+        if validate:
+            self.validate()
+
+    def validate(self, warning_tol=1e-8):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints and values
+        lists, including that the list of breakpoints is
+        nondecreasing.
+
+        Args:
+            warning_tol (float): Tolerance used when
+                generating warnings about consecutive slopes
+                of the piecewise function being nearly
+                equal.
+
+        Returns:
+            - 1: indicates that the function is affine
+            - 2: indicates that the function is convex
+            - 3: indicates that the function is concave
+            - 4: indicates that the function has one or
+                 more steps
+            - 5: none of the above
+        """
+        breakpoints = [value(x) for x in self._breakpoints]
+        values = [value(x) for x in self._values]
+        if not is_nondecreasing(breakpoints):
+            raise AssertionError(
+                "The list of breakpoints is not nondecreasing: %s"
+                % (str(breakpoints)))
+
+        type_, slopes = characterize_function(breakpoints, values)
+        for i in xrange(1, len(slopes)):
+            if (slopes[i-1] is not None) and \
+               (slopes[i] is not None) and \
+               (abs(slopes[i-1] - slopes[i]) <= warning_tol):
+                logger.warning(
+                    "Piecewise linear validation detected slopes "
+                    "of consecutive line segments to be within %s "
+                    "of one another. This may cause numerical issues. "
+                    "To disable this warning, increase the "
+                    "warning tolerance." % (warning_tol))
+
+        return type_
 
     @property
     def input(self):
@@ -243,6 +298,10 @@ class piecewise_sos2(_PiecewiseLinearFunction):
                                     coefficients=(1,)*len(y),
                                     rhs=1)
         self._c4 = sos2(y)
+
+    def validate(self, **kwds):
+        return super(piecewise_sos2, self).validate(**kwds)
+
 registered_transforms['sos2'] = piecewise_sos2
 
 class piecewise_dcc(_PiecewiseLinearFunction):
@@ -313,6 +372,10 @@ class piecewise_dcc(_PiecewiseLinearFunction):
             variables=tuple(y),
             coefficients=(1,)*len(y),
             rhs=1)
+
+    def validate(self, **kwds):
+        return super(piecewise_dcc, self).validate(**kwds)
+
 registered_transforms['dcc'] = piecewise_dcc
 
 class piecewise_cc(_PiecewiseLinearFunction):
@@ -382,6 +445,10 @@ class piecewise_cc(_PiecewiseLinearFunction):
             variables=tuple(y),
             coefficients=(1,)*len(y),
             rhs=1)
+
+    def validate(self, **kwds):
+        return super(piecewise_cc, self).validate(**kwds)
+
 registered_transforms['cc'] = piecewise_cc
 
 class piecewise_mc(_PiecewiseLinearFunction):
@@ -451,6 +518,16 @@ class piecewise_mc(_PiecewiseLinearFunction):
             variables=y_tuple,
             coefficients=(1,)*len(y),
             rhs=1)
+
+    def validate(self, **kwds):
+        type_ = super(piecewise_mc, self).validate(**kwds)
+        # this representation does not support step functions
+        if type_ == 4:
+            raise AssertionError(
+                "The MC piecewise representation does "
+                "not support step functions.")
+        return type_
+
 registered_transforms['mc'] = piecewise_mc
 
 class piecewise_inc(_PiecewiseLinearFunction):
@@ -510,6 +587,10 @@ class piecewise_inc(_PiecewiseLinearFunction):
                 variables=(y[p], delta[p]),
                 coefficients=(1, -1),
                 ub=0))
+
+    def validate(self, **kwds):
+        return super(piecewise_inc, self).validate(**kwds)
+
 registered_transforms['inc'] = piecewise_inc
 
 class piecewise_dlog(_PiecewiseLinearFunction):
@@ -522,7 +603,7 @@ class piecewise_dlog(_PiecewiseLinearFunction):
         bound = kwds.pop('bound', 'eq')
         super(piecewise_dlog, self).__init__(*args, **kwds)
 
-        if not is_postive_power_of_two(len(self.breakpoints)-1):
+        if not is_positive_power_of_two(len(self.breakpoints)-1):
             raise ValueError("The list of breakpoints must be "
                              "of length (2^n)+1 for some positive "
                              "integer n. Invalid length: %s"
@@ -623,6 +704,10 @@ class piecewise_dlog(_PiecewiseLinearFunction):
             B_RIGHT.append(sorted(tmp))
 
         return B_LEFT, B_RIGHT
+
+    def validate(self, **kwds):
+        return super(piecewise_dlog, self).validate(**kwds)
+
 registered_transforms['dlog'] = piecewise_dlog
 
 class piecewise_log(_PiecewiseLinearFunction):
@@ -635,7 +720,7 @@ class piecewise_log(_PiecewiseLinearFunction):
         bound = kwds.pop('bound', 'eq')
         super(piecewise_log, self).__init__(*args, **kwds)
 
-        if not is_postive_power_of_two(len(self.breakpoints)-1):
+        if not is_positive_power_of_two(len(self.breakpoints)-1):
             raise ValueError("The list of breakpoints must be "
                              "of length (2^n)+1 for some positive "
                              "integer n. Invalid length: %s"
@@ -708,4 +793,8 @@ class piecewise_log(_PiecewiseLinearFunction):
                    if ((k == 0) or (G[k-1][s] == 0))
                    and ((k == N) or (G[k][s] == 0))] for s in S)
         return S, L, R
+
+    def validate(self, **kwds):
+        return super(piecewise_log, self).validate(**kwds)
+
 registered_transforms['log'] = piecewise_log

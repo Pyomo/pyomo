@@ -16,12 +16,42 @@ p = pk.piecewise(breakpoints,
                  repn='sos2',
                  bound='eq')
 
-
 # change the input and output variables
 z = pk.variable()
 q = pk.variable()
 p.set_input(z)
 p.set_output(q)
+
+# evalute the function
+assert p(1) == 1
+assert p(1.5) == 1.5
+assert p(2) == 2
+assert p(2.5) == 1.5
+assert p(3) == 1
+assert p(2.5) == 1.5
+assert p(4) == 2
+
+breakpoints = [pk.parameter(1),
+               pk.parameter(2),
+               pk.parameter(3),
+               pk.parameter(None)]
+values = [pk.parameter(1),
+          pk.parameter(2),
+          pk.parameter(1),
+          pk.parameter(None)]
+p = pk.piecewise(breakpoints,
+                 values,
+                 input=x,
+                 output=y,
+                 repn='sos2',
+                 bound='eq',
+                 validate=False)
+
+# change the function parameters and
+# validate that the inputs are correct
+breakpoints[3].value = 4
+values[3].value = 2
+p.validate()
 
 # evalute the function
 assert p(1) == 1

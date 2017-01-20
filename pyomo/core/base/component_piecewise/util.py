@@ -41,7 +41,7 @@ def is_nonincreasing(vals):
     op = operator.le
     return all(itertools.starmap(op, zip(it,vals)))
 
-def is_postive_power_of_two(x):
+def is_positive_power_of_two(x):
     """Checks if a number is a nonzero and positive power of 2"""
     if (x <= 0):
         return False
@@ -78,9 +78,9 @@ def generate_gray_code(nbits):
 
 def characterize_function(breakpoints, values):
     """
-    Characterizes a piecewise linear function as affine (0),
-    convex (1), concave (2), step (3), or None (4). Assumes
-    breakpoints are sorted in increasing order. Returns an
+    Characterizes a piecewise linear function as affine (1),
+    convex (2), concave (3), step (4), or None (5). Assumes
+    breakpoints are in nondecreasing order. Returns an
     integer that signifies the function characterization and
     the slopes. If the function has step points, some of the
     slopes may be done.
@@ -101,12 +101,12 @@ def characterize_function(breakpoints, values):
         slopes.append(slope)
 
     if step:
-        return 3, slopes # step function
+        return 4, slopes # step
     elif is_constant(slopes):
-        return 0, slopes # affine function
+        return 1, slopes # affine
     elif is_nondecreasing(slopes):
-        return 1, slopes # convex function
+        return 2, slopes # convex
     elif is_nonincreasing(slopes):
-        return 2, slopes # concave function
+        return 3, slopes # concave
     else:
-        return 4, slopes # none of the above
+        return 5, slopes # none of the above

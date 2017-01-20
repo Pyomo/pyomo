@@ -75,25 +75,25 @@ class Test_util(unittest.TestCase):
         self.assertEqual(util.is_nonincreasing([1,1,-1,1]), False)
         self.assertEqual(util.is_nonincreasing([1,1,1,-1]), True)
 
-    def test_is_postive_power_of_two(self):
-        self.assertEqual(util.is_postive_power_of_two(-8), False)
-        self.assertEqual(util.is_postive_power_of_two(-4), False)
-        self.assertEqual(util.is_postive_power_of_two(-3), False)
-        self.assertEqual(util.is_postive_power_of_two(-2), False)
-        self.assertEqual(util.is_postive_power_of_two(-1), False)
-        self.assertEqual(util.is_postive_power_of_two(0), False)
-        self.assertEqual(util.is_postive_power_of_two(1), True)
-        self.assertEqual(util.is_postive_power_of_two(2), True)
-        self.assertEqual(util.is_postive_power_of_two(3), False)
-        self.assertEqual(util.is_postive_power_of_two(4), True)
-        self.assertEqual(util.is_postive_power_of_two(5), False)
-        self.assertEqual(util.is_postive_power_of_two(6), False)
-        self.assertEqual(util.is_postive_power_of_two(7), False)
-        self.assertEqual(util.is_postive_power_of_two(8), True)
-        self.assertEqual(util.is_postive_power_of_two(15), False)
-        self.assertEqual(util.is_postive_power_of_two(16), True)
-        self.assertEqual(util.is_postive_power_of_two(31), False)
-        self.assertEqual(util.is_postive_power_of_two(32), True)
+    def test_is_positive_power_of_two(self):
+        self.assertEqual(util.is_positive_power_of_two(-8), False)
+        self.assertEqual(util.is_positive_power_of_two(-4), False)
+        self.assertEqual(util.is_positive_power_of_two(-3), False)
+        self.assertEqual(util.is_positive_power_of_two(-2), False)
+        self.assertEqual(util.is_positive_power_of_two(-1), False)
+        self.assertEqual(util.is_positive_power_of_two(0), False)
+        self.assertEqual(util.is_positive_power_of_two(1), True)
+        self.assertEqual(util.is_positive_power_of_two(2), True)
+        self.assertEqual(util.is_positive_power_of_two(3), False)
+        self.assertEqual(util.is_positive_power_of_two(4), True)
+        self.assertEqual(util.is_positive_power_of_two(5), False)
+        self.assertEqual(util.is_positive_power_of_two(6), False)
+        self.assertEqual(util.is_positive_power_of_two(7), False)
+        self.assertEqual(util.is_positive_power_of_two(8), True)
+        self.assertEqual(util.is_positive_power_of_two(15), False)
+        self.assertEqual(util.is_positive_power_of_two(16), True)
+        self.assertEqual(util.is_positive_power_of_two(31), False)
+        self.assertEqual(util.is_positive_power_of_two(32), True)
 
     def test_log2floor(self):
         self.assertEqual(util.log2floor(1), 0)
@@ -155,27 +155,27 @@ class Test_util(unittest.TestCase):
 
         fc, slopes = util.characterize_function([1,2,3],
                                                 [1,1,1])
-        self.assertEqual(fc, 0) # affine
+        self.assertEqual(fc, 1) # affine
         self.assertEqual(slopes, [0,0])
 
         fc, slopes = util.characterize_function([1,2,3],
                                                 [1,0,1])
-        self.assertEqual(fc, 1) # convex
+        self.assertEqual(fc, 2) # convex
         self.assertEqual(slopes, [-1,1])
 
         fc, slopes = util.characterize_function([1,2,3],
                                                 [1,2,1])
-        self.assertEqual(fc, 2) # concave
+        self.assertEqual(fc, 3) # concave
         self.assertEqual(slopes, [1,-1])
 
         fc, slopes = util.characterize_function([1,1,2],
                                                 [1,2,1])
-        self.assertEqual(fc, 3) # step
+        self.assertEqual(fc, 4) # step
         self.assertEqual(slopes, [None,-1])
 
         fc, slopes = util.characterize_function([1,2,3,4],
                                                 [1,2,1,2])
-        self.assertEqual(fc, 4) # none of the above
+        self.assertEqual(fc, 5) # none of the above
         self.assertEqual(slopes, [1,-1,1])
 
 class Test_piecewise(unittest.TestCase):
@@ -206,10 +206,17 @@ class Test_piecewise(unittest.TestCase):
         with self.assertRaises(ValueError):
             _PiecewiseLinearFunction([1,2,3,4],
                                      [1,2,1])
+
         # breakpoints list not nondecreasing
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             _PiecewiseLinearFunction([1,3,2],
                                      [1,2,1])
+
+        p = _PiecewiseLinearFunction([1,3,2],
+                                     [1,2,1],
+                                     validate=False)
+        with self.assertRaises(AssertionError):
+            p.validate()
 
         f = _PiecewiseLinearFunction([1,2,3],
                                      [1,2,1])
@@ -308,6 +315,17 @@ class Test_piecewise(unittest.TestCase):
             piecewise([1,2,3,4],[1,2,3,4],repn='dlog')
         with self.assertRaises(ValueError):
             piecewise([1,2,3,4],[1,2,3,4],repn='log')
+
+    def test_step(self):
+        breakpoints = [1,2,2]
+        values = [1,0,1]
+        for key in registered_transforms:
+            if key == 'mc':
+                with self.assertRaises(AssertionError):
+                    piecewise(breakpoints, values, repn=key)
+            else:
+                p = piecewise(breakpoints, values, repn=key)
+                self.assertEqual(p.validate(), 4)
 
 class Test_piecewise_dict(_TestActiveComponentDictBase,
                           unittest.TestCase):
