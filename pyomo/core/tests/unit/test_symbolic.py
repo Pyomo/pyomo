@@ -21,7 +21,7 @@ def s(e):
 
 @unittest.skipIf( not _sympy_available,
                   "Symbolic derivatives require teh sympy package" )
-class SymbolicDericatives(unittest.TestCase):
+class SymbolicDerivatives(unittest.TestCase):
     def test_single_derivatives(self):
         m = ConcreteModel()
         m.x = Var()
