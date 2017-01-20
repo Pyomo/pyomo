@@ -72,6 +72,12 @@ sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
     ans = ()
     for obj in objs:
+        if inplace:
+            inplace = False
+            _delta = 0
+        else:
+            _delta = 1
+
         if obj.__class__ in native_types:
             ans = ans + (obj,)
             continue
@@ -98,11 +104,7 @@ def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
                 ans = ans + (obj,)
             continue
 
-        if inplace:
-            inplace = False
-            test = getrefcount(obj) - UNREFERENCED_EXPR_COUNT
-        else:
-            test = getrefcount(obj) - UNREFERENCED_EXPR_COUNT + 1
+        test = getrefcount(obj) - UNREFERENCED_EXPR_COUNT + _delta
         if test == target:
             ans = ans + (obj,)
         elif test > target:
