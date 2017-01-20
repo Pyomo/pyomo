@@ -328,8 +328,8 @@ class TestConnector(unittest.TestCase):
         m.x = Var()
         m.y = Var()
         m.CON = Connector()
-        m.CON.add(-m.x)
-        m.CON.add(1 + m.y)
+        m.CON.add(-m.x, name='expr1')
+        m.CON.add(1 + m.y, name='expr2')
 
         # 2 constraints: one has a connector, the other doesn't.  The
         # former should be deactivated and expanded, the latter should
