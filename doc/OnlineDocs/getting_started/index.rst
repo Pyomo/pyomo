@@ -1,4 +1,4 @@
 Getting Started
 ===============
 
-TODO
+Installation, pyomo command, a simple example, etc

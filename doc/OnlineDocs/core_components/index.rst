@@ -1,4 +1,5 @@
 Core Pyomo Components
 =====================
 
-TODO
+Detailed component descriptions...
+
