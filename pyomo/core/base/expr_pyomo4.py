@@ -636,6 +636,12 @@ class _ExternalFunctionExpression(_ExpressionBase):
                     a._parent_expr = bypass_backreference or ref(self)
         self._fcn = fcn
 
+    def __getstate__(self):
+        result = super(_ExternalFunctionExpression, self).__getstate__()
+        for i in _ExternalFunctionExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
     def getname(self, *args, **kwds):
         return self._fcn.getname(*args, **kwds)
 
