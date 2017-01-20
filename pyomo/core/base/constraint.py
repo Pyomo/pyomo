@@ -671,7 +671,7 @@ class Constraint(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
-        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleConstraint.__new__(SimpleConstraint)
         else:
             return IndexedConstraint.__new__(IndexedConstraint)
@@ -783,8 +783,7 @@ class Constraint(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index \
-              if self._index != UnindexedComponent_set else None),
+             ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
             iteritems(self),

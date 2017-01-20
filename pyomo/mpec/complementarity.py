@@ -16,7 +16,6 @@ from pyomo.core import *
 from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData
-from pyomo.core.base.indexed_component import UnindexedComponent_set
 import pyomo.core.base.expr as EXPR
 
 import logging
@@ -255,8 +254,7 @@ Error thrown for Complementarity "%s"
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index \
-                  if self._index != UnindexedComponent_set else None),
+             ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
             iteritems(self._data),

@@ -13,4 +13,11 @@ try:
     pkg_resources.declare_namespace(__name__)
 except ImportError:
     import pkgutil
+    orig_get_loader = pkgutil.get_loader
+    def get_loader(name):
+        try:
+            return orig_get_loader(name)
+        except AttributeError:
+            pass
+    pkgutil.get_loader = get_loader
     __path__ = pkgutil.extend_path(__path__, __name__)
