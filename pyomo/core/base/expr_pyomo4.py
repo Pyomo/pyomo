@@ -497,7 +497,7 @@ class _ExpressionBase(NumericValue):
 
         _infix = False
         _bypass_prefix = False
-        argList = self._arguments()
+        argList = self._args
         _stack = [ [ self, argList, 0, len(argList),
                      precedence if precedence is not None else self._precedence() ] ]
         while _stack:
@@ -516,8 +516,9 @@ class _ExpressionBase(NumericValue):
                     if _my_precedence > _prec or not _my_precedence or verbose:
                         ostream.write("( ")
                     _infix = True
-                if hasattr(_sub, '_arguments'): # _args is a proxy for Expression
-                    argList = _sub._arguments()
+                if isinstance(_sub, _ExpressionBase):
+                #if hasattr(_sub, '_args'): # _args is a proxy for Expression
+                    argList = _sub._args
                     _stack.append([ _sub, argList, 0, len(argList), _my_precedence ])
                     _infix = False
                 elif hasattr(_parent, '_to_string_term'):
@@ -528,9 +529,6 @@ class _ExpressionBase(NumericValue):
                 _stack.pop()
                 if (_my_precedence > _prec) or not _my_precedence or verbose:
                     ostream.write(" )")
-
-    def _arguments(self):
-        return self._args
 
     def _precedence(self):
         return _ExpressionBase.PRECEDENCE
@@ -1046,9 +1044,6 @@ class Expr_if(_ExpressionBase):
             state[i] = getattr(self, i)
         return state
 
-    def _arguments(self):
-        return ( self._if, self._then, self._else )
-
     def getname(self, *args, **kwds):
         return "Expr_if"
 
@@ -1206,9 +1201,6 @@ class _LinearExpression(_ExpressionBase):
             return _SumExpression.PRECEDENCE
         else:
             return _ProductExpression.PRECEDENCE
-
-    def _arguments(self):
-        return self._args
 
     def getname(self, *args, **kwds):
         return 'linear'
