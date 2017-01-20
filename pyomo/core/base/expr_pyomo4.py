@@ -1208,12 +1208,7 @@ class _LinearExpression(_ExpressionBase):
             return _ProductExpression.PRECEDENCE
 
     def _arguments(self):
-        if self._const.__class__ in native_numeric_types and self._const == 0:
-            return self._args
-        else:
-            ans = [ self._const ]
-            ans.extend(self._args)
-            return ans
+        return self._args
 
     def getname(self, *args, **kwds):
         return 'linear'
@@ -1251,34 +1246,31 @@ class _LinearExpression(_ExpressionBase):
     def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
         if _idx == 0 and self._const != 0:
             ostream.write("%s" % (self._const, ))
-        else:
-            coef = self._coef[id(_sub)]
+            self._to_string_infix(ostream, _idx, verbose)
+
+        coef = self._coef[id(_sub)]
+        _coeftype = coef.__class__
+        if _idx and _coeftype is _NegationExpression:
+            coef = coef._args[0]
             _coeftype = coef.__class__
-            if _idx and _coeftype is _NegationExpression:
-                coef = coef._args[0]
-                _coeftype = coef.__class__
-            if _coeftype in native_numeric_types:
-                if _idx and not verbose:
-                    coef = abs(coef)
-                if coef == 1:
-                    ostream.write(_sub.getname(True, _name_buffer))
-                    return
-                ostream.write(str(coef))
-            elif coef.is_expression():
-                coef.to_string( ostream=ostream, verbose=verbose,
-                                precedence=_ProductExpression.PRECEDENCE )
-            else:
-                ostream.write(str(coef))
-            ostream.write("*%s" % (_sub.getname(True, _name_buffer)))
+        if _coeftype in native_numeric_types:
+            if _idx and not verbose:
+                coef = abs(coef)
+            if coef == 1:
+                ostream.write(_sub.getname(True, _name_buffer))
+                return
+            ostream.write(str(coef))
+        elif coef.is_expression():
+            coef.to_string( ostream=ostream, verbose=verbose,
+                            precedence=_ProductExpression.PRECEDENCE )
+        else:
+            ostream.write(str(coef))
+        ostream.write("*%s" % (_sub.getname(True, _name_buffer)))
 
     def _to_string_infix(self, ostream, idx, verbose):
         if verbose:
             ostream.write(" , ")
         else:
-            hasConst = not ( self._const.__class__ in native_numeric_types
-                             and self._const == 0 )
-            if hasConst:
-                idx -= 1
             _l = self._coef[id(self._args[idx])]
             _lt = _l.__class__
             if _lt is _NegationExpression or (
