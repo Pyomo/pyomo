@@ -35,6 +35,7 @@ class BigM_Transformation(Transformation):
             Connector : self._xform_skip,
             Suffix : self._xform_skip,
             Param : self._xform_skip,
+            Set : self._xform_skip,
             }
 
     def _apply_to(self, instance, **kwds):
@@ -191,7 +192,7 @@ class BigM_Transformation(Transformation):
                 continue
             c.deactivate()
 
-            name = _name + (cname and '.'+cname or '')
+            name = _name + (cname and '.'+str(cname) or '')
 
             if (not lin_body_map is None) and (not lin_body_map.get(c) is None):
                 raise GDP_Error('GDP(BigM) cannot process linear ' \
