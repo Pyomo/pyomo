@@ -20,14 +20,17 @@ releases of the entire Pyomo software.
 _init_url="$URL$"
 
 # The micro number should be set when tagging a release or generating a
-# VOTD build
-_major=4
-_minor=4
+# VOTD build. releaselever should be left at 'invalid' for trunk
+# development and set to 'final' for releases.
+_major=5
+_minor=1
 _micro=1
-_releaselevel='invalid'
+_releaselevel='final'
 _serial=0
 
-if '/trunk/' in _init_url or len(_init_url) == 5:
+if _releaselevel == 'final':
+    pass
+elif '/trunk/' in _init_url or len(_init_url) == 5:
     # __file__ fails if script is called in different ways on Windows
     # __file__ fails if someone does os.chdir() before
     # sys.argv[0] also fails because it doesn't not always contains the path

@@ -8,9 +8,11 @@ environment:
     # isn't covered by this document) at the time of writing.
 
     - PYTHON: "C:\\Python27"
+      CATEGORY: "nightly"
+    - PYTHON: "C:\\Python35"
+      CATEGORY: "nightly"
     ##- PYTHON: "C:\\Python33"
     #- PYTHON: "C:\\Python34"
-    - PYTHON: "C:\\Python35"
     #- PYTHON: "C:\\Python27-x64"
     ##- PYTHON: "C:\\Python33-x64"
     ##  DISTUTILS_USE_SDK: "1"
@@ -27,6 +29,11 @@ install:
   - "python -m pip install PyYAML"
   - "python -m pip install coverage"
   - "python -m pip install nose"
+  - "python -m pip install Pyro4"
+  #
+  # Clone but don't install pyomo-model-libraries
+  #
+  - "cd /d .. && git clone https://github.com/Pyomo/pyomo-model-libraries.git && cd /d pyomo"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
   - "dir %PYTHON%\\Scripts"
@@ -41,7 +48,7 @@ test_script:
   # Note that you must use the environment variable %PYTHON% to refer to
   # the interpreter you're using - Appveyor does not do anything special
   # to put the Python evrsion you want to use on PATH.
-  - "test.pyomo --cat=nightly --cov -v"
+  - "test.pyomo --cat=%CATEGORY% --cov -v"
 
 #after_test:
   # This step builds your wheels.

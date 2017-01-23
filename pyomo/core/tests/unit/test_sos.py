@@ -203,6 +203,15 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(set((v.name,w) for v,w in M.c[1].get_items()),
                          set((M.x[i].name, w[1][i]) for i in [1,2,3]))
 
+    def test_abstract_index(self):
+        model = AbstractModel()
+        model.A = Set(initialize=[0])
+        model.B = Set(initialize=[1])
+        model.C = model.A | model.B
+        M = ConcreteModel()
+        M.x = Var([1,2,3])
+        M.c = SOSConstraint(model.C, var=M.x, sos=1, index={0:[1,2], 1:[2,3]})
+
 
 if __name__ == "__main__":
     unittest.main()

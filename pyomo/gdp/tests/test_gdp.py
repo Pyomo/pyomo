@@ -36,7 +36,7 @@ try:
 except ImportError:
     yaml_available=False
 
-solver = pyomo.opt.load_solvers('cplex', 'glpk')
+solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
 
 
 if False:
@@ -196,7 +196,7 @@ class Solver(unittest.TestCase):
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(solver['glpk'] is None, "The 'glpk' executable is not available")
+@unittest.skipIf(not 'glpk' in solvers, "The 'glpk' executable is not available")
 class Solve_GLPK(Solver, CommonTests):
 
     def pyomo(self,  *args, **kwds):
@@ -205,7 +205,7 @@ class Solve_GLPK(Solver, CommonTests):
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(solver['cplex'] is None, "The 'cplex' executable is not available")
+@unittest.skipIf(not 'cplex' in solvers, "The 'cplex' executable is not available")
 class Solve_CPLEX(Solver, CommonTests):
 
     def pyomo(self,  *args, **kwds):

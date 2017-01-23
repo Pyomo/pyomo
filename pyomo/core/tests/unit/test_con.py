@@ -351,6 +351,25 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+    def test_nondata_bounds(self):
+        model = ConcreteModel()
+        model.c = Constraint()
+        model.e1 = Expression()
+        model.e2 = Expression()
+        model.e3 = Expression()
+        with self.assertRaises(ValueError):
+            model.c.set_value(model.e1 <= model.e2 <= model.e3)
+        model.e1.expr = 1.0
+        model.e2.expr = 1.0
+        model.e3.expr = 1.0
+        with self.assertRaises(ValueError):
+            model.c.set_value(model.e1 <= model.e2 <= model.e3)
+        model.p1 = Param(mutable=True)
+        model.p2 = Param(mutable=True)
+        model.c.set_value(model.p1 <= model.e1 <= model.p2)
+        model.e1.expr = None
+        model.c.set_value(model.p1 <= model.e1 <= model.p2)
+
     # make sure we can use a mutable param that
     # has not been given a value in the upper bound
     # of an inequality constraint
@@ -1127,13 +1146,13 @@ class MiscConTests(unittest.TestCase):
         L = -1.0
         U = 5.0
         model.cL = Constraint(expr=model.x**2 >= L)
-        self.assertEqual(model.cL.lslack(), -5.0)
+        self.assertEqual(model.cL.lslack(), 5.0)
         self.assertEqual(model.cL.uslack(), float('inf'))
         model.cU = Constraint(expr=model.x**2 <= U)
         self.assertEqual(model.cU.lslack(), float('-inf'))
         self.assertEqual(model.cU.uslack(), 1.0)
         model.cR = Constraint(expr=L <= model.x**2 <= U)
-        self.assertEqual(model.cR.lslack(), -5.0)
+        self.assertEqual(model.cR.lslack(), 5.0)
         self.assertEqual(model.cR.uslack(), 1.0)
 
     def test_constructor(self):
@@ -1312,8 +1331,8 @@ class MiscConTests(unittest.TestCase):
             pass
         m.c = Constraint()
         self.assertRaisesRegexp(
-            TypeError, "contains non-constant terms \(variables\) "
-            "appearing in a Boolean context", m.c.set_value, a)
+            TypeError, "Relational expression used in an unexpected "
+            "Boolean context.", m.c.set_value, a)
 
     def test_tuple_constraint_create(self):
         def rule1(model):
@@ -1492,6 +1511,14 @@ class MiscConTests(unittest.TestCase):
         except ValueError:
             pass
         #
+
+    def test_abstract_index(self):
+        model = AbstractModel()
+        model.A = Set()
+        model.B = Set()
+        model.C = model.A | model.B
+        model.x = Constraint(model.C)
+
 
 if __name__ == "__main__":
     unittest.main()

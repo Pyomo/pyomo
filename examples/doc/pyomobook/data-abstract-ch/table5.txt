@@ -1,0 +1,7 @@
+2 Set Declarations
+    Y : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [(4.3, 5.3), (4.4, 5.4), (4.5, 5.5)]
+    Z : Dim=0, Dimen=2, Size=3, Domain=None, Ordered=False, Bounds=None
+        [('A1', 'B1'), ('A2', 'B2'), ('A3', 'B3')]
+
+2 Declarations: Z Y

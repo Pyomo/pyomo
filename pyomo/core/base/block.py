@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 
 __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
-            'active_components', 'components', 'active_components_data', 
+            'active_components', 'components', 'active_components_data',
             'components_data']
 
 import copy
@@ -20,12 +20,13 @@ from operator import itemgetter, attrgetter
 from six import iteritems, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
-from pyomo.core.base.plugin import *
+from pyomo.core.base.plugin import * # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID, register_component
 from pyomo.core.base.sets import Set,  _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
 
@@ -65,6 +66,50 @@ if sys.version_info[0] == 2 and sys.version_info[1] <= 6:
         return new
     weakref.WeakKeyDictionary.__copy__ = weakref.WeakKeyDictionary.copy
     weakref.WeakKeyDictionary.__deepcopy__ = dcwkd
+
+
+class _generic_component_decorator(object):
+    """A generic decorator that wraps Block.__setattr__()
+
+    Arguments
+    ---------
+        component: the Pyomo Component class to construct
+        block: the block onto which to add the new component
+        *args: positional arguments to the Component constructor
+               (*excluding* the block argument)
+        **kwds: keyword arguments to the Component constructor
+    """
+    def __init__(self, component, block, *args, **kwds):
+        self._component = component
+        self._block = block
+        self._args = args
+        self._kwds = kwds
+
+    def __call__(self, rule):
+        setattr(
+            self._block,
+            rule.__name__,
+            self._component(*self._args, rule=rule, **(self._kwds))
+        )
+
+
+class _component_decorator(object):
+    """A class that wraps the _generic_component_decorator, which remembers
+    and provides the Block and component type to the decorator.
+
+    Arguments
+    ---------
+        component: the Pyomo Component class to construct
+        block: the block onto which to add the new component
+
+    """
+    def __init__(self, block, component):
+        self._block = block
+        self._component = component
+
+    def __call__(self, *args, **kwds):
+        return _generic_component_decorator(
+            self._component, self._block, *args, **kwds )
 
 
 class SortComponents(object):
@@ -462,6 +507,15 @@ class _BlockData(ActiveComponentData):
         for (slot_name, value) in iteritems(state):
             super(_BlockData, self).__setattr__(slot_name, value)
         super(_BlockData, self).__setstate__(state)
+
+    def __getattr__(self, val):
+        if val in ModelComponentFactory.services():
+            return _component_decorator(
+                self, ModelComponentFactory.get_class(val).component )
+        # Since the base classes don't support getattr, we can just
+        # throw the "normal" AttributeError
+        raise AttributeError("'%s' object has no attribute '%s'"
+                             % (self.__class__.__name__, val))
 
     def __setattr__(self, name, val):
         """
@@ -1029,9 +1083,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # preserved as references (anything outside this block
         # hierarchy).  We must always go through this effort to prevent
         # copying certain "reserved" components (like Any,
-        # NonNegativeReals, etc).
+        # NonNegativeReals, etc) that are not "owned" by any blocks and
+        # should be preserved as singletons.
         #
-        new_block = copy.deepcopy(self, {'__block_scope__': set( (id(self),) )})
+        new_block = copy.deepcopy(
+            self, {'__block_scope__': {id(self):True, id(None):False}} )
         new_block._parent = None
         return new_block
 
@@ -1189,16 +1245,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         block.  By default, this generator recursively
         descends into sub-blocks.
         """
-        if not descend_into:
-            for x in self._component_data_iter(ctype=ctype,
-                                               active=active,
-                                               sort=sort):
-                yield x[1]
-            return
-        for _block in self.block_data_objects(active=active,
-                                              sort=sort,
-                                              descend_into=descend_into,
-                                              descent_order=descent_order):
+        if descend_into:
+            block_generator = self.block_data_objects(
+                active=active,
+                sort=sort,
+                descend_into=descend_into,
+                descent_order=descent_order)
+        else:
+            block_generator = (self,)
+
+        for _block in block_generator:
             for x in _block._component_data_iter(ctype=ctype,
                                                  active=active,
                                                  sort=sort):
@@ -1217,16 +1273,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         tuple is
             ((component name, index value), _ComponentData)
         """
-        if not descend_into:
-            for x in self._component_data_iter(ctype=ctype,
-                                               active=active,
-                                               sort=sort):
-                yield x
-            return
-        for _block in self.block_data_objects(active=active,
-                                              sort=sort,
-                                              descend_into=descend_into,
-                                              descent_order=descent_order):
+        if descend_into:
+            block_generator = self.block_data_objects(
+                active=active,
+                sort=sort,
+                descend_into=descend_into,
+                descent_order=descent_order)
+        else:
+            block_generator = (self,)
+
+        for _block in block_generator:
             for x in _block._component_data_iter(ctype=ctype,
                                                  active=active,
                                                  sort=sort):
@@ -1262,7 +1318,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Rely on the _tree_iterator:
         #
-        return self._tree_iterator(ctype=Block,
+        return self._tree_iterator(ctype=(Block,),
                                    active=active,
                                    sort=sort,
                                    traversal=descent_order)
@@ -1275,8 +1331,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
         # TODO: merge into block_data_objects
         if ctype is None:
-            ctype = Block
-        if isclass(ctype):
+            ctype = (Block,)
+        elif isclass(ctype):
             ctype = (ctype,)
 
         # A little weird, but since we "normally" return a generator, we
@@ -1522,7 +1578,7 @@ class Block(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Block:
             return super(Block, cls).__new__(cls)
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleBlock.__new__(SimpleBlock)
         else:
             return IndexedBlock.__new__(IndexedBlock)
@@ -1707,7 +1763,84 @@ class IndexedBlock(Block):
     def __init__(self, *args, **kwds):
         Block.__init__(self, *args, **kwds)
 
+def generate_cuid_names(block,
+                        ctype=None,
+                        descend_into=True,
+                        cuid_names_=None):
+    """
+    Bulk generation of CUID strings for all components
+    stored on a block.
 
+    Args:
+        block: The block to generate CUID strings for.
+        ctype: The ctype to generate CUID strings for (e.g.,
+            Var). This keyword is optional and if left to
+            its default value of None, the function will
+            generate CUID strings for all component
+            types. Note that if ctype is not None, this
+            function will still generate CUID strings for
+            any parent containers (such as blocks) that
+            prefix the components requested even though the
+            parent ctype may not match the input ctype.
+        descend_into (bool): Indicates whether or not the
+            function should descend into subblocks. Default
+            is True.
+        cuid_names_: Used internally by the function.
+
+    Returns:
+        A dictionary-like object that maps model components
+        to their CUID string.
+    """
+
+    # get the current blocks label, if it has one
+    if cuid_names_ is None:
+        cuid_names_ = ComponentMap()
+        block_prefix = ''
+    else:
+        block_prefix = cuid_names_[block] + '.'
+
+    # determine if we need to generate labels on
+    # subblocks
+    if (ctype is not None) and \
+       (ctype is not Block) and \
+       descend_into:
+        ctypes = (Block, ctype)
+    else:
+        ctypes = (ctype,)
+
+    for ctype_ in ctypes:
+        for key, obj in block.component_map(ctype=ctype_).items():
+            obj_cuid = block_prefix+key
+            if obj.is_indexed():
+                for data_key, obj_data in obj.items():
+                    if data_key.__class__ is tuple:
+                        key_cuid = ','.join(
+                            ComponentUID.tDict.get(type(x), '?') + str(x)
+                            for x in data_key)
+                    else:
+                        key_cuid = ComponentUID.tDict.get(type(data_key), '?') + \
+                                   str(data_key)
+                    cuid_names_[obj_data] = \
+                        obj_cuid + ":" + key_cuid
+                obj_cuid += ":**"
+            cuid_names_[obj] = obj_cuid
+
+    # Now recurse into subblocks
+    if descend_into:
+        for key, block_ in block.component_map(ctype=Block).items():
+            if block_.is_indexed():
+                for block_data in block_.values():
+                    generate_cuid_names(block_data,
+                                        ctype=ctype,
+                                        descend_into=descend_into,
+                                        cuid_names_=cuid_names_)
+            else:
+                generate_cuid_names(block_,
+                                    ctype=ctype,
+                                    descend_into=descend_into,
+                                    cuid_names_=cuid_names_)
+
+    return cuid_names_
 #
 # Deprecated functions.
 #
@@ -1731,4 +1864,3 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
 
 register_component(
     Block, "A component that contains one or more model components." )
-

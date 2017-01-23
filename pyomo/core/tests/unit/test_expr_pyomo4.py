@@ -12,6 +12,7 @@
 #
 
 import os
+import re
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
@@ -24,8 +25,9 @@ from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
      UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT
 from pyomo.core.base.var import SimpleVar
+from pyomo.core.base.numvalue import potentially_variable
 
-class Expression_EvaluateNumericConstant(unittest.TestCase):
+class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -140,14 +142,14 @@ class Expression_EvaluateNumericConstant(unittest.TestCase):
         except TypeError:
             pass
 
-class Expression_EvaluateVarData(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -160,14 +162,14 @@ class Expression_EvaluateVarData(Expression_EvaluateNumericConstant):
         tmp.value=val
         return tmp
 
-class Expression_EvaluateVar(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -180,14 +182,14 @@ class Expression_EvaluateVar(Expression_EvaluateNumericConstant):
         tmp.value=val
         return tmp
 
-class Expression_EvaluateFixedVar(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -201,14 +203,14 @@ class Expression_EvaluateFixedVar(Expression_EvaluateNumericConstant):
         tmp.value=val
         return tmp
 
-class Expression_EvaluateImmutableParam(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -220,14 +222,14 @@ class Expression_EvaluateImmutableParam(Expression_EvaluateNumericConstant):
         tmp.construct()
         return tmp
 
-class Expression_EvaluateMutableParam(Expression_EvaluateNumericConstant):
+class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant):
 
     def setUp(self):
         import pyomo.core.base.var
         #
         # Create Model
         #
-        Expression_EvaluateNumericConstant.setUp(self)
+        TestExpression_EvaluateNumericConstant.setUp(self)
         #
         # Create model instance
         #
@@ -290,7 +292,7 @@ class TestNumericValue(unittest.TestCase):
         self.assertEqual(abs(c()), 2.2)
         self.assertEqual(str(c), "-2.2")
 
-class Generate_SumExpression(unittest.TestCase):
+class TestGenerate_SumExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -655,7 +657,7 @@ class Generate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.b)], 1)
         self.assertEqual(e._coef[id(m.c)], -1)
 
-class Generate_ProductExpression(unittest.TestCase):
+class TestGenerate_ProductExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -872,7 +874,7 @@ class Generate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e), float)
         self.assertEqual(e, 1.5)
 
-class Generate_RelationalExpression(unittest.TestCase):
+class TestGenerate_RelationalExpression(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1047,16 +1049,22 @@ class Generate_RelationalExpression(unittest.TestCase):
             self.fail("expected construction of invalid compound inequality: "
                       "combining strict and nonstrict relationships in an "
                       "implicit equality.")
-        except TypeError:
-            pass
+        except TypeError as e:
+            self.assertIn(
+                "Cannot create a compound inequality with identical upper and "
+                "lower bounds using strict inequalities",
+                re.sub('\s+',' ',str(e)) )
 
         try:
             0 <= m.a < 0
             self.fail("expected construction of invalid compound inequality: "
                       "combining strict and nonstrict relationships in an "
                       "implicit equality.")
-        except TypeError:
-            pass
+        except TypeError as e:
+            self.assertIn(
+                "Cannot create a compound inequality with identical upper and "
+                "lower bounds using strict inequalities",
+                re.sub('\s+',' ',str(e)) )
 
         e = 0 <= 1 < m.a
         self.assertIs(type(e), EXPR._InequalityExpression)
@@ -1066,16 +1074,88 @@ class Generate_RelationalExpression(unittest.TestCase):
         self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict[0], True)
 
-        e = m.a <= 0 <= 1
-        self.assertIs(type(e), bool)
-        self.assertEqual(e, True)
+    def test_eval_compoundInequality(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=0)
+
+        self.assertTrue( 0 <= m.x <= 0 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( 1 <= m.x <= 1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( -1 <= m.x <= -1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+
+        self.assertTrue( 0 <= m.x <= 1 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertFalse( 1 <= m.x <= 2 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+        self.assertTrue( -1 <= m.x <= 0 )
+        self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
+
+
+    def test_compoundInequality_errors(self):
+        m = ConcreteModel()
+        m.x = Var()
+
+        try:
+            0 <= m.x >= 0
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        try:
+            0 <= m.x >= 1
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Attempting to form a compound inequality with two lower bounds",
+                str(e) )
+
+        try:
+            0 >= m.x <= 1
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Attempting to form a compound inequality with two upper bounds",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
         self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
         try:
-            m.a == m.b
+            m.x == 5
             self.fail("expected construction of relational expression to "
-                      "generate a chainedInequality TypeError")
-        except TypeError:
-            pass
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
+        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        try:
+            m.x*2 <= 5
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
+
+        self.assertTrue(m.x <= 0)
+        self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
+        try:
+            m.x <= 0
+            self.fail("expected construction of relational expression to "
+                      "generate a TypeError")
+        except TypeError as e:
+            self.assertIn(
+                "Relational expression used in an unexpected Boolean context.",
+                str(e) )
 
     def test_inequalityErrors(self):
         m = self.m
@@ -1159,18 +1239,18 @@ class Generate_RelationalExpression(unittest.TestCase):
         except TypeError:
             pass
 
-class PrettyPrinter_oldStyle(unittest.TestCase):
+class TestPrettyPrinter_oldStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-        PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
+        TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
 
     def test_sum(self):
@@ -1276,18 +1356,18 @@ class PrettyPrinter_oldStyle(unittest.TestCase):
             " ) ) ) ) ) )",
             str(expr) )
 
-class PrettyPrinter_newStyle(unittest.TestCase):
+class TestPrettyPrinter_newStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-        PrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
+        TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
-        pyomo.core.base.expr_common.TO_STRING_VERBOSE = PrettyPrinter_oldStyle._save
+        pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
 
     def test_sum(self):
@@ -1483,7 +1563,7 @@ class PrettyPrinter_newStyle(unittest.TestCase):
         self.assertFileEqualsBaseline( currdir+"varpprint.out",
                                        currdir+"varpprint.txt" )
 
-class InplaceExpressionGeneration(unittest.TestCase):
+class TestInplaceExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1637,7 +1717,7 @@ class InplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(x._args[0]._args[1], m.a)
         #self.assertEqual(EXPR.generate_expression.clone_counter, count+1)
 
-class GeneralExpressionGeneration(unittest.TestCase):
+class TestGeneralExpressionGeneration(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1722,7 +1802,7 @@ class GeneralExpressionGeneration(unittest.TestCase):
         self.assertIs(type(e), EXPR._NegationExpression)
         self.assertIs(type(e._args[0]), EXPR._IntrinsicFunctionExpression)
 
-class ExprConditionalContext(unittest.TestCase):
+class TestExprConditionalContext(unittest.TestCase):
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -2012,7 +2092,7 @@ class ExprConditionalContext(unittest.TestCase):
         self.checkCondition(value(1 == instance.v), True)
         self.checkCondition(value(2 == instance.v), False)
 
-class PolynomialDegree(unittest.TestCase):
+class TestPolynomialDegree(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2243,7 +2323,7 @@ def TrapRefCount_fcn(obj, target = None):
     else:
         return TrapRefCount.inst.saved_fcn(obj, target)
 
-class CloneIfNeeded(unittest.TestCase):
+class TestCloneIfNeeded(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2483,7 +2563,7 @@ class CloneIfNeeded(unittest.TestCase):
     def test_cloneCount_relationalExpression_compound_reversed(self):
         # relational expression of a compound expression (simple vars)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < self.model.a > self.model.d
+        expr = self.model.c > self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count )
@@ -2491,7 +2571,7 @@ class CloneIfNeeded(unittest.TestCase):
         # relational expression of a compound expression
         # (non-expression common term)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = 2*self.model.c < self.model.a > 2*self.model.d
+        expr = 2*self.model.c > self.model.a > 2*self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count )
@@ -2499,14 +2579,14 @@ class CloneIfNeeded(unittest.TestCase):
         # relational expression of a compound expression
         # (expression common term)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < 2 * self.model.a > self.model.d
+        expr = self.model.c > 2 * self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count + 1 )
 
         # relational expression of a referenced compound expression (1)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = self.model.c < self.model.a
+        expr = self.model.c > self.model.a
         expr1 = expr > self.model.d
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
@@ -2514,13 +2594,13 @@ class CloneIfNeeded(unittest.TestCase):
 
         # relational expression of a referenced compound expression (2)
         #count = EXPR.generate_relational_expression.clone_counter
-        expr = 2*self.model.c < 2*self.model.a
+        expr = 2*self.model.c > 2*self.model.a
         expr1 = self.model.d > expr
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
         #self.assertEqual( EXPR.generate_relational_expression.clone_counter, count + 1)
 
-class CloneExpression(unittest.TestCase):
+class TestCloneExpression(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2529,7 +2609,6 @@ class CloneExpression(unittest.TestCase):
         self.m = ConcreteModel()
         self.m.a = Var(initialize=5)
         self.m.b = Var(initialize=10)
-        self.m.expr = self.m.a + self.m.b
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
@@ -2540,12 +2619,14 @@ class CloneExpression(unittest.TestCase):
         expr2 = expr1.clone()
         self.assertEqual( expr1(), 15 )
         self.assertEqual( expr2(), 15 )
+        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
         expr1._args[0] = self.m.b
         self.assertEqual( expr1(), 20 )
         self.assertEqual( expr2(), 15 )
+        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertNotEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
@@ -2554,12 +2635,14 @@ class CloneExpression(unittest.TestCase):
         expr2 = expr1.clone()
         self.assertEqual( expr1(), 15 )
         self.assertEqual( expr2(), 15 )
+        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
         expr1 += self.m.b
         self.assertEqual( expr1(), 25 )
         self.assertEqual( expr2(), 15 )
+        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
@@ -2569,42 +2652,80 @@ class CloneExpression(unittest.TestCase):
         expr2 = expr1.clone()
         self.assertEqual( expr1(), 50 )
         self.assertEqual( expr2(), 50 )
-        self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertEqual(id(expr1._args[1]), id(expr2._args[1]))
+        self.assertNotEqual( id(expr1),      id(expr2) )
+        # Note: as the _args are both components, Python will not
+        # duplicate the tuple
+        self.assertEqual( id(expr1._args),    id(expr2._args) )
+        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
         expr1 *= self.m.b
         self.assertEqual( expr1(), 500 )
         self.assertEqual( expr2(), 50 )
-        self.assertNotEqual(id(expr1._args),           id(expr2._args))
-        self.assertNotEqual(id(expr1._args[0]._args),  id(expr2._args))
-        self.assertEqual(id(expr1._args[1]),           id(expr2._args[1]))
-        self.assertEqual(id(expr1._args[0]._args[0]),  id(expr2._args[0]))
-        self.assertEqual(id(expr1._args[0]._args[1]),  id(expr2._args[1]))
+        self.assertNotEqual( id(expr1),                 id(expr2) )
+        self.assertNotEqual( id(expr1._args),           id(expr2._args) )
+        # Note: as the _args are both components, Python will not
+        # duplicate the tuple
+        self.assertEqual( id(expr1._args[0]._args),     id(expr2._args) )
+        self.assertEqual( id(expr1._args[1]),           id(expr2._args[1]) )
+        self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
+        self.assertEqual( id(expr1._args[0]._args[1]),  id(expr2._args[1]) )
+
+        expr1 = self.m.a * (self.m.b + self.m.a)
+        expr2 = expr1.clone()
+        self.assertEqual( expr1(), 75 )
+        self.assertEqual( expr2(), 75 )
+        # Note that since one of the args is a sum expression, the _args
+        # in the sum is a *list*, which will be duplicated by deepcopy.
+        # This will cause the two args in the Product to be different.
+        self.assertNotEqual( id(expr1),      id(expr2) )
+        self.assertNotEqual( id(expr1._args), id(expr2._args) )
+        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+        self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
+
 
     def test_ProductExpression_div(self):
         expr1 = self.m.a / self.m.b
         expr2 = expr1.clone()
         self.assertEqual( expr1(), 0.5 )
         self.assertEqual( expr2(), 0.5 )
-        self.assertNotEqual(id(expr1._args), id(expr2._args))
-        self.assertEqual(id(expr1._args[0]), id(expr2._args[0]))
-        self.assertEqual(id(expr1._args[1]), id(expr2._args[1]))
+        self.assertNotEqual( id(expr1),       id(expr2) )
+        # Note: as the _args are both components, Python will not
+        # duplicate the tuple
+        self.assertEqual( id(expr1._args),    id(expr2._args) )
+        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
         expr1 /= self.m.b
         self.assertEqual( expr1(), 0.05 )
         self.assertEqual( expr2(), 0.5 )
-        self.assertNotEqual(id(expr1._args),           id(expr2._args))
-        self.assertNotEqual(id(expr1._args[0]._args),  id(expr2._args))
-        self.assertEqual(id(expr1._args[1]),           id(expr2._args[1]))
-        self.assertEqual(id(expr1._args[0]._args[0]),  id(expr2._args[0]))
-        self.assertEqual(id(expr1._args[0]._args[1]),  id(expr2._args[1]))
+        self.assertNotEqual( id(expr1),                 id(expr2) )
+        self.assertNotEqual( id(expr1._args),              id(expr2._args) )
+        # Note: as the _args are both components, Python will not
+        # duplicate the tuple
+        self.assertEqual( id(expr1._args[0]._args),  id(expr2._args) )
+        self.assertEqual( id(expr1._args[1]),           id(expr2._args[1]) )
+        self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
+        self.assertEqual( id(expr1._args[0]._args[1]),  id(expr2._args[1]) )
+
+        expr1 = self.m.a / (self.m.b + self.m.a)
+        expr2 = expr1.clone()
+        self.assertEqual( expr1(), 1/3. )
+        self.assertEqual( expr2(), 1/3. )
+        # Note that since one of the args is a sum expression, the _args
+        # in the sum is a *list*, which will be duplicated by deepcopy.
+        # This will cause the two args in the Product to be different.
+        self.assertNotEqual( id(expr1),      id(expr2) )
+        self.assertNotEqual( id(expr1._args), id(expr2._args) )
+        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
+        self.assertNotEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
     def test_sumOfExpressions(self):
         expr1 = self.m.a * self.m.b + self.m.a * self.m.a
         expr2 = expr1.clone()
         self.assertEqual(expr1(), 75)
         self.assertEqual(expr2(), 75)
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
         self.assertEqual(expr1._args[0](), expr2._args[0]())
         self.assertEqual(expr1._args[1](), expr2._args[1]())
@@ -2613,6 +2734,7 @@ class CloneExpression(unittest.TestCase):
         expr1 += self.m.b
         self.assertEqual(expr1(), 85)
         self.assertEqual(expr2(), 75)
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
         self.assertEqual(len(expr1._args), 3)
         self.assertEqual(len(expr2._args), 2)
@@ -2626,6 +2748,7 @@ class CloneExpression(unittest.TestCase):
         expr2 = expr1.clone()
         self.assertEqual(expr1(), 150)
         self.assertEqual(expr2(), 150)
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
         self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
         self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
@@ -2647,6 +2770,7 @@ class CloneExpression(unittest.TestCase):
         expr1 *= self.m.b
         self.assertEqual(expr1(), 1500)
         self.assertEqual(expr2(), 150)
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
         self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
 
@@ -2660,6 +2784,7 @@ class CloneExpression(unittest.TestCase):
         expr1 = (self.m.a + self.m.b) / (self.m.a + self.m.a)
         expr2 = expr1.clone()
 
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertNotEqual(id(expr1._args), id(expr2._args))
         self.assertNotEqual(id(expr1._args[0]), id(expr2._args[0]))
         self.assertNotEqual(id(expr1._args[1]), id(expr2._args[1]))
@@ -2693,6 +2818,7 @@ class CloneExpression(unittest.TestCase):
     def test_Expr_if(self):
         expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
         expr2 = expr1.clone()
+        self.assertNotEqual(id(expr1), id(expr2))
         self.assertEqual(expr1(), value(self.m.a))
         self.assertEqual(expr2(), value(self.m.a))
         self.assertNotEqual(id(expr1._if), id(expr2._if))
@@ -2702,7 +2828,7 @@ class CloneExpression(unittest.TestCase):
         self.assertEqual(expr1._then(), expr2._then())
         self.assertEqual(expr1._else(), expr2._else())
 
-class IsFixedIsConstant(unittest.TestCase):
+class TestIsFixedIsConstant(unittest.TestCase):
 
     def setUp(self):
         # This class tests the Coopr 3.x expression trees
@@ -2929,9 +3055,80 @@ class IsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr.is_constant(), False)
         m.a.fixed = False
 
-class ExpressionUtilities(unittest.TestCase):
+class TestPotentiallyVariable(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def test_var(self):
+        m = ConcreteModel()
+        m.x = Var()
+        e = m.x
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x + 1
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x**2
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x**2/(m.x + 1)
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+    def test_param(self):
+        m = ConcreteModel()
+        m.x = Param(mutable=True)
+        e = m.x
+        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(potentially_variable(e), False)
+
+        e = m.x + 1
+        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(potentially_variable(e), False)
+
+        e = m.x**2
+        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(potentially_variable(e), False)
+
+        e = m.x**2/(m.x + 1)
+        self.assertEqual(e._potentially_variable(), False)
+        self.assertEqual(potentially_variable(e), False)
+
+    # TODO: This test fails due to bugs in Pyomo4 expression generation
+    def Xtest_expression(self):
+        m = ConcreteModel()
+        m.x = Expression()
+        e = m.x
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x + 1
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x**2
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+        e = m.x**2/(m.x + 1)
+        self.assertEqual(e._potentially_variable(), True)
+        self.assertEqual(potentially_variable(e), True)
+
+    def test_misc(self):
+        self.assertEqual(potentially_variable(0), False)
+        self.assertEqual(potentially_variable('a'), False)
+        self.assertEqual(potentially_variable(None), False)
+
+class TestExpressionUtilities(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):

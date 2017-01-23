@@ -22,7 +22,7 @@ from pyutilib.misc import setup_redirect, reset_redirect
 
 import pyomo.core
 import pyomo.scripting.pyomo_main as main
-from pyomo.opt import load_solvers
+from pyomo.opt import check_available_solvers
 
 from six import StringIO
 
@@ -44,14 +44,14 @@ def filter_fn(line):
 
 _diff_tol = 1e-6
 
-solver = None
+solvers = None
 class Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global solver
+        global solvers
         import pyomo.environ
-        solver = load_solvers('glpk')
+        solvers = check_available_solvers('glpk')
 
     def pyomo(self, cmd, **kwds):
         if 'root' in kwds:
@@ -77,7 +77,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.ofile = None
-        if solver['glpk'] is None:
+        if not 'glpk' in solvers:
             self.skipTest("GLPK is not installed")
 
     def tearDown(self):
@@ -129,7 +129,8 @@ class Test(unittest.TestCase):
         self.pyomo('pmedian1.py pmedian.dat', root=currdir+'test3')
         def filter3(line):
             return line.startswith('[') or line.startswith('DEPRECATION')
-        self.assertFileEqualsBaseline(currdir+"test3.out", currdir+"test3.txt", filter=filter3)
+        self.assertMatchesJsonBaseline(currdir+"test3.jsn", currdir+"test1.txt",tolerance=_diff_tol)
+        os.remove(currdir+'test3.out')
 
     def test4_valid_modelname_option(self):
         # Run pyomo with good --model-name option value

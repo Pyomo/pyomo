@@ -90,6 +90,18 @@ class _ParamData(ComponentData, NumericValue):
         """
         return False
 
+    def _potentially_variable(self):
+        """
+        Returns False because this object can never reference variables.
+        """
+        return False
+
+    def _polynomial_degree(self, result):
+        """
+        Returns 0 because this object can never reference variables.
+        """
+        return 0
+
     def __nonzero__(self):
         """Return True if the value is defined and non-zero."""
         if self.value:
@@ -126,7 +138,7 @@ class Param(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Param:
             return super(Param, cls).__new__(cls)
-        if args == () or (type(args[0]) is set and args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleParam.__new__(SimpleParam)
         else:
             return IndexedParam.__new__(IndexedParam)
@@ -852,17 +864,15 @@ This has resulted in the conversion of the source to dense form.
         Return data that will be printed for this component.
         """
         return ( [("Size", len(self)),
-                  ("Index", self._index \
-                       if self._index != UnindexedComponent_set else None),
+                  ("Index", self._index if self.is_indexed() else None),
                   ("Domain", self.domain.name),
                   ("Default", "(function)" if type(self._default_val) \
                        is types.FunctionType else self._default_val),
                   ("Mutable", self._mutable),
                   ],
                  self.sparse_iteritems(),
-                 ("Key","Value"),
-                 lambda k, v: [ k,
-                                value(v)
+                 ("Value",),
+                 lambda k, v: [ value(v)
                                 ]
                  )
 

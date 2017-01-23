@@ -598,7 +598,7 @@ class Set(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Set:
             return super(Set, cls).__new__(cls)
-        if args == () or (type(args[0]) is set and args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             if kwds.get('ordered',False) is False:
                 return SimpleSet.__new__(SimpleSet)
             else:
@@ -804,11 +804,11 @@ class SimpleSetBase(Set):
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
             iteritems( {None: self} ),
-            None,
+            None, #("Members",),
             lambda k, v: [
-                "Virtual" if not v.concrete or v.virtual \
+                "Virtual" if not self.concrete or v.virtual \
                     else v.value if v.ordered \
-                    else sorted(v) ] )
+                    else sorted(v), ] )
 
     def _set_repn(self, other):
         """
@@ -1608,7 +1608,7 @@ class IndexedSet(Set):
         """
         Clear that data in this component.
         """
-        if UnindexedComponent_set != self._index:
+        if self.is_indexed():
             self._data = {}
         else:
             #
@@ -1677,10 +1677,10 @@ class IndexedSet(Set):
              ("Ordered", _ordered),
              ("Bounds", self._bounds)],
             iteritems(self._data),
-            ("Key","Members"),
+            ("Members",),
             lambda k, v: [
-                k,
-                v.value if self.ordered else sorted(v.value) ] )
+                #"Virtual" if not v.concrete or v.virtual else \
+                v.value if self.ordered else sorted(v) ] )
 
     def construct(self, values=None):
         """

@@ -25,7 +25,7 @@ from pyomo.opt.parallel.local import SolverManager_Serial
 from pyomo.environ import *
 from pyomo.core.base.expr import identify_variables
 
-solver = pyomo.opt.load_solvers('glpk')
+solvers = pyomo.opt.check_available_solvers('glpk')
 
 try:
     import yaml
@@ -209,7 +209,7 @@ class Test(unittest.TestCase):
         model.obj = Objective(rule=obj_rule)
         self.assertEqual(len(model.obj[None].expr._args), 4)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve1(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -223,7 +223,7 @@ class Test(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model, keepfiles=True, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+"solve1.out", format='json')
@@ -268,7 +268,7 @@ class Test(unittest.TestCase):
         model.display(currdir+"solve3.out")
         self.assertFileEqualsBaseline(currdir+"solve3.out",currdir+"solve3.txt")
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve4(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -282,13 +282,13 @@ class Test(unittest.TestCase):
                 expr += i*model.x[i]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+'solve4.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve4.out",currdir+"solve1.txt", tolerance=1e-4)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve6(self):
         #
         # Test that solution values have complete block names:
@@ -309,13 +309,13 @@ class Test(unittest.TestCase):
                 expr += i*model.b.x[i]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=currdir+'solve6.out', format='json')
         self.assertMatchesJsonBaseline(currdir+"solve6.out", currdir+"solve6.txt", tolerance=1e-4)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve7(self):
         #
         # Test that solution values are writen with appropriate quotations in results
@@ -335,7 +335,7 @@ class Test(unittest.TestCase):
                     expr += i*model.x[i,j]
             return expr == 0
         model.c = Constraint(rule=c_rule)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model, symbolic_solver_labels=True)
         #model.display()
         model.solutions.store_to(results)
@@ -412,7 +412,7 @@ class Test(unittest.TestCase):
         self.assertEqual(model.nobjectives(), 4)
         self.assertEqual(model.nconstraints(), 4)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve_with_pickle(self):
         model = ConcreteModel()
         model.A = RangeSet(1,4)
@@ -420,7 +420,7 @@ class Test(unittest.TestCase):
         model.b.x = Var(model.A, bounds=(-1,1))
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         self.assertEqual(len(model.solutions), 0)
         results = opt.solve(model, symbolic_solver_labels=True)
         self.assertEqual(len(model.solutions), 1)
@@ -436,7 +436,7 @@ class Test(unittest.TestCase):
         self.assertEqual(tmodel.solutions[0].status, SolutionStatus.feasible)
         self.assertEqual(tmodel.solutions[0].message, None)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store1(self):
         # With symbolic solver labels
@@ -446,7 +446,7 @@ class Test(unittest.TestCase):
         model.b.x = Var(model.A, bounds=(-1,1))
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model, symbolic_solver_labels=True)
         #
         results.write(filename=currdir+'solve_with_store1.out', format='yaml')
@@ -468,7 +468,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store2(self):
         # Without symbolic solver labels
@@ -478,7 +478,7 @@ class Test(unittest.TestCase):
         model.b.x = Var(model.A, bounds=(-1,1))
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model, symbolic_solver_labels=False)
         #
         results.write(filename=currdir+'solve_with_store1.out', format='yaml')
@@ -500,7 +500,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load_from(results)
         self.assertEqual(len(tmodel.solutions), 1)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store2(self):
         model = ConcreteModel()
@@ -509,7 +509,7 @@ class Test(unittest.TestCase):
         model.b.x = Var(model.A, bounds=(-1,1))
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model)
         #
         results.write(filename=currdir+'solve_with_store3.out', format='json')
@@ -538,7 +538,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load_from(results, ignore_invalid_labels=True)
         self.assertEqual(len(tmodel.solutions), 1)
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glkp' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store3(self):
         model = ConcreteModel()
@@ -547,7 +547,7 @@ class Test(unittest.TestCase):
         model.b.x = Var(model.A, bounds=(-1,1))
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model)
         #
         model.solutions.store_to(results)
@@ -577,7 +577,7 @@ class Test(unittest.TestCase):
         results.write(filename=currdir+'solve_with_store7.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store7.out", currdir+"solve_with_store4.txt")
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store4(self):
         model = ConcreteModel()
@@ -586,7 +586,7 @@ class Test(unittest.TestCase):
         model.b.x = Var(model.A, bounds=(-1,1))
         model.b.obj = Objective(expr=summation(model.b.x))
         model.c = Constraint(expr=model.b.x[1] >= 0)
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model, load_solutions=False)
         self.assertEqual(len(model.solutions), 0)
         self.assertEqual(len(results.solution), 1)
@@ -598,7 +598,7 @@ class Test(unittest.TestCase):
         results.write(filename=currdir+'solve_with_store8.out', format='json')
         self.assertMatchesYamlBaseline(currdir+"solve_with_store8.out", currdir+"solve_with_store4.txt")
 
-    @unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store5(self):
         model = ConcreteModel()
@@ -611,8 +611,6 @@ class Test(unittest.TestCase):
         smanager = SolverManager_Serial()
         ah = smanager.queue(model, solver='glpk', load_solutions=False)
         results = smanager.wait_for(ah)
-        #opt = solver['glpk']
-        #results = opt.solve(model, load_solutions=False)
         self.assertEqual(len(model.solutions), 0)
         self.assertEqual(len(results.solution), 1)
         model.solutions.load_from(results)

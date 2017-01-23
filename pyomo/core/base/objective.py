@@ -256,7 +256,7 @@ class Objective(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Objective:
             return super(Objective, cls).__new__(cls)
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleObjective.__new__(SimpleObjective)
         else:
             return IndexedObjective.__new__(IndexedObjective)
@@ -369,14 +369,12 @@ class Objective(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index \
-                       if self._index != UnindexedComponent_set else None),
+             ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active)
              ],
             iteritems(self._data),
-            ( "Key","Active","Sense","Expression"),
-            lambda k, v: [ k,
-                           v.active,
+            ( "Active","Sense","Expression"),
+            lambda k, v: [ v.active,
                            ("minimize" if (v.sense == minimize) else "maximize"),
                            v.expr
                            ]
@@ -392,16 +390,15 @@ class Objective(ActiveIndexedComponent):
         ostream.write(prefix+self.local_name+" : ")
         ostream.write(", ".join("%s=%s" % (k,v) for k,v in [
                     ("Size", len(self)),
-                    ("Index", self._index \
-                     if self._index != UnindexedComponent_set else None),
+                    ("Index", self._index if self.is_indexed() else None),
                     ("Active", self.active),
                     ] ))
 
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,
                         ((k,v) for k,v in iteritems(self._data) if v.active),
-                        ( "Key","Active","Value" ),
-                        lambda k, v: [ k, v.active, value(v), ] )
+                        ( "Active","Value" ),
+                        lambda k, v: [ v.active, value(v), ] )
 
     #
     # Checks flags like Objective.Skip, etc. before

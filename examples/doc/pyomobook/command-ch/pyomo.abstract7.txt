@@ -1,0 +1,96 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+Here are the options that were provided:
+data:
+  files: []
+  namespaces: []
+model:
+  filename: abstract7.py
+  object name: null
+  type: null
+  options:
+  linearize expressions: false
+  save file: null
+  save format: null
+  symbolic solver labels: false
+  file determinism: 1
+transform: []
+preprocess: []
+runtime:
+  logging: null
+  logfile: null
+  catch errors: true
+  disable gc: false
+  interactive: false
+  keep files: false
+  paths: []
+  profile count: 0
+  profile memory: 0
+  report timing: false
+  tempdir: null
+  only instance: false
+  stream output: false
+solvers:
+  -
+    solver name: glpk
+    solver executable: null
+    io format: null
+    manager: serial
+    pyro host: null
+    pyro port: null
+    options:
+    options string: null
+    suffixes: []
+postprocess: []
+postsolve:
+  print logfile: false
+  save results: null
+  show results: false
+  results format: yaml
+  summary: false
+
+[    0.00] Creating model
+[    0.02] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: 0.0
+      Status: feasible
+      Function Value: 0.8
+    Solver results file: results.yml
+
+Problem: 
+- Name: unknown
+  Lower bound: 0.8
+  Upper bound: 0.8
+  Number of objectives: 1
+  Number of constraints: 3
+  Number of variables: 2
+  Number of nonzeros: 3
+  Sense: minimize
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+  Time: 0.0271968841553
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: feasible
+  Message: None
+  Objective:
+    obj:
+      Value: 0.8
+  Variable:
+    x[2]:
+      Value: 0.4
+  Constraint: No values
+
+[    0.05] Applying Pyomo postprocessing actions
+Solution value 0.8
+[    0.06] Pyomo Finished

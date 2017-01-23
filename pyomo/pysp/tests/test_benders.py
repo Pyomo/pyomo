@@ -37,9 +37,9 @@ class TestBenders(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        global solver
+        global solvers
         import pyomo.environ
-        solver = pyomo.opt.load_solvers('cplex')
+        solvers = pyomo.opt.check_available_solvers('cplex')
 
     def setUp(self):
         if os.path.exists(this_test_directory+'benders_cplex.out'):
@@ -54,7 +54,7 @@ class TestBenders(unittest.TestCase):
 
     def test_benders_cplex(self):
         import subprocess
-        if solver['cplex'] is None:
+        if not 'cplex' in solvers:
             self.skipTest("The 'cplex' executable is not available")
         out_file = open(this_test_directory+"benders_cplex.out",'w')
         os.chdir(benders_example_dir)

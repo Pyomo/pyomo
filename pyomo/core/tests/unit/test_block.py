@@ -30,7 +30,6 @@ from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.expr import identify_variables
 from pyomo.opt import *
 
-solver = load_solvers('glpk')
 
 class DerivedBlock(SimpleBlock):
     def __init__(self, *args, **kwargs):
@@ -1759,6 +1758,34 @@ class TestBlock(unittest.TestCase):
         self.instance.load(solutions.solution(0))
         self.instance.display(join(currdir,"solve1.out"))
         self.assertFileEqualsBaseline(join(currdir,"solve1.out"),join(currdir,"solve1.txt"))
+
+    def test_abstract_index(self):
+        model = AbstractModel()
+        model.A = Set()
+        model.B = Set()
+        model.C = model.A | model.B
+        model.x = Block(model.C)
+
+    def test_decorated_definition(self):
+        model = ConcreteModel()
+        model.I = Set(initialize=[1,2,3])
+        model.x = Var(model.I)
+
+        @model.Constraint()
+        def scalar_constraint(m):
+            return m.x[1]**2 <= 0
+
+        self.assertTrue(hasattr(model, 'scalar_constraint'))
+        self.assertIs(model.scalar_constraint._type, Constraint)
+        self.assertEqual(len(model.scalar_constraint), 1)
+
+        @model.Constraint(model.I)
+        def vector_constraint(m, i):
+            return m.x[i]**2 <= 0
+
+        self.assertTrue(hasattr(model, 'vector_constraint'))
+        self.assertIs(model.vector_constraint._type, Constraint)
+        self.assertEqual(len(model.vector_constraint), 3)
 
 if __name__ == "__main__":
     unittest.main()

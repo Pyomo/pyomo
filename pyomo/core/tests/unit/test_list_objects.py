@@ -42,11 +42,11 @@ class _TestComponentListBase(object):
     def test_init2(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         self.assertEqual(model.c.is_indexed(), True)
         self.assertEqual(model.c.is_constructed(), True)
         with self.assertRaises(TypeError):
-            model.d = self._ctype(*tuple(self._cdatatype(self._arg)
+            model.d = self._ctype(*tuple(self._cdatatype(self._arg())
                                          for i in index))
 
     def test_len1(self):
@@ -57,7 +57,7 @@ class _TestComponentListBase(object):
     def test_len2(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         self.assertEqual(len(model.c), len(index))
 
     def test_append(self):
@@ -66,7 +66,7 @@ class _TestComponentListBase(object):
         index = range(5)
         self.assertEqual(len(model.c), 0)
         for i in index:
-            c_new = self._cdatatype(self._arg)
+            c_new = self._cdatatype(self._arg())
             model.c.append(c_new)
             self.assertEqual(id(model.c[-1]), id(c_new))
             self.assertEqual(len(model.c), i+1)
@@ -77,7 +77,7 @@ class _TestComponentListBase(object):
         index = range(5)
         self.assertEqual(len(model.c), 0)
         for i in index:
-            c_new = self._cdatatype(self._arg)
+            c_new = self._cdatatype(self._arg())
             model.c.insert(0, c_new)
             self.assertEqual(id(model.c[0]), id(c_new))
             self.assertEqual(len(model.c), i+1)
@@ -87,9 +87,9 @@ class _TestComponentListBase(object):
         model.c = self._ctype()
         index = range(5)
         for i in index:
-            model.c.append(self._cdatatype(self._arg))
+            model.c.append(self._cdatatype(self._arg()))
         for i in index:
-            c_new = self._cdatatype(self._arg)
+            c_new = self._cdatatype(self._arg())
             self.assertNotEqual(id(c_new), id(model.c[i]))
             model.c[i] = c_new
             self.assertEqual(len(model.c), len(index))
@@ -99,35 +99,35 @@ class _TestComponentListBase(object):
         model = self.model
         index = range(5)
         with self.assertRaises(TypeError):
-            model.c = self._ctype(self._arg for i in index)
+            model.c = self._ctype(self._arg() for i in index)
 
     def test_wrong_type_append(self):
         model = self.model
         model.c = self._ctype()
-        model.c.append(self._cdatatype(self._arg))
+        model.c.append(self._cdatatype(self._arg()))
         with self.assertRaises(TypeError):
-            model.c.append(self._arg)
+            model.c.append(self._arg())
 
     def test_wrong_type_insert(self):
         model = self.model
         model.c = self._ctype()
-        model.c.append(self._cdatatype(self._arg))
-        model.c.insert(0, self._cdatatype(self._arg))
+        model.c.append(self._cdatatype(self._arg()))
+        model.c.insert(0, self._cdatatype(self._arg()))
         with self.assertRaises(TypeError):
-            model.c.insert(0, self._arg)
+            model.c.insert(0, self._arg())
 
     def test_wrong_type_setitem(self):
         model = self.model
         model.c = self._ctype()
-        model.c.append(self._cdatatype(self._arg))
-        model.c[0] = self._cdatatype(self._arg)
+        model.c.append(self._cdatatype(self._arg()))
+        model.c[0] = self._cdatatype(self._arg())
         with self.assertRaises(TypeError):
-            model.c[0] = self._arg
+            model.c[0] = self._arg()
 
     def test_has_parent_init(self):
         model = self.model
         model.c = self._ctype()
-        model.c.append(self._cdatatype(self._arg))
+        model.c.append(self._cdatatype(self._arg()))
         with self.assertRaises(ValueError):
             model.c.append(model.c[0])
         with self.assertRaises(ValueError):
@@ -136,7 +136,7 @@ class _TestComponentListBase(object):
     def test_has_parent_append(self):
         model = self.model
         model.c = self._ctype()
-        model.c.append(self._cdatatype(self._arg))
+        model.c.append(self._cdatatype(self._arg()))
         with self.assertRaises(ValueError):
             model.c.append(model.c[0])
         d = []
@@ -148,8 +148,8 @@ class _TestComponentListBase(object):
     def test_has_parent_insert(self):
         model = self.model
         model.c = self._ctype()
-        model.c.append(self._cdatatype(self._arg))
-        model.c.insert(0, self._cdatatype(self._arg))
+        model.c.append(self._cdatatype(self._arg()))
+        model.c.insert(0, self._cdatatype(self._arg()))
         with self.assertRaises(ValueError):
             model.c.insert(0, model.c[0])
         d = []
@@ -161,10 +161,10 @@ class _TestComponentListBase(object):
     def test_has_parent_setitem(self):
         model = self.model
         model.c = self._ctype()
-        model.c.append(self._cdatatype(self._arg))
-        model.c[0] = self._cdatatype(self._arg)
+        model.c.append(self._cdatatype(self._arg()))
+        model.c[0] = self._cdatatype(self._arg())
         model.c[0] = model.c[0]
-        model.c.append(self._cdatatype(self._arg))
+        model.c.append(self._cdatatype(self._arg()))
         with self.assertRaises(ValueError):
             model.c[0] = model.c[1]
 
@@ -173,12 +173,12 @@ class _TestComponentListBase(object):
     def test_setitem_exists_overwrite(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         self.assertEqual(len(model.c), len(index))
         for i in index:
             cdata = model.c[i]
             self.assertEqual(id(cdata.parent_component()), id(model.c))
-            model.c[i] = self._cdatatype(self._arg)
+            model.c[i] = self._cdatatype(self._arg())
             self.assertEqual(len(model.c), len(index))
             self.assertNotEqual(id(cdata), id(model.c[i]))
             self.assertEqual(cdata.parent_component(), None)
@@ -186,7 +186,7 @@ class _TestComponentListBase(object):
     def test_delitem(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         self.assertEqual(len(model.c), len(index))
         for i in index:
             cdata = model.c[0]
@@ -198,7 +198,7 @@ class _TestComponentListBase(object):
     def test_iter(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         self.assertEqual(len(model.c), len(index))
         raw_list = model.c[:]
         self.assertEqual(type(raw_list), list)
@@ -208,7 +208,7 @@ class _TestComponentListBase(object):
     def test_reverse(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         raw_list = model.c[:]
         self.assertEqual(type(raw_list), list)
         model.c.reverse()
@@ -220,7 +220,7 @@ class _TestComponentListBase(object):
         model = self.model
         model = ConcreteModel()
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         for i in index:
             cdata = model.c[0]
             self.assertEqual(cdata in model.c, True)
@@ -230,7 +230,7 @@ class _TestComponentListBase(object):
     def test_pop(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         for i in index:
             cdata = model.c[-1]
             self.assertEqual(cdata in model.c, True)
@@ -241,7 +241,7 @@ class _TestComponentListBase(object):
     def test_index(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         for i in index:
             cdata = model.c[i]
             self.assertEqual(model.c.index(cdata), i)
@@ -266,7 +266,7 @@ class _TestComponentListBase(object):
                     self.assertEqual(model.c.index(cdata, stop=-len(index)+i+1), i)
             else:
                 self.assertEqual(model.c.index(cdata, stop=-len(index)+i+1), i)
-        tmp = self._cdatatype(self._arg)
+        tmp = self._cdatatype(self._arg())
         with self.assertRaises(ValueError):
             model.c.index(tmp)
         with self.assertRaises(ValueError):
@@ -275,8 +275,8 @@ class _TestComponentListBase(object):
     def test_extend(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
-        c_more_list = [self._cdatatype(self._arg) for i in index]
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
+        c_more_list = [self._cdatatype(self._arg()) for i in index]
         self.assertEqual(len(model.c), len(index))
         self.assertTrue(len(c_more_list) > 0)
         for cdata in c_more_list:
@@ -289,14 +289,14 @@ class _TestComponentListBase(object):
     def test_count(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         for i in index:
             self.assertEqual(model.c.count(model.c[i]), 1)
 
     def test_model_clone(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         inst = model.clone()
         self.assertNotEqual(id(inst.c), id(model.c))
         for i in index:
@@ -305,7 +305,7 @@ class _TestComponentListBase(object):
     def test_name(self):
         model = self.model
         index = range(5)
-        model.c = self._ctype(self._cdatatype(self._arg) for i in index)
+        model.c = self._ctype(self._cdatatype(self._arg()) for i in index)
         prefix = "c"
         for i in index:
             cdata = model.c[i]
@@ -320,7 +320,7 @@ class _TestActiveComponentListBase(_TestComponentListBase):
     def test_activate(self):
         model = self.model
         index = list(range(4))
-        model.c = self._ctype(self._cdatatype(self._arg)
+        model.c = self._ctype(self._cdatatype(self._arg())
                               for i in index)
         self.assertEqual(len(model.c), len(index))
         self.assertEqual(model.c.active, True)
@@ -336,7 +336,7 @@ class _TestActiveComponentListBase(_TestComponentListBase):
     def test_activate(self):
         model = self.model
         index = list(range(4))
-        model.c = self._ctype(self._cdatatype(self._arg)
+        model.c = self._ctype(self._cdatatype(self._arg())
                               for i in index)
         self.assertEqual(len(model.c), len(index))
         self.assertEqual(model.c.active, True)
@@ -358,11 +358,11 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(model.c.active, True)
         model.c.deactivate()
         self.assertEqual(model.c.active, False)
-        model.c.append(self._cdatatype(self._arg))
+        model.c.append(self._cdatatype(self._arg()))
         self.assertEqual(model.c.active, True)
         model.c.deactivate()
         self.assertEqual(model.c.active, False)
-        model.c.insert(0, self._cdatatype(self._arg))
+        model.c.insert(0, self._cdatatype(self._arg()))
         self.assertEqual(model.c.active, True)
 
 class TestVarList(_TestComponentListBase,
@@ -371,7 +371,7 @@ class TestVarList(_TestComponentListBase,
     _cdatatype = _GeneralVarData
     def setUp(self):
         _TestComponentListBase.setUp(self)
-        self._arg = Reals
+        self._arg = lambda: Reals
 
 class TestExpressionList(_TestComponentListBase,
                          unittest.TestCase):
@@ -379,7 +379,7 @@ class TestExpressionList(_TestComponentListBase,
     _cdatatype = _GeneralExpressionData
     def setUp(self):
         _TestComponentListBase.setUp(self)
-        self._arg = self.model.x**3
+        self._arg = lambda: self.model.x**3
 
 #
 # Test components that include activate/deactivate
@@ -392,7 +392,7 @@ class TestConstraintList(_TestActiveComponentListBase,
     _cdatatype = _GeneralConstraintData
     def setUp(self):
         _TestComponentListBase.setUp(self)
-        self._arg = self.model.x >= 1
+        self._arg = lambda: self.model.x >= 1
 
 class TestObjectiveList(_TestActiveComponentListBase,
                         unittest.TestCase):
@@ -400,7 +400,7 @@ class TestObjectiveList(_TestActiveComponentListBase,
     _cdatatype = _GeneralObjectiveData
     def setUp(self):
         _TestComponentListBase.setUp(self)
-        self._arg = self.model.x**2
+        self._arg = lambda: self.model.x**2
 
 if __name__ == "__main__":
     unittest.main()

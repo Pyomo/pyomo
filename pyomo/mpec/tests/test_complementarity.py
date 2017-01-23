@@ -45,13 +45,11 @@ class CCTests(object):
     def _test(self, tname, M):
         ofile = currdir + tname + '_%s.out' % str(self.xfrm)
         bfile = currdir + tname + '_%s.txt' % str(self.xfrm)
-        setup_redirect(ofile)
-        if self.xfrm is None:
-            self._print(M)
-        else:
+        if self.xfrm is not None:
             xfrm = TransformationFactory(self.xfrm)
             xfrm.apply_to(M)
-            self._print(M)
+        setup_redirect(ofile)
+        self._print(M)
         reset_redirect()
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)

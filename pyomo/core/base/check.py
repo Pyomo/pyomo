@@ -51,7 +51,7 @@ class BuildCheck(IndexedComponent):
             return
         self._constructed=True
         #
-        if None in self._index:
+        if not self.is_indexed():
             # Scalar component
             res = self._rule(self._parent())
             if not res:

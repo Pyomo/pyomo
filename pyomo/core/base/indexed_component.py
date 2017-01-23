@@ -14,7 +14,7 @@ import pyutilib.misc
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.template_expr import TemplateExpressionError
-
+from pyomo.util import DeveloperError
 
 from six import PY3, itervalues, iteritems, advance_iterator
 import sys
@@ -306,6 +306,21 @@ class IndexedComponent(Component):
             self._implicit_subsets = tmp
             self._index = tmp[0].cross(*tmp[1:])
 
+    def __getstate__(self):
+        # Special processing of getstate so that we never copy the
+        # UnindexedComponent_set set
+        state = super(IndexedComponent, self).__getstate__()
+        if not self.is_indexed():
+            state['_index'] = None
+        return state
+
+    def __setstate__(self, state):
+        # Special processing of setstate so that we never copy the
+        # UnindexedComponent_set set
+        if state['_index'] is None:
+            state['_index'] = UnindexedComponent_set
+        return super(IndexedComponent, self).__setstate__(state)
+
     def to_dense_data(self):
         """TODO"""
         for ndx in self._index:
@@ -314,12 +329,11 @@ class IndexedComponent(Component):
 
     def clear(self):
         """Clear the data in this component"""
-        if UnindexedComponent_set != self._index:
+        if self.is_indexed():
             self._data = {}
         else:
-            raise NotImplementedError(
-                "Derived scalar component %s failed to define clear().\n"
-                "\tPlease report this to the Pyomo developers"
+            raise DeveloperError(
+                "Derived scalar component %s failed to define clear()."
                 % (self.__class__.__name__,))
 
     def index_set(self):
@@ -328,11 +342,11 @@ class IndexedComponent(Component):
 
     def is_indexed(self):
         """Return true if this component is indexed"""
-        return UnindexedComponent_set != self._index
+        return self._index is not UnindexedComponent_set
 
     def dim(self):
         """Return the dimension of the index"""
-        if id(UnindexedComponent_set) == id(self._index):
+        if not self.is_indexed():
             return 0
         return getattr(self._index, 'dimen', 0)
 
@@ -636,24 +650,22 @@ the value() function.""" % ( self.name, i ))
 
     def _default(self, index):
         """Returns the default component data value"""
-        raise NotImplementedError(
-            "Derived component %s failed to define _default().\n"
-            "\tPlease report this to the Pyomo developers"
+        raise DeveloperError(
+            "Derived component %s failed to define _default()."
             % (self.__class__.__name__,))
 
     def set_value(self, value):
         """Set the value of a scalar component."""
-        if UnindexedComponent_set != self._index:
+        if self.is_indexed():
             raise ValueError(
                 "Cannot set the value for the indexed component '%s' "
                 "without specifying an index value.\n"
                 "\tFor example, model.%s[i] = value"
                 % (self.name, self.name))
         else:
-            raise NotImplementedError(
+            raise DeveloperError(
                 "Derived component %s failed to define set_value() "
-                "for scalar instances.\n"
-                "\tPlease report this to the Pyomo developers"
+                "for scalar instances."
                 % (self.__class__.__name__,))
 
     def id_index_map(self):

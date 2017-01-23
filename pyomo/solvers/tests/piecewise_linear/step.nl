@@ -6,7 +6,7 @@ g3 1 1 0	# problem unknown
  0 0 0 1	# linear network variables; functions; arith, flags
  4 0 0 0 0 	# discrete variables: binary, integer, nonlinear (b,c,o)
  23 2 	# nonzeros in Jacobian, obj. gradient
- 0 0	# max name lengths: constraints, variables
+ 22 16	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
 C0	#con.INC_constraint1
 n0

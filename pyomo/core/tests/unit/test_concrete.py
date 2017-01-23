@@ -18,9 +18,10 @@ import pyutilib.th as unittest
 
 import pyomo.opt
 from pyomo.environ import *
-solver = pyomo.opt.load_solvers('glpk')
 
-@unittest.skipIf(solver['glpk'] is None, "glpk solver is not available")
+solvers = pyomo.opt.check_available_solvers('glpk')
+
+@unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
 class Test(unittest.TestCase):
 
     def test_blending(self):
@@ -37,7 +38,7 @@ class Test(unittest.TestCase):
         model.c2 = Constraint(expr=0.080*model.x1 + 0.100*model.x2 >= 6.0, doc="Fat Requirement")
         model.c3 = Constraint(expr=0.001*model.x1 + 0.005*model.x2 <= 2.0, doc="Fiber Requirement")
         model.c4 = Constraint(expr=0.002*model.x1 + 0.005*model.x2 <= 0.4, doc="Salt Requirement")
-        opt = solver['glpk']
+        opt = SolverFactory('glpk')
         results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=currdir+"blend.out", format='json')

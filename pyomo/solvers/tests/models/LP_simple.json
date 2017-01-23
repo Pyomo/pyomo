@@ -1,0 +1,63 @@
+{
+  "c1": {
+    "dual": -4.0, 
+    "slack": 0.0, 
+    "value": 0.0
+  }, 
+  "c2": {
+    "dual": 1.0, 
+    "slack": 8.0, 
+    "value": 2.0
+  }, 
+  "c3": {
+    "dual": 1.0, 
+    "slack": 10.0, 
+    "value": 0.0
+  }, 
+  "c4": {
+    "dual": -1.0, 
+    "slack": -10.0, 
+    "value": 0.0
+  }, 
+  "inactive_obj": {
+    "value": 7.0
+  }, 
+  "obj": {
+    "value": 7.0
+  }, 
+  "simple_LP": {}, 
+  "x": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": 3.0
+  }, 
+  "y": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": 1.0
+  }, 
+  "z1": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": -1.0
+  }, 
+  "z2": {
+    "rc": 0.0, 
+    "stale": false, 
+    "value": -1.0
+  },
+  "suffix defaults": {
+    "dual": [
+      0.0, 
+      null
+    ], 
+    "rc": [
+      0.0, 
+      null
+    ], 
+    "slack": [
+      0.0, 
+      null
+    ]
+  }
+}

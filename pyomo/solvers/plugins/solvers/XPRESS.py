@@ -69,6 +69,8 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
         kwds['type'] = 'xpress'
         ILMLicensedSystemCallSolver.__init__(self, **kwds)
 
+        self.is_mip = kwds.pop('is_mip', False)
+
         #
         # Define valid problem formats and associated results formats
         #
@@ -147,16 +149,20 @@ class XPRESS_shell(ILMLicensedSystemCallSolver):
             script += "maxtime=%s\n" % (self._timelimit,)
 
         if (self.options.mipgap is not None) and (self.options.mipgap > 0.0):
-            script += "miprelstop=%s\n" % (self.options.mipgap,)
+            mipgap = self.options.pop('mipgap')
+            script += "miprelstop=%s\n" % (mipgap,)
 
         for option_name in self.options:
-            script += "%s=%s" % (option_name, self.options[option_name])
+            script += "%s=%s\n" % (option_name, self.options[option_name])
 
         script += "readprob %s\n" % (problem_files[0],)
 
         # doesn't seem to be a global solve command for mip versus lp
         # solves
-        script += "lpoptimize\n"
+        if self.is_mip:
+            script += "mipoptimize\n"
+        else:
+            script += "lpoptimize\n"
 
         # a quick explanation of the various flags used below:
         # p: outputs in full precision

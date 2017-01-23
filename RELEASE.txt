@@ -1,20 +1,28 @@
-We are pleased to announce the release of Pyomo 4.4. Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
+We are pleased to announce the release of Pyomo 5.1. Pyomo is a collection of Python software packages that supports a diverse set of optimization capabilities for formulating and analyzing optimization models.
 
-The following are highlights of this release:
 
-- Modeling
-   * Added an SP representation that uses annotations for declaring mutable stochastic data
+The following are a summary of changes since Pyomo 5.0:
 
-- Solvers
-   * Adding PySP solver interface to the SD solver
+- Added a CONOPT plugin to handle a custom SOL file output (#88)
+- Changed 'pyomo solve' to use any Model object that is found, rather than
+  requiring the default object to be named 'model' (#80)
+- Reworked the solver testing infrastructure to enable enumeration of all
+  test scenarios, which is used by 'pyomo test-solvers' (#78)
+- Fixes for xpress solver options writer (#79)
+- Resolved an issue where Pyomo was unnecessarily cloning most inequality
+  expressions (#80)
+- Reworked the Pyomo *.DAT file parser and post-parse processing logic. This
+  eliminates parse ambiguities that were causing test failures.
+- Finalized book test examples for the new edition of the Pyomo book
+- Added pyomo.contrib to support integration of third-party Pyomo libraries
+  in a standard manner
+- Fixed TravisCI testing issues where the incorrect version of Python was being
+  tested
+- Fixed error messages in pyomo.dae (#81)
+- Revised CBC interface to recognize intermediate non-integer solutions (#77)
+- Added checks for IPOPT test failures based on version info (#72)
+- Removed support for OpenOpt
 
-- Other
-   * Allow the use of ellipsis in indices
-   * Python 3.x compatibility updates
-   * Support evaluating external functions in AMPL-stype shared libraries
-   * Use HTTPS with NEOS
-
-See http://pyomo.org for installation options and documentation for getting started with Pyomo.
 
 Enjoy!
 
@@ -31,12 +39,12 @@ The Pyomo home page provides resources for Pyomo users:
 
  * http://pyomo.org
 
-Pyomo development is hosted by Sandia National Laboratories and COIN-OR:
+Pyomo development is hosted at GitHub:
 
- * https://software.sandia.gov/pyomo 
- * https://projects.coin-or.org/Pyomo
+ * https://github.com/Pyomo
 
-See the Pyomo Forum for online discussions of Pyomo:
+Get help at 
 
- * http://groups.google.com/group/pyomo-forum/
+ * StackOverflow: http://stackoverflow.com/questions/tagged/pyomo
+ * Pyomo Forum:   http://groups.google.com/group/pyomo-forum/
 

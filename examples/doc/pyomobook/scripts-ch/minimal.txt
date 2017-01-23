@@ -1,0 +1,23 @@
+
+Problem: 
+- Name: unknown
+  Lower bound: 1.0
+  Upper bound: 1.0
+  Number of objectives: 1
+  Number of constraints: 2
+  Number of variables: 2
+  Number of nonzeros: 2
+  Sense: minimize
+Solver: 
+- Status: ok
+  Termination condition: optimal
+  Statistics: 
+    Branch and bound: 
+      Number of bounded subproblems: 0
+      Number of created subproblems: 0
+  Error rc: 0
+  Time: 0.007606029510498047
+Solution: 
+- number of solutions: 0
+  number of solutions displayed: 0
+

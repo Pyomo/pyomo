@@ -1,0 +1,57 @@
+[    0.00] Setting up Pyomo environment
+[    0.00] Applying Pyomo preprocessing actions
+[    0.00] Creating model
+[    0.00] Applying solver
+[    0.05] Processing results
+    Number of solutions: 1
+    Solution Information
+      Gap: None
+      Status: optimal
+    Solver results file: results.yml
+[    0.05] Applying Pyomo postprocessing actions
+[    0.05] Pyomo Finished
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: unknown
+  Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: None
+  Number of constraints: None
+  Number of variables: None
+  Number of binary variables: None
+  Number of integer variables: None
+  Number of continuous variables: None
+  Sense: unknown
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Name: None
+  Status: ok
+  Wallclock time: 0.0463972091675
+  Termination condition: optimal
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: None
+  Status: optimal
+  Message: Ipopt 3.12.3\x3a Optimal Solution Found
+  Objective:
+    o:
+      Value: -12.025830426
+    sub.o:
+      Value: 4.00574009558
+  Variable:
+    sub.y:
+      Value: 4.00574009558
+    x:
+      Value: 3.99712995633
+  Constraint: No values

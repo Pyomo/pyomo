@@ -189,14 +189,14 @@ class _ConstraintData(ActiveComponentData):
 
     def lslack(self):
         """
-        Returns the value of L-f(x) for constraints of the form:
+        Returns the value of f(x)-L for constraints of the form:
             L <= f(x) (<= U)
             (U >=) f(x) >= L
         """
         if self.lower is None:
             return float('-inf')
         else:
-            return value(self.lower)-value(self.body)
+            return value(self.body)-value(self.lower)
 
     def uslack(self):
         """
@@ -208,6 +208,17 @@ class _ConstraintData(ActiveComponentData):
             return float('inf')
         else:
             return value(self.upper)-value(self.body)
+
+    def slack(self):
+        """
+        Returns the smaller of lslack and uslack values
+        """
+        if self.lower is None:
+            return value(self.upper)-value(self.body)
+        elif self.upper is None:
+            return value(self.body)-value(self.lower)
+        return min(value(self.upper)-value(self.body),
+                   value(self.body)-value(self.lower))
 
     #
     # Abstract Interface
@@ -245,6 +256,10 @@ class _ConstraintData(ActiveComponentData):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
+        raise NotImplementedError
+
+    def get_value(self):
+        """Get the expression on this constraint."""
         raise NotImplementedError
 
 class _GeneralConstraintData(_ConstraintData):
@@ -339,6 +354,11 @@ class _GeneralConstraintData(_ConstraintData):
         """A boolean indicating whether this constraint has a strict upper bound."""
         return False
 
+    @property
+    def expr(self):
+        """Return the expression associated with this constraint."""
+        return self.get_value()
+
     def set_value(self, expr):
         """Set the expression on this constraint."""
 
@@ -363,15 +383,16 @@ class _GeneralConstraintData(_ConstraintData):
                     arg1 = as_numeric(arg1)
 
                 self._equality = True
-                if arg1 is None or arg1.is_fixed():
+                if arg1 is None or (not arg1._potentially_variable()):
                     self._lower = self._upper = arg1
                     self._body = arg0
-                elif arg0 is None or arg0.is_fixed():
+                elif arg0 is None or (not arg0._potentially_variable()):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
                     self._lower = self._upper = ZeroConstant
-                    self._body = arg0 - arg1
+                    self._body = EXPR.generate_expression_bypassCloneCheck(
+                        _sub, arg0, arg1)
             #
             # Form inequality expression
             #
@@ -379,11 +400,12 @@ class _GeneralConstraintData(_ConstraintData):
                 arg0 = expr[0]
                 if arg0 is not None:
                     arg0 = as_numeric(arg0)
-                    if not arg0.is_fixed():
+                    if arg0._potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the lower "
-                            "value was non-constant."
+                            "value was not data or an expression "
+                            "restricted to storage of data."
                             % (self.name))
 
                 arg1 = expr[1]
@@ -393,11 +415,12 @@ class _GeneralConstraintData(_ConstraintData):
                 arg2 = expr[2]
                 if arg2 is not None:
                     arg2 = as_numeric(arg2)
-                    if not arg2.is_fixed():
+                    if arg2._potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a 3-tuple (lower,"
                             " expression, upper) but the upper "
-                            "value was non-constant."
+                            "value was not data or an expression "
+                            "restricted to storage of data."
                             % (self.name))
 
                 self._lower = arg0
@@ -460,30 +483,26 @@ class _GeneralConstraintData(_ConstraintData):
             if _expr_type is EXPR._EqualityExpression:
                 # Equality expression: only 2 arguments!
                 self._equality = True
-                try:
-                    _args = (expr._lhs, expr._rhs)
-                except AttributeError:
-                    _args = expr._args
-                if _args[1].is_fixed():
+                _args = expr._args
+                # Explicitly dereference the original arglist (otherwise
+                # this runs afoul of the getrefcount logic)
+                expr._args = []
+
+                if not _args[1]._potentially_variable():
                     self._lower = self._upper = _args[1]
                     self._body = _args[0]
-                elif _args[0].is_fixed():
+                elif not _args[0]._potentially_variable():
                     self._lower = self._upper = _args[0]
                     self._body = _args[1]
                 else:
                     self._lower = self._upper = ZeroConstant
-                    self._body = \
-                        EXPR.generate_expression_bypassCloneCheck(
-                            _sub,
-                            _args[0],
-                            _args[1])
+                    self._body = EXPR.generate_expression_bypassCloneCheck(
+                        _sub, _args[0], _args[1] )
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
                     try:
-                        _strict = \
-                            sum(1 if _s else 0
-                                for _s in expr._strict) > 0
+                        _strict = any(expr._strict)
                     except:
                         _strict = True
                     if _strict:
@@ -504,36 +523,28 @@ class _GeneralConstraintData(_ConstraintData):
                             "using '<=', '>=', or '=='."
                             % (self.name))
 
-                try:
-                    _args = (expr._lhs, expr._rhs)
-                    if expr._lhs.__class__ is \
-                       EXPR._InequalityExpression:
-                        _args = (expr._lhs._lhs,
-                                 expr._lhs._rhs,
-                                 expr._rhs)
-                    elif expr._lhs.__class__ is \
-                         EXPR._InequalityExpression:
-                        _args = (expr._lhs,
-                                 expr._rhs._lhs,
-                                 expr._rhs._rhs)
-                except AttributeError:
-                    _args = expr._args
+                _args = expr._args
+                # Explicitly dereference the original arglist (otherwise
+                # this runs afoul of the getrefcount logic)
+                expr._args = []
 
                 if len(_args) == 3:
 
-                    if not _args[0].is_fixed():
+                    if _args[0]._potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "
                             "inequality expression (lower <= "
                             "expression <= upper) but the lower "
-                            "bound was non-constant."
+                            "bound was not data or an expression "
+                            "restricted to storage of data."
                             % (self.name))
-                    if not _args[2].is_fixed():
+                    if _args[2]._potentially_variable():
                         raise ValueError(
                             "Constraint '%s' found a double-sided "\
                             "inequality expression (lower <= "
                             "expression <= upper) but the upper "
-                            "bound was non-constant."
+                            "bound was not data or an expression "
+                            "restricted to storage of data."
                             % (self.name))
 
                     self._lower = _args[0]
@@ -541,31 +552,25 @@ class _GeneralConstraintData(_ConstraintData):
                     self._upper = _args[2]
 
                 else:
-
-                    if _args[1].is_fixed():
+                    if not _args[1]._potentially_variable():
                         self._lower = None
                         self._body  = _args[0]
                         self._upper = _args[1]
-                    elif _args[0].is_fixed():
+                    elif not _args[0]._potentially_variable():
                         self._lower = _args[0]
                         self._body  = _args[1]
                         self._upper = None
                     else:
                         self._lower = None
-                        self._body  = \
-                            EXPR.\
-                            generate_expression_bypassCloneCheck(
-                                _sub,
-                                _args[0],
-                                _args[1])
+                        self._body  = EXPR.generate_expression_bypassCloneCheck(
+                            _sub, _args[0], _args[1])
                         self._upper = ZeroConstant
 
         #
         # Replace numeric bound values with a NumericConstant object,
         # and reset the values to 'None' if they are 'infinite'
         #
-        if (self._lower is not None) and \
-           is_constant(self._lower):
+        if (self._lower is not None) and is_constant(self._lower):
             val = self._lower()
             if not pyutilib.math.is_finite(val):
                 if val > 0:
@@ -578,8 +583,7 @@ class _GeneralConstraintData(_ConstraintData):
                     "Constraint '%s' created with a non-numeric "
                     "lower bound." % (self.name))
 
-        if (self._upper is not None) and \
-           is_constant(self._upper):
+        if (self._upper is not None) and is_constant(self._upper):
             val = self._upper()
             if not pyutilib.math.is_finite(val):
                 if val < 0:
@@ -605,6 +609,17 @@ class _GeneralConstraintData(_ConstraintData):
                     "Equality constraint '%s' defined with "
                     "non-finite term." % (self.name))
             assert self._lower is self._upper
+
+    def get_value(self):
+        """Get the expression on this constraint."""
+        if self._equality:
+            return self._body == self._lower
+        else:
+            if self._lower is None:
+                return self._body <= self._upper
+            elif self._upper is None:
+                return self._lower <= self._body
+            return self._lower <= self._body <= self._upper
 
 class Constraint(ActiveIndexedComponent):
     """
@@ -647,7 +662,7 @@ class Constraint(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
-        if args == () or (args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleConstraint.__new__(SimpleConstraint)
         else:
             return IndexedConstraint.__new__(IndexedConstraint)
@@ -759,14 +774,12 @@ class Constraint(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index \
-              if self._index != UnindexedComponent_set else None),
+             ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
             iteritems(self),
-            ( "Key","Lower","Body","Upper","Active" ),
-            lambda k, v: [ k,
-                           "-Inf" if v.lower is None else v.lower,
+            ( "Lower","Body","Upper","Active" ),
+            lambda k, v: [ "-Inf" if v.lower is None else v.lower,
                            v.body,
                            "+Inf" if v.upper is None else v.upper,
                            v.active,
@@ -790,9 +803,8 @@ class Constraint(ActiveIndexedComponent):
         ostream.write("\n")
         tabular_writer( ostream, prefix+tab,
                         ((k,v) for k,v in iteritems(self._data) if v.active),
-                        ( "Key","Lower","Body","Upper" ),
-                        lambda k, v: [ k,
-                                       value(v.lower),
+                        ( "Lower","Body","Upper" ),
+                        lambda k, v: [ value(v.lower),
                                        v.body(),
                                        value(v.upper),
                                        ] )
@@ -846,7 +858,7 @@ class Constraint(ActiveIndexedComponent):
             # example, model.a < 1 > 0.
             #
             if EXPR.generate_relational_expression.\
-               chainedInequality is not None:
+                    chainedInequality is not None:
 
                 buf = StringIO()
                 EXPR.generate_relational_expression.\
