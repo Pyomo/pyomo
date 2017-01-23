@@ -45,24 +45,31 @@ except:
     basestring = str
 
 _cplex_version = None
-try:
-    import cplex
-    from cplex.exceptions import CplexError, CplexSolverError
-    # create a version tuple of length 4
-    _cplex_version = tuple(int(i) for i in cplex.Cplex().get_version().split('.'))
-    while(len(_cplex_version) < 4):
-        _cplex_version += (0,)
-    _cplex_version = _cplex_version[:4]
-    cplex_import_available=True
-except ImportError:
-    cplex_import_available=False
-except Exception as e:
-    # other forms of exceptions can be thrown by CPLEX python
-    # import.  For example, an error in code invoked by the module's
-    # __init__.  We should continue gracefully and not cause a fatal
-    # error in Pyomo.
-    print("Import of cplex failed - cplex message=%s\n" % (e,) )
-    cplex_import_available=False
+cplex_import_available = None
+
+def configure_cplex():
+    global _cplex_version
+    global cplex_import_available
+    if not cplex_import_available is None:
+        return
+    try:
+        import cplex
+        from cplex.exceptions import CplexError, CplexSolverError
+        # create a version tuple of length 4
+        _cplex_version = tuple(int(i) for i in cplex.Cplex().get_version().split('.'))
+        while(len(_cplex_version) < 4):
+            _cplex_version += (0,)
+        _cplex_version = _cplex_version[:4]
+        cplex_import_available=True
+    except ImportError:
+        cplex_import_available=False
+    except Exception as e:
+        # other forms of exceptions can be thrown by CPLEX python
+        # import.  For example, an error in code invoked by the module's
+        # __init__.  We should continue gracefully and not cause a fatal
+        # error in Pyomo.
+        print("Import of cplex failed - cplex message=%s\n" % (e,) )
+        cplex_import_available=False
 
 class CplexSolverWrapper(wrappers.MIPSolverWrapper):
 
@@ -122,10 +129,10 @@ class CPLEXDirect(OptSolver):
                             doc='Direct Python interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
+        configure_cple_()
         #
         # Call base class constructor
         #
-
         # This gets overridden by CPLEXPersistent
         if 'type' not in kwds:
             kwds['type'] = 'cplexdirect'
