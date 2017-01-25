@@ -1,6 +1,7 @@
 import pyomo.environ
 from pyomo.core import *
 from pyomo.gdp import *
+from pyomo.opt import SolverFactory
 
 import pdb
 
@@ -9,6 +10,7 @@ import pdb
 
 
 datFile = "../../../../examples/gdp/stickies1.dat"
+SOLVER = 'baron'
 
 
 model = AbstractModel()
@@ -439,21 +441,30 @@ instance = model.create_instance(datFile)
 # Real beginning, with a model instance.
 ######################################################################
 
-instance.pprint()
+#instance.pprint()
 
 # constriant types dict
 constraint_types = {'equality': pyomo.core.base.expr_coopr3._EqualityExpression,
                     'inequality': pyomo.core.base.expr_coopr3._InequalityExpression}
 
+obj_expr = 0
+sense = 1
+minimize = 1
+maximize = -1
+
 # deactivate the objective
 for o in instance.component_data_objects(Objective):
+    if o.active: 
+        obj_expr = o.expr 
+        sense = o.sense
     o.deactivate()
 
-count = 0
+#iteration = 0
 # TODO: I'm not getting the constraints in the disjunctions yet
 #instance.pprint()
 for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
-    count += 1
+    # don't want to do anything with constraints we've already added slacks to
+    if cons.name.startswith("_slackConstraint_"): continue
     #print(cons.name)
     expr = cons.expr
     #pdb.set_trace()
@@ -461,27 +472,67 @@ for cons in instance.component_data_objects(Constraint, descend_into=(Block, Dis
     # DEBUG
     #expr.to_string()
     lhs = cons.expr._args[0]
+    rhs = cons.expr._args[1]
     # there are cases depending on what kind of expression this is.
-    # TODO: I also know for sure I'm not covering all of them... The tuples are left out right now
+    # TODO: I also know for sure I'm not covering all of them... The tuples are left out right now...
+    # and the thing <= thing <= thing will come up in the disjunctions...
     exprType = type(expr)
     if (exprType == constraint_types['equality']):
         # we need to add two slack variables
-        print "equality"
+        #print "equality"
+        plusVarName = "_slack_plus_" + cons.name
+        minusVarName = "_slack_minus_" + cons.name
+        instance.add_component(plusVarName, Var(within=NonNegativeReals))
+        instance.add_component(minusVarName, Var(within=NonNegativeReals))
+        plusVar = getattr(instance, plusVarName)
+        minusVar = getattr(instance, minusVarName)
+        instance.add_component("_slackConstraint_" + cons.name, Constraint(
+            expr=lhs + plusVar - minusVar == rhs))
+        # add slacks to objective:
+        if sense == minimize:
+            obj_expr += plusVar + minusVar
+        elif sense == maximize:
+            obj_expr -= plusVar + minusVar
+        else:
+            raise RuntimeError("Unrecognized objective sense: %s" % sense)
     elif (exprType == constraint_types['inequality']):
-        print "inequality"
+        #print "inequality"
+        varName = "_slack_" + cons.name
+        instance.add_component(varName, Var(within=NonNegativeReals))
+        slackVar = getattr(instance, varName)
+        instance.add_component("_slackConstraint_" + cons.name, Constraint(
+            expr=lhs - slackVar <= rhs))
+        # add slacks to objective:
+        if sense == minimize:
+            obj_expr += slackVar
+        elif sense == maximize:
+            obj_expr -= slackVar
+        else:
+            raise RuntimeError("Unrecognized objective sense: %s" % sense)
     else:
         raise RuntimeError("Unrecognized constraint type: %s" % (exprType))
+    #iteration += 1
 
-oldcount = count
+# for disj in instance.component_data_objects(Disjunct):
+#     pdb.set_trace()
+#     print disj.name
+#     for cons in disj.component_data_objects(Constraint):
+#         count += 1
+#         print cons.name
 
-for disj in instance.component_data_objects(Disjunct):
-    pdb.set_trace()
-    print disj.name
-    for cons in disj.component_data_objects(Constraint):
-        count += 1
-        print cons.name
+# make a new objective that includes the slack variables
+instance.add_component("_slack_objective", Objective(expr=obj_expr, sense=sense))
 
-print oldcount
-print count
+# TODO: I don't know what the plan should be in general... For now I am just going to do bigm and solve it.
 
-pdb.set_trace()
+bigMRelaxation = TransformationFactory('gdp.bigm')
+bigMRelaxation.apply_to(instance)
+
+print "Solving slack variable model"
+opt = SolverFactory(SOLVER)
+opt.solve(instance, tee=True)
+
+
+#instance.pprint()
+#pdb.set_trace() 
+
