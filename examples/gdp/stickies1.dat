@@ -36,12 +36,12 @@ param ExpScreenCostCoeff :=
       S6    0.56
 ;
 
-param InitialFlow :=
+param InitialComponentFlow :=
       st    1
       fib   0.675
 ;
 
-param FlowLB :=
+param ScreenFlowLB :=
       S1    0.1
       S2    0.1
       S3    0.1

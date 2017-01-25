@@ -2,14 +2,14 @@ import pyomo.environ
 from pyomo.core import *
 from pyomo.gdp import *
 
-''' Layout optimization for screening systems in waste paper recovery:
-Problem from http://www.minlp.org/library/problem/index.php?i=263&lib=GDP
-This problem is a design problem: When waste paper is recovered, a separator 
-screen is used to separate the fiber from the stickies. Different reject rates 
-can be set for different pieces of equipment to separate out the output with 
-more fiber and the output with more stickies. The overall equipment layout 
-affects the output purity and the flow rates. (We want more fiber and fewer 
-stickies!)'''
+import pdb
+
+## On the same plan as before, I am just going to develop my algorithm with 
+# this model as my instance:
+
+
+datFile = "../../../../examples/gdp/stickies1.dat"
+
 
 model = AbstractModel()
 
@@ -431,3 +431,57 @@ def accept_or_reject_rule4(model, s, n):
         model.flow_rejection_disjunct[s, n, 1].indicator_var
 model.accept_or_reject4 = Constraint(model.ScreenNodePairs, 
                                      rule=accept_or_reject_rule4)
+
+# put data in the model
+instance = model.create_instance(datFile)
+
+######################################################################
+# Real beginning, with a model instance.
+######################################################################
+
+instance.pprint()
+
+# constriant types dict
+constraint_types = {'equality': pyomo.core.base.expr_coopr3._EqualityExpression,
+                    'inequality': pyomo.core.base.expr_coopr3._InequalityExpression}
+
+# deactivate the objective
+for o in instance.component_data_objects(Objective):
+    o.deactivate()
+
+count = 0
+# TODO: I'm not getting the constraints in the disjunctions yet
+#instance.pprint()
+for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
+    count += 1
+    #print(cons.name)
+    expr = cons.expr
+    #pdb.set_trace()
+    cons.deactivate()
+    # DEBUG
+    #expr.to_string()
+    lhs = cons.expr._args[0]
+    # there are cases depending on what kind of expression this is.
+    # TODO: I also know for sure I'm not covering all of them... The tuples are left out right now
+    exprType = type(expr)
+    if (exprType == constraint_types['equality']):
+        # we need to add two slack variables
+        print "equality"
+    elif (exprType == constraint_types['inequality']):
+        print "inequality"
+    else:
+        raise RuntimeError("Unrecognized constraint type: %s" % (exprType))
+
+oldcount = count
+
+for disj in instance.component_data_objects(Disjunct):
+    pdb.set_trace()
+    print disj.name
+    for cons in disj.component_data_objects(Constraint):
+        count += 1
+        print cons.name
+
+print oldcount
+print count
+
+pdb.set_trace()
