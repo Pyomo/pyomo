@@ -1318,7 +1318,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Rely on the _tree_iterator:
         #
-        return self._tree_iterator(ctype=(Block,),
+        if descend_into is True:
+            descend_into = (Block,)
+        elif isclass(descend_into):
+            descend_into = (descend_into,)
+        return self._tree_iterator(ctype=descend_into,
                                    active=active,
                                    sort=sort,
                                    traversal=descent_order)
