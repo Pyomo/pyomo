@@ -90,7 +90,7 @@ class _ExpressionData(NumericValue):
         return lambda x: False
 
     def _is_fixed_combiner(self):
-        return lambda x: x
+        return lambda x: x[0]
 
     def _potentially_variable_combiner(self):
         # Expression objects are potentially variable by definition
