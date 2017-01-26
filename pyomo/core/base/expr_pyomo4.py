@@ -589,7 +589,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
 
     def __init__(self, arg, name, fcn):
         """Construct an expression with an operation and a set of arguments"""
-        self._args = arg
+        self._args = (arg,)
         if not _getrefcount_available:
             self._parent_expr = None
         self._fcn = fcn
@@ -1802,7 +1802,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     if arg.__class__ in native_types:
         return fcn(arg)
 
-    ans = _UnaryFunctionExpression((arg,), name, fcn)
+    ans = _UnaryFunctionExpression(arg, name, fcn)
     if not _getrefcount_available:
         ans._parent_expr = bypass_backreference or ref(self)
     return ans
