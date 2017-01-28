@@ -11,7 +11,7 @@ import pdb
 
 datFile = "../../../../examples/gdp/stickies1.dat"
 SOLVER = 'baron'
-
+#SOLVER = 'couenne'
 
 model = AbstractModel()
 
@@ -130,7 +130,8 @@ model.screenCost = Var(model.Screens, within=NonNegativeReals)#, bounds=get_scre
 # NOTE: the upper bound is enforced globally. The lower bound is enforced in
 # the first disjunction
 def get_inlet_flow_bounds(model, s):
-    return (0, model.ScreenFlowUB[s])
+    #LB can't be 0 because of derivative issues in Couenne
+    return (1e-20, model.ScreenFlowUB[s])
 model.inletScreenFlow = Var(model.Screens, within=NonNegativeReals, 
                             bounds=get_inlet_flow_bounds)
 
@@ -202,33 +203,33 @@ model.min_cost = Objective(rule=calc_cost_rule)
 # Constraints
 ######################
 
-def stickies_bound_rule(model, j):
-    return sum(model.inletComponentFlow[j,'PRD'] for j in model.BadComponents) \
-        <= model.AcceptedLeftover[j] * model.InitialComponentFlow[j]
-model.stickies_bound = Constraint(model.BadComponents, rule=stickies_bound_rule)
+# def stickies_bound_rule(model, j):
+#     return sum(model.inletComponentFlow[j,'PRD'] for j in model.BadComponents) \
+#         <= model.AcceptedLeftover[j] * model.InitialComponentFlow[j]
+# model.stickies_bound = Constraint(model.BadComponents, rule=stickies_bound_rule)
 
-def inlet_flow_rule(model, s, j):
-    return model.inletComponentFlow[j,s] == model.acceptedComponentFlow[j,s] + \
-        model.rejectedComponentFlow[j, s]
-model.inlet_flow = Constraint(model.Screens, model.Components, 
-                              rule=inlet_flow_rule)
+# def inlet_flow_rule(model, s, j):
+#     return model.inletComponentFlow[j,s] == model.acceptedComponentFlow[j,s] + \
+#         model.rejectedComponentFlow[j, s]
+# model.inlet_flow = Constraint(model.Screens, model.Components, 
+#                               rule=inlet_flow_rule)
 
-def total_inlet_flow_rule(model, s):
-    return model.inletScreenFlow[s] == sum(model.inletComponentFlow[j, s] \
-                                           for j in model.Components)
-model.total_inlet_flow = Constraint(model.Screens, rule=total_inlet_flow_rule)
+# def total_inlet_flow_rule(model, s):
+#     return model.inletScreenFlow[s] == sum(model.inletComponentFlow[j, s] \
+#                                            for j in model.Components)
+# model.total_inlet_flow = Constraint(model.Screens, rule=total_inlet_flow_rule)
 
-def inlet_flow_balance_rule(model, n, j):
-    return model.inletComponentFlow[j, n] == model.flowFromSource[j, n] + \
-        sum(model.acceptedNodeFlow[j, s, n] + model.rejectedNodeFlow[j, s, n] \
-            for s in model.Screens if s != n)
-model.inlet_flow_balance = Constraint(model.Nodes, model.Components, 
-                                      rule=inlet_flow_balance_rule)
+# def inlet_flow_balance_rule(model, n, j):
+#     return model.inletComponentFlow[j, n] == model.flowFromSource[j, n] + \
+#         sum(model.acceptedNodeFlow[j, s, n] + model.rejectedNodeFlow[j, s, n] \
+#             for s in model.Screens if s != n)
+# model.inlet_flow_balance = Constraint(model.Nodes, model.Components, 
+#                                       rule=inlet_flow_balance_rule)
 
-def source_flow_rule(model, j):
-    return model.InitialComponentFlow[j] == sum(model.flowFromSource[j, n] \
-                                       for n in model.Nodes)
-model.source_flow = Constraint(model.Components, rule=source_flow_rule)
+# def source_flow_rule(model, j):
+#     return model.InitialComponentFlow[j] == sum(model.flowFromSource[j, n] \
+#                                        for n in model.Nodes)
+# model.source_flow = Constraint(model.Components, rule=source_flow_rule)
 
 #################
 ## Disjunctions
@@ -333,9 +334,9 @@ model.flow_from_source_disjunction = Disjunction(
     rule=flow_from_source_disjunction_rule)
 
 
-######################
-# Boolean Constraints
-######################
+# ######################
+# # Boolean Constraints
+# ######################
 
 # YA_{s,n} v YR_{s,n} implies Y_s
 def flow_existence_rule1(model, s, n):
@@ -460,10 +461,10 @@ for o in instance.component_data_objects(Objective):
     o.deactivate()
 
 #iteration = 0
-# TODO: I'm not getting the constraints in the disjunctions yet
 #instance.pprint()
 for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
     # don't want to do anything with constraints we've already added slacks to
+    print cons.name
     if cons.name.startswith("_slackConstraint_"): continue
     #print(cons.name)
     expr = cons.expr
@@ -477,6 +478,7 @@ for cons in instance.component_data_objects(Constraint, descend_into=(Block, Dis
     # TODO: I also know for sure I'm not covering all of them... The tuples are left out right now...
     # and the thing <= thing <= thing will come up in the disjunctions...
     exprType = type(expr)
+    print exprType
     if (exprType == constraint_types['equality']):
         # we need to add two slack variables
         #print "equality"
@@ -523,7 +525,8 @@ for cons in instance.component_data_objects(Constraint, descend_into=(Block, Dis
 # make a new objective that includes the slack variables
 instance.add_component("_slack_objective", Objective(expr=obj_expr, sense=sense))
 
-# TODO: I don't know what the plan should be in general... For now I am just going to do bigm and solve it.
+# TODO: I don't know what the plan should be in general... For now I am just going to 
+# do bigm and solve it.
 
 bigMRelaxation = TransformationFactory('gdp.bigm')
 bigMRelaxation.apply_to(instance)
