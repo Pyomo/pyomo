@@ -2,6 +2,7 @@ import pyomo.environ
 from pyomo.core import *
 from pyomo.gdp import *
 
+
 ''' Layout optimization for screening systems in waste paper recovery:
 Problem from http://www.minlp.org/library/problem/index.php?i=263&lib=GDP
 This problem is a design problem: When waste paper is recovered, a separator 
@@ -10,6 +11,7 @@ can be set for different pieces of equipment to separate out the output with
 more fiber and the output with more stickies. The overall equipment layout 
 affects the output purity and the flow rates. (We want more fiber and fewer 
 stickies!)'''
+
 
 model = AbstractModel()
 
@@ -128,7 +130,8 @@ model.screenCost = Var(model.Screens, within=NonNegativeReals)#, bounds=get_scre
 # NOTE: the upper bound is enforced globally. The lower bound is enforced in
 # the first disjunction
 def get_inlet_flow_bounds(model, s):
-    return (0, model.ScreenFlowUB[s])
+    #LB can't be 0 because of derivative issues in Couenne
+    return (1e-20, model.ScreenFlowUB[s])
 model.inletScreenFlow = Var(model.Screens, within=NonNegativeReals, 
                             bounds=get_inlet_flow_bounds)
 
@@ -331,9 +334,9 @@ model.flow_from_source_disjunction = Disjunction(
     rule=flow_from_source_disjunction_rule)
 
 
-######################
-# Boolean Constraints
-######################
+# ######################
+# # Boolean Constraints
+# ######################
 
 # YA_{s,n} v YR_{s,n} implies Y_s
 def flow_existence_rule1(model, s, n):
