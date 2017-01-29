@@ -314,15 +314,25 @@ model.flow_rejection_disjunction = Disjunction(model.ScreenNodePairs,
                                             rule=rejected_flow_disjunction_rule)
 
 
+# TODO: this is indexed by components and nodes in GAMS. I think it essentially
+# is here too, but I should make it explicit. I am beginning to think that
+# the model might not be feasible as it is written in the formulation. At least
+# with this data.
 def flow_from_source_disjunct_rule(disjunct, n):
     model = disjunct.model()
-    def sourceFlow_balance_rule(disjunct, j):
-        return model.flowFromSource[j, n] == model.InitialComponentFlow[j]
+    def sourceFlow_balance_rule1(disjunct, j):
+        # this doesn't match the formulation, but it matches GAMS:
+        return model.flowFromSource[j, n] >= model.InitialComponentFlowLB[j]
+        #return model.flowFromSource[j, n] == model.InitialComponentFlow[j]
+    def sourceFlow_balance_rule2(disjunct, j):
+        return model.flowFromSource[j, n] <= model.InitialComponentFlow[j]
     def no_sourceFlow_rule(disjunct, j, nprime):
         return model.flowFromSource[j, nprime] == 0
 
-    disjunct.flow_balance = Constraint(model.Components, 
-                                       rule=sourceFlow_balance_rule)
+    disjunct.flow_balance1 = Constraint(model.Components, 
+                                        rule=sourceFlow_balance_rule1)
+    disjunct.flow_balance2 = Constraint(model.Components,
+                                        rule=sourceFlow_balance_rule2)
     disjunct.no_flow = Constraint(model.Components, model.Nodes-[n], 
                                   rule=no_sourceFlow_rule)
 model.flow_from_source_disjunct = Disjunct(model.Nodes, 
