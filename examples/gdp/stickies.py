@@ -314,10 +314,6 @@ model.flow_rejection_disjunction = Disjunction(model.ScreenNodePairs,
                                             rule=rejected_flow_disjunction_rule)
 
 
-# TODO: this is indexed by components and nodes in GAMS. I think it essentially
-# is here too, but I should make it explicit. I am beginning to think that
-# the model might not be feasible as it is written in the formulation. At least
-# with this data.
 def flow_from_source_disjunct_rule(disjunct, n):
     model = disjunct.model()
     def sourceFlow_balance_rule1(disjunct, j):

@@ -48,10 +48,12 @@ class AddSlackVariables(NonIsomorphicTransformation):
         expr = lhs + plusVar - minusVar == rhs if numArgs == 2 else \
                lhs <= cons.expr._args[1] + plusVar - minusVar <= rhs
         instance.add_component("_slackConstraint_" + cons.name, Constraint(expr=expr))
+
         # add slacks to objective:
         obj_expr = self.add_slacks_to_obj(obj_expr, sense, plusVar + minusVar)
         return (instance, obj_expr)
 
+    # helper function for adding slack variables to constraints of the form expr <= expr
     def add_one_slack(self, instance, cons, lhs, rhs, obj_expr, sense):
         varName = "_slack_" + cons.name
         instance.add_component(varName, Var(within=NonNegativeReals))
@@ -60,17 +62,11 @@ class AddSlackVariables(NonIsomorphicTransformation):
             expr=lhs - slackVar <= rhs))
         obj_expr = self.add_slacks_to_obj(obj_expr, sense, slackVar)
         return (instance, obj_expr)
-        
 
     def _apply_to(self, instance, **kwds):
         # constriant types dict
         constraint_types = {'equality': pyomo.core.base.expr_coopr3._EqualityExpression,
                         'inequality': pyomo.core.base.expr_coopr3._InequalityExpression}
-
-        # TODO: should these be class variables? It seems to make sense for easy access
-        # in the helper functions... I am so rusty on OO stuff...
-        # obj_expr = 0
-        # sense = 1
 
         # deactivate the objective
         for o in instance.component_data_objects(Objective):
@@ -79,8 +75,6 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 sense = o.sense
                 o.deactivate()
 
-            #iteration = 0
-            #instance.pprint()
         for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
             # don't want to do anything with constraints we've already added slacks to
             if cons.name.startswith("_slackConstraint_"): continue
@@ -95,58 +89,14 @@ class AddSlackVariables(NonIsomorphicTransformation):
             if (exprType == constraint_types['equality']):
                 instance, obj_expr = self.add_two_slacks(instance, cons, 2,
                                                                 lhs, rhs, obj_expr, sense)
-                # we need to add two slack variables
-                #print "equality"
-                # plusVarName = "_slack_plus_" + cons.name
-                # minusVarName = "_slack_minus_" + cons.name
-                # instance.add_component(plusVarName, Var(within=NonNegativeReals))
-                # instance.add_component(minusVarName, Var(within=NonNegativeReals))
-                # plusVar = getattr(instance, plusVarName)
-                # minusVar = getattr(instance, minusVarName)
-                # instance.add_component("_slackConstraint_" + cons.name, Constraint(
-                #     expr=lhs + plusVar - minusVar == rhs))
-
-                
-                # if sense == minimize:
-                #     obj_expr += plusVar + minusVar
-                # elif sense == maximize:
-                #     obj_expr -= plusVar + minusVar
-                # else:
-                #     raise RuntimeError("Unrecognized objective sense: %s" % sense)
             elif (exprType == constraint_types['inequality']):
                 # two cases (that I know of): either a <= b or a <= b <= c
                 if len(args) == 2:
                     instance, obj_expr = self.add_one_slack(instance, cons, lhs, rhs,
                                                             obj_expr, sense)
-                    
-                    # add slacks to objective:
-                    # if sense == minimize:
-                    #     obj_expr += slackVar
-                    # elif sense == maximize:
-                    #     obj_expr -= slackVar
-                    # else:
-                    #     raise RuntimeError("Unrecognized objective sense: %s" % sense)
                 elif len(args) == 3:
                     instance, obj_expr = self.add_two_slacks(instance, cons, 3, lhs, 
                                                              rhs, obj_expr, sense)
-                    # TODO: this is identical code to the equality case except for the
-                    # expression of the new constraint. Should be helper function.
-                    # plusVarName = "_slack_plus_" + cons.name
-                    # minusVarName = "_slack_minus_" + cons.name
-                    # instance.add_component(plusVarName, Var(within=NonNegativeReals))
-                    # instance.add_component(minusVarName, Var(within=NonNegativeReals))
-                    # plusVar = getattr(instance, plusVarName)
-                    # minusVar = getattr(instance, minusVarName)
-                    # instance.add_component("_slackConstraint_" + cons.name, Constraint(
-                    #     expr=lhs <= args[1] + plusVar - minusVar <= rhs))
-                    # # TODO: this should be a helper function for sure.
-                    # # add slacks to objective:
-                    # if sense == minimize:
-                    #     obj_expr += plusVar + minusVar
-                    # elif sense == maximize:
-                    #     obj_expr -= plusVar + minusVar
-                    # else:
-                    #     raise RuntimeError("Unrecognized objective sense: %s" % sense)
                 else:
                     raise RuntimeError("""Unrecognized number of expressions in inequality
                                        constraint: %s args in constraint %s""" \
@@ -158,7 +108,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
         instance.add_component("_slack_objective", Objective(expr=obj_expr, sense=sense))
 
         # TODO: I don't know what the plan should be in general... For now I am just going to 
-        # do bigm and solve it. Does bigm hurt things that don't have disjunctions?
-
+        # do bigm. Does bigm hurt things that don't have disjunctions? Or can you
+        # do multiple transformations at a time with the pyomo command?
         bigMRelaxation = TransformationFactory('gdp.bigm')
         bigMRelaxation.apply_to(instance)
