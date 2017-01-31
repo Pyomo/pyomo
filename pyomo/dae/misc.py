@@ -12,6 +12,7 @@ import logging
 from pyomo.core import *
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
+from pyomo.core.base.block import _BlockData
 from pyomo.dae import *
 
 from six import iterkeys, itervalues
@@ -98,12 +99,8 @@ def update_contset_indexed_component(comp):
     Update any model components which are indexed by a ContinuousSet
     that has changed
     """
-    # FIXME: This implementation is a hack until Var and Constraint get
-    # moved over to Indexed_Component. The update methods below are
-    # roughly what the '_default' method in Var and Constraint should
-    # do when they get reimplemented.
 
-    # Additionally, this implemenation will *NOT* check for or update
+    # This implemenation will *NOT* check for or update
     # components which use a ContinuousSet implicitly. ex) an
     # objective function which iterates through a ContinuousSet and
     # sums the squared error.  If you use a ContinuousSet implicitly
@@ -112,6 +109,15 @@ def update_contset_indexed_component(comp):
 
     if comp.type() is Suffix:
         return
+    
+    # Params indexed by a ContinuousSet should include an initialize
+    # and/or default rule which will be called automatically when the
+    # parameter value at a new point in the ContinuousSet is
+    # requested. Therefore, no special processing is required for
+    # Params.
+    if comp.type() is Param:
+        return
+
     if comp.dim() == 1:
         if comp._index.type() == ContinuousSet:
             if comp._index.get_changed():
@@ -121,6 +127,16 @@ def update_contset_indexed_component(comp):
                     _update_constraint(comp)
                 elif comp.type() == Expression:
                     _update_expression(comp)
+                elif comp.type() == Block:
+                    _update_block(comp)
+                else:
+                    raise TypeError("Found component %s of type %s indexed "\
+                        "by a ContinuousSet. Components of this type are "\
+                        "not currently supported by the automatic "\
+                        "discretization transformation in pyomo.dae. "\
+                        "Try adding the component to the model "\
+                        "after discretizing. Alert the pyomo developers "\
+                        "for more assistance." %(str(comp),comp.type()))
     elif comp.dim() > 1:
         indexset = comp._implicit_subsets
 
@@ -132,11 +148,21 @@ def update_contset_indexed_component(comp):
                     _update_constraint(comp)
                 elif comp.type() == Expression:
                     _update_expression(comp)
+                elif comp.type() == Block:
+                    _update_block(comp)
+                else:
+                    raise TypeError("Found component %s of type %s indexed "\
+                        "by a ContinuousSet. Components of this type are "\
+                        "not currently supported by the automatic "\
+                        "discretization transformation in pyomo.dae. "\
+                        "Try adding the component to the model "\
+                        "after discretizing. Alert the pyomo developers "\
+                        "for more assistance." %(str(comp),comp.type()))
 
 def _update_var(v):
     """
     This method will construct any additional indices in a variable
-    resulting from the discretization of ContinuousSet
+    resulting from the discretization of a ContinuousSet.
     """
 
     # Note: This is not required it is handled by the _default method on
@@ -150,7 +176,7 @@ def _update_var(v):
 def _update_constraint(con):
     """
     This method will construct any additional indices in a constraint
-    resulting from the discretization.
+    resulting from the discretization of a ContinuousSet.
     """
 
     _rule=con.rule
@@ -162,8 +188,8 @@ def _update_constraint(con):
 
 def _update_expression(expre):
     """
-    This method will construct any additional indices in a expression
-    resulting from the discretization
+    This method will construct any additional indices in an expression
+    resulting from the discretization of a ContinuousSet.
     """
     _rule=expre._init_rule
     _parent=expre._parent()
@@ -171,6 +197,30 @@ def _update_expression(expre):
         if i not in expre:
             # Code taken from the construct() method of Expression
             expre.add(i,apply_indexed_rule(expre,_rule,_parent,i))
+
+def _update_block(blk):
+    """
+    This method will construct any additional indices in a block
+    resulting from the discretization of a ContinuousSet.
+    """
+    
+    # Code taken from the construct() method of Block
+    missing_idx = set(blk._index)-set(iterkeys(blk._data))
+    for idx in missing_idx:
+        _block = blk[idx]
+        obj = apply_indexed_rule(
+            None, blk._rule, _block, idx, blk._options )
+ 
+        if isinstance(obj, _BlockData) and obj is not _block:
+            # If the user returns a block, use their block instead
+            # of the empty one we just created.
+            for c in list(obj.component_objects(descend_into=False)):
+                obj.del_component(c)
+                _block.add_component(c.local_name, c)
+                # transfer over any other attributes that are not components
+                for name, val in iteritems(obj.__dict__):
+                    if not hasattr(_block, name) and not hasattr(blk, name):
+                        super(_BlockData, _block).__setattr__(name, val)
 
 def create_access_function(var):
     """
