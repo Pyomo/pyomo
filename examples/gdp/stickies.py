@@ -2,6 +2,11 @@ import pyomo.environ
 from pyomo.core import *
 from pyomo.gdp import *
 
+from pyomo.opt import SolverFactory
+
+#DEBUG
+import pdb
+
 
 ''' Layout optimization for screening systems in waste paper recovery:
 Problem from http://www.minlp.org/library/problem/index.php?i=263&lib=GDP
@@ -18,6 +23,9 @@ model = AbstractModel()
 
 model.BigM = Suffix(direction=Suffix.LOCAL)
 model.BigM[None] = 7000
+
+SOLVER = 'baron'
+DATFILE = "stickies1.dat"
 
 #######################
 #Sets
@@ -128,10 +136,9 @@ model.screenCost = Var(model.Screens, within=NonNegativeReals)#, bounds=get_scre
 
 # total inlet flow into screen s (f_s, F_IN(s))
 # NOTE: the upper bound is enforced globally. The lower bound is enforced in
-# the first disjunction
+# the first disjunction (to match GAMS)
 def get_inlet_flow_bounds(model, s):
-    #LB can't be 0 because of derivative issues in Couenne
-    return (1e-20, model.ScreenFlowUB[s])
+    return (0, model.ScreenFlowUB[s])
 model.inletScreenFlow = Var(model.Screens, within=NonNegativeReals, 
                             bounds=get_inlet_flow_bounds)
 
@@ -244,10 +251,12 @@ def screen_disjunct_rule(disjunct, selectScreen, s):
 
     if selectScreen:              
         disjunct.inlet_flow_bounds = Constraint(expr=model.ScreenFlowLB[s] <= \
-                                                model.inletScreenFlow[s] <= \
-                                                model.ScreenFlowUB[s])
+                                                model.inletScreenFlow[s])# <= \
+                                                #model.ScreenFlowUB[s])
         disjunct.rejected_flow = Constraint(model.Components, 
                                             rule=rejected_flow_rule)
+        # TODO: in GAMS, the == is >=... It should be the same since it
+        # is minimized in the objective, right??
         disjunct.screen_cost = Constraint(expr=model.screenCost[s] == \
                                           model.ScreenCostCoeff1[s]* \
                                           (model.inletScreenFlow[s]** \
@@ -273,7 +282,6 @@ def accepted_flow_disjunct_rule(disjunct, s, n, acceptFlow):
         return model.acceptedNodeFlow[j, s, n] == \
             model.acceptedComponentFlow[j, s]
     def no_flow_rule(disjunct, j):
-        model = disjunct.model()
         return model.acceptedNodeFlow[j, s, n] == 0
 
     if acceptFlow:
@@ -304,12 +312,12 @@ def rejected_flow_disjunct_rule(disjunct, s, n, rejectFlow):
                                            rule=flow_balance_rule)
     else:
         disjunct.no_reject = Constraint(model.Components, rule=no_reject_rule)
-model.flow_rejection_disjunct = Disjunct(model.ScreenNodePairs, [0, 1], 
+model.flow_rejection_disjunct = Disjunct(model.ScreenNodePairs, [0,1], 
                                          rule=rejected_flow_disjunct_rule)
 
 def rejected_flow_disjunction_rule(model, s, n):
     return [model.flow_rejection_disjunct[s, n, rejectFlow] \
-            for rejectFlow in [0, 1]]
+            for rejectFlow in [0,1]]
 model.flow_rejection_disjunction = Disjunction(model.ScreenNodePairs, 
                                             rule=rejected_flow_disjunction_rule)
 
@@ -329,7 +337,7 @@ def flow_from_source_disjunct_rule(disjunct, n):
                                         rule=sourceFlow_balance_rule1)
     disjunct.flow_balance2 = Constraint(model.Components,
                                         rule=sourceFlow_balance_rule2)
-    disjunct.no_flow = Constraint(model.Components, model.Nodes-[n], 
+    disjunct.no_flow = Constraint(model.Components, model.Nodes - [n], 
                                   rule=no_sourceFlow_rule)
 model.flow_from_source_disjunct = Disjunct(model.Nodes, 
                                            rule=flow_from_source_disjunct_rule)
@@ -340,103 +348,167 @@ model.flow_from_source_disjunction = Disjunction(
     rule=flow_from_source_disjunction_rule)
 
 
-# ######################
-# # Boolean Constraints
-# ######################
+######################
+# Boolean Constraints
+######################
+
+# These are the GAMS ones:
+def log1_rule(model, s):
+    return model.screen_selection_disjunct[1, s].indicator_var == \
+        sum(model.flow_acceptance_disjunct[s, n, 1].indicator_var \
+            for n in model.Nodes if s != n)
+model.log1 = Constraint(model.Screens, rule=log1_rule)
+
+def log2_rule(model, s):
+    return model.screen_selection_disjunct[1, s].indicator_var == \
+        sum(model.flow_rejection_disjunct[s, n, 1].indicator_var \
+            for n in model.Nodes if s != n)
+model.log2 = Constraint(model.Screens, rule=log2_rule)
+
+def log3_rule(model, s):
+    return model.screen_selection_disjunct[1, s].indicator_var >= \
+        sum(model.flow_acceptance_disjunct[s, sprime, 1].indicator_var \
+            for sprime in model.Screens if s != sprime)
+model.log3 = Constraint(model.Screens, rule=log3_rule)
+
+def log4_rule(model, s):
+    return model.screen_selection_disjunct[1, s].indicator_var >= \
+        sum(model.flow_rejection_disjunct[s, sprime, 1].indicator_var \
+            for sprime in model.Screens if s != sprime)
+model.log4 = Constraint(model.Screens, rule=log4_rule)
+
+def log6_rule(model, s, sprime):
+    return model.flow_acceptance_disjunct[s, sprime, 1].indicator_var + \
+        model.flow_acceptance_disjunct[sprime, s, 1].indicator_var <= 1
+model.log6 = Constraint(model.ScreenPairs, rule=log6_rule)
+
+def log7_rule(model, s, sprime):
+    return model.flow_rejection_disjunct[s, sprime, 1].indicator_var + \
+        model.flow_rejection_disjunct[sprime, s, 1].indicator_var <= 1
+model.log7 = Constraint(model.ScreenPairs, rule=log7_rule)
+
+def log8_rule(model, s, n):
+    return model.flow_acceptance_disjunct[s, n, 1].indicator_var + \
+        model.flow_rejection_disjunct[s, n, 1].indicator_var <= 1
+model.log8 = Constraint(model.ScreenNodePairs, rule=log8_rule)
+
+def log9_rule(model, s, sprime):
+    return model.flow_acceptance_disjunct[s, sprime, 1].indicator_var + \
+        model.flow_rejection_disjunct[sprime, s, 1].indicator_var <= 1
+model.log9 = Constraint(model.ScreenPairs, rule=log9_rule)
 
 # YA_{s,n} v YR_{s,n} implies Y_s
-def flow_existence_rule1(model, s, n):
-    return model.screen_selection_disjunct[1, s].indicator_var >= \
-        model.flow_acceptance_disjunct[s, n, 1].indicator_var
-model.flow_existence1 = Constraint(model.ScreenNodePairs, 
-                                   rule=flow_existence_rule1)
+# def flow_existence_rule1(model, s, n):
+#     return model.screen_selection_disjunct[1, s].indicator_var >= \
+#         model.flow_acceptance_disjunct[s, n, 1].indicator_var
+# model.flow_existence1 = Constraint(model.ScreenNodePairs, 
+#                                    rule=flow_existence_rule1)
 
-def flow_existence_rule2(model, s, n):
-    return model.screen_selection_disjunct[1, s].indicator_var >= \
-        model.flow_rejection_disjunct[s, n, 1].indicator_var
-model.flow_existence2 = Constraint(model.ScreenNodePairs, 
-                                   rule=flow_existence_rule2)
-
-
-# YA_{s,s'} v YR_{s',s} implies Y_s
-def screen_flow_existence_rule1(model, s, sprime):
-    return model.screen_selection_disjunct[1, s].indicator_var >= \
-        model.flow_acceptance_disjunct[s, sprime, 1].indicator_var
-model.screen_flow_existence1 = Constraint(model.ScreenPairs, 
-                                          rule=screen_flow_existence_rule1)
-
-def screen_flow_existence_rule2(model, s, sprime):
-    return model.screen_selection_disjunct[1,s].indicator_var >= \
-        model.flow_rejection_disjunct[sprime, s, 1].indicator_var
-model.screen_flow_existence2 = Constraint(model.ScreenPairs, 
-                                          rule=screen_flow_existence_rule2)
+# def flow_existence_rule2(model, s, n):
+#     return model.screen_selection_disjunct[1, s].indicator_var >= \
+#         model.flow_rejection_disjunct[s, n, 1].indicator_var
+# model.flow_existence2 = Constraint(model.ScreenNodePairs, 
+#                                    rule=flow_existence_rule2)
 
 
-# YA_{s', s} XOR YA_{s, s'}
-def accept_rule1(model, s, sprime):
-    return 1 <= model.flow_acceptance_disjunct[s, sprime, 1].indicator_var + \
-        model.flow_acceptance_disjunct[sprime, s, 1].indicator_var
-model.accept1 = Constraint(model.ScreenPairs, rule=accept_rule1)
+# # YA_{s,s'} v YR_{s',s} implies Y_s
+# def screen_flow_existence_rule1(model, s, sprime):
+#     return model.screen_selection_disjunct[1, s].indicator_var >= \
+#         model.flow_acceptance_disjunct[s, sprime, 1].indicator_var
+# model.screen_flow_existence1 = Constraint(model.ScreenPairs, 
+#                                           rule=screen_flow_existence_rule1)
 
-def accept_rule2(model, s, sprime):
-    return 1 >= model.flow_acceptance_disjunct[s, sprime, 1].indicator_var - \
-        model.flow_acceptance_disjunct[sprime, s, 1].indicator_var
-model.accept2 = Constraint(model.ScreenPairs, rule=accept_rule2)
-
-def accept_rule3(model, s, sprime):
-    return 1 >= model.flow_acceptance_disjunct[sprime, s, 1].indicator_var - \
-        model.flow_acceptance_disjunct[s, sprime, 1].indicator_var
-model.accept3 = Constraint(model.ScreenPairs, rule=accept_rule3)
-
-def accept_rule4(model, s, sprime):
-    return 1 <= 2 - model.flow_acceptance_disjunct[sprime,s,1].indicator_var - \
-        model.flow_acceptance_disjunct[s, sprime, 1].indicator_var
-model.accept4 = Constraint(model.ScreenPairs, rule=accept_rule4)
+# def screen_flow_existence_rule2(model, s, sprime):
+#     return model.screen_selection_disjunct[1,s].indicator_var >= \
+#         model.flow_rejection_disjunct[sprime, s, 1].indicator_var
+# model.screen_flow_existence2 = Constraint(model.ScreenPairs, 
+#                                           rule=screen_flow_existence_rule2)
 
 
-# YR_{s', s} XOR YR_{s, s'}
-def reject_rule1(model, s, sprime):
-    return 1 <= model.flow_rejection_disjunct[s, sprime, 1].indicator_var + \
-        model.flow_rejection_disjunct[sprime, s, 1].indicator_var
-model.reject1 = Constraint(model.ScreenPairs, rule=reject_rule1)
+# # YA_{s', s} XOR YA_{s, s'}
+# def accept_rule1(model, s, sprime):
+#     return 1 <= model.flow_acceptance_disjunct[s, sprime, 1].indicator_var + \
+#         model.flow_acceptance_disjunct[sprime, s, 1].indicator_var
+# model.accept1 = Constraint(model.ScreenPairs, rule=accept_rule1)
 
-def reject_rule2(model, s, sprime):
-    return 1 >= model.flow_rejection_disjunct[s, sprime, 1].indicator_var - \
-        model.flow_rejection_disjunct[sprime, s, 1].indicator_var
-model.reject2 = Constraint(model.ScreenPairs, rule=reject_rule2)
+# def accept_rule2(model, s, sprime):
+#     return 1 >= model.flow_acceptance_disjunct[s, sprime, 1].indicator_var - \
+#         model.flow_acceptance_disjunct[sprime, s, 1].indicator_var
+# model.accept2 = Constraint(model.ScreenPairs, rule=accept_rule2)
 
-def reject_rule3(model, s, sprime):
-    return 1 >= model.flow_rejection_disjunct[sprime, s, 1].indicator_var - \
-        model.flow_rejection_disjunct[s, sprime, 1].indicator_var
-model.reject3 = Constraint(model.ScreenPairs, rule=reject_rule3)
+# def accept_rule3(model, s, sprime):
+#     return 1 >= model.flow_acceptance_disjunct[sprime, s, 1].indicator_var - \
+#         model.flow_acceptance_disjunct[s, sprime, 1].indicator_var
+# model.accept3 = Constraint(model.ScreenPairs, rule=accept_rule3)
 
-def reject_rule4(model, s, sprime):
-    return 1 <= 2 - model.flow_rejection_disjunct[sprime,s,1].indicator_var - \
-        model.flow_rejection_disjunct[s, sprime, 1].indicator_var
-model.reject4 = Constraint(model.ScreenPairs, rule=reject_rule4)
+# def accept_rule4(model, s, sprime):
+#     return 1 <= 2 - model.flow_acceptance_disjunct[sprime,s,1].indicator_var - \
+#         model.flow_acceptance_disjunct[s, sprime, 1].indicator_var
+# model.accept4 = Constraint(model.ScreenPairs, rule=accept_rule4)
 
 
-# YA_{s,n} XOR YR_{s,n}
-def accept_or_reject_rule1(model, s, n):
-    return 1 <= model.flow_acceptance_disjunct[s, n, 1].indicator_var + \
-        model.flow_rejection_disjunct[s, n, 1].indicator_var
-model.accept_or_reject1 = Constraint(model.ScreenNodePairs, 
-                                     rule=accept_or_reject_rule1)
+# # YR_{s', s} XOR YR_{s, s'}
+# def reject_rule1(model, s, sprime):
+#     return 1 <= model.flow_rejection_disjunct[s, sprime, 1].indicator_var + \
+#         model.flow_rejection_disjunct[sprime, s, 1].indicator_var
+# model.reject1 = Constraint(model.ScreenPairs, rule=reject_rule1)
 
-def accept_or_reject_rule2(model, s, n):
-    return 1 >= model.flow_acceptance_disjunct[s, n, 1].indicator_var - \
-        model.flow_rejection_disjunct[s, n, 1].indicator_var
-model.accept_or_reject2 = Constraint(model.ScreenNodePairs, 
-                                     rule=accept_or_reject_rule2)
+# def reject_rule2(model, s, sprime):
+#     return 1 >= model.flow_rejection_disjunct[s, sprime, 1].indicator_var - \
+#         model.flow_rejection_disjunct[sprime, s, 1].indicator_var
+# model.reject2 = Constraint(model.ScreenPairs, rule=reject_rule2)
 
-def accept_or_reject_rule3(model, s, n):
-    return 1 >= model.flow_rejection_disjunct[s, n, 1].indicator_var - \
-        model.flow_acceptance_disjunct[s, n, 1].indicator_var
-model.accept_or_reject3 = Constraint(model.ScreenNodePairs, 
-                                     rule=accept_or_reject_rule3)
+# def reject_rule3(model, s, sprime):
+#     return 1 >= model.flow_rejection_disjunct[sprime, s, 1].indicator_var - \
+#         model.flow_rejection_disjunct[s, sprime, 1].indicator_var
+# model.reject3 = Constraint(model.ScreenPairs, rule=reject_rule3)
 
-def accept_or_reject_rule4(model, s, n):
-    return 1 <= 2 - model.flow_acceptance_disjunct[s, n, 1].indicator_var - \
-        model.flow_rejection_disjunct[s, n, 1].indicator_var
-model.accept_or_reject4 = Constraint(model.ScreenNodePairs, 
-                                     rule=accept_or_reject_rule4)
+# def reject_rule4(model, s, sprime):
+#     return 1 <= 2 - model.flow_rejection_disjunct[sprime,s,1].indicator_var - \
+#         model.flow_rejection_disjunct[s, sprime, 1].indicator_var
+# model.reject4 = Constraint(model.ScreenPairs, rule=reject_rule4)
+
+
+# # YA_{s,n} XOR YR_{s,n}
+# def accept_or_reject_rule1(model, s, n):
+#     return 1 <= model.flow_acceptance_disjunct[s, n, 1].indicator_var + \
+#         model.flow_rejection_disjunct[s, n, 1].indicator_var
+# model.accept_or_reject1 = Constraint(model.ScreenNodePairs, 
+#                                      rule=accept_or_reject_rule1)
+
+# def accept_or_reject_rule2(model, s, n):
+#     return 1 >= model.flow_acceptance_disjunct[s, n, 1].indicator_var - \
+#         model.flow_rejection_disjunct[s, n, 1].indicator_var
+# model.accept_or_reject2 = Constraint(model.ScreenNodePairs, 
+#                                      rule=accept_or_reject_rule2)
+
+# def accept_or_reject_rule3(model, s, n):
+#     return 1 >= model.flow_rejection_disjunct[s, n, 1].indicator_var - \
+#         model.flow_acceptance_disjunct[s, n, 1].indicator_var
+# model.accept_or_reject3 = Constraint(model.ScreenNodePairs, 
+#                                      rule=accept_or_reject_rule3)
+
+# def accept_or_reject_rule4(model, s, n):
+#     return 1 <= 2 - model.flow_acceptance_disjunct[s, n, 1].indicator_var - \
+#         model.flow_rejection_disjunct[s, n, 1].indicator_var
+# model.accept_or_reject4 = Constraint(model.ScreenNodePairs, 
+#                                      rule=accept_or_reject_rule4)
+
+
+# BARON hates this fixing variables business...
+#instance = model.create_instance(DATFILE)
+
+#pdb.set_trace()
+
+# # fix the variables they fix in GAMS
+# for s in instance.Screens:
+#     #pdb.set_trace()
+#     instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var = 0
+#     instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var.fixed = True
+#     instance.flow_rejection_disjunct[s,'PRD',1].indicator_var = 0
+#     instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fixed = True
+
+# # solve the model
+# opt = SolverFactory(SOLVER)
+# results = opt.solve(instance, tee=True)
+# instance.display()
