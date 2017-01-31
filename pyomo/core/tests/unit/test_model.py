@@ -224,7 +224,7 @@ class Test(unittest.TestCase):
             return expr == 0
         model.c = Constraint(rule=c_rule)
         opt = SolverFactory('glpk')
-        results = opt.solve(model, keepfiles=True, symbolic_solver_labels=True)
+        results = opt.solve(model, symbolic_solver_labels=True)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1.out"), format='json')
         self.assertMatchesJsonBaseline(
@@ -235,7 +235,7 @@ class Test(unittest.TestCase):
             return model.x[1] >= 0
         model.d = Constraint(rule=d_rule)
         model.d.deactivate()
-        results = opt.solve(model, keepfiles=True)
+        results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1x.out"), format='json')
         self.assertMatchesJsonBaseline(
@@ -243,7 +243,7 @@ class Test(unittest.TestCase):
             tolerance=1e-4)
         #
         model.d.activate()
-        results = opt.solve(model, keepfiles=True)
+        results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1a.out"), format='json')
         self.assertMatchesJsonBaseline(
@@ -256,7 +256,7 @@ class Test(unittest.TestCase):
         model.e = Constraint(model.A, rule=e_rule)
         for i in model.A:
             model.e[i].deactivate()
-        results = opt.solve(model, keepfiles=True)
+        results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1y.out"), format='json')
         self.assertMatchesJsonBaseline(
@@ -264,7 +264,7 @@ class Test(unittest.TestCase):
             tolerance=1e-4)
         #
         model.e.activate()
-        results = opt.solve(model, keepfiles=True)
+        results = opt.solve(model)
         model.solutions.store_to(results)
         results.write(filename=join(currdir,"solve1b.out"), format='json')
         self.assertMatchesJsonBaseline(
