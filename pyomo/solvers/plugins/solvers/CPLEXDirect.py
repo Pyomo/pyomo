@@ -129,7 +129,7 @@ class CPLEXDirect(OptSolver):
                             doc='Direct Python interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
-        configure_cple_()
+        configure_cplex()
         #
         # Call base class constructor
         #
