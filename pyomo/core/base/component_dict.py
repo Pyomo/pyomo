@@ -121,6 +121,9 @@ class ComponentDict(IComponentContainer,
                 return key
         raise ValueError
 
+    def child(self, key):
+        return self.__getitem__(key)
+
     def children(self, return_key=False):
         """Iterate over the children of this container.
 

@@ -377,6 +377,14 @@ class _TestComponentListBase(object):
         clist.append(c)
         self.assertEqual(clist.child_key(c), 0)
 
+    def test_child(self):
+        clist = self._container_type()
+        c = self._ctype_factory()
+        clist.append(c)
+        with self.assertRaises(KeyError):
+            clist.child(1)
+        self.assertIs(clist.child(0), c)
+
     def test_name(self):
         children = [self._ctype_factory() for i in range(5)]
         children.append(self._container_type())

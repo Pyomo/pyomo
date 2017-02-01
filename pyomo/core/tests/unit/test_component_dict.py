@@ -333,6 +333,14 @@ class _TestComponentDictBase(object):
         cdict[1] = c
         self.assertEqual(cdict.child_key(c), 1)
 
+    def test_child(self):
+        cdict = self._container_type()
+        c = self._ctype_factory()
+        with self.assertRaises(KeyError):
+            cdict.child(1)
+        cdict[1] = c
+        self.assertIs(cdict.child(1), c)
+
     def test_name(self):
         children = {}
         children['a'] = self._ctype_factory()

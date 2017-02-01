@@ -181,6 +181,12 @@ class _block_base(object):
                                  descend_into=False,
                                  _from_parent_=True)
 
+    def child(self, key):
+        try:
+            return getattr(self, key)
+        except AttributeError:
+            raise KeyError(str(key))
+
     def preorder_traversal(self,
                            ctype=_no_ctype,
                            active=None,

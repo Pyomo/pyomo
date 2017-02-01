@@ -361,6 +361,11 @@ class IComponentContainer(ICategorizedObject):
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
+    def child(self, *args, **kwds):
+        """Returns a child of this container given a storage key."""
+        raise NotImplementedError     #pragma:nocover
+
+    @abc.abstractmethod
     def children(self, *args, **kwds):
         """A generator over the children of this container."""
         raise NotImplementedError     #pragma:nocover

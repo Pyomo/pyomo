@@ -572,6 +572,7 @@ class _Test_block_base(object):
             [id(obj) for obj in self._postorder if obj.ctype is Var])
 
     def test_child_key(self):
+        orphan = variable()
         for child in self._child_key:
             parent = child.parent
             self.assertTrue(parent is not None)
@@ -579,6 +580,19 @@ class _Test_block_base(object):
                 id(_c) for _c in self._children[parent]))
             self.assertEqual(self._child_key[child],
                              parent.child_key(child))
+            with self.assertRaises(ValueError):
+                parent.child_key(orphan)
+
+    def test_child(self):
+        for child in self._child_key:
+            parent = child.parent
+            self.assertTrue(parent is not None)
+            self.assertTrue(id(child) in set(
+                id(_c) for _c in self._children[parent]))
+            self.assertIs(parent.child(self._child_key[child]),
+                          child)
+            with self.assertRaises(KeyError):
+                parent.child("_not_a_valid_child_key_")
 
     def test_child_key_no_entry(self):
         v = variable()

@@ -88,9 +88,16 @@ class ComponentList(IComponentContainer,
                     yield component
 
     def child_key(self, child):
-        """Returns the lookup key associated with a child of this
-        container."""
-        return self.index(child)
+        try:
+            return self.index(child)
+        except IndexError:
+            raise ValueError
+
+    def child(self, key):
+        try:
+            return self.__getitem__(key)
+        except (IndexError, TypeError):
+            raise KeyError(str(key))
 
     def children(self, return_key=False):
         """Iterate over the children of this container.
