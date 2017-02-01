@@ -644,8 +644,7 @@ class _block_base(object):
         for _attr_key, attr_value in iteritems(solution.problem):
             attr_key = _attr_key[0].lower() + _attr_key[1:]
             if attr_key in valid_import_suffixes:
-                valid_import_suffixes[attr_key][self] = \
-                    attr_value.value
+                valid_import_suffixes[attr_key][self] = attr_value
 
         #
         # Load objective data (should simply be suffixes if
@@ -663,7 +662,7 @@ class _block_base(object):
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][obj_value] = \
-                        attr_value.value
+                        attr_value
 
         #
         # Load variable data
