@@ -15,7 +15,7 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData, IndexedBlock
 from pyomo.dae import *
 
-from six import iterkeys, itervalues
+from six import iterkeys, itervalues, iteritems
 
 logger = logging.getLogger('pyomo.core')
 
@@ -210,7 +210,7 @@ def _update_block(blk):
     
     # Code taken from the construct() method of Block
     missing_idx = set(blk._index)-set(iterkeys(blk._data))
-    for idx in missing_idx:
+    for idx in list(missing_idx):
         _block = blk[idx]
         obj = apply_indexed_rule(
             None, blk._rule, _block, idx, blk._options )
@@ -222,9 +222,9 @@ def _update_block(blk):
                 obj.del_component(c)
                 _block.add_component(c.local_name, c)
                 # transfer over any other attributes that are not components
-                for name, val in iteritems(obj.__dict__):
-                    if not hasattr(_block, name) and not hasattr(blk, name):
-                        super(_BlockData, _block).__setattr__(name, val)
+            for name, val in iteritems(obj.__dict__):
+                if not hasattr(_block, name) and not hasattr(blk, name):
+                    super(_BlockData, _block).__setattr__(name, val)
 
 def _update_piecewise(pw):
     """

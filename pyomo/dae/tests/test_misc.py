@@ -510,6 +510,104 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(model.blk[0,'A'].con2['x1','x1',10](), 21)
         self.assertEqual(model.blk[4,'C'].con2['x2','x2',6](), 13)
 
+    # test update_contset_indexed_component method for Blocks 
+    # indexed by a ContinuousSet. Block rule returns new block
+    def test_update_contset_indexed_component_block_single2(self):
+        model = ConcreteModel()
+        model.t = ContinuousSet(bounds=(0,10))
+
+        def _block_rule(_b_, t):
+            m = _b_.model()
+            b = Block()
+
+            b.s1 = Set(initialize=['A1','A2','A3'])
+            def _init(m,j):
+                return j*2
+            b.p1 = Param(m.t, default=_init)
+            b.v1 = Var(m.t, initialize=5)
+            b.v2 = Var(m.t,initialize=2)
+            b.v3 = Var(m.t, b.s1, initialize=1)
+
+            def _con1(_b,ti):
+                return _b.v1[ti]*_b.p1[ti] == _b.v1[t]**2
+            b.con1 = Constraint(m.t,rule=_con1)
+
+            def _con2(_b,i,ti):
+                return _b.v2[ti] - _b.v3[ti,i] +_b.p1[ti]
+            b.con2 = Expression(b.s1,m.t,rule=_con2)
+            return b
+    
+        model.blk = Block(model.t, rule=_block_rule)
+     
+        self.assertTrue(len(model.blk),2)
+
+        generate_finite_elements(model.t,5)
+        update_contset_indexed_component(model.blk)
+
+        self.assertEqual(len(model.blk),6)
+        self.assertEqual(len(model.blk[10].con1),2)
+        self.assertEqual(len(model.blk[2].con1),6)
+        self.assertEqual(len(model.blk[10].v2),2)
+
+        self.assertEqual(model.blk[2].p1[2], 4)
+        self.assertEqual(model.blk[8].p1[6], 12)
+        
+        self.assertEqual(model.blk[4].con1[4](), 15)
+        self.assertEqual(model.blk[6].con1[8](), 55)
+
+        self.assertEqual(model.blk[0].con2['A1',10](), 21)
+        self.assertEqual(model.blk[4].con2['A2',6](), 13)
+
+    # test update_contset_indexed_component method for Blocks with
+    # multiple indices. Block rule returns new block
+    def test_update_contset_indexed_component_block_multiple2(self):
+        model = ConcreteModel()
+        model.t = ContinuousSet(bounds=(0,10))
+        model.s1 = Set(initialize=['A','B','C'])
+        model.s2 = Set(initialize=[('x1','x1'),('x2','x2')])
+
+        def _block_rule(_b_, t, s1):
+            m = _b_.model()
+            b = Block()
+
+            def _init(m,i,j):
+                return j*2
+            b.p1 = Param(m.s1,m.t,mutable=True,default=_init)
+            b.v1 = Var(m.s1, m.t, initialize=5)
+            b.v2 = Var(m.s2,m.t,initialize=2)
+            b.v3 = Var(m.t,m.s2, initialize=1)
+
+            def _con1(_b,si,ti):
+                return _b.v1[si,ti]*_b.p1[si,ti] == _b.v1[si,t]**2
+            b.con1 = Constraint(m.s1,m.t,rule=_con1)
+
+            def _con2(_b,i,j,ti):
+                return _b.v2[i,j,ti] - _b.v3[ti,i,j] +_b.p1['A',ti]
+            b.con2 = Expression(m.s2,m.t,rule=_con2)
+            return b
+    
+        model.blk = Block(model.t, model.s1, rule=_block_rule)
+        
+        self.assertTrue(len(model.blk),6)
+
+        generate_finite_elements(model.t,5)
+        update_contset_indexed_component(model.blk)
+
+        self.assertEqual(len(model.blk),18)
+        self.assertEqual(len(model.blk[10,'C'].con1),6)
+        self.assertEqual(len(model.blk[2,'B'].con1),18)
+        self.assertEqual(len(model.blk[10,'C'].v2),4)
+
+        self.assertEqual(model.blk[2,'A'].p1['A',2], 4)
+        self.assertEqual(model.blk[8,'C'].p1['B',6], 12)
+        
+        self.assertEqual(model.blk[4,'B'].con1['B',4](), 15)
+        self.assertEqual(model.blk[6,'A'].con1['C',8](), 55)
+
+        self.assertEqual(model.blk[0,'A'].con2['x1','x1',10](), 21)
+        self.assertEqual(model.blk[4,'C'].con2['x2','x2',6](), 13)
+
+
     # test update_contset_indexed_component method for Piecewise
     # component indexed by a ContinuousSet
     def test_update_contset_indexed_component_piecewise_single(self):
@@ -537,8 +635,8 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(len(model.fx[2].SOS2_constraint), 3)
 
 
-    # test update_contset_indexed_component method for Blocks with
-    # multiple indices
+    # test update_contset_indexed_component method for Piecewise 
+    # component with multiple indices
     def test_update_contset_indexed_component_piecewise_multiple(self):
         x = [0.0, 1.5, 3.0, 5.0]
         y = [1.1, -1.1, 2.0, 1.1]
