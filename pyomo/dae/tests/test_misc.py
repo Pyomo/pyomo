@@ -417,6 +417,52 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(m.con3[2,6,3,1,1](), -3)
         self.assertEqual(m.con3[3,8,2,2,2](), -6)
 
+    # test update_contset_indexed_component method for Blocks 
+    # indexed by a ContinuousSet
+    def test_update_contset_indexed_component_block_single(self):
+        model = ConcreteModel()
+        model.t = ContinuousSet(bounds=(0,10))
+
+        def _block_rule(b, t):
+            m = b.model()
+    
+            b.s1 = Set(initialize=['A1','A2','A3'])
+            def _init(m,j):
+                return j*2
+            b.p1 = Param(m.t, default=_init)
+            b.v1 = Var(m.t, initialize=5)
+            b.v2 = Var(m.t,initialize=2)
+            b.v3 = Var(m.t, b.s1, initialize=1)
+
+            def _con1(_b,ti):
+                return _b.v1[ti]*_b.p1[ti] == _b.v1[t]**2
+            b.con1 = Constraint(m.t,rule=_con1)
+
+            def _con2(_b,i,ti):
+                return _b.v2[ti] - _b.v3[ti,i] +_b.p1[ti]
+            b.con2 = Expression(b.s1,m.t,rule=_con2)
+    
+        model.blk = Block(model.t, rule=_block_rule)
+     
+        self.assertTrue(len(model.blk),2)
+
+        generate_finite_elements(model.t,5)
+        update_contset_indexed_component(model.blk)
+
+        self.assertEqual(len(model.blk),6)
+        self.assertEqual(len(model.blk[10].con1),2)
+        self.assertEqual(len(model.blk[2].con1),6)
+        self.assertEqual(len(model.blk[10].v2),2)
+
+        self.assertEqual(model.blk[2].p1[2], 4)
+        self.assertEqual(model.blk[8].p1[6], 12)
+        
+        self.assertEqual(model.blk[4].con1[4](), 15)
+        self.assertEqual(model.blk[6].con1[8](), 55)
+
+        self.assertEqual(model.blk[0].con2['A1',10](), 21)
+        self.assertEqual(model.blk[4].con2['A2',6](), 13)
+
     # test update_contset_indexed_component method for Blocks with
     # multiple indices
     def test_update_contset_indexed_component_block_multiple(self):
@@ -450,10 +496,10 @@ class TestDaeMisc(unittest.TestCase):
         generate_finite_elements(model.t,5)
         update_contset_indexed_component(model.blk)
 
-        self.assertTrue(len(model.blk),18)
-        self.assertTrue(len(model.blk[10,'C'].con1),6)
-        self.assertTrue(len(model.blk[2,'B'].con1),18)
-        self.assertTrue(len(model.blk[10,'C'].v2),4)
+        self.assertEqual(len(model.blk),18)
+        self.assertEqual(len(model.blk[10,'C'].con1),6)
+        self.assertEqual(len(model.blk[2,'B'].con1),18)
+        self.assertEqual(len(model.blk[10,'C'].v2),4)
 
         self.assertEqual(model.blk[2,'A'].p1['A',2], 4)
         self.assertEqual(model.blk[8,'C'].p1['B',6], 12)
@@ -463,6 +509,60 @@ class TestDaeMisc(unittest.TestCase):
 
         self.assertEqual(model.blk[0,'A'].con2['x1','x1',10](), 21)
         self.assertEqual(model.blk[4,'C'].con2['x2','x2',6](), 13)
+
+    # test update_contset_indexed_component method for Piecewise
+    # component indexed by a ContinuousSet
+    def test_update_contset_indexed_component_piecewise_single(self):
+        x = [0.0, 1.5, 3.0, 5.0]
+        y = [1.1, -1.1, 2.0, 1.1]
+        
+        model = ConcreteModel()
+        model.t = ContinuousSet(bounds=(0,10))
+
+        model.x = Var(model.t, bounds=(min(x),max(x)))
+        model.y = Var(model.t)
+
+        model.fx = Piecewise(model.t, 
+                             model.y, model.x,
+                             pw_pts=x,
+                             pw_constr_type='EQ',
+                             f_rule=y)
+        
+        self.assertEqual(len(model.fx), 2)
+
+        generate_finite_elements(model.t,5)
+        update_contset_indexed_component(model.fx)
+
+        self.assertEqual(len(model.fx), 6)
+        self.assertEqual(len(model.fx[2].SOS2_constraint), 3)
+
+
+    # test update_contset_indexed_component method for Blocks with
+    # multiple indices
+    def test_update_contset_indexed_component_piecewise_multiple(self):
+        x = [0.0, 1.5, 3.0, 5.0]
+        y = [1.1, -1.1, 2.0, 1.1]
+        
+        model = ConcreteModel()
+        model.t = ContinuousSet(bounds=(0,10))
+        model.s = Set(initialize=['A','B','C'])
+
+        model.x = Var(model.s, model.t, bounds=(min(x),max(x)))
+        model.y = Var(model.s, model.t)
+
+        model.fx = Piecewise(model.s, model.t, 
+                             model.y, model.x,
+                             pw_pts=x,
+                             pw_constr_type='EQ',
+                             f_rule=y)
+        
+        self.assertEqual(len(model.fx), 6)
+
+        generate_finite_elements(model.t,5)
+        update_contset_indexed_component(model.fx)
+
+        self.assertEqual(len(model.fx), 18)
+        self.assertEqual(len(model.fx['A',2].SOS2_constraint), 3)
 
     # test update_contset_indexed_component method for other components
     def test_update_contset_indexed_component_other(self):
@@ -479,6 +579,37 @@ class TestDaeMisc(unittest.TestCase):
         update_contset_indexed_component(m.junk)
         update_contset_indexed_component(m.s)
         update_contset_indexed_component(m.obj)
+
+    # test unsupported components indexed by a single ContinuousSet
+    def test_update_contset_indexed_component_unsupported_single(self):
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        m.s = Set(m.t)
+        generate_finite_elements(m.t,5)
+
+        try :
+            update_contset_indexed_component(m.s)
+            self.fail("Expected TypeError because Set is not a component "\
+                      "that supports indexing by a ContinuousSet")
+
+        except TypeError:
+            pass
+
+    # test unsupported components indexed by multiple sets
+    def test_update_contset_indexed_component_unsupported_multiple(self):
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        m.i = Set(initialize=[1,2,3])
+        m.s = Set(m.i, m.t)
+        generate_finite_elements(m.t,5)
+
+        try :
+            update_contset_indexed_component(m.s)
+            self.fail("Expected TypeError because Set is not a component "\
+                      "that supports indexing by a ContinuousSet")
+
+        except TypeError:
+            pass  
         
     # test add_equality_constraints method
     # def test_add_equality_constraints(self):

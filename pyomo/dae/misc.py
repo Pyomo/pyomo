@@ -12,7 +12,7 @@ import logging
 from pyomo.core import *
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.block import _BlockData, IndexedBlock
 from pyomo.dae import *
 
 from six import iterkeys, itervalues
@@ -127,8 +127,10 @@ def update_contset_indexed_component(comp):
                     _update_constraint(comp)
                 elif comp.type() == Expression:
                     _update_expression(comp)
-                elif comp.type() == Block:
-                    _update_block(comp)
+                elif type(comp) is IndexedBlock: # Only catch Blocks and not components derived
+                    _update_block(comp)          # from Blocks
+                elif isinstance(comp, Piecewise):
+                    _update_piecewise(comp)
                 else:
                     raise TypeError("Found component %s of type %s indexed "\
                         "by a ContinuousSet. Components of this type are "\
@@ -148,8 +150,10 @@ def update_contset_indexed_component(comp):
                     _update_constraint(comp)
                 elif comp.type() == Expression:
                     _update_expression(comp)
-                elif comp.type() == Block:
-                    _update_block(comp)
+                elif type(comp) is IndexedBlock: # Only catch Blocks and not components derived
+                    _update_block(comp)          # from Blocks
+                elif isinstance(comp, Piecewise):
+                    _update_piecewise(comp)
                 else:
                     raise TypeError("Found component %s of type %s indexed "\
                         "by a ContinuousSet. Components of this type are "\
@@ -221,6 +225,14 @@ def _update_block(blk):
                 for name, val in iteritems(obj.__dict__):
                     if not hasattr(_block, name) and not hasattr(blk, name):
                         super(_BlockData, _block).__setattr__(name, val)
+
+def _update_piecewise(pw):
+    """
+    This method will construct any additional indices in a Piecewise
+    object resulting from the discretization of a ContinuousSet.
+    """
+    pw._constructed = False
+    pw.construct()
 
 def create_access_function(var):
     """
