@@ -12,6 +12,7 @@ from pyomo.opt import (SolverFactory,
                        SolverStatus,
                        TerminationCondition)
 import pyomo.opt.base
+from pyomo.core.base.component_map import ComponentMap
 from pyomo.core.base.component_block import *
 from pyomo.core.base.component_variable import *
 from pyomo.core.base.component_constraint import *
