@@ -46,19 +46,24 @@ from pyomo.core.base.objective import (minimize,
 from pyomo.core.base import value
 
 # Short term helper method for debugging models
-def _pprint(obj, indent=""):
+def _pprint(obj, indent=0):
     import pyomo.core.base
+    if not isinstance(obj, ICategorizedObject):
+        import pprint
+        assert indent == 0
+        pprint.pprint(obj, indent=indent+1)
+        return
     if not obj._is_component:
         # a container but not a block
         assert obj._is_container
-        print(indent+" - %s: container(size=%s, ctype=%s)"
+        print((" "*indent)+" - %s: container(size=%s, ctype=%s)"
               % (str(obj), len(obj), obj.ctype.__name__))
         for c in obj.children():
-            _pprint(c, indent=indent+" ")
+            _pprint(c, indent=indent+1)
     elif not obj._is_container:
         # not a block
         if obj.ctype is pyomo.core.base.Var:
-            print(indent+" - %s: variable(value=%s, lb=%s, ub=%s, domain_type=%s, fixed=%s)"
+            print((" "*indent)+" - %s: variable(value=%s, lb=%s, ub=%s, domain_type=%s, fixed=%s)"
                   % (str(obj),
                      obj.value,
                      obj.lb,
@@ -66,20 +71,20 @@ def _pprint(obj, indent=""):
                      obj.domain_type.__name__,
                      obj.fixed))
         elif obj.ctype is pyomo.core.base.Constraint:
-              print(indent+" - %s: constraint(expr=%s)"
+              print((" "*indent)+" - %s: constraint(expr=%s)"
                   % (str(obj),
                      str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Objective:
-            print(indent+" - %s: objective(expr=%s)"
+            print((" "*indent)+" - %s: objective(expr=%s)"
                   % (str(obj), str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Expression:
-            print(indent+" - %s: expression(expr=%s)"
+            print((" "*indent)+" - %s: expression(expr=%s)"
                   % (str(obj), str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Param:
-            print(indent+" - %s: parameter(value=%s)"
+            print((" "*indent)+" - %s: parameter(value=%s)"
                   % (str(obj), str(obj.value)))
         elif obj.ctype is pyomo.core.base.SOSConstraint:
-            print(indent+" - %s: sos(level=%s, entries=%s)"
+            print((" "*indent)+" - %s: sos(level=%s, entries=%s)"
                   % (str(obj),
                      obj.level,
                      str(["(%s,%s)" % (str(v), w)
@@ -87,28 +92,28 @@ def _pprint(obj, indent=""):
                                          obj.weights)])))
         else:
             assert obj.ctype is pyomo.core.base.Suffix
-            print(indent+" - %s: suffix(size=%s)"
+            print((" "*indent)+" - %s: suffix(size=%s)"
                   % (str(obj), str(len(obj))))
     else:
         # a block
         for block in obj.blocks():
             print("")
-            print(indent+"block: %s" % (str(block)))
+            print((" "*indent)+"block: %s" % (str(block)))
             ctypes = block.collect_ctypes(descend_into=False)
             for ctype in sorted(ctypes,
                                 key=lambda x: str(x)):
-                print(indent+'ctype='+ctype.__name__+" declarations:")
+                print((" "*indent)+'ctype='+ctype.__name__+" declarations:")
                 for c in block.children(ctype=ctype):
                     if ctype is pyomo.core.base.Block:
                         if c._is_component:
-                            print(indent+"  - %s: block(children=%s)"
+                            print((" "*indent)+"  - %s: block(children=%s)"
                                   % (str(c), len(list(c.children()))))
                         else:
-                            print(indent+"  - %s: block_container(size=%s)"
+                            print((" "*indent)+"  - %s: block_container(size=%s)"
                                   % (str(c), len(list(c))))
 
                     else:
-                        _pprint(c, indent=indent+" ")
+                        _pprint(c, indent=indent+1)
 
 #
 # Collecting all of the hacks that needed to be added into
