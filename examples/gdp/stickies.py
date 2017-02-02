@@ -22,7 +22,7 @@ model = AbstractModel()
 
 
 model.BigM = Suffix(direction=Suffix.LOCAL)
-model.BigM[None] = 7000
+model.BigM[None] = 1000
 
 SOLVER = 'baron'
 DATFILE = "stickies1.dat"

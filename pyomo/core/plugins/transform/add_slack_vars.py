@@ -65,17 +65,29 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
     def _apply_to(self, instance, **kwds):
         # constriant types dict
-        constraint_types = {'equality': pyomo.core.base.expr_coopr3._EqualityExpression,
-                        'inequality': pyomo.core.base.expr_coopr3._InequalityExpression}
+        #constraint_types = {'equality': pyomo.core.base.expr_coopr3._EqualityExpression,
+        #                'inequality': pyomo.core.base.expr_coopr3._InequalityExpression}
 
         # deactivate the objective
         for o in instance.component_data_objects(Objective):
-            if o.active: 
-                obj_expr = o.expr 
-                sense = o.sense
-                o.deactivate()
+            #if o.active: 
+            #    obj_expr = o.expr 
+            #    sense = o.sense
+            o.deactivate()
 
         for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
+            if cons.lower is not None:
+                # declare positive slack
+                # add positive slack to body expression
+                # add negative slack to objective
+                pass
+            if cons.upper is not None:
+                # declare negative slack
+                # add negative slack to body expression
+                # add positive slack to objective
+                pass
+                
+
             # don't want to do anything with constraints we've already added slacks to
             if cons.name.startswith("_slackConstraint_"): continue
             expr = cons.expr
@@ -105,10 +117,11 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 raise RuntimeError("Unrecognized constraint type: %s" % (exprType))
 
         # make a new objective that includes the slack variables
-        instance.add_component("_slack_objective", Objective(expr=obj_expr, sense=sense))
+        #instance.add_component("_slack_objective", Objective(expr=obj_expr, sense=sense))
+        instance._slack_objective = Objective(expr=obj_expr, sense=sense)
 
         # TODO: I don't know what the plan should be in general... For now I am just going to 
         # do bigm. Does bigm hurt things that don't have disjunctions? Or can you
         # do multiple transformations at a time with the pyomo command?
-        bigMRelaxation = TransformationFactory('gdp.bigm')
-        bigMRelaxation.apply_to(instance)
+        #bigMRelaxation = TransformationFactory('gdp.bigm')
+        #bigMRelaxation.apply_to(instance)
