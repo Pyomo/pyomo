@@ -1318,7 +1318,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Rely on the _tree_iterator:
         #
-        return self._tree_iterator(ctype=(Block,),
+        if descend_into is True:
+            descend_into = (Block,)
+        elif isclass(descend_into):
+            descend_into = (descend_into,)
+        return self._tree_iterator(ctype=descend_into,
                                    active=active,
                                    sort=sort,
                                    traversal=descent_order)
@@ -1341,8 +1345,14 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # count on us always returning a generator)
         if active is not None and self.active != active:
             return ().__iter__()
-        if self.parent_component().type() not in ctype:
-            return ().__iter__()
+
+        # ALWAYS return the "self" Block, even if it does not match
+        # ctype.  This is because we map this ctype to the
+        # "descend_into" argument in public calling functions: callers
+        # expect that the called thing will be iterated over.
+        #
+        #if self.parent_component().type() not in ctype:
+        #    return ().__iter__()
 
         if traversal is None or \
                 traversal == TraversalStrategy.PrefixDepthFirstSearch:
