@@ -110,10 +110,10 @@ class BigM_Transformation(Transformation):
         for disjunct in obj.parent_component()._disjuncts[idx]:
             self._bigM_relax_disjunct(disjunct)
 
-        _tmp = obj.parent_block().component('_gdp_relax_bigm')
+        _tmp = obj.parent_block().component('_gdp_relax')
         if _tmp is None:
             _tmp = Block()
-            obj.parent_block().add_component('_gdp_relax_bigm', _tmp)
+            obj.parent_block().add_component('_gdp_relax', _tmp)
 
         if obj.parent_component().dim() == 0:
             # Since there can't be more than one Disjunction in a
@@ -145,10 +145,10 @@ class BigM_Transformation(Transformation):
             # Do not transform a block more than once
             return
 
-        _tmp = disjunct.parent_block().component('_gdp_relax_bigm')
+        _tmp = disjunct.parent_block().component('_gdp_relax')
         if _tmp is None:
             _tmp = Block()
-            disjunct.parent_block().add_component('_gdp_relax_bigm', _tmp)
+            disjunct.parent_block().add_component('_gdp_relax', _tmp)
 
         # Move this disjunct over to a Block component (so the writers
         # will pick it up)

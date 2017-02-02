@@ -152,17 +152,17 @@ c_u_NoClash(B_C_2_1)t(C)_hi_:
 +1 NoClash(B_C_2_1)t(C)
 <= 0
 
-c_e__gdp_relax_chull_disj(A_B_3)_:
+c_e__gdp_relax_disj(A_B_3)_:
 +1 NoClash(A_B_3_0)indicator_var
 +1 NoClash(A_B_3_1)indicator_var
 = 1
 
-c_e__gdp_relax_chull_disj(A_C_1)_:
+c_e__gdp_relax_disj(A_C_1)_:
 +1 NoClash(A_C_1_0)indicator_var
 +1 NoClash(A_C_1_1)indicator_var
 = 1
 
-c_e__gdp_relax_chull_disj(B_C_2)_:
+c_e__gdp_relax_disj(B_C_2)_:
 +1 NoClash(B_C_2_0)indicator_var
 +1 NoClash(B_C_2_1)indicator_var
 = 1

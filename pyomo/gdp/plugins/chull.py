@@ -195,7 +195,7 @@ class ConvexHull_Transformation(Transformation):
 
         # Recreate each Disjunction as a simple constraint
         #
-        # Note: we do this at the end because the "disjunctions" opject
+        # Note: we do this at the end because the "disjunctions" object
         # is a lightweight reference to the underlying component data:
         # replacing Disjunctions with Constraints results in this
         # PseudoMap being *empty* after this block!
@@ -213,10 +213,10 @@ class ConvexHull_Transformation(Transformation):
         #    block.del_component(name)
         #    block.add_component(name, newC)
         #    newC.construct()
-        _tmp = obj.parent_block().component('_gdp_relax_chull')
+        _tmp = obj.parent_block().component('_gdp_relax')
         if _tmp is None:
             _tmp = Block()
-            obj.parent_block().add_component('_gdp_relax_chull', _tmp)
+            obj.parent_block().add_component('_gdp_relax', _tmp)
 
         if obj.parent_component().dim() == 0:
             # Since there can't be more than one Disjunction in a
