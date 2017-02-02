@@ -41,6 +41,9 @@ from pyomo.core.base.expr_common import (
 from pyomo.core.base import expr_common as common
 
 UNREFERENCED_EXPR_COUNT = 11
+if (sys.version_info[0] >= 3) and \
+   (sys.version_info[1] >= 6):
+    UNREFERENCED_EXPR_COUNT -= 1
 
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \
