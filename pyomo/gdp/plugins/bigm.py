@@ -30,11 +30,12 @@ class BigM_Transformation(Transformation):
     def __init__(self):
         super(BigM_Transformation, self).__init__()
         self.handlers = {
-            Constraint : self._xform_constraint,
-            Var : self._xform_var,
-            Connector : self._xform_skip,
-            Suffix : self._xform_skip,
-            Param : self._xform_skip,
+            Constraint: self._xform_constraint,
+            Var:       False,
+            Connector: False,
+            Suffix:    False,
+            Param:     False,
+            Set:       False,
             }
 
     def _apply_to(self, instance, **kwds):
@@ -90,9 +91,10 @@ class BigM_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        for (name, idx), obj in block.component_data_iterindex(Disjunction,
-                                                               active=True,
-                                                               sort=SortComponents.deterministic):
+        for (name, idx), obj in block.component_data_iterindex(
+                Disjunction,
+                active=True,
+                sort=SortComponents.deterministic ):
             self._transformDisjunction(name, idx, obj)
 
     def _transformDisjunction(self, name, idx, obj):
@@ -170,15 +172,13 @@ class BigM_Transformation(Transformation):
         # Transform each component within this disjunct
         for name, obj in list(disjunct.component_map().iteritems()):
             handler = self.handlers.get(obj.type(), None)
-            if handler is None:
-                raise GDP_Error(
-                    "No BigM transformation handler registered "
-                    "for modeling components of type %s" % obj.type() )
+            if not handler:
+                if handler is None:
+                    raise GDP_Error(
+                        "No BigM transformation handler registered "
+                        "for modeling components of type %s" % obj.type() )
+                continue
             handler(name, obj, disjunct)
-
-
-    def _xform_skip(self, _name, constraint, disjunct):
-        pass
 
     def _xform_constraint(self, _name, constraint, disjunct):
         if 'BigM' in disjunct.component_map(Suffix):
@@ -240,9 +240,6 @@ class BigM_Transformation(Transformation):
                 disjunct.add_component(n, newC)
                 newC.construct()
 
-
-    def _xform_var(self, name, var, disjunct):
-        pass
 
 
     def _estimate_M(self, expr, name, m, disjunct):
