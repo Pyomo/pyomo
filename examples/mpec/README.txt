@@ -1,17 +1,21 @@
---------------
-Other Examples
---------------
+#
+# Examples for pyomo.mpec
+#
+
+#
+# Other Examples
+#
 
 See also the pyomo.data.mcplib package.
 
 
--------------------
-Generating NL files
--------------------
+#
+# Generating NL files
+#
 
 Here's how to generate NL files from Pyomo
 
-  lbin pyomo convert --nl --symbolic-solver-labels linear1.py
+  pyomo convert --nl --symbolic-solver-labels linear1.py
 
 This generates unknown.nl, unknown.col, unknown.row
 

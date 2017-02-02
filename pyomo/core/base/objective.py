@@ -253,7 +253,7 @@ class Objective(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Objective:
             return super(Objective, cls).__new__(cls)
-        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleObjective.__new__(SimpleObjective)
         else:
             return IndexedObjective.__new__(IndexedObjective)
@@ -366,8 +366,7 @@ class Objective(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index \
-                       if self._index != UnindexedComponent_set else None),
+             ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active)
              ],
             iteritems(self._data),
@@ -388,8 +387,7 @@ class Objective(ActiveIndexedComponent):
         ostream.write(prefix+self.local_name+" : ")
         ostream.write(", ".join("%s=%s" % (k,v) for k,v in [
                     ("Size", len(self)),
-                    ("Index", self._index \
-                     if self._index != UnindexedComponent_set else None),
+                    ("Index", self._index if self.is_indexed() else None),
                     ("Active", self.active),
                     ] ))
 
