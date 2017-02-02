@@ -31,7 +31,8 @@ class Tests(unittest.TestCase):
             tmp_ = version.split('.')
             self.assertEqual(str(tmp_[0]), str(pyomo.version_info[0]))
             self.assertEqual(str(tmp_[1]), str(pyomo.version_info[1]))
-            self.assertEqual(str(tmp_[2]), str(pyomo.version_info[2]))
+            if len(tmp_) > 2:
+                self.assertEqual(str(tmp_[2]), str(pyomo.version_info[2]))
 
 
 if __name__ == "__main__":

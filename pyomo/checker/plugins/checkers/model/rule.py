@@ -7,12 +7,21 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import sys
 import ast
 import pyomo.util.plugin
 
 from pyomo.checker.plugins.model import ModelTrackerHook
 from pyomo.checker.plugins.checker import IterativeTreeChecker
 from pyomo.checker.plugins.checkers.model._rulebase import _ModelRuleChecker
+
+
+if sys.version_info < (3,0):
+    def arg_name(arg):
+        return arg.id
+else:   
+    def arg_name(arg):
+        return arg.arg
 
 
 if False:
@@ -60,7 +69,7 @@ class ModelAccess(IterativeTreeChecker):
             for attrNode in attrNodes:
                 if attrNode.value.id in script.modelVars:
                     args = getattr(script, 'functionArgs', [])
-                    if len(args) > 0 and not attrNode.value.id in list(arg.id for arg in args[-1].args):
+                    if len(args) > 0 and not attrNode.value.id in list(arg_name(arg) for arg in args[-1].args):
                         # NOTE: this probably will not catch arguments defined as keyword arguments.
                         self.problem("Expression '{0}.{1}' may access a model variable that is outside of the function scope".format(attrNode.value.id, attrNode.attr), lineno=attrNode.lineno)
 
@@ -83,7 +92,7 @@ class ModelArgument(_ModelRuleChecker):
             for node in ast.walk(bodyNode):
                 if isinstance(node, ast.Attribute):
                     if isinstance(node.value, ast.Name):
-                        if node.value.id != funcdef.args.args[0].id:
+                        if node.value.id != arg_name(funcdef.args.args[0]):
                             self.problem("Model variable '{0}' is used in the rule, but this variable is not first argument in the rule argument list".format(node.value.id), lineno=funcdef.lineno)
 
 

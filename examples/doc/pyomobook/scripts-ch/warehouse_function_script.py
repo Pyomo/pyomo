@@ -9,5 +9,5 @@ model = wf.create_wl_model(N, M, d, P)
 solver = pe.SolverFactory('glpk')
 solver.solve(model)
 
-# look at the results
+# look at the solution
 model.y.pprint()

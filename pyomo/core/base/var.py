@@ -433,7 +433,7 @@ class Var(IndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Var:
             return super(Var, cls).__new__(cls)
-        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleVar.__new__(SimpleVar)
         else:
             return IndexedVar.__new__(IndexedVar)
@@ -699,8 +699,7 @@ class Var(IndexedComponent):
     def _pprint(self):
         """Print component information."""
         return ( [("Size", len(self)),
-                  ("Index", self._index \
-                       if self._index != UnindexedComponent_set else None),
+                  ("Index", self._index if self.is_indexed() else None),
                   ],
                  iteritems(self._data),
                  ( "Lower","Value","Upper","Fixed","Stale","Domain"),

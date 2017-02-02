@@ -1,4 +1,5 @@
 [    0.00] Setting up Pyomo environment
 [    0.00] Applying Pyomo preprocessing actions
 [    0.00] Creating model
-Exiting pyomo solve: Neither 'dummy' nor 'pyomo_create_model' are available in module pmedian.py
+[    0.00] Pyomo Finished
+Exiting pyomo solve: Model 'dummy' is not defined in file 'pmedian.py'!

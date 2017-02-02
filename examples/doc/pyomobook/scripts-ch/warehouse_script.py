@@ -26,5 +26,5 @@ model.num_warehouses = Constraint(rule=num_warehouses_rule)
 solver = SolverFactory('glpk')
 solver.solve(model)
 
-# look at the results
+# look at the solution
 model.y.pprint()

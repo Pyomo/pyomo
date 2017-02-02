@@ -3,12 +3,14 @@ from pyomo.environ import *
 from pyomo.bilevel import *
 from interdiction_data import A, budget
 
+INDEX = list(A.keys())
+
 M = ConcreteModel()
-M.x = Var(A.keys(), within=Binary)
+M.x = Var(INDEX, within=Binary)
 M.budget = Constraint(expr=summation(M.x) <= budget)
 M.sub = SubModel()
 M.sub.f = Var()
-M.sub.y = Var(A.keys(), within=NonNegativeReals)
+M.sub.y = Var(INDEX, within=NonNegativeReals)
 
 # Min/Max objectives
 M.o = Objective(expr=M.sub.f, sense=minimize)
@@ -35,6 +37,4 @@ M.sub.t = Constraint(rule=t_rule)
 def c_rule(M, i, j):
     model = M.model()
     return M.y[i,j] <= A[i,j]*(1-model.x[i,j])
-M.sub.c = Constraint(A.keys(), rule=c_rule)
-
-model = M
+M.sub.c = Constraint(INDEX, rule=c_rule)

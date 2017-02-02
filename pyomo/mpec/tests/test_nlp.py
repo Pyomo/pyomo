@@ -32,7 +32,7 @@ try:
 except ImportError:
     yaml_available=False
 
-solver = pyomo.opt.load_solvers('ipopt')
+solvers = pyomo.opt.check_available_solvers('ipopt')
 
 class CommonTests:
 
@@ -123,7 +123,7 @@ class CommonTests:
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(solver['ipopt'] is None, "The 'ipopt' executable is not available")
+@unittest.skipIf(not 'ipopt' in solvers, "The 'ipopt' executable is not available")
 class Solve_IPOPT(unittest.TestCase, CommonTests):
 
     def tearDown(self):

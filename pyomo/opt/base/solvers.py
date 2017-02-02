@@ -12,7 +12,7 @@ __all__ = ('IOptSolver',
            'PersistentSolver',
            'SolverFactory',
            'UnknownSolver',
-           'load_solvers')
+           'check_available_solvers')
 
 import re
 import os
@@ -197,7 +197,7 @@ def __solver_call__(self, _name=None, args=[], **kwds):
                     opt.set_options('solver='+_name)
     except:
         err = sys.exc_info()[1]
-        logger.error("Failed to create solver with name '%s':\n%s"
+        logger.warning("Failed to create solver with name '%s':\n%s"
                      % (_name, err))
         opt = None
     if opt is not None and subsolver is not None:
@@ -219,8 +219,19 @@ pyutilib.misc.add_method(SolverFactory, __solver_call__, name='__call__')
 #       this is NOT asl:cbc (same with PICO)
 # WEH:  Why is there a distinction between SolverFactory('asl:cbc') and SolverFactory('cbc', solver_io='nl')???   This is bad.
 #
-def load_solvers(*args):
-    ans = {}
+def check_available_solvers(*args):
+    from pyomo.solvers.plugins.solvers.GUROBI import GUROBISHELL
+    from pyomo.solvers.plugins.solvers.BARON import BARONSHELL
+
+    logger_solvers = logging.getLogger('pyomo.solvers')
+    _level_solvers = logger_solvers.getEffectiveLevel()
+    logger_solvers.setLevel( logging.ERROR )
+
+    logger_opt = logging.getLogger('pyomo.opt')
+    _level_opt = logger_opt.getEffectiveLevel()
+    logger_opt.setLevel( logging.ERROR )
+
+    ans = []
     for arg in args:
         if not isinstance(arg,tuple):
             name = arg
@@ -228,9 +239,25 @@ def load_solvers(*args):
         else:
             name = arg[0]
         opt = SolverFactory(*arg)
-        if not opt is None and not opt.available():
-            opt = None
-        ans[name] = opt
+        if opt is None or isinstance(opt, UnknownSolver):
+            available = False
+        elif (arg[0] == "gurobi") and \
+           (not GUROBISHELL.license_is_valid()):
+            available = False
+        elif (arg[0] == "baron") and \
+           (not BARONSHELL.license_is_valid()):
+            available = False
+        else:
+            available = \
+                (opt.available(exception_flag=False)) and \
+                ((not hasattr(opt,'executable')) or \
+                (opt.executable() is not None))
+        if available:
+            ans.append(name)
+
+    logger_opt.setLevel( _level_opt )
+    logger_solvers.setLevel( _level_solvers )
+
     return ans
 
 def _raise_ephemeral_error(name, keyword=""):
@@ -538,22 +565,14 @@ class OptSolver(Plugin):
         # dictionary, but we will reset these options to
         # their original value at the end of this method.
         #
-        tmp_solver_options = kwds.pop('options', {})
-        tmp_solver_options.update(
-            self._options_string_to_dict(kwds.pop('options_string', '')))
-        options_to_reset = {}
-        options_to_delete = []
-        if tmp_solver_options is not None:
-            for key in tmp_solver_options:
-                if key in self.options:
-                    options_to_reset[key] = self.options[key]
-                else:
-                    options_to_delete.append(key)
-            # only modify the options dict after the above loop
-            # completes, so that we only detect the original state
-            for key in tmp_solver_options:
-                self.options[key] = tmp_solver_options[key]
 
+        orig_options = self.options
+
+        self.options = pyutilib.misc.Options()
+        self.options.update(orig_options)
+        self.options.update(kwds.pop('options', {}))
+        self.options.update(
+            self._options_string_to_dict(kwds.pop('options_string', '')))
         try:
 
             # we're good to go.
@@ -613,14 +632,9 @@ class OptSolver(Plugin):
 
         finally:
             #
-            # Reset the options dict (remove any ephemeral solver options
-            # passed into this method)
+            # Reset the options dict
             #
-            for key in options_to_reset:
-                self.options[key] = options_to_reset[key]
-            for key in options_to_delete:
-                if key in self.options:
-                    del self.options[key]
+            self.options = orig_options
 
         return result
 

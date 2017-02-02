@@ -9,6 +9,7 @@
 
 
 import re
+import six
 
 from gurobipy import *
 
@@ -69,9 +70,9 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # GUROBI doesn't throw an exception if an unknown
     # key is specified, so you have to stare at the
     # output to see if it was accepted.
-    for key, value in options.iteritems():
+    for key, value in six.iteritems(options):
         model.setParam(key, value)
-        
+
     if 'relax_integrality' in options:
         for v in model.getVars():
             if v.vType != GRB.CONTINUOUS:
@@ -82,69 +83,93 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     model.optimize()
 
     solver_status = model.getAttr(GRB.Attr.Status)
+    solution_status = None
     return_code = 0
     if (solver_status == GRB.LOADED):
         status = 'aborted'
         message = 'Model is loaded, but no solution information is availale.'
         term_cond = 'error'
+        solution_status = 'unknown'
     elif (solver_status == GRB.OPTIMAL):
         status = 'ok'
         message = 'Model was solved to optimality (subject to tolerances), and an optimal solution is available.'
         term_cond = 'optimal'
+        solution_status = 'optimal'
     elif (solver_status == GRB.INFEASIBLE):
         status = 'warning'
         message = 'Model was proven to be infeasible.'
         term_cond = 'infeasible'
+        solution_status = 'infeasible'
     elif (solver_status == GRB.INF_OR_UNBD):
         status = 'warning'
         message = 'Problem proven to be infeasible or unbounded.'
-        term_cond = 'infeasible' # Pyomo doesn't have an analog to "infeasible or unbounded", which is a weird concept anyway.
+        term_cond = 'unbounded' # Pyomo doesn't have an analog to "infeasible or unbounded", which is a weird concept anyway.
+        solution_status = 'unbounded'
     elif (solver_status == GRB.UNBOUNDED):
         status = 'warning'
         message = 'Model was proven to be unbounded.'
         term_cond = 'unbounded'
+        solution_status = 'unbounded'
     elif (solver_status == GRB.CUTOFF):
         status = 'aborted'
         message = 'Optimal objective for model was proven to be worse than the value specified in the Cutoff  parameter. No solution information is available.'
         term_cond = 'minFunctionValue'
+        solution_status = 'unknown'
     elif (solver_status == GRB.ITERATION_LIMIT):
         status = 'aborted'
         message = 'Optimization terminated because the total number of simplex iterations performed exceeded the value specified in the IterationLimit parameter.'
         term_cond = 'maxIterations'
+        solution_status = 'stoppedByLimit'
     elif (solver_status == GRB.NODE_LIMIT):
         status = 'aborted'
         message = 'Optimization terminated because the total number of branch-and-cut nodes explored exceeded the value specified in the NodeLimit parameter.'
         term_cond = 'maxEvaluations'
+        solution_status = 'stoppedByLimit'
     elif (solver_status == GRB.TIME_LIMIT):
         status = 'aborted'
         message = 'Optimization terminated because the time expended exceeded the value specified in the TimeLimit parameter.'
         term_cond = 'maxTimeLimit'
+        solution_status = 'stoppedByLimit'
     elif (solver_status == GRB.SOLUTION_LIMIT):
         status = 'aborted'
         message = 'Optimization terminated because the number of solutions found reached the value specified in the SolutionLimit parameter.'
         term_cond = 'stoppedByLimit'
+        solution_status = 'stoppedByLimit'
     elif (solver_status == GRB.INTERRUPTED):
         status = 'aborted'
         message = 'Optimization was terminated by the user.'
         term_cond = 'error'
+        solution_status = 'error'
     elif (solver_status == GRB.NUMERIC):
         status = 'error'
         message = 'Optimization was terminated due to unrecoverable numerical difficulties.'
         term_cond = 'error'
+        solution_status = 'error'
     elif (solver_status == GRB.SUBOPTIMAL):
         status = 'warning'
         message = 'Unable to satisfy optimality tolerances; a sub-optimal solution is available.'
         term_cond = 'other'
+        solution_status = 'feasible'
     else:
         print(solver_status)
         status = 'error'
         message = 'Unknown return code from GUROBI model.getAttr(GRB.Attr.Status) call'
         term_cond = 'error'
+        solution_status = 'error'
+    assert solution_status is not None
 
+    sense = model.getAttr(GRB.Attr.ModelSense)
     try:
         obj_value = model.getAttr(GRB.Attr.ObjVal)
     except:
         obj_value = None
+        if term_cond == "unbounded":
+            if (sense < 0):
+                # maximize
+                obj_value = float('inf')
+            else:
+                # minimize
+                obj_value = float('-inf')
 
     # write the solution file
     solnfile = open(soln_file, "w+")
@@ -153,8 +178,6 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     solnfile.write("section:problem\n")
     name = model.getAttr(GRB.Attr.ModelName)
     solnfile.write("name: "+name+'\n')
-
-    sense = model.getAttr(GRB.Attr.ModelSense)
 
     # TODO: find out about bounds and fix this with error checking
     # this line fails for some reason so set the value to unknown
@@ -169,13 +192,13 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     if (sense < 0):
         solnfile.write("sense:maximize\n")
         if bound is None:
-            solnfile.write("upper_bound: %f\n" % float('infinity'))
+            solnfile.write("upper_bound: %f\n" % float('inf'))
         else:
             solnfile.write("upper_bound: %s\n" % str(bound))
     else:
         solnfile.write("sense:minimize\n")
         if bound is None:
-            solnfile.write("lower_bound: %f\n" % float('-infinity'))
+            solnfile.write("lower_bound: %f\n" % float('-inf'))
         else:
             solnfile.write("lower_bound: %s\n" % str(bound))
 
@@ -206,7 +229,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     solnfile.write("section:solver\n")
 
     solnfile.write('status: %s\n' % status)
-    solnfile.write('return_code: %s\n' % str(return_code))
+    solnfile.write('return_code: %s\n' % return_code)
     solnfile.write('message: %s\n' % message)
     solnfile.write('user_time: %s\n' % str(model.getAttr(GRB.Attr.Runtime)))
     solnfile.write('system_time: %s\n' % str(0.0))
@@ -219,7 +242,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
 
     if (term_cond == 'optimal') or (model.getAttr(GRB.Attr.SolCount) >= 1):
         solnfile.write('section:solution\n')
-        solnfile.write('status:optimal\n')
+        solnfile.write('status: %s\n' % (solution_status))
         solnfile.write('message: %s\n' % message)
         solnfile.write('objective: %s\n' % str(obj_value))
         solnfile.write('gap: 0.0\n')

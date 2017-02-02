@@ -14,7 +14,7 @@ import os
 from os.path import abspath, dirname, normpath, join
 
 currdir = dirname(abspath(__file__))
-exdir = normpath(join(currdir,'..', '..','..','..','examples','core'))
+exdir = normpath(join(currdir,'..', '..','..','..','examples','pyomo','core'))
 
 import pyutilib.th as unittest
 
@@ -155,12 +155,12 @@ class Solve_GLPK(Solver, CommonTests):
 
     @classmethod
     def setUpClass(cls):
-        global solver
+        global solvers
         import pyomo.environ
-        solver = pyomo.opt.load_solvers('glpk')
+        solvers = pyomo.opt.check_available_solvers('glpk')
 
     def setUp(self):
-        if (not yaml_available) or (solver['glpk'] is None):
+        if (not yaml_available) or (not 'glpk' in solvers):
             self.skipTest("YAML is not available or "
                           "the 'glpk' executable is not available")
 
@@ -173,12 +173,12 @@ class Solve_CPLEX(Solver, CommonTests):
 
     @classmethod
     def setUpClass(cls):
-        global solver
+        global solvers
         import pyomo.environ
-        solver = pyomo.opt.load_solvers('cplex')
+        solvers = pyomo.opt.check_available_solvers('cplex')
 
     def setUp(self):
-        if (not yaml_available) or (solver['cplex'] is None):
+        if (not yaml_available) or (not 'cplex' in solvers):
             self.skipTest("YAML is not available or "
                           "the 'cplex' executable is not available")
 

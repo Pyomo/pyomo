@@ -1,0 +1,27 @@
+      Ashland :     0 :   1.0 :     1 : False : False : Binary
+      Memphis :     0 :   0.0 :     1 : False : False : Binary
+    Harlingen :     0 :   1.0 :     1 : False : False : Binary
+    Key       : Lower : Value : Upper : Fixed : Stale : Domain
+1
+1.0
+x[Ashland,Chicago] = 1.0
+x[Ashland,Houston] = 0.0
+x[Ashland,LA] = 0.0
+x[Ashland,NYC] = 1.0
+x[Harlingen,Chicago] = 0.0
+x[Harlingen,Houston] = 1.0
+x[Harlingen,LA] = 1.0
+x[Harlingen,NYC] = 0.0
+x[Memphis,Chicago] = 0.0
+x[Memphis,Houston] = 0.0
+x[Memphis,LA] = 0.0
+x[Memphis,NYC] = 0.0
+y : Size=3, Index=y_index
+y[Ashland] = 1.0
+y[Ashland] = 1.0
+y[Harlingen] = 1.0
+y[Harlingen] = 1.0
+y[Memphis] = 0.0
+y[Memphis] = 0.0
+z
+z = 1
