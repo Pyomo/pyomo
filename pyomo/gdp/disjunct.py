@@ -37,53 +37,10 @@ class _DisjunctData(_BlockData):
 
     def __init__(self, owner):
         _BlockData.__init__(self, owner)
-        self._M = None
         self.indicator_var = Var(within=Binary)
 
     def pprint(self, ostream=None, verbose=False, prefix=""):
         _BlockData.pprint(self, ostream=ostream, verbose=verbose, prefix=prefix)
-
-    def Xpprint(self, ostream=None, verbose=False, prefix=""):
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write("    %s :" % self.local_name)
-        ostream.write("\tSize= %s" % str(len(self._data.keys())))
-        if isinstance(self._index,Set):
-            ostream.write("\tIndex= %s\n" % self._index.name)
-        else:
-            ostream.write("\n")
-        if self._M is not None:
-            ostream.write("\tM= %s\n" % str(self._M))
-        indent = StreamIndenter(ostream)
-        if len(self._data):
-            for val in self._data.itervalues():
-                val.pprint(indent, verbose=verbose, prefix=prefix)
-        else:
-            Block.pprint(self, ostream=indent, verbose=verbose, prefix=prefix)
-
-    def next_M(self):
-        if self._M is None:
-            return None
-        elif isinstance(self._M, list):
-            if len(self._M):
-                return self._M.pop(0)
-            else:
-                return None
-        else:
-            return self._M
-
-    def add_M(self, M):
-        if self._M is None:
-            self._M = M
-        elif isinstance(self._M, list):
-            self._M.append(M)
-        else:
-            self._M = [self._M, M]
-
-    def set_M(self, M_list):
-        if self._M is not None:
-            logger.warning("Discarding pre-defined M values for %s", self.name)
-        self._M = M_list
 
 
 class Disjunct(Block):

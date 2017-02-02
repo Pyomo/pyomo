@@ -184,7 +184,7 @@ class BigM_Transformation(Transformation):
         if 'BigM' in disjunct.component_map(Suffix):
             M = disjunct.component('BigM').get(constraint)
         else:
-            M = disjunct.next_M()
+            M = None
         lin_body_map = getattr(disjunct.model(),"lin_body",None)
         for cname, c in iteritems(constraint._data):
             if not c.active:
