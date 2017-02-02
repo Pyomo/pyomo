@@ -1358,6 +1358,10 @@ generate_expression.clone_counter = 0
 # error to hit _clone_if_needed() with fewer than
 # UNREFERENCED_EXPR_COUNT references.
 UNREFERENCED_EXPR_COUNT = 9
+if (sys.version_info[0] >= 3) and \
+   (sys.version_info[1] >= 6):
+    UNREFERENCED_EXPR_COUNT -= 1
+
 
 
 def _generate_relational_expression__clone_if_needed(obj):
@@ -1565,6 +1569,10 @@ generate_relational_expression.call_info = None
 # inner expression is *always* cloned when forming the first half of the
 # compound inequality.
 UNREFERENCED_RELATIONAL_EXPR_COUNT = 9
+if (sys.version_info[0] >= 3) and \
+   (sys.version_info[1] >= 6):
+    UNREFERENCED_RELATIONAL_EXPR_COUNT -= 1
+
 
 
 
@@ -1625,6 +1633,9 @@ def generate_intrinsic_function_expression(arg, name, fcn):
 # error to hit _clone_if_needed() with fewer than
 # UNREFERENCED_EXPR_COUNT references.
 UNREFERENCED_INTRINSIC_EXPR_COUNT = 7
+#if (sys.version_info[0] >= 3) and \
+#   (sys.version_info[1] >= 6):
+#    UNREFERENCED_INTRINSIC_EXPR_COUNT -= 1
 
 #
 # If you want to completely disable clone checking (e.g., for
