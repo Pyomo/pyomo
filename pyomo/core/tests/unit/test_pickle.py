@@ -38,7 +38,7 @@ class Test(unittest.TestCase):
                 self.assertNotEqual(id(ref._data[idx]),  id(new._data[idx]))
         self.assertEqual( id(ref.solutions._instance()), id(ref) )
         self.assertEqual( id(new.solutions._instance()), id(new) )
-            
+
         # Verify the block attributes
         for idx in ref._data.keys():
             ref_c = ref[idx].component_map()
@@ -47,7 +47,6 @@ class Test(unittest.TestCase):
             for a in ref_c.keys():
                 self.assertEqual(type(ref_c[a]),  type(new_c[a]))
                 self.assertNotEqual(id(ref_c[a]),  id(new_c[a]))
-                
 
     def test_pickle_empty_abstract_model(self):
         model = AbstractModel()
@@ -258,11 +257,11 @@ class Test(unittest.TestCase):
         tmodel = pickle.loads(pickle_str)
         instance=tmodel.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals( 
-            str(expr), 
+        self.assertEquals(
+            str(expr),
             "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
 
-    # same as above, but pickles the constructed AbstractModel and 
+    # same as above, but pickles the constructed AbstractModel and
     # then operates on the unpickled instance.
     def test_pickle2(self):
         model = AbstractModel()
@@ -276,8 +275,8 @@ class Test(unittest.TestCase):
         pickle_str = pickle.dumps(tmp)
         instance = pickle.loads(pickle_str)
         expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals( 
-            str(expr), 
+        self.assertEquals(
+            str(expr),
             "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
 
     # verifies that the use of lambda expressions as rules yields model instances
@@ -310,11 +309,14 @@ class Test(unittest.TestCase):
         except AttributeError:
             pass
 
-    # verifies that we can print a constructed model and obtain identical results before and after 
-    # pickling. introduced due to a test case by Gabe that illustrated __getstate__ of various 
-    # modeling components was incorrectly and unexpectedly modifying object state.
+    # verifies that we can print a constructed model and
+    # obtain identical results before and after
+    # pickling. introduced due to a test case by Gabe that
+    # illustrated __getstate__ of various modeling
+    # components was incorrectly and unexpectedly modifying
+    # object state.
     def test_pickle4(self):
-    
+
         model = ConcreteModel()
         model.s = Set(initialize=[1,2])
         model.x = Var(within=NonNegativeReals)
@@ -334,8 +336,6 @@ class Test(unittest.TestCase):
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
         self.assertFileEqualsBaseline(currdir+"test_pickle4_after.out",currdir+"test_pickle4_baseline.txt")
-        
-
 
 if __name__ == "__main__":
     unittest.main()
