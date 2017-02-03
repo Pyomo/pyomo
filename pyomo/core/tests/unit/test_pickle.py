@@ -299,15 +299,16 @@ class Test(unittest.TestCase):
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
-        try:
-            str = pickle.dumps(instance)
-            self.fail("Expected pickling error due to the use of lambda expressions - did not generate one!")
-        except pickle.PicklingError:
-            pass
-        except TypeError:
-            pass
-        except AttributeError:
-            pass
+        if "dill" in sys.modules:
+            pickle.dumps(instance)
+        else:
+            with self.assertRaises((pickle.PicklingError,
+                                    TypeError,
+                                    AttributeError),
+                                   ("Expected pickling error due "
+                                    "to the use of lambda expressions "
+                                    "- did not generate one!")):
+                pickle.dumps(instance)
 
     # verifies that we can print a constructed model and
     # obtain identical results before and after
