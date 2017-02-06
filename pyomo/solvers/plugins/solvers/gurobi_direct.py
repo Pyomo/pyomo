@@ -59,6 +59,8 @@ from pyomo.core.base import (SymbolMap,
 from pyomo.core.base.numvalue import value
 from pyomo.repn import generate_canonical_repn
 
+from pyomo.core.base.component_block import IBlockStorage
+
 GRB_MAX = -1
 GRB_MIN = 1
 
@@ -203,7 +205,7 @@ class gurobi_direct ( OptSolver ):
         from pyomo.repn import LinearCanonicalRepn, canonical_degree
 
         try:
-            grbmodel = Model(name=pyomo_instance.name)
+            grbmodel = Model()
         except Exception:
             e = sys.exc_info()[1]
             msg = 'Unable to create Gurobi model.  Have you installed the Python'\
@@ -215,9 +217,16 @@ class gurobi_direct ( OptSolver ):
         else:
             labeler = NumericLabeler('x')
         # cache to avoid dictionary getitem calls in the loops below.
-        self_symbol_map = self._symbol_map = SymbolMap()
-        pyomo_instance.solutions.add_symbol_map(self_symbol_map)
-        self._smap_id = id(self_symbol_map)
+        symbol_map = self._symbol_map = SymbolMap()
+        self._smap_id = id(symbol_map)
+        if isinstance(pyomo_instance, IBlockStorage):
+            # BIG HACK (see pyomo.core.kernel write function)
+            if not hasattr(pyomo_instance, "._symbol_maps"):
+                setattr(pyomo_instance, "._symbol_maps", {})
+            getattr(pyomo_instance,
+                    "._symbol_maps")[self._smap_id] = symbol_map
+        else:
+            pyomo_instance.solutions.add_symbol_map(symbol_map)
 
         # we use this when iterating over the constraints because it
         # will have a much smaller hash table, we also use this for
@@ -246,7 +255,7 @@ class gurobi_direct ( OptSolver ):
 
             # _VarValue objects will not be in the symbol map yet, so
             # avoid some checks.
-            var_value_label = self_symbol_map.createSymbol(var_value, labeler)
+            var_value_label = symbol_map.createSymbol(var_value, labeler)
             var_symbol_pairs.append((var_value, var_value_label))
 
             # be sure to impart the integer and binary nature of any variables
@@ -303,7 +312,7 @@ class gurobi_direct ( OptSolver ):
                    (level > 2):
                     raise RuntimeError(
                         "Solver does not support SOS level %s constraints" % (level,))
-                modelSOS.count_constraint(self_symbol_map,
+                modelSOS.count_constraint(symbol_map,
                                           labeler,
                                           self_variable_symbol_map,
                                           pyomo_gurobi_variable_map,
@@ -386,7 +395,7 @@ class gurobi_direct ( OptSolver ):
                 # _ObjectiveData objects will not be in the symbol map
                 # yet, so avoid some checks.
                 self._objective_label = \
-                    self_symbol_map.createSymbol(obj_data, labeler)
+                    symbol_map.createSymbol(obj_data, labeler)
 
                 grbmodel.setObjective(obj_expr, sense=sense)
 
@@ -413,7 +422,7 @@ class gurobi_direct ( OptSolver ):
                 # _ConstraintData objects will not be in the symbol
                 # map yet, so avoid some checks.
                 constraint_label = \
-                    self_symbol_map.createSymbol(constraint_data, labeler)
+                    symbol_map.createSymbol(constraint_data, labeler)
 
                 trivial = False
                 if isinstance(con_repn, LinearCanonicalRepn):
@@ -631,7 +640,7 @@ class gurobi_direct ( OptSolver ):
             msg = "The gurobi_direct plugin method '_presolve' must be supplied "\
                   "a single problem instance - %s were supplied"
             raise ValueError(msg % len(args))
-        elif not isinstance(model, Model):
+        elif not isinstance(model, (Model, IBlockStorage)):
             raise ValueError("The problem instance supplied to the "            \
                  "gurobi_direct plugin '_presolve' method must be of type 'Model'")
 
