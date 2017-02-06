@@ -304,10 +304,7 @@ class Test(unittest.TestCase):
         else:
             with self.assertRaises((pickle.PicklingError,
                                     TypeError,
-                                    AttributeError),
-                                   ("Expected pickling error due "
-                                    "to the use of lambda expressions "
-                                    "- did not generate one!")):
+                                    AttributeError)):
                 pickle.dumps(instance)
 
     # verifies that we can print a constructed model and
