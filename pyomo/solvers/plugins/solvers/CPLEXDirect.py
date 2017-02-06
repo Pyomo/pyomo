@@ -34,6 +34,8 @@ from pyomo.core.base import (SymbolMap,
 from pyomo.repn import generate_canonical_repn
 from pyomo.solvers import wrappers
 
+from pyomo.core.base.component_block import IBlockStorage
+
 from six import itervalues, iterkeys, iteritems, advance_iterator
 from six.moves import xrange
 
@@ -364,8 +366,15 @@ class CPLEXDirect(OptSolver):
         else:
             labeler = NumericLabeler('x')
         symbol_map = SymbolMap()
-        pyomo_instance.solutions.add_symbol_map(symbol_map)
         self._smap_id = id(symbol_map)
+        if isinstance(pyomo_instance, IBlockStorage):
+            # BIG HACK (see pyomo.core.kernel write function)
+            if not hasattr(pyomo_instance, "._symbol_maps"):
+                setattr(pyomo_instance, "._symbol_maps", {})
+            getattr(pyomo_instance,
+                    "._symbol_maps")[self._smap_id] = symbol_map
+        else:
+            pyomo_instance.solutions.add_symbol_map(symbol_map)
 
         # we use this when iterating over the constraints because it
         # will have a much smaller hash table, we also use this for
@@ -845,7 +854,7 @@ class CPLEXDirect(OptSolver):
             raise ValueError(msg % len(args))
 
         model = args[ 0 ]
-        if not isinstance(model, Model):
+        if not isinstance(model, (Model, IBlockStorage)):
             msg = "The problem instance supplied to the CPLEXDirect plugin " \
                   "method '_presolve' must be of type 'Model' - "\
                   "interface does not currently support file names"
@@ -859,10 +868,14 @@ class CPLEXDirect(OptSolver):
         # below), relies on a "clean" symbol map
         vars_to_delete = set(self._variable_symbol_map.byObject.keys()) - \
                          self._referenced_variable_ids
-        sm_byObject = model.solutions.symbol_map[self._smap_id].byObject
-        sm_bySymbol = model.solutions.symbol_map[self._smap_id].bySymbol
-        #sm_bySymbol = self._symbol_map.bySymbol
-        assert(len(model.solutions.symbol_map[self._smap_id].aliases) == 0)
+        if isinstance(model, IBlockStorage):
+            symbol_map = getattr(model,
+                                 "._symbol_maps")[self._smap_id]
+        else:
+            symbol_map = model.solutions.symbol_map[self._smap_id]
+        sm_byObjective = symbol_map.byObject
+        sm_bySymbol = symbol_map.bySymbol
+        assert len(symbol_map.aliases) == 0
         var_sm_byObject = self._variable_symbol_map.byObject
         var_sm_bySymbol = self._variable_symbol_map.bySymbol
         for varid in vars_to_delete:
@@ -1139,7 +1152,13 @@ class CPLEXDirect(OptSolver):
                     soln_constraint[q_constraint_names[i]] = \
                         {"Slack" : slack_values[i]}
 
-            byObject = self._instance.solutions.symbol_map[self._smap_id].byObject
+            if isinstance(self._instance, IBlockStorage):
+                symbol_map = getattr(self._instance,
+                                     "._symbol_maps")[self._smap_id]
+            else:
+                symbol_map = self._instance.solutions.\
+                             symbol_map[self._smap_id]
+            byObject = symbol_map.byObject
             referenced_varnames = set(byObject[varid]
                                       for varid in self._referenced_variable_ids)
             names_to_delete = set(soln_variable.keys())-referenced_varnames
