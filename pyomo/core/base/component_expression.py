@@ -7,11 +7,6 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-__all__ = ("expression",
-           "data_expression",
-           "expression_list",
-           "expression_dict")
-
 import sys
 import abc
 

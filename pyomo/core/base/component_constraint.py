@@ -14,11 +14,6 @@
 #       (so changes there on master need to be)
 #        duplicated here)
 
-__all__ = ("constraint",
-           "linear_constraint",
-           "constraint_list",
-           "constraint_dict")
-
 import abc
 
 import pyutilib.math

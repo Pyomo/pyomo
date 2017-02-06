@@ -8,4 +8,4 @@
 #  _________________________________________________________________________
 
 import pyomo.core.base.component_piecewise.util
-from pyomo.core.base.component_piecewise.transforms import *
+import pyomo.core.base.component_piecewise.transforms

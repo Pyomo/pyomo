@@ -7,14 +7,6 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-__all__ = ("sos",
-           "sos1",
-           "sos2",
-           "sos_list",
-           "sos_dict")
-
-import abc
-
 import pyutilib.math
 
 from pyomo.core.base.component_interface import \

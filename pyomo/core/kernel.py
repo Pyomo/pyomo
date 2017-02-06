@@ -13,15 +13,41 @@ from pyomo.opt import (SolverFactory,
                        TerminationCondition)
 import pyomo.opt.base
 from pyomo.core.base.component_map import ComponentMap
-from pyomo.core.base.component_block import *
-from pyomo.core.base.component_variable import *
-from pyomo.core.base.component_constraint import *
-from pyomo.core.base.component_parameter import *
-from pyomo.core.base.component_expression import *
-from pyomo.core.base.component_objective import *
-from pyomo.core.base.component_sos import *
-from pyomo.core.base.component_suffix import *
-from pyomo.core.base.component_piecewise import *
+from pyomo.core.base.component_block import (block,
+                                             tiny_block,
+                                             block_list,
+                                             block_dict)
+from pyomo.core.base.component_variable import (variable,
+                                                variable_list,
+                                                variable_dict)
+from pyomo.core.base.component_constraint import (constraint,
+                                                  linear_constraint,
+                                                  constraint_list,
+                                                  constraint_dict)
+from pyomo.core.base.component_parameter import (parameter,
+                                                 parameter_list,
+                                                 parameter_dict)
+from pyomo.core.base.component_expression import (expression,
+                                                  data_expression,
+                                                  expression_list,
+                                                  expression_dict)
+from pyomo.core.base.component_objective import (objective,
+                                                 objective_list,
+                                                 objective_dict)
+from pyomo.core.base.component_sos import (sos,
+                                           sos1,
+                                           sos2,
+                                           sos_list,
+                                           sos_dict)
+from pyomo.core.base.component_suffix import (suffix,)
+from pyomo.core.base.component_piecewise.transforms import (piecewise,
+                                                            piecewise_sos2,
+                                                            piecewise_dcc,
+                                                            piecewise_cc,
+                                                            piecewise_mc,
+                                                            piecewise_inc,
+                                                            piecewise_dlog,
+                                                            piecewise_log)
 from pyomo.core.base.expr import *
 from pyomo.core.base.set_types import (RealSet,
                                        IntegerSet,
