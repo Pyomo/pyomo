@@ -725,6 +725,74 @@ class _Test_block_base(object):
                     for _c in
                     self._components_no_descend[obj][ctype]))
 
+    def test_components_no_descend_active_None_return_key(self):
+        for obj in self._components_no_descend:
+            self.assertTrue(isinstance(obj, IComponentContainer))
+            self.assertTrue(isinstance(obj, IBlockStorage))
+            for ckey, c in obj.components(descend_into=False, return_key=True):
+                self.assertTrue(
+                    _path_to_object_exists(obj, c))
+                self.assertEqual(ckey, self._child_key[c])
+            # test ctype=Block
+            self.assertEqual(
+                sorted(str(_b)
+                       for _bk, _b in
+                       obj.components(ctype=Block,
+                                      active=None,
+                                      descend_into=False,
+                                      return_key=True)),
+                sorted(str(_b)
+                       for _b in
+                       self._components_no_descend[obj][Block]))
+            self.assertEqual(
+                set(id(_b) for _bk, _b in
+                    obj.components(ctype=Block,
+                                   active=None,
+                                   descend_into=False,
+                                   return_key=True)),
+                set(id(_b) for _b in
+                    self._components_no_descend[obj][Block]))
+            # test ctype=Var
+            self.assertEqual(
+                sorted(str(_v)
+                       for _vk, _v in
+                       obj.components(ctype=Var,
+                                      active=None,
+                                      descend_into=False,
+                                      return_key=True)),
+                sorted(str(_v)
+                       for _v in
+                       self._components_no_descend[obj][Var]))
+            self.assertEqual(
+                set(id(_v) for _vk, _v in
+                    obj.components(ctype=Var,
+                                   active=None,
+                                   descend_into=False,
+                                   return_key=True)),
+                set(id(_v) for _v in
+                    self._components_no_descend[obj][Var]))
+            # test no ctype
+            self.assertEqual(
+                sorted(str(_c)
+                       for _ck, _c in
+                       obj.components(active=None,
+                                      descend_into=False,
+                                      return_key=True)),
+                sorted(str(_c)
+                       for ctype in
+                       self._components_no_descend[obj]
+                       for _c in
+                       self._components_no_descend[obj][ctype]))
+            self.assertEqual(
+                set(id(_c) for _ck, _c in
+                    obj.components(active=None,
+                                   descend_into=False,
+                                   return_key=True)),
+                set(id(_c) for ctype in
+                    self._components_no_descend[obj]
+                    for _c in
+                    self._components_no_descend[obj][ctype]))
+
     def test_components_no_descend_active_True(self):
         for obj in self._components_no_descend:
             self.assertTrue(isinstance(obj, IComponentContainer))
@@ -793,6 +861,80 @@ class _Test_block_base(object):
                     if getattr(_c, "active", True))
                 if getattr(obj, 'active', True) else set())
 
+    def test_components_no_descend_active_True_return_key(self):
+        for obj in self._components_no_descend:
+            self.assertTrue(isinstance(obj, IComponentContainer))
+            self.assertTrue(isinstance(obj, IBlockStorage))
+            # test ctype=Block
+            self.assertEqual(
+                sorted(str(_b)
+                       for _bk, _b in
+                       obj.components(ctype=Block,
+                                      active=True,
+                                      descend_into=False,
+                                      return_key=True)),
+                sorted(str(_b)
+                       for _b in
+                       self._components_no_descend[obj][Block]
+                       if _b.active)
+                if getattr(obj, 'active', True) else [])
+            self.assertEqual(
+                set(id(_b) for _bk, _b in
+                    obj.components(ctype=Block,
+                                   active=True,
+                                   descend_into=False,
+                                   return_key=True)),
+                set(id(_b) for _b in
+                    self._components_no_descend[obj][Block]
+                    if _b.active)
+                if getattr(obj, 'active', True) else set())
+            # test ctype=Var
+            self.assertEqual(
+                sorted(str(_v)
+                       for _vk, _v in
+                       obj.components(ctype=Var,
+                                      active=True,
+                                      descend_into=False,
+                                      return_key=True)),
+                sorted(str(_v)
+                       for _v in
+                       self._components_no_descend[obj][Var])
+                if getattr(obj, 'active', True) else [])
+            self.assertEqual(
+                set(id(_v) for _vk, _v in
+                    obj.components(ctype=Var,
+                                   active=True,
+                                   descend_into=False,
+                                   return_key=True)),
+                set(id(_v) for _v in
+                    self._components_no_descend[obj][Var])
+                if getattr(obj, 'active', True) else set())
+            # test no ctype
+            self.assertEqual(
+                sorted(str(_c)
+                       for _ck, _c in
+                       obj.components(active=True,
+                                      descend_into=False,
+                                      return_key=True)),
+                sorted(str(_c)
+                       for ctype in
+                       self._components_no_descend[obj]
+                       for _c in
+                       self._components_no_descend[obj][ctype]
+                       if getattr(_c, "active", True))
+                if getattr(obj, 'active', True) else [])
+            self.assertEqual(
+                set(id(_c) for _ck, _c in
+                    obj.components(active=True,
+                                   descend_into=False,
+                                   return_key=True)),
+                set(id(_c) for ctype in
+                    self._components_no_descend[obj]
+                    for _c in
+                    self._components_no_descend[obj][ctype]
+                    if getattr(_c, "active", True))
+                if getattr(obj, 'active', True) else set())
+
     def test_components_active_None(self):
         for obj in self._components:
             self.assertTrue(isinstance(obj, IComponentContainer))
@@ -849,6 +991,74 @@ class _Test_block_base(object):
                 set(id(_c) for _c in
                     obj.components(active=None,
                                    descend_into=True)),
+                set(id(_c) for ctype in
+                    self._components[obj]
+                    for _c in
+                    self._components[obj][ctype]))
+
+    def test_components_active_None_return_key(self):
+        for obj in self._components:
+            self.assertTrue(isinstance(obj, IComponentContainer))
+            self.assertTrue(isinstance(obj, IBlockStorage))
+            for ckey, c in obj.components(descend_into=True, return_key=True):
+                self.assertTrue(
+                    _path_to_object_exists(obj, c))
+                self.assertEqual(ckey, self._child_key[c])
+            # test ctype=Block
+            self.assertEqual(
+                sorted(str(_b)
+                       for _bk, _b in
+                       obj.components(ctype=Block,
+                                      active=None,
+                                      descend_into=True,
+                                      return_key=True)),
+                sorted(str(_b)
+                       for _b in
+                       self._components[obj][Block]))
+            self.assertEqual(
+                set(id(_b) for _bk, _b in
+                    obj.components(ctype=Block,
+                                   active=None,
+                                   descend_into=True,
+                                   return_key=True)),
+                set(id(_b) for _b in
+                    self._components[obj][Block]))
+            # test ctype=Var
+            self.assertEqual(
+                sorted(str(_v)
+                       for _vk, _v in
+                       obj.components(ctype=Var,
+                                      active=None,
+                                      descend_into=True,
+                                      return_key=True)),
+                sorted(str(_v)
+                       for _v in
+                       self._components[obj][Var]))
+            self.assertEqual(
+                set(id(_v) for _vk, _v in
+                    obj.components(ctype=Var,
+                                   active=None,
+                                   descend_into=True,
+                                   return_key=True)),
+                set(id(_v) for _v in
+                    self._components[obj][Var]))
+            # test no ctype
+            self.assertEqual(
+                sorted(str(_c)
+                       for _ck, _c in
+                       obj.components(active=None,
+                                      descend_into=True,
+                                      return_key=True)),
+                sorted(str(_c)
+                       for ctype in
+                       self._components[obj]
+                       for _c in
+                       self._components[obj][ctype]))
+            self.assertEqual(
+                set(id(_c) for _ck, _c in
+                    obj.components(active=None,
+                                   descend_into=True,
+                                   return_key=True)),
                 set(id(_c) for ctype in
                     self._components[obj]
                     for _c in
@@ -917,6 +1127,82 @@ class _Test_block_base(object):
                 set(id(_c) for _c in
                     obj.components(active=True,
                                    descend_into=True)),
+                set(id(_c) for ctype in
+                    self._components[obj]
+                    for _c in
+                    self._components[obj][ctype]
+                    if _active_path_to_object_exists(obj, _c))
+                if getattr(obj, 'active', True) else set())
+
+    def test_components_active_True_return_key(self):
+        for obj in self._components:
+            self.assertTrue(isinstance(obj, IComponentContainer))
+            self.assertTrue(isinstance(obj, IBlockStorage))
+            # test ctype=Block
+            self.assertEqual(
+                sorted(str(_b)
+                       for _bk, _b in
+                       obj.components(ctype=Block,
+                                      active=True,
+                                      descend_into=True,
+                                      return_key=True)),
+                sorted(str(_b)
+                       for _b in
+                       self._components[obj][Block]
+                       if _b.active)
+                if getattr(obj, 'active', True) else [])
+            self.assertEqual(
+                set(id(_b) for _bk, _b in
+                    obj.components(ctype=Block,
+                                   active=True,
+                                   descend_into=True,
+                                   return_key=True)),
+                set(id(_b) for _b in
+                    self._components[obj][Block]
+                    if _b.active)
+                if getattr(obj, 'active', True) else set())
+            # test ctype=Var
+            self.assertEqual(
+                sorted(str(_v)
+                       for _vk, _v in
+                       obj.components(ctype=Var,
+                                      active=True,
+                                      descend_into=True,
+                                      return_key=True)),
+                sorted(str(_v)
+                       for _v in
+                       self._components[obj][Var]
+                       if _active_path_to_object_exists(obj, _v))
+                if getattr(obj, 'active', True) else [])
+            self.assertEqual(
+                set(id(_v) for _vk, _v in
+                    obj.components(ctype=Var,
+                                   active=True,
+                                   descend_into=True,
+                                   return_key=True)),
+                set(id(_v) for _v in
+                    self._components[obj][Var]
+                    if _active_path_to_object_exists(obj, _v))
+                if getattr(obj, 'active', True) else set())
+            # test no ctype
+            self.assertEqual(
+                sorted(str(_c)
+                       for _ck, _c in
+                       obj.components(active=True,
+                                      descend_into=True,
+                                      return_key=True)),
+                sorted(str(_c)
+                       for ctype in
+                       self._components[obj]
+                       for _c in
+                       self._components[obj][ctype]
+                       if _active_path_to_object_exists(obj, _c))
+                if getattr(obj, 'active', True) else [])
+            self.assertEqual(
+                set(id(_c) for _ck, _c in
+                    obj.components(active=True,
+                                   descend_into=True,
+                                   return_key=True)),
                 set(id(_c) for ctype in
                     self._components[obj]
                     for _c in

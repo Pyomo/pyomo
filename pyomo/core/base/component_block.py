@@ -421,6 +421,7 @@ class _block_base(object):
     def components(self,
                    ctype=_no_ctype,
                    active=None,
+                   return_key=False,
                    descend_into=True):
         """
         Generates an efficient traversal of all components
@@ -439,11 +440,17 @@ class _block_base(object):
                 deactivated) should be included. *Note*: This
                 flag is ignored for any objects that do not
                 have an active flag.
+            return_key (bool): Set to True to indicate that
+                the return type should be a 2-tuple
+                consisting of the local storage key of the
+                object within its parent and the object
+                itself. By default, only the objects are
+                returned.
             descend_into (bool): Indicates whether or not to
                 include components on sub-blocks. Default is
                 True.
 
-        Returns: an iterator of objects
+        Returns: an iterator of objects or (key,object) tuples
         """
 
         assert active in (None, True)
@@ -456,7 +463,7 @@ class _block_base(object):
             return
 
         # Generate components from immediate children first
-        for child in self.children(ctype=ctype):
+        for child_key, child in self.children(ctype=ctype, return_key=True):
 
             # check active status (if appropriate)
             if (active is not None) and \
@@ -465,20 +472,26 @@ class _block_base(object):
 
             if child._is_component:
                 # child is a component (includes blocks), so yield it
-                yield child
+                if return_key:
+                    yield child_key, child
+                else:
+                    yield child
             else:
                 assert child._is_container
                 # child is a container (but not a block)
                 if (active is not None) and \
                    isinstance(child, _IActiveComponentContainerMixin):
-                    for component in child.components():
+                    for component_key, component in child.components(return_key=True):
                         if getattr(component,
                                    _active_flag_name,
                                    True):
-                            yield component
+                            if return_key:
+                                yield component_key, component
+                            else:
+                                yield component
                 else:
-                    for component in child.components():
-                        yield component
+                    for item in child.components(return_key=return_key):
+                        yield item
 
         if descend_into:
             # now recurse into subblocks
@@ -491,11 +504,12 @@ class _block_base(object):
 
                 if child._is_component:
                     # child is a block
-                    for component in child.components(
+                    for item in child.components(
                             ctype=ctype,
                             active=active,
+                            return_key=return_key,
                             descend_into=descend_into):
-                        yield component
+                        yield item
                 else:
                     # child is a container of blocks,
                     # but not a block itself
@@ -504,11 +518,12 @@ class _block_base(object):
                            getattr(_comp,
                                    _active_flag_name,
                                    True):
-                            for component in _comp.components(
+                            for item in _comp.components(
                                     ctype=ctype,
                                     active=active,
+                                    return_key=return_key,
                                     descend_into=descend_into):
-                                yield component
+                                yield item
 
     def blocks(self,
                active=None,
