@@ -542,7 +542,8 @@ class OptSolver(Plugin):
         #
         from pyomo.core.base import Block
         from pyomo.core.base.component_block import IBlockStorage
-        from pyomo.core.base.suffix import active_import_suffix_generator
+        import pyomo.core.base.suffix
+        import pyomo.core.base.component_suffix
         _model = None
         for arg in args:
             if isinstance(arg, (Block, IBlockStorage)):
@@ -553,8 +554,15 @@ class OptSolver(Plugin):
                             "component(s)" % (arg.name))
                 _model = arg
 
-                model_suffixes = list(name for (name,comp) \
-                                      in active_import_suffix_generator(arg))
+                if isinstance(arg, Block):
+                    model_suffixes = list(name for (name,comp) \
+                                          in pyomo.core.base.suffix.\
+                                          active_import_suffix_generator(arg))
+                else:
+                    assert isinstance(arg, IBlockStorage)
+                    model_suffixes = list(name for (name,comp) \
+                                          in pyomo.core.base.component_suffix.\
+                                          import_suffix_generator(arg, active=True))
 
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])

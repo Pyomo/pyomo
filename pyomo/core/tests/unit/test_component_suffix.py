@@ -12,7 +12,11 @@ from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
-from pyomo.core.base.component_suffix import suffix
+from pyomo.core.base.component_suffix import (suffix,
+                                              export_suffix_generator,
+                                              import_suffix_generator,
+                                              local_suffix_generator,
+                                              suffix_generator)
 from pyomo.core.base.component_variable import (variable,
                                                 variable_dict)
 from pyomo.core.base.suffix import Suffix
@@ -76,20 +80,20 @@ class Test_suffix(unittest.TestCase):
         s = suffix()
         s.direction = suffix.LOCAL
         self.assertEqual(s.direction, suffix.LOCAL)
-        self.assertEqual(s.export_enabled(), False)
-        self.assertEqual(s.import_enabled(), False)
+        self.assertEqual(s.export_enabled, False)
+        self.assertEqual(s.import_enabled, False)
         s.direction = suffix.IMPORT
         self.assertEqual(s.direction, suffix.IMPORT)
-        self.assertEqual(s.export_enabled(), False)
-        self.assertEqual(s.import_enabled(), True)
+        self.assertEqual(s.export_enabled, False)
+        self.assertEqual(s.import_enabled, True)
         s.direction = suffix.EXPORT
         self.assertEqual(s.direction, suffix.EXPORT)
-        self.assertEqual(s.export_enabled(), True)
-        self.assertEqual(s.import_enabled(), False)
+        self.assertEqual(s.export_enabled, True)
+        self.assertEqual(s.import_enabled, False)
         s.direction = suffix.IMPORT_EXPORT
         self.assertEqual(s.direction, suffix.IMPORT_EXPORT)
-        self.assertEqual(s.export_enabled(), True)
-        self.assertEqual(s.import_enabled(), True)
+        self.assertEqual(s.export_enabled, True)
+        self.assertEqual(s.import_enabled, True)
         with self.assertRaises(ValueError):
             s.direction = 'export'
 
@@ -258,6 +262,282 @@ class Test_suffix(unittest.TestCase):
         self.assertEqual(b.active, True)
         self.assertEqual(model.active, True)
         self.assertEqual(s.active, True)
+
+    def test_export_suffix_generator(self):
+        m = block()
+        m.s0 = suffix(direction=suffix.LOCAL)
+        m.s0i = suffix(direction=suffix.LOCAL,
+                      datatype=suffix.INT)
+        m.s1 = suffix(direction=suffix.IMPORT_EXPORT)
+        m.s1i = suffix(direction=suffix.IMPORT_EXPORT,
+                       datatype=suffix.INT)
+        m.s2 = suffix(direction=suffix.IMPORT)
+        m.s2i = suffix(direction=suffix.IMPORT,
+                      datatype=suffix.INT)
+        m.s3 = suffix(direction=suffix.EXPORT)
+        m.s3i = suffix(direction=suffix.EXPORT,
+                       datatype=suffix.INT)
+        m.b = block()
+        m.b.s0 = suffix(direction=suffix.LOCAL)
+        m.b.s0i = suffix(direction=suffix.LOCAL,
+                         datatype=suffix.INT)
+        m.b.s1 = suffix(direction=suffix.IMPORT_EXPORT)
+        m.b.s1i = suffix(direction=suffix.IMPORT_EXPORT,
+                         datatype=suffix.INT)
+        m.b.s2 = suffix(direction=suffix.IMPORT)
+        m.b.s2i = suffix(direction=suffix.IMPORT,
+                         datatype=suffix.INT)
+        m.b.s3 = suffix(direction=suffix.EXPORT)
+        m.b.s3i = suffix(direction=suffix.EXPORT,
+                         datatype=suffix.INT)
+        # default
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in export_suffix_generator(m)],
+                         [("s1", m.s1.name), ("s1i", m.s1i.name),
+                          ("s3", m.s3.name), ("s3i", m.s3i.name),
+                          ("s1", m.b.s1.name), ("s1i", m.b.s1i.name),
+                          ("s3", m.b.s3.name), ("s3i", m.b.s3i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in export_suffix_generator(m)],
+                         [id(m.s1), id(m.s1i),
+                          id(m.s3), id(m.s3i),
+                          id(m.b.s1), id(m.b.s1i),
+                          id(m.b.s3), id(m.b.s3i)])
+        # descend_into=False
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in export_suffix_generator(m, descend_into=False)],
+                         [("s1", m.s1.name), ("s1i", m.s1i.name),
+                          ("s3", m.s3.name), ("s3i", m.s3i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in export_suffix_generator(m, descend_into=False)],
+                         [id(m.s1), id(m.s1i),
+                          id(m.s3), id(m.s3i)])
+        # datatype=INT
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in export_suffix_generator(m, datatype=suffix.INT)],
+                         [("s1i", m.s1i.name),
+                          ("s3i", m.s3i.name),
+                          ("s1i", m.b.s1i.name),
+                          ("s3i", m.b.s3i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in export_suffix_generator(m, datatype=suffix.INT)],
+                         [id(m.s1i),
+                          id(m.s3i),
+                          id(m.b.s1i),
+                          id(m.b.s3i)])
+        # active=True
+        m.s1.deactivate()
+        m.b.deactivate()
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in export_suffix_generator(m, active=True)],
+                         [("s1i", m.s1i.name),
+                          ("s3", m.s3.name),
+                          ("s3i", m.s3i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in export_suffix_generator(m, active=True)],
+                         [id(m.s1i), id(m.s3), id(m.s3i)])
+
+    def test_import_suffix_generator(self):
+        m = block()
+        m.s0 = suffix(direction=suffix.LOCAL)
+        m.s0i = suffix(direction=suffix.LOCAL,
+                      datatype=suffix.INT)
+        m.s1 = suffix(direction=suffix.IMPORT_EXPORT)
+        m.s1i = suffix(direction=suffix.IMPORT_EXPORT,
+                       datatype=suffix.INT)
+        m.s2 = suffix(direction=suffix.IMPORT)
+        m.s2i = suffix(direction=suffix.IMPORT,
+                      datatype=suffix.INT)
+        m.s3 = suffix(direction=suffix.EXPORT)
+        m.s3i = suffix(direction=suffix.EXPORT,
+                       datatype=suffix.INT)
+        m.b = block()
+        m.b.s0 = suffix(direction=suffix.LOCAL)
+        m.b.s0i = suffix(direction=suffix.LOCAL,
+                         datatype=suffix.INT)
+        m.b.s1 = suffix(direction=suffix.IMPORT_EXPORT)
+        m.b.s1i = suffix(direction=suffix.IMPORT_EXPORT,
+                         datatype=suffix.INT)
+        m.b.s2 = suffix(direction=suffix.IMPORT)
+        m.b.s2i = suffix(direction=suffix.IMPORT,
+                         datatype=suffix.INT)
+        m.b.s3 = suffix(direction=suffix.EXPORT)
+        m.b.s3i = suffix(direction=suffix.EXPORT,
+                         datatype=suffix.INT)
+        # default
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in import_suffix_generator(m)],
+                         [("s1", m.s1.name), ("s1i", m.s1i.name),
+                          ("s2", m.s2.name), ("s2i", m.s2i.name),
+                          ("s1", m.b.s1.name), ("s1i", m.b.s1i.name),
+                          ("s2", m.b.s2.name), ("s2i", m.b.s2i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in import_suffix_generator(m)],
+                         [id(m.s1), id(m.s1i),
+                          id(m.s2), id(m.s2i),
+                          id(m.b.s1), id(m.b.s1i),
+                          id(m.b.s2), id(m.b.s2i)])
+        # descend_into=False
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in import_suffix_generator(m, descend_into=False)],
+                         [("s1", m.s1.name), ("s1i", m.s1i.name),
+                          ("s2", m.s2.name), ("s2i", m.s2i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in import_suffix_generator(m, descend_into=False)],
+                         [id(m.s1), id(m.s1i),
+                          id(m.s2), id(m.s2i)])
+        # datatype=INT
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in import_suffix_generator(m, datatype=suffix.INT)],
+                         [("s1i", m.s1i.name),
+                          ("s2i", m.s2i.name),
+                          ("s1i", m.b.s1i.name),
+                          ("s2i", m.b.s2i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in import_suffix_generator(m, datatype=suffix.INT)],
+                         [id(m.s1i),
+                          id(m.s2i),
+                          id(m.b.s1i),
+                          id(m.b.s2i)])
+        # active=True
+        m.s1.deactivate()
+        m.b.deactivate()
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in import_suffix_generator(m, active=True)],
+                         [("s1i", m.s1i.name),
+                          ("s2", m.s2.name),
+                          ("s2i", m.s2i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in import_suffix_generator(m, active=True)],
+                         [id(m.s1i), id(m.s2), id(m.s2i)])
+
+    def test_local_suffix_generator(self):
+        m = block()
+        m.s0 = suffix(direction=suffix.LOCAL)
+        m.s0i = suffix(direction=suffix.LOCAL,
+                      datatype=suffix.INT)
+        m.s1 = suffix(direction=suffix.IMPORT_EXPORT)
+        m.s1i = suffix(direction=suffix.IMPORT_EXPORT,
+                       datatype=suffix.INT)
+        m.s2 = suffix(direction=suffix.IMPORT)
+        m.s2i = suffix(direction=suffix.IMPORT,
+                      datatype=suffix.INT)
+        m.s3 = suffix(direction=suffix.EXPORT)
+        m.s3i = suffix(direction=suffix.EXPORT,
+                       datatype=suffix.INT)
+        m.b = block()
+        m.b.s0 = suffix(direction=suffix.LOCAL)
+        m.b.s0i = suffix(direction=suffix.LOCAL,
+                         datatype=suffix.INT)
+        m.b.s1 = suffix(direction=suffix.IMPORT_EXPORT)
+        m.b.s1i = suffix(direction=suffix.IMPORT_EXPORT,
+                         datatype=suffix.INT)
+        m.b.s2 = suffix(direction=suffix.IMPORT)
+        m.b.s2i = suffix(direction=suffix.IMPORT,
+                         datatype=suffix.INT)
+        m.b.s3 = suffix(direction=suffix.EXPORT)
+        m.b.s3i = suffix(direction=suffix.EXPORT,
+                         datatype=suffix.INT)
+        # default
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in local_suffix_generator(m)],
+                         [("s0", m.s0.name), ("s0i", m.s0i.name),
+                          ("s0", m.b.s0.name), ("s0i", m.b.s0i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in local_suffix_generator(m)],
+                         [id(m.s0), id(m.s0i),
+                          id(m.b.s0), id(m.b.s0i)])
+        # descend_into=False
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in local_suffix_generator(m, descend_into=False)],
+                         [("s0", m.s0.name), ("s0i", m.s0i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in local_suffix_generator(m, descend_into=False)],
+                         [id(m.s0), id(m.s0i)])
+        # datatype=INT
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in local_suffix_generator(m, datatype=suffix.INT)],
+                         [("s0i", m.s0i.name),
+                          ("s0i", m.b.s0i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in local_suffix_generator(m, datatype=suffix.INT)],
+                         [id(m.s0i),
+                          id(m.b.s0i)])
+        # active=True
+        m.s0.deactivate()
+        m.b.deactivate()
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in local_suffix_generator(m, active=True)],
+                         [("s0i", m.s0i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in local_suffix_generator(m, active=True)],
+                         [id(m.s0i)])
+
+    def test_suffix_generator(self):
+        m = block()
+        m.s0 = suffix(direction=suffix.LOCAL)
+        m.s0i = suffix(direction=suffix.LOCAL,
+                      datatype=suffix.INT)
+        m.s1 = suffix(direction=suffix.IMPORT_EXPORT)
+        m.s1i = suffix(direction=suffix.IMPORT_EXPORT,
+                       datatype=suffix.INT)
+        m.s2 = suffix(direction=suffix.IMPORT)
+        m.s2i = suffix(direction=suffix.IMPORT,
+                      datatype=suffix.INT)
+        m.s3 = suffix(direction=suffix.EXPORT)
+        m.s3i = suffix(direction=suffix.EXPORT,
+                       datatype=suffix.INT)
+        m.b = block()
+        m.b.s0 = suffix(direction=suffix.LOCAL)
+        m.b.s0i = suffix(direction=suffix.LOCAL,
+                         datatype=suffix.INT)
+        m.b.s1 = suffix(direction=suffix.IMPORT_EXPORT)
+        m.b.s1i = suffix(direction=suffix.IMPORT_EXPORT,
+                         datatype=suffix.INT)
+        m.b.s2 = suffix(direction=suffix.IMPORT)
+        m.b.s2i = suffix(direction=suffix.IMPORT,
+                         datatype=suffix.INT)
+        m.b.s3 = suffix(direction=suffix.EXPORT)
+        m.b.s3i = suffix(direction=suffix.EXPORT,
+                         datatype=suffix.INT)
+        # default
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in suffix_generator(m)],
+                         [("s0", m.s0.name), ("s0i", m.s0i.name),
+                          ("s1", m.s1.name), ("s1i", m.s1i.name),
+                          ("s2", m.s2.name), ("s2i", m.s2i.name),
+                          ("s3", m.s3.name), ("s3i", m.s3i.name),
+                          ("s0", m.b.s0.name), ("s0i", m.b.s0i.name),
+                          ("s1", m.b.s1.name), ("s1i", m.b.s1i.name),
+                          ("s2", m.b.s2.name), ("s2i", m.b.s2i.name),
+                          ("s3", m.b.s3.name), ("s3i", m.b.s3i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in suffix_generator(m)],
+                         [id(m.s0), id(m.s0i),
+                          id(m.s1), id(m.s1i),
+                          id(m.s2), id(m.s2i),
+                          id(m.s3), id(m.s3i),
+                          id(m.b.s0), id(m.b.s0i),
+                          id(m.b.s1), id(m.b.s1i),
+                          id(m.b.s2), id(m.b.s2i),
+                          id(m.b.s3), id(m.b.s3i)])
+        # descend_into=False
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in suffix_generator(m, descend_into=False)],
+                         [("s0", m.s0.name), ("s0i", m.s0i.name),
+                          ("s1", m.s1.name), ("s1i", m.s1i.name),
+                          ("s2", m.s2.name), ("s2i", m.s2i.name),
+                          ("s3", m.s3.name), ("s3i", m.s3i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in suffix_generator(m, descend_into=False)],
+                         [id(m.s0), id(m.s0i),
+                          id(m.s1), id(m.s1i),
+                          id(m.s2), id(m.s2i),
+                          id(m.s3), id(m.s3i)])
+        # datatype=INT
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in suffix_generator(m, datatype=suffix.INT)],
+                         [("s0i", m.s0i.name),
+                          ("s1i", m.s1i.name),
+                          ("s2i", m.s2i.name),
+                          ("s3i", m.s3i.name),
+                          ("s0i", m.b.s0i.name),
+                          ("s1i", m.b.s1i.name),
+                          ("s2i", m.b.s2i.name),
+                          ("s3i", m.b.s3i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in suffix_generator(m, datatype=suffix.INT)],
+                         [id(m.s0i),
+                          id(m.s1i),
+                          id(m.s2i),
+                          id(m.s3i),
+                          id(m.b.s0i),
+                          id(m.b.s1i),
+                          id(m.b.s2i),
+                          id(m.b.s3i)])
+        # active=True
+        m.s1.deactivate()
+        m.b.deactivate()
+        self.assertEqual([(ck_, c_.name) for ck_, c_ in suffix_generator(m, active=True)],
+                         [("s0", m.s0.name),
+                          ("s0i", m.s0i.name),
+                          ("s1i", m.s1i.name),
+                          ("s2", m.s2.name),
+                          ("s2i", m.s2i.name),
+                          ("s3", m.s3.name),
+                          ("s3i", m.s3i.name)])
+        self.assertEqual([id(c_) for ck_, c_ in suffix_generator(m, active=True)],
+                         [id(m.s0), id(m.s0i), id(m.s1i), id(m.s2), id(m.s2i), id(m.s3), id(m.s3i)])
 
     #
     # These methods are deprecated

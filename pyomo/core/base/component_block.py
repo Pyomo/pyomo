@@ -33,7 +33,7 @@ from pyomo.core.base.component_constraint import IConstraint
 from pyomo.core.base.component_dict import ComponentDict
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.component_map import ComponentMap
-from pyomo.core.base.suffix import active_import_suffix_generator
+from pyomo.core.base.component_suffix import import_suffix_generator
 from pyomo.core.base.symbol_map import SymbolMap
 import pyomo.opt
 
@@ -644,7 +644,7 @@ class _block_base(object):
         # Generate the list of active import suffixes on
         # this top level model
         valid_import_suffixes = \
-            dict(active_import_suffix_generator(self))
+            dict(import_suffix_generator(self, active=True))
         # To ensure that import suffix data gets properly
         # overwritten (e.g., the case where nonzero dual
         # values exist on the suffix and but only sparse

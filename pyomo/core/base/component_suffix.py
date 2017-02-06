@@ -28,6 +28,8 @@ import six
 
 logger = logging.getLogger('pyomo.core')
 
+_noarg = object()
+
 class suffix(ComponentMap, IComponent, _IActiveComponentMixin):
     """
     A container for storing extranious model data that can
@@ -79,6 +81,7 @@ class suffix(ComponentMap, IComponent, _IActiveComponentMixin):
     # Interface
     #
 
+    @property
     def export_enabled(self):
         """
         Returns True when this suffix is enabled for export to
@@ -86,6 +89,7 @@ class suffix(ComponentMap, IComponent, _IActiveComponentMixin):
         """
         return bool(self._direction & suffix.EXPORT)
 
+    @property
     def import_enabled(self):
         """
         Returns True when this suffix is enabled for import from
@@ -172,3 +176,61 @@ class suffix(ComponentMap, IComponent, _IActiveComponentMixin):
             "with the property setter suffix.direction")
         self.direction = direction
 
+# A list of convenient suffix generators, including:
+#   - export_suffix_generator
+#       **(used by problem writers)
+#   - import_suffix_generator
+#       **(used by OptSolver and PyomoModel._load_solution)
+#   - local_suffix_generator
+#   - suffix_generator
+
+def export_suffix_generator(a_block,
+                            datatype=_noarg,
+                            active=None,
+                            descend_into=True):
+    for name, suf in filter(lambda x: (x[1].export_enabled and \
+                                       ((datatype is _noarg) or \
+                                        (x[1].datatype is datatype))),
+                            a_block.components(ctype=suffix._ctype,
+                                               return_key=True,
+                                               active=active,
+                                               descend_into=descend_into)):
+        yield name, suf
+
+def import_suffix_generator(a_block,
+                            datatype=_noarg,
+                            active=None,
+                            descend_into=True):
+    for name, suf in filter(lambda x: (x[1].import_enabled and \
+                                       ((datatype is _noarg) or \
+                                        (x[1].datatype is datatype))),
+                            a_block.components(ctype=suffix._ctype,
+                                               return_key=True,
+                                               active=active,
+                                               descend_into=descend_into)):
+        yield name, suf
+
+def local_suffix_generator(a_block,
+                           datatype=_noarg,
+                           active=None,
+                           descend_into=True):
+    for name, suf in filter(lambda x: (x[1].direction is suffix.LOCAL and \
+                                       ((datatype is _noarg) or \
+                                        (x[1].datatype is datatype))),
+                            a_block.components(ctype=suffix._ctype,
+                                               return_key=True,
+                                               active=active,
+                                               descend_into=descend_into)):
+        yield name, suf
+
+def suffix_generator(a_block,
+                     datatype=_noarg,
+                     active=None,
+                     descend_into=True):
+    for name, suf in filter(lambda x: ((datatype is _noarg) or \
+                                       (x[1].datatype is datatype)),
+                            a_block.components(ctype=suffix._ctype,
+                                               return_key=True,
+                                               active=active,
+                                               descend_into=descend_into)):
+        yield name, suf

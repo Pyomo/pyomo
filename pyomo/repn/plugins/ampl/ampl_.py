@@ -38,9 +38,11 @@ from pyomo.core.base import _ExpressionData, Expression, SortComponents
 from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
 from pyomo.core.base import var
 from pyomo.core.base import param
-from pyomo.core.base.suffix import active_export_suffix_generator
+import pyomo.core.base.suffix
+import pyomo.core.base.component_suffix
 from pyomo.repn.ampl_repn import generate_ampl_repn
 
+from pyomo.core.base.component_block import IBlockStorage
 from pyomo.core.base.component_expression import IExpression
 from pyomo.core.base.component_variable import IVariable
 
@@ -1277,8 +1279,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
         obj_tag = 2
         prob_tag = 3
         suffix_dict = {}
+        if isinstance(model, IBlockStorage):
+            suffix_gen = lambda b: pyomo.core.base.component_suffix.\
+                         export_suffix_generator(b,
+                                                 active=True,
+                                                 descend_into=False)
+        else:
+            suffix_gen = lambda b: pyomo.core.base.suffix.\
+                         active_export_suffix_generator(b)
         for block in all_blocks_list:
-            for name, suf in active_export_suffix_generator(block):
+            for name, suf in suffix_gen(block):
                 if len(suf):
                     suffix_dict.setdefault(name,[]).append(suf)
         if not ('sosno' in suffix_dict):
@@ -1329,7 +1339,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for suffix_name, suffixes in iteritems(suffix_dict):
             datatypes = set()
             for suffix in suffixes:
-                datatype = suffix.get_datatype()
+                try:
+                    datatype = suffix.datatype
+                except AttributeError:
+                    datatype = suffix.get_datatype()
                 if datatype not in (Suffix.FLOAT,Suffix.INT):
                     raise ValueError(
                         "The Pyomo NL file writer requires that all active export "
