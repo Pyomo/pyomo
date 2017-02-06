@@ -53,7 +53,6 @@ from pyomo.core.base.component import register_component, Component, ComponentUI
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 import pyomo.opt
-from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt.results import SolverResults, Solution, SolutionStatus, UndefinedData
 
 from six import itervalues, iteritems, StringIO, string_types
@@ -601,10 +600,6 @@ use the AbstractModel or ConcreteModel class instead.""")
         self.compute_statistics()
         return self.statistics.number_of_objectives
 
-    def valid_problem_types(self):
-        """This method allows the pyomo.opt convert function to work with a Model object."""
-        return [ProblemFormat.pyomo]
-
     def create_instance( self, filename=None, data=None, name=None,
                          namespace=None, namespaces=None,
                          profile_memory=0, report_timing=False,
@@ -941,50 +936,6 @@ from solvers are immediately loaded into the original model instance.""")
             mem_used = muppy.get_size(muppy.get_objects())
             print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
 
-
-    def write(self,
-              filename=None,
-              format=None,
-              solver_capability=None,
-              io_options={}):
-        """
-        Write the model to a file, with a given format.
-        """
-        #
-        # Guess the format if none is specified
-        #
-        if (filename is None) and (format is None):
-            # Preserving backwards compatibility here.
-            # The function used to be defined with format='lp' by
-            # default, but this led to confusing behavior when a
-            # user did something like 'model.write("f.nl")' and
-            # expected guess_format to create an NL file.
-            format = ProblemFormat.cpxlp
-        if (filename is not None) and (format is None):
-            format = guess_format(filename)
-        problem_writer = pyomo.opt.WriterFactory(format)
-        if problem_writer is None:
-            raise ValueError(
-                "Cannot write model in format '%s': no model "
-                "writer registered for that format"
-                % str(format))
-
-        if solver_capability is None:
-            solver_capability = lambda x: True
-        (filename, smap) = problem_writer(self,
-                                          filename,
-                                          solver_capability,
-                                          io_options)
-        smap_id = id(smap)
-        self.solutions.add_symbol_map(smap)
-
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
-                "Writing model '%s' to file '%s' with format %s",
-                self.name,
-                str(filename),
-                str(format))
-        return filename, smap_id
 
     def create(self, filename=None, **kwargs):
         """
