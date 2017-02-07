@@ -495,20 +495,15 @@ model.log9 = Constraint(model.ScreenPairs, rule=log9_rule)
 #                                      rule=accept_or_reject_rule4)
 
 
-# BARON hates this fixing variables business...
-#instance = model.create_instance(DATFILE)
+# TODO: BARON hates this fixing variables business?
+instance = model.create_instance(DATFILE)
 
-#pdb.set_trace()
+# fix the variables they fix in GAMS
+#for s in instance.Screens:
+    #instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var.fix(0)
+    #instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fix(0)
 
-# # fix the variables they fix in GAMS
-# for s in instance.Screens:
-#     #pdb.set_trace()
-#     instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var = 0
-#     instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var.fixed = True
-#     instance.flow_rejection_disjunct[s,'PRD',1].indicator_var = 0
-#     instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fixed = True
-
-# # solve the model
-# opt = SolverFactory(SOLVER)
-# results = opt.solve(instance, tee=True)
-# instance.display()
+# solve the model
+opt = SolverFactory(SOLVER)
+results = opt.solve(instance, tee=True)
+instance.display()
