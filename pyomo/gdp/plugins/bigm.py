@@ -41,7 +41,7 @@ class BigM_Transformation(Transformation):
     def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
 
-        bigM = options.get('default_bigM', None)
+        bigM = options.pop('default_bigM', None)
         bigM = kwds.pop('default_bigM', bigM)
         if bigM is not None:
             #
@@ -63,6 +63,9 @@ class BigM_Transformation(Transformation):
         if kwds:
             logger.warning("GDP(BigM): unrecognized keyword arguments:\n%s"
                            % ( '\n'.join(iterkeys(kwds)), ))
+        if options:
+            logger.warning("GDP(BigM): unrecognized options:\n%s"
+                           % ( '\n'.join(iterkeys(options)), ))
 
         if targets is None:
             for block in instance.block_data_objects(
