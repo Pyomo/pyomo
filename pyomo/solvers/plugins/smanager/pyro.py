@@ -27,7 +27,9 @@ from pyomo.opt.parallel.async_solver import (AsynchronousSolverManager,
                                              SolverManagerFactory)
 from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
 from pyomo.core.base import Block
-from pyomo.core.base.suffix import active_import_suffix_generator
+from pyomo.core.base.component_block import IBlockStorage
+import pyomo.core.base.suffix
+import pyomo.core.base.component_suffix
 
 import six
 
@@ -82,14 +84,25 @@ class SolverManager_Pyro(PyroAsynchronousActionManager, AsynchronousSolverManage
         # constructed! Collect suffix names to try and import from solution.
         #
         for arg in args:
-            if isinstance(arg, Block):
-                if not arg.is_constructed():
-                    raise RuntimeError(
-                        "Attempting to solve model=%s with unconstructed "
-                        "component(s)" % (arg.name,) )
-
-                model_suffixes = list(name for (name,comp) \
-                                      in active_import_suffix_generator(arg))
+            if isinstance(arg, (Block, IBlockStorage)):
+                if isinstance(arg, Block):
+                    if not arg.is_constructed():
+                        raise RuntimeError(
+                            "Attempting to solve model=%s with unconstructed "
+                            "component(s)" % (arg.name))
+                # import suffixes must be on the top-level model
+                if isinstance(arg, Block):
+                    model_suffixes = list(name for (name,comp) \
+                                          in pyomo.core.base.suffix.\
+                                          active_import_suffix_generator(arg))
+                else:
+                    assert isinstance(arg, IBlockStorage)
+                    model_suffixes = list(name for (name,comp) \
+                                          in pyomo.core.base.component_suffix.\
+                                          import_suffix_generator(arg,
+                                                                  active=True,
+                                                                  descend_into=False,
+                                                                  return_key=True))
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
                     for name in model_suffixes:
