@@ -15,7 +15,6 @@ import pdb
 # do I have other options that won't be mad about the quadratic objective in the
 # separation problem?
 SOLVER = 'ipopt'
-#MIPSOLVER = 'cbc'
 stream_solvers = False
 
 class CuttingPlane_Transformation(Transformation):
@@ -43,7 +42,7 @@ class CuttingPlane_Transformation(Transformation):
         improving = True
         iteration = 0
         prev_obj = float("inf")
-        # TODO: What should this be again??
+        # TODO: What should this be actually??
         epsilon = 0.1
 
         for o in instance_rChull.component_data_objects(Objective):
@@ -53,14 +52,13 @@ class CuttingPlane_Transformation(Transformation):
         v_map = {}
         for v in instance_rBigm.component_data_objects(Var, descend_into=\
                                                        (Block, Disjunct)):
-            # QUESTION: Why is the key the id?
             v_map[id(v)] = (ComponentUID(v), v, len(v_map))
         instance_rChull.xstar = Param(range(len(v_map)), mutable=True)
         
         # TODO: this doesn't work yet because indicator variables in bigm and
         # chull don't have the same cuid...
         obj_expr = 0
-        for cuid, v, i in itervalues(v_map):
+        for cuid, v, i in v_map.itervalues():
             # TODO: this is totally wrong, but I'm skipping indicator variables
             # for now because I can't get them with their cuid.
             if str(v).startswith("_gdp_relax_bigm."): continue
@@ -80,31 +78,10 @@ class CuttingPlane_Transformation(Transformation):
             rBigm_objVal = value(list(instance_rBigm.component_data_objects(Objective))[0])
 
             # copy over xstar
-            for cuid, v, i in itervalues(v_map):
+            for cuid, v, i in v_map.itervalues():
                 # TODO: same thing to avoid indicator var problem for the moment
                 if str(v).startswith("_gdp_relax_bigm."): continue
                 instance_rChull.xstar[i] = value(v)
-
-            # Build objective expression for separation problem and save x* as 
-            # a dictionary (variable name and index as key)
-            # obj_expr = 0
-            # x_star = {}
-            # for v in instance_rBigm.component_objects(Var, active=True):
-            #     var_name = str(v)
-            #     # we don't want the indicator variables
-            #     if not var_name.startswith("_gdp_relax_bigm."):
-            #         varobject = getattr(instance_rBigm, var_name)
-            #         sep_var = getattr(instance_rChull, var_name)
-            #         for index in varobject:
-            #             soln_value = varobject[index].value
-            #             x_star[var_name + "[" + str(index) + "]"] = soln_value
-            #             obj_expr += (sep_var[index] - soln_value)**2
-
-            # get objective
-            # obj_name = instance_rChull.component_objects(Objective, 
-            #                                              active=True).next()
-            # rChull_obj = getattr(instance_rChull, str(obj_name))
-            # rChull_obj.set_value(expr=obj_expr)
 
             # solve separation problem to get xhat.
             opt.solve(instance_rChull, tee=stream_solvers)
@@ -113,26 +90,15 @@ class CuttingPlane_Transformation(Transformation):
             print "Adding cut" + str(iteration) + " to BM model"
             cutexpr_bigm = 0
             cutexpr_rBigm = 0
-            #for v in instance_rBigm.component_objects(Var, active=True):
-            for vid, (cuid, v, i) in v_map.iteritems():
-                # var_name = str(v)
+            for cuid, v, i in v_map.itervalues():
                 # TODO: same terrible thing for now:
                 if str(v).startswith("_gdp_relax_bigm."): continue
                 xhat = cuid.find_component(instance_rChull).value
                 xstar = instance_rChull.xstar[i].value
                 x_bigm = cuid.find_component(instance)
-                x_rBigm = cuid.find_component(instance_rBigm)
+                x_rBigm = v # TODO: this is true, right?
                 cutexpr_bigm += (xhat - xstar)*(x_bigm - xhat)
                 cutexpr_rBigm += (xhat - xstar)*(x_rBigm - xhat)
-                # rBigm_var = getattr(instance_rBigm, var_name)
-                # bigm_var = getattr(instance, var_name)
-                # xhat_var = getattr(instance_rChull, var_name)
-                # for index in xhat_var:
-                #     xhat_val = xhat_var[index].value
-                #     norm_vec_val = xhat_val - x_star[var_name + "[" + \
-                #                                      str(index) + "]"]
-                #     cutexpr_bigm += norm_vec_val*(bigm_var[index] - xhat_val)
-                #     cutexpr_rBigm += norm_vec_val*(rBigm_var[index] - xhat_val)
 
             instance.add_component("_cut" + str(iteration), 
                                         Constraint(expr=cutexpr_bigm >= 0))
@@ -147,15 +113,6 @@ class CuttingPlane_Transformation(Transformation):
                 improving = abs(obj_diff) > epsilon
             else:
                 improving = abs(obj_diff/prev_obj) > epsilon
-            # DEBUG
-            print "prev_obj: " + str(prev_obj)
-            print "rBigm_objVal: " + str(rBigm_objVal)
-            print "prev_obj - rBigm_objVal: " + str(prev_obj - rBigm_objVal)
+           
             prev_obj = rBigm_objVal
             iteration += 1
-
-        # Last, we send off the bigm + cuts model to a MIP solver
-        # But pyomo does this for us now...
-        # print "Solving MIP"
-        # mip_opt = SolverFactory(MIPSOLVER)
-        # mip_opt.solve(instance, tee=stream_solvers)
