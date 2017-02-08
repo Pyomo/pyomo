@@ -576,7 +576,8 @@ class _NegationExpression(_ExpressionBase):
     def _to_string_prefix(self, ostream, verbose):
         if verbose:
             ostream.write(self.getname())
-        elif not self._args[0].is_expression and _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
+        elif not self._args[0].is_expression \
+             and _NegationExpression.PRECEDENCE <= self._args[0]._precedence():
             ostream.write("-")
         else:
             ostream.write("- ")
