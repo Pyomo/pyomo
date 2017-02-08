@@ -109,10 +109,8 @@ class CuttingPlane_Transformation(Transformation):
             # relative difference further from 0.
             # TODO: is this right?
             obj_diff = prev_obj - rBigm_objVal
-            if abs(obj_diff) < 1:
-                improving = abs(obj_diff) > epsilon
-            else:
-                improving = abs(obj_diff/prev_obj) > epsilon
+            improving = abs(obj_diff) > epsilon if abs(obj_diff) < 1 else \
+                        abs(obj_diff/prev_obj) > epsilon
            
             prev_obj = rBigm_objVal
             iteration += 1
