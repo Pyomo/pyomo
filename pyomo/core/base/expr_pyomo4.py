@@ -1511,7 +1511,7 @@ def generate_expression(etype, _self, _other, targetRefs=0):
                 if not _getrefcount_available and _self_expr:
                     _self._parent_expr = bypass_backreference or ref(ans)
         elif etype == _abs:
-            ans = _AbsExpression((_self,))
+            ans = _AbsExpression(_self)
             if not _getrefcount_available and _self_expr:
                 _self._parent_expr = bypass_backreference or ans(ans)
         else: #pragma:nocover
