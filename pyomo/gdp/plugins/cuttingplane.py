@@ -1,4 +1,5 @@
 # Implements cutting plane reformulation for linear, convex GDPs
+from __future__ import division
 
 from pyomo.core import *
 from pyomo.gdp import *
@@ -14,8 +15,8 @@ import pdb
 # do I have other options that won't be mad about the quadratic objective in the
 # separation problem?
 SOLVER = 'ipopt'
-MIPSOLVER = 'cbc'
-stream_solvers = True#False
+#MIPSOLVER = 'cbc'
+stream_solvers = False
 
 class CuttingPlane_Transformation(Transformation):
     
@@ -42,8 +43,8 @@ class CuttingPlane_Transformation(Transformation):
         improving = True
         iteration = 0
         prev_obj = float("inf")
-        # TODO: I made up this number and I have no idea what I am doing...
-        epsilon = 0.001
+        # TODO: What should this be again??
+        epsilon = 0.1
 
         for o in instance_rChull.component_data_objects(Objective):
             o.deactivate()
@@ -59,7 +60,7 @@ class CuttingPlane_Transformation(Transformation):
         # TODO: this doesn't work yet because indicator variables in bigm and
         # chull don't have the same cuid...
         obj_expr = 0
-        for vid, (cuid, v, i) in v_map.iteritems():
+        for cuid, v, i in itervalues(v_map):
             # TODO: this is totally wrong, but I'm skipping indicator variables
             # for now because I can't get them with their cuid.
             if str(v).startswith("_gdp_relax_bigm."): continue
@@ -73,22 +74,16 @@ class CuttingPlane_Transformation(Transformation):
             expr=obj_expr)
 
         while (improving):
-            # solve rBigm, solution is x*
+            # solve rBigm, solution is xstar
             opt.solve(instance_rBigm, tee=stream_solvers)
 
-            # There is only one active objective, so we can pull it out this way
-            obj_name = instance_rBigm.component_objects(Objective, 
-                                                         active=True).next()
-            rBigm_obj = getattr(instance_rBigm, str(obj_name))
-            rBigm_objVal = rBigm_obj.expr.value
+            rBigm_objVal = value(list(instance_rBigm.component_data_objects(Objective))[0])
 
-            # sep_name = "instance_rChull"
-
-            # put x* in rChull so we can solve separation problem
-            for vid, (cuid, v, i) in v_map.iteritems():
+            # copy over xstar
+            for cuid, v, i in itervalues(v_map):
                 # TODO: same thing to avoid indicator var problem for the moment
                 if str(v).startswith("_gdp_relax_bigm."): continue
-                instance_rChull.xstar[i] = cuid.find_component(instance_rBigm).value
+                instance_rChull.xstar[i] = value(v)
 
             # Build objective expression for separation problem and save x* as 
             # a dictionary (variable name and index as key)
@@ -144,8 +139,14 @@ class CuttingPlane_Transformation(Transformation):
             instance_rBigm.add_component("_cut" + str(iteration), 
                                          Constraint(expr=cutexpr_rBigm >= 0))
 
-            # TODO: What IS "enough"? That's got to depend the problem, right?
-            improving = prev_obj - rBigm_objVal > epsilon
+            # decide whether or not to keep going: check absolute difference close to 0,
+            # relative difference further from 0.
+            # TODO: is this right?
+            obj_diff = prev_obj - rBigm_objVal
+            if abs(obj_diff) < 1:
+                improving = abs(obj_diff) > epsilon
+            else:
+                improving = abs(obj_diff/prev_obj) > epsilon
             # DEBUG
             print "prev_obj: " + str(prev_obj)
             print "rBigm_objVal: " + str(rBigm_objVal)
@@ -154,6 +155,7 @@ class CuttingPlane_Transformation(Transformation):
             iteration += 1
 
         # Last, we send off the bigm + cuts model to a MIP solver
-        print "Solving MIP"
-        mip_opt = SolverFactory(MIPSOLVER)
-        mip_opt.solve(instance, tee=stream_solvers)
+        # But pyomo does this for us now...
+        # print "Solving MIP"
+        # mip_opt = SolverFactory(MIPSOLVER)
+        # mip_opt.solve(instance, tee=stream_solvers)
