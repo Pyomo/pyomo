@@ -639,7 +639,9 @@ class _block_base(object):
         # Generate the list of active import suffixes on
         # this top level model
         valid_import_suffixes = \
-            dict(import_suffix_generator(self, active=True))
+            dict(import_suffix_generator(self,
+                                         active=True,
+                                         return_key=True))
         # To ensure that import suffix data gets properly
         # overwritten (e.g., the case where nonzero dual
         # values exist on the suffix and but only sparse

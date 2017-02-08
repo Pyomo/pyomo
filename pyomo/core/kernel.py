@@ -39,7 +39,11 @@ from pyomo.core.base.component_sos import (sos,
                                            sos2,
                                            sos_list,
                                            sos_dict)
-from pyomo.core.base.component_suffix import (suffix,)
+from pyomo.core.base.component_suffix import (suffix,
+                                              export_suffix_generator,
+                                              import_suffix_generator,
+                                              local_suffix_generator,
+                                              suffix_generator)
 from pyomo.core.base.component_piecewise.transforms import (piecewise,
                                                             piecewise_sos2,
                                                             piecewise_dcc,

@@ -181,53 +181,165 @@ class suffix(ComponentMap, IComponent, _IActiveComponentMixin):
 #   - local_suffix_generator
 #   - suffix_generator
 
-def export_suffix_generator(a_block,
+def export_suffix_generator(blk,
                             datatype=_noarg,
                             active=None,
-                            descend_into=True):
+                            descend_into=True,
+                            return_key=False):
+    """
+    Generates an efficient traversal of all suffixes that
+    have been declared for exporting data.
+
+    Args:
+        blk: A block object.
+        datatype: Restricts the suffixes included in the
+            returned generator to those matching the
+            provided suffix datatype.
+        active (True/None): Set to True to indicate that
+            only active suffixes should be included. The
+            default value of None indicates that all
+            suffixes (including those that have been
+            deactivated) should be included.
+        descend_into (bool): Indicates whether or not to
+            include suffixes on sub-blocks. Default is True.
+        return_key (bool): Set to True to indicate that the
+            return type should be a 2-tuple consisting of
+            the local storage key of the suffix within its
+            parent and the suffix itself. By default, only
+            the suffixes are returned.
+
+    Returns: an iterator of suffixes or (key,suffix) tuples
+    """
     for name, suf in filter(lambda x: (x[1].export_enabled and \
                                        ((datatype is _noarg) or \
                                         (x[1].datatype is datatype))),
-                            a_block.components(ctype=suffix._ctype,
-                                               return_key=True,
-                                               active=active,
-                                               descend_into=descend_into)):
-        yield name, suf
+                            blk.components(ctype=suffix._ctype,
+                                           return_key=True,
+                                           active=active,
+                                           descend_into=descend_into)):
+        if return_key:
+            yield name, suf
+        else:
+            yield suf
 
-def import_suffix_generator(a_block,
+def import_suffix_generator(blk,
                             datatype=_noarg,
                             active=None,
-                            descend_into=True):
+                            descend_into=True,
+                            return_key=False):
+    """
+    Generates an efficient traversal of all suffixes that
+    have been declared for importing data.
+
+    Args:
+        blk: A block object.
+        datatype: Restricts the suffixes included in the
+            returned generator to those matching the
+            provided suffix datatype.
+        active (True/None): Set to True to indicate that
+            only active suffixes should be included. The
+            default value of None indicates that all
+            suffixes (including those that have been
+            deactivated) should be included.
+        descend_into (bool): Indicates whether or not to
+            include suffixes on sub-blocks. Default is True.
+        return_key (bool): Set to True to indicate that the
+            return type should be a 2-tuple consisting of
+            the local storage key of the suffix within its
+            parent and the suffix itself. By default, only
+            the suffixes are returned.
+
+    Returns: an iterator of suffixes or (key,suffix) tuples
+    """
     for name, suf in filter(lambda x: (x[1].import_enabled and \
                                        ((datatype is _noarg) or \
                                         (x[1].datatype is datatype))),
-                            a_block.components(ctype=suffix._ctype,
-                                               return_key=True,
-                                               active=active,
-                                               descend_into=descend_into)):
-        yield name, suf
+                            blk.components(ctype=suffix._ctype,
+                                           return_key=True,
+                                           active=active,
+                                           descend_into=descend_into)):
+        if return_key:
+            yield name, suf
+        else:
+            yield suf
 
-def local_suffix_generator(a_block,
+def local_suffix_generator(blk,
                            datatype=_noarg,
                            active=None,
-                           descend_into=True):
+                           descend_into=True,
+                           return_key=False):
+    """
+    Generates an efficient traversal of all suffixes that
+    have been declared local data storage.
+
+    Args:
+        blk: A block object.
+        datatype: Restricts the suffixes included in the
+            returned generator to those matching the
+            provided suffix datatype.
+        active (True/None): Set to True to indicate that
+            only active suffixes should be included. The
+            default value of None indicates that all
+            suffixes (including those that have been
+            deactivated) should be included.
+        descend_into (bool): Indicates whether or not to
+            include suffixes on sub-blocks. Default is True.
+        return_key (bool): Set to True to indicate that the
+            return type should be a 2-tuple consisting of
+            the local storage key of the suffix within its
+            parent and the suffix itself. By default, only
+            the suffixes are returned.
+
+    Returns: an iterator of suffixes or (key,suffix) tuples
+    """
     for name, suf in filter(lambda x: (x[1].direction is suffix.LOCAL and \
                                        ((datatype is _noarg) or \
                                         (x[1].datatype is datatype))),
-                            a_block.components(ctype=suffix._ctype,
-                                               return_key=True,
-                                               active=active,
-                                               descend_into=descend_into)):
-        yield name, suf
+                            blk.components(ctype=suffix._ctype,
+                                           return_key=True,
+                                           active=active,
+                                           descend_into=descend_into)):
+        if return_key:
+            yield name, suf
+        else:
+            yield suf
 
-def suffix_generator(a_block,
+def suffix_generator(blk,
                      datatype=_noarg,
                      active=None,
-                     descend_into=True):
+                     descend_into=True,
+                     return_key=False):
+    """
+    Generates an efficient traversal of all suffixes that
+    have been declared.
+
+    Args:
+        blk: A block object.
+        datatype: Restricts the suffixes included in the
+            returned generator to those matching the
+            provided suffix datatype.
+        active (True/None): Set to True to indicate that
+            only active suffixes should be included. The
+            default value of None indicates that all
+            suffixes (including those that have been
+            deactivated) should be included.
+        descend_into (bool): Indicates whether or not to
+            include suffixes on sub-blocks. Default is True.
+        return_key (bool): Set to True to indicate that the
+            return type should be a 2-tuple consisting of
+            the local storage key of the suffix within its
+            parent and the suffix itself. By default, only
+            the suffixes are returned.
+
+    Returns: an iterator of suffixes or (key,suffix) tuples
+    """
     for name, suf in filter(lambda x: ((datatype is _noarg) or \
                                        (x[1].datatype is datatype)),
-                            a_block.components(ctype=suffix._ctype,
-                                               return_key=True,
-                                               active=active,
-                                               descend_into=descend_into)):
-        yield name, suf
+                            blk.components(ctype=suffix._ctype,
+                                           return_key=True,
+                                           active=active,
+                                           descend_into=descend_into)):
+        if return_key:
+            yield name, suf
+        else:
+            yield suf

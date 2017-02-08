@@ -291,30 +291,44 @@ class Test_suffix(unittest.TestCase):
         m.b.s3i = suffix(direction=suffix.EXPORT,
                          datatype=suffix.INT)
         # default
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in export_suffix_generator(m)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in export_suffix_generator(m, return_key=True)],
                          [("s1", m.s1.name), ("s1i", m.s1i.name),
                           ("s3", m.s3.name), ("s3i", m.s3i.name),
                           ("s1", m.b.s1.name), ("s1i", m.b.s1i.name),
                           ("s3", m.b.s3.name), ("s3i", m.b.s3i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in export_suffix_generator(m)],
+        self.assertEqual([id(c_) for c_
+                          in export_suffix_generator(m,
+                                                     return_key=False)],
                          [id(m.s1), id(m.s1i),
                           id(m.s3), id(m.s3i),
                           id(m.b.s1), id(m.b.s1i),
                           id(m.b.s3), id(m.b.s3i)])
         # descend_into=False
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in export_suffix_generator(m, descend_into=False)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in export_suffix_generator(m,
+                                                     descend_into=False,
+                                                     return_key=True)],
                          [("s1", m.s1.name), ("s1i", m.s1i.name),
                           ("s3", m.s3.name), ("s3i", m.s3i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in export_suffix_generator(m, descend_into=False)],
+        self.assertEqual([id(c_) for c_
+                          in export_suffix_generator(m,
+                                                     descend_into=False)],
                          [id(m.s1), id(m.s1i),
                           id(m.s3), id(m.s3i)])
         # datatype=INT
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in export_suffix_generator(m, datatype=suffix.INT)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in export_suffix_generator(m,
+                                                     datatype=suffix.INT,
+                                                     return_key=True)],
                          [("s1i", m.s1i.name),
                           ("s3i", m.s3i.name),
                           ("s1i", m.b.s1i.name),
                           ("s3i", m.b.s3i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in export_suffix_generator(m, datatype=suffix.INT)],
+        self.assertEqual([id(c_) for c_
+                          in export_suffix_generator(m,
+                                                     datatype=suffix.INT,
+                                                     return_key=False)],
                          [id(m.s1i),
                           id(m.s3i),
                           id(m.b.s1i),
@@ -322,11 +336,16 @@ class Test_suffix(unittest.TestCase):
         # active=True
         m.s1.deactivate()
         m.b.deactivate()
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in export_suffix_generator(m, active=True)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in export_suffix_generator(m,
+                                                     active=True,
+                                                     return_key=True)],
                          [("s1i", m.s1i.name),
                           ("s3", m.s3.name),
                           ("s3i", m.s3i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in export_suffix_generator(m, active=True)],
+        self.assertEqual([id(c_) for c_ in export_suffix_generator(m,
+                                                                   active=True,
+                                                                   return_key=False)],
                          [id(m.s1i), id(m.s3), id(m.s3i)])
 
     def test_import_suffix_generator(self):
@@ -357,30 +376,46 @@ class Test_suffix(unittest.TestCase):
         m.b.s3i = suffix(direction=suffix.EXPORT,
                          datatype=suffix.INT)
         # default
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in import_suffix_generator(m)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in import_suffix_generator(m,
+                                                     return_key=True)],
                          [("s1", m.s1.name), ("s1i", m.s1i.name),
                           ("s2", m.s2.name), ("s2i", m.s2i.name),
                           ("s1", m.b.s1.name), ("s1i", m.b.s1i.name),
                           ("s2", m.b.s2.name), ("s2i", m.b.s2i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in import_suffix_generator(m)],
+        self.assertEqual([id(c_) for c_
+                          in import_suffix_generator(m,
+                                                     return_key=False)],
                          [id(m.s1), id(m.s1i),
                           id(m.s2), id(m.s2i),
                           id(m.b.s1), id(m.b.s1i),
                           id(m.b.s2), id(m.b.s2i)])
         # descend_into=False
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in import_suffix_generator(m, descend_into=False)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in import_suffix_generator(m,
+                                                     descend_into=False,
+                                                     return_key=True)],
                          [("s1", m.s1.name), ("s1i", m.s1i.name),
                           ("s2", m.s2.name), ("s2i", m.s2i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in import_suffix_generator(m, descend_into=False)],
+        self.assertEqual([id(c_) for c_
+                          in import_suffix_generator(m,
+                                                     descend_into=False,
+                                                     return_key=False)],
                          [id(m.s1), id(m.s1i),
                           id(m.s2), id(m.s2i)])
         # datatype=INT
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in import_suffix_generator(m, datatype=suffix.INT)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in import_suffix_generator(m,
+                                                     datatype=suffix.INT,
+                                                     return_key=True)],
                          [("s1i", m.s1i.name),
                           ("s2i", m.s2i.name),
                           ("s1i", m.b.s1i.name),
                           ("s2i", m.b.s2i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in import_suffix_generator(m, datatype=suffix.INT)],
+        self.assertEqual([id(c_) for c_
+                          in import_suffix_generator(m,
+                                                     datatype=suffix.INT,
+                                                     return_key=False)],
                          [id(m.s1i),
                           id(m.s2i),
                           id(m.b.s1i),
@@ -388,11 +423,17 @@ class Test_suffix(unittest.TestCase):
         # active=True
         m.s1.deactivate()
         m.b.deactivate()
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in import_suffix_generator(m, active=True)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in import_suffix_generator(m,
+                                                     active=True,
+                                                     return_key=True)],
                          [("s1i", m.s1i.name),
                           ("s2", m.s2.name),
                           ("s2i", m.s2i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in import_suffix_generator(m, active=True)],
+        self.assertEqual([id(c_) for c_
+                          in import_suffix_generator(m,
+                                                     active=True,
+                                                     return_key=False)],
                          [id(m.s1i), id(m.s2), id(m.s2i)])
 
     def test_local_suffix_generator(self):
@@ -423,30 +464,52 @@ class Test_suffix(unittest.TestCase):
         m.b.s3i = suffix(direction=suffix.EXPORT,
                          datatype=suffix.INT)
         # default
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in local_suffix_generator(m)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in local_suffix_generator(m,
+                                                    return_key=True)],
                          [("s0", m.s0.name), ("s0i", m.s0i.name),
                           ("s0", m.b.s0.name), ("s0i", m.b.s0i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in local_suffix_generator(m)],
+        self.assertEqual([id(c_) for c_
+                          in local_suffix_generator(m,
+                                                    return_key=False)],
                          [id(m.s0), id(m.s0i),
                           id(m.b.s0), id(m.b.s0i)])
         # descend_into=False
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in local_suffix_generator(m, descend_into=False)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in local_suffix_generator(m,
+                                                    descend_into=False,
+                                                    return_key=True)],
                          [("s0", m.s0.name), ("s0i", m.s0i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in local_suffix_generator(m, descend_into=False)],
+        self.assertEqual([id(c_) for c_
+                          in local_suffix_generator(m,
+                                                    descend_into=False,
+                                                    return_key=False)],
                          [id(m.s0), id(m.s0i)])
         # datatype=INT
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in local_suffix_generator(m, datatype=suffix.INT)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in local_suffix_generator(m,
+                                                    datatype=suffix.INT,
+                                                    return_key=True)],
                          [("s0i", m.s0i.name),
                           ("s0i", m.b.s0i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in local_suffix_generator(m, datatype=suffix.INT)],
+        self.assertEqual([id(c_) for c_
+                          in local_suffix_generator(m,
+                                                    datatype=suffix.INT,
+                                                    return_key=False)],
                          [id(m.s0i),
                           id(m.b.s0i)])
         # active=True
         m.s0.deactivate()
         m.b.deactivate()
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in local_suffix_generator(m, active=True)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in local_suffix_generator(m,
+                                                    active=True,
+                                                    return_key=True)],
                          [("s0i", m.s0i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in local_suffix_generator(m, active=True)],
+        self.assertEqual([id(c_) for c_
+                          in local_suffix_generator(m,
+                                                    active=True,
+                                                    return_key=False)],
                          [id(m.s0i)])
 
     def test_suffix_generator(self):
@@ -477,7 +540,9 @@ class Test_suffix(unittest.TestCase):
         m.b.s3i = suffix(direction=suffix.EXPORT,
                          datatype=suffix.INT)
         # default
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in suffix_generator(m)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in suffix_generator(m,
+                                              return_key=True)],
                          [("s0", m.s0.name), ("s0i", m.s0i.name),
                           ("s1", m.s1.name), ("s1i", m.s1i.name),
                           ("s2", m.s2.name), ("s2i", m.s2i.name),
@@ -486,7 +551,9 @@ class Test_suffix(unittest.TestCase):
                           ("s1", m.b.s1.name), ("s1i", m.b.s1i.name),
                           ("s2", m.b.s2.name), ("s2i", m.b.s2i.name),
                           ("s3", m.b.s3.name), ("s3i", m.b.s3i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in suffix_generator(m)],
+        self.assertEqual([id(c_) for c_
+                          in suffix_generator(m,
+                                              return_key=False)],
                          [id(m.s0), id(m.s0i),
                           id(m.s1), id(m.s1i),
                           id(m.s2), id(m.s2i),
@@ -496,18 +563,27 @@ class Test_suffix(unittest.TestCase):
                           id(m.b.s2), id(m.b.s2i),
                           id(m.b.s3), id(m.b.s3i)])
         # descend_into=False
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in suffix_generator(m, descend_into=False)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in suffix_generator(m,
+                                              descend_into=False,
+                                              return_key=True)],
                          [("s0", m.s0.name), ("s0i", m.s0i.name),
                           ("s1", m.s1.name), ("s1i", m.s1i.name),
                           ("s2", m.s2.name), ("s2i", m.s2i.name),
                           ("s3", m.s3.name), ("s3i", m.s3i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in suffix_generator(m, descend_into=False)],
+        self.assertEqual([id(c_) for c_
+                          in suffix_generator(m,
+                                              descend_into=False,
+                                              return_key=False)],
                          [id(m.s0), id(m.s0i),
                           id(m.s1), id(m.s1i),
                           id(m.s2), id(m.s2i),
                           id(m.s3), id(m.s3i)])
         # datatype=INT
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in suffix_generator(m, datatype=suffix.INT)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in suffix_generator(m,
+                                              datatype=suffix.INT,
+                                              return_key=True)],
                          [("s0i", m.s0i.name),
                           ("s1i", m.s1i.name),
                           ("s2i", m.s2i.name),
@@ -516,7 +592,10 @@ class Test_suffix(unittest.TestCase):
                           ("s1i", m.b.s1i.name),
                           ("s2i", m.b.s2i.name),
                           ("s3i", m.b.s3i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in suffix_generator(m, datatype=suffix.INT)],
+        self.assertEqual([id(c_) for c_
+                          in suffix_generator(m,
+                                              datatype=suffix.INT,
+                                              return_key=False)],
                          [id(m.s0i),
                           id(m.s1i),
                           id(m.s2i),
@@ -528,7 +607,10 @@ class Test_suffix(unittest.TestCase):
         # active=True
         m.s1.deactivate()
         m.b.deactivate()
-        self.assertEqual([(ck_, c_.name) for ck_, c_ in suffix_generator(m, active=True)],
+        self.assertEqual([(ck_, c_.name) for ck_, c_
+                          in suffix_generator(m,
+                                              active=True,
+                                              return_key=True)],
                          [("s0", m.s0.name),
                           ("s0i", m.s0i.name),
                           ("s1i", m.s1i.name),
@@ -536,8 +618,17 @@ class Test_suffix(unittest.TestCase):
                           ("s2i", m.s2i.name),
                           ("s3", m.s3.name),
                           ("s3i", m.s3i.name)])
-        self.assertEqual([id(c_) for ck_, c_ in suffix_generator(m, active=True)],
-                         [id(m.s0), id(m.s0i), id(m.s1i), id(m.s2), id(m.s2i), id(m.s3), id(m.s3i)])
+        self.assertEqual([id(c_) for c_
+                          in suffix_generator(m,
+                                              active=True,
+                                              return_key=False)],
+                         [id(m.s0),
+                          id(m.s0i),
+                          id(m.s1i),
+                          id(m.s2),
+                          id(m.s2i),
+                          id(m.s3),
+                          id(m.s3i)])
 
     #
     # These methods are deprecated

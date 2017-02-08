@@ -554,6 +554,7 @@ class OptSolver(Plugin):
                             "component(s)" % (arg.name))
                 _model = arg
 
+                # import suffixes must be on the top-level model
                 if isinstance(arg, Block):
                     model_suffixes = list(name for (name,comp) \
                                           in pyomo.core.base.suffix.\
@@ -562,7 +563,10 @@ class OptSolver(Plugin):
                     assert isinstance(arg, IBlockStorage)
                     model_suffixes = list(name for (name,comp) \
                                           in pyomo.core.base.component_suffix.\
-                                          import_suffix_generator(arg, active=True))
+                                          import_suffix_generator(arg,
+                                                                  active=True,
+                                                                  descend_into=False,
+                                                                  return_key=True))
 
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])

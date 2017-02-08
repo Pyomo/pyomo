@@ -1283,6 +1283,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             suffix_gen = lambda b: pyomo.core.base.component_suffix.\
                          export_suffix_generator(b,
                                                  active=True,
+                                                 return_key=True,
                                                  descend_into=False)
         else:
             suffix_gen = lambda b: pyomo.core.base.suffix.\
