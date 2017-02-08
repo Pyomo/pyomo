@@ -41,9 +41,11 @@ from pyomo.core.base.expr_common import (
 from pyomo.core.base import expr_common as common
 
 UNREFERENCED_EXPR_COUNT = 11
-if (sys.version_info[0] >= 3) and \
-   (sys.version_info[1] >= 6):
+UNREFERENCED_INTRINSIC_EXPR_COUNT = -2
+if sys.version_info[:2] >= (3, 6):
     UNREFERENCED_EXPR_COUNT -= 1
+    UNREFERENCED_INTRINSIC_EXPR_COUNT += 1
+
 
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \
@@ -1800,8 +1802,10 @@ def generate_relational_expression(etype, lhs, rhs):
 # the first inequality so the second inequality can access it later.
 generate_relational_expression.chainedInequality = None
 
+
 def generate_intrinsic_function_expression(arg, name, fcn):
-    arg, = _generate_expression__clone_if_needed(-2, False, arg)
+    arg, = _generate_expression__clone_if_needed(
+        UNREFERENCED_INTRINSIC_EXPR_COUNT, False, arg)
     if arg.__class__ in native_types:
         return fcn(arg)
 
