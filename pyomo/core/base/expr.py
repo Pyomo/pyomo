@@ -19,7 +19,7 @@ def generate_expression(etype, _self,_other):
     raise RuntimeError("incomplete import of Pyomo expression system")
 def generate_relational_expression(etype, lhs, rhs):
     raise RuntimeError("incomplete import of Pyomo expression system")
-def generate_intrinsic_function_expression(etype, name, arg):
+def generate_intrinsic_function_expression(arg, name, fcn):
     raise RuntimeError("incomplete import of Pyomo expression system")
 
 import math
