@@ -275,16 +275,18 @@ class ProblemWriter_bar(AbstractProblemWriter):
         for block in all_blocks_list:
             for var_data in active_components_data_var[id(block)]:
 
-                if isinstance(var_data.domain, BooleanSet):
+                if var_data.is_continuous():
+                    if (var_data.lb is not None) and \
+                       (var_data.lb >= 0):
+                        TypeList = PosVars
+                    else:
+                        TypeList = Vars
+                elif var_data.is_binary():
                     TypeList = BinVars
-                elif isinstance(var_data.domain, IntegerSet):
+                elif var_data.is_integer():
                     TypeList = IntVars
-                elif isinstance(var_data.domain, RealSet) and \
-                     (var_data.lb is not None) and \
-                     (var_data.lb >= 0):
-                    TypeList = PosVars
                 else:
-                    TypeList = Vars
+                    assert False
 
                 var_name = object_symbol_dictionary[id(var_data)]
                 #if len(var_name) > 15:
