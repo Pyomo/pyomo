@@ -408,12 +408,12 @@ class CPLEXDirect(OptSolver):
                 var_ubs.append(cplex.infinity)
             else:
                 var_ubs.append(value(var.ub))
-            if var.is_integer():
-                var_types.append(cplex_instance.variables.type.integer)
-                num_integer_variables += 1
-            elif var.is_binary():
+            if var.is_binary():
                 var_types.append(cplex_instance.variables.type.binary)
                 num_binary_variables += 1
+            elif var.is_integer():
+                var_types.append(cplex_instance.variables.type.integer)
+                num_integer_variables += 1
             elif var.is_continuous():
                 var_types.append(cplex_instance.variables.type.continuous)
                 num_continuous_variables += 1
