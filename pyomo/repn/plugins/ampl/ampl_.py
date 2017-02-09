@@ -970,8 +970,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     raise Exception(
                         "Solver does not support SOS level %s constraints"
                         % (level,))
-                LinearVars.update(self_varID_map[id(vardata)]
-                                  for vardata in soscondata.get_variables())
+                if hasattr(soscondata, "get_variables"):
+                    LinearVars.update(self_varID_map[id(vardata)]
+                                      for vardata in soscondata.get_variables())
+                else:
+                    LinearVars.update(self_varID_map[id(vardata)]
+                                      for vardata in soscondata.variables)
 
         # create the ampl constraint ids
         self_ampl_con_id.update(

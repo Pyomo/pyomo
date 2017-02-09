@@ -87,7 +87,10 @@ class ModelSOS(object):
 
     def count_constraint(self,symbol_map,labeler,variable_symbol_map,soscondata):
 
-        sos_items = list(soscondata.get_items())
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
         level = soscondata.level
 
         if len(sos_items) == 0:
