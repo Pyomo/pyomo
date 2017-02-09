@@ -835,10 +835,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
             # track the number of integer and binary variables, so we know whether
             # to output the general / binary sections below.
-            if vardata.is_integer():
-                integer_vars.append(name_to_output)
-            elif vardata.is_binary():
+            if vardata.is_binary():
                 binary_vars.append(name_to_output)
+            elif vardata.is_integer():
+                integer_vars.append(name_to_output)
             elif not vardata.is_continuous():
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary."

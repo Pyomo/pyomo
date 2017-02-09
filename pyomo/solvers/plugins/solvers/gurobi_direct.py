@@ -259,10 +259,10 @@ class gurobi_direct ( OptSolver ):
             var_symbol_pairs.append((var_value, var_value_label))
 
             # be sure to impart the integer and binary nature of any variables
-            if var_value.is_integer():
-                var_type = GRB.INTEGER
-            elif var_value.is_binary():
+            if var_value.is_binary():
                 var_type = GRB.BINARY
+            elif var_value.is_integer():
+                var_type = GRB.INTEGER
             elif var_value.is_continuous():
                 var_type = GRB.CONTINUOUS
             else:
