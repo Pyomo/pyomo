@@ -3,9 +3,7 @@ from pyomo.core import *
 from pyomo.gdp import *
 
 from pyomo.opt import SolverFactory
-
-#DEBUG
-import pdb
+from pyomo.core.base import Transformation
 
 
 ''' Layout optimization for screening systems in waste paper recovery:
@@ -24,7 +22,8 @@ model = AbstractModel()
 model.BigM = Suffix(direction=Suffix.LOCAL)
 model.BigM[None] = 1000
 
-SOLVER = 'baron'
+SOLVER = 'baron'                
+#SOLVER = 'bonmin'               
 DATFILE = "stickies1.dat"
 
 #######################
@@ -494,16 +493,21 @@ model.log9 = Constraint(model.ScreenPairs, rule=log9_rule)
 # model.accept_or_reject4 = Constraint(model.ScreenNodePairs, 
 #                                      rule=accept_or_reject_rule4)
 
-
-# TODO: BARON hates this fixing variables business?
 instance = model.create_instance(DATFILE)
 
 # fix the variables they fix in GAMS
-#for s in instance.Screens:
-    #instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var.fix(0)
-    #instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fix(0)
+for s in instance.Screens:
+    instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var.fix(0)
+    instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fix(0)
+
+# bigm transformation!
+bigM = TransformationFactory('gdp.bigm')
+bigM.apply_to(instance)
 
 # solve the model
 opt = SolverFactory(SOLVER)
+opt.options["MaxTime"] = 9000
 results = opt.solve(instance, tee=True)
+#results = opt.solve(instance, options="MaxTime=9000", tee=True)
+
 instance.display()
