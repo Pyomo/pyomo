@@ -63,6 +63,7 @@ class CBC(OptSolver):
     pyomo.util.plugin.alias('cbc', doc='The CBC LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
+        configure_cbc()
         try:
             mode = kwds['solver_io']
             if mode is None:

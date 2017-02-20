@@ -1,0 +1,104 @@
+%-
+%- (JP) TODO
+
+\chapter{SOS and Piecewise Linear Models}
+\label{chap:sos}
+
+\abstract{This chapter describes the use of SOS and Piecewise linear modles.  }
+
+
+\section{Introduction}
+
+\section{SOS}
+
+\section{Piecewise Linear}
+
+
+\section{Discussion}
+
+
+
+\begin{subappendices}
+% Complete examples go here
+
+\if 0
+\section{Examples}
+
+\subsection{Concrete Pyomo Model with Explicit Variables}
+\label{ex:concrete1}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) using explicit variables.
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_concrete1.py}{}{1}{8}
+
+
+\subsection{Concrete Pyomo Model with Indexed Variables}
+\label{ex:concrete2}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) using indexed variables.
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_concrete2.py}{}{1}{7}
+
+
+\subsection{Concrete Pyomo Model with External Data}
+\label{ex:concrete3}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) 
+with (a) external data declarations and (b) expressions defined using Python's generator syntax.
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_concrete3.py}{}{1}{15}
+
+
+\subsection{Concrete Pyomo Model with Constraint Rules}
+\label{ex:concrete4}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) using a constraint rule to create constraints \code{con}.
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_concrete4.py}{}{1}{15}
+
+
+\subsection{Concrete Pyomo Model with Abstract Component Declarations}
+\label{ex:concrete5}
+
+A concrete Pyomo model for Formulation~(\ref{eqn:simple-concrete}) that uses \code{rule} and \code{initialize} arguments for
+all modeling components.
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_concrete5.py}{}{1}{25}
+
+\newpage
+
+\subsection{Using a Function to Construct a Concrete Pyomo Model}
+\label{ex:abstract4}
+
+A function that creates a concrete Pyomo model for Formulation~(\ref{eqn:simple-abstract}) using only data provide in the argument list.
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_abstract4.py}{}{1}{17}
+
+
+\subsection{Abstract Pyomo Model}
+
+\subsubsection{Pyomo Model}
+\label{ex:abstract5}
+
+An abstract Pyomo model for Formulation~(\ref{eqn:simple-abstract}).
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_abstract5.py}{}{1}{20}
+
+
+\subsubsection{Data Commands}
+\label{ex:abstract5.dat}
+
+Data commands for the abstract Pyomo model in Example~\ref{ex:abstract5} that are used to generate the concrete model in Formulation~(\ref{eqn:simple-concrete}).
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_abstract5.dat}{}{1}{17}
+
+
+\subsection{A Python Script that Optimizes a Concrete Pyomo Model}
+\label{ex:script1}
+
+A Python script that creates the concrete Pyomo model in Example~\ref{ex:concrete1} and performs optimization using the GLPK linear programming solver.
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_script1.py}{}{1}{12}
+
+\newpage
+
+
+\subsection{A Python Script that Optimizes an Abstract Pyomo Model}
+\label{ex:script2}
+
+A Python script that creates a model instance from the abstract Pyomo model in Example~\ref{ex:abstract5} and performs optimization using the GLPK linear programming solver.
+\listing{pyomo/examples/doc/samples/pyomo_book/overview_script2.py}{}{1}{12}
+\fi
+
+\end{subappendices}

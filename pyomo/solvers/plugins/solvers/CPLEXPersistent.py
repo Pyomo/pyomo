@@ -35,7 +35,7 @@ from pyomo.solvers import wrappers
 from six import itervalues, iterkeys, iteritems, advance_iterator
 from six.moves import xrange
 from pyomo.solvers.plugins.solvers.CPLEXDirect import (CPLEXDirect,
-                                                       ModelSOS)
+                                                       ModelSOS, configure_cplex)
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -44,19 +44,6 @@ try:
 except:
     basestring = str
 
-try:
-    import cplex
-    from cplex.exceptions import CplexError, CplexSolverError
-    cplex_import_available=True
-except ImportError:
-    cplex_import_available=False
-except Exception as e:
-    # other forms of exceptions can be thrown by CPLEX python
-    # import.  For example, an error in code invoked by the module's
-    # __init__.  We should continue gracefully and not cause a fatal
-    # error in Pyomo.
-    print("Import of cplex failed - cplex message=%s\n" % (e,) )
-    cplex_import_available=False
 
 class CplexSolverWrapper(wrappers.MIPSolverWrapper):
 
@@ -75,6 +62,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                             doc='Persistent Python interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
+        configure_cplex()
         #
         # Call base class constructor
         #
@@ -738,7 +726,3 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         self._instance = instance
 
         return ret
-
-if cplex_import_available is False:
-    SolverFactory().deactivate('_cplex_persistent')
-    SolverFactory().deactivate('_mock_cplexpersistent')
