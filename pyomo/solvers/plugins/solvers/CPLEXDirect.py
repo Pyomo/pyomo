@@ -1235,7 +1235,3 @@ class CPLEXDirect(OptSolver):
                                   "name":name,
                                   "__call__":call_fn})
             self._active_cplex_instance.register_callback(CallbackClass)
-
-if cplex_import_available is False:
-    SolverFactory().deactivate('_cplex_direct')
-    SolverFactory().deactivate('_mock_cplexdirect')
