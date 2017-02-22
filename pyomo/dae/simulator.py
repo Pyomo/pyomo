@@ -295,6 +295,7 @@ class Simulator:
         templatemap = {} # Map for template substituter 
         rhsdict = {} # Map of derivative to its RHS templated expr
         derivlist = []  # Ordered list of derivatives
+        alglist = [] # list of templated algebraic equations
 
         # Loop over constraints to find differential equations with separable
         # RHS. Must find a RHS for every derivative var otherwise ERROR. Build
@@ -371,23 +372,23 @@ class Simulator:
                 # Case 3: m.p*m.dxdt[t] = RHS
                 if args is None:
                     if type(tempexp._args[0]) is EXPR._ProductExpression:
-                        args = _check_productexpresstion(tempexp,0)
+                        args = _check_productexpression(tempexp,0)
 
                 # Case 4: RHS =  m.p*m.dxdt[t]
                 if args is None:
                     if type(tempexp._args[1]) is EXPR._ProductExpression:
-                        args = _check_productexpresstion(tempexp,1)
+                        args = _check_productexpression(tempexp,1)
 
                 # Case 5: m.dxdt[t] + CONSTANT = RHS 
                 # or CONSTANT + m.dxdt[t] = RHS
                 if args is None:
                     if type(tempexp._args[0]) is EXPR._SumExpression:
-                        args = _check_sumexpresstion(tempexp,0)
+                        args = _check_sumexpression(tempexp,0)
 
                 # Case 6: RHS = m.dxdt[t] + CONSTANT
                 if args is None:
                     if type(tempexp._args[1]) is EXPR._SumExpression:
-                        args = _check_sumexpresstion(tempexp,1)
+                        args = _check_sumexpression(tempexp,1)
 
             
                 # Case 7: RHS = m.p*m.dxdt[t] + CONSTANT
@@ -397,9 +398,24 @@ class Simulator:
 
                 # At this point if args is not None then args[0] contains
                 # the _GetItemExpression for the DerivativeVar and args[1]
-                # contains the RHS expression
+                # contains the RHS expression. If args is None then the
+                # constraint is considered an algebraic equation
                 if args is None:
-                    # Constraint is not a separable differential equation
+                    # Constraint is an algebraic equation or unsupported
+                    # differential equation
+                    if self._intpackage == 'scipy':
+                        raise DAE_Error("Model contains an algebraic equation "
+                                        "or unrecognized differential equation. "
+                                        "Constraint '%s' cannot be simulated "
+                                        "using Scipy. If you are trying to "
+                                        "simulate a DAE you must use CasADi "
+                                        "as the integration package." 
+                                        %(str(con.name)))
+                    tempexp = tempexp._args[0] - tempexp._args[1]
+                    algexp = substitute_template_expression(tempexp, substituter, templatemap)
+                    algexp = substitute_intrinsic_function(
+                        algexp, substitute_intrinsic_function_with_casadi)
+                    alglist.append(algexp)
                     continue
             
                 # Add the differential equation to rhsdict and derivlist
@@ -433,27 +449,26 @@ class Simulator:
         # Create ordered list of differential variables corresponding
         # to the list of derivatives.
         diffvars=[]
+
         for deriv in derivlist:
             sv = deriv._base.get_state_var()
             diffvars.append(_GetItemIndexer(sv[deriv._args]))
 
-        # Make sure there are no DerivativeVars or algebraic variables
-        # in the RHS expressions. The template map should only contain
-        # differential variables.
+        # Create ordered list of algebraic variables and time-varying
+        # parameters
+        algvars=[]
         for item in iterkeys(templatemap):
             if item._base.name in allderivs:
+                # Make sure there are no DerivativeVars in the
+                # template map
                 raise DAE_Error(
                     "Cannot simulate a differential equation with "
                     "multiple DerivativeVars")
             if item not in diffvars:
-                # This only catches algebraic variables indexed by
-                # time. TODO: how to catch variables not indexed by
-                # time or warn the user that values must be set for
-                # these variables.
-                raise DAE_Error(
-                    "Cannot simulate a differential equation with "
-                    "algebraic variables")
-
+                # Finds time varying parameters and algebraic vars
+                algvars.append(item)
+                
+        # FIXME: add support for time-varying parameters
         if self._intpackage == 'scipy':
             # Function sent to scipy integrator
             def _rhsfun(t,x):
@@ -475,11 +490,13 @@ class Simulator:
         self._derivlist = derivlist
         self._templatemap = templatemap
         self._rhsdict = rhsdict
+        self._alglist = alglist
+        self._algvars = algvars
         self._model = m
         self._tsim = None
         self._simsolution = None
 
-    def get_variable_order(self):
+    def get_variable_order(self, algebraic=False):
         """
         This function returns the ordered list of differential variable
         names. The order corresponds to the order being sent to the
@@ -489,7 +506,12 @@ class Simulator:
         the Pyomo variables.
 
         """        
-        return self._diffvars
+        if algebraic == True:
+            # NOTE: algvars will include both algebraic variables
+            # and time varying parameters (control inputs)
+            return self._algvars
+        else:
+            return self._diffvars
         
     def simulate(self,**kwds):
         """
@@ -510,8 +532,10 @@ class Simulator:
             if integrator is 'odeint':
                 integrator = 'lsoda'
         else:
-            # Specify the casadi integrator to use for simulation
-            valid_integrators = ['cvodes','idas']
+            # Specify the casadi integrator to use for simulation.
+            # Only a subset of these integrators may be used for 
+            # DAE simulation. We defer this check to CasADi.
+            valid_integrators = ['cvodes','idas','collocation','rk']
             integrator = kwds.pop('integrator', 'idas')
 
         if integrator not in valid_integrators:
@@ -541,9 +565,16 @@ class Simulator:
         tsim = []
         if tstep is None:
             tsim = np.linspace(
-                self._contset.first(),self._contset.last(),numpoints)
+                self._contset.first(),self._contset.last(),num=numpoints)
+
+            # Consider adding an option for log spaced time points. Can
+            # be important for simulating stiff systems.  tsim =
+            # np.logspace(-4,6,num=100)
+            # np.log10(self._contset.first()),np.log10(self._contset.last()),num=1000,
+            # endpoint=True)
+
         else:
-            tsim = np.arrange(
+            tsim = np.arange(
                 self._contset.first(),self._contset.last(),tstep)
 
         # Check if initial conditions were provided, otherwise obtain
@@ -586,16 +617,54 @@ class Simulator:
                 raise DAE_Error("The Scipy integrator %s did not terminate "
                             "successfully."%(integrator))
         else:
-            xalltemp = [self._templatemap[i] for i in self._diffvars]
-            xall = casadi.vertcat(*xalltemp)
 
-            odealltemp = [value(self._rhsdict[i]) for i in self._derivlist]
-            odeall = casadi.vertcat(*odealltemp)
-            dae = {'x':xall, 'ode':odeall}
-            opts = {'grid':tsim,'output_t0':True}
-            F = casadi.integrator('F',integrator,dae,opts)
-            sol = F(x0=initcon)
-            profile=sol['xf'].full().T
+            if False:
+                # New way with mapaccum
+                xalltemp = [self._templatemap[i] for i in self._diffvars]
+                xall = casadi.vertcat(*xalltemp)
+                
+                time = casadi.SX.sym('time')
+                
+                odealltemp = [time*value(self._rhsdict[i]) for i in self._derivlist]
+                odeall = casadi.vertcat(*odealltemp)
+                dae = {'x':xall, 'p':time, 'ode':odeall}
+                opts = {'tf':1.0}
+                F = casadi.integrator('F',integrator,dae,opts)
+                N = len(tsim)
+                # This approach removes the time scaling from tsim so must create an array
+                # with the time step between consecutive time points
+                tsimtemp = np.hstack([0,tsim[1:]-tsim[0:-1]])
+                I = F.mapaccum('simulator',N)
+                sol = I(x0=initcon,p=tsimtemp)
+                profile=sol['xf'].full().T
+
+            else:
+                # Old way (10 times faster, but how to incorporate time varying parameters/controls??)
+                xalltemp = [self._templatemap[i] for i in self._diffvars]
+                xall = casadi.vertcat(*xalltemp)
+
+                odealltemp = [value(self._rhsdict[i]) for i in self._derivlist]
+                odeall = casadi.vertcat(*odealltemp)
+                dae = {'x':xall, 'ode':odeall}
+
+                if len(self._algvars) != 0:
+                    zalltemp = [self._templatemap[i] for i in self._algvars]
+                    zall = casadi.vertcat(*zalltemp)
+
+                    algalltemp = [value(i) for i in self._alglist]
+                    algall = casadi.vertcat(*algalltemp)
+                    dae['z'] = zall
+                    dae['alg'] = algall
+
+
+                opts = {'grid':tsim,'output_t0':True}
+                F = casadi.integrator('F',integrator,dae,opts)
+                sol = F(x0=initcon)
+                profile=sol['xf'].full().T
+
+                if len(self._algvars) != 0:
+                    algprofile=sol['zf'].full().T
+                    profile = np.concatenate((profile,algprofile),axis=1)
 
         self._tsim = tsim
         self._simsolution = profile
@@ -613,8 +682,12 @@ class Simulator:
                 "first")
 
         tvals = list(self._contset)
-        
-        for idx,v in enumerate(self._diffvars):
+ 
+        # Build list of state and algebraic variables
+        # that can be initialized
+        initvars = self._diffvars + self._algvars
+               
+        for idx,v in enumerate(initvars):
             for idx2,i in enumerate(v._args):
                     if type(i) is IndexTemplate:
                         break
