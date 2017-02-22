@@ -55,4 +55,3 @@ class LP_simple(_BaseTestModel):
         model = self.model
         model.x = None
         model.y = 1.0
-
