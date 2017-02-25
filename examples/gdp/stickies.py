@@ -22,15 +22,13 @@ model = AbstractModel()
 model.BigM = Suffix(direction=Suffix.LOCAL)
 model.BigM[None] = 1000
 
-SOLVER = 'baron'                
-#SOLVER = 'bonmin'               
+SOLVER = 'baron'                          
 DATFILE = "stickies1.dat"
 
 #######################
 #Sets
 #######################
 
-# TODO: this is a set union and I think you can change that.
 # J
 model.Components = Set()
 # fiber
@@ -40,7 +38,6 @@ model.BadComponents = Set()
 # N: total nodes in the system
 model.Nodes = Set()
 # S: possibe screens
-# TODO: you can do this as a set union and you should, I think.
 model.Screens = Set()
 
 def screen_node_filter(model, s, n):
@@ -94,9 +91,6 @@ def component_flow_ub_rule(model, k, n):
 model.InletComponentFlowUB = Param(model.Components, model.Nodes, 
                                    initialize=component_flow_ub_rule)
 
-# model.ScreenCostUB = Param(model.Screens)
-# model.ScreenCostLB = Param(model.Screens, default=0)
-
 # r_lo(s)
 model.RejectRateLB = Param(model.Screens)
 # r_up(s)
@@ -127,10 +121,6 @@ model.AcceptedComponentFlowUB = Param(model.Components, model.Screens,
 ######################
 
 # c_s, C(s), cost of selecting screen
-# TODO: I did make trivial bounds for this, but since this problem is 
-# non-convex anyway, I guess we don't *need* them?
-# def get_screen_cost_bounds(model, s):
-#     return (model.ScreenCostLB[s], model.ScreenCostUB[s])
 model.screenCost = Var(model.Screens, within=NonNegativeReals)#, bounds=get_screen_cost_bounds)
 
 # total inlet flow into screen s (f_s, F_IN(s))
@@ -254,8 +244,6 @@ def screen_disjunct_rule(disjunct, selectScreen, s):
                                                 #model.ScreenFlowUB[s])
         disjunct.rejected_flow = Constraint(model.Components, 
                                             rule=rejected_flow_rule)
-        # TODO: in GAMS, the == is >=... It should be the same since it
-        # is minimized in the objective, right??
         disjunct.screen_cost = Constraint(expr=model.screenCost[s] == \
                                           model.ScreenCostCoeff1[s]* \
                                           (model.inletScreenFlow[s]** \
@@ -326,6 +314,7 @@ def flow_from_source_disjunct_rule(disjunct, n):
     def sourceFlow_balance_rule1(disjunct, j):
         # this doesn't match the formulation, but it matches GAMS:
         return model.flowFromSource[j, n] >= model.InitialComponentFlowLB[j]
+        # this would be the formulation version:
         #return model.flowFromSource[j, n] == model.InitialComponentFlow[j]
     def sourceFlow_balance_rule2(disjunct, j):
         return model.flowFromSource[j, n] <= model.InitialComponentFlow[j]
@@ -351,7 +340,8 @@ model.flow_from_source_disjunction = Disjunction(
 # Boolean Constraints
 ######################
 
-# These are the GAMS ones:
+# These are the GAMS versions of the logical constraints, which is not
+# what appears in the formulation:
 def log1_rule(model, s):
     return model.screen_selection_disjunct[1, s].indicator_var == \
         sum(model.flow_acceptance_disjunct[s, n, 1].indicator_var \
@@ -395,6 +385,10 @@ def log9_rule(model, s, sprime):
     return model.flow_acceptance_disjunct[s, sprime, 1].indicator_var + \
         model.flow_rejection_disjunct[sprime, s, 1].indicator_var <= 1
 model.log9 = Constraint(model.ScreenPairs, rule=log9_rule)
+
+# These are the above logical constraints implemented correctly (I think)
+# However, this doesn't match what is actually coded in gams and makes the
+# model infeasible with the data from gams.
 
 # YA_{s,n} v YR_{s,n} implies Y_s
 # def flow_existence_rule1(model, s, n):
@@ -501,150 +495,110 @@ for s in instance.Screens:
     instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fix(0)
 
 ##################################################################################
-## Fix all the indicator variables to see if we get same objective value (250.956)
+## for validation: Fix all the indicator variables to see if we get same objective 
+## value (250.956)
 ##################################################################################
 
-instance.screen_selection_disjunct[1,'S1'].indicator_var.fix(1)
-instance.screen_selection_disjunct[1,'S2'].indicator_var.fix(0)
-instance.screen_selection_disjunct[1,'S3'].indicator_var.fix(0)
-instance.screen_selection_disjunct[1,'S4'].indicator_var.fix(0)
-instance.screen_selection_disjunct[1,'S5'].indicator_var.fix(0)
-instance.screen_selection_disjunct[1,'S6'].indicator_var.fix(0) 
+# instance.screen_selection_disjunct[1,'S1'].indicator_var.fix(1)
+# instance.screen_selection_disjunct[1,'S2'].indicator_var.fix(0)
+# instance.screen_selection_disjunct[1,'S3'].indicator_var.fix(0)
+# instance.screen_selection_disjunct[1,'S4'].indicator_var.fix(0)
+# instance.screen_selection_disjunct[1,'S5'].indicator_var.fix(0)
+# instance.screen_selection_disjunct[1,'S6'].indicator_var.fix(0) 
 
 
-instance.flow_acceptance_disjunct['S1','S2',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S1','S3',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S1','S4',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S1','S5',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S1','S6',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S1','PRD',1].indicator_var.fix(1)
-# 'SNK' is already fixed correctly in the loop above that is "in" the model
-instance.flow_acceptance_disjunct['S2','S1',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S2','S3',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S2','S4',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S2','S5',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S2','S6',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S2','PRD',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S3','S1',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S3','S2',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S3','S4',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S3','S5',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S3','S6',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S3','PRD',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S4','S1',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S4','S2',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S4','S3',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S4','S5',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S4','S6',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S4','PRD',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S5','S1',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S5','S2',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S5','S3',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S5','S4',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S5','S6',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S5','PRD',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S6','S1',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S6','S2',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S6','S3',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S6','S4',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S6','S5',1].indicator_var.fix(0)
-instance.flow_acceptance_disjunct['S6','PRD',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S1','S2',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S1','S3',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S1','S4',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S1','S5',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S1','S6',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S1','PRD',1].indicator_var.fix(1)
+# # 'SNK' is already fixed correctly in the loop above that is "in" the model
+# instance.flow_acceptance_disjunct['S2','S1',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S2','S3',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S2','S4',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S2','S5',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S2','S6',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S2','PRD',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S3','S1',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S3','S2',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S3','S4',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S3','S5',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S3','S6',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S3','PRD',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S4','S1',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S4','S2',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S4','S3',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S4','S5',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S4','S6',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S4','PRD',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S5','S1',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S5','S2',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S5','S3',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S5','S4',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S5','S6',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S5','PRD',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S6','S1',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S6','S2',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S6','S3',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S6','S4',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S6','S5',1].indicator_var.fix(0)
+# instance.flow_acceptance_disjunct['S6','PRD',1].indicator_var.fix(0)
 
-instance.flow_rejection_disjunct['S1','S2',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S1','S3',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S1','S4',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S1','S5',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S1','S6',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S1','SNK',1].indicator_var.fix(1)
-# 'SNK' is already fixed correctly in the loop above that is "in" the model
-instance.flow_rejection_disjunct['S2','S1',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S2','S3',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S2','S4',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S2','S5',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S2','S6',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S2','SNK',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S3','S1',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S3','S2',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S3','S4',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S3','S5',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S3','S6',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S3','SNK',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S4','S1',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S4','S2',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S4','S3',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S4','S5',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S4','S6',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S4','SNK',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S5','S1',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S5','S2',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S5','S3',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S5','S4',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S5','S6',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S5','SNK',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S6','S1',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S6','S2',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S6','S3',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S6','S4',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S6','S5',1].indicator_var.fix(0)
-instance.flow_rejection_disjunct['S6','SNK',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S1','S2',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S1','S3',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S1','S4',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S1','S5',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S1','S6',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S1','SNK',1].indicator_var.fix(1)
+# # 'SNK' is already fixed correctly in the loop above that is "in" the model
+# instance.flow_rejection_disjunct['S2','S1',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S2','S3',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S2','S4',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S2','S5',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S2','S6',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S2','SNK',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S3','S1',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S3','S2',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S3','S4',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S3','S5',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S3','S6',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S3','SNK',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S4','S1',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S4','S2',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S4','S3',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S4','S5',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S4','S6',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S4','SNK',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S5','S1',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S5','S2',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S5','S3',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S5','S4',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S5','S6',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S5','SNK',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S6','S1',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S6','S2',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S6','S3',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S6','S4',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S6','S5',1].indicator_var.fix(0)
+# instance.flow_rejection_disjunct['S6','SNK',1].indicator_var.fix(0)
 
-instance.flow_from_source_disjunct['S1'].indicator_var.fix(1)
-instance.flow_from_source_disjunct['S2'].indicator_var.fix(0)
-instance.flow_from_source_disjunct['S3'].indicator_var.fix(0)
-instance.flow_from_source_disjunct['S4'].indicator_var.fix(0)
-instance.flow_from_source_disjunct['S5'].indicator_var.fix(0)
-instance.flow_from_source_disjunct['S6'].indicator_var.fix(0)
-instance.flow_from_source_disjunct['PRD'].indicator_var.fix(0)
-instance.flow_from_source_disjunct['SNK'].indicator_var.fix(0)
-
-
-# M_IN
-# instance.inletComponentFlow['st', 'S1'].fix(1.0)
-# instance.inletComponentFlow['fib', 'S1'].fix(0.675)
-# instance.inletComponentFlow['st', 'S2'].fix(0)
-# instance.inletComponentFlow['fib', 'S2'].fix(0)
-# instance.inletComponentFlow['st', 'S3'].fix(0)
-# instance.inletComponentFlow['fib', 'S3'].fix(0)
-# instance.inletComponentFlow['st', 'S4'].fix(0)
-# instance.inletComponentFlow['fib', 'S4'].fix(0)
-# instance.inletComponentFlow['st', 'S5'].fix(0)
-# instance.inletComponentFlow['fib', 'S5'].fix(0)
-# instance.inletComponentFlow['st', 'S6'].fix(0)
-# instance.inletComponentFlow['fib', 'S6'].fix(0)
-# instance.inletComponentFlow['st', 'PRD'].fix(0.1)
-# QUESTION: so is this actual infeasibility or is this evil floating point stuff??
-# OK, so any one of these  makes it infeasible. But with just the ones above, it has the right objective...?
-# Ah, so it is 0.15912stuff. damn.
-# instance.inletComponentFlow['fib', 'PRD'].fix(0.159) 
-# 0.9
-# instance.inletComponentFlow['st', 'SNK'].fix(1.0)
-# 0.51587stuff
-# instance.inletComponentFlow['fib', 'SNK'].fix(0.516)
-
-# F_IN
-# instance.inletScreenFlow['S1'].fix(1.675)
-# instance.inletScreenFlow['S2'].fix(0)
-# instance.inletScreenFlow['S3'].fix(0)
-# instance.inletScreenFlow['S4'].fix(0)
-# instance.inletScreenFlow['S5'].fix(0)
-# instance.inletScreenFlow['S6'].fix(0)
-
-# M_ACC
-
+# instance.flow_from_source_disjunct['S1'].indicator_var.fix(1)
+# instance.flow_from_source_disjunct['S2'].indicator_var.fix(0)
+# instance.flow_from_source_disjunct['S3'].indicator_var.fix(0)
+# instance.flow_from_source_disjunct['S4'].indicator_var.fix(0)
+# instance.flow_from_source_disjunct['S5'].indicator_var.fix(0)
+# instance.flow_from_source_disjunct['S6'].indicator_var.fix(0)
+# instance.flow_from_source_disjunct['PRD'].indicator_var.fix(0)
+# instance.flow_from_source_disjunct['SNK'].indicator_var.fix(0)
 
 # bigm transformation!
 bigM = TransformationFactory('gdp.bigm')
 bigM.apply_to(instance)
 
-# TESTING SLACKS TRANSFORMATION
-# addSlacks = TransformationFactory('core.add_slack_variables')
-# addSlacks.apply_to(instance)
-
 # solve the model
 opt = SolverFactory(SOLVER)
 opt.options["MaxTime"] = 32400
 results = opt.solve(instance, tee=True)
-# TODO: what's wrong with the syntax below??
-#results = opt.solve(instance, options="MaxTime=9000", tee=True)
 
 #instance.display()

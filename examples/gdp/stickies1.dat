@@ -68,17 +68,6 @@ param RejectRateUB :=
       S6    0.9
 ;
 
-# This bound isn't in the gams model--it's a trivial bound based on 
-# the solutions
-# param ScreenCostUB :=
-#       S1    200
-#       S2    200
-#       S3    200
-#       S4    200
-#       S5    200
-#       S6    200
-# ;
-
 param FiberWeight := 400 ;
 param StickiesWeight := 200 ;
 param CostWeight := 15 ;
