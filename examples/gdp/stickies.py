@@ -601,4 +601,5 @@ opt = SolverFactory(SOLVER)
 opt.options["MaxTime"] = 32400
 results = opt.solve(instance, tee=True)
 
-#instance.display()
+instance.solutions.store_to(results)
+print(results)

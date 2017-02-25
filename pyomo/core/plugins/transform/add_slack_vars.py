@@ -27,7 +27,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
         for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
             if (cons.lower is not None and cons.upper is not None) and \
                value(cons.lower) > value(cons.upper):
-                # this is a structural infeasibility slacks aren't going to help:
+                # this is a structural infeasibility so slacks aren't going to help:
                 raise RuntimeError("Lower bound exceeds upper bound in constraint %s" % cons.name)
             if cons.lower is not None:
                 # we add positive slack variable to body:
