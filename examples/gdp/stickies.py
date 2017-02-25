@@ -500,14 +500,57 @@ for s in instance.Screens:
     instance.flow_acceptance_disjunct[s,'SNK',1].indicator_var.fix(0)
     instance.flow_rejection_disjunct[s,'PRD',1].indicator_var.fix(0)
 
+##########################################################################
+## Fix all the variables to see if we get same objective value (250.956)
+##########################################################################
+
+# M_IN
+instance.inletComponentFlow['st', 'S1'].fix(1.0)
+instance.inletComponentFlow['fib', 'S1'].fix(0.675)
+instance.inletComponentFlow['st', 'S2'].fix(0)
+instance.inletComponentFlow['fib', 'S2'].fix(0)
+instance.inletComponentFlow['st', 'S3'].fix(0)
+instance.inletComponentFlow['fib', 'S3'].fix(0)
+instance.inletComponentFlow['st', 'S4'].fix(0)
+instance.inletComponentFlow['fib', 'S4'].fix(0)
+instance.inletComponentFlow['st', 'S5'].fix(0)
+instance.inletComponentFlow['fib', 'S5'].fix(0)
+instance.inletComponentFlow['st', 'S6'].fix(0)
+instance.inletComponentFlow['fib', 'S6'].fix(0)
+instance.inletComponentFlow['st', 'PRD'].fix(0.1)
+# QUESTION: so is this actual infeasibility or is this evil floating point stuff??
+# OK, so any one of these  makes it infeasible. But with just the ones above, it has the right objective...?
+# Ah, so it is 0.15912stuff. damn.
+instance.inletComponentFlow['fib', 'PRD'].fix(0.159)
+# 0.9
+# instance.inletComponentFlow['st', 'SNK'].fix(1.0)
+# 0.51587stuff
+# instance.inletComponentFlow['fib', 'SNK'].fix(0.516)
+
+# F_IN
+instance.inletScreenFlow['S1'].fix(1.675)
+instance.inletScreenFlow['S2'].fix(0)
+instance.inletScreenFlow['S3'].fix(0)
+instance.inletScreenFlow['S4'].fix(0)
+instance.inletScreenFlow['S5'].fix(0)
+instance.inletScreenFlow['S6'].fix(0)
+
+# M_ACC
+
+
 # bigm transformation!
 bigM = TransformationFactory('gdp.bigm')
 bigM.apply_to(instance)
 
+# TESTING SLACKS TRANSFORMATION
+addSlacks = TransformationFactory('core.add_slack_variables')
+addSlacks.apply_to(instance)
+
 # solve the model
 opt = SolverFactory(SOLVER)
-opt.options["MaxTime"] = 9000
+opt.options["MaxTime"] = 32400
 results = opt.solve(instance, tee=True)
+# TODO: what's wrong with the syntax below??
 #results = opt.solve(instance, options="MaxTime=9000", tee=True)
 
 instance.display()

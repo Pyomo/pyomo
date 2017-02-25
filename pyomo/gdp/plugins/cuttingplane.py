@@ -19,7 +19,6 @@ stream_solvers = False
 
 class CuttingPlane_Transformation(Transformation):
     
-    #TODO: I just made this up...
     alias('gdp.cuttingplane', doc="Relaxes a linear disjunctive model by adding cuts from convex hull to Big-M relaxation.")
 
     def __init__(self):
@@ -42,8 +41,7 @@ class CuttingPlane_Transformation(Transformation):
         improving = True
         iteration = 0
         prev_obj = float("inf")
-        # TODO: What should this be actually??
-        epsilon = 0.1
+        epsilon = 0.01
 
         for o in instance_rChull.component_data_objects(Objective):
             o.deactivate()
@@ -55,8 +53,6 @@ class CuttingPlane_Transformation(Transformation):
             v_map[id(v)] = (ComponentUID(v), v, len(v_map))
         instance_rChull.xstar = Param(range(len(v_map)), mutable=True)
         
-        # TODO: this doesn't work yet because indicator variables in bigm and
-        # chull don't have the same cuid...
         obj_expr = 0
         for cuid, v, i in v_map.itervalues():
             # TODO: this is totally wrong, but I'm skipping indicator variables
@@ -64,18 +60,16 @@ class CuttingPlane_Transformation(Transformation):
             if str(v).startswith("_gdp_relax_bigm."): continue
             x_star = instance_rChull.xstar[i]
             x = cuid.find_component(instance_rChull)
-            # this breaks when we get to the indicator variables:
-            # but if the indicator variables had the same cuid in both models,
-            # it wouldn't.
             obj_expr += (x - x_star)**2
         instance_rChull.separation_objective = Objective(
             expr=obj_expr)
 
+        rBigM_obj = list(instance_rBigm.component_data_objects(Objective))[0]
         while (improving):
             # solve rBigm, solution is xstar
             opt.solve(instance_rBigm, tee=stream_solvers)
 
-            rBigm_objVal = value(list(instance_rBigm.component_data_objects(Objective))[0])
+            rBigm_objVal = value(rBigM_obj)
 
             # copy over xstar
             for cuid, v, i in v_map.itervalues():
@@ -96,18 +90,20 @@ class CuttingPlane_Transformation(Transformation):
                 xhat = cuid.find_component(instance_rChull).value
                 xstar = instance_rChull.xstar[i].value
                 x_bigm = cuid.find_component(instance)
-                x_rBigm = v # TODO: this is true, right?
+                x_rBigm = v
                 cutexpr_bigm += (xhat - xstar)*(x_bigm - xhat)
                 cutexpr_rBigm += (xhat - xstar)*(x_rBigm - xhat)
 
+            # TODO: Instead of adding these to the instance, we'll add them to the block
+            # that the transformation adds. That way we're not risking already having
+            # constraints of the same name.
             instance.add_component("_cut" + str(iteration), 
-                                        Constraint(expr=cutexpr_bigm >= 0))
+                                   Constraint(expr=cutexpr_bigm >= 0))
             instance_rBigm.add_component("_cut" + str(iteration), 
                                          Constraint(expr=cutexpr_rBigm >= 0))
 
             # decide whether or not to keep going: check absolute difference close to 0,
             # relative difference further from 0.
-            # TODO: is this right?
             obj_diff = prev_obj - rBigm_objVal
             improving = abs(obj_diff) > epsilon if abs(obj_diff) < 1 else \
                         abs(obj_diff/prev_obj) > epsilon
