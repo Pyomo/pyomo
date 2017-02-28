@@ -11,7 +11,7 @@ __all__ = ('Simulator', )
 
 import numpy as np
 
-from pyomo.environ import Constraint, Param, value
+from pyomo.environ import Constraint, Param, value, Suffix
 
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
@@ -495,8 +495,10 @@ class Simulator:
         self._model = m
         self._tsim = None
         self._simsolution = None
+        self._simalgvars = None # The algebraic vars in the most recent simulation
+        self._siminputvars = None # The time-varying inputs in the most recent simulation
 
-    def get_variable_order(self, algebraic=False):
+    def get_variable_order(self, vartype=None):
         """
         This function returns the ordered list of differential variable
         names. The order corresponds to the order being sent to the
@@ -506,10 +508,12 @@ class Simulator:
         the Pyomo variables.
 
         """        
-        if algebraic == True:
-            # NOTE: algvars will include both algebraic variables
-            # and time varying parameters (control inputs)
+        if vartype == 'time-varying':
             return self._algvars
+        elif vartype == 'algebraic':
+            return self._simalgvars
+        elif vartype == 'input':
+            return self._siminputvars
         else:
             return self._diffvars
         
@@ -577,6 +581,49 @@ class Simulator:
             tsim = np.arange(
                 self._contset.first(),self._contset.last(),tstep)
 
+        varying_inputs = kwds.pop('varying_inputs',None)
+        switchpts = []
+        self._siminputvars = {}
+        self._simalgvars = []
+        if varying_inputs is not None:
+            if type(varying_inputs) is not Suffix:
+                raise TypeError(
+                    "Varying input values must be specified using a "
+                    "Suffix. Please refer to the simulator documentation.")
+
+            for alg in self._algvars:
+                if alg._base in varying_inputs:
+                    # Find all the switching points         
+                    switchpts += varying_inputs[alg._base].keys()
+                    # Add to dictionary of siminputvars
+                    self._siminputvars[alg._base] = alg
+                else:
+                    self._simalgvars.append(alg)
+
+            if self._intpackage is 'scipy' and len(self._simalgvars) != 0:
+                raise DAE_Error("When simulating with Scipy you must "
+                                "provide values for all parameters "
+                                "and algebraic variables that are indexed "
+                                "by the ContinuoutSet using the "
+                                "'varying_inputs' keyword argument. "
+                                "Please refer to the simulator documentation "
+                                "for more information.")
+
+            # Get the set of unique points
+            switchpts = list(set(switchpts)) 
+            switchpts.sort()
+
+            # Make sure all the switchpts are within the bounds of 
+            # the ContinuousSet
+            if switchpts[0] < self._contset.first() or switchpts[-1] > self._contset.last():
+                raise ValueError("Found a switching point for one or more of "
+                                 "the time-varying inputs that is not within "
+                                 "the bounds of the ContinuousSet.")
+
+            # Update tsim to include input switching points
+            # This numpy function returns the unique, sorted points
+            tsim = np.union1d(tsim,switchpts)
+
         # Check if initial conditions were provided, otherwise obtain
         # them from the current variable values
         initcon = kwds.pop('initcon',None)
@@ -609,6 +656,14 @@ class Simulator:
             profile = np.array(initcon)
             i = 1
             while scipyint.successful() and scipyint.t < tsim[-1]:
+                
+                # check if tsim[i-1] is a switching time and update value
+                if tsim[i-1] in switchpts:
+                    for v in self._siminputvars.keys():
+                        if tsim[i-1] in varying_inputs[v]:
+                            p = self._templatemap[self._siminputvars[v]]
+                            p.set_value(varying_inputs[v][tsim[i-1]])
+
                 profilestep = scipyint.integrate(tsim[i])
                 profile = np.vstack([profile,profilestep])
                 i += 1
@@ -618,28 +673,71 @@ class Simulator:
                             "successfully."%(integrator))
         else:
 
-            if False:
+            if len(switchpts) != 0:
                 # New way with mapaccum
                 xalltemp = [self._templatemap[i] for i in self._diffvars]
                 xall = casadi.vertcat(*xalltemp)
                 
                 time = casadi.SX.sym('time')
-                
+              
                 odealltemp = [time*value(self._rhsdict[i]) for i in self._derivlist]
                 odeall = casadi.vertcat(*odealltemp)
-                dae = {'x':xall, 'p':time, 'ode':odeall}
+
+                # Time-varying inputs
+                ptemp = [self._templatemap[i] for i in self._siminputvars.values()]
+                pall = casadi.vertcat(time,*ptemp)
+
+                dae = {'x':xall, 'p':pall, 'ode':odeall}
+
+                if len(self._algvars) != 0:
+                    zalltemp = [self._templatemap[i] for i in self._simalgvars]
+                    zall = casadi.vertcat(*zalltemp)
+                    # Need to do anything special with time scaling??
+                    algalltemp = [value(i) for i in self._alglist]
+                    algall = casadi.vertcat(*algalltemp)
+                    dae['z'] = zall
+                    dae['alg'] = algall
+
                 opts = {'tf':1.0}
                 F = casadi.integrator('F',integrator,dae,opts)
                 N = len(tsim)
+
                 # This approach removes the time scaling from tsim so must create an array
                 # with the time step between consecutive time points
                 tsimtemp = np.hstack([0,tsim[1:]-tsim[0:-1]])
+                tsimtemp.shape = (1,len(tsimtemp))
+                
+                # Need a similar np array for each time-varying input
+                print tsim
+                def _build_step_input(profile):
+                    tswitch = list(profile.keys())
+                    tswitch.sort()
+                    tidx = [tsim.searchsorted(i) for i in tswitch]+[len(tsim)-1]
+                    ptemp = [profile[0]]+[casadi.repmat(profile[tswitch[i]],1,tidx[i+1]-tidx[i]) for i in range(len(tswitch))]
+                    return casadi.horzcat(*ptemp)
+
+                palltemp = [casadi.DM(tsimtemp)]
+
+                for p in self._siminputvars.keys():
+                    profile = varying_inputs[p]
+                    tswitch = list(profile.keys())
+                    tswitch.sort()
+                    tidx = [tsim.searchsorted(i) for i in tswitch]+[len(tsim)-1]
+                    ptemp = [profile[0]]+[casadi.repmat(profile[tswitch[i]],1,tidx[i+1]-tidx[i]) for i in range(len(tswitch))]
+                    temp = casadi.horzcat(*ptemp)
+                    palltemp.append(temp)
+                # self._palltemp = palltemp
                 I = F.mapaccum('simulator',N)
-                sol = I(x0=initcon,p=tsimtemp)
+                sol = I(x0=initcon,p=casadi.vertcat(*palltemp))
                 profile=sol['xf'].full().T
 
+                if len(self._algvars) != 0:
+                    algprofile=sol['zf'].full().T
+                    profile = np.concatenate((profile,algprofile),axis=1)
+
+
             else:
-                # Old way (10 times faster, but how to incorporate time varying parameters/controls??)
+                # Old way (10 times faster, but can't incorporate time varying parameters/controls)
                 xalltemp = [self._templatemap[i] for i in self._diffvars]
                 xall = casadi.vertcat(*xalltemp)
 
@@ -648,7 +746,7 @@ class Simulator:
                 dae = {'x':xall, 'ode':odeall}
 
                 if len(self._algvars) != 0:
-                    zalltemp = [self._templatemap[i] for i in self._algvars]
+                    zalltemp = [self._templatemap[i] for i in self._simalgvars]
                     zall = casadi.vertcat(*zalltemp)
 
                     algalltemp = [value(i) for i in self._alglist]
