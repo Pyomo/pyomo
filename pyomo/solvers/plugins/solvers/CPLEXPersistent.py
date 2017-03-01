@@ -44,19 +44,6 @@ try:
 except:
     basestring = str
 
-try:
-    import cplex
-    from cplex.exceptions import CplexError, CplexSolverError
-    cplex_import_available=True
-except ImportError:
-    cplex_import_available=False
-except Exception as e:
-    # other forms of exceptions can be thrown by CPLEX python
-    # import.  For example, an error in code invoked by the module's
-    # __init__.  We should continue gracefully and not cause a fatal
-    # error in Pyomo.
-    print("Import of cplex failed - cplex message=%s\n" % (e,) )
-    cplex_import_available=False
 
 class CplexSolverWrapper(wrappers.MIPSolverWrapper):
 
@@ -123,12 +110,12 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                 return
             else:
                 if var_data.lb is None:
-                    var_lb = -cplex.infinity
+                    var_lb = -CPLEXDirect._cplex_module.infinity
                 else:
                     var_lb = value(var_data.lb)
 
                 if var_data.ub is None:
-                    var_ub = cplex.infinity
+                    var_ub = CPLEXDirect._cplex_module.infinity
                 else:
                     var_ub= value(var_data.ub)
 
@@ -284,7 +271,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         self._has_quadratic_objective = False
         used_sos_constraints = False
 
-        self._active_cplex_instance = cplex.Cplex()
+        self._active_cplex_instance = CPLEXDirect._cplex_module.Cplex()
 
         if self._symbolic_solver_labels:
             labeler = self._labeler = TextLabeler()
@@ -341,12 +328,12 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
             self._cplex_variable_ids[var_name] = len(self._cplex_variable_ids)
 
             if (var_data.lb is None) or (var_data.lb == -infinity):
-                var_lbs.append(-cplex.infinity)
+                var_lbs.append(-CPLEXDirect._cplex_module.infinity)
             else:
                 var_lbs.append(value(var_data.lb))
 
             if (var_data.ub is None) or (var_data.ub == infinity):
-                var_ubs.append(cplex.infinity)
+                var_ubs.append(CPLEXDirect._cplex_module.infinity)
             else:
                 var_ubs.append(value(var_data.ub))
 
@@ -459,7 +446,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
                 if quadratic:
                     if expr is None:
-                        expr = cplex.SparsePair(ind=[0],val=[0.0])
+                        expr = CPLEXDirect._cplex_module.SparsePair(ind=[0],val=[0.0])
                     self._has_quadratic_constraints = True
 
                     qexpr = self._encode_constraint_body_quadratic(con_repn,labeler)
@@ -738,7 +725,3 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         self._instance = instance
 
         return ret
-
-if cplex_import_available is False:
-    SolverFactory().deactivate('_cplex_persistent')
-    SolverFactory().deactivate('_mock_cplexpersistent')

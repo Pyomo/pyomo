@@ -47,24 +47,30 @@ except:
     basestring = str
 
 _cplex_version = None
-try:
-    import cplex
-    from cplex.exceptions import CplexError, CplexSolverError
-    # create a version tuple of length 4
-    _cplex_version = tuple(int(i) for i in cplex.Cplex().get_version().split('.'))
-    while(len(_cplex_version) < 4):
-        _cplex_version += (0,)
-    _cplex_version = _cplex_version[:4]
-    cplex_import_available=True
-except ImportError:
-    cplex_import_available=False
-except Exception as e:
-    # other forms of exceptions can be thrown by CPLEX python
-    # import.  For example, an error in code invoked by the module's
-    # __init__.  We should continue gracefully and not cause a fatal
-    # error in Pyomo.
-    print("Import of cplex failed - cplex message=%s\n" % (e,) )
-    cplex_import_available=False
+cplex_import_available = None
+def configure_cplex():
+    global _cplex_version
+    global cplex_import_available
+    if not cplex_import_available is None:
+        return
+    try:
+        import cplex
+        CPLEXDirect._cplex_module = cplex
+        # create a version tuple of length 4
+        _cplex_version = tuple(int(i) for i in cplex.Cplex().get_version().split('.'))
+        while(len(_cplex_version) < 4):
+            _cplex_version += (0,)
+        _cplex_version = _cplex_version[:4]
+        cplex_import_available=True
+    except ImportError:
+        cplex_import_available=False
+    except Exception as e:
+        # other forms of exceptions can be thrown by CPLEX python
+        # import.  For example, an error in code invoked by the module's
+        # __init__.  We should continue gracefully and not cause a fatal
+        # error in Pyomo.
+        print("Import of cplex failed - cplex message=%s\n" % (e,) )
+        cplex_import_available=False
 
 class CplexSolverWrapper(wrappers.MIPSolverWrapper):
 
@@ -101,9 +107,9 @@ class ModelSOS(object):
         varids = self.varids[self.block_cntr] = []
         weights = self.weights[self.block_cntr] = []
         if level == 1:
-            self.sosType[self.block_cntr] = cplex.Cplex.SOS.type.SOS1
+            self.sosType[self.block_cntr] = CPLEXDirect._cplex_module.Cplex.SOS.type.SOS1
         elif level == 2:
-            self.sosType[self.block_cntr] = cplex.Cplex.SOS.type.SOS2
+            self.sosType[self.block_cntr] = CPLEXDirect._cplex_module.Cplex.SOS.type.SOS2
         else:
             raise ValueError("Unsupported SOSConstraint level %s" % level)
 
@@ -122,15 +128,15 @@ class ModelSOS(object):
 class CPLEXDirect(OptSolver):
     """The CPLEX LP/MIP solver
     """
-
+    _cplex_module = None
     pyomo.util.plugin.alias('_cplex_direct',
                             doc='Direct Python interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
+        configure_cplex()
         #
         # Call base class constructor
         #
-
         # This gets overridden by CPLEXPersistent
         if 'type' not in kwds:
             kwds['type'] = 'cplexdirect'
@@ -230,7 +236,7 @@ class CPLEXDirect(OptSolver):
         if as_pairs is True:
             return pairs, offset
         else:
-            expr = cplex.SparsePair(ind=variables, val=coefficients)
+            expr = CPLEXDirect._cplex_module.SparsePair(ind=variables, val=coefficients)
             return expr, offset
 
     #
@@ -290,7 +296,7 @@ class CPLEXDirect(OptSolver):
         if as_pairs is True:
             return pairs, offset
         else:
-            expr = cplex.SparsePair(ind=variable_identifiers, val=variable_coefficients)
+            expr = CPLEXDirect._cplex_module.SparsePair(ind=variable_identifiers, val=variable_coefficients)
             return expr, offset
 
     #
@@ -334,9 +340,9 @@ class CPLEXDirect(OptSolver):
         if as_triples is True:
             return triples
         else:
-            expr = cplex.SparseTriple(ind1=variables1,
-                                      ind2=variables2,
-                                      val=coefficients)
+            expr = CPLEXDirect._cplex_module.SparseTriple(ind1=variables1,
+                                              ind2=variables2,
+                                              val=coefficients)
             return expr
 
     #
@@ -356,8 +362,8 @@ class CPLEXDirect(OptSolver):
         cplex_instance = None
 
         try:
-            cplex_instance = cplex.Cplex()
-        except CplexError:
+            cplex_instance = CPLEXDirect._cplex_module.Cplex()
+        except CPLEXDirect._cplex_module.exceptions.CplexError:
             e = sys.exc_info()[1]
             msg = 'Unable to create Cplex model.  Have you installed the Python'\
             '\n       bindings for Cplex?\n\n\tError message: %s'
@@ -413,11 +419,11 @@ class CPLEXDirect(OptSolver):
             var_symbol_pairs.append((var, varname))
 
             if (var.lb is None) or (var.lb == -infinity):
-                var_lbs.append(-cplex.infinity)
+                var_lbs.append(-CPLEXDirect._cplex_module.infinity)
             else:
                 var_lbs.append(value(var.lb))
             if (var.ub is None) or (var.ub == infinity):
-                var_ubs.append(cplex.infinity)
+                var_ubs.append(CPLEXDirect._cplex_module.infinity)
             else:
                 var_ubs.append(value(var.ub))
             if var.is_binary():
@@ -629,7 +635,7 @@ class CPLEXDirect(OptSolver):
                 #Quadratic constraints
                 if quadratic:
                     if expr is None:
-                        expr = cplex.SparsePair(ind=[0],val=[0.0])
+                        expr = CPLEXDirect._cplex_module.SparsePair(ind=[0],val=[0.0])
                     quadratic_constraints = True
 
                     qexpr = self._encode_constraint_body_quadratic(con_repn, labeler)
@@ -1083,7 +1089,7 @@ class CPLEXDirect(OptSolver):
                 relative_gap = cplex_instance.solution.MIP.get_mip_relative_gap()
                 absolute_gap = upper_bound - lower_bound
                 soln.gap = absolute_gap
-            except CplexSolverError:
+            except CPLEXDirect._cplex_module.exceptions.CplexSolverError:
                 # something went wrong during the solve and no solution
                 # exists
                 pass
@@ -1218,18 +1224,18 @@ class CPLEXDirect(OptSolver):
         # Called from OptSolver
         #
         cplex_callback = {
-            "node-callback":        cplex.callbacks.NodeCallback,
-            "solve-callback":       cplex.callbacks.SolveCallback,
-            "branch-callback":      cplex.callbacks.BranchCallback,
-            "heuristic-callback":   cplex.callbacks.HeuristicCallback,
-            "incumbent-callback":   cplex.callbacks.IncumbentCallback,
-            "cut-callback":         cplex.callbacks.UserCutCallback,
-            "lazycut-callback":     cplex.callbacks.LazyConstraintCallback,
-            "crossover-callback":   cplex.callbacks.CrossoverCallback,
-            "barrier-callback":     cplex.callbacks.BarrierCallback,
-            "simplex-callback":     cplex.callbacks.SimplexCallback,
-            "presolve-callback":    cplex.callbacks.PresolveCallback,
-            "tuning-callback":      cplex.callbacks.TuningCallback
+            "node-callback":        CPLEXDirect._cplex_module.callbacks.NodeCallback,
+            "solve-callback":       CPLEXDirect._cplex_module.callbacks.SolveCallback,
+            "branch-callback":      CPLEXDirect._cplex_module.callbacks.BranchCallback,
+            "heuristic-callback":   CPLEXDirect._cplex_module.callbacks.HeuristicCallback,
+            "incumbent-callback":   CPLEXDirect._cplex_module.callbacks.IncumbentCallback,
+            "cut-callback":         CPLEXDirect._cplex_module.callbacks.UserCutCallback,
+            "lazycut-callback":     CPLEXDirect._cplex_module.callbacks.LazyConstraintCallback,
+            "crossover-callback":   CPLEXDirect._cplex_module.callbacks.CrossoverCallback,
+            "barrier-callback":     CPLEXDirect._cplex_module.callbacks.BarrierCallback,
+            "simplex-callback":     CPLEXDirect._cplex_module.callbacks.SimplexCallback,
+            "presolve-callback":    CPLEXDirect._cplex_module.callbacks.PresolveCallback,
+            "tuning-callback":      CPLEXDirect._cplex_module.callbacks.TuningCallback
             }
         #
         for name in self._callback:

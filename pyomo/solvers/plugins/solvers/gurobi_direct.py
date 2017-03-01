@@ -19,27 +19,33 @@ from six.moves import xrange
 logger = logging.getLogger('pyomo.solvers')
 
 _gurobi_version = None
-try:
-    # import all the glp_* functions
-    from gurobipy import *
-    # create a version tuple of length 4
-    _gurobi_version = gurobi.version()
-    while(len(_gurobi_version) < 4):
-        _gurobi_version += (0,)
-    _gurobi_version = _gurobi_version[:4]
-    _GUROBI_VERSION_MAJOR = _gurobi_version[0]
-    gurobi_python_api_exists = True
-except ImportError:
-    gurobi_python_api_exists = False
-except Exception as e:
-    # other forms of exceptions can be thrown by the gurobi python
-    # import. for example, a gurobipy.GurobiError exception is thrown
-    # if all tokens for Gurobi are already in use. assuming, of
-    # course, the license is a token license. unfortunately, you can't
-    # import without a license, which means we can't test for the
-    # exception above!
-    print("Import of gurobipy failed - gurobi message="+str(e)+"\n")
-    gurobi_python_api_exists = False
+gurobi_python_api_exists = None
+def configure_gurobi_direct():
+    global _gurobi_version
+    global gurobi_python_api_exists
+    if _gurobi_version is not None:
+        return
+    try:
+        # import all the glp_* functions
+        import gurobipy
+        # create a version tuple of length 4
+        _gurobi_version = gurobi.version()
+        while(len(_gurobi_version) < 4):
+            _gurobi_version += (0,)
+        _gurobi_version = _gurobi_version[:4]
+        _GUROBI_VERSION_MAJOR = _gurobi_version[0]
+        gurobi_python_api_exists = True
+    except ImportError:
+        gurobi_python_api_exists = False
+    except Exception as e:
+        # other forms of exceptions can be thrown by the gurobi python
+        # import. for example, a gurobipy.GurobiError exception is thrown
+        # if all tokens for Gurobi are already in use. assuming, of
+        # course, the license is a token license. unfortunately, you can't
+        # import without a license, which means we can't test for the
+        # exception above!
+        print("Import of gurobipy failed - gurobi message="+str(e)+"\n")
+        gurobi_python_api_exists = False
 
 import pyutilib.services
 from pyutilib.misc import Bunch, Options
@@ -65,6 +71,7 @@ GRB_MAX = -1
 GRB_MIN = 1
 
 class ModelSOS(object):
+
     def __init__(self):
         self.sosType = {}
         self.sosName = {}
@@ -144,6 +151,7 @@ class gurobi_direct ( OptSolver ):
           doc='Direct Python interface to the Gurobi optimization solver.')
 
     def __init__(self, **kwds):
+        configure_gurobi_direct()
         #
         # Call base class constructor
         #

@@ -515,7 +515,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
                 for param_data in param_data_iter:
                     param_stream = StringIO()
-                    param.to_string(ostream=param_stream, verbose=False)
+                    param_data.to_string(ostream=param_stream, verbose=False)
                     param_string = param_stream.getvalue()
 
                     param_string = ' '+param_string+' '
