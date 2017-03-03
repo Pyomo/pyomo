@@ -181,16 +181,6 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         p_unorm = math.sqrt(p_unorm)
         p_vnorm = math.sqrt(p_vnorm)
 
-        scalarized_norm = math.sqrt(p_unorm*p_unorm + p_vnorm*p_vnorm)
-
-        print("Computed separator norm: (%e,%e) - scalarized norm=%e" % (p_unorm, p_vnorm, scalarized_norm))
-
-        self._converger._last_computed_uv_norm_value = scalarized_norm
-
-#        if p_unorm < delta and p_vnorm < epsilon:
-#            print("Separator norm dropped below threshold (%e,%e)" % (delta, epsilon))
-#            return
-
         #####################################################
         # compute phi; if greater than zero, update z and w #
         #####################################################
@@ -286,6 +276,50 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             for tree_node in stage._tree_nodes:            
                 for variable_id in tree_node._z:
                     tree_node._xbars[variable_id] = tree_node._z[variable_id]
+
+        #########################################################################################
+        # compute the normalizers for unorm and vnorm, now that we have updated w and z values. #
+        #########################################################################################
+
+        unorm_normalizer = 0.0
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+                this_node_unorm_normalizer = 0.0
+                for variable_id in tree_node._standard_variable_ids:
+                    this_z_value = tree_node._z[variable_id]
+                    this_node_unorm_normalizer += this_z_value**2
+            unorm_normalizer += tree_node._probability * this_node_unorm_normalizer
+
+        vnorm_normalizer = 0.0
+        for stage in ph._scenario_tree._stages[:-1]:
+            for tree_node in stage._tree_nodes:
+                for scenario in tree_node._scenarios:
+                    this_scenario_vnorm_normalizer = 0.0
+                    this_scenario_ws = scenario._w[tree_node._name]
+                    for variable_id in tree_node._standard_variable_ids:
+                        this_scenario_vnorm_normalizer += this_scenario_ws[variable_id]**2
+                    vnorm_normalizer += scenario._probability * this_scenario_vnorm_normalizer
+
+        unorm_normalizer = math.sqrt(unorm_normalizer)
+        vnorm_normalizer = math.sqrt(vnorm_normalizer)
+
+#        print("p_unorm=",p_unorm)
+#        print("p_unorm_normalizer=",unorm_normalizer)
+#        print("p_vnorm=",p_vnorm)
+#        print("p_vnorm_normalizer=",vnorm_normalizer)
+
+        p_unorm /= unorm_normalizer
+        p_vnorm /= vnorm_normalizer
+
+        scalarized_norm = math.sqrt(p_unorm*p_unorm + p_vnorm*p_vnorm)
+
+        print("Computed separator norm: (%e,%e) - scalarized norm=%e" % (p_unorm, p_vnorm, scalarized_norm))
+
+        self._converger._last_computed_uv_norm_value = scalarized_norm
+
+#        if p_unorm < delta and p_vnorm < epsilon:
+#            print("Separator norm dropped below threshold (%e,%e)" % (delta, epsilon))
+#            return
 
         print("")
         print("Initiating post-projection calculations...")
