@@ -990,15 +990,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         for var_ID in LinearVars:
             var = Vars_dict[var_ID]
-            if var.is_integer():
-                LinearVarsInt.add(var_ID)
-            elif var.is_binary():
+            if var.is_binary():
                 L = var.lb
                 U = var.ub
                 if L is None or U is None:
                     raise ValueError("Variable " + str(var.name) +\
                                      "is binary, but does not have lb and ub set")
                 LinearVarsBool.add(var_ID)
+            elif var.is_integer():
+                LinearVarsInt.add(var_ID)
             elif not var.is_continuous():
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary.")

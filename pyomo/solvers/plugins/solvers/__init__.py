@@ -25,17 +25,3 @@ import pyomo.solvers.plugins.solvers.pywrapper
 import pyomo.solvers.plugins.solvers.SCIPAMPL
 import pyomo.solvers.plugins.solvers.CONOPT
 import pyomo.solvers.plugins.solvers.XPRESS
-
-#
-# Interrogate the CBC executable to see if it recognizes the -AMPL flag
-#
-from pyomo.solvers.plugins.solvers.CBCplugin import configure_cbc
-configure_cbc()
-del configure_cbc
-
-#
-# Interrogate the glpsol executable to see if it is new enough to allow the new parser logic
-#
-from pyomo.solvers.plugins.solvers.GLPK import configure_glpk
-configure_glpk()
-del configure_glpk
