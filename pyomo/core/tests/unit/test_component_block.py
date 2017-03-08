@@ -105,7 +105,8 @@ class TestMisc(unittest.TestCase):
         from pyomo.opt import SolverStatus, TerminationCondition
 
         opt = SolverFactory("glpk")
-        if isinstance(opt, UnknownSolver):
+        if isinstance(opt, UnknownSolver) or \
+           (not opt.available()):
             raise unittest.SkipTest("glpk solver not available")
         status = opt.solve(b)
         self.assertEqual(status.solver.status,
@@ -117,7 +118,8 @@ class TestMisc(unittest.TestCase):
         self.assertAlmostEqual(b.y(), 1.0, places=5)
 
         opt = SolverFactory("glpk")
-        if isinstance(opt, UnknownSolver):
+        if isinstance(opt, UnknownSolver) or \
+           (not opt.available()):
             raise unittest.SkipTest("glpk solver not available")
         status = opt.solve(b, symbolic_solver_labels=True)
         self.assertEqual(status.solver.status,
@@ -129,7 +131,8 @@ class TestMisc(unittest.TestCase):
         self.assertAlmostEqual(b.y(), 1.0, places=5)
 
         opt = SolverFactory("ipopt")
-        if isinstance(opt, UnknownSolver):
+        if isinstance(opt, UnknownSolver) or \
+           (not opt.available()):
             raise unittest.SkipTest("ipopt solver not available")
         status = opt.solve(b)
         self.assertEqual(status.solver.status,
