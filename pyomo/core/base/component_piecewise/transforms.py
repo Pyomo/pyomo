@@ -8,13 +8,8 @@
 #  _________________________________________________________________________
 """
 This module contains a library of transformations for
-representing piecewise linear constraints on a Pyomo
-model. All piecewise representations except for 'sos2' and
-'bigm' were taken from the following paper:
-
-Mixed-Integer Models for Non-separable Piecewise Linear
-Optimization: Unifying framework and Extensions (Vielma,
-Nemhauser 2008).
+representing a piecewise linear function using a
+mixed-interger problem formulation.
 """
 
 # ****** NOTE: Nothing in this file relies on integer division *******
@@ -29,11 +24,9 @@ import logging
 
 __all__ = ("piecewise",)
 
-import pyutilib.enum
-
 from pyomo.core.base.numvalue import value
 from pyomo.core.base.set_types import Binary
-from pyomo.core.base.component_block import (block, tiny_block)
+from pyomo.core.base.component_block import tiny_block
 from pyomo.core.base.component_expression import expression
 from pyomo.core.base.component_variable import (variable_list,
                                                 variable_dict,
@@ -154,17 +147,14 @@ class _PiecewiseLinearFunction(tiny_block):
                  output=None,
                  validate=True):
         super(_PiecewiseLinearFunction, self).__init__()
-        self._input = expression()
-        self._output = expression()
+        self._input = expression(input)
+        self._output = expression(output)
         self._breakpoints = breakpoints
         self._values = values
         if type(self._breakpoints) is not tuple:
             self._breakpoints = tuple(self._breakpoints)
         if type(self._values) is not tuple:
             self._values = tuple(self._values)
-        # call the setters
-        self.set_input(input)
-        self.set_output(output)
         if len(self._breakpoints) != len(self._values):
             raise ValueError(
                 "The number of breakpoints (%s) differs from "
@@ -217,15 +207,17 @@ class _PiecewiseLinearFunction(tiny_block):
 
     @property
     def input(self):
+        """Returns the expression that stores the input to
+        the piecewise function. The returned object can be updated
+        by assigning to its .expr property."""
         return self._input
-    def set_input(self, input):
-        self._input.expr = input
 
     @property
     def output(self):
+        """Returns the expression that stores the output of
+        the piecewise function. The returned object can be updated
+        by assigning to its .expr property."""
         return self._output
-    def set_output(self, output):
-        self._output.expr = output
 
     @property
     def breakpoints(self):
@@ -238,11 +230,13 @@ class _PiecewiseLinearFunction(tiny_block):
         return self._values
 
     def __call__(self, x):
+        """Evaluates the piecewise function using interpolation"""
         # Note: One could implement binary search here to
         #       speed this up. I don't see this
         #       functionality being used very often (and the
         #       list of breakpoints probably isn't too
-        #       large), so I'm doing it the easy way.
+        #       large), so I'm doing it the easy way for
+        #       now.
         for i in xrange(len(self.breakpoints)-1):
             xL = value(self.breakpoints[i])
             xU = value(self.breakpoints[i+1])
@@ -262,7 +256,7 @@ class _PiecewiseLinearFunction(tiny_block):
 class piecewise_sos2(_PiecewiseLinearFunction):
     """
     Expresses a piecewise linear function using
-    the SOS2 formulation
+    the SOS2 formulation.
     """
 
     def __init__(self, *args, **kwds):
@@ -307,7 +301,7 @@ registered_transforms['sos2'] = piecewise_sos2
 class piecewise_dcc(_PiecewiseLinearFunction):
     """
     Expresses a piecewise linear function using
-    the DCC formulation
+    the DCC formulation.
     """
 
     def __init__(self, *args, **kwds):
@@ -381,7 +375,7 @@ registered_transforms['dcc'] = piecewise_dcc
 class piecewise_cc(_PiecewiseLinearFunction):
     """
     Expresses a piecewise linear function using
-    the CC formulation
+    the CC formulation.
     """
 
     def __init__(self, *args, **kwds):
@@ -454,7 +448,7 @@ registered_transforms['cc'] = piecewise_cc
 class piecewise_mc(_PiecewiseLinearFunction):
     """
     Expresses a piecewise linear function using
-    the MC formulation
+    the MC formulation.
     """
 
     def __init__(self, *args, **kwds):
@@ -533,7 +527,7 @@ registered_transforms['mc'] = piecewise_mc
 class piecewise_inc(_PiecewiseLinearFunction):
     """
     Expresses a piecewise linear function using
-    the INC formulation
+    the INC formulation.
     """
 
     def __init__(self, *args, **kwds):
@@ -596,7 +590,7 @@ registered_transforms['inc'] = piecewise_inc
 class piecewise_dlog(_PiecewiseLinearFunction):
     """
     Expresses a piecewise linear function using
-    the DLOG formulation
+    the DLOG formulation.
     """
 
     def __init__(self, *args, **kwds):
@@ -713,7 +707,7 @@ registered_transforms['dlog'] = piecewise_dlog
 class piecewise_log(_PiecewiseLinearFunction):
     """
     Expresses a piecewise linear function using
-    the LOG formulation
+    the LOG formulation.
     """
 
     def __init__(self, *args, **kwds):
