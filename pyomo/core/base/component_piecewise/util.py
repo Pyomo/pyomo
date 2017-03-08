@@ -14,6 +14,21 @@ import six
 from six.moves import xrange
 from six import advance_iterator
 
+numpy_available = False
+try:
+    import numpy
+    numpy_available = True
+except:             #pragma:nocover
+    pass
+
+scipy_available = False
+try:
+    import scipy
+    import scipy.spatial
+    scipy_available = True
+except:             #pragma:nocover
+    pass
+
 def is_constant(vals):
     """Checks if a list of points is constant"""
     if len(vals) <= 1:
@@ -110,3 +125,37 @@ def characterize_function(breakpoints, values):
         return 3, slopes # concave
     else:
         return 5, slopes # none of the above
+
+def generate_delaunay(variables, num=10, **kwds):
+    """
+    Generate a Delaunay triangulation of the D-dimensional
+    bounded variable domain given a list of D variables.
+
+    Requires the numpy and scipy.spatial packages.
+    Args:
+        variables: A list of variables, each having a finite
+            upper and lower bound.
+        num (int): The number of grid points to generate for
+            each variable (default=10).
+        **kwds: All additional keywords are passed to the
+          scipy.spatial.Delaunay constructor.
+
+    Returns: A scipy.spatial.Delaunay object.
+    """
+    if not (numpy_available and scipy_available):             #pragma:nocover
+        raise ImportError(
+            "numpy and scipy are required")
+    linegrids = []
+    for v in variables:
+        if v.has_lb() and v.has_ub():
+            linegrids.append(numpy.linspace(v.lb, v.ub, num))
+        else:
+            raise ValueError(
+                "Variable %s does not have a "
+                "finite lower and upper bound.")
+    # generates a meshgrid and then flattens and transposes
+    # the meshgrid into an (npoints, D) shaped array of
+    # coordinates
+    points = numpy.vstack(numpy.meshgrid(*linegrids)).\
+             reshape(len(variables),-1).T
+    return scipy.spatial.Delaunay(points, **kwds)

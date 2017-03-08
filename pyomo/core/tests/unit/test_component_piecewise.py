@@ -1,4 +1,5 @@
 import pickle
+import abc
 
 import pyutilib.th as unittest
 from pyomo.core.base.component_interface import \
@@ -16,18 +17,33 @@ from pyomo.core.base.component_block import (IBlockStorage,
                                              block_dict,
                                              block_list,
                                              tiny_block)
-from pyomo.core.base.component_variable import variable
+from pyomo.core.base.component_variable import (variable,
+                                                variable_list)
 from pyomo.core.base.component_piecewise.transforms import \
-    (registered_transforms,
-     _PiecewiseLinearFunction,
-     piecewise,
-     piecewise_sos2,
-     piecewise_dcc,
-     piecewise_cc,
-     piecewise_mc,
-     piecewise_inc)
+    _PiecewiseLinearFunction
+import pyomo.core.base.component_piecewise.transforms as transforms
+from pyomo.core.base.component_piecewise.transforms_nd import \
+    _PiecewiseLinearFunctionND
+import pyomo.core.base.component_piecewise.transforms_nd as transforms_nd
 import pyomo.core.base.component_piecewise.util as util
 from pyomo.core.base.block import Block
+
+# for the multi-dimensional piecewise tests
+_test_v = None
+_test_tri = None
+_test_values = None
+def setUpModule():
+    global _test_v
+    global _test_tri
+    global _test_values
+    if util.numpy_available and util.scipy_available:
+        _test_v = variable_list(
+            variable(lb=i, ub=i+1) for i in range(3))
+        _test_tri = util.generate_delaunay(_test_v, num=4)
+        _test_values = []
+        for _xi in _test_tri.points:
+            _test_values.append(sum(_xi))
+        _test_values = util.numpy.array(_test_values)
 
 class Test_util(unittest.TestCase):
 
@@ -178,13 +194,47 @@ class Test_util(unittest.TestCase):
         self.assertEqual(fc, 5) # none of the above
         self.assertEqual(slopes, [1,-1,1])
 
+    def test_generate_delaunay(self):
+        vlist = variable_list()
+        vlist.append(variable(lb=0, ub=1))
+        vlist.append(variable(lb=1, ub=2))
+        vlist.append(variable(lb=2, ub=3))
+        if not (util.numpy_available and util.scipy_available):
+            with self.assertRaises(ImportError):
+                util.generate_delaunay(vlist)
+        else:
+            tri = util.generate_delaunay(vlist, num=2)
+            self.assertTrue(
+                isinstance(tri, util.scipy.spatial.Delaunay))
+            self.assertEqual(len(tri.simplices), 6)
+            self.assertEqual(len(tri.points), 8)
+
+            tri = util.generate_delaunay(vlist, num=3)
+            self.assertTrue(
+                isinstance(tri, util.scipy.spatial.Delaunay))
+            self.assertEqual(len(tri.simplices), 62)
+            self.assertEqual(len(tri.points), 27)
+
+        #
+        # Check cases where not all variables are bounded
+        #
+        vlist = variable_list()
+        vlist.append(variable(lb=0))
+        with self.assertRaises(ValueError):
+            util.generate_delaunay(vlist)
+
+        vlist = variable_list()
+        vlist.append(variable(ub=0))
+        with self.assertRaises(ValueError):
+            util.generate_delaunay(vlist)
+
 class Test_piecewise(unittest.TestCase):
 
     def test_pickle(self):
-        for key in registered_transforms:
-            p = piecewise([1,2,3],
-                          [1,2,1],
-                          repn=key)
+        for key in transforms.registered_transforms:
+            p = transforms.piecewise([1,2,3],
+                                     [1,2,1],
+                                     repn=key)
             self.assertEqual(p.parent, None)
             pup = pickle.loads(
                 pickle.dumps(p))
@@ -263,11 +313,11 @@ class Test_piecewise(unittest.TestCase):
             f(3.1)
 
     def test_type(self):
-        for key in registered_transforms:
-            p = piecewise([1,2,3],
-                          [1,2,1],
-                          repn=key)
-            self.assertTrue(isinstance(p, registered_transforms[key]))
+        for key in transforms.registered_transforms:
+            p = transforms.piecewise([1,2,3],
+                                     [1,2,1],
+                                     repn=key)
+            self.assertTrue(isinstance(p, transforms.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
             self.assertTrue(isinstance(p, IActiveObject))
             self.assertTrue(isinstance(p, IComponent))
@@ -277,21 +327,21 @@ class Test_piecewise(unittest.TestCase):
             self.assertTrue(isinstance(p, IBlockStorage))
 
     def test_bad_repn(self):
-        repn = 'sos2'
-        self.assertTrue(repn in registered_transforms)
-        piecewise([1,2,3],
-                  [1,2,1],
-                  repn=repn)
+        repn = list(transforms.registered_transforms.keys())[0]
+        self.assertTrue(repn in transforms.registered_transforms)
+        transforms.piecewise([1,2,3],
+                             [1,2,1],
+                             repn=repn)
 
         repn = '_bad_repn_'
-        self.assertFalse(repn in registered_transforms)
+        self.assertFalse(repn in transforms.registered_transforms)
         with self.assertRaises(ValueError):
-            piecewise([1,2,3],
-                      [1,2,1],
-                      repn=repn)
+            transforms.piecewise([1,2,3],
+                                 [1,2,1],
+                                 repn=repn)
 
     def test_init(self):
-        for key in registered_transforms:
+        for key in transforms.registered_transforms:
             for bound in ['lb','ub','eq','bad']:
                 for args in [([1,2,3], [1,2,1]),
                              ([1,2,3,4,5],[1,2,1,2,1]),
@@ -299,11 +349,11 @@ class Test_piecewise(unittest.TestCase):
                     kwds = {'repn': key, 'bound': bound}
                     if bound == 'bad':
                         with self.assertRaises(ValueError):
-                            piecewise(*args, **kwds)
+                            transforms.piecewise(*args, **kwds)
                     else:
-                        p = piecewise(*args, **kwds)
+                        p = transforms.piecewise(*args, **kwds)
                         self.assertTrue(
-                            isinstance(p, registered_transforms[key]))
+                            isinstance(p, transforms.registered_transforms[key]))
                         self.assertTrue(
                             isinstance(p, _PiecewiseLinearFunction))
                         self.assertEqual(p.active, True)
@@ -312,32 +362,153 @@ class Test_piecewise(unittest.TestCase):
     def test_bad_init_log_types(self):
         # lists are not of length: (2^n) + 1
         with self.assertRaises(ValueError):
-            piecewise([1,2,3,4],[1,2,3,4],repn='dlog')
+            transforms.piecewise([1,2,3,4],[1,2,3,4],repn='dlog')
         with self.assertRaises(ValueError):
-            piecewise([1,2,3,4],[1,2,3,4],repn='log')
+            transforms.piecewise([1,2,3,4],[1,2,3,4],repn='log')
 
     def test_step(self):
         breakpoints = [1,2,2]
         values = [1,0,1]
-        for key in registered_transforms:
+        for key in transforms.registered_transforms:
             if key == 'mc':
                 with self.assertRaises(AssertionError):
-                    piecewise(breakpoints, values, repn=key)
+                    transforms.piecewise(breakpoints, values, repn=key)
             else:
-                p = piecewise(breakpoints, values, repn=key)
+                p = transforms.piecewise(breakpoints, values, repn=key)
                 self.assertEqual(p.validate(), 4)
 
 class Test_piecewise_dict(_TestActiveComponentDictBase,
                           unittest.TestCase):
     _container_type = block_dict
-    _ctype_factory = lambda self: piecewise([1,2,3],
-                                            [1,2,1])
+    _ctype_factory = lambda self: transforms.piecewise([1,2,3],
+                                                       [1,2,1])
 
 class Test_piecewise_list(_TestActiveComponentListBase,
                           unittest.TestCase):
     _container_type = block_list
-    _ctype_factory = lambda self: piecewise([1,2,3],
-                                            [1,2,1])
+    _ctype_factory = lambda self: transforms.piecewise([1,2,3],
+                                                       [1,2,1])
+
+@unittest.skipUnless(util.numpy_available and util.scipy_available,
+                     "Numpy or Scipy is not available")
+class Test_piecewise_nd(unittest.TestCase):
+
+    def test_pickle(self):
+        for key in transforms_nd.registered_transforms:
+            p = transforms_nd.piecewise_nd(_test_tri,
+                                           _test_values,
+                                           repn=key)
+            self.assertEqual(p.parent, None)
+            pup = pickle.loads(
+                pickle.dumps(p))
+            self.assertEqual(pup.parent, None)
+            b = block()
+            b.p = p
+            self.assertIs(p.parent, b)
+            bup = pickle.loads(
+                pickle.dumps(b))
+            pup = bup.p
+            self.assertIs(pup.parent, bup)
+
+    def test_call(self):
+
+        #
+        # 2d points
+        #
+        vlist = variable_list([variable(lb=0, ub=1),
+                               variable(lb=0, ub=1)])
+        tri = util.generate_delaunay(vlist, num=3)
+        x, y = tri.points.T
+        values = x*y
+        f = _PiecewiseLinearFunctionND(tri, values)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, Block)
+        self.assertTrue(util.numpy.isclose(f(tri.points), values).all())
+        self.assertAlmostEqual(f([0,0]), 0.0)
+        self.assertAlmostEqual(f(util.numpy.array([0,0])), 0.0)
+        self.assertAlmostEqual(f([1,1]), 1.0)
+        self.assertAlmostEqual(f(util.numpy.array([1,1])), 1.0)
+
+        #
+        # 3d points
+        #
+        vlist = variable_list([variable(lb=0, ub=1),
+                               variable(lb=0, ub=1),
+                               variable(lb=0, ub=1)])
+        tri = util.generate_delaunay(vlist, num=10)
+        x, y, z = tri.points.T
+        values = x*y*z
+        f = _PiecewiseLinearFunctionND(tri, values)
+        self.assertTrue(f.parent is None)
+        self.assertEqual(f.ctype, Block)
+        self.assertTrue(util.numpy.isclose(f(tri.points), values).all())
+        self.assertAlmostEqual(f([0,0,0]), 0.0)
+        self.assertAlmostEqual(f(util.numpy.array([0,0,0])), 0.0)
+        self.assertAlmostEqual(f([1,1,1]), 1.0)
+        self.assertAlmostEqual(f(util.numpy.array([1,1,1])), 1.0)
+
+    def test_type(self):
+        for key in transforms_nd.registered_transforms:
+            p = transforms_nd.piecewise_nd(_test_tri,
+                                           _test_values,
+                                           repn=key)
+            self.assertTrue(isinstance(p, transforms_nd.registered_transforms[key]))
+            self.assertTrue(isinstance(p, ICategorizedObject))
+            self.assertTrue(isinstance(p, IActiveObject))
+            self.assertTrue(isinstance(p, IComponent))
+            self.assertTrue(isinstance(p, IComponentContainer))
+            self.assertTrue(isinstance(p, _IActiveComponentContainerMixin))
+            self.assertTrue(isinstance(p, tiny_block))
+            self.assertTrue(isinstance(p, IBlockStorage))
+
+    def test_bad_repn(self):
+        repn = list(transforms_nd.registered_transforms.keys())[0]
+        self.assertTrue(repn in transforms_nd.registered_transforms)
+        transforms_nd.piecewise_nd(_test_tri,
+                                   _test_values,
+                                   repn=repn)
+
+        repn = '_bad_repn_'
+        self.assertFalse(repn in transforms_nd.registered_transforms)
+        with self.assertRaises(ValueError):
+            transforms_nd.piecewise_nd(_test_tri,
+                                       _test_values,
+                                       repn=repn)
+
+    def test_init(self):
+        for key in transforms_nd.registered_transforms:
+            for bound in ['lb','ub','eq','bad']:
+                args = (_test_tri, _test_values)
+                kwds = {'repn': key, 'bound': bound}
+                if bound == 'bad':
+                    with self.assertRaises(ValueError):
+                        transforms_nd.piecewise_nd(*args, **kwds)
+                else:
+                    p = transforms_nd.piecewise_nd(*args, **kwds)
+                    self.assertTrue(
+                        isinstance(p, transforms_nd.registered_transforms[key]))
+                    self.assertTrue(
+                        isinstance(p, _PiecewiseLinearFunctionND))
+                    self.assertEqual(p.active, True)
+                    self.assertIs(p.parent, None)
+
+@unittest.skipUnless(util.numpy_available and util.scipy_available,
+                     "Numpy or Scipy is not available")
+class Test_piecewise_nd_dict(_TestActiveComponentDictBase,
+                             unittest.TestCase):
+    _container_type = block_dict
+    _ctype_factory = lambda self: \
+                     transforms_nd.piecewise_nd(_test_tri,
+                                                _test_values)
+
+@unittest.skipUnless(util.numpy_available and util.scipy_available,
+                     "Numpy or Scipy is not available")
+class Test_piecewise_nd_list(_TestActiveComponentListBase,
+                             unittest.TestCase):
+    _container_type = block_list
+    _ctype_factory = lambda self:\
+                     transforms_nd.piecewise_nd(_test_tri,
+                                                _test_values)
 
 if __name__ == "__main__":
     unittest.main()

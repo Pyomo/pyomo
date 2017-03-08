@@ -9,3 +9,4 @@
 
 import pyomo.core.base.component_piecewise.util
 import pyomo.core.base.component_piecewise.transforms
+import pyomo.core.base.component_piecewise.transforms_nd

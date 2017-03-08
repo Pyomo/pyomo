@@ -52,6 +52,8 @@ from pyomo.core.base.component_piecewise.transforms import (piecewise,
                                                             piecewise_inc,
                                                             piecewise_dlog,
                                                             piecewise_log)
+from pyomo.core.base.component_piecewise.transforms_nd import piecewise_nd
+
 from pyomo.core.base.expr import *
 from pyomo.core.base.set_types import (RealSet,
                                        IntegerSet,
