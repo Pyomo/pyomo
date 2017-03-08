@@ -9,25 +9,25 @@ matrix:
   - python: '2.7'
     env:                             CATEGORY="nightly"  EXTRAS="yes"
   #
-#  - python: '3.4'
-#    env:                             CATEGORY="nightly"  EXTRAS="yes"
-#  - python: '3.4'
-#    env:                             CATEGORY="parallel" EXTRAS="yes"
+  - python: '3.4'
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  - python: '3.4'
+    env:                             CATEGORY="parallel" EXTRAS="yes"
   #
-#  - python: '3.5'
-#    env:                             CATEGORY="nightly"
-#  - python: '3.5'
+  - python: '3.5'
+    env:                             CATEGORY="nightly"
+  - python: '3.5'
+    env:                             CATEGORY="nightly"  EXTRAS="yes"
+  - python: '3.5'
+    env:                             CATEGORY="parallel" EXTRAS="yes"
+  - python: '3.6'
+    env:                             CATEGORY="nightly"
+#  - python: '3.6'
 #    env:                             CATEGORY="nightly"  EXTRAS="yes"
-#  - python: '3.5'
-#    env:                             CATEGORY="parallel" EXTRAS="yes"
 #  - python: '3.6'
+#    env:                             CATEGORY="parallel" EXTRAS="yes"
+#  - python: pypy
 #    env:                             CATEGORY="nightly"
-#  - python: '3.6'
-#    env:                             CATEGORY="nightly"  EXTRAS="yes"
-#  - python: '3.6'
-#    env:                             CATEGORY="parallel" EXTRAS="yes"
-  - python: pypy
-    env:                             CATEGORY="nightly"  PYPY="yes"
   #
   #- python: '2.7'
   #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
@@ -40,38 +40,27 @@ install:
 #
 # Setup miniconda and activate the testenv environment
 #
-- echo "${PYPY}"
-- if [[ -z "${PYPY}" ]]; then
-     if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-        wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh || travis_terminate 1;
-     else
-        wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh || travis_terminate 1;
-     fi
-     bash miniconda.sh -b -p $HOME/miniconda || travis_terminate 1;
-     export PATH="$HOME/miniconda/bin:$PATH" || travis_terminate 1;
-     hash -r || travis_terminate 1;
-     conda create -f -y -n testenv python=${TRAVIS_PYTHON_VERSION} || travis_terminate 1;
-     source activate testenv || travis_terminate 1;
-     if [ -n "${EXTRAS}" ]; then
-        conda install -y --channel conda-forge pyomo.extras || travis_terminate 1;
-     fi
-     conda install -y --channel conda-forge glpk || travis_terminate 1;
-     conda install -y --channel cachemeorg ipopt_bin || travis_terminate 1;
-     conda install -y --channel conda-forge setuptools || travis_terminate 1;
+- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+     wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+  else
+     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   fi
+- bash miniconda.sh -b -p $HOME/miniconda
+- export PATH="$HOME/miniconda/bin:$PATH"
+- hash -r
+- conda create -f -y -n testenv python=${TRAVIS_PYTHON_VERSION}
+- source activate testenv
 #- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 #
 # Install supporting packages
 #
-- if [ -n "${YAML}" ]; then
-     pip install pyyaml || travis_terminate 1;
-  fi
-- if [ -n "${PYRO}" ];
-     then pip install $PYRO || travis_terminate 1;
-  fi
-- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then
-     pip install ordereddict || travis_terminate 1;
-  fi
+- if [ -n "${YAML}" ]; then pip install pyyaml; fi
+- if [ -n "${PYRO}" ]; then pip install $PYRO; fi
+- if [ -n "${EXTRAS}" ]; then conda install -y --channel conda-forge pyomo.extras; fi
+- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
+- conda install -y --channel conda-forge glpk
+- conda install -y --channel cachemeorg ipopt_bin
+- conda install -y --channel conda-forge setuptools
 - pip install xlrd
 - pip install openpyxl
 - pip install coverage
