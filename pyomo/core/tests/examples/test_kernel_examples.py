@@ -50,15 +50,20 @@ def setUpModule():
             testing_solvers[_solver, _io] = True
 
 @unittest.nottest
-def create_test_method(example, skip=None):
+def create_test_method(example):
     # It is important that this inner function has a name that
     # starts with 'test' in order for nose to discover it
     # after we assign it to the class. I have _no_ idea why
     # this is the case since we are returing the function object
     # and placing it on the class with a different name.
     def testmethod(self):
-        if skip is not None:
-            self.skipTest(skip)
+        if basename(example) == "piecewise_nd_functions.py":
+            if (not numpy_available) or \
+               (not scipy_available) or \
+               (not testing_solvers['ipopt','nl']) or \
+               (not testing_solvers['glpk','lp']):
+                print(numpy_available, scipy_available, testing_solvers['ipopt','nl'], testing_solvers['glpk','lp'])
+                self.skipTest("Numpy or Scipy or Ipopt or Glpk is not available")
         rc, log = pyutilib.subprocess.run(['python',example])
         self.assertEqual(rc, 0, msg=log)
     return testmethod
@@ -67,19 +72,12 @@ def create_test_method(example, skip=None):
 class TestKernelExamples(unittest.TestCase):
     pass
 for filename in examples:
-    skip = None
     testname = basename(filename)
     assert testname.endswith(".py")
-    if testname == "piecewise_nd_functions.py":
-        if (not numpy_available) or \
-           (not scipy_available) or \
-           (not testing_solvers['ipopt','nl']) or \
-           (not testing_solvers['glpk','lp']):
-            skip = "Numpy or Scipy or Ipopt or Glpk is not available"
     testname = "test_"+testname[:-3]+"_example"
     setattr(TestKernelExamples,
             testname,
-            create_test_method(filename, skip=skip))
+            create_test_method(filename))
 
 if __name__ == "__main__":
     unittest.main()
