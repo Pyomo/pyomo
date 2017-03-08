@@ -194,6 +194,8 @@ class Test_util(unittest.TestCase):
         self.assertEqual(fc, 5) # none of the above
         self.assertEqual(slopes, [1,-1,1])
 
+    @unittest.skipUnless(util.numpy_available and util.scipy_available,
+                         "Numpy or Scipy is not available")
     def test_generate_delaunay(self):
         vlist = variable_list()
         vlist.append(variable(lb=0, ub=1))
