@@ -9,7 +9,6 @@
 
 __all__ = ("ComponentDict",)
 
-import weakref
 import collections
 try:
     from collections import OrderedDict
@@ -18,9 +17,7 @@ except ImportError:                         #pragma:nocover
 
 from pyomo.core.base.component_interface import \
     (IComponentContainer,
-     _SimpleContainerMixin,
-     _abstract_readwrite_property)
-from pyomo.core.base.component_map import ComponentMap
+     _SimpleContainerMixin)
 
 import six
 from six import itervalues, iteritems

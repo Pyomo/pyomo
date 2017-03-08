@@ -16,6 +16,7 @@ from pyomo.core.base.component_interface import \
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
+from pyomo.core.base.component_tuple import ComponentTuple
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.set_types import (RealSet,
@@ -272,6 +273,24 @@ class variable(IVariable):
                                             None, None)
     domain = property(fset=_set_domain,
                       doc=_set_domain.__doc__)
+
+class variable_tuple(ComponentTuple):
+    """A tuple-style container for variables."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in var.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_data")
+    if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+        __slots__ = list(__slots__) + ["__weakref__"]
+
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        super(variable_tuple, self).__init__(*args, **kwds)
 
 class variable_list(ComponentList):
     """A list-style container for variables."""

@@ -25,6 +25,7 @@ from pyomo.core.base.component_interface import \
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
+from pyomo.core.base.component_tuple import ComponentTuple
 from pyomo.core.base.component_list import ComponentList
 
 from pyomo.core.base.numvalue import (ZeroConstant,
@@ -701,6 +702,26 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
             if v.fixed:
                 constant += value(c) * v()
         return constant
+
+class constraint_tuple(ComponentTuple,
+                       _IActiveComponentContainerMixin):
+    """A tuple-style container for constraints."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in constraint.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_active",
+                 "_data")
+    if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+        __slots__ = list(__slots__) + ["__weakref__"]
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        self._active = True
+        super(constraint_tuple, self).__init__(*args, **kwds)
 
 class constraint_list(ComponentList,
                       _IActiveComponentContainerMixin):

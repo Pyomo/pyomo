@@ -1948,10 +1948,12 @@ register_component(
 # This is temporary.
 from pyomo.core.base.component_block import (block,
                                              tiny_block,
+                                             block_tuple,
                                              block_list,
                                              block_dict)
 
 block._ctype = Block
+block_tuple._ctype = Block
 block_list._ctype = Block
 block_dict._ctype = Block
 tiny_block._ctype = Block

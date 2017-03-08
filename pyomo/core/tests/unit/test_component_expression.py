@@ -7,12 +7,15 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
+from pyomo.core.tests.unit.test_component_tuple import \
+    _TestComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
 from pyomo.core.base.component_expression import (IExpression,
                                                   expression,
                                                   data_expression,
                                                   expression_dict,
+                                                  expression_tuple,
                                                   expression_list)
 from pyomo.core.base.numvalue import (NumericValue,
                                       is_fixed,
@@ -351,6 +354,11 @@ class Test_data_expression(_Test_expression_base,
 class Test_expression_dict(_TestComponentDictBase,
                            unittest.TestCase):
     _container_type = expression_dict
+    _ctype_factory = lambda self: expression()
+
+class Test_expression_tuple(_TestComponentTupleBase,
+                           unittest.TestCase):
+    _container_type = expression_tuple
     _ctype_factory = lambda self: expression()
 
 class Test_expression_list(_TestComponentListBase,

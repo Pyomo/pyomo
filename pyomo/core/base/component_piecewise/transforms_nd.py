@@ -22,7 +22,7 @@ from pyomo.core.base.component_variable import (variable,
 from pyomo.core.base.component_constraint import (linear_constraint,
                                                   constraint_list)
 from pyomo.core.base.component_expression import (expression,
-                                                  expression_list)
+                                                  expression_tuple)
 import pyomo.core.base.component_piecewise.util
 
 logger = logging.getLogger('pyomo.core')
@@ -126,7 +126,7 @@ class _PiecewiseLinearFunctionND(tiny_block):
         self._values = values
         if input is None:
             input = [None]*ndim
-        self._input = expression_list(
+        self._input = expression_tuple(
             expression(input[i]) for i in range(ndim))
         self._output = expression(output)
 

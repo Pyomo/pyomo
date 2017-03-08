@@ -1202,9 +1202,11 @@ register_component(ConstraintList, "A list of constraint expressions.")
 # This is temporary.
 from pyomo.core.base.component_constraint import (constraint,
                                                   linear_constraint,
+                                                  constraint_tuple,
                                                   constraint_list,
                                                   constraint_dict)
 constraint._ctype = Constraint
 linear_constraint._ctype = Constraint
+constraint_tuple._ctype = Constraint
 constraint_list._ctype = Constraint
 constraint_dict._ctype = Constraint

@@ -15,28 +15,35 @@ import pyomo.opt.base
 from pyomo.core.base.component_map import ComponentMap
 from pyomo.core.base.component_block import (block,
                                              tiny_block,
+                                             block_tuple,
                                              block_list,
                                              block_dict)
 from pyomo.core.base.component_variable import (variable,
+                                                variable_tuple,
                                                 variable_list,
                                                 variable_dict)
 from pyomo.core.base.component_constraint import (constraint,
                                                   linear_constraint,
+                                                  constraint_tuple,
                                                   constraint_list,
                                                   constraint_dict)
 from pyomo.core.base.component_parameter import (parameter,
+                                                 parameter_tuple,
                                                  parameter_list,
                                                  parameter_dict)
 from pyomo.core.base.component_expression import (expression,
                                                   data_expression,
+                                                  expression_tuple,
                                                   expression_list,
                                                   expression_dict)
 from pyomo.core.base.component_objective import (objective,
+                                                 objective_tuple,
                                                  objective_list,
                                                  objective_dict)
 from pyomo.core.base.component_sos import (sos,
                                            sos1,
                                            sos2,
+                                           sos_tuple,
                                            sos_list,
                                            sos_dict)
 from pyomo.core.base.component_suffix import (suffix,

@@ -8,12 +8,15 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
+from pyomo.core.tests.unit.test_component_tuple import \
+    _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.base.component_constraint import (IConstraint,
                                                   constraint,
                                                   linear_constraint,
                                                   constraint_dict,
+                                                  constraint_tuple,
                                                   constraint_list)
 from pyomo.core.base.component_variable import variable
 from pyomo.core.base.component_parameter import parameter
@@ -1347,6 +1350,11 @@ class Test_linear_constraint(unittest.TestCase):
 class Test_constraint_dict(_TestActiveComponentDictBase,
                            unittest.TestCase):
     _container_type = constraint_dict
+    _ctype_factory = lambda self: constraint()
+
+class Test_constraint_tuple(_TestActiveComponentTupleBase,
+                            unittest.TestCase):
+    _container_type = constraint_tuple
     _ctype_factory = lambda self: constraint()
 
 class Test_constraint_list(_TestActiveComponentListBase,

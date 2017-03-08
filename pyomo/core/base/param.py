@@ -932,8 +932,10 @@ register_component(Param, "Parameter data that is used to define a model instanc
 # Setting these properties here avoids a circular import.
 # This is temporary.
 from pyomo.core.base.component_parameter import (parameter,
+                                                 parameter_tuple,
                                                  parameter_list,
                                                  parameter_dict)
 parameter._ctype = Param
+parameter_tuple._ctype = Param
 parameter_list._ctype = Param
 parameter_dict._ctype = Param

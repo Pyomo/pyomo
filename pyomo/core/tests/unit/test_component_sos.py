@@ -6,6 +6,8 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  _IActiveComponentMixin)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
+from pyomo.core.tests.unit.test_component_tuple import \
+    _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.base.component_sos import (ISOS,
@@ -13,6 +15,7 @@ from pyomo.core.base.component_sos import (ISOS,
                                            sos1,
                                            sos2,
                                            sos_dict,
+                                           sos_tuple,
                                            sos_list)
 from pyomo.core.base.component_block import block
 from pyomo.core.base.component_variable import variable
@@ -159,6 +162,11 @@ class Test_sos(unittest.TestCase):
 class Test_sos_dict(_TestActiveComponentDictBase,
                     unittest.TestCase):
     _container_type = sos_dict
+    _ctype_factory = lambda self: sos([variable()])
+
+class Test_sos_tuple(_TestActiveComponentTupleBase,
+                     unittest.TestCase):
+    _container_type = sos_tuple
     _ctype_factory = lambda self: sos([variable()])
 
 class Test_sos_list(_TestActiveComponentListBase,

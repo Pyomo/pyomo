@@ -18,6 +18,7 @@ from pyomo.core.base.component_interface import \
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
+from pyomo.core.base.component_tuple import ComponentTuple
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.numvalue import (NumericValue,
                                       is_fixed,
@@ -173,6 +174,24 @@ class data_expression(expression):
         if potentially_variable(expr):
             raise ValueError("Expression is not restricted to data.")
         self._expr = as_numeric(expr) if (expr is not None) else None
+
+class expression_tuple(ComponentTuple):
+    """A tuple-style container for expressions."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in expression.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_data")
+    if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+        __slots__ = list(__slots__) + ["__weakref__"]
+
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        super(expression_tuple, self).__init__(*args, **kwds)
 
 class expression_list(ComponentList):
     """A list-style container for expressions."""

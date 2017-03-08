@@ -697,8 +697,10 @@ register_component(ObjectiveList,
 # Setting these properties here avoids a circular import.
 # This is temporary.
 from pyomo.core.base.component_objective import (objective,
+                                                 objective_tuple,
                                                  objective_list,
                                                  objective_dict)
 objective._ctype = Objective
+objective_tuple._ctype = Objective
 objective_list._ctype = Objective
 objective_dict._ctype = Objective

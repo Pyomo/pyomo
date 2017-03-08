@@ -8,11 +8,14 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
+from pyomo.core.tests.unit.test_component_tuple import \
+    _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.base.component_objective import (IObjective,
                                                  objective,
                                                  objective_dict,
+                                                 objective_tuple,
                                                  objective_list,
                                                  minimize,
                                                  maximize)
@@ -104,6 +107,11 @@ class Test_objective(unittest.TestCase):
 class Test_objective_dict(_TestActiveComponentDictBase,
                           unittest.TestCase):
     _container_type = objective_dict
+    _ctype_factory = lambda self: objective()
+
+class Test_objective_tuple(_TestActiveComponentTupleBase,
+                           unittest.TestCase):
+    _container_type = objective_tuple
     _ctype_factory = lambda self: objective()
 
 class Test_objective_list(_TestActiveComponentListBase,

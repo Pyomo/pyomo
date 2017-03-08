@@ -10,6 +10,8 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  _IActiveComponentContainerMixin)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
+from pyomo.core.tests.unit.test_component_tuple import \
+    _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
 from pyomo.core.base.component_map import ComponentMap
@@ -34,6 +36,7 @@ from pyomo.core.base.component_variable import (IVariable,
 from pyomo.core.base.component_block import (IBlockStorage,
                                              block,
                                              block_dict,
+                                             block_tuple,
                                              block_list,
                                              tiny_block)
 from pyomo.core.base.block import Block
@@ -1885,6 +1888,11 @@ class Test_tiny_block_clone(_Test_tiny_block, unittest.TestCase):
 class Test_block_dict(_TestActiveComponentDictBase,
                       unittest.TestCase):
     _container_type = block_dict
+    _ctype_factory = lambda self: block()
+
+class Test_block_tuple(_TestActiveComponentTupleBase,
+                       unittest.TestCase):
+    _container_type = block_tuple
     _ctype_factory = lambda self: block()
 
 class Test_block_list(_TestActiveComponentListBase,

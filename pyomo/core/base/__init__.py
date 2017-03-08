@@ -26,6 +26,7 @@ from pyomo.core.base.symbol_map import *
 # Experimental component interface
 #
 import pyomo.core.base.component_interface
+import pyomo.core.base.component_tuple
 import pyomo.core.base.component_list
 import pyomo.core.base.component_dict
 import pyomo.core.base.component_block

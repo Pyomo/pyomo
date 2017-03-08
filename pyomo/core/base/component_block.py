@@ -26,6 +26,7 @@ from pyomo.core.base.component_objective import IObjective
 from pyomo.core.base.component_variable import IVariable
 from pyomo.core.base.component_constraint import IConstraint
 from pyomo.core.base.component_dict import ComponentDict
+from pyomo.core.base.component_tuple import ComponentTuple
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.component_map import ComponentMap
 from pyomo.core.base.component_suffix import import_suffix_generator
@@ -926,6 +927,27 @@ class block(_block_base, IBlockStorage):
 
     # TODO
     #def write(self, ...):
+
+class block_tuple(ComponentTuple,
+                  _IActiveComponentContainerMixin):
+    """A tuple-style container for blocks."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in block.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_active",
+                 "_data")
+    if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+        __slots__ = list(__slots__) + ["__weakref__"]
+
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        self._active = True
+        super(block_tuple, self).__init__(*args, **kwds)
 
 class block_list(ComponentList,
                  _IActiveComponentContainerMixin):

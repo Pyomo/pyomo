@@ -62,6 +62,8 @@ class _TestComponentListBase(object):
         self.assertFalse(isinstance(clist, IComponent))
         self.assertTrue(isinstance(clist, collections.Sequence))
         self.assertTrue(issubclass(type(clist), collections.Sequence))
+        self.assertTrue(isinstance(clist, collections.MutableSequence))
+        self.assertTrue(issubclass(type(clist), collections.MutableSequence))
 
     def test_len1(self):
         c = self._container_type()
@@ -214,6 +216,8 @@ class _TestComponentListBase(object):
             self._ctype_factory() for i in index)
         raw_list = c[:]
         self.assertEqual(type(raw_list), list)
+        for c1, c2 in zip(reversed(c), reversed(raw_list)):
+            self.assertEqual(id(c1), id(c2))
         c.reverse()
         raw_list.reverse()
         for c1, c2 in zip(c, raw_list):

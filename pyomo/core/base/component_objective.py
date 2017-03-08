@@ -16,6 +16,7 @@ from pyomo.core.base.component_interface import \
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
+from pyomo.core.base.component_tuple import ComponentTuple
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.numvalue import as_numeric
 from pyomo.core.base.component_expression import IExpression
@@ -95,6 +96,26 @@ class objective(IObjective):
                 "Objective sense must be set to one of: "
                 "[minimize (%s), maximize (%s)]. Invalid "
                 "value: %s'" % (minimize, maximize, sense))
+
+class objective_tuple(ComponentTuple, _IActiveComponentContainerMixin):
+    """A tuple-style container for objectives."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in objective.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_active",
+                 "_data")
+    if six.PY3:
+        __slots__ = list(__slots__) + ["__weakref__"]
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        self._active = True
+        super(objective_tuple, self).__init__(*args, **kwds)
 
 class objective_list(ComponentList, _IActiveComponentContainerMixin):
     """A list-style container for objectives."""

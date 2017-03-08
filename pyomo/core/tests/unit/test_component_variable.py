@@ -8,6 +8,8 @@ from pyomo.core.base.component_interface import (ICategorizedObject,
                                                  IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
+from pyomo.core.tests.unit.test_component_tuple import \
+    _TestComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
 from pyomo.core.base.numvalue import (NumericValue,
@@ -19,6 +21,7 @@ from pyomo.core.base.component_variable import \
     (IVariable,
      variable,
      variable_dict,
+     variable_tuple,
      variable_list,
      _extract_domain_type_and_bounds)
 from pyomo.core.base.var import Var
@@ -659,6 +662,11 @@ class Test_variable(unittest.TestCase):
 class Test_variable_dict(_TestComponentDictBase,
                          unittest.TestCase):
     _container_type = variable_dict
+    _ctype_factory = lambda self: variable()
+
+class Test_variable_tuple(_TestComponentTupleBase,
+                          unittest.TestCase):
+    _container_type = variable_tuple
     _ctype_factory = lambda self: variable()
 
 class Test_variable_list(_TestComponentListBase,

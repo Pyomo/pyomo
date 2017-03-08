@@ -16,6 +16,7 @@ from pyomo.core.base.component_interface import \
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.base.component_dict import ComponentDict
+from pyomo.core.base.component_tuple import ComponentTuple
 from pyomo.core.base.component_list import ComponentList
 from pyomo.core.base.numvalue import NumericValue
 
@@ -89,6 +90,24 @@ class parameter(IParameter):
     @value.setter
     def value(self, value):
         self._value = value
+
+class parameter_tuple(ComponentTuple):
+    """A tuple-style container for parameters."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in param.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_data")
+    if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+        __slots__ = list(__slots__) + ["__weakref__"]
+
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        super(parameter_tuple, self).__init__(*args, **kwds)
 
 class parameter_list(ComponentList):
     """A list-style container for parameters."""
