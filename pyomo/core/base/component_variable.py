@@ -158,6 +158,18 @@ class IVariable(IComponent, NumericValue):
             (self.lb >= 0) and \
             (self.ub <= 1)
 
+    def has_lb(self):
+        """Returns True when the lower bound is not None or
+        negative infinity"""
+        return not ((self.lb is None) or \
+                    (self.lb == float('-inf')))
+
+    def has_ub(self):
+        """Returns True when the upper bound is not None or
+        positive infinity"""
+        return not ((self.ub is None) or \
+                    (self.ub == float('inf')))
+
 # TODO?
 #    def is_semicontinuous(self):
 #        """

@@ -43,7 +43,10 @@ class Test_variable(unittest.TestCase):
 
     def test_extract_domain_type_and_bounds(self):
         # test an edge case
-        domain_type, lb, ub = _extract_domain_type_and_bounds(None, None, None, None)
+        domain_type, lb, ub = _extract_domain_type_and_bounds(None,
+                                                              None,
+                                                              None,
+                                                              None)
         self.assertIs(domain_type, RealSet)
         self.assertIs(lb, None)
         self.assertIs(ub, None)
@@ -562,6 +565,53 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.lb, -1)
         self.assertEqual(v.ub, 0)
         self.assertEqual(v.bounds, (-1,0))
+
+    def test_has_lb_ub(self):
+        v = variable()
+        self.assertEqual(v.has_lb(), False)
+        self.assertEqual(v.lb, None)
+        self.assertEqual(v.has_ub(), False)
+        self.assertEqual(v.ub, None)
+
+        v.lb = float('-inf')
+        self.assertEqual(v.has_lb(), False)
+        self.assertEqual(v.lb, float('-inf'))
+        self.assertEqual(v.has_ub(), False)
+        self.assertEqual(v.ub, None)
+
+        v.ub = float('inf')
+        self.assertEqual(v.has_lb(), False)
+        self.assertEqual(v.lb, float('-inf'))
+        self.assertEqual(v.has_ub(), False)
+        self.assertEqual(v.ub, float('inf'))
+
+        v.lb = 0
+        self.assertEqual(v.has_lb(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.has_ub(), False)
+        self.assertEqual(v.ub, float('inf'))
+
+        v.ub = 0
+        self.assertEqual(v.has_lb(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.has_ub(), True)
+        self.assertEqual(v.ub, 0)
+
+        #
+        # edge cases
+        #
+
+        v.lb = float('inf')
+        self.assertEqual(v.has_lb(), True)
+        self.assertEqual(v.lb, float('inf'))
+        self.assertEqual(v.has_ub(), True)
+        self.assertEqual(v.ub, 0)
+
+        v.ub = float('-inf')
+        self.assertEqual(v.has_lb(), True)
+        self.assertEqual(v.lb, float('inf'))
+        self.assertEqual(v.has_ub(), True)
+        self.assertEqual(v.ub, float('-inf'))
 
     def test_fix_free(self):
         v = variable()
