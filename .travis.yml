@@ -26,6 +26,8 @@ matrix:
     env:                             CATEGORY="nightly"  EXTRAS="yes"
   - python: '3.6'
     env:                             CATEGORY="parallel" EXTRAS="yes"
+  - python: pypy
+    env:                             CATEGORY="nightly"  PYPY="yes"
   #
   #- python: '2.7'
   #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
@@ -56,9 +58,9 @@ install:
 - if [ -n "${PYRO}" ]; then pip install $PYRO; fi
 - if [ -n "${EXTRAS}" ]; then conda install -y --channel conda-forge pyomo.extras; fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
-- conda install -y --channel conda-forge glpk
-- conda install -y --channel cachemeorg ipopt_bin
-- conda install -y --channel conda-forge setuptools
+- if [ -n "${PYPY}" ]; conda install -y --channel conda-forge glpk; fi
+- if [ -n "${PYPY}" ]; conda install -y --channel cachemeorg ipopt_bin; fi
+- if [ -n "${PYPY}" ]; conda install -y --channel conda-forge setuptools; fi
 - pip install xlrd
 - pip install openpyxl
 - pip install coverage
