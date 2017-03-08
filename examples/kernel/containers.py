@@ -1,17 +1,17 @@
-import pyomo.core.kernel as pk
+import pyomo.core.kernel as pmo
 
 #
 # List containers
 #
 
-vl = pk.variable_list(
-    pk.variable() for i in range(10))
+vl = pmo.variable_list(
+    pmo.variable() for i in range(10))
 
-cl = pk.constraint_list()
+cl = pmo.constraint_list()
 for i in range(10):
-    cl.append(pk.constraint(vl[-1] == 1))
+    cl.append(pmo.constraint(vl[-1] == 1))
 
-cl.insert(0, pk.constraint(vl[0]**2 >= 1))
+cl.insert(0, pmo.constraint(vl[0]**2 >= 1))
 
 del cl[0]
 
@@ -20,21 +20,21 @@ del cl[0]
 #
 
 # uses OrderedDict when ordered=True
-vd = pk.variable_dict(
-    ((str(i), pk.variable()) for i in range(10)),
+vd = pmo.variable_dict(
+    ((str(i), pmo.variable()) for i in range(10)),
     ordered=True)
 
-cd = pk.constraint_dict(
-    (i, pk.constraint(v == 1)) for i,v in vd.items())
+cd = pmo.constraint_dict(
+    (i, pmo.constraint(v == 1)) for i,v in vd.items())
 
-cd = pk.constraint_dict()
+cd = pmo.constraint_dict()
 for i, v in vd.items():
-    cd[i] = pk.constraint(v == 1)
+    cd[i] = pmo.constraint(v == 1)
 
-cd = pk.constraint_dict()
-cd.update((i, pk.constraint()) for i,v in vd.items())
+cd = pmo.constraint_dict()
+cd.update((i, pmo.constraint()) for i,v in vd.items())
 
-cd[None] = pk.constraint()
+cd[None] = pmo.constraint()
 
 del cd[None]
 
@@ -42,10 +42,10 @@ del cd[None]
 # Nesting containers
 #
 
-b = pk.block()
-b.bd = pk.block_dict()
-b.bd[None] = pk.block_dict()
-b.bd[None][1] = pk.block()
-b.bd[None][1].x = pk.variable()
-b.bd['a'] = pk.block_list()
-b.bd['a'].append(pk.block())
+b = pmo.block()
+b.bd = pmo.block_dict()
+b.bd[None] = pmo.block_dict()
+b.bd[None][1] = pmo.block()
+b.bd[None][1].x = pmo.variable()
+b.bd['a'] = pmo.block_list()
+b.bd['a'].append(pmo.block())

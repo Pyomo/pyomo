@@ -1,42 +1,42 @@
-import pyomo.core.kernel as pk
+import pyomo.core.kernel as pmo
 
 #
 # Blocks
 #
 
 # define a simple optimization model
-b = pk.block()
-b.x = pk.variable()
-b.c = pk.constraint(expr= b.x >= 1)
-b.o = pk.objective(expr= b.x)
+b = pmo.block()
+b.x = pmo.variable()
+b.c = pmo.constraint(expr= b.x >= 1)
+b.o = pmo.objective(expr= b.x)
 
 # define an optimization model with indexed containers
-b = pk.block()
+b = pmo.block()
 
-b.p = pk.parameter()
-b.plist = pk.parameter_list(pk.parameter()
+b.p = pmo.parameter()
+b.plist = pmo.parameter_list(pmo.parameter()
+                             for i in range(10))
+b.pdict = pmo.parameter_dict(((i,j), pmo.parameter())
+                             for i in range(10)
+                             for j in range(10))
+
+b.x = pmo.variable()
+b.xlist = pmo.variable_list(pmo.variable()
                             for i in range(10))
-b.pdict = pk.parameter_dict(((i,j), pk.parameter())
+b.xdict = pmo.variable_dict(((i,j), pmo.variable())
                             for i in range(10)
                             for j in range(10))
 
-b.x = pk.variable()
-b.xlist = pk.variable_list(pk.variable()
-                           for i in range(10))
-b.xdict = pk.variable_dict(((i,j), pk.variable())
-                           for i in range(10)
-                           for j in range(10))
-
-b.c = pk.constraint(b.x >= 1)
-b.clist = pk.constraint_list(
-    pk.constraint(b.xlist[i] >= i)
+b.c = pmo.constraint(b.x >= 1)
+b.clist = pmo.constraint_list(
+    pmo.constraint(b.xlist[i] >= i)
     for i in range(10))
-b.cdict = pk.constraint_dict(
-    ((i,j), pk.constraint(b.xdict[i,j] >= i * j))
+b.cdict = pmo.constraint_dict(
+    ((i,j), pmo.constraint(b.xdict[i,j] >= i * j))
     for i in range(10)
     for j in range(10))
 
-b.o = pk.objective(
+b.o = pmo.objective(
     b.x + sum(b.xlist) + sum(b.xdict.values()))
 
 #
@@ -45,17 +45,17 @@ b.o = pk.objective(
 
 # The tiny_block class uses more efficient storage for the
 # case where there are a small number children on a block.
-class Widget(pk.tiny_block):
+class Widget(pmo.tiny_block):
     def __init__(self, p, input=None):
         super(Widget, self).__init__()
-        self.p = pk.parameter(value=p)
-        self.input = pk.expression(expr=input)
-        self.output = pk.variable()
-        self.c = pk.constraint(
+        self.p = pmo.parameter(value=p)
+        self.input = pmo.expression(expr=input)
+        self.output = pmo.variable()
+        self.c = pmo.constraint(
             self.output == self.input**2 / self.p)
 
-b = pk.block()
-b.x = pk.variable()
-b.widgets = pk.block_list()
+b = pmo.block()
+b.x = pmo.variable()
+b.widgets = pmo.block_list()
 for i in range(10):
     b.widgets.append(Widget(i, input=b.x))

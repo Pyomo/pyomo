@@ -1,4 +1,4 @@
-import pyomo.core.kernel as pk
+import pyomo.core.kernel as pmo
 
 #
 # Piecewise linear constraints
@@ -7,20 +7,20 @@ import pyomo.core.kernel as pk
 breakpoints = [1,2,3,4]
 values = [1,2,1,2]
 
-x = pk.variable()
-y = pk.variable()
-p = pk.piecewise(breakpoints,
-                 values,
-                 input=x,
-                 output=y,
-                 repn='sos2',
-                 bound='eq')
+x = pmo.variable()
+y = pmo.variable()
+p = pmo.piecewise(breakpoints,
+                  values,
+                  input=x,
+                  output=y,
+                  repn='sos2',
+                  bound='eq')
 
 # change the input and output variables
-z = pk.variable()
-q = pk.variable()
-p.set_input(z)
-p.set_output(q)
+z = pmo.variable()
+q = pmo.variable()
+p.input.expr = z
+p.output.expr = q
 
 # evalute the function
 assert p(1) == 1
@@ -31,21 +31,21 @@ assert p(3) == 1
 assert p(2.5) == 1.5
 assert p(4) == 2
 
-breakpoints = [pk.parameter(1),
-               pk.parameter(2),
-               pk.parameter(3),
-               pk.parameter(None)]
-values = [pk.parameter(1),
-          pk.parameter(2),
-          pk.parameter(1),
-          pk.parameter(None)]
-p = pk.piecewise(breakpoints,
-                 values,
-                 input=x,
-                 output=y,
-                 repn='sos2',
-                 bound='eq',
-                 validate=False)
+breakpoints = [pmo.parameter(1),
+               pmo.parameter(2),
+               pmo.parameter(3),
+               pmo.parameter(None)]
+values = [pmo.parameter(1),
+          pmo.parameter(2),
+          pmo.parameter(1),
+          pmo.parameter(None)]
+p = pmo.piecewise(breakpoints,
+                  values,
+                  input=x,
+                  output=y,
+                  repn='sos2',
+                  bound='eq',
+                  validate=False)
 
 # change the function parameters and
 # validate that the inputs are correct
@@ -65,20 +65,18 @@ assert p(4) == 2
 #
 # Example model (piecewise linear objective)
 #
-import pyomo.environ
-
 breakpoints = [-1.0, 0.0, 1.0, 2.0]
 function_points = [2.0, -2.5, 3.0, 1.0]
 
-m = pk.block()
+m = pmo.block()
 
-m.x = pk.variable()
-m.y = pk.variable()
+m.x = pmo.variable()
+m.y = pmo.variable()
 
-m.o = pk.objective(m.y)
+m.o = pmo.objective(m.y)
 
-m.pw = pk.piecewise(breakpoints,
-                    function_points,
-                    input=m.x,
-                    output=m.y,
-                    repn='inc')
+m.pw = pmo.piecewise(breakpoints,
+                     function_points,
+                     input=m.x,
+                     output=m.y,
+                     repn='inc')

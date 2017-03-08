@@ -1,56 +1,56 @@
-import pyomo.core.kernel as pk
+import pyomo.core.kernel as pmo
 
 #
 # Continuous variables
 #
 
-v = pk.variable()
+v = pmo.variable()
 
-v = pk.variable(domain=pk.Reals)
+v = pmo.variable(domain=pmo.Reals)
 
-v = pk.variable(domain=pk.NonNegativeReals,
-                ub=10)
+v = pmo.variable(domain=pmo.NonNegativeReals,
+                 ub=10)
 
-v = pk.variable(domain_type=pk.RealSet,
-                lb=1)
+v = pmo.variable(domain_type=pmo.RealSet,
+                 lb=1)
 
 # error (because domain lower bound is finite)
-#v = pk.variable(domain=pk.NonNegativeReals,
-#                lb=1)
+#v = pmo.variable(domain=pmo.NonNegativeReals,
+#                 lb=1)
 
 #
 # Discrete variables
 #
 
-v = pk.variable(domain=pk.Binary)
+v = pmo.variable(domain=pmo.Binary)
 
-v = pk.variable(domain=pk.Integers)
+v = pmo.variable(domain=pmo.Integers)
 
-v = pk.variable(domain=pk.NonNegativeIntegers,
-                ub=10)
+v = pmo.variable(domain=pmo.NonNegativeIntegers,
+                 ub=10)
 
-v = pk.variable(domain_type=pk.IntegerSet,
-                lb=1)
+v = pmo.variable(domain_type=pmo.IntegerSet,
+                 lb=1)
 
 # error (because domain upper bound is finite)
-#v = pk.variable(domain=pk.NegativeIntegers,
-#                ub=10)
+#v = pmo.variable(domain=pmo.NegativeIntegers,
+#                 ub=10)
 
 #
 # Usage
 #
 
-v = pk.variable()
+v = pmo.variable()
 assert v.value == None
 assert v.lb == None
 assert v.ub == None
 assert v.fixed == False
-assert v.domain_type == pk.RealSet
+assert v.domain_type == pmo.RealSet
 
 # set the value
 v.value = 2
 assert v.value == 2
-assert pk.value(v**2) == 4
+assert pmo.value(v**2) == 4
 
 # set the bounds
 v.lb = 10
@@ -59,20 +59,20 @@ assert v.lb == 10
 assert v.ub == 20
 
 # set the domain (always overwrites bounds, even if infinite)
-v.domain = pk.Reals
+v.domain = pmo.Reals
 assert v.lb == None
 assert v.ub == None
-assert v.domain_type == pk.RealSet
-v.domain = pk.Binary
+assert v.domain_type == pmo.RealSet
+v.domain = pmo.Binary
 assert v.lb == 0
 assert v.ub == 1
-assert v.domain_type == pk.IntegerSet
+assert v.domain_type == pmo.IntegerSet
 
 # set the domain_type (never overwrites bounds)
-v.domain_type = pk.RealSet
+v.domain_type = pmo.RealSet
 assert v.lb == 0
 assert v.ub == 1
-assert v.domain_type == pk.RealSet
+assert v.domain_type == pmo.RealSet
 
 # fix the variable to its current value
 v.fix()

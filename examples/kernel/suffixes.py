@@ -1,27 +1,27 @@
-import pyomo.core.kernel as pk
+import pyomo.core.kernel as pmo
 
 #
 # Suffixes
 #
 
 # collect dual information when the model is solved
-b = pk.block()
-b.x = pk.variable()
-b.c = pk.constraint(expr= b.x >= 1)
-b.o = pk.objective(expr= b.x)
-b.dual = pk.suffix(direction=pk.suffix.IMPORT)
+b = pmo.block()
+b.x = pmo.variable()
+b.c = pmo.constraint(expr= b.x >= 1)
+b.o = pmo.objective(expr= b.x)
+b.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
 
 # suffixes behave as dictionaries that map
 # components to values
-s = pk.suffix()
+s = pmo.suffix()
 assert len(s) == 0
 
-v = pk.variable()
+v = pmo.variable()
 s[v] = 2
 assert len(s) == 1
 assert bool(v in s) == True
 assert s[v] == 2
 
 # error (a dict / list container is not a component)
-vlist = pk.variable_list()
+vlist = pmo.variable_list()
 s[vlist] = 1

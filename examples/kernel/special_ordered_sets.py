@@ -1,28 +1,28 @@
-import pyomo.core.kernel as pk
+import pyomo.core.kernel as pmo
 
-v1 = pk.variable()
-v2 = pk.variable()
-v3 = pk.variable()
+v1 = pmo.variable()
+v2 = pmo.variable()
+v3 = pmo.variable()
 
 #
 # Special Ordered Sets (Type 1)
 #
 
-s = pk.sos([v1,v2])
+s = pmo.sos([v1,v2])
 assert s.level == 1
 assert s.weights == (1,2)
 assert len(s.variables) == 2
 assert v1 in s
 assert v2 in s
 
-s = pk.sos([v1,v2], level=1)
+s = pmo.sos([v1,v2], level=1)
 assert s.level == 1
 assert s.weights == (1,2)
 assert len(s.variables) == 2
 assert v1 in s
 assert v2 in s
 
-s = pk.sos1([v1,v2])
+s = pmo.sos1([v1,v2])
 assert s.level == 1
 assert s.weights == (1,2)
 assert len(s.variables) == 2
@@ -33,14 +33,14 @@ assert v2 in s
 # Special Ordered Sets (Type 2)
 #
 
-s = pk.sos([v1,v2], level=2)
+s = pmo.sos([v1,v2], level=2)
 assert s.level == 2
 assert s.weights == (1,2)
 assert len(s.variables) == 2
 assert v1 in s
 assert v2 in s
 
-s = pk.sos2([v1,v2])
+s = pmo.sos2([v1,v2])
 assert s.level == 2
 assert s.weights == (1,2)
 assert len(s.variables) == 2
@@ -51,7 +51,7 @@ assert v2 in s
 # Special Ordered Sets (Type n)
 #
 
-s = pk.sos([v1,v2,v3], level=3)
+s = pmo.sos([v1,v2,v3], level=3)
 assert s.level == 3
 assert s.weights == (1,2,3)
 assert len(s.variables) == 3
@@ -64,26 +64,26 @@ assert v3 in s
 #
 
 # using known values
-s = pk.sos([v1,v2], weights=[1.2,2.5])
+s = pmo.sos([v1,v2], weights=[1.2,2.5])
 assert s.weights == (1.2,2.5)
 
 # using paramters
-p = pk.parameter_list(
-    pk.parameter() for i in range(2))
-s = pk.sos([v1,v2], weights=[p[0]**2, p[1]**2])
+p = pmo.parameter_list(
+    pmo.parameter() for i in range(2))
+s = pmo.sos([v1,v2], weights=[p[0]**2, p[1]**2])
 assert len(s.weights) == 2
 p[0].value = 1
 p[1].value = 2
-assert tuple(pk.value(w) for w in s.weights) == (1, 4)
+assert tuple(pmo.value(w) for w in s.weights) == (1, 4)
 
 # using data expressions
-d = pk.expression_list(
-    pk.data_expression() for i in range(2))
-s = pk.sos([v1,v2], weights=d)
+d = pmo.expression_list(
+    pmo.data_expression() for i in range(2))
+s = pmo.sos([v1,v2], weights=d)
 assert len(s.weights) == 2
 d[0].expr = p[0] + 1
 d[1].expr = p[0] + p[1]
-assert tuple(pk.value(w) for w in s.weights) == (2, 3)
+assert tuple(pmo.value(w) for w in s.weights) == (2, 3)
 
 #
 # Example model (discontiguous variable domain)
@@ -92,17 +92,17 @@ import pyomo.environ
 
 domain = [-1.1, 4.49, 8.1, -30.2, 12.5]
 
-m = pk.block()
+m = pmo.block()
 
-m.z = pk.variable_list(
-    pk.variable(lb=0)
+m.z = pmo.variable_list(
+    pmo.variable(lb=0)
     for i in range(len(domain)))
-m.y = pk.variable()
+m.y = pmo.variable()
 
-m.o = pk.objective(m.y, sense=pk.maximize)
+m.o = pmo.objective(m.y, sense=pmo.maximize)
 
-m.c1 = pk.constraint(
+m.c1 = pmo.constraint(
     m.y == sum(v*z for v,z in zip(m.z, domain)))
-m.c2 = pk.constraint(
+m.c2 = pmo.constraint(
     sum(m.z) == 1)
-m.s = pk.sos1(m.z)
+m.s = pmo.sos1(m.z)
