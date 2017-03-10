@@ -11,6 +11,7 @@ import shutil
 import basicclasses as bc
 import stoch_solver as st
 import distr2pysp as dp
+import pyomo.pysp.daps
 
 __author__ = 'David L. Woodruff <DLWoodruff@UCDavis.edu>'
 __date__ = 'March 15, 2017'
@@ -32,19 +33,23 @@ class TestDAPS(unittest.TestCase):
             Put all literals in this routine."""
 
         self.seed = 7734  # random number seed
-        self.farmer_json_dir = '/home/david/Documents/Research/prescient/daps/concrete_farmer'
-        self.farmer_AMPL_dir = '/home/david/Documents/Research/prescient/daps/farmer' 
-        """
-        self.farmer_json_dir = \
-          pkg_resources('pyomo.pysp.daps', 'concrete_farmer')
-        self.farmer_AMPL_dir = \
-          pkg_resources('pyomo.pysp.daps', 'farmer')
-        """
+
+        p = str(pyomo.pysp.daps.__path__)
+        ## _NamespacePath(['/home/david/software/pyomo/pyomo/pyomo/pysp/daps'])
+        l = p.find("'")
+        r = p.find("'", l+1)
+        dapspath = p[l+1:r]
+
+        self.farmer_json_dir = dapspath + os.sep + 'concrete_farmer'
+        self.farmer_AMPL_dir = dapspath + os.sep + 'farmer'
+
         self.dptest_dir = self.farmer_json_dir + os.sep + 'dptest'
+
         self.farmer_concrete_model = 'ReferenceModel.py'
         self.farmer_json_tree_file = 'TreeTemplateFile.json'
         self.farmer_AMPL_tree_file = "TreeTemplateFile.dat"
         self.farmer_AMPL_scen_template_file = "ScenTemplate.dat"
+
         self.dptest_data_file_dict = 'datafiledict.json'
         self.dptest_distr_dict_file = 'distrdict.json'
         self.indep_norms_n = 4
@@ -63,6 +68,7 @@ class TestDAPS(unittest.TestCase):
     
     def test_2stage_json(self):
         """ smoke for concrete two-stage json"""
+
         self.do_the_deal(self.farmer_json_dir)
         tree_model = bc.Tree_2Stage_json_dir(self.tdir, \
                                              self.farmer_json_tree_file)
@@ -80,6 +86,7 @@ class TestDAPS(unittest.TestCase):
 
     def test_scipy_2stage(self):
         """ smoke for named scipy dists """
+
         self.do_the_deal(self.farmer_json_dir)
         self.do_the_deal(self.dptest_dir)
         dp.json_scipy_2stage(self.dptest_distr_dict_file,
