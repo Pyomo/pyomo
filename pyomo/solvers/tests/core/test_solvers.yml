@@ -25,7 +25,7 @@ solvers:
         name: 'openopt:glpk'
     #
     ipopt:
-        name: 'asl:ipopt'
+        name: 'ipopt'
     #
     pico:
     pico_asl:
