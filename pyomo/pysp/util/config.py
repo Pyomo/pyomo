@@ -188,13 +188,13 @@ def check_options_match(opt1,
 # making sure nothing is overwritten
 #
 def safe_declare_option(configblock,
-                         name,
-                         configvalue,
-                         ap_group=None,
-                         relax_default_check=False,
-                         declare_for_argparse=False,
-                         ap_args=None,
-                         ap_kwds=None):
+                        name,
+                        configvalue,
+                        ap_group=None,
+                        relax_default_check=False,
+                        declare_for_argparse=False,
+                        ap_args=None,
+                        ap_kwds=None):
     assert isinstance(configblock, PySPConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False
