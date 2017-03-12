@@ -6,11 +6,22 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
+#
+# Unit Tests for Pyomo tutorials
+#
 
-# this is a namespace package
-try:
-    import pkg_resources
-    pkg_resources.declare_namespace(__name__)
-except ImportError:
-    import pkgutil
-    __path__ = pkgutil.extend_path(__path__, __name__)
+import os
+from os.path import abspath, dirname
+topdir = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
+currdir = dirname(abspath(__file__))+os.sep
+test_dir=topdir+os.sep+"examples"+os.sep+"doc"+os.sep+"pyomobook"+os.sep
+
+import unittest
+import sys
+
+os.chdir(test_dir)
+sys.path.append(test_dir)
+from test_book_examples import *
+
+if __name__ == "__main__":
+    unittest.main()

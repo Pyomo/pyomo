@@ -282,8 +282,12 @@ def create_model(data):
             msg = "Model '%s' is not defined in file '%s'!"
             raise SystemExit(msg % (model_name, data.options.model.filename))
     elif len(_models) > 1:
-        msg = "Multiple models defined in file '%s'!"
-        raise SystemExit(msg % data.options.model.filename)
+        if model_name is None:
+            msg = "Multiple models defined in file '%s'!"
+            raise SystemExit(msg % data.options.model.filename)
+        elif not model_name in _models:
+            msg = "Unknown model '%s' in file '%s'!"
+            raise SystemExit(msg % (model_name, data.options.model.filename))
 
     ep = ExtensionPoint(IPyomoScriptCreateModel)
 
@@ -631,7 +635,7 @@ def apply_optimizer(data, instance=None):
             data.local.max_memory = mem_used
         print("   Total memory = %d bytes following optimization" % mem_used)
 
-    return pyutilib.misc.Options(results=results, opt=opt, local=data.local)
+    return pyutilib.misc.Options(results=results, opt=solver, local=data.local)
 
 
 @pyomo_api(namespace='pyomo.script')

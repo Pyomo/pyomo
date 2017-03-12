@@ -7,9 +7,9 @@ model = ConcreteModel()
 model.foo = Suffix()
 # @:suffixsimple
 
-# @suffixdecl:
 model = ConcreteModel()
 
+# @suffixdecl:
 # Export integer data
 model.priority = Suffix(direction=Suffix.EXPORT, 
                         datatype=Suffix.INT)

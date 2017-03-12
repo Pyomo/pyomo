@@ -30,6 +30,9 @@ from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.expr import identify_variables
 from pyomo.opt import *
 
+from pyomo.gdp import Disjunct
+
+solvers = check_available_solvers('glpk')
 
 class DerivedBlock(SimpleBlock):
     def __init__(self, *args, **kwargs):
@@ -1437,6 +1440,180 @@ class TestBlock(unittest.TestCase):
                           list(m.component_map( set([Objective]), active=False,
                                                 sort=True )) )
 
+    def test_iterate_hierarchical_blocks(self):
+        def def_var(b, *args):
+            b.x = Var()
+        def init_block(b):
+            b.c = Block([1,2], rule=def_var)
+            b.e = Disjunct([1,2], rule=def_var)
+            b.b = Block(rule=def_var)
+            b.d = Disjunct(rule=def_var)
+
+        m = ConcreteModel()
+        m.x = Var()
+        init_block(m)
+        init_block(m.b)
+        init_block(m.c[1])
+        init_block(m.c[2])
+        init_block(m.d)
+        init_block(m.e[1])
+        init_block(m.e[2])
+
+        ref = [x.name for x in (
+            m,
+            m.c[1], m.c[1].c[1], m.c[1].c[2], m.c[1].b,
+            m.c[2], m.c[2].c[1], m.c[2].c[2], m.c[2].b,
+            m.b, m.b.c[1], m.b.c[2], m.b.b,
+        )]
+        test = list(x.name for x in m.block_data_objects())
+        self.assertEqual(test, ref)
+
+        test = list(x.name for x in m.block_data_objects(
+            descend_into=Block ))
+        self.assertEqual(test, ref)
+
+        test = list(x.name for x in m.block_data_objects(
+            descend_into=(Block,) ))
+        self.assertEqual(test, ref)
+
+
+        ref = [x.name for x in (
+            m,
+            m.e[1], m.e[1].e[1], m.e[1].e[2], m.e[1].d,
+            m.e[2], m.e[2].e[1], m.e[2].e[2], m.e[2].d,
+            m.d, m.d.e[1], m.d.e[2], m.d.d,
+        )]
+        test = list(x.name for x in m.block_data_objects(
+            descend_into=(Disjunct,) ))
+        self.assertEqual(test, ref)
+
+        ref = [x.name for x in (
+            m.d, m.d.e[1], m.d.e[2], m.d.d,
+        )]
+        test = list(x.name for x in m.d.block_data_objects(
+            descend_into=(Disjunct,) ))
+        self.assertEqual(test, ref)
+
+
+        ref = [x.name for x in (
+            m,
+            m.c[1],
+            m.c[1].c[1], m.c[1].c[2],
+            m.c[1].e[1], m.c[1].e[2],
+            m.c[1].b, m.c[1].d,
+            m.c[2],
+            m.c[2].c[1], m.c[2].c[2],
+            m.c[2].e[1], m.c[2].e[2],
+            m.c[2].b, m.c[2].d,
+            m.e[1],
+            m.e[1].c[1], m.e[1].c[2],
+            m.e[1].e[1], m.e[1].e[2],
+            m.e[1].b, m.e[1].d,
+            m.e[2],
+            m.e[2].c[1], m.e[2].c[2],
+            m.e[2].e[1], m.e[2].e[2],
+            m.e[2].b, m.e[2].d,
+            m.b,
+            m.b.c[1], m.b.c[2],
+            m.b.e[1], m.b.e[2],
+            m.b.b, m.b.d,
+            m.d,
+            m.d.c[1], m.d.c[2],
+            m.d.e[1], m.d.e[2],
+            m.d.b, m.d.d,
+        )]
+        test = list(x.name for x in m.block_data_objects(
+            descend_into=(Block,Disjunct) ))
+        self.assertEqual(test, ref)
+
+        test = list(x.name for x in m.block_data_objects(
+            descend_into=(Disjunct,Block) ))
+        self.assertEqual(test, ref)
+
+
+        ref = [x.name for x in (
+            m.x,
+            m.c[1].x, m.c[1].c[1].x, m.c[1].c[2].x, m.c[1].b.x,
+            m.c[2].x, m.c[2].c[1].x, m.c[2].c[2].x, m.c[2].b.x,
+            m.b.x, m.b.c[1].x, m.b.c[2].x, m.b.b.x,
+        )]
+        test = list(x.name for x in m.component_data_objects(
+            Var ))
+        self.assertEqual(test, ref)
+
+        test = list(x.name for x in m.component_data_objects(
+            Var, descend_into=Block ))
+        self.assertEqual(test, ref)
+
+        test = list(x.name for x in m.component_data_objects(
+            Var, descend_into=(Block,) ))
+        self.assertEqual(test, ref)
+
+        ref = [x.name for x in (
+            m.x,
+            m.e[1].indicator_var,      m.e[1].x,
+            m.e[1].e[1].indicator_var, m.e[1].e[1].x,
+            m.e[1].e[2].indicator_var, m.e[1].e[2].x,
+            m.e[1].d.indicator_var,    m.e[1].d.x,
+            m.e[2].indicator_var,      m.e[2].x,
+            m.e[2].e[1].indicator_var, m.e[2].e[1].x,
+            m.e[2].e[2].indicator_var, m.e[2].e[2].x,
+            m.e[2].d.indicator_var,    m.e[2].d.x,
+            m.d.indicator_var,      m.d.x,
+            m.d.e[1].indicator_var, m.d.e[1].x,
+            m.d.e[2].indicator_var, m.d.e[2].x,
+            m.d.d.indicator_var,    m.d.d.x,
+        )]
+        test = list(x.name for x in m.component_data_objects(
+            Var, descend_into=Disjunct ))
+        self.assertEqual(test, ref)
+
+        ref = [x.name for x in (
+            m.x,
+            m.c[1].x,
+            m.c[1].c[1].x,             m.c[1].c[2].x,
+            m.c[1].e[1].indicator_var, m.c[1].e[1].x,
+            m.c[1].e[2].indicator_var, m.c[1].e[2].x,
+            m.c[1].b.x,
+            m.c[1].d.indicator_var,    m.c[1].d.x,
+            m.c[2].x,
+            m.c[2].c[1].x,             m.c[2].c[2].x,
+            m.c[2].e[1].indicator_var, m.c[2].e[1].x,
+            m.c[2].e[2].indicator_var, m.c[2].e[2].x,
+            m.c[2].b.x,
+            m.c[2].d.indicator_var,    m.c[2].d.x,
+
+            m.e[1].indicator_var,      m.e[1].x,
+            m.e[1].c[1].x,             m.e[1].c[2].x,
+            m.e[1].e[1].indicator_var, m.e[1].e[1].x,
+            m.e[1].e[2].indicator_var, m.e[1].e[2].x,
+            m.e[1].b.x,
+            m.e[1].d.indicator_var,    m.e[1].d.x,
+            m.e[2].indicator_var,      m.e[2].x,
+            m.e[2].c[1].x,             m.e[2].c[2].x,
+            m.e[2].e[1].indicator_var, m.e[2].e[1].x,
+            m.e[2].e[2].indicator_var, m.e[2].e[2].x,
+            m.e[2].b.x,
+            m.e[2].d.indicator_var,    m.e[2].d.x,
+
+            m.b.x,
+            m.b.c[1].x,             m.b.c[2].x,
+            m.b.e[1].indicator_var, m.b.e[1].x,
+            m.b.e[2].indicator_var, m.b.e[2].x,
+            m.b.b.x,
+            m.b.d.indicator_var,    m.b.d.x,
+
+            m.d.indicator_var,      m.d.x,
+            m.d.c[1].x,             m.d.c[2].x,
+            m.d.e[1].indicator_var, m.d.e[1].x,
+            m.d.e[2].indicator_var, m.d.e[2].x,
+            m.d.b.x,
+            m.d.d.indicator_var,    m.d.d.x,
+        )]
+        test = list(x.name for x in m.component_data_objects(
+            Var, descend_into=(Block,Disjunct) ))
+        self.assertEqual(test, ref)
+
 
     def test_deepcopy(self):
         m = ConcreteModel()
@@ -1624,140 +1801,149 @@ class TestBlock(unittest.TestCase):
             sorted(id(x) for x in (m.x, m.y[1], nb.x, nb.y[1])),
         )
 
-
-    def Xtest_display(self):
-        self.block.A = RangeSet(1,4)
-        self.block.x = Var(self.block.A, bounds=(-1,1))
-        def obj_rule(block):
-            return summation(block.x)
-        self.block.obj = Objective(rule=obj_rule)
-        #self.instance = self.block.create_instance()
-        #self.block.pprint()
-        #self.block.display()
-
-    def Xtest_write2(self):
-        self.model.A = RangeSet(1,4)
-        self.model.x = Var(self.model.A, bounds=(-1,1))
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    def test_solve1(self):
+        model = Block(concrete=True)
+        model.A = RangeSet(1,4)
+        model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
             return summation(model.x)
-        self.model.obj = Objective(rule=obj_rule)
-        def c_rule(model):
-            return (1, model.x[1]+model.x[2], 2)
-        self.model.c = Constraint(rule=c_rule)
-        self.instance = self.model.create_instance()
-        self.instance.write()
-
-    def Xtest_write3(self):
-        """Test that the summation works correctly, even though param 'w' has a default value"""
-        self.model.J = RangeSet(1,4)
-        self.model.w=Param(self.model.J, default=4)
-        self.model.x=Var(self.model.J)
-        def obj_rule(instance):
-            return summation(instance.x, instance.w)
-        self.model.obj = Objective(rule=obj_rule)
-        self.instance = self.model.create_instance()
-        self.assertEqual(len(self.instance.obj[None].expr._args), 4)
-
-    def Xtest_solve1(self):
-        self.model.A = RangeSet(1,4)
-        self.model.x = Var(self.model.A, bounds=(-1,1))
-        def obj_rule(model):
-            return summation(model.x)
-        self.model.obj = Objective(rule=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
             for i in model.A:
                 expr += i*model.x[i]
             return expr == 0
-        self.model.c = Constraint(rule=c_rule)
-        self.instance = self.model.create_instance()
-        #self.instance.pprint()
-        opt = solver['glpk']
-        solutions = opt.solve(self.instance, keepfiles=True)
-        self.instance.load(solutions)
-        self.instance.display(join(currdir,"solve1.out"))
-        self.assertFileEqualsBaseline(join(currdir,"solve1.out"),join(currdir,"solve1.txt"))
+        model.c = Constraint(rule=c_rule)
+        opt = SolverFactory('glpk')
+        results = opt.solve(model, symbolic_solver_labels=True)
+        model.solutions.store_to(results)
+        results.write(filename=join(currdir,"solve1.out"), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve1.out"), join(currdir,"solve1.txt"),
+            tolerance=1e-4)
         #
         def d_rule(model):
-            return model.x[1] > 0
-        self.model.d = Constraint(rule=d_rule)
-        self.model.d.deactivate()
-        self.instance = self.model.create_instance()
-        solutions = opt.solve(self.instance, keepfiles=True)
-        self.instance.load(solutions)
-        self.instance.display(currdir+"solve1.out")
-        self.assertFileEqualsBaseline(currdir+"solve1.out",currdir+"solve1.txt")
+            return model.x[1] >= 0
+        model.d = Constraint(rule=d_rule)
+        model.d.deactivate()
+        results = opt.solve(model)
+        model.solutions.store_to(results)
+        results.write(filename=join(currdir,"solve1x.out"), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve1x.out"), join(currdir,"solve1.txt"),
+            tolerance=1e-4)
         #
-        self.model.d.activate()
-        self.instance = self.model.create_instance()
-        solutions = opt.solve(self.instance, keepfiles=True)
-        self.instance.load(solutions)
-        self.instance.display(join(currdir,"solve1.out"))
-        self.assertFileEqualsBaseline(join(currdir,"solve1.out"),join(currdir,"solve1a.txt"))
+        model.d.activate()
+        results = opt.solve(model)
+        model.solutions.store_to(results)
+        results.write(filename=join(currdir,"solve1a.out"), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve1a.out"), join(currdir,"solve1a.txt"),
+            tolerance=1e-4)
         #
-        self.model.d.deactivate()
-        def e_rule(i, model):
-            return model.x[i] > 0
-        self.model.e = Constraint(self.model.A, rule=e_rule)
-        self.instance = self.model.create_instance()
-        for i in self.instance.A:
-            self.instance.e[i].deactivate()
-        solutions = opt.solve(self.instance, keepfiles=True)
-        self.instance.load(solutions)
-        self.instance.display(join(currdir,"solve1.out"))
-        self.assertFileEqualsBaseline(join(currdir,"solve1.out"),join(currdir,"solve1b.txt"))
+        model.d.deactivate()
+        def e_rule(model, i):
+            return model.x[i] >= 0
+        model.e = Constraint(model.A, rule=e_rule)
+        for i in model.A:
+            model.e[i].deactivate()
+        results = opt.solve(model)
+        model.solutions.store_to(results)
+        results.write(filename=join(currdir,"solve1y.out"), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve1y.out"), join(currdir,"solve1.txt"),
+            tolerance=1e-4)
+        #
+        model.e.activate()
+        results = opt.solve(model)
+        model.solutions.store_to(results)
+        results.write(filename=join(currdir,"solve1b.out"), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve1b.out"), join(currdir,"solve1b.txt"),
+            tolerance=1e-4)
 
-    def Xtest_load1(self):
-        """Testing loading of vector solutions"""
-        self.model.A = RangeSet(1,4)
-        self.model.x = Var(self.model.A, bounds=(-1,1))
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    def test_solve4(self):
+        model = Block(concrete=True)
+        model.A = RangeSet(1,4)
+        model.x = Var(model.A, bounds=(-1,1))
         def obj_rule(model):
             return summation(model.x)
-        self.model.obj = Objective(rule=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         def c_rule(model):
             expr = 0
             for i in model.A:
                 expr += i*model.x[i]
             return expr == 0
-        self.model.c = Constraint(rule=c_rule)
-        self.instance = self.model.create_instance()
-        ans = [0.75]*4
-        self.instance.load(ans)
-        self.instance.display(join(currdir,"solve1.out"))
-        self.assertFileEqualsBaseline(join(currdir,"solve1.out"),join(currdir,"solve1c.txt"))
+        model.c = Constraint(rule=c_rule)
+        opt = SolverFactory('glpk')
+        results = opt.solve(model, symbolic_solver_labels=True)
+        model.solutions.store_to(results)
+        results.write(filename=join(currdir,'solve4.out'), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve4.out"), join(currdir,"solve1.txt"),
+            tolerance=1e-4)
 
-    def Xtest_solve3(self):
-        self.model.A = RangeSet(1,4)
-        self.model.x = Var(self.model.A, bounds=(-1,1))
-        def obj_rule(model):
-            expr = 0
-            for i in model.A:
-                expr += model.x[i]
-            return expr
-        self.model.obj = Objective(rule=obj_rule)
-        self.instance = self.model.create_instance()
-        self.instance.display(join(currdir,"solve1.out"))
-        self.assertFileEqualsBaseline(join(currdir,"solve1.out"),join(currdir,"solve3.txt"))
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    def test_solve6(self):
+        #
+        # Test that solution values have complete block names:
+        #   b.obj
+        #   b.x
+        #
+        model = Block(concrete=True)
+        model.y = Var(bounds=(-1,1))
+        model.b = Block()
+        model.b.A = RangeSet(1,4)
+        model.b.x = Var(model.b.A, bounds=(-1,1))
+        def obj_rule(block):
+            return summation(block.x)
+        model.b.obj = Objective(rule=obj_rule)
+        def c_rule(model):
+            expr = model.y
+            for i in model.b.A:
+                expr += i*model.b.x[i]
+            return expr == 0
+        model.c = Constraint(rule=c_rule)
+        opt = SolverFactory('glpk')
+        results = opt.solve(model, symbolic_solver_labels=True)
+        model.solutions.store_to(results)
+        results.write(filename=join(currdir,'solve6.out'), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve6.out"), join(currdir,"solve6.txt"),
+            tolerance=1e-4)
 
-    def Xtest_solve4(self):
-        self.model.A = RangeSet(1,4)
-        self.model.x = Var(self.model.A, bounds=(-1,1))
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
+    def test_solve7(self):
+        #
+        # Test that solution values are writen with appropriate
+        # quotations in results
+        #
+        model = Block(concrete=True)
+        model.y = Var(bounds=(-1,1))
+        model.A = RangeSet(1,4)
+        model.B = Set(initialize=['A B', 'C,D', 'E'])
+        model.x = Var(model.A, model.B, bounds=(-1,1))
         def obj_rule(model):
             return summation(model.x)
-        self.model.obj = Objective(rule=obj_rule)
+        model.obj = Objective(rule=obj_rule)
         def c_rule(model):
-            expr = 0
+            expr = model.y
             for i in model.A:
-                expr += i*model.x[i]
+                for j in model.B:
+                    expr += i*model.x[i,j]
             return expr == 0
-        self.model.c = Constraint(rule=c_rule)
-        self.instance = self.model.create_instance()
-        #self.instance.pprint()
-        opt = solver['glpk']
-        solutions = opt.solve(self.instance)
-        self.instance.load(solutions.solution(0))
-        self.instance.display(join(currdir,"solve1.out"))
-        self.assertFileEqualsBaseline(join(currdir,"solve1.out"),join(currdir,"solve1.txt"))
+        model.c = Constraint(rule=c_rule)
+        opt = SolverFactory('glpk')
+        results = opt.solve(model, symbolic_solver_labels=True)
+        #model.display()
+        model.solutions.store_to(results)
+        results.write(filename=join(currdir,'solve7.out'), format='json')
+        self.assertMatchesJsonBaseline(
+            join(currdir,"solve7.out"), join(currdir,"solve7.txt"),
+            tolerance=1e-4)
+
 
     def test_abstract_index(self):
         model = AbstractModel()
@@ -1765,6 +1951,27 @@ class TestBlock(unittest.TestCase):
         model.B = Set()
         model.C = model.A | model.B
         model.x = Block(model.C)
+
+    def test_decorated_definition(self):
+        model = ConcreteModel()
+        model.I = Set(initialize=[1,2,3])
+        model.x = Var(model.I)
+
+        @model.Constraint()
+        def scalar_constraint(m):
+            return m.x[1]**2 <= 0
+
+        self.assertTrue(hasattr(model, 'scalar_constraint'))
+        self.assertIs(model.scalar_constraint._type, Constraint)
+        self.assertEqual(len(model.scalar_constraint), 1)
+
+        @model.Constraint(model.I)
+        def vector_constraint(m, i):
+            return m.x[i]**2 <= 0
+
+        self.assertTrue(hasattr(model, 'vector_constraint'))
+        self.assertIs(model.vector_constraint._type, Constraint)
+        self.assertEqual(len(model.vector_constraint), 3)
 
 if __name__ == "__main__":
     unittest.main()

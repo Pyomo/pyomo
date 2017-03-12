@@ -3,6 +3,12 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.1.1
+-------------------------------------------------------------------------------
+
+- Monkeypatch to resolve (#95)
+
+-------------------------------------------------------------------------------
 Pyomo 5.1
 -------------------------------------------------------------------------------
 
@@ -24,6 +30,7 @@ Pyomo 5.1
 - Fixed error messages in pyomo.dae (#81)
 - Revised CBC interface to recognize intermediate non-integer solutions (#77)
 - Added checks for IPOPT test failures based on version info (#72)
+- Removed support for OpenOpt
 
 -------------------------------------------------------------------------------
 Pyomo 5.0.1

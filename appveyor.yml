@@ -30,6 +30,10 @@ install:
   - "python -m pip install coverage"
   - "python -m pip install nose"
   - "python -m pip install Pyro4"
+  #
+  # Clone but don't install pyomo-model-libraries
+  #
+  - "cd /d .. && git clone https://github.com/Pyomo/pyomo-model-libraries.git && cd /d pyomo"
   - "python -m pip install git+https://github.com/PyUtilib/pyutilib"
   - "python setup.py develop"
   - "dir %PYTHON%\\Scripts"

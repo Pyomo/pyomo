@@ -189,14 +189,14 @@ class _ConstraintData(ActiveComponentData):
 
     def lslack(self):
         """
-        Returns the value of L-f(x) for constraints of the form:
+        Returns the value of f(x)-L for constraints of the form:
             L <= f(x) (<= U)
             (U >=) f(x) >= L
         """
         if self.lower is None:
             return float('-inf')
         else:
-            return value(self.lower)-value(self.body)
+            return value(self.body)-value(self.lower)
 
     def uslack(self):
         """
@@ -216,8 +216,9 @@ class _ConstraintData(ActiveComponentData):
         if self.lower is None:
             return value(self.upper)-value(self.body)
         elif self.upper is None:
-            return value(self.lower)-value(self.body)
-        return min(value(self.upper)-value(self.body), value(self.lower)-value(self.body))
+            return value(self.body)-value(self.lower)
+        return min(value(self.upper)-value(self.body),
+                   value(self.body)-value(self.lower))
 
     #
     # Abstract Interface
@@ -661,7 +662,7 @@ class Constraint(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Constraint:
             return super(Constraint, cls).__new__(cls)
-        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleConstraint.__new__(SimpleConstraint)
         else:
             return IndexedConstraint.__new__(IndexedConstraint)
@@ -773,8 +774,7 @@ class Constraint(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index \
-              if self._index != UnindexedComponent_set else None),
+             ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
             iteritems(self),

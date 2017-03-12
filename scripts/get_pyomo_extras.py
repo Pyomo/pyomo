@@ -12,8 +12,34 @@
 
 import sys
 
-package_list = ['sympy', 'xlrd', 'openpyxl', 'suds-jurko', 'PyYAML', 'pypyodbc', 'pymysql', 'openopt', 'FuncDesigner', 'DerApproximator', 'ipython[notebook]', 'pyro', 'pyro4']
-packages = {'xlrd':None, 'openpyxl':None, 'suds-jurko':'suds', 'PyYAML':'yaml', 'pypyodbc':None, 'pymysql':None, 'openopt':None, 'FuncDesigner':None, 'DerApproximator':None, 'sympy':None, 'ipython[notebook]':'IPython'}
+package_list = [
+'sympy', 
+'xlrd', 
+'openpyxl', 
+#'suds-jurko', 
+'PyYAML', 
+'pypyodbc', 
+'pymysql', 
+#'openopt', 
+#'FuncDesigner', 
+#'DerApproximator', 
+'ipython[notebook]', 
+'pyro', 
+'pyro4']
+
+packages = {
+'sympy':None, 
+'xlrd':None, 
+'openpyxl':None, 
+#'suds-jurko':'suds', 
+'PyYAML':'yaml', 
+'pypyodbc':None, 
+'pymysql':None, 
+#'openopt':None, 
+#'FuncDesigner':None, 
+#'DerApproximator':None, 
+'ipython[notebook]':'IPython'
+}
 if sys.version_info[0] < 3:
     packages['pyro'] = 'Pyro'
 else:

@@ -1,0 +1,464 @@
+
+\chapter{Miscellaneous Components and Utility Functions}
+\label{chap:ref-misc}
+\chaptermark{Miscellaneous Components and Utility Functions}
+
+
+%\abstract*{ONLINE ABSTRACT}
+
+\abstract{
+This chapter describes modeling components that supplement the core 
+components described in the previous two chapters.  
+Additionally, this chapter describes
+utility functions that simplify the formulation of Pyomo models.
+}
+
+
+\section{Suffix Components}
+
+Suffixes provide a mechanism for annotating a model with auxiliary
+data that is not strictly related to the model declaration and
+structure. Suffixes are commonly used by solver plugins to store
+extra information about the solution of a model.
+More generally, suffixes can be used to
+\begin{itemize}
+
+\item import information from a solver about the solution to a mathematical
+program (e.g., constraint duals, variable reduced costs, basis information),
+
+\item export information to a solver or algorithm to configure the solution process
+(e.g., warm-starting information, variable branching priorities), and
+
+\item tag model components with local data for later use in advanced scripting
+algorithms.
+\end{itemize}
+
+\subsection{Overview}
+
+This functionality is made available to the modeler
+through the \code{Suffix} component class, which
+provides an interface for annotating Pyomo modeling
+components with arbitrary data. Consider the following example:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix1}{6}{9}
+This examples includes two variable components (indexed and
+non-indexed) along with a suffix component.  Conceptually, the
+declaration of the suffix \code{foo} allows the association of
+\code{foo} with each component data object in the model.
+For example:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix1a}{12}{19}
+Suffix values can be assigned with \code{get\_suffix\_value} and
+they can be accessed with \code{get\_suffix\_value}.  This example
+illustrates two ways of specifying the suffix:  with a name and
+with a suffix component object.  Specifying suffixes with component objects
+is more efficient because it avoids a search within the model for the 
+corresponding component (see below).  
+
+Suffix values for indexed components can also be assigned with
+\linebreak\code{set\_suffix\_value}:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix1b}{22}{32}
+This example illustrates how \code{set\_suffix\_value} is used to
+set the value for an indexed component and a single component data
+object.  When \code{set\_suffix\_value} is called for an indexed
+component, by default it sets all suffix values for all component
+data objects.  The following example illustrates the use of the \code{expand} option
+to direct \code{set\_suffix\_value} to set a suffix value for an indexed component 
+and not on its component data:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix1c}{35}{43}
+
+Suffix values can also be cleared, which is equivalent to setting the value \code{None}:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix1d}{48}{54}
+
+
+\subsection{Declaring Suffixes}
+
+The \code{Suffix} component is a not an indexed component, and hence
+it cannot be declared with positional arguments.  The \code{direction}
+keyword argument is used to specify the information flow for a
+suffix when interfacing with a solver.  This argument can be one of four possible values:
+\begin{itemize}
+
+\item \code{Suffix.LOCAL}: Suffix data is local to the model.  It is not imported or exported by solver plugins (default).
+
+\item \code{Suffix.IMPORT}: Suffix data will be imported from solvers to the model by solver plugins.
+
+\item \code{Suffix.EXPORT}: Suffix data will be exported to solvers solver plugins.
+
+\item \code{Suffix.IMPORT\_EXPORT}: Suffix data is both imported and exported by solver plugins.
+
+\end{itemize}
+Not all solver plugins are guaranteed to manage suffix information flow, but the user controls this
+information flow by configuring suffix components..
+
+The \code{datatype} keyword argument specifies the type of data that will be held in the suffix.
+This argument can be one of three possible values:
+\begin{itemize}
+
+\item \code{Suffix.FLOAT}: floating point data (default).
+
+\item \code{Suffix.INT}: integer data.
+
+\item \code{None}: any type of data.
+
+\end{itemize}
+This argument may be optional for a solver interface, but exporting
+suffix data with solvers that use Pyomo's \code{nl} file interface
+requires that all active export suffixes have a strict datatype
+(i.e., the \code{datatype} keyword cannot be \code{None}).
+
+The following model illustrates various suffix declarations:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix2}{59}{69}
+
+Declaring a suffix with non-local direction is not
+guaranteed to be compatible with all solver plugins in Pyomo. Whether
+a given suffix is acceptable or not depends on both the solver and
+solver interface being used. In some cases, a solver plugin will raise
+an exception if it encounters a suffix type that it does not handle,
+but this is not true in every situation. For example, the \code{nl} file
+interface is generic to all AMPL-compatible solvers, so there is no way
+to validate that a suffix of a given name, direction, and datatype is
+appropriate for a solver. One should be careful in verifying that
+suffix declarations are being handled as expected when switching to
+a different solver or solver interface.
+
+% WEH - We should deprecate the use of 'rule'
+
+Finally, the \code{initialize} keyword argument can be used to 
+define suffix values.  This argument specifies a function that
+is executed when the model is constructed.
+This function returns an iterable of
+(component, value) tuples.
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix3}{75}{85}
+
+
+\subsection{Working with Suffixes}
+
+The \code{Suffix} component includes a variety of methods that allow
+this component to be reconfigured.  The methods \code{set\_datatype}
+and \code{get\_datatype} can be used to configure the suffix datatype.
+The method \code{set\_direction} can be used to configure the
+information flow, and the methods \code{export\_enabled},
+\code{import\_enabled} and \code{get\_direction} query the suffix
+for the information flow configuration.
+The \code{reset} and \code{clear\_all\_values} methods clear all suffix data, and the
+\code{set\_all\_values} method sets the value of this suffix on all components.
+
+\subsection{Scripting with Suffixes}
+
+The \code{Suffix} component provides a dictionary interface and
+other methods that manage suffix values more efficiently than the
+component-level methods described above.  This syntax is less intuitive than 
+the use of component-level methods, but it is useful in scripting contexts
+where efficiency is a concern.
+
+Consider the following example:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix4}{91}{114}
+This example defines a concrete Pyomo model with two different types
+of variable components (indexed and non-indexed) as well as a suffix
+\code{foo}.  The \code{\_\_setitem\_\_} and \code{set\_value} methods
+of \code{Suffix} accept a model component as an argument.  Since
+the suffix data is stored inside the\ \code{Suffix} component, this
+syntax is slightly more efficient than the component-level method
+$set\_suffix\_value$, especially when the suffix is specified with
+a string name.
+
+Note that the \code{\_\_setitem\_\_} and \code{set\_value} methods
+can be used interchangeably except in the case where indexed
+components are used. In the indexed case, the \code{\_\_setitem\_\_}
+method creates a single entry for the parent indexed component
+itself, whereas the \code{set\_value} method creates an entry for
+each index of the component. This method includes the optional
+keyword \code{expand}, where assigning it a value of \code{False}
+results in the same behavior as \code{\_\_setitem\_\_}.
+
+Other operations like accessing or removing entries in a suffix
+using the same syntax as a Python \code{dict} class.
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-misc/examples.py}{suffix5}{117}{131}
+The method \code{clear\_value} can be used in place of
+\code{\_\_delitem\_\_} to remove entries.  This method has the same
+default behavior as \code{set\_value} for indexed components, and
+it does not raise a \code{KeyError} when the argument does not exist
+as a key in the mapping.
+
+
+
+\section{Build Components}
+
+The \code{BuildAction}\index{BuildAction component@\code{BuildAction}
+component} component is used to inject arbitrary actions into the
+model construction process.  Similarly, the
+\code{BuildCheck}\index{BuildCheck component@\code{BuildCheck}
+component} component is used to perform a test during the model
+construction process.  These components are added to a model in the
+same manner as other components, but their role is to allow a user
+to insert diagnostics into the model construction process.
+
+The \code{BuildAction} and \code{BuildCheck} components can be used
+in both concrete and abstract models, but they are most interesting
+for abstract models.  Consider Examples~\ref{example:component3:concrete}
+and~\ref{example:component3:abstract} (on page~\pageref{example:component3:concrete} and~\pageref{example:component3:abstract}).
+Example~\ref{example:component3:concrete} is a Python script that
+defines a function that constructs a concrete model.  Because this
+model is concrete, each component is initialized as it is constructed.
+Thus, we can naturally perform error checks and print diagnostic
+output while the model is being constructed.
+
+In Example~\ref{example:component3:concrete}, the function creates
+a simple network flow model for a clique of size \code{N}.  An error
+check is performed to confirm that the edge set contains the expected
+number of elements, and the script prints out the edge weights in
+sorted order.  The function returns the constructed model, and
+consequently this function provides the same type of encapsulation
+of model construction that is supported by an abstract model.
+
+Example~\ref{example:component3:abstract} is a corresponding abstract
+model for this network flow problem.  In this model, the parameter
+\code{N} is not given a value in the model defintion file;  its
+value must be supplied in a data file.  The setup of the components
+in this abstract model is otherwise quite similar to the component
+definitions in the concrete model.  The main difference is that in
+the abstract model the component rules reference the parameter
+\code{N}, while the rules in the concrete model use the Python
+variable \code{N} that is passed into the \code{create} function.
+
+Example~\ref{example:component3:abstract} illustrates the use of
+the \code{BuildAction} and \code{BuildCheck} components.  These
+components define actions that are executed during the construction
+of the abstract model.  These actions provide the same functionality
+as the error checking and print diagnostics in
+Example~\ref{example:component3:concrete}, but they  use rules that are
+not executed immediately when they are constructed.  Instead, these
+rules are executed while creating the model instance from the
+abstract model.  The \code{BuildAction} component executes the
+associated rule.  The \code{BuildCheck} component executes its rule,
+and it terminates the construction of the model instance if the
+rule returns \code{False}.
+
+As with other components, the \code{BuildAction} and \code{BuildCheck}
+components can be indexed, which allows actions and checks to be
+customized based on specific data.  For example, the \code{BuildAction}
+component in Example~\ref{example:component3:abstract} can be
+replaced with the following component declaration:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/MiscAbstract2.py}{all}{35}{38}
+This action prints an edge weight for each element of the edge set.
+
+
+\section{Functions to Support Modeling \label{sec:ref-misc:fcts}}
+
+Pyomo includes a variety of functions that support the construction
+and evaluation of model expressions.   
+Table~\ref{table:ref-misc:nonlinear-functions} summarizes functions that
+are used to define nonlinear expressions, 
+and Table~\ref{table:ref-misc:utility} summarizes the utility functions
+that support the concise expression of modeling concepts.  These
+functions are described further in this section.
+
+
+\subsection{Generalized Dot Products}
+
+The \code{summation}\index{summation@\code{summation} function|textbf}
+function is a utility function that computes a generalized dot
+product;  the \code{dot\_product}\index{dot\_product@\code{dot\_product}
+function|textbf} is a synonym for this function.  This function
+creates an expression that represents the sum of elements of one
+or more indexed components.  We use the following components in our
+examples:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{components}{7}{14}
+In the simplest case, \code{summation} creates an expression that 
+represents the sum of the elements of an indexed component.  For example,
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{sum1}{18}{18}
+represents the sum $\sum_{i=1}^3 x_i$.  This function provides a convenient shorthand for defining expressions in objectives and constraints.  For example, the
+following constraint uses the Python \code{sum}\index{python!sum@\code{sum} function} function and a Python generator expression to define the constraint body:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{c1}{22}{23}
+This constraint can be rewritten in a more concise format with the \code{summation} function:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{c2}{27}{27}
+
+More generally, the \code{summation} function can be used to create
+an expression for dot products between two arrays of parameters and
+variables in addition to generalized dot products and sums of subexpressions.
+For example, the following objective computes a simple dot product
+between \code{a} and \code{x}:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{o1}{31}{31}
+The \code{denom} option is used to create terms that are fractions.  This option specifies one or more components that are divided into each term of the sum:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{o2}{35}{35}
+The objective in this expression represents the sum $\sum_{i=1}^3 x_i/y_i$.
+Similarly, two or more terms can be included in the denominator with the following
+syntax:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{o3}{39}{40}
+
+The previous examples have constructed sums from components with the
+same index set.  When components have different index sets, the index
+set is inferred from the component arguments.  If one or more components
+are specified for the numerator, then the last component specified defines the index
+for the sum.  For example, consider the following:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{o4}{44}{45}
+This sum represents the polynomial
+\[
+\frac{x_1 z_1}{a_1} + \frac{x_3 z_3}{a_3}.\]
+The index for component \code{z} defines the index for this sum, since it occurs last.  Similarly, if no
+numerator components are specified, then the last component specified with the \code{denom} option defines the index for the sum.  For example, consider the following:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{o5}{49}{50}
+This sum represents the polynomial \[\frac{1}{x_1 z_1} + \frac{1}{x_3 z_3}.\]
+
+Finally, the \code{index} option allows the explicit specification of
+an index set.  For example:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/summation.py}{o6}{54}{55}
+This sum represents \[x_1 y_1 + x_3 y_3.\]
+
+
+\subsection{Generating Sequences}
+
+The function \code{sequence([start,] stop[, step])}\index{sequence@\code{sequence} function|textbf} returns a generator for a list
+that is an arithmetic progression of integers.  With a single argument,
+\code{sequence} generates a sequence that starts with \code{1}.  Thus,
+\code{sequence(i)} generates the sequence \code{1, 2, ..., i}.  With two arguments,
+\code{sequence(i, j)} generates the sequence \code{i, i+1, i+2, ..., j}.  The third
+argument, when given, specifies the increment (or decrement if negative).
+
+Note that \code{sequence} is simply a wrapper around the Python
+\code{range} function.  The main difference is that the sequences
+are shifted by one.  Sequences generated by \code{range} start at
+\code{0}, and sequences generated by \code{sequence} start at
+\code{1}.  Thus, \code{sequence} has a functionality that is more
+familiar to mathematical modelers.
+
+
+\subsection{Helper Functions}
+
+Pyomo includes several helper functions that aid in the interrogation
+of model objects.  Pyomo models and model components support a
+\code{display}\index{display function@\code{display} function|textbf}
+method, which summarizes the model.  The \code{display} function
+is a helper function that can be called directly to generate this
+summary.  For example, consider the following simple model:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/display.py}{Model}{4}{8}
+The function \code{display(model)} displays the entire model:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/display.txt}{display1}{2}{18}
+and the \code{display(model.x)} function displays the \code{x} variable:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/display.txt}{display2}{21}{23}
+
+Various components of a Pyomo model have a numeric \textit{value}
+that represents the state of the component.  The \code{value}
+function provides a wrapper for accessing and computing component
+values. For example, \code{value(model.x)} returns the value of
+\code{x} variable:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/display.txt}{value2}{29}{29}
+and \code{value(model.o)} computes the value of the expression for the objective \code{o}:
+\listing{pyomo/examples/doc/pyomobook/ref-misc/display.txt}{value1}{26}{26}
+
+\if 0
+cname
+is_constant
+is_fixed
+\fi
+
+
+\section{Discussion}
+
+A variety of other modeling components are defined in Pyomo.  The
+\code{pyomo}\index{pyomo command@\code{pyomo} command} command can
+be used to list the available modeling components:
+\begin{otherlisting}
+pyomo help --components
+\end{otherlisting}
+This book does not include documentation for components defined in
+more recent Pyomo packages like \code{pyomo.bilevel} and \code{pyomo.dae}.
+The component definitions in these packages remain in flux, so they
+were omitted from this book.
+
+
+
+\begin{subappendices}
+
+\section{Tables}
+
+\begin{table}
+
+\begin{tabular}{p{1.5in} p{3.0in}}\hline
+Component Method & Description\\ \hline
+clear\_all\_values(...) & Clear all suffix data.\\
+clear\_value(...) & Clear the suffix value for a component.\\
+export\_enabled() & Returns \code{True} if this suffix is configured to export data to solvers.\\
+get\_datatype() & Get the suffix datatype.\\
+get\_direction() & Get the suffix information flow.\\
+import\_enabled() & Returns \code{True} if this suffix is configured to import data from solvers.\\
+reset(...) & Clear all values.\\
+set\_all\_values(...) & Set the value of this suffix on all components.\\
+set\_datatype(...) & Set the suffix datatype.\\
+set\_direction(...) & Set the suffix information flow.\\
+set\_value(...) & Set the suffix value for a component.\\
+\end{tabular}
+
+\caption{\label{table:ref-misc:suffix:methods} Methods of the \code{Suffix} class.}
+\end{table}
+
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{p{1.5in} p{1.0in} p{2.5in}}
+Operation & Function & Example \\
+\hline \hline
+arccosine               & \code{acos} \index{acos@\code{acos} function} & \code{expr = acos(model.x)} \\
+hyperbolic arccosine    & \code{acosh} \index{acosh@\code{acosh} function} & \code{expr = acosh(model.x)} \\
+arcsine                 & \code{asin} \index{asin@\code{asin} function} & \code{expr = asin(model.x)} \\
+hyperbolic arcsine      & \code{asinh} \index{asinh@\code{asinh} function} & \code{expr = asinh(model.x)} \\
+arctangent              & \code{atan} \index{atan@\code{atan} function} & \code{expr = atan(model.x)} \\
+hyperbolic arctangent   & \code{atanh} \index{atanh@\code{atanh} function} & \code{expr = atanh(model.x)} \\
+cosine                  & \code{cos} \index{cos@\code{cos} function} & \code{expr = cos(model.x)} \\
+hyperbolic cosine       & \code{cosh} \index{cosh@\code{cosh} function} & \code{expr = cosh(model.x)} \\
+exponential             & \code{exp} \index{exp@\code{exp} function} & \code{expr = exp(model.x)} \\
+natural log             & \code{log} \index{log@\code{log} function} & \code{expr = log(model.x)} \\
+log base 10             & \code{log10} \index{log10@\code{log10} function} & \code{expr = log10(model.x)} \\
+sine                    & \code{sin} \index{sin@\code{sin} function} & \code{expr = sin(model.x)} \\
+square root             & \code{sqrt} \index{sqrt@\code{sqrt} function} & \code{expr = sqrt(model.x)} \\
+hyperbolic sine         & \code{sinh} \index{sinh@\code{sinh} function} & \code{expr = sinh(model.x)} \\
+tangent                 & \code{tan} \index{tan@\code{tan} function} & \code{expr = tan(model.x)} \\
+hyperbolic tangent      & \code{tanh} \index{tanh@\code{tanh} function} & \code{expr = tanh(model.x)} \\     \hline
+\end{tabular}
+\end{center}
+
+\caption{\label{table:ref-misc:nonlinear-functions} Functions supported by Pyomo for the definition of nonlinear      expressions.}
+\end{table}
+
+
+
+\begin{table}[tbp]
+
+\begin{tabular}{p{1.8in} p{2.7in}} \hline
+\code{display} \index{display function@\code{display} function} & Display the properties of models and model components\\
+\code{dot\_product} \index{dot\_product@\code{dot\_product} function} & Compute a generalized dot product\\
+\code{prod} \index{prod@\code{prod} function} & Compute the product of a sequence of factors\\
+\code{sequence} \index{sequence@\code{sequence} function} & Compute a sequence of integers\\
+\code{summation} \index{summation@\code{summation} function} & Compute a generalized dot product\\
+\code{value} \index{value@\code{value} function} & Compute the value of a model component\\
+\end{tabular}
+
+\caption{\label{table:ref-misc:utility} Pyomo utility functions that support the construction and evaluation of model expressions.}
+\end{table}
+
+\clearpage
+
+
+\section{Examples}
+
+\subsection{Error Checks in a Concrete Model}
+\label{example:component3:concrete}
+
+A Python script that
+illustrates the use of error checks and diagnostic output in the
+construction of a concrete model.
+
+\listing{pyomo/examples/doc/pyomobook/ref-misc/miscComponents_concrete.py}{all}{8}{51}
+
+
+
+\subsection{Error Checks in an Abstract Model}
+\label{example:component3:abstract} 
+
+A Python script that
+illustrates the use of \code{BuildAction} and \code{BuildCheck} components to 
+define error checks and diagnostic output in an abstract model.
+
+\listing{pyomo/examples/doc/pyomobook/ref-misc/miscComponents_abstract.py}{all}{7}{53}
+
+\end{subappendices}
+

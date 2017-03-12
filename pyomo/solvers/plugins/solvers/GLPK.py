@@ -113,6 +113,7 @@ class GLPKSHELL(SystemCallSolver):
         doc='Shell interface to the GNU Linear Programming Kit')
 
     def __init__ (self, **kwargs):
+        configure_glpk()
         #
         # Call base constructor
         #
