@@ -87,6 +87,16 @@ class Test(unittest.TestCase):
         pyutilib.services.TempfileManager.unique_files()
         os.chdir(tmpdir)
 
+    def test_version_asl(self):
+        self.assertTrue(self.asl.version() is not None)
+        self.assertTrue(type(self.asl.version()) is tuple)
+        self.assertEqual(len(self.asl.version()), 4)
+
+    def test_version_ipopt(self):
+        self.assertTrue(self.ipopt.version() is not None)
+        self.assertTrue(type(self.ipopt.version()) is tuple)
+        self.assertEqual(len(self.ipopt.version()), 4)
+
     def test_asl_solve_from_nl(self):
         # Test ipopt solve from nl file
         results = self.asl.solve(join(currdir, "sisser.pyomo.nl"),

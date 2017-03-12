@@ -79,7 +79,7 @@ class IPOPT(SystemCallSolver):
         solver_exec = self.executable()
         if solver_exec is None:
             return _extract_version('')
-        results = pyutilib.subprocess.run( [solver_exec], timelimit=1 )
+        results = pyutilib.subprocess.run( [solver_exec,"-v"], timelimit=1 )
         return _extract_version(results[1])
 
     def create_command_line(self, executable, problem_files):
