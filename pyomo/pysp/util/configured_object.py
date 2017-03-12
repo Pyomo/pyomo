@@ -193,7 +193,7 @@ class PySPConfiguredObject(object):
                         configval._parent = None
                         declare_for_argparse = False
                         if (configval._argparse is None) and \
-                           (options.get(prefix+name, default=None).value() is None):
+                           (prefix+name not in options):
                             declare_for_argparse = True
                         safe_declare_option(
                             options,
@@ -210,7 +210,7 @@ class PySPConfiguredObject(object):
                         configval._parent = None
                         declare_for_argparse = False
                         if (configval._argparse is None) and \
-                           (options.get(prefix+name, default=None).value() is None):
+                           (prefix+name not in options):
                             declare_for_argparse = True
                         safe_declare_option(
                             options,
