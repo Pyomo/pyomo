@@ -6,6 +6,9 @@ from pyomo.opt import SolverFactory
 from pyomo.util.plugin import alias
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
+# DEBUG
+import pdb
+
 class AddSlackVariables(NonIsomorphicTransformation):
     """
     This plugin adds slack variables to every constraint
@@ -25,6 +28,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
         obj_expr = 0
         for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
+            pdb.set_trace()
             if (cons.lower is not None and cons.upper is not None) and \
                value(cons.lower) > value(cons.upper):
                 # this is a structural infeasibility so slacks aren't going to help:
@@ -34,6 +38,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 # declare positive slack
                 varName = "_slack_plus_" + cons.name
                 posSlack = Var(within=NonNegativeReals)
+                # TODO: Should I be making my own block and adding variables to that?
+                # Did we talk about that??
                 instance.add_component(varName, posSlack)
                 # add positive slack to body expression
                 cons._body += posSlack
