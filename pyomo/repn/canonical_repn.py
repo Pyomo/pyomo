@@ -29,7 +29,23 @@ from pyomo.core.base.objective import (_GeneralObjectiveData,
 from pyomo.core.base.connector import _ConnectorData, SimpleConnector, Connector
 from pyomo.core.base.var import SimpleVar, Var, _GeneralVarData, _VarData
 
-from pyomo.core.base.expr_pyomo4 import TreeWalkerHelper
+from pyomo.core.base import expr_pyomo4
+from pyomo.core.base import expr_coopr3
+
+class TreeWalkerHelper(object):
+    stack = []
+    max = 0
+    inuse = False
+    typeList = {
+        expr_pyomo4._SumExpression: 1,
+        expr_pyomo4._InequalityExpression: 1,
+        expr_pyomo4._EqualityExpression: 1,
+        expr_pyomo4._ProductExpression: 2,
+        expr_pyomo4._NegationExpression: 3,
+        expr_pyomo4._LinearExpression: 4,
+        expr_pyomo4._DivisionExpression: 5,
+        _GeneralExpressionData : 6,
+    }
 
 import six
 from six import iterkeys, itervalues, iteritems, StringIO
@@ -227,7 +243,7 @@ def repn_mult(r1, r2, coef=1.0):
 def collect_variables(exp, idMap):
     if exp.is_expression():
         ans = {}
-        if exp.__class__ is expr._ProductExpression:
+        if exp.__class__ is expr_coopr3._ProductExpression:
             for subexp in exp._numerator:
                 ans.update(collect_variables(subexp, idMap))
             for subexp in exp._denominator:
@@ -291,7 +307,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
         #
         # Sum
         #
-        if exp_type is expr._SumExpression:
+        if exp_type is expr_coopr3._SumExpression:
             if exp._const != 0.0:
                 repn = { 0: {None:exp._const} }
             else:
@@ -307,7 +323,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
         #
         # Product
         #
-        elif exp_type is expr._ProductExpression:
+        elif exp_type is expr_coopr3._ProductExpression:
             #
             # Iterate through the denominator.  If they aren't all
             # constants, then simply return this expression.
@@ -338,7 +354,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
         #
         # Power Expression
         #
-        elif exp_type is expr._PowExpression:
+        elif exp_type is expr_coopr3._PowExpression:
             if exp.polynomial_degree() is None:
                 raise TypeError("Unsupported general power expression: "
                                 +str(exp._args))
@@ -359,7 +375,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
                         reduce( lambda x,y: x*y, [exp._args[0]]*int(value(exp._args[1])), 1.0 ),
                         idMap,
                         compute_values)
-        elif exp_type is expr.Expr_if:
+        elif exp_type is expr_coopr3.Expr_if:
             if exp._if.is_fixed():
                 if exp._if():
                     return collect_general_canonical_repn(exp._then,
@@ -551,75 +567,6 @@ class pyomo4_CompiledLinearCanonicalRepn(LinearCanonicalRepn):
         return self
 
 
-    def X__add__(self, other):
-        assert(type(other) == CompiledLinearCanonicalRepn)
-        #if len(self.variables) < len(other.variables):
-        #    self, other = other, self
-        self.constant += other.constant
-        for v in other.variables:
-            _id = id(v)
-            if _id in self.linear:
-                self.linear[_id] += other.linear[_id]
-            else:
-                self.variables.append(v)
-                self.linear[_id] = other.linear[_id]
-
-        CompiledLinearCanonicalRepn_Pool.append(other)
-        return self
-
-    def X__radd__(self, other):
-        assert(type(other) in native_numeric_types)
-        self.constant += other
-        return self
-
-    def X__mul__(self, other):
-        assert(type(other) == CompiledLinearCanonicalRepn)
-        if len(self.variables) < len(other.variables):
-            self, other = other, self
-        assert(len(other.variables) == 0)
-
-        mul = other.constant
-        coef = self.linear
-        self.constant *= mul
-        for _v in coef:
-            coef[_v] *= mul
-
-        CompiledLinearCanonicalRepn_Pool.append(other)
-        return self
-
-    def X__div__(self, other):
-        assert(type(other) == CompiledLinearCanonicalRepn)
-        assert(len(other.variables) == 0)
-
-        mul = other.constant
-        coef = self.linear
-        self.constant /= mul
-        for _v in coef:
-            coef[_v] /= mul
-
-        CompiledLinearCanonicalRepn_Pool.append(other)
-        return self
-
-    def X__pow__(self, other):
-        assert(type(other) == CompiledLinearCanonicalRepn)
-        assert(len(other.variables) == 0)
-
-        if other.constant == 0:
-            self.__init__(1.,None)
-        else:
-            assert(other.constant == 1)
-
-        CompiledLinearCanonicalRepn_Pool.append(other)
-        return self
-
-    def X__neg__(self):
-        self.constant *= -1.
-        coef = self.linear
-        for _v in coef:
-            coef[_v] *= -1.
-        return self
-
-
 def _collect_linear_sum(exp, idMap, multiplier, coef, varmap, compute_values):
 
     coef[None] += multiplier * exp._const  # None is the constant term in the coefficient map.
@@ -766,13 +713,13 @@ def _collect_identity(exp, idMap, multiplier, coef, varmap, compute_values):
 
 
 _linear_collectors = {
-    expr._SumExpression               : _collect_linear_sum,
-    expr._ProductExpression           : _collect_linear_prod,
-    expr._PowExpression               : _collect_linear_pow,
-    expr._IntrinsicFunctionExpression : _collect_linear_intrinsic,
+    expr_coopr3._SumExpression               : _collect_linear_sum,
+    expr_coopr3._ProductExpression           : _collect_linear_prod,
+    expr_coopr3._PowExpression               : _collect_linear_pow,
+    expr_coopr3._IntrinsicFunctionExpression : _collect_linear_intrinsic,
     _ConnectorData          : _collect_linear_connector,
     SimpleConnector         : _collect_linear_connector,
-    expr.Expr_if            : _collect_branching_expr,
+    expr_coopr3.Expr_if            : _collect_branching_expr,
     param._ParamData        : _collect_linear_const,
     param.SimpleParam       : _collect_linear_const,
     param.Param             : _collect_linear_const,
@@ -855,214 +802,169 @@ def coopr3_generate_canonical_repn(exp, idMap=None, compute_values=True):
             { None: exp, -1 : collect_variables(exp, idMap) } )
 
 
-_stack = [[0,0,0,0,0,pyomo4_CompiledLinearCanonicalRepn()]]
+_identity_collectors = set([
+    _GeneralExpressionData,
+    SimpleExpression,
+    _GeneralObjectiveData,
+    SimpleObjective,
+])
+
 
 def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
-    # A **very** special case
-    if TreeWalkerHelper.typeList.get(exp.__class__,0) == 4: # _LinearExpression:
+    if exp.__class__ in native_numeric_types:
         ans = CompiledLinearCanonicalRepn()
-
-        # old format
-        ans.constant = exp._const
-        ans.variables = list( exp._args )
-        _l = exp._coef
-        ans.linear = [_l[id(v)] for v in exp._args]
-
-        if idMap:
-            if None not in idMap:
-                idMap[None] = {}
-            _test = idMap[None]
-            _key = len(idMap) - 1
-            for v in exp._args:
-                if id(v) not in _test:
-                    _test[id(v)] = _key
-                    idMap[_key] = v
-                    _key += 1
+        ans.constant = value(exp)
         return ans
-    else:
-        degree = exp.polynomial_degree()
+    if not exp.is_expression():
+        if exp.is_fixed():
+            ans = CompiledLinearCanonicalRepn()
+            ans.constant = value(exp)
+            return ans
+        elif isinstance(exp, _VarData):
+            ans = CompiledLinearCanonicalRepn()
+            ans.constant = 0
+            ans.linear = (1.,)
+            ans.variables = (exp,)
+            return ans
+        else:
+            raise RuntimeError(
+                "Unrecognized expression node: %s" % (type(exp),) )
+
+    degree = exp.polynomial_degree()
 
     if degree == 1:
-        _typeList = TreeWalkerHelper.typeList
-        _stackMax = len(_stack)
-        _stackIdx = 0
-        _stackPtr = _stack[0]
-
-        _stackPtr[0] = exp
-        try:
-            _stackPtr[1] = exp._args
-        except AttributeError:
-            ans = CompiledLinearCanonicalRepn()
-            ans.variables.append(exp)
-            # until we can redefine CompiledLinearCanonicalRepn, restore
-            # old format
-            #ans.linear[id(exp)] = 1.
-            ans.linear = [1.]
-            return ans
-        try:
-            _stackPtr[2] = _type = _typeList[exp.__class__]
-            if _stackPtr[2] == 2:
-                _stackPtr[5].constant = 1.
-        except KeyError:
-            _stackPtr[2] = _type = 0
-        _stackPtr[3] = len(_stackPtr[1])
-        _stackPtr[4] = 0
-        #_stackPtr[5] = CompiledLinearCanonicalRepn()
-
-        if _type == 4: # _LinearExpression
-            _stackPtr[4] = _stackPtr[3]
-            _stackPtr[5].constant = exp._const
-            _stackPtr[5].linear = dict(exp._coef)
-            _stackPtr[5].variables = list(exp._args)
-
-        while 1: # Note: 1 is faster than True for Python 2.x
-            if _stackPtr[4] < _stackPtr[3]:
-                _sub = _stackPtr[1][_stackPtr[4]]
-                _stackPtr[4] += 1
-                _test = _sub.__class__ in native_numeric_types
-                if _test or not _sub.is_expression():
-                    if not _test and _sub.is_fixed():
-                        _sub = value(_sub)
-                        _test = 1 # True
-                    if _test:
-                        if _type == 2:
-                            _stackPtr[5].constant *= _sub
-                            _l = _stackPtr[5].linear
-                            if _l:
-                                for _id in _l:
-                                    _l[_id] *= _sub
-                        elif _type == 1:
-                            _stackPtr[5].constant += _sub
-                        elif _type == 3:
-                            _stackPtr[5].constant = -1. * _sub
-                        else:
-                            raise RuntimeError("HELP")
+        _stack = []
+        _args = exp._args
+        _idx = 0
+        _len = len(_args)
+        _result = None
+        while 1:
+            # Linear expressions just need to be filteres and copied
+            if exp.__class__ is expr_pyomo4._LinearExpression:
+                _result = expr_pyomo4._LinearExpression(None, 0)
+                _result._args = []
+                _result._coef.clear()
+                _result._const = value(exp._const)
+                for v in _args:
+                    _id = id(v)
+                    if v.is_fixed():
+                        _result._const += v.value * value(exp._coef[_id])
                     else:
-                        _id = id(_sub)
-                        if _type == 2:
-                            _lcr = _stackPtr[5]
-                            _lcr.variables.append(_sub)
-                            _lcr.linear[_id] = _lcr.constant
-                            _lcr.constant = 0
-                        elif _type == 1:
-                            if _id in _stackPtr[5].linear:
-                                _stackPtr[5].linear[_id] += 1.
-                            else:
-                                _stackPtr[5].variables.append(_sub)
-                                _stackPtr[5].linear[_id] = 1.
-                        elif _type == 3:
-                            _lcr = _stackPtr[5]
-                            _lcr.variables.append(_sub)
-                            _lcr.linear[_id] = -1.
-                        else:
-                            raise RuntimeError("HELP")
+                        _result._args.append(v)
+                        _result._coef[_id] = value(exp._coef[_id])
+                _idx = _len
+
+            # Other expressions get their arguments parsed one at a time
+            if _idx < _len:
+                _stack.append((exp, _args, _idx+1, _len, _result))
+                exp = _args[_idx]
+                if exp.__class__ in native_numeric_types:
+                    _len = _idx = 0
+                    _result = exp
+                elif exp.is_expression():
+                    _args = exp._args
+                    _idx = 0
+                    _len = len(_args)
+                    _result = None
+                    continue
+                elif isinstance(exp, _VarData):
+                    _len = _idx = 0
+                    if exp.is_fixed():
+                        _result = exp.value
+                    else:
+                        _result = expr_pyomo4._LinearExpression(exp, 1.)
                 else:
-                    _stackIdx += 1
-                    if _stackMax == _stackIdx:
-                        _stackMax += 1
-                        _stack.append([0,0,0,0,0, CompiledLinearCanonicalRepn()])
-                    _stackPtr = _stack[_stackIdx]
+                    raise RuntimeError(
+                        "Unrecognized expression node: %s" % (type(exp),) )
 
-                    _stackPtr[0] = _sub
-                    _stackPtr[1] = _sub._args
-                    #_stackPtr[2] = _type = _typeList.get(_sub.__class__, 0)
-                    #if _type == 2:
-                    #    _stackPtr[5].constant = 1.
-                    try:
-                        _stackPtr[2] = _type = _typeList[_sub.__class__]
-                        if _type == 2:
-                            _stackPtr[5].constant = 1.
-                    except KeyError:
-                        _stackPtr[2] = _type = 0
-                    _stackPtr[3] = len(_stackPtr[1])
-                    _stackPtr[4] = 0
-                    #_stackPtr[5] = CompiledLinearCanonicalRepn()
+            #
+            # End of _args... time to move up the stack
+            #
 
-                    if _type == 4: # _LinearExpression
-                        _stackPtr[4] = _stackPtr[3]
-                        _stackPtr[5].constant = _sub._const
-                        _stackPtr[5].linear = dict(_sub._coef)
-                        _stackPtr[5].variables = list(_sub._args)
+            # Top of the stack.  _result had better be a _LinearExpression
+            if not _stack:
+                ans = CompiledLinearCanonicalRepn()
+                # old format
+                ans.constant = _result._const
+                ans.linear = []
+                for v in _result._args:
+                    # Note: this also filters out the bogus NONE we added above
+                    _coef = _result._coef[id(v)]
+                    if _coef:
+                        ans.variables.append(v)
+                        ans.linear.append(_coef)
+
+                if idMap:
+                    if None not in idMap:
+                        idMap[None] = {}
+                    _test = idMap[None]
+                    _key = len(idMap) - 1
+                    for v in ans.variables:
+                        if id(v) not in _test:
+                            _test[id(v)] = _key
+                            idMap[_key] = v
+                            _key += 1
+                return ans
+
+            # Ok ... process the new argument to the node.  Note that
+            # _idx is 1-based now...
+            _inner_result = _result
+            exp, _args, _idx, _len, _result = _stack.pop()
+            if exp.__class__ is expr_pyomo4._SumExpression:
+                if _idx == 1:
+                    _result = _inner_result
+                else:
+                    _result += _inner_result
+            elif exp.__class__ is expr_pyomo4._ProductExpression:
+                if _idx == 1:
+                    _result = _inner_result
+                else:
+                    _result *= _inner_result
+            elif exp.__class__ is expr_pyomo4._DivisionExpression:
+                if _idx == 1:
+                    _result = _inner_result
+                else:
+                    _result /= _inner_result
+            elif exp.__class__ is expr_pyomo4._NegationExpression:
+                _result = -_inner_result
+            elif exp.__class__ is expr_pyomo4._PowExpression:
+                # We know this is either constant or linear
+                if _idx == 1:
+                    _result = _inner_result
+                else:
+                    coef = value(_inner_result)
+                    if not coef:
+                        _result = 1.
+                    elif coef != 1:
+                        _result = _result ** coef
+            elif exp.__class__ is expr_pyomo4.Expr_if:
+                if _idx == 1:
+                    _result = [_inner_result]
+                else:
+                    _result.append(_inner_result)
+                if _idx == 3:
+                    if value(_result[0]):
+                        _result = _result[1]
+                    else:
+                        _result = _result[2]
+            elif exp.__class__ in _identity_collectors:
+                _result = _inner_result
+            elif exp.is_fixed():
+                _result = value(exp)
             else:
-                old = _stackPtr[5]
-                if not _type:
-                    old.constant = _stackPtr[0]._apply_operation(old.variables)
-                    old.variables = []
-
-                if _stackIdx == 0:
-                    ans = CompiledLinearCanonicalRepn()
-                    ans.variables, old.variables = old.variables, ans.variables
-                    ans.linear, old.linear = old.linear, ans.linear
-                    ans.constant, old.constant = old.constant, ans.constant
-                    # until we can redefine CompiledLinearCanonicalRepn, restore
-                    # old format
-                    ans.linear = [ans.linear[id(v)] for v in ans.variables]
-
-                    if idMap:
-                        if None not in idMap:
-                            idMap[None] = {}
-                        _test = idMap[None]
-                        _key = len(idMap) - 1
-                        for v in ans.variables:
-                            if id(v) not in _test:
-                                _test[id(v)] = _key
-                                idMap[_key] = v
-                                _key += 1
-                    return ans
-
-                _stackIdx -= 1
-                _stackPtr = _stack[_stackIdx]
-                new = _stackPtr[5]
-                _type = _stackPtr[2]
-                if _type == 1:
-                    new.constant += old.constant
-                    _nl = new.linear
-                    # Note: append the variables in the order that they
-                    # were originally added to the CompiledLinearCanonicalRepn.
-                    # This keeps things deterministic.
-                    for v in old.variables:
-                        _id = id(v)
-                        if _id in _nl:
-                            _nl[_id] += old.linear[_id]
-                        else:
-                            new.variables.append(v)
-                            _nl[_id] = old.linear[_id]
-                    old.constant = 0.
-                    old.variables = []
-                    old.linear = {}
-                elif _type == 2:
-                    if old.variables:
-                        old.variables, new.variables = new.variables, old.variables
-                        old.linear, new.linear = new.linear, old.linear
-                        old.constant, new.constant = new.constant, old.constant
-                    _c = old.constant
-                    new.constant *= _c
-                    _nl = new.linear
-                    for _id in _nl:
-                        _nl[_id] *= _c
-                    old.constant = 0.
-                elif _type == 3:
-                    old.variables, new.variables = new.variables, old.variables
-                    old.linear, new.linear = new.linear, old.linear
-                    new.constant = -1 * old.constant
-                    old.constant = 0.
-                    _nl = new.linear
-                    for _id in _nl:
-                        _nl[_id] *= -1
-                else:
-                    raise RuntimeError("HELP")
+                raise RuntimeError(
+                    "Unknown non-fixed subexpression type %s" % (type(exp),) )
 
     elif degree == 0:
-        if CompiledLinearCanonicalRepn_Pool:
-            ans = CompiledLinearCanonicalRepn_Pool.pop()
-            ans.__init__()
-        else:
-            ans = CompiledLinearCanonicalRepn()
+        ans = CompiledLinearCanonicalRepn()
         ans.constant = value(exp)
         return ans
 
+
     # **Py3k: degree > 1 comparision will error if degree is None
     elif degree and degree > 1:
+        raise RuntimeError("generate_canonical_repn does not support nonlinear Pyomo4 expressions")
+
         ans = collect_general_canonical_repn(exp, idMap, compute_values)
         if 1 in ans:
             linear_terms = {}

@@ -11,7 +11,7 @@ from __future__ import division
 
 __all__ = ( 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
             'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh', 
-            'atanh', 'ceil', 'floor' )
+            'atanh', 'ceil', 'floor', 'sum' )
 
 from pyomo.core.base import expr_common as common
 
@@ -19,7 +19,7 @@ def generate_expression(etype, _self,_other):
     raise RuntimeError("incomplete import of Pyomo expression system")
 def generate_relational_expression(etype, lhs, rhs):
     raise RuntimeError("incomplete import of Pyomo expression system")
-def generate_intrinsic_function_expression(etype, name, arg):
+def generate_intrinsic_function_expression(arg, name, fcn):
     raise RuntimeError("incomplete import of Pyomo expression system")
 
 import math
@@ -33,7 +33,7 @@ _common_module_members = [
     'generate_expression',
     'generate_intrinsic_function_expression',
     'generate_relational_expression',
-    'generate_expression_bypassCloneCheck',
+    'bypass_clone_check',
     'chainedInequalityErrorMessage',
     '_ExpressionBase',
     '_EqualityExpression',
@@ -46,6 +46,7 @@ _common_module_members = [
     '_IntrinsicFunctionExpression',
     '_GetItemExpression',
     'Expr_if',
+    'sum',
 ]
 _coopr3_module_members = []
 _pyomo4_module_members = [
