@@ -792,7 +792,11 @@ class _BlockData(ActiveComponentData):
         #
         if not val.valid_model_component():
             raise RuntimeError(
-                "Cannot add '%s' as a component to a model" % str(type(val)) )
+                "Cannot add '%s' as a component to a block" % str(type(val)) )
+        if name in _Block_reserved_words:
+            raise ValueError("Attempting to declare a block component using "
+                             "the name of a reserved function:\n\t%s"
+                             % (name,) )
         if name in self.__dict__:
             raise RuntimeError(
                 "Cannot add component '%s' (type %s) to block '%s': a "
@@ -1940,6 +1944,8 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
     logger.warning("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
     return block.component_data_objects(ctype=ctype, active=False, sort=sort)
 
+
+_Block_reserved_words = set(dir(Block()))
 
 register_component(
     Block, "A component that contains one or more model components." )
