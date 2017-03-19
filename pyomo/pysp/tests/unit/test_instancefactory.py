@@ -19,6 +19,12 @@ from pyomo.pysp.scenariotree.tree_structure_model import \
     CreateAbstractScenarioTreeModel
 from pyomo.pysp.util.misc import load_external_module
 
+try:
+    import networkx
+    has_networkx = True
+except:
+    has_networkx = False
+
 has_yaml = False
 try:
     import yaml
@@ -456,6 +462,7 @@ class Test(unittest.TestCase):
         self.assertEqual(factory._closed, True)
         self.assertEqual(len(factory._archives), 0)
 
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
     def test_init15(self):
         self.assertTrue("reference_test_model" not in sys.modules)
         with ScenarioTreeInstanceFactory(
