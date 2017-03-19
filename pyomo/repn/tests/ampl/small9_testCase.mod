@@ -5,7 +5,7 @@
 #          as linear or trivial when fixing variables or params
 #          cause such a situation.
 #
-#          This test model relies on the asl_test executable. It
+#          This test model relies on the gjh_asl_json executable. It
 #          will not solve if sent to a real optimizer.
 #
 
