@@ -804,7 +804,7 @@ def default_config_block(solver, init=False):
                 'glpk',
                 str,
                 'Solver name',
-                None) ).declare_as_argument('--solver', dest='solver')
+                None) )
     solver.declare('solver executable', ConfigValue(
         default=None,
         domain=str,
@@ -814,29 +814,27 @@ def default_config_block(solver, init=False):
              "interact with a local executable through the shell. If unset, "
              "the solver interface will attempt to find an executable within "
              "the search path of the shell's environment that matches a name "
-             "commonly associated with the solver interface.")).\
-                   declare_as_argument('--solver-executable',
-                                       dest="solver_executable", metavar="FILE"))
+             "commonly associated with the solver interface.")))
     solver.declare('io format', ConfigValue(
                 None,
                 str,
                 'The type of IO used to execute the solver. Different solvers support different types of IO, but the following are common options: lp - generate LP files, nl - generate NL files, python - direct Python interface, os - generate OSiL XML files.',
-                None) ).declare_as_argument('--solver-io', dest='io_format', metavar="FORMAT")
+                None) )
     solver.declare('manager', ConfigValue(
                 'serial',
                 str,
                 'The technique that is used to manage solver executions.',
-                None) ).declare_as_argument('--solver-manager', dest="smanager_type", metavar="TYPE")
+                None) )
     solver.declare('pyro host', ConfigValue(
                 None,
                 str,
                 "The hostname to bind on when searching for a Pyro nameserver.",
-                None) ).declare_as_argument('--pyro-host', dest="pyro_host")
+                None) )
     solver.declare('pyro port', ConfigValue(
                 None,
                 int,
                 "The port to bind on when searching for a Pyro nameserver.",
-                None) ).declare_as_argument('--pyro-port', dest="pyro_port")
+                None) )
     solver.declare('options', ConfigBlock(
                 implicit=True,
                 implicit_domain=ConfigValue(
@@ -849,12 +847,12 @@ def default_config_block(solver, init=False):
                 None,
                 str,
                 'String describing solver options',
-                None) ).declare_as_argument('--solver-options', dest='options_string', metavar="STRING")
+                None) )
     solver.declare('suffixes', ConfigList(
                 [],
                 ConfigValue(None, str, 'Suffix', None),
                 'Solution suffixes that will be extracted by the solver (e.g., rc, dual, or slack). The use of this option is not required when a suffix has been declared on the model using Pyomo\'s Suffix component.',
-                None) ).declare_as_argument('--solver-suffix', dest="solver_suffixes")
+                None) )
     blocks['solver'] = solver
     #
     solver_list = config.declare('solvers', ConfigList(
@@ -862,7 +860,37 @@ def default_config_block(solver, init=False):
                 solver, #ConfigValue(None, str, 'Solver', None),
                 'List of solvers.  The first solver in this list is the master solver.',
                 None) )
+    #
+    # Make sure that there is one solver in the list.
+    #
+    # This will be the solver into which we dump command line options.
+    # Note that we CANNOT declare the argparse options on the base block
+    # definition above, as we use that definition as the DOMAIN TYPE for
+    # the list of solvers.  As that information is NOT copied to
+    # derivative blocks, the initial solver entry we are creating would
+    # be missing all argparse information. Plus, if we were to have more
+    # than one solver defined, we wouldn't want command line options
+    # going to both.
     solver_list.append()
+    solver_list[0].get('solver name').\
+        declare_as_argument('--solver', dest='solver')
+    solver_list[0].get('solver executable').\
+        declare_as_argument('--solver-executable',
+                            dest="solver_executable", metavar="FILE")
+    solver_list[0].get('io format').\
+        declare_as_argument('--solver-io', dest='io_format', metavar="FORMAT")
+    solver_list[0].get('manager').\
+        declare_as_argument('--solver-manager', dest="smanager_type",
+                            metavar="TYPE")
+    solver_list[0].get('pyro host').\
+        declare_as_argument('--pyro-host', dest="pyro_host")
+    solver_list[0].get('pyro port').\
+        declare_as_argument('--pyro-port', dest="pyro_port")
+    solver_list[0].get('options string').\
+        declare_as_argument('--solver-options', dest='options_string',
+                            metavar="STRING")
+    solver_list[0].get('suffixes').\
+        declare_as_argument('--solver-suffix', dest="solver_suffixes")
 
     #
     # Postprocess

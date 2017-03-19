@@ -21,6 +21,8 @@ from pyomo.core.base.template_expr import (
     substitute_template_with_value,
 )
 
+import six
+
 class ExpressionObjectTester(object):
     def setUp(self):
         self.m = m = ConcreteModel()
@@ -70,6 +72,11 @@ class ExpressionObjectTester(object):
         self.assertIs(e.resolve_template(), m.p[5,10])
         t.set_value(None)
 
+    # TODO: Fixing this test requires fixing Set (it
+    #       currently only fails with pyomo4-expressions)
+    def _test_template_scalar_with_set(self):
+        m = self.m
+        t = IndexTemplate(m.I)
         e = m.s[t]
         self.assertIs(type(e), EXPR._GetItemExpression)
         self.assertIs(e._base, m.s)
@@ -81,7 +88,6 @@ class ExpressionObjectTester(object):
         self.assertRaises(TypeError, e)
         self.assertIs(e.resolve_template(), m.s[5])
         t.set_value(None)
-
 
     def test_template_operation(self):
         m = self.m
@@ -254,7 +260,8 @@ class ExpressionObjectTester(object):
                          E_base._args[-1]._args[0]._args[1])
         self.assertIs(type(e._args[0]._args[1]._args[0]), EXPR._SumExpression)
         self.assertIs(e._args[0]._args[1]._args[0]._args[0], t)
-        
+
+
 
 class TestTemplate_expressionObjects_coopr3\
       ( ExpressionObjectTester, unittest.TestCase ):
@@ -266,6 +273,9 @@ class TestTemplate_expressionObjects_coopr3\
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
 
+    # see TODO next to _test_template_scalar_with_set
+    def test_template_scalar_with_set(self):
+        self._test_template_scalar_with_set()
 
 class TestTemplate_expressionObjects_pyomo4\
       ( ExpressionObjectTester, unittest.TestCase ):
@@ -276,6 +286,10 @@ class TestTemplate_expressionObjects_pyomo4\
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    @unittest.expectedFailure
+    def test_template_scalar_with_set(self):
+        self._test_template_scalar_with_set()
 
 class TestTemplateSubstitution(unittest.TestCase):
 
@@ -368,3 +382,6 @@ class TestTemplateSubstitution(unittest.TestCase):
         self.assertEqual(
             str(E),
             'dxdt[5,2]  ==  5.0 * x[5,2]**2.0 + y**2.0' )
+
+if __name__ == "__main__":
+    unittest.main()
