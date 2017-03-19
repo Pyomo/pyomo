@@ -350,9 +350,11 @@ class constraint(_mutable_bounds_mixin, IConstraint):
                     self.rhs = arg0
                     self.body = arg1
                 else:
-                    self.rhs = ZeroConstant
-                    self.body = EXPR.generate_expression_bypassCloneCheck(
-                        _sub, arg0, arg1)
+                    with EXPR.bypass_clone_check():
+                        self.rhs = ZeroConstant
+                        self.body = arg0
+                        self.body -= arg1
+
             #
             # Form inequality expression
             #
@@ -455,9 +457,10 @@ class constraint(_mutable_bounds_mixin, IConstraint):
                     self.rhs = _args[0]
                     self.body = _args[1]
                 else:
-                    self.rhs = ZeroConstant
-                    self.body = EXPR.generate_expression_bypassCloneCheck(
-                        _sub, _args[0], _args[1] )
+                    with EXPR.bypass_clone_check():
+                        self.rhs = ZeroConstant
+                        self.body = _args[0]
+                        self.body -= _args[1]
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
@@ -521,10 +524,11 @@ class constraint(_mutable_bounds_mixin, IConstraint):
                         self.body  = _args[1]
                         self.ub = None
                     else:
-                        self.lb = None
-                        self.body  = EXPR.generate_expression_bypassCloneCheck(
-                            _sub, _args[0], _args[1])
-                        self.ub = ZeroConstant
+                        with EXPR.bypass_clone_check():
+                            self.lb = None
+                            self.body  = _args[0]
+                            self.body -= _args[1]
+                            self.ub = ZeroConstant
 
         #
         # Replace numeric bound values with a NumericConstant object,

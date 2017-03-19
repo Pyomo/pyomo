@@ -62,7 +62,6 @@ def create_test_method(example):
                (not scipy_available) or \
                (not testing_solvers['ipopt','nl']) or \
                (not testing_solvers['glpk','lp']):
-                print(numpy_available, scipy_available, testing_solvers['ipopt','nl'], testing_solvers['glpk','lp'])
                 self.skipTest("Numpy or Scipy or Ipopt or Glpk is not available")
         rc, log = pyutilib.subprocess.run(['python',example])
         self.assertEqual(rc, 0, msg=log)
