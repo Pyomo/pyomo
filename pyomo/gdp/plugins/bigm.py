@@ -191,7 +191,7 @@ class BigM_Transformation(Transformation):
                 continue
             c.deactivate()
 
-            name = _name + (cname and '.'+cname or '')
+            name = _name + ('.'+str(cname) if cname is not None else '')
 
             if (not lin_body_map is None) and (not lin_body_map.get(c) is None):
                 raise GDP_Error('GDP(BigM) cannot process linear ' \

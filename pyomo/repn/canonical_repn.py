@@ -320,8 +320,9 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
                     temp_nonl[None] = exp
                     return temp_nonl
                 if denom == 0.0:
-                    print("Divide-by-zero error - offending sub-expression:")
-                    e.pprint()
+                    logger.error(
+                        "Divide-by-zero: offending sub-expression:\n   %s"
+                        % str(e))
                     raise ZeroDivisionError
             #
             # OK, the denominator is a constant.
@@ -656,9 +657,8 @@ def _collect_linear_prod(exp, idMap, multiplier, coef, varmap, compute_values):
         if compute_values:
             x = value(subexp) # only have constants/fixed terms in the denominator.
             if x == 0:
-                buf = StringIO()
-                subexp.pprint(buf)
-                logger.error("Divide-by-zero: offending sub-expression:\n   " + buf)
+                logger.error("Divide-by-zero: offending sub-expression:\n   %s"
+                             % str(subexp))
                 raise ZeroDivisionError
             multiplier /= x
         else:
