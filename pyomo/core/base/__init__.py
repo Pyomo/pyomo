@@ -7,7 +7,7 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import pyomo.core.base.log_config
+import pyomo.core.kernel
 from pyomo.core.base.config import PyomoOptions
 
 from pyomo.core.kernel import (minimize,
