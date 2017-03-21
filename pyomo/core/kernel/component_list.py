@@ -11,7 +11,7 @@ __all__ = ("ComponentList",)
 
 import collections
 
-from pyomo.core.base.component_tuple import ComponentTuple
+from pyomo.core.kernel.component_tuple import ComponentTuple
 
 class ComponentList(ComponentTuple,
                     collections.MutableSequence):

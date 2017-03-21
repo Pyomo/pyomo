@@ -17,19 +17,20 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyomo.core.base.component_interface import (IActiveObject,
-                                                 ICategorizedObject,
-                                                 IComponent,
-                                                 IComponentContainer,
-                                                 _IActiveComponentContainerMixin)
-from pyomo.core.base.component_objective import IObjective
-from pyomo.core.base.component_variable import IVariable
-from pyomo.core.base.component_constraint import IConstraint
-from pyomo.core.base.component_dict import ComponentDict
-from pyomo.core.base.component_tuple import ComponentTuple
-from pyomo.core.base.component_list import ComponentList
-from pyomo.core.base.component_map import ComponentMap
-from pyomo.core.base.component_suffix import import_suffix_generator
+from pyomo.core.kernel.component_interface import \
+    (IActiveObject,
+     ICategorizedObject,
+     IComponent,
+     IComponentContainer,
+     _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_objective import IObjective
+from pyomo.core.kernel.component_variable import IVariable
+from pyomo.core.kernel.component_constraint import IConstraint
+from pyomo.core.kernel.component_dict import ComponentDict
+from pyomo.core.kernel.component_tuple import ComponentTuple
+from pyomo.core.kernel.component_list import ComponentList
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_suffix import import_suffix_generator
 from pyomo.core.base.symbol_map import SymbolMap
 import pyomo.opt
 

@@ -9,17 +9,17 @@
 
 import pyutilib.math
 
-from pyomo.core.base.component_interface import \
+from pyomo.core.kernel.component_interface import \
     (IComponent,
      _IActiveComponentMixin,
      _IActiveComponentContainerMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.base.component_dict import ComponentDict
-from pyomo.core.base.component_tuple import ComponentTuple
-from pyomo.core.base.component_list import ComponentList
+from pyomo.core.kernel.component_dict import ComponentDict
+from pyomo.core.kernel.component_tuple import ComponentTuple
+from pyomo.core.kernel.component_list import ComponentList
+from pyomo.core.kernel.component_expression import IExpression
 from pyomo.core.base.numvalue import as_numeric
-from pyomo.core.base.component_expression import IExpression
 from pyomo.core.base import minimize, maximize
 
 import six

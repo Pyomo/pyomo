@@ -12,54 +12,54 @@ from pyomo.opt import (SolverFactory,
                        SolverStatus,
                        TerminationCondition)
 import pyomo.opt.base
-from pyomo.core.base.component_map import ComponentMap
-from pyomo.core.base.component_block import (block,
-                                             tiny_block,
-                                             block_tuple,
-                                             block_list,
-                                             block_dict)
-from pyomo.core.base.component_variable import (variable,
-                                                variable_tuple,
-                                                variable_list,
-                                                variable_dict)
-from pyomo.core.base.component_constraint import (constraint,
-                                                  linear_constraint,
-                                                  constraint_tuple,
-                                                  constraint_list,
-                                                  constraint_dict)
-from pyomo.core.base.component_parameter import (parameter,
-                                                 parameter_tuple,
-                                                 parameter_list,
-                                                 parameter_dict)
-from pyomo.core.base.component_expression import (expression,
-                                                  data_expression,
-                                                  expression_tuple,
-                                                  expression_list,
-                                                  expression_dict)
-from pyomo.core.base.component_objective import (objective,
-                                                 objective_tuple,
-                                                 objective_list,
-                                                 objective_dict)
-from pyomo.core.base.component_sos import (sos,
-                                           sos1,
-                                           sos2,
-                                           sos_tuple,
-                                           sos_list,
-                                           sos_dict)
-from pyomo.core.base.component_suffix import (suffix,
-                                              export_suffix_generator,
-                                              import_suffix_generator,
-                                              local_suffix_generator,
-                                              suffix_generator)
-from pyomo.core.base.component_piecewise.transforms import (piecewise,
-                                                            piecewise_sos2,
-                                                            piecewise_dcc,
-                                                            piecewise_cc,
-                                                            piecewise_mc,
-                                                            piecewise_inc,
-                                                            piecewise_dlog,
-                                                            piecewise_log)
-from pyomo.core.base.component_piecewise.transforms_nd import piecewise_nd
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_block import (block,
+                                               tiny_block,
+                                               block_tuple,
+                                               block_list,
+                                               block_dict)
+from pyomo.core.kernel.component_variable import (variable,
+                                                  variable_tuple,
+                                                  variable_list,
+                                                  variable_dict)
+from pyomo.core.kernel.component_constraint import (constraint,
+                                                    linear_constraint,
+                                                    constraint_tuple,
+                                                    constraint_list,
+                                                    constraint_dict)
+from pyomo.core.kernel.component_parameter import (parameter,
+                                                   parameter_tuple,
+                                                   parameter_list,
+                                                   parameter_dict)
+from pyomo.core.kernel.component_expression import (expression,
+                                                    data_expression,
+                                                    expression_tuple,
+                                                    expression_list,
+                                                    expression_dict)
+from pyomo.core.kernel.component_objective import (objective,
+                                                   objective_tuple,
+                                                   objective_list,
+                                                   objective_dict)
+from pyomo.core.kernel.component_sos import (sos,
+                                             sos1,
+                                             sos2,
+                                             sos_tuple,
+                                             sos_list,
+                                             sos_dict)
+from pyomo.core.kernel.component_suffix import (suffix,
+                                                export_suffix_generator,
+                                                import_suffix_generator,
+                                                local_suffix_generator,
+                                                suffix_generator)
+from pyomo.core.kernel.component_piecewise.transforms import (piecewise,
+                                                              piecewise_sos2,
+                                                              piecewise_dcc,
+                                                              piecewise_cc,
+                                                              piecewise_mc,
+                                                              piecewise_inc,
+                                                              piecewise_dlog,
+                                                              piecewise_log)
+from pyomo.core.kernel.component_piecewise.transforms_nd import piecewise_nd
 
 from pyomo.core.base.expr import *
 from pyomo.core.base.set_types import (RealSet,
@@ -164,7 +164,7 @@ def _pprint(obj, indent=0):
 #
 # Ducktyping to work with a few solver interfaces
 #
-from pyomo.core.base.component_block import _block_base
+from pyomo.core.kernel.component_block import _block_base
 
 # This is ugly and bad (keys are local names
 # so they can overwrite each other). Not sure
@@ -269,5 +269,5 @@ _block_base.write = _write
 del _write
 
 # canonical repn checks type instead of ctype
-from pyomo.core.base.component_interface import ICategorizedObject
+from pyomo.core.kernel.component_interface import ICategorizedObject
 ICategorizedObject.type = ICategorizedObject.ctype

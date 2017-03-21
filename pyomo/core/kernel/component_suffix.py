@@ -11,15 +11,15 @@ import logging
 
 import pyutilib.math
 
-from pyomo.core.base.component_interface import \
+from pyomo.core.kernel.component_interface import \
     (IComponent,
      _IActiveComponentMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.base.numvalue import NumericValue
 from pyomo.core.base.set_types import (RealSet,
                                        IntegerSet)
-from pyomo.core.base.component_map import ComponentMap
 
 import six
 

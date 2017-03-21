@@ -11,7 +11,7 @@ __all__ = ("ComponentTuple",)
 
 import collections
 
-from pyomo.core.base.component_interface import \
+from pyomo.core.kernel.component_interface import \
     (IComponentContainer,
      _SimpleContainerMixin)
 

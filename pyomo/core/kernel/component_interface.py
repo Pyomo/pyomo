@@ -684,7 +684,7 @@ class _SimpleContainerMixin(object):
             mapping component objects to names.
         """
         assert active in (None, True)
-        from pyomo.core.base.component_map import ComponentMap
+        from pyomo.core.kernel.component_map import ComponentMap
         names = ComponentMap()
 
         # if not active, then no children can be active

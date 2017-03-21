@@ -13,13 +13,13 @@ import abc
 import pyutilib.math
 
 import pyomo.core.base.expr_common
-from pyomo.core.base.component_interface import \
+from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.base.component_dict import ComponentDict
-from pyomo.core.base.component_tuple import ComponentTuple
-from pyomo.core.base.component_list import ComponentList
+from pyomo.core.kernel.component_dict import ComponentDict
+from pyomo.core.kernel.component_tuple import ComponentTuple
+from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.base.numvalue import (NumericValue,
                                       is_fixed,
                                       potentially_variable,

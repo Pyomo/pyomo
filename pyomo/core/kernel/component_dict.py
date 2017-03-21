@@ -15,7 +15,7 @@ try:
 except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
-from pyomo.core.base.component_interface import \
+from pyomo.core.kernel.component_interface import \
     (IComponentContainer,
      _SimpleContainerMixin)
 
