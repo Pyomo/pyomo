@@ -68,8 +68,6 @@ from pyomo.core.base.rangeset import *
 
 from pyomo.core.base.instance2dat import *
 
-from pyomo.core.base.register_numpy_types import *
-
 #
 # This is a hack to strip out modules, which shouldn't have been included in these imports
 #
