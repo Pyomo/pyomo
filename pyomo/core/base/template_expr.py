@@ -82,6 +82,10 @@ class IndexTemplate(NumericValue):
         """
         return False
 
+    def _potentially_variable(self):
+        """Returns True because this is a variable."""
+        return False
+
     def __str__(self):
         return self.getname()
 

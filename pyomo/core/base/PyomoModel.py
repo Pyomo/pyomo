@@ -833,7 +833,7 @@ from solvers are immediately loaded into the original model instance.""")
             #
 
             if report_timing is True:
-                import pyomo.core.base.expr_coopr3
+                import pyomo.core.base.expr as EXPR
                 construction_start_time = time.time()
 
             for component_name, component in iteritems(self.component_map()):
@@ -843,11 +843,7 @@ from solvers are immediately loaded into the original model instance.""")
 
                 if report_timing is True:
                     start_time = time.time()
-                    clone_counters = (
-                        pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
-                        )
+                    clone_counters = EXPR.generate_expression.clone_counter
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
 
@@ -861,14 +857,10 @@ from solvers are immediately loaded into the original model instance.""")
                     print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
-                    tmp_clone_counters = (
-                        pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
-                        )
+                    tmp_clone_counters = EXPR.generate_expression.clone_counter
                     if clone_counters != tmp_clone_counters:
                         clone_counters = tmp_clone_counters
-                        print("             Cloning detected! (clone counters: %d, %d, %d)" % clone_counters)
+                        print("             Cloning detected! (clone counters: %d)" % clone_counters)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.

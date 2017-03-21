@@ -7,7 +7,8 @@ from os.path import dirname, abspath
 # @preprocess:
 def pyomo_preprocess(options=None):
     print("Here are the options that were provided:")
-    print(options.display())
+    if options is not None:
+        options.display()
 # @:preprocess
 
 # @create_model:

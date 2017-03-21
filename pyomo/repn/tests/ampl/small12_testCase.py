@@ -8,10 +8,10 @@
 #  _________________________________________________________________________
 #
 # Author:  Gabe Hackebeil
-# Purpose: For testing to ensure that the Pyomo NL writer properly 
+# Purpose: For testing to ensure that the Pyomo NL writer properly
 #          handles the Expr_if component.
 #
-#          This test model relies on the asl_test executable. It
+#          This test model relies on the gjh_asl_json executable. It
 #          will not solve if sent to a real optimizer.
 #
 
