@@ -351,14 +351,3 @@ class IndexedSOSConstraint(SOSConstraint):
 
 
 register_component(SOSConstraint, "SOS constraint expressions.")
-
-# Setting these properties here avoids a circular import.
-# This is temporary.
-from pyomo.core.base.component_sos import (sos,
-                                           sos_tuple,
-                                           sos_list,
-                                           sos_dict)
-sos._ctype = SOSConstraint
-sos_tuple._ctype = SOSConstraint
-sos_list._ctype = SOSConstraint
-sos_dict._ctype = SOSConstraint

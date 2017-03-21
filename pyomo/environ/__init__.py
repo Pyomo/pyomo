@@ -69,3 +69,9 @@ def _import_packages():
 _PG.add_env("pyomo")
 _import_packages()
 _PG.pop_env()
+
+# The following sets up the ctype properties on the
+# components in core/kernel. It is a temporary hack
+import _setup_kernel
+_setup_kernel._setup()
+del _setup_kernel

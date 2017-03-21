@@ -446,9 +446,3 @@ class Suffix(ComponentMap, ActiveComponent):
 
 
 register_component(Suffix, "Declare a container for extraneous model data")
-
-# Setting these properties here avoids a circular import.
-# This is temporary.
-from pyomo.core.base.component_suffix import suffix
-
-suffix._ctype = Suffix

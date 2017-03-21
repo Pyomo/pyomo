@@ -693,14 +693,3 @@ register_component(Objective,
                    "Expressions that are minimized or maximized.")
 register_component(ObjectiveList,
                    "A list of objective expressions.")
-
-# Setting these properties here avoids a circular import.
-# This is temporary.
-from pyomo.core.base.component_objective import (objective,
-                                                 objective_tuple,
-                                                 objective_list,
-                                                 objective_dict)
-objective._ctype = Objective
-objective_tuple._ctype = Objective
-objective_list._ctype = Objective
-objective_dict._ctype = Objective

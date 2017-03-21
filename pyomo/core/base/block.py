@@ -1943,17 +1943,3 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
 
 register_component(
     Block, "A component that contains one or more model components." )
-
-# Setting these properties here avoids a circular import.
-# This is temporary.
-from pyomo.core.base.component_block import (block,
-                                             tiny_block,
-                                             block_tuple,
-                                             block_list,
-                                             block_dict)
-
-block._ctype = Block
-block_tuple._ctype = Block
-block_list._ctype = Block
-block_dict._ctype = Block
-tiny_block._ctype = Block
