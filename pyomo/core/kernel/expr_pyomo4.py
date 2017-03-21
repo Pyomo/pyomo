@@ -8,6 +8,14 @@
 #  For more information, see the Pyomo README.txt file.
 #  _________________________________________________________________________
 
+
+# TODO: There is a reference to Var and Connector in one of
+#       the methods below that is not covered by any
+#       tests. Those components are now in a different
+#       directory, so this line will not work.
+#from pyomo.core.base.var import Var
+#from pyomo.core.base.connector import Connector
+
 from __future__ import division
 
 import logging
@@ -20,21 +28,25 @@ from six import StringIO, next, string_types, itervalues
 from six.moves import xrange, builtins
 from weakref import ref
 
-from pyomo.core.base.component import Component
-from pyomo.core.base.numvalue import (
-    NumericValue, NumericConstant, native_types, native_numeric_types,
-    as_numeric, value
-)
-from pyomo.core.base.var import Var, _VarData
-from pyomo.core.base.param import _ParamData
-from pyomo.core.base.connector import Connector
-from pyomo.core.base.expr_common import (
-    bypass_backreference, _getrefcount_available, getrefcount,
-    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary,
-    _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow,
-    _lt, _le, _eq, clone_expression, chainedInequalityErrorMessage as cIEM
-)
-from pyomo.core.base import expr_common as common
+from pyomo.core.kernel.numvalue import \
+    (NumericValue,
+     NumericConstant,
+     native_types,
+     native_numeric_types,
+     as_numeric,
+     value)
+from pyomo.core.kernel.expr_common import \
+    (bypass_backreference,
+     _getrefcount_available,
+     getrefcount,
+     _add, _sub, _mul, _div,
+     _pow, _neg, _abs, _inplace,
+     _unary, _radd, _rsub, _rmul,
+     _rdiv, _rpow, _iadd, _isub,
+     _imul, _idiv, _ipow, _lt, _le,
+     _eq, clone_expression,
+     chainedInequalityErrorMessage as cIEM)
+from pyomo.core.kernel import expr_common as common
 
 UNREFERENCED_EXPR_COUNT = 11
 UNREFERENCED_INTRINSIC_EXPR_COUNT = -2
@@ -198,43 +210,6 @@ class bypass_clone_check(object):
             = _generate_expression__clone_if_needed, \
               _generate_expression__noCloneCheck
         bypass_clone_check.currently_bypassing = False
-
-
-def identify_variables( expr,
-                        include_fixed=True,
-                        allow_duplicates=False,
-                        include_potentially_variable=False ):
-    if not allow_duplicates:
-        _seen = set()
-    _stack = [ ([expr], 0, 1) ]
-    while _stack:
-        _argList, _idx, _len = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_types:
-                pass
-            elif _sub.is_expression():
-                _stack.append(( _argList, _idx, _len ))
-                _argList = _sub._args
-                _idx = 0
-                _len = len(_argList)
-            elif isinstance(_sub, _VarData):
-                if ( include_fixed
-                     or not _sub.is_fixed()
-                     or include_potentially_variable ):
-                    if not allow_duplicates:
-                        if id(_sub) in _seen:
-                            continue
-                        _seen.add(id(_sub))
-                    yield _sub
-            elif include_potentially_variable and _sub._potentially_variable():
-                if not allow_duplicates:
-                    if id(_sub) in _seen:
-                        continue
-                    _seen.add(id(_sub))
-                yield _sub
-
 
 class _ExpressionBase(NumericValue):
     """An object that defines a mathematical expression that can be evaluated"""

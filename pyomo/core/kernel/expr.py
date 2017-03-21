@@ -8,8 +8,9 @@
 #  _________________________________________________________________________
 
 from __future__ import division
+import math
 
-from pyomo.core.base import expr_common as common
+import pyomo.core.kernel.expr_common as common
 
 def generate_expression(etype, _self,_other):
     raise RuntimeError("incomplete import of Pyomo expression system")
@@ -18,11 +19,10 @@ def generate_relational_expression(etype, lhs, rhs):
 def generate_intrinsic_function_expression(arg, name, fcn):
     raise RuntimeError("incomplete import of Pyomo expression system")
 
-import math
-from pyomo.core.base import numvalue
+import pyomo.core.kernel.numvalue as numvalue
 
 # Import global methods that are common to all expression systems
-from pyomo.core.base.expr_common import clone_expression
+from pyomo.core.kernel.expr_common import clone_expression
 
 _common_module_members = [
     'identify_variables',
@@ -54,7 +54,7 @@ _pyomo4_module_members = [
 
 def set_expression_tree_format(mode):
     if mode is common.Mode.coopr3_trees:
-        from pyomo.core.base import expr_coopr3 as expr3
+        from pyomo.core.kernel import expr_coopr3 as expr3
         for obj in _common_module_members:
             globals()[obj] = getattr(expr3, obj)
         for obj in _coopr3_module_members:
@@ -64,7 +64,7 @@ def set_expression_tree_format(mode):
                 del globals()[obj]
 
     elif mode is common.Mode.pyomo4_trees:
-        from pyomo.core.base import expr_pyomo4 as expr4
+        from pyomo.core.kernel import expr_pyomo4 as expr4
         for obj in _common_module_members:
             globals()[obj] = getattr(expr4, obj)
         for obj in _coopr3_module_members:

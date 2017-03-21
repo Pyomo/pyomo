@@ -11,10 +11,12 @@ import sys
 import logging
 from six import iteritems, PY3, string_types, text_type, binary_type
 
-from pyomo.core.base.expr_common import \
-    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, \
-    _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq
+from pyomo.core.kernel.expr_common import \
+    (_add, _sub, _mul, _div, _pow,
+     _neg, _abs, _inplace, _radd,
+     _rsub, _rmul, _rdiv, _rpow,
+     _iadd, _isub, _imul, _idiv,
+     _ipow, _lt, _le, _eq)
 
 logger = logging.getLogger('pyomo.core')
 

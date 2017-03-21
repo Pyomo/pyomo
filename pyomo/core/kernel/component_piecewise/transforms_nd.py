@@ -15,15 +15,15 @@ a mixed-interger problem formulation.
 import logging
 import collections
 
-from pyomo.core.base.component_block import tiny_block
-from pyomo.core.base.set_types import Binary
-from pyomo.core.base.component_variable import (variable,
-                                                variable_list)
-from pyomo.core.base.component_constraint import (linear_constraint,
-                                                  constraint_list)
-from pyomo.core.base.component_expression import (expression,
-                                                  expression_tuple)
-import pyomo.core.base.component_piecewise.util
+from pyomo.core.kernel.component_block import tiny_block
+from pyomo.core.kernel.set_types import Binary
+from pyomo.core.kernel.component_variable import (variable,
+                                                  variable_list)
+from pyomo.core.kernel.component_constraint import (linear_constraint,
+                                                    constraint_list)
+from pyomo.core.kernel.component_expression import (expression,
+                                                    expression_tuple)
+import pyomo.core.kernel.component_piecewise.util
 
 logger = logging.getLogger('pyomo.core')
 
@@ -106,13 +106,13 @@ class _PiecewiseLinearFunctionND(tiny_block):
                  values,
                  input=None,
                  output=None):
-        assert pyomo.core.base.component_piecewise.util.numpy_available
-        assert pyomo.core.base.component_piecewise.util.scipy_available
+        assert pyomo.core.kernel.component_piecewise.util.numpy_available
+        assert pyomo.core.kernel.component_piecewise.util.scipy_available
         assert isinstance(tri,
-                          pyomo.core.base.component_piecewise.\
+                          pyomo.core.kernel.component_piecewise.\
                           util.scipy.spatial.Delaunay)
         assert isinstance(values,
-                          pyomo.core.base.component_piecewise.\
+                          pyomo.core.kernel.component_piecewise.\
                           util.numpy.ndarray)
         npoints, ndim = tri.points.shape
         nsimplices, _ = tri.simplices.shape
@@ -160,7 +160,7 @@ class _PiecewiseLinearFunctionND(tiny_block):
         a (n, D) shaped array numpy array.
         """
         assert isinstance(x, collections.Sized)
-        if isinstance(x, pyomo.core.base.component_piecewise.\
+        if isinstance(x, pyomo.core.kernel.component_piecewise.\
                       util.numpy.ndarray):
             if x.shape != self._tri.points.shape[1:]:
                 multi = True
@@ -175,9 +175,9 @@ class _PiecewiseLinearFunctionND(tiny_block):
         if multi:
             Tinv = self._tri.transform[i,:ndim]
             r = self._tri.transform[i,ndim]
-            b = pyomo.core.base.component_piecewise.util.\
+            b = pyomo.core.kernel.component_piecewise.util.\
                 numpy.einsum('ijk,ik->ij', Tinv, x-r)
-            b = pyomo.core.base.component_piecewise.util.\
+            b = pyomo.core.kernel.component_piecewise.util.\
                 numpy.c_[b, 1 - b.sum(axis=1)]
             s = self._tri.simplices[i]
             return (b*self._values[s]).sum(axis=1)

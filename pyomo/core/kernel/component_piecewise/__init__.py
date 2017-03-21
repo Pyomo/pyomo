@@ -7,6 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import pyomo.core.base.component_piecewise.util
-import pyomo.core.base.component_piecewise.transforms
-import pyomo.core.base.component_piecewise.transforms_nd
+import pyomo.core.kernel.component_piecewise.util
+import pyomo.core.kernel.component_piecewise.transforms
+import pyomo.core.kernel.component_piecewise.transforms_nd

@@ -28,13 +28,13 @@ from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 
-from pyomo.core.base.numvalue import (ZeroConstant,
-                                      is_constant,
-                                      as_numeric,
-                                      potentially_variable,
-                                      value,
-                                      _sub)
-from pyomo.core.base import expr as EXPR
+from pyomo.core.kernel.numvalue import (ZeroConstant,
+                                        is_constant,
+                                        as_numeric,
+                                        potentially_variable,
+                                        value,
+                                        _sub)
+from pyomo.core.kernel import expr as EXPR
 
 import six
 from six.moves import zip

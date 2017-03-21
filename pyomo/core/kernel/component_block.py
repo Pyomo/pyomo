@@ -31,7 +31,7 @@ from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.component_suffix import import_suffix_generator
-from pyomo.core.base.symbol_map import SymbolMap
+from pyomo.core.kernel.symbol_map import SymbolMap
 import pyomo.opt
 
 import six

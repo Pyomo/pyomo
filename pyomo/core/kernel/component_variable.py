@@ -18,12 +18,12 @@ from pyomo.core.kernel.component_interface import \
 from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
-from pyomo.core.base.numvalue import NumericValue
-from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet,
-                                       BooleanSet,
-                                       RealInterval,
-                                       IntegerInterval)
+from pyomo.core.kernel.numvalue import NumericValue
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet,
+                                         BooleanSet,
+                                         RealInterval,
+                                         IntegerInterval)
 
 import six
 from six.moves import xrange

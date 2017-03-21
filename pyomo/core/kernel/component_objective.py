@@ -19,8 +19,7 @@ from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
 from pyomo.core.kernel.component_expression import IExpression
-from pyomo.core.base.numvalue import as_numeric
-from pyomo.core.base import minimize, maximize
+from pyomo.core.kernel.numvalue import as_numeric
 
 import six
 

@@ -25,75 +25,38 @@ except:
 
 #from pyomo.util.plugin import *
 
-from pyomo.core.base.component import Component
-#from pyomo.core.base.plugin import *
-from pyomo.core.base.numvalue import *
-from pyomo.core.base.numvalue import native_numeric_types, native_types
-from pyomo.core.base.var import _VarData, Var
+from pyomo.core.kernel.component import Component
+from pyomo.core.kernel.numvalue import *
+from pyomo.core.kernel.numvalue import (native_numeric_types,
+                                        native_types)
 
-import pyomo.core.base.expr_common
-from pyomo.core.base.expr_common import \
-    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary, \
-    _radd, _rsub, _rmul, _rdiv, _rpow, _iadd, _isub, _imul, _idiv, _ipow, \
-    _lt, _le, _eq, clone_expression, chainedInequalityErrorMessage as cIEM, \
-    _getrefcount_available, getrefcount
+import pyomo.core.kernel.expr_common
+from pyomo.core.kernel.expr_common import \
+    (_add, _sub, _mul, _div, _pow,
+     _neg, _abs, _inplace, _unary,
+    _radd, _rsub, _rmul, _rdiv, _rpow,
+     _iadd, _isub, _imul, _idiv, _ipow,
+     _lt, _le, _eq, clone_expression,
+     chainedInequalityErrorMessage as cIEM,
+     _getrefcount_available, getrefcount)
 
-# Wrap the common chainedInequalityErrorMessage to pass the local context
+# Wrap the common chainedInequalityErrorMessage to pass the
+# local context
 chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
 sum = builtins.sum
 
-
-def identify_variables( expr,
-                        include_fixed=True,
-                        allow_duplicates=False,
-                        include_potentially_variable=False ):
-    if not allow_duplicates:
-        _seen = set()
-    _stack = [ ([expr], 0, 1) ]
-    while _stack:
-        _argList, _idx, _len = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if type(_sub) in native_types:
-                pass
-            elif _sub.is_expression():
-                _stack.append(( _argList, _idx, _len ))
-                if type(_sub) is _ProductExpression:
-                    if _sub._denominator:
-                        _stack.append(
-                            (_sub._denominator, 0, len(_sub._denominator)) )
-                    _argList = _sub._numerator
-                else:
-                    _argList = _sub._args
-                _idx = 0
-                _len = len(_argList)
-            elif isinstance(_sub, _VarData):
-                if ( include_fixed
-                     or not _sub.is_fixed()
-                     or include_potentially_variable ):
-                    if not allow_duplicates:
-                        if id(_sub) in _seen:
-                            continue
-                        _seen.add(id(_sub))
-                    yield _sub
-            elif include_potentially_variable and _sub._potentially_variable():
-                if not allow_duplicates:
-                    if id(_sub) in _seen:
-                        continue
-                    _seen.add(id(_sub))
-                yield _sub
-
 class _ExpressionBase(NumericValue):
-    """An object that defines a mathematical expression that can be evaluated"""
+    """An object that defines a mathematical expression that
+    can be evaluated"""
 
     __slots__ = ('_args', )
     PRECEDENCE = 10
 
     def __init__(self, args):
-        """Construct an expression with an operation and a set of arguments"""
+        """Construct an expression with an operation and a
+        set of arguments"""
         self._args=args
 
     def __getstate__(self):
@@ -106,7 +69,7 @@ class _ExpressionBase(NumericValue):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE \
+        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         ostream.write(self.getname() + "( ")
         first = True
@@ -361,7 +324,7 @@ class _PowExpression(_IntrinsicFunctionExpression):
         """Print this expression"""
         # For verbose mode, rely on the underlying base expression
         # (prefix) expression printer
-        _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE \
+        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         if _verbose:
             return super(_PowExpression, self).to_string(
@@ -622,7 +585,7 @@ class _ProductExpression(_ExpressionBase):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE \
+        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         _my_precedence = self._precedence()
         if _verbose:
@@ -734,7 +697,7 @@ class _SumExpression(_LinearExpression):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE \
+        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE \
                    if verbose is None else verbose
         _my_precedence = self._precedence()
         if _verbose:
@@ -859,40 +822,6 @@ class Expr_if(_ExpressionBase):
             return self._then(exception=exception)
         else:
             return self._else(exception=exception)
-
-
-class _GetItemExpression(_ExpressionBase):
-    __slots__ = ('_base',)
-
-    def __init__(self, base, args):
-        """Construct a call to an external function"""
-        _ExpressionBase.__init__(self, args)
-        self._base = base
-
-    def __getstate__(self):
-        result = _ExpressionBase.__getstate__(self)
-        for i in _GetItemExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    def getname(self, *args, **kwds):
-        return self._base.getname(*args, **kwds)
-
-    def polynomial_degree(self):
-        return 0 if self.is_fixed() else 1
-
-    def is_constant(self):
-        return False
-
-    def is_fixed(self):
-        return not isinstance(self._base, Var)
-
-    def _apply_operation(self, values):
-        return value(self._base[values])
-
-    def resolve_template(self):
-        return self._base.__getitem__(tuple(value(i) for i in self._args))
-
 
 def _generate_expression__clone_if_needed(obj, target):
     #print(getrefcount(obj) - UNREFERENCED_EXPR_COUNT, target)

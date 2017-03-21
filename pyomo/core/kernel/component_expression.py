@@ -12,7 +12,6 @@ import abc
 
 import pyutilib.math
 
-import pyomo.core.base.expr_common
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
@@ -20,10 +19,12 @@ from pyomo.core.kernel.component_interface import \
 from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
-from pyomo.core.base.numvalue import (NumericValue,
-                                      is_fixed,
-                                      potentially_variable,
-                                      as_numeric)
+
+import pyomo.core.kernel.expr_common
+from pyomo.core.kernel.numvalue import (NumericValue,
+                                        is_fixed,
+                                        potentially_variable,
+                                        as_numeric)
 
 import six
 
@@ -96,7 +97,7 @@ class IExpression(IComponent, NumericValue):
     def to_string(self, ostream=None, verbose=None, precedence=0):
         if ostream is None:
             ostream = sys.stdout
-        _verbose = pyomo.core.base.expr_common.TO_STRING_VERBOSE if \
+        _verbose = pyomo.core.kernel.expr_common.TO_STRING_VERBOSE if \
             verbose is None else verbose
         if _verbose:
             ostream.write(str(self))

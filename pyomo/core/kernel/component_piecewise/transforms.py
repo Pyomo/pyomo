@@ -24,18 +24,18 @@ import logging
 
 __all__ = ("piecewise",)
 
-from pyomo.core.base.numvalue import value
-from pyomo.core.base.set_types import Binary
-from pyomo.core.base.component_block import tiny_block
-from pyomo.core.base.component_expression import expression
-from pyomo.core.base.component_variable import (variable_list,
-                                                variable_dict,
-                                                variable)
-from pyomo.core.base.component_constraint import (constraint,
-                                                  constraint_list,
-                                                  linear_constraint)
-from pyomo.core.base.component_sos import sos2
-from pyomo.core.base.component_piecewise.util import \
+from pyomo.core.kernel.numvalue import value
+from pyomo.core.kernel.set_types import Binary
+from pyomo.core.kernel.component_block import tiny_block
+from pyomo.core.kernel.component_expression import expression
+from pyomo.core.kernel.component_variable import (variable_list,
+                                                  variable_dict,
+                                                  variable)
+from pyomo.core.kernel.component_constraint import (constraint,
+                                                    constraint_list,
+                                                    linear_constraint)
+from pyomo.core.kernel.component_sos import sos2
+from pyomo.core.kernel.component_piecewise.util import \
     (characterize_function,
      is_nondecreasing,
      is_positive_power_of_two,
