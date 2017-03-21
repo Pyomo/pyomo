@@ -7,6 +7,9 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import pyomo.core.kernel.expr
+from pyomo.core.kernel.register_numpy_types import *
+
 import pyomo.opt
 from pyomo.opt import (SolverFactory,
                        SolverStatus,

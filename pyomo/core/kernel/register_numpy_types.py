@@ -9,7 +9,7 @@
 
 __all__ = []
 
-from pyomo.core.base.numvalue import \
+from pyomo.core.kernel.numvalue import \
    RegisterNumericType, \
    RegisterIntegerType, \
    RegisterBooleanType
