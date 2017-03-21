@@ -7,8 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ("ComponentDict",)
-
 import collections
 try:
     from collections import OrderedDict

@@ -7,8 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ("ComponentList",)
-
 import collections
 
 from pyomo.core.kernel.component_tuple import ComponentTuple

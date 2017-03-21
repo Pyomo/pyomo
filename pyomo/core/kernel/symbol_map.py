@@ -7,8 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ['SymbolMap', 'symbol_map_from_instance']
-
 from weakref import ref as weakref_ref
 from six import iteritems, iterkeys
 from pyomo.core.base.label import TextLabeler

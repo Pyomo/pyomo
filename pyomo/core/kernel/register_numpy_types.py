@@ -7,8 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = []
-
 from pyomo.core.kernel.numvalue import \
    RegisterNumericType, \
    RegisterIntegerType, \

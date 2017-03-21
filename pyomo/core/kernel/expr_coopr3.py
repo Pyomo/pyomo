@@ -9,9 +9,6 @@
 
 from __future__ import division
 
-#__all__ = ( 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
-#            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
-#            'atanh', 'ceil', 'floor' )
 import logging
 import math
 import sys

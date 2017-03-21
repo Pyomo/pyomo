@@ -7,13 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ('ICategorizedObject',
-           'IActiveObject',
-           'IComponent',
-           '_IActiveComponent',
-           'IComponentContainer',
-           '_IActiveComponentContainer')
-
 import sys
 import abc
 import copy

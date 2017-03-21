@@ -7,9 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = [ 'value', 'NumericValue', 'as_numeric', 'NumericConstant',
-            'is_constant', 'is_fixed']
-
 import sys
 import logging
 from six import iteritems, PY3, string_types, text_type, binary_type

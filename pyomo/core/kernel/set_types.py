@@ -7,14 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = (
-  '_VirtualSet', '_AnySet', 'RealSet', 'IntegerSet', 'BooleanSet', 'Any',
-  'AnyWithNone', 'Reals', 'PositiveReals', 'NonPositiveReals', 'NegativeReals',
-  'NonNegativeReals', 'PercentFraction', 'UnitInterval', 'Integers', 'PositiveIntegers',
-  'NonPositiveIntegers', 'NegativeIntegers', 'NonNegativeIntegers', 'Boolean',
-  'Binary', 'RealInterval', 'IntegerInterval', 'EmptySet'
-)
-
 from weakref import ref as weakref_ref
 
 import pyomo.util.plugin
