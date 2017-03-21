@@ -39,7 +39,9 @@ from pyomo.core.kernel.component_expression import (expression,
                                                     expression_tuple,
                                                     expression_list,
                                                     expression_dict)
-from pyomo.core.kernel.component_objective import (objective,
+from pyomo.core.kernel.component_objective import (maximize,
+                                                   minimize,
+                                                   objective,
                                                    objective_tuple,
                                                    objective_list,
                                                    objective_dict)

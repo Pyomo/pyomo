@@ -24,6 +24,10 @@ from pyomo.core.base import minimize, maximize
 
 import six
 
+# Constants used to define the optimization sense
+minimize=1
+maximize=-1
+
 class IObjective(IExpression, _IActiveComponentMixin):
     """
     The interface for optimization objectives.

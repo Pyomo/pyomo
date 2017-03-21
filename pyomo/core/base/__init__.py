@@ -10,9 +10,8 @@
 import pyomo.core.base.log_config
 from pyomo.core.base.config import PyomoOptions
 
-# Constants used to define the optimization sense
-minimize=1
-maximize=-1
+from pyomo.core.kernel import (minimize,
+                               maximize)
 
 from pyomo.core.base.expr import *
 from pyomo.core.base.numvalue import *
