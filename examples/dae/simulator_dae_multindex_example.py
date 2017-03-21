@@ -10,6 +10,9 @@
 # zA' = -p1*zA + p2*zB, zA(0)=1
 # zB' = p1*zA - (p2 + p3)*zB + p4*zC, zB(0)=0
 # zA + zB + zC = 1
+#
+# This example is modified such that the reaction coefficient
+# p1 changes in time
 
 from pyomo.environ import *
 from pyomo.dae import *
@@ -17,9 +20,13 @@ from pyomo.dae.simulator import Simulator
 
 m = ConcreteModel()
 
-m.t = ContinuousSet(bounds=(0.0,1))
+m.t = ContinuousSet(bounds=(0.0,1), initialize=[0.5])
 
-m.p1 = Param(initialize=4.0)
+def _p1_init(m,t):
+    if t >= 0.5:
+        return 1.0
+    return 4.0
+m.p1 = Param(m.t,initialize=4.0, default=_p1_init)
 m.p2 = Param(initialize=2.0)
 m.p3 = Param(initialize=40.0)
 m.p4 = Param(initialize=20.0)
@@ -34,12 +41,17 @@ m.dzb = DerivativeVar(m.zb)
 m.za[0.0] = 1
 m.zb[0.0] = 0
 
+# Setting the time-varying profile
+p1_profile = {0:4.0, 0.5:1.0}
+m.var_input = Suffix(direction=Suffix.LOCAL)
+m.var_input[m.p1] = p1_profile
+
 def _diffeq1(m,t):
-    return m.dza[t] == -m.p1*m.za[t]+m.p2*m.zb[t]
+    return m.dza[t] == -m.p1[t]*m.za[t]+m.p2*m.zb[t]
 m.diffeq1 = Constraint(m.t,rule=_diffeq1)
 
 def _diffeq2(m,t):
-    return m.dzb[t] == m.p1*m.za[t]-(m.p2+m.p3)*m.zb[t]+m.p4*m.zc[t]
+    return m.dzb[t] == m.p1[t]*m.za[t]-(m.p2+m.p3)*m.zb[t]+m.p4*m.zc[t]
 m.diffeq2 = Constraint(m.t,rule=_diffeq2)
 
 def _algeq1(m,t):
@@ -49,7 +61,7 @@ m.algeq1 = Constraint(m.t,rule=_algeq1)
 
 # Simulate the model using casadi
 sim = Simulator(m, package='casadi')
-tsim, profiles = sim.simulate(numpoints=100,integrator='idas')
+tsim, profiles = sim.simulate(numpoints=100,integrator='idas', varying_inputs=m.var_input)
 
 varorder = sim.get_variable_order()
 algorder = sim.get_variable_order(vartype='algebraic')

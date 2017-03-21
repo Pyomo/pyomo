@@ -623,6 +623,8 @@ class Simulator:
             # Update tsim to include input switching points
             # This numpy function returns the unique, sorted points
             tsim = np.union1d(tsim,switchpts)
+        else:
+            self._simalgvars = self._algvars
 
         # Check if initial conditions were provided, otherwise obtain
         # them from the current variable values
@@ -708,7 +710,6 @@ class Simulator:
                 tsimtemp.shape = (1,len(tsimtemp))
                 
                 # Need a similar np array for each time-varying input
-                print tsim
                 def _build_step_input(profile):
                     tswitch = list(profile.keys())
                     tswitch.sort()
@@ -754,7 +755,6 @@ class Simulator:
                     dae['z'] = zall
                     dae['alg'] = algall
 
-
                 opts = {'grid':tsim,'output_t0':True}
                 F = casadi.integrator('F',integrator,dae,opts)
                 sol = F(x0=initcon)
@@ -783,7 +783,7 @@ class Simulator:
  
         # Build list of state and algebraic variables
         # that can be initialized
-        initvars = self._diffvars + self._algvars
+        initvars = self._diffvars + self._simalgvars
                
         for idx,v in enumerate(initvars):
             for idx2,i in enumerate(v._args):
