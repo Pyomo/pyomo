@@ -2,42 +2,43 @@ import sys
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (ICategorizedObject,
-                                                 IActiveObject,
-                                                 IComponent,
-                                                 IComponentContainer)
+import pyomo.environ
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
     _TestComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
-from pyomo.core.base.numvalue import (NumericValue,
+from pyomo.core.kernel.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
                                       potentially_variable)
-from pyomo.core.base.component_parameter import parameter
-from pyomo.core.base.component_variable import \
+from pyomo.core.kernel.component_interface import (ICategorizedObject,
+                                                   IActiveObject,
+                                                   IComponent,
+                                                   IComponentContainer)
+from pyomo.core.kernel.component_parameter import parameter
+from pyomo.core.kernel.component_variable import \
     (IVariable,
      variable,
      variable_dict,
      variable_tuple,
      variable_list,
      _extract_domain_type_and_bounds)
+from pyomo.core.kernel.component_block import block
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet,
+                                         Binary,
+                                         NonNegativeReals,
+                                         NegativeReals,
+                                         Reals,
+                                         RealInterval,
+                                         Integers,
+                                         NonNegativeIntegers,
+                                         NegativeIntegers,
+                                         IntegerInterval,
+                                         BooleanSet)
 from pyomo.core.base.var import Var
-from pyomo.core.base.component_block import block
-from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet,
-                                       Binary,
-                                       NonNegativeReals,
-                                       NegativeReals,
-                                       Reals,
-                                       RealInterval,
-                                       Integers,
-                                       NonNegativeIntegers,
-                                       NegativeIntegers,
-                                       IntegerInterval,
-                                       BooleanSet)
 
 import six
 from six import StringIO

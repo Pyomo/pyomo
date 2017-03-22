@@ -3,27 +3,27 @@ import collections
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (ICategorizedObject,
-                                                 IActiveObject,
-                                                 IComponent,
-                                                 _IActiveComponentMixin,
-                                                 IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
-from pyomo.core.base.component_suffix import (suffix,
-                                              export_suffix_generator,
-                                              import_suffix_generator,
-                                              local_suffix_generator,
-                                              suffix_generator)
-from pyomo.core.base.component_variable import (variable,
-                                                variable_dict)
+from pyomo.core.kernel.component_interface import (ICategorizedObject,
+                                                   IActiveObject,
+                                                   IComponent,
+                                                   _IActiveComponentMixin,
+                                                   IComponentContainer)
+from pyomo.core.kernel.component_suffix import (suffix,
+                                                export_suffix_generator,
+                                                import_suffix_generator,
+                                                local_suffix_generator,
+                                                suffix_generator)
+from pyomo.core.kernel.component_variable import (variable,
+                                                  variable_dict)
+from pyomo.core.kernel.component_block import (block,
+                                               block_dict)
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet)
 from pyomo.core.base.suffix import Suffix
-from pyomo.core.base.component_block import (block,
-                                             block_dict)
-from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet)
 
 import six
 from six import StringIO

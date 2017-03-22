@@ -1,30 +1,30 @@
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (ICategorizedObject,
-                                                 IActiveObject,
-                                                 IComponent,
-                                                 _IActiveComponentMixin,
-                                                 IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
-from pyomo.core.base.component_objective import (IObjective,
-                                                 objective,
-                                                 objective_dict,
-                                                 objective_tuple,
-                                                 objective_list,
-                                                 minimize,
-                                                 maximize)
-from pyomo.core.base.numvalue import NumericValue
-from pyomo.core.base.component_variable import variable
+from pyomo.core.kernel.component_interface import (ICategorizedObject,
+                                                   IActiveObject,
+                                                   IComponent,
+                                                   _IActiveComponentMixin,
+                                                   IComponentContainer)
+from pyomo.core.kernel.component_objective import (IObjective,
+                                                   objective,
+                                                   objective_dict,
+                                                   objective_tuple,
+                                                   objective_list,
+                                                   minimize,
+                                                   maximize)
+from pyomo.core.kernel.numvalue import NumericValue
+from pyomo.core.kernel.component_variable import variable
+from pyomo.core.kernel.component_block import block
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet)
 from pyomo.core.base.objective import Objective
-from pyomo.core.base.component_block import block
-from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet)
 
 class Test_objective(unittest.TestCase):
 

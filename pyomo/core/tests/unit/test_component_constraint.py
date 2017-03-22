@@ -1,31 +1,31 @@
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (ICategorizedObject,
-                                                 IActiveObject,
-                                                 IComponent,
-                                                 _IActiveComponentMixin,
-                                                 IComponentContainer)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
-from pyomo.core.base.component_constraint import (IConstraint,
-                                                  constraint,
-                                                  linear_constraint,
-                                                  constraint_dict,
-                                                  constraint_tuple,
-                                                  constraint_list)
-from pyomo.core.base.component_variable import variable
-from pyomo.core.base.component_parameter import parameter
-from pyomo.core.base.component_expression import (expression,
-                                                  data_expression)
+from pyomo.core.kernel.component_interface import (ICategorizedObject,
+                                                   IActiveObject,
+                                                   IComponent,
+                                                   _IActiveComponentMixin,
+                                                   IComponentContainer)
+from pyomo.core.kernel.component_constraint import (IConstraint,
+                                                    constraint,
+                                                    linear_constraint,
+                                                    constraint_dict,
+                                                    constraint_tuple,
+                                                    constraint_list)
+from pyomo.core.kernel.component_variable import variable
+from pyomo.core.kernel.component_parameter import parameter
+from pyomo.core.kernel.component_expression import (expression,
+                                                    data_expression)
+from pyomo.core.kernel.component_block import block
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet)
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.component_block import block
-from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet)
 
 class Test_constraint(unittest.TestCase):
 

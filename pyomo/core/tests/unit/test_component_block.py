@@ -3,42 +3,42 @@ import os
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (ICategorizedObject,
-                                                 IActiveObject,
-                                                 IComponent,
-                                                 IComponentContainer,
-                                                 _IActiveComponentContainerMixin)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
-from pyomo.core.base.component_map import ComponentMap
-from pyomo.core.base.component_suffix import suffix
-from pyomo.core.base.component_constraint import (constraint,
-                                                  constraint_dict,
-                                                  constraint_list)
-from pyomo.core.base.component_parameter import (parameter,
-                                                 parameter_dict,
-                                                 parameter_list)
-from pyomo.core.base.component_expression import (expression,
-                                                  data_expression,
-                                                  expression_dict,
-                                                  expression_list)
-from pyomo.core.base.component_objective import (objective,
-                                                 objective_dict,
-                                                 objective_list)
-from pyomo.core.base.component_variable import (IVariable,
-                                                variable,
-                                                variable_dict,
-                                                variable_list)
-from pyomo.core.base.component_block import (IBlockStorage,
-                                             block,
-                                             block_dict,
-                                             block_tuple,
-                                             block_list,
-                                             tiny_block)
+from pyomo.core.kernel.component_interface import (ICategorizedObject,
+                                                 IActiveObject,
+                                                 IComponent,
+                                                 IComponentContainer,
+                                                 _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_suffix import suffix
+from pyomo.core.kernel.component_constraint import (constraint,
+                                                    constraint_dict,
+                                                    constraint_list)
+from pyomo.core.kernel.component_parameter import (parameter,
+                                                   parameter_dict,
+                                                   parameter_list)
+from pyomo.core.kernel.component_expression import (expression,
+                                                    data_expression,
+                                                    expression_dict,
+                                                    expression_list)
+from pyomo.core.kernel.component_objective import (objective,
+                                                   objective_dict,
+                                                   objective_list)
+from pyomo.core.kernel.component_variable import (IVariable,
+                                                  variable,
+                                                  variable_dict,
+                                                  variable_list)
+from pyomo.core.kernel.component_block import (IBlockStorage,
+                                               block,
+                                               block_dict,
+                                               block_tuple,
+                                               block_list,
+                                               tiny_block)
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var

@@ -2,30 +2,30 @@ import pickle
 import abc
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import \
+from pyomo.core.tests.unit.test_component_dict import \
+    _TestActiveComponentDictBase
+from pyomo.core.tests.unit.test_component_list import \
+    _TestActiveComponentListBase
+from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
      IActiveObject,
      IComponent,
      IComponentContainer,
      _IActiveComponentContainerMixin)
-from pyomo.core.tests.unit.test_component_dict import \
-    _TestActiveComponentDictBase
-from pyomo.core.tests.unit.test_component_list import \
-    _TestActiveComponentListBase
-from pyomo.core.base.component_block import (IBlockStorage,
-                                             block,
-                                             block_dict,
-                                             block_list,
-                                             tiny_block)
-from pyomo.core.base.component_variable import (variable,
-                                                variable_list)
-from pyomo.core.base.component_piecewise.transforms import \
+from pyomo.core.kernel.component_block import (IBlockStorage,
+                                               block,
+                                               block_dict,
+                                               block_list,
+                                               tiny_block)
+from pyomo.core.kernel.component_variable import (variable,
+                                                  variable_list)
+from pyomo.core.kernel.component_piecewise.transforms import \
     _PiecewiseLinearFunction
-import pyomo.core.base.component_piecewise.transforms as transforms
-from pyomo.core.base.component_piecewise.transforms_nd import \
+import pyomo.core.kernel.component_piecewise.transforms as transforms
+from pyomo.core.kernel.component_piecewise.transforms_nd import \
     _PiecewiseLinearFunctionND
-import pyomo.core.base.component_piecewise.transforms_nd as transforms_nd
-import pyomo.core.base.component_piecewise.util as util
+import pyomo.core.kernel.component_piecewise.transforms_nd as transforms_nd
+import pyomo.core.kernel.component_piecewise.util as util
 from pyomo.core.base.block import Block
 
 # for the multi-dimensional piecewise tests

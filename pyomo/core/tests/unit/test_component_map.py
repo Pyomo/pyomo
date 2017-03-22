@@ -11,23 +11,23 @@ import pickle
 import collections
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_map import ComponentMap
-from pyomo.core.base.component_variable import (variable,
-                                                variable_dict,
-                                                variable_list)
-from pyomo.core.base.component_constraint import (constraint,
-                                                  constraint_dict,
-                                                  constraint_list)
-from pyomo.core.base.component_objective import (objective,
-                                                 objective_dict,
-                                                 objective_list)
-from pyomo.core.base.component_expression import (expression,
-                                                  expression_dict,
-                                                  expression_list)
-from pyomo.core.base.component_block import (block,
-                                             block_dict,
-                                             block_list)
-from pyomo.core.base.component_suffix import suffix
+from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_variable import (variable,
+                                                  variable_dict,
+                                                  variable_list)
+from pyomo.core.kernel.component_constraint import (constraint,
+                                                    constraint_dict,
+                                                    constraint_list)
+from pyomo.core.kernel.component_objective import (objective,
+                                                   objective_dict,
+                                                   objective_list)
+from pyomo.core.kernel.component_expression import (expression,
+                                                    expression_dict,
+                                                    expression_list)
+from pyomo.core.kernel.component_block import (block,
+                                               block_dict,
+                                               block_list)
+from pyomo.core.kernel.component_suffix import suffix
 
 class TestComponentMap(unittest.TestCase):
 

@@ -1,27 +1,27 @@
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (ICategorizedObject,
-                                                 IComponent,
-                                                 _IActiveComponentMixin)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
-from pyomo.core.base.component_sos import (ISOS,
-                                           sos,
-                                           sos1,
-                                           sos2,
-                                           sos_dict,
-                                           sos_tuple,
-                                           sos_list)
-from pyomo.core.base.component_block import block
-from pyomo.core.base.component_variable import variable
-from pyomo.core.base.component_parameter import parameter
-from pyomo.core.base.component_expression import (expression,
-                                                  data_expression)
+from pyomo.core.kernel.component_interface import (ICategorizedObject,
+                                                   IComponent,
+                                                   _IActiveComponentMixin)
+from pyomo.core.kernel.component_sos import (ISOS,
+                                             sos,
+                                             sos1,
+                                             sos2,
+                                             sos_dict,
+                                             sos_tuple,
+                                             sos_list)
+from pyomo.core.kernel.component_block import block
+from pyomo.core.kernel.component_variable import variable
+from pyomo.core.kernel.component_parameter import parameter
+from pyomo.core.kernel.component_expression import (expression,
+                                                    data_expression)
 from pyomo.core.base.sos import SOSConstraint
 
 class Test_sos(unittest.TestCase):

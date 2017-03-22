@@ -1,28 +1,28 @@
 import pickle
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (ICategorizedObject,
-                                                 IComponent)
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
     _TestComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
-from pyomo.core.base.component_parameter import (IParameter,
-                                                 parameter,
-                                                 parameter_dict,
-                                                 parameter_tuple,
-                                                 parameter_list)
-from pyomo.core.base.component_variable import variable
+from pyomo.core.kernel.component_interface import (ICategorizedObject,
+                                                   IComponent)
+from pyomo.core.kernel.component_parameter import (IParameter,
+                                                   parameter,
+                                                   parameter_dict,
+                                                   parameter_tuple,
+                                                   parameter_list)
+from pyomo.core.kernel.component_variable import variable
+from pyomo.core.kernel.component_block import block
+from pyomo.core.kernel.set_types import (RealSet,
+                                         IntegerSet)
+from pyomo.core.kernel.numvalue import (NumericValue,
+                                        is_fixed,
+                                        is_constant,
+                                        potentially_variable)
 from pyomo.core.base.param import Param
-from pyomo.core.base.component_block import block
-from pyomo.core.base.set_types import (RealSet,
-                                       IntegerSet)
-from pyomo.core.base.numvalue import (NumericValue,
-                                      is_fixed,
-                                      is_constant,
-                                      potentially_variable)
 
 class Test_parameter(unittest.TestCase):
 

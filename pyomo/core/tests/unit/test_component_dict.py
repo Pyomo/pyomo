@@ -15,15 +15,16 @@ except ImportError:                         #pragma:nocover
     from ordereddict import OrderedDict
 
 import pyutilib.th as unittest
-from pyomo.core.base.component_interface import (ICategorizedObject,
-                                                 IActiveObject,
-                                                 IComponent,
-                                                 _IActiveComponentMixin,
-                                                 IComponentContainer,
-                                                 _IActiveComponentContainerMixin)
-from pyomo.core.base.component_block import (IBlockStorage,
-                                             block,
-                                             block_dict)
+import pyomo.environ
+from pyomo.core.kernel.component_interface import (ICategorizedObject,
+                                                   IActiveObject,
+                                                   IComponent,
+                                                   _IActiveComponentMixin,
+                                                   IComponentContainer,
+                                                   _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_block import (IBlockStorage,
+                                               block,
+                                               block_dict)
 
 #
 # There are no fully implemented test suites in this
