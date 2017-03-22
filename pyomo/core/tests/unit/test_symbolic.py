@@ -20,7 +20,7 @@ def s(e):
     return str(e).replace(' ','')
 
 @unittest.skipIf( not _sympy_available,
-                  "Symbolic derivatives require teh sympy package" )
+                  "Symbolic derivatives require the sympy package" )
 class SymbolicDerivatives(unittest.TestCase):
     def test_single_derivatives(self):
         m = ConcreteModel()
@@ -208,3 +208,6 @@ class SymbolicDerivatives(unittest.TestCase):
             DeveloperError,
             "sympy expression .* not found in the operator map",
             _map_sympy2pyomo, bogus(), {x:m.x})
+
+if __name__ == "__main__":
+    unittest.main()
