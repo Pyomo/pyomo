@@ -124,7 +124,7 @@ class SymbolMap(object):
                 raise RuntimeError(
                     "Duplicate alias '%s' already associated with "
                     "component '%s' (conflicting component: '%s')"
-                    % (name, "UNKNOWN" if obj_object is None else old_object.name, obj.name) )
+                    % (name, "UNKNOWN" if old_object is None else old_object.name, obj.name) )
         else:
             #
             # Add the alias
