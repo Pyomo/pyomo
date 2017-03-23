@@ -35,7 +35,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_bool.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Integers
@@ -57,7 +57,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_int.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Reals
@@ -72,7 +72,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_float.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Complex
@@ -86,7 +86,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_complex.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 

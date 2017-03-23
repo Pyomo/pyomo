@@ -1321,9 +1321,22 @@ class TestRealSet(unittest.TestCase):
         x = RealSet(bounds=(1,2))
         self.assertEqual(x.bounds(), (1, 2))
 
+    def test_inequality_comparison_fails(self):
+        x = RealSet()
+        y = RealSet()
+        with self.assertRaises(TypeError):
+            x < y
+        with self.assertRaises(TypeError):
+            x <= y
+        with self.assertRaises(TypeError):
+            x > y
+        with self.assertRaises(TypeError):
+            x >= y
+
     def test_name(self):
         x = RealSet()
         self.assertEqual(x.name, None)
+        self.assertTrue('RealSet' in str(x))
         x = RealSet(name="x")
         self.assertEqual(x.name, 'x')
         self.assertEqual(str(x), 'x')
@@ -1422,6 +1435,45 @@ class TestRealSet(unittest.TestCase):
         self.assertFalse(-2.2 in x)
         self.assertFalse(-10 in x)
 
+    def test_RealInterval(self):
+        x = RealInterval()
+        self.assertEqual(x.name,
+                         "RealInterval(None, None)")
+        self.assertTrue(10 in x)
+        self.assertTrue(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertTrue(-2.2 in x)
+        self.assertTrue(-10 in x)
+
+        x = RealInterval(bounds=(-1,1))
+        self.assertEqual(x.name,
+                         "RealInterval(-1, 1)")
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+        x = RealInterval(bounds=(-1,1), name="JUNK")
+        self.assertEqual(x.name, "JUNK")
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
 class TestIntegerSet(unittest.TestCase):
 
     def test_bounds(self):
@@ -1430,15 +1482,29 @@ class TestIntegerSet(unittest.TestCase):
         x = IntegerSet(bounds=(1,2))
         self.assertEqual(x.bounds(), (1, 2))
 
+    def test_inequality_comparison_fails(self):
+        x = RealSet()
+        y = RealSet()
+        with self.assertRaises(TypeError):
+            x < y
+        with self.assertRaises(TypeError):
+            x <= y
+        with self.assertRaises(TypeError):
+            x > y
+        with self.assertRaises(TypeError):
+            x >= y
+
     def test_name(self):
         x = IntegerSet()
         self.assertEqual(x.name, None)
+        self.assertTrue('IntegerSet' in str(x))
         x = IntegerSet(name="x")
         self.assertEqual(x.name, 'x')
         self.assertEqual(str(x), 'x')
 
     def test_contains(self):
         x = IntegerSet()
+        self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1449,6 +1515,7 @@ class TestIntegerSet(unittest.TestCase):
         self.assertFalse(-2.2 in x)
         self.assertTrue(-10 in x)
         x = IntegerSet(bounds=(-1, 1))
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1461,6 +1528,7 @@ class TestIntegerSet(unittest.TestCase):
 
     def test_PositiveIntegers(self):
         x = PositiveIntegers
+        self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1473,6 +1541,7 @@ class TestIntegerSet(unittest.TestCase):
 
     def test_NonPositiveIntegers(self):
         x = NonPositiveIntegers
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertFalse(1 in x)
@@ -1485,6 +1554,7 @@ class TestIntegerSet(unittest.TestCase):
 
     def test_NegativeIntegers(self):
         x = NegativeIntegers
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertFalse(1 in x)
@@ -1497,6 +1567,7 @@ class TestIntegerSet(unittest.TestCase):
 
     def test_NonNegativeIntegers(self):
         x = NonNegativeIntegers
+        self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1507,21 +1578,77 @@ class TestIntegerSet(unittest.TestCase):
         self.assertFalse(-2.2 in x)
         self.assertFalse(-10 in x)
 
+    def test_IntegerInterval(self):
+        x = IntegerInterval()
+        self.assertFalse(None in x)
+        self.assertEqual(x.name,
+                         "IntegerInterval(None, None)")
+        self.assertTrue(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertTrue(-10 in x)
+
+        x = IntegerInterval(bounds=(-1,1))
+        self.assertFalse(None in x)
+        self.assertEqual(x.name,
+                         "IntegerInterval(-1, 1)")
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+        x = IntegerInterval(bounds=(-1,1), name="JUNK")
+        self.assertFalse(None in x)
+        self.assertEqual(x.name, "JUNK")
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
 class TestBooleanSet(unittest.TestCase):
 
     def test_bounds(self):
         x = BooleanSet()
         self.assertEqual(x.bounds(), (0, 1))
 
+    def test_inequality_comparison_fails(self):
+        x = RealSet()
+        y = RealSet()
+        with self.assertRaises(TypeError):
+            x < y
+        with self.assertRaises(TypeError):
+            x <= y
+        with self.assertRaises(TypeError):
+            x > y
+        with self.assertRaises(TypeError):
+            x >= y
+
     def test_name(self):
         x = BooleanSet()
         self.assertEqual(x.name, None)
+        self.assertTrue('BooleanSet' in str(x))
         x = BooleanSet(name="x")
         self.assertEqual(x.name, 'x')
         self.assertEqual(str(x), 'x')
 
     def test_contains(self):
         x = BooleanSet()
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1538,6 +1665,7 @@ class TestBooleanSet(unittest.TestCase):
 
     def test_Boolean(self):
         x = Boolean
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1554,6 +1682,7 @@ class TestBooleanSet(unittest.TestCase):
 
     def test_Binary(self):
         x = Binary
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)

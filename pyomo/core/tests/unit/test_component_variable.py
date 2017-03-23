@@ -1,4 +1,3 @@
-import sys
 import pickle
 
 import pyutilib.th as unittest
@@ -10,9 +9,9 @@ from pyomo.core.tests.unit.test_component_tuple import \
 from pyomo.core.tests.unit.test_component_list import \
     _TestComponentListBase
 from pyomo.core.kernel.numvalue import (NumericValue,
-                                      is_fixed,
-                                      is_constant,
-                                      potentially_variable)
+                                        is_fixed,
+                                        is_constant,
+                                        potentially_variable)
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                    IActiveObject,
                                                    IComponent,
