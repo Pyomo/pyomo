@@ -234,7 +234,8 @@ class ICategorizedObject(object):
         if self._parent is not None:
             self._parent = weakref.ref(self._parent)
 
-class IActiveObject(six.with_metaclass(abc.ABCMeta, object)):
+@six.add_metaclass(abc.ABCMeta)
+class IActiveObject(object):
     """
     Interface for objects that support activate/deactivate
     semantics.
