@@ -7,4 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.core.kernel.numvalue import *
+import sys
+from pyomo.core.kernel import numvalue
+sys.modules[__name__] = numvalue
