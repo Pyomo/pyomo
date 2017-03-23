@@ -77,7 +77,11 @@ def set_expression_tree_format(mode):
         for obj in _pyomo4_module_members:
             globals()[obj] = getattr(expr4, obj)
     else:
-        raise RuntimeError("Unrecognized expression tree mode")
+        raise RuntimeError("Unrecognized expression tree mode: %s\n"
+                           "Must be one of [%s, %s]"
+                           % (mode,
+                              common.Mode.coopr3_trees,
+                              common.Mode.pyomo4_trees))
     #
     # Propagate the generate_expression functions to the numvalue namespace
     numvalue.generate_expression = generate_expression
