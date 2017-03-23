@@ -14,9 +14,9 @@ __all__ = ('Suffix',
 import logging
 import pprint
 
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.base.component import (ActiveComponent,
                                        register_component)
-from pyomo.core.base.component_map import ComponentMap
 
 from six import iteritems, itervalues
 

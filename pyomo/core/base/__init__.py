@@ -10,7 +10,8 @@
 import pyomo.core.kernel
 from pyomo.core.base.config import PyomoOptions
 
-from pyomo.core.kernel import (minimize,
+from pyomo.core.kernel import (ComponentMap,
+                               minimize,
                                maximize)
 
 from pyomo.core.base.expr import *
@@ -20,23 +21,6 @@ from pyomo.core.base.label import *
 from pyomo.core.base.plugin import *
 from pyomo.core.base.DataPortal import *
 from pyomo.core.base.symbol_map import *
-
-#
-# Experimental component interface
-#
-import pyomo.core.base.component_interface
-import pyomo.core.base.component_tuple
-import pyomo.core.base.component_list
-import pyomo.core.base.component_dict
-import pyomo.core.base.component_block
-import pyomo.core.base.component_variable
-import pyomo.core.base.component_constraint
-import pyomo.core.base.component_parameter
-import pyomo.core.base.component_expression
-import pyomo.core.base.component_objective
-import pyomo.core.base.component_sos
-import pyomo.core.base.component_suffix
-import pyomo.core.base.component_piecewise
 
 #
 # Components
@@ -52,7 +36,6 @@ from pyomo.core.base.objective import *
 from pyomo.core.base.connector import *
 from pyomo.core.base.sos import *
 from pyomo.core.base.piecewise import *
-from pyomo.core.base.component_map import *
 from pyomo.core.base.suffix import *
 from pyomo.core.base.external import *
 #

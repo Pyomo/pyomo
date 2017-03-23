@@ -8,8 +8,8 @@
 #  _________________________________________________________________________
 
 import pyomo.core.kernel.log_config
-import pyomo.core.kernel.expr
-from pyomo.core.kernel.register_numpy_types import *
+from  pyomo.core.kernel.expr import *
+import pyomo.core.kernel.register_numpy_types
 
 import pyomo.opt
 from pyomo.opt import (SolverFactory,

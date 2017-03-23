@@ -29,7 +29,7 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
-from pyomo.core.base import minimize, maximize
+from pyomo.core.kernel import minimize, maximize
 
 from six import iteritems
 

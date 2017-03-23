@@ -25,7 +25,7 @@ except:
 
 #from pyomo.util.plugin import *
 
-from pyomo.core.kernel.component import Component
+#from pyomo.core.kernel.component import Component
 from pyomo.core.kernel.numvalue import *
 from pyomo.core.kernel.numvalue import (native_numeric_types,
                                         native_types)
@@ -46,6 +46,49 @@ chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
 sum = builtins.sum
+
+def identify_variables(expr,
+                       include_fixed=True,
+                       allow_duplicates=False,
+                       include_potentially_variable=False):
+    from pyomo.core.base import _VarData # TODO
+    from pyomo.core.kernel.component_variable import IVariable # TODO
+    if not allow_duplicates:
+        _seen = set()
+    _stack = [ ([expr], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if type(_sub) in native_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                if type(_sub) is _ProductExpression:
+                    if _sub._denominator:
+                        _stack.append(
+                            (_sub._denominator, 0, len(_sub._denominator)) )
+                    _argList = _sub._numerator
+                else:
+                    _argList = _sub._args
+                _idx = 0
+                _len = len(_argList)
+            elif isinstance(_sub, (_VarData, IVariable)):
+                if ( include_fixed
+                     or not _sub.is_fixed()
+                     or include_potentially_variable ):
+                    if not allow_duplicates:
+                        if id(_sub) in _seen:
+                            continue
+                        _seen.add(id(_sub))
+                    yield _sub
+            elif include_potentially_variable and _sub._potentially_variable():
+                if not allow_duplicates:
+                    if id(_sub) in _seen:
+                        continue
+                    _seen.add(id(_sub))
+                yield _sub
 
 class _ExpressionBase(NumericValue):
     """An object that defines a mathematical expression that
@@ -742,6 +785,39 @@ class _SumExpression(_LinearExpression):
         """Evaluate the expression"""
         return sum(c*next(values) for c in self._coef) + self._const
 
+class _GetItemExpression(_ExpressionBase):
+    __slots__ = ('_base',)
+
+    def __init__(self, base, args):
+        """Construct a call to an external function"""
+        _ExpressionBase.__init__(self, args)
+        self._base = base
+
+    def __getstate__(self):
+        result = _ExpressionBase.__getstate__(self)
+        for i in _GetItemExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def getname(self, *args, **kwds):
+        return self._base.getname(*args, **kwds)
+
+    def polynomial_degree(self):
+        return 0 if self.is_fixed() else 1
+
+    def is_constant(self):
+        return False
+
+    def is_fixed(self):
+        from pyomo.core.base import Var # TODO
+        from pyomo.core.kernel.component_variable import IVariable # TODO
+        return not isinstance(self._base, (Var, IVariable))
+
+    def _apply_operation(self, values):
+        return value(self._base[values])
+
+    def resolve_template(self):
+        return self._base.__getitem__(tuple(value(i) for i in self._args))
 
 class Expr_if(_ExpressionBase):
     """An object that defines a dynamic if-then-else expression"""
@@ -1521,7 +1597,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     # argument list, then evaluate the expression and return the result.
     pyomo_expression = False
     # FIXME: does anyone know why we also test for 'Component' here? [JDS]
-    if isinstance(arg, NumericValue) or isinstance(arg, Component):
+    if isinstance(arg, NumericValue): # or isinstance(arg, Component):
         # TODO: efficiency: we already know this is a NumericValue -
         # so we should be able to avoid the call to as_numeric()
         # below (expecially since most intrinsic functions are unary

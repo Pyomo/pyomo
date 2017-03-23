@@ -7,4 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-from pyomo.core.kernel.expr import *
+import sys
+from pyomo.core.kernel import expr
+sys.modules[__name__] = expr

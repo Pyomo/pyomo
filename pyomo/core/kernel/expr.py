@@ -10,7 +10,7 @@
 from __future__ import division
 import math
 
-import pyomo.core.kernel.expr_common as common
+from pyomo.core.kernel import expr_common as common
 
 def generate_expression(etype, _self,_other):
     raise RuntimeError("incomplete import of Pyomo expression system")
@@ -19,7 +19,7 @@ def generate_relational_expression(etype, lhs, rhs):
 def generate_intrinsic_function_expression(arg, name, fcn):
     raise RuntimeError("incomplete import of Pyomo expression system")
 
-import pyomo.core.kernel.numvalue as numvalue
+from pyomo.core.kernel import numvalue
 
 # Import global methods that are common to all expression systems
 from pyomo.core.kernel.expr_common import clone_expression
@@ -82,7 +82,6 @@ def set_expression_tree_format(mode):
     common.mode = mode
 
 set_expression_tree_format(common.mode)
-
 
 def fabs(arg):
     # FIXME: We need to switch this over from generate_expression to

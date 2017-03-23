@@ -9,12 +9,6 @@
 #  _________________________________________________________________________
 
 
-# TODO: There is a reference to Var and Connector in one of
-#       the methods below that is not covered by any
-#       tests. Those components are now in a different
-#       directory, so this line will not work.
-#from pyomo.core.base.var import Var
-#from pyomo.core.base.connector import Connector
 
 from __future__ import division
 
@@ -81,6 +75,42 @@ def _sum_with_iadd(iterable):
 
 sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
+def identify_variables(expr,
+                       include_fixed=True,
+                       allow_duplicates=False,
+                       include_potentially_variable=False):
+    from pyomo.core.base import _VarData # TODO
+    from pyomo.core.kernel.component_variable import IVariable # TODO
+    if not allow_duplicates:
+        _seen = set()
+    _stack = [ ([expr], 0, 1) ]
+    while _stack:
+        _argList, _idx, _len = _stack.pop()
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_types:
+                pass
+            elif _sub.is_expression():
+                _stack.append(( _argList, _idx, _len ))
+                _argList = _sub._args
+                _idx = 0
+                _len = len(_argList)
+            elif isinstance(_sub, (_VarData, IVariable)):
+                if ( include_fixed
+                     or not _sub.is_fixed()
+                     or include_potentially_variable ):
+                    if not allow_duplicates:
+                        if id(_sub) in _seen:
+                            continue
+                        _seen.add(id(_sub))
+                    yield _sub
+            elif include_potentially_variable and _sub._potentially_variable():
+                if not allow_duplicates:
+                    if id(_sub) in _seen:
+                        continue
+                    _seen.add(id(_sub))
+                yield _sub
 
 def _generate_expression__clone_if_needed__getrefcount(target, inplace, *objs):
     ans = ()
@@ -990,6 +1020,84 @@ class _SumExpression(_LinearOperatorExpression):
         #def __neg__(self):
         #    N/A
 
+class _GetItemExpression(_ExpressionBase):
+    """Expression to call "__getitem__" on the base"""
+
+    __slots__ = ('_base',)
+    PRECEDENCE = 1
+
+    def _precedence(self):
+        return _GetItemExpression.PRECEDENCE
+
+    def __init__(self, base, args):
+        """Construct an expression with an operation and a set of arguments"""
+        self._args = _generate_expression__clone_if_needed(-2, False, *args)
+        if not _getrefcount_available:
+            self._parent_expr = None
+            for a in self._args:
+                if a.__class__ not in native_types and a.is_expression():
+                    a._parent_expr = bypass_backreference or ref(self)
+        self._base = base
+
+    def __getstate__(self):
+        result = super(_GetItemExpression, self).__getstate__()
+        for i in _GetItemExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def getname(self, *args, **kwds):
+        return self._base.getname(*args, **kwds)
+
+    def _is_constant_combiner(self):
+        # This must be false to prevent automatic expression simplification
+        def impl(args):
+            return False
+        return impl
+
+    def _is_fixed_combiner(self):
+        # FIXME: This is tricky.  I think the correct answer is that we
+        # should iterate over the members of the args and make sure all
+        # are fixed
+        def impl(args):
+            return all(args) and \
+                all( True if x.__class__ in native_types else x.is_fixed()
+                     for x in itervalues(self._base) )
+        return impl
+
+    def _potentially_variable_combiner(self):
+        from pyomo.core.base import _VarData # TODO
+        from pyomo.core.base.connector import Connector # TODO
+        from pyomo.core.kernel.component_variable import IVariable # TODO
+        def impl(args):
+            return any(args) and \
+                any( False if x.__class__ in native_types
+                     else x._potentially_variable()
+                     for x in itervalues(self._base) )
+            return not isinstance(self._base, (Var, Connector, IVariable))
+        return impl
+
+    def _polynomial_degree(self, result):
+        if any(x != 0 for x in result):
+            return None
+        ans = 0
+        for x in itervalues(self._base):
+            if x.__class__ in native_types:
+                continue
+            tmp = x.polynomial_degree()
+            if tmp is None:
+                return None
+            elif tmp > ans:
+                ans = tmp
+        return ans
+
+    def _apply_operation(self, result):
+        return value(self._base.__getitem__( tuple(result) ))
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.name)
+
+    def resolve_template(self):
+        return self._base.__getitem__(tuple(value(i) for i in self._args))
 
 class Expr_if(_ExpressionBase):
     """An object that defines a dynamic if-then-else expression"""
@@ -1065,83 +1173,6 @@ class Expr_if(_ExpressionBase):
     def _apply_operation(self, result):
         _if, _then, _else = result
         return _then if _if else _else
-
-
-class _GetItemExpression(_ExpressionBase):
-    """Expression to call "__getitem__" on the base"""
-
-    __slots__ = ('_base',)
-    PRECEDENCE = 1
-
-    def _precedence(self):
-        return _GetItemExpression.PRECEDENCE
-
-    def __init__(self, base, args):
-        """Construct an expression with an operation and a set of arguments"""
-        self._args = _generate_expression__clone_if_needed(-2, False, *args)
-        if not _getrefcount_available:
-            self._parent_expr = None
-            for a in self._args:
-                if a.__class__ not in native_types and a.is_expression():
-                    a._parent_expr = bypass_backreference or ref(self)
-        self._base = base
-
-    def __getstate__(self):
-        result = super(_GetItemExpression, self).__getstate__()
-        for i in _GetItemExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    def getname(self, *args, **kwds):
-        return self._base.getname(*args, **kwds)
-
-    def _is_constant_combiner(self):
-        # This must be false to prevent automatic expression simplification
-        def impl(args):
-            return False
-        return impl
-
-    def _is_fixed_combiner(self):
-        # FIXME: This is tricky.  I think the correct answer is that we
-        # should iterate over the members of the args and make sure all
-        # are fixed
-        def impl(args):
-            return all(args) and \
-                all( True if x.__class__ in native_types else x.is_fixed()
-                     for x in itervalues(self._base) )
-        return impl
-
-    def _potentially_variable_combiner(self):
-        def impl(args):
-            return any(args) and \
-                any( False if x.__class__ in native_types
-                     else x._potentially_variable()
-                     for x in itervalues(self._base) )
-            return not isinstance(self._base, (Var, Connector))
-        return impl
-
-    def _polynomial_degree(self, result):
-        if any(x != 0 for x in result):
-            return None
-        ans = 0
-        for x in itervalues(self._base):
-            if x.__class__ in native_types:
-                continue
-            tmp = x.polynomial_degree()
-            if tmp is None:
-                return None
-            elif tmp > ans:
-                ans = tmp
-        return ans
-
-    def _apply_operation(self, result):
-        return value(self._base.__getitem__( tuple(result) ))
-
-    def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.name)
-
-    def resolve_template(self):
-        return self._base.__getitem__(tuple(value(i) for i in self._args))
 
 
 class _LinearExpression(_ExpressionBase):
