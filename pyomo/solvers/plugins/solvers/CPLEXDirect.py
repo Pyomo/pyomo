@@ -882,7 +882,7 @@ class CPLEXDirect(OptSolver):
                                  "._symbol_maps")[self._smap_id]
         else:
             symbol_map = model.solutions.symbol_map[self._smap_id]
-        sm_byObjective = symbol_map.byObject
+        sm_byObject = symbol_map.byObject
         sm_bySymbol = symbol_map.bySymbol
         assert len(symbol_map.aliases) == 0
         var_sm_byObject = self._variable_symbol_map.byObject
