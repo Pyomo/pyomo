@@ -20,7 +20,10 @@ import sys
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-sys.path.insert(0, os.path.abspath('..'))
+# assumes pyutilib source is next to the pyomo source directory
+sys.path.insert(0, os.path.abspath('../../../pyutilib'))
+# top-level pyomo source directory
+sys.path.insert(0, os.path.abspath('../..'))
 
 
 # -- General configuration ------------------------------------------------
@@ -171,5 +174,4 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-
-
+autodoc_member_order = 'bysource'
