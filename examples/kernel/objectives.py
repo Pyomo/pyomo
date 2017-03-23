@@ -1,4 +1,4 @@
-import pyomo.core.kernel as pmo
+import pyomo.kernel as pmo
 
 v = pmo.variable(value=2)
 

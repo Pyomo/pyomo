@@ -1,4 +1,4 @@
-import pyomo.core.kernel as pmo
+import pyomo.kernel as pmo
 
 v1 = pmo.variable()
 v2 = pmo.variable()
@@ -88,7 +88,6 @@ assert tuple(pmo.value(w) for w in s.weights) == (2, 3)
 #
 # Example model (discontiguous variable domain)
 #
-import pyomo.environ
 
 domain = [-1.1, 4.49, 8.1, -30.2, 12.5]
 

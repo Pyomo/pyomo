@@ -1,10 +1,7 @@
 import random
 import sys
 
-import pyomo.environ
-import pyomo.core.kernel as pmo
-from pyomo.core.base.component_piecewise.util import \
-    generate_delaunay
+import pyomo.kernel as pmo
 
 try:
     import numpy as np
@@ -42,7 +39,7 @@ m.real.g = pmo.constraint(m.z == g(m.x, m.y))
 
 m.approx = pmo.block()
 
-tri = generate_delaunay([m.x, m.y], num=25)
+tri = pmo.component_piecewise.util.generate_delaunay([m.x, m.y], num=25)
 pw_xarray, pw_yarray = np.transpose(tri.points)
 
 fvals = f(pw_xarray, pw_yarray, package=np)
