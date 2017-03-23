@@ -278,5 +278,5 @@ _block_base.write = _write
 del _write
 
 # canonical repn checks type instead of ctype
-from pyomo.core.kernel.component_interface import ICategorizedObject
-ICategorizedObject.type = ICategorizedObject.ctype
+from pyomo.core.kernel.component_interface import _ICategorizedObjectMeta
+_ICategorizedObjectMeta.type = _ICategorizedObjectMeta.ctype

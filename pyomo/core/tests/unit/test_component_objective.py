@@ -28,6 +28,12 @@ from pyomo.core.base.objective import Objective
 
 class Test_objective(unittest.TestCase):
 
+    def test_ctype(self):
+        o = objective()
+        self.assertIs(o.ctype, Objective)
+        self.assertIs(type(o).ctype, Objective)
+        self.assertIs(objective.ctype, Objective)
+
     def test_pickle(self):
         o = objective(sense=maximize,
                       expr=1.0)

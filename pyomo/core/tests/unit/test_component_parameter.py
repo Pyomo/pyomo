@@ -26,6 +26,12 @@ from pyomo.core.base.param import Param
 
 class Test_parameter(unittest.TestCase):
 
+    def test_ctype(self):
+        p = parameter()
+        self.assertIs(p.ctype, Param)
+        self.assertIs(type(p).ctype, Param)
+        self.assertIs(parameter.ctype, Param)
+
     def test_pickle(self):
         p = parameter(value=1.0)
         self.assertEqual(p.value, 1.0)

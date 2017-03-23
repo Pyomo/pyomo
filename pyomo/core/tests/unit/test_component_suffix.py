@@ -30,6 +30,12 @@ from six import StringIO
 
 class Test_suffix(unittest.TestCase):
 
+    def test_ctype(self):
+        s = suffix()
+        self.assertIs(s.ctype, Suffix)
+        self.assertIs(type(s).ctype, Suffix)
+        self.assertIs(suffix.ctype, Suffix)
+
     def test_pickle(self):
         s = suffix(direction=suffix.EXPORT,
                    datatype=suffix.FLOAT)

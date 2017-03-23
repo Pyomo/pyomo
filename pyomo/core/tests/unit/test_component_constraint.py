@@ -29,6 +29,12 @@ from pyomo.core.base.constraint import Constraint
 
 class Test_constraint(unittest.TestCase):
 
+    def test_ctype(self):
+        c = constraint()
+        self.assertIs(c.ctype, Constraint)
+        self.assertIs(type(c).ctype, Constraint)
+        self.assertIs(constraint.ctype, Constraint)
+
     def test_pickle(self):
         c = constraint()
         self.assertIs(c.lb, None)
@@ -1008,6 +1014,12 @@ class Test_constraint(unittest.TestCase):
             constraint(x+x)
 
 class Test_linear_constraint(unittest.TestCase):
+
+    def test_ctype(self):
+        c = linear_constraint([],[])
+        self.assertIs(c.ctype, Constraint)
+        self.assertIs(type(c).ctype, Constraint)
+        self.assertIs(linear_constraint.ctype, Constraint)
 
     def test_pickle(self):
         c = linear_constraint([],[])

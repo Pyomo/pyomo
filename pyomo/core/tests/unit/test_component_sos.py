@@ -26,6 +26,12 @@ from pyomo.core.base.sos import SOSConstraint
 
 class Test_sos(unittest.TestCase):
 
+    def test_ctype(self):
+        s = sos([])
+        self.assertIs(s.ctype, SOSConstraint)
+        self.assertIs(type(s).ctype, SOSConstraint)
+        self.assertIs(sos.ctype, SOSConstraint)
+
     def test_pickle(self):
         v = variable()
         s = sos([v],weights=[1])

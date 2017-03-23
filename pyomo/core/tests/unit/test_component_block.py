@@ -84,6 +84,16 @@ def _collect_expr_components(exp):
 
 class TestMisc(unittest.TestCase):
 
+    def test_ctype(self):
+        b = block()
+        self.assertIs(b.ctype, Block)
+        self.assertIs(type(b).ctype, Block)
+        self.assertIs(block.ctype, Block)
+        b = tiny_block()
+        self.assertIs(b.ctype, Block)
+        self.assertIs(type(b).ctype, Block)
+        self.assertIs(tiny_block.ctype, Block)
+
     # a temporary test to make sure solve and load
     # functionality work (will be moved elsewhere in the
     # future)

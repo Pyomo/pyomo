@@ -48,6 +48,13 @@ class _TestComponentDictBase(object):
     _container_type = None
     _ctype_factory = None
 
+    def test_ctype(self):
+        c = self._container_type()
+        ctype = self._ctype_factory().ctype
+        self.assertIs(c.ctype, ctype)
+        self.assertIs(type(c).ctype, ctype)
+        self.assertIs(self._container_type.ctype, ctype)
+
     def test_init1(self):
         cdict = self._container_type()
 

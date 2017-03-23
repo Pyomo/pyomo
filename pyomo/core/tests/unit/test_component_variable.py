@@ -54,6 +54,12 @@ class Test_variable(unittest.TestCase):
         self.assertIs(lb, None)
         self.assertIs(ub, None)
 
+    def test_ctype(self):
+        v = variable()
+        self.assertIs(v.ctype, Var)
+        self.assertIs(type(v).ctype, Var)
+        self.assertIs(variable.ctype, Var)
+
     def test_pickle(self):
         v = variable(lb=1,
                      ub=2,
