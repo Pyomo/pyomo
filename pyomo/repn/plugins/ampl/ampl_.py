@@ -39,12 +39,12 @@ from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
 from pyomo.core.base import var
 from pyomo.core.base import param
 import pyomo.core.base.suffix
-import pyomo.core.base.component_suffix
 from pyomo.repn.ampl_repn import generate_ampl_repn
 
-from pyomo.core.base.component_block import IBlockStorage
-from pyomo.core.base.component_expression import IExpression
-from pyomo.core.base.component_variable import IVariable
+import pyomo.core.kernel.component_suffix
+from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.component_expression import IExpression
+from pyomo.core.kernel.component_variable import IVariable
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
@@ -1284,7 +1284,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         prob_tag = 3
         suffix_dict = {}
         if isinstance(model, IBlockStorage):
-            suffix_gen = lambda b: pyomo.core.base.component_suffix.\
+            suffix_gen = lambda b: pyomo.core.kernel.component_suffix.\
                          export_suffix_generator(b,
                                                  active=True,
                                                  return_key=True,

@@ -52,14 +52,14 @@ class TreeWalkerHelper(object):
         _GeneralExpressionData : 6,
     }
 
-from pyomo.core.base.component_expression import (IExpression,
-                                                  expression,
-                                                  data_expression)
-from pyomo.core.base.component_objective import objective
-from pyomo.core.base.component_variable import (IVariable,
-                                                variable)
-from pyomo.core.base.component_parameter import (IParameter,
-                                                 parameter)
+from pyomo.core.kernel.component_expression import (IExpression,
+                                                    expression,
+                                                    data_expression)
+from pyomo.core.kernel.component_objective import objective
+from pyomo.core.kernel.component_variable import (IVariable,
+                                                  variable)
+from pyomo.core.kernel.component_parameter import (IParameter,
+                                                   parameter)
 
 import six
 from six import iterkeys, itervalues, iteritems, StringIO

@@ -68,7 +68,7 @@ from pyomo.core.base import (SymbolMap,
 from pyomo.core.base.numvalue import value
 from pyomo.repn import generate_canonical_repn
 
-from pyomo.core.base.component_block import IBlockStorage
+from pyomo.core.kernel.component_block import IBlockStorage
 
 GRB_MAX = -1
 GRB_MIN = 1

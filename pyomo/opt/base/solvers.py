@@ -541,9 +541,9 @@ class OptSolver(Plugin):
         # constructed! Collect suffix names to try and import from solution.
         #
         from pyomo.core.base import Block
-        from pyomo.core.base.component_block import IBlockStorage
         import pyomo.core.base.suffix
-        import pyomo.core.base.component_suffix
+        from pyomo.core.kernel.component_block import IBlockStorage
+        import pyomo.core.kernel.component_suffix
         _model = None
         for arg in args:
             if isinstance(arg, (Block, IBlockStorage)):
@@ -562,7 +562,7 @@ class OptSolver(Plugin):
                 else:
                     assert isinstance(arg, IBlockStorage)
                     model_suffixes = list(name for (name,comp) \
-                                          in pyomo.core.base.component_suffix.\
+                                          in pyomo.core.kernel.component_suffix.\
                                           import_suffix_generator(arg,
                                                                   active=True,
                                                                   descend_into=False,

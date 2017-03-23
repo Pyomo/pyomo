@@ -27,9 +27,10 @@ from pyomo.opt.parallel.async_solver import (AsynchronousSolverManager,
                                              SolverManagerFactory)
 from pyomo.opt.parallel.pyro import PyroAsynchronousActionManager
 from pyomo.core.base import Block
-from pyomo.core.base.component_block import IBlockStorage
 import pyomo.core.base.suffix
-import pyomo.core.base.component_suffix
+
+from pyomo.core.kernel.component_block import IBlockStorage
+import pyomo.core.kernel.component_suffix
 
 import six
 

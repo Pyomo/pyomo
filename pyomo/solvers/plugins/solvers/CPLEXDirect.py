@@ -34,7 +34,7 @@ from pyomo.core.base import (SymbolMap,
 from pyomo.repn import generate_canonical_repn
 from pyomo.solvers import wrappers
 
-from pyomo.core.base.component_block import IBlockStorage
+from pyomo.core.kernel.component_block import IBlockStorage
 
 from six import itervalues, iterkeys, iteritems, advance_iterator
 from six.moves import xrange

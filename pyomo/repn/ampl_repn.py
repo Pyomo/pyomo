@@ -28,8 +28,8 @@ from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
                                        generate_canonical_repn)
 from pyomo.core.base import expr_common
 
-from pyomo.core.base.component_expression import IExpression
-from pyomo.core.base.component_variable import IVariable
+from pyomo.core.kernel.component_expression import IExpression
+from pyomo.core.kernel.component_variable import IVariable
 
 import six
 from six import itervalues, iteritems, StringIO
