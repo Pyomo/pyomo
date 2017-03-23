@@ -628,7 +628,7 @@ class Set(IndexedComponent):
 
         # Get dimen from domain, if possible
         if self.domain is not None:
-            tmp_dimen = self.domain.dimen
+            tmp_dimen = getattr(self.domain, 'dimen', 0)
         if self._bounds is None and not self.domain is None:
             self._bounds = copy.copy(self.domain._bounds)
 

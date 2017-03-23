@@ -7,122 +7,118 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
+import logging
 from weakref import ref as weakref_ref
 
-import pyomo.util.plugin
-from pyomo.core.base.sets import SimpleSet
-from pyomo.core.base.numvalue import (native_numeric_types,
-                                      native_integer_types,
-                                      native_boolean_types)
-from pyomo.core.base.plugin import *
+from pyomo.core.kernel.numvalue import (native_numeric_types,
+                                        native_integer_types,
+                                        native_boolean_types)
 
-import logging
+
 logger = logging.getLogger('pyomo.core')
 
 _virtual_sets = []
 
-
-class _VirtualSet(SimpleSet):
+class _VirtualSet(object):
     """
     A set that does not contain elements, but instead overrides the
        __contains__ method to define set membership.
     """
 
-    def __init__(self,*args,**kwds):
-        self._class_override=False
-        SimpleSet.__init__(self, *args, **kwds)
-        self.virtual=True
-        self.concrete=False
+    def __init__(self, name=None, doc=None, bounds=None, validate=None):
+        self.name = name
+        self.doc = doc
+        self._bounds = bounds
+        if self._bounds is None:
+            self._bounds = (None, None)
+        self.validate = validate
 
         global _virtual_sets
         _virtual_sets.append(self)
 
-    def data(self):
-        raise TypeError("Cannot access data for a virtual set")
+    def __lt__(self, other):
+        raise TypeError("'<' not supported")
 
+    def ___le__(self, other):
+        raise TypeError("<=' not supported")
 
-class _AnySet(_VirtualSet):
-    """A virtual set that allows any value"""
+    def __gt__(self, other):
+        raise TypeError("'>' not supported")
 
-    def __init__(self,*args,**kwds):
-        """Constructor"""
-        _VirtualSet.__init__(self,*args,**kwds)
+    def __ge__(self, other):
+        raise TypeError("'>=' not supported")
 
-    def __contains__(self, element):
-        return True
+    def __str__(self):
+        if self.name is None:
+            return super(_VirtualSet, self).__str__()
+        else:
+            return str(self.name)
 
+    def bounds(self):
+        return self._bounds
 
-class _EmptySet(_VirtualSet):
-    """A virtual set that allows no values"""
-
-    def __init__(self,*args,**kwds):
-        """Constructor"""
-        _VirtualSet.__init__(self,*args,**kwds)
-
-    def __contains__(self, element):
-        return False
-
-
-class _AnySetWithNone(_AnySet):
-    """A virtual set that allows any value (including None)"""
-
-    def __contains__(self, element):
-        logger.warning("DEPRECATION WARNING: Use the Any set instead of AnyWithNone")
-        return True
-
+    def __contains__(self, other):
+        valid = True
+        if self.validate is not None:
+            valid = self.validate(None, other)
+        if valid:
+            if (self._bounds is not None):
+                if self._bounds[0] is not None:
+                    valid &= (other >= self._bounds[0])
+                if self._bounds[1] is not None:
+                    valid &= (other <= self._bounds[1])
+        return valid
 
 class RealSet(_VirtualSet):
     """A virtual set that represents real values"""
 
-    def __init__(self,*args,**kwds):
+    def __init__(self, *args, **kwds):
         """Constructor"""
-        if not 'bounds' in kwds:
-            kwds['bounds'] = (None,None)
-        _VirtualSet.__init__(self,*args,**kwds)
+        _VirtualSet.__init__(self, *args, **kwds)
 
     def __contains__(self, element):
         """Report whether an element is an 'int', 'long' or 'float' value.
 
         (Called in response to the expression 'element in self'.)
         """
-        return _VirtualSet.__contains__(self, element) and \
-            ( element.__class__ in native_numeric_types )
-
+        return element.__class__ in native_numeric_types and \
+            _VirtualSet.__contains__(self, element)
 
 class IntegerSet(_VirtualSet):
     """A virtual set that represents integer values"""
 
-    def __init__(self,*args,**kwds):
+    def __init__(self, *args, **kwds):
         """Constructor"""
-        if not 'bounds' in kwds:
-            kwds['bounds'] = (None,None)
-        _VirtualSet.__init__(self,*args,**kwds)
+        _VirtualSet.__init__(self, *args, **kwds)
 
     def __contains__(self, element):
         """Report whether an element is an 'int'.
 
         (Called in response to the expression 'element in self'.)
         """
-        return _VirtualSet.__contains__(self, element) and \
-            ( element.__class__ in native_integer_types )
-
+        return element.__class__ in native_integer_types and \
+            _VirtualSet.__contains__(self, element)
 
 class BooleanSet(_VirtualSet):
     """A virtual set that represents boolean values"""
 
-    def __init__(self,*args,**kwds):
+    def __init__(self, *args, **kwds):
         """Construct the set of booleans, which contains no explicit values"""
+        assert 'bounds' not in kwds
         kwds['bounds'] = (0,1)
-        _VirtualSet.__init__(self,*args,**kwds)
+        _VirtualSet.__init__(self, *args, **kwds)
 
     def __contains__(self, element):
         """Report whether an element is a boolean.
 
         (Called in response to the expression 'element in self'.)
         """
-        return _VirtualSet.__contains__(self, element) \
-               and ( element.__class__ in native_boolean_types ) \
-               and ( element in (0, 1, True, False, 'True', 'False', 'T', 'F') )
+        return ((element.__class__ in native_boolean_types) or \
+                (element.__class__ in native_numeric_types)) and \
+            (element in (0, 1, True, False)) and \
+            _VirtualSet.__contains__(self, element)
+               # where does it end? (i.e., why not 'true', 'TRUE, etc.?)
+               #and ( element in (0, 1, True, False, 'True', 'False', 'T', 'F') )
 
 # GH 2/2016: I'm doing this to make instances of
 #            RealInterval and IntegerInterval pickle-able
@@ -149,37 +145,34 @@ class _validate_interval(object):
 class RealInterval(RealSet):
     """A virtual set that represents an interval of real values"""
 
-    def __init__(self, *args, **kwds):
+    def __init__(self, name=None, **kwds):
         """Constructor"""
         if 'bounds' not in kwds:
             kwds['bounds'] = (None,None)
         kwds['validate'] = _validate_interval(self)
         # GH: Assigning a name here so that var.pprint() does not
         #     output _unknown_ in the book examples
-        if 'name' not in kwds:
+        if name is None:
             kwds['name'] = "RealInterval"+str(kwds['bounds'])
-        RealSet.__init__(self, *args, **kwds)
+        else:
+            kwds['name'] = name
+        RealSet.__init__(self, **kwds)
 
 class IntegerInterval(IntegerSet):
     """A virtual set that represents an interval of integer values"""
 
-    def __init__(self, *args, **kwds):
+    def __init__(self, name=None, **kwds):
         """Constructor"""
         if 'bounds' not in kwds:
             kwds['bounds'] = (None,None)
         kwds['validate'] = _validate_interval(self)
         # GH: Assigning a name here so that var.pprint() does not
         #     output _unknown_ in the book examples
-        if 'name' not in kwds:
+        if name is None:
             kwds['name'] = "IntegerInterval"+str(kwds['bounds'])
-        IntegerSet.__init__(self, *args, **kwds)
-
-#
-# Concrete instances of the standard sets
-#
-Any=_AnySet(name="Any", doc="A set of any data")
-EmptySet=_EmptySet(name="EmptySet", doc="A set of no data")
-AnyWithNone=_AnySetWithNone(name="AnyWithNone", doc="A set of any data (including None)")
+        else:
+            kwds['name'] = name
+        IntegerSet.__init__(self, **kwds)
 
 Reals=RealSet(name="Reals", doc="A set of real values")
 def validate_PositiveValues(model,x):    return x >  0
@@ -190,38 +183,38 @@ def validate_PercentFraction(model,x):   return x >= 0 and x <= 1.0
 
 PositiveReals    = RealSet(
   name="PositiveReals",
-  validate=validate_PositiveValues,
   doc="A set of positive real values",
+  validate=validate_PositiveValues,
   bounds=(0, None)
 )
 NonPositiveReals = RealSet(
   name="NonPositiveReals",
-  validate=validate_NonPositiveValues,
   doc="A set of non-positive real values",
+  validate=validate_NonPositiveValues,
   bounds=(None, 0)
 )
 NegativeReals    = RealSet(
   name="NegativeReals",
-  validate=validate_NegativeValues,
   doc="A set of negative real values",
+  validate=validate_NegativeValues,
   bounds=(None, 0)
 )
 NonNegativeReals = RealSet(
   name="NonNegativeReals",
-  validate=validate_NonNegativeValues,
   doc="A set of non-negative real values",
+  validate=validate_NonNegativeValues,
   bounds=(0, None)
 )
 PercentFraction = RealSet(
   name="PercentFraction",
-  validate=validate_PercentFraction,
   doc="A set of real values in the interval [0,1]",
+  validate=validate_PercentFraction,
   bounds=(0.0,1.0)
 )
 UnitInterval = RealSet(
   name="UnitInterval",
-  validate=validate_PercentFraction,
   doc="A set of real values in the interval [0,1]",
+  validate=validate_PercentFraction,
   bounds=(0.0,1.0)
 )
 
@@ -231,28 +224,28 @@ Integers            = IntegerSet(
 )
 PositiveIntegers    = IntegerSet(
   name="PositiveIntegers",
-  validate=validate_PositiveValues,
   doc="A set of positive integer values",
+  validate=validate_PositiveValues,
   bounds=(1, None)
 )
 NonPositiveIntegers = IntegerSet(
   name="NonPositiveIntegers",
-  validate=validate_NonPositiveValues,
   doc="A set of non-positive integer values",
+  validate=validate_NonPositiveValues,
   bounds=(None, 0)
 )
 NegativeIntegers    = IntegerSet(
   name="NegativeIntegers",
-  validate=validate_NegativeValues,
   doc="A set of negative integer values",
+  validate=validate_NegativeValues,
   bounds=(None, -1)
 )
 NonNegativeIntegers = IntegerSet(
   name="NonNegativeIntegers",
-  validate=validate_NonNegativeValues,
   doc="A set of non-negative integer values",
+  validate=validate_NonNegativeValues,
   bounds=(0, None)
 )
 
-Boolean = BooleanSet( name="Boolean", doc="A set of boolean values")
-Binary  = BooleanSet( name="Binary",  doc="A set of boolean values")
+Boolean = BooleanSet(name="Boolean", doc="A set of boolean values")
+Binary  = BooleanSet(name="Binary",  doc="A set of boolean values")
