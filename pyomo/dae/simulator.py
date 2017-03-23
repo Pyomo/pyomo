@@ -29,6 +29,9 @@ from pyomo.core.base.template_expr import (
 
 from six import iterkeys, itervalues
 
+import logging
+logger = logging.getLogger('pyomo.core')
+
 # Check integrator availability
 scipy_available = True
 try:
@@ -266,11 +269,17 @@ class Simulator:
 
         if self._intpackage == 'scipy':
             if not scipy_available:
-                raise ImportError("The scipy module is not available. "
-                                  "Cannot simulate model.")   
+                # Converting this to a warning so that Simulator initialization
+                # can be tested even when scipy is unavailable
+                logger.warning("The scipy module is not available. You may "
+                               "build the Simulator object but you will not "
+                               "be able to run the simulation.")
             substituter = substitute_getitem_with_param
         else:
             if not casadi_available:
+                # Initializing the simulator for use with casadi requires
+                # access to casadi objects. Therefore, we must throw an error
+                # here instead of a warning. 
                 raise ImportError("The casadi module is not available. "
                                   "Cannot simulate model.")
             substituter = substitute_getitem_with_casadi_sym
@@ -652,6 +661,10 @@ class Simulator:
                 initcon.append(value(v._base[vidx]))
         
         if self._intpackage is 'scipy':
+            if not scipy_available:
+                raise ImportError("The scipy module is not available. "
+                                  "Cannot simulate the model.")
+
             scipyint = scipy.ode(self._rhsfun).set_integrator(integrator,**kwds)
             scipyint.set_initial_value(initcon,tsim[0])
 
