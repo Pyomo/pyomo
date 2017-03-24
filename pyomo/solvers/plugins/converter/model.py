@@ -20,6 +20,8 @@ from pyomo.util.plugin import *
 from pyomo.opt.base import *
 from pyomo.solvers.plugins.converter.pico import PicoMIPConverter
 
+from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.base import Block
 
 class PyomoMIPConverter(SingletonPlugin):
 
@@ -78,12 +80,22 @@ class PyomoMIPConverter(SingletonPlugin):
             problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix = '.pyomo.lp')
             if instance is not None:
-                (problem_filename, symbol_map) = \
-                    instance.write(filename=problem_filename,
-                                   format=ProblemFormat.cpxlp,
-                                   solver_capability=capabilities,
-                                   io_options=io_options)
-                return (problem_filename,), symbol_map
+                if isinstance(instance, Block):
+                    (problem_filename, symbol_map_id) = \
+                        instance.write(
+                            filename=problem_filename,
+                            format=ProblemFormat.cpxlp,
+                            solver_capability=capabilities,
+                            io_options=io_options)
+                else:
+                    assert isinstance(instance, IBlockStorage)
+                    symbol_map_id = instance.write(
+                        problem_filename,
+                        format=ProblemFormat.cpxlp,
+                        _solver_capability=capabilities,
+                        _called_by_solver=True,
+                        **io_options)
+                return (problem_filename,), symbol_map_id
             else:
 
                 #
@@ -115,12 +127,22 @@ class PyomoMIPConverter(SingletonPlugin):
             problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix = '.pyomo.bar')
             if instance is not None:
-                (problem_filename, symbol_map) = \
-                    instance.write(filename=problem_filename,
-                                   format=ProblemFormat.bar,
-                                   solver_capability=capabilities,
-                                   io_options=io_options)
-                return (problem_filename,), symbol_map
+                if isinstance(instance, Block):
+                    (problem_filename, symbol_map_id) = \
+                        instance.write(
+                            filename=problem_filename,
+                            format=ProblemFormat.bar,
+                            solver_capability=capabilities,
+                            io_options=io_options)
+                else:
+                    assert isinstance(instance, IBlockStorage)
+                    symbol_map_id = instance.write(
+                        problem_filename,
+                        format=ProblemFormat.bar,
+                        _solver_capability=capabilities,
+                        _called_by_solver=True,
+                        **io_options)
+                return (problem_filename,), symbol_map_id
             else:
 
                 #
@@ -156,12 +178,22 @@ class PyomoMIPConverter(SingletonPlugin):
                 problem_filename = pyutilib.services.TempfileManager.\
                                    create_tempfile(suffix = '.pyomo.mps')
             if instance is not None:
-                (problem_filename, symbol_map) = \
-                    instance.write(filename=problem_filename,
-                                   format=args[1],
-                                   solver_capability=capabilities,
-                                   io_options=io_options)
-                return (problem_filename,), symbol_map
+                if isinstance(instance, Block):
+                    (problem_filename, symbol_map_id) = \
+                        instance.write(
+                            filename=problem_filename,
+                            format=args[1],
+                            solver_capability=capabilities,
+                            io_options=io_options)
+                else:
+                    assert isinstance(instance, IBlockStorage)
+                    symbol_map_id = instance.write(
+                        problem_filename,
+                        format=args[1],
+                        _solver_capability=capabilities,
+                        _called_by_solver=True,
+                        **io_options)
+                return (problem_filename,), symbol_map_id
             else:
 
                 #
@@ -210,11 +242,21 @@ class PyomoMIPConverter(SingletonPlugin):
                 problem_filename = pyutilib.services.TempfileManager.\
                                create_tempfile(suffix='pyomo.osil')
                 if instance:
-                    (problem_filename, symbol_map) = \
-                        instance.write(filename=problem_filename,
-                                    format=ProblemFormat.osil,
-                                    solver_capability=capabilities,
-                                    io_options=io_options)
+                    if isinstance(instance, Block):
+                        (problem_filename, symbol_map_id) = \
+                            instance.write(
+                                filename=problem_filename,
+                                format=ProblemFormat.osil,
+                                solver_capability=capabilities,
+                                io_options=io_options)
+                    else:
+                        assert isinstance(instance, IBlockStorage)
+                        symbol_map_id = instance.write(
+                            problem_filename,
+                            format=ProblemFormat.osil,
+                            _solver_capability=capabilities,
+                            _called_by_solver=True,
+                            **io_options)
                     return (problem_filename,), None
             else:
                 raise NotImplementedError(

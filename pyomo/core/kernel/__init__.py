@@ -230,53 +230,6 @@ def _valid_problem_types(self):
 _block_base.valid_problem_types = _valid_problem_types
 del _valid_problem_types
 
-# I would really like to see this method changed to
-# REQUIRE a filename as an argument and simply return
-# the symbol map.
-def _write(self,
-          filename=None,
-          format=None,
-          solver_capability=None,
-          io_options={}):
-    """
-    Write the model to a file, with a given format.
-    """
-    #
-    # Guess the format if none is specified
-    #
-    if (filename is None) and (format is None):
-        # Preserving backwards compatibility here.
-        # The function used to be defined with format='lp' by
-        # default, but this led to confusing behavior when a
-        # user did something like 'model.write("f.nl")' and
-        # expected guess_format to create an NL file.
-        format = pyomo.opt.base.ProblemFormat.cpxlp
-    if (filename is not None) and (format is None):
-        format = pyomo.opt.base.guess_format(filename)
-    problem_writer = pyomo.opt.WriterFactory(format)
-    if problem_writer is None:
-        raise ValueError(
-            "Cannot write model in format '%s': no model "
-            "writer registered for that format"
-            % str(format))
-
-    if solver_capability is None:
-        solver_capability = lambda x: True
-    (filename, smap) = problem_writer(self,
-                                      filename,
-                                      solver_capability,
-                                      io_options)
-    smap_id = id(smap)
-
-    # BIG HACK
-    if not hasattr(self, "._symbol_maps"):
-        setattr(self, "._symbol_maps", {})
-    getattr(self, "._symbol_maps")[smap_id] = smap
-
-    return filename, smap_id
-_block_base.write = _write
-del _write
-
 # canonical repn checks type instead of ctype
 from pyomo.core.kernel.component_interface import _ICategorizedObjectMeta
 _ICategorizedObjectMeta.type = _ICategorizedObjectMeta.ctype

@@ -617,6 +617,64 @@ class _block_base(object):
 
         return names
 
+    def write(self,
+              filename,
+              format=None,
+              _solver_capability=None,
+              _called_by_solver=False,
+              **kwds):
+        """
+        Write the model to a file, with a given format.
+
+        Args:
+            filename (str): The name of the file to write.
+            format: The file format to use. If this is not
+                specified, the file format will be inferred
+                from the filename suffix.
+            **kwds: Additional keyword options passed the
+                model writer.
+        """
+        #
+        # Guess the format if none is specified
+        #
+        if format is None:
+            format = pyomo.opt.base.guess_format(filename)
+        problem_writer = pyomo.opt.WriterFactory(format)
+
+        # TODO: I have no idea how to properly check if the
+        #       WriterFactory lookup failed. When it does
+        #       fail, it seems to return something of type:
+        # 'pyutilib.component.core.core.PluginFactoryFunctor'
+        #       which is not a class in the global namespace
+        #       of that module. So for now, I am simply
+        #       checking for a few methods that exist on this
+        #       strange class.
+        if (problem_writer is None) or \
+           (hasattr(problem_writer, 'get_class') and \
+            hasattr(problem_writer, 'services')):
+            raise ValueError(
+                "Cannot write model in format '%s': no model "
+                "writer registered for that format"
+                % str(format))
+
+        if _solver_capability is None:
+            _solver_capability = lambda x: True
+        (filename_, smap) = problem_writer(self,
+                                           filename,
+                                           _solver_capability,
+                                           kwds)
+        assert filename_ == filename
+
+        if _called_by_solver:
+            # BIG HACK
+            smap_id = id(smap)
+            if not hasattr(self, "._symbol_maps"):
+                setattr(self, "._symbol_maps", {})
+            getattr(self, "._symbol_maps")[smap_id] = smap
+            return smap_id
+        else:
+            return smap
+
     def load_solution(self,
                       solution,
                       allow_consistent_values_for_fixed_vars=False,
@@ -925,9 +983,6 @@ class block(_block_base, IBlockStorage):
                     active=active,
                     descend_into=False))
         return ctypes
-
-    # TODO
-    #def write(self, ...):
 
 class block_tuple(ComponentTuple,
                   _IActiveComponentContainerMixin):

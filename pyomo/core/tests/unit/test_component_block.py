@@ -15,6 +15,7 @@ from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                  IComponentContainer,
                                                  _IActiveComponentContainerMixin)
 from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.symbol_map import SymbolMap
 from pyomo.core.kernel.component_suffix import suffix
 from pyomo.core.kernel.component_constraint import (constraint,
                                                     constraint_dict,
@@ -93,6 +94,47 @@ class TestMisc(unittest.TestCase):
         self.assertIs(b.ctype, Block)
         self.assertIs(type(b).ctype, Block)
         self.assertIs(tiny_block.ctype, Block)
+
+    def test_write(self):
+        b = block()
+        b.v = variable()
+        b.y = variable(value=1.0, fixed=True)
+        b.p = parameter(value=2.0)
+        b.e = expression(b.v * b.p + 1)
+        b.eu = data_expression(b.p**2 + 10)
+        b.el = data_expression(-b.p**2 - 10)
+        b.o = objective(b.v + b.y)
+        b.c1 = constraint(b.el + 1 <= b.e + 2 <= b.eu + 2)
+        b.c2 = constraint(lb=b.el, body=b.v)
+        b.c3 = constraint(body=b.v, ub=b.eu)
+
+        fid, fname = tempfile.mkstemp(suffix='.lp')
+        os.close(fid)
+        assert fname.endswith('.lp')
+        smap = b.write(fname)
+        os.remove(fname)
+        self.assertTrue(isinstance(smap, SymbolMap))
+
+        fid, fname = tempfile.mkstemp(suffix='.lp')
+        os.close(fid)
+        assert fname.endswith('.lp')
+        smap = b.write(fname, format='nl')
+        os.remove(fname)
+        self.assertTrue(isinstance(smap, SymbolMap))
+
+        fid, fname = tempfile.mkstemp(suffix='.sdfsdfsf')
+        os.close(fid)
+        assert fname.endswith('.sdfsdfsf')
+        with self.assertRaises(ValueError):
+            b.write(fname)
+        os.remove(fname)
+
+        fid, fname = tempfile.mkstemp(suffix='.sdfsdfsf')
+        os.close(fid)
+        assert fname.endswith('.sdfsdfsf')
+        with self.assertRaises(ValueError):
+            b.write(fname, format="sdfdsfsdfsf")
+        os.remove(fname)
 
     # a temporary test to make sure solve and load
     # functionality work (will be moved elsewhere in the
