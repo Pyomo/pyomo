@@ -2,6 +2,7 @@ import pickle
 
 import pyutilib.th as unittest
 import pyomo.environ
+import pyomo.core.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
@@ -43,6 +44,22 @@ import six
 from six import StringIO
 
 class Test_variable(unittest.TestCase):
+
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        v = variable()
+        pyomo.core.kernel.pprint(v)
+        b = block()
+        b.v = v
+        pyomo.core.kernel.pprint(v)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(v)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
 
     def test_extract_domain_type_and_bounds(self):
         # test an edge case

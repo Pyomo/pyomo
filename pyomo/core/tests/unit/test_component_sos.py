@@ -1,6 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
+import pyomo.core.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
@@ -18,13 +19,31 @@ from pyomo.core.kernel.component_sos import (ISOS,
                                              sos_tuple,
                                              sos_list)
 from pyomo.core.kernel.component_block import block
-from pyomo.core.kernel.component_variable import variable
+from pyomo.core.kernel.component_variable import (variable,
+                                                  variable_list)
 from pyomo.core.kernel.component_parameter import parameter
 from pyomo.core.kernel.component_expression import (expression,
                                                     data_expression)
 from pyomo.core.base.sos import SOSConstraint
 
 class Test_sos(unittest.TestCase):
+
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        vlist = variable_list([variable(), variable()])
+        s = sos(vlist)
+        pyomo.core.kernel.pprint(s)
+        b = block()
+        b.s = s
+        pyomo.core.kernel.pprint(s)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(s)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
 
     def test_ctype(self):
         s = sos([])

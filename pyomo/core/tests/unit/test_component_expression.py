@@ -1,6 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
+import pyomo.core.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
@@ -34,6 +35,23 @@ from six import StringIO
 class _Test_expression_base(object):
 
     _ctype_factory = None
+
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        v = variable()
+        e = expression(expr=v**2)
+        pyomo.core.kernel.pprint(e)
+        b = block()
+        b.e = e
+        pyomo.core.kernel.pprint(e)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(e)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
 
     def test_pickle(self):
         e = self._ctype_factory(expr=1.0)

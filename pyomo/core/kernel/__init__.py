@@ -95,24 +95,31 @@ from pyomo.core.kernel.set_types import (RealSet,
 from pyomo.core.kernel.numvalue import value
 
 # Short term helper method for debugging models
-def _pprint(obj, indent=0):
+import pprint as _pprint_
+def pprint(obj, indent=0):
+    """pprint a modeling object"""
     import pyomo.core.base
-    if not isinstance(obj, ICategorizedObject):
-        import pprint
+    if not isinstance(obj, pyomo.core.kernel.component_interface.ICategorizedObject):
         assert indent == 0
-        pprint.pprint(obj, indent=indent+1)
+        _pprint_.pprint(obj, indent=indent+1)
         return
     if not obj._is_component:
         # a container but not a block
         assert obj._is_container
-        print((" "*indent)+" - %s: container(size=%s, ctype=%s)"
+        prefix = ""
+        if indent > 0:
+            prefix = (" "*indent)+" - "
+        print(prefix+"%s: container(size=%s, ctype=%s)"
               % (str(obj), len(obj), obj.ctype.__name__))
         for c in obj.children():
-            _pprint(c, indent=indent+1)
+            pprint(c, indent=indent+1)
     elif not obj._is_container:
+        prefix = ""
+        if indent > 0:
+            prefix = (" "*indent)+" - "
         # not a block
         if obj.ctype is pyomo.core.base.Var:
-            print((" "*indent)+" - %s: variable(value=%s, lb=%s, ub=%s, domain_type=%s, fixed=%s)"
+            print(prefix+"%s: variable(value=%s, lb=%s, ub=%s, domain_type=%s, fixed=%s)"
                   % (str(obj),
                      obj.value,
                      obj.lb,
@@ -120,20 +127,20 @@ def _pprint(obj, indent=0):
                      obj.domain_type.__name__,
                      obj.fixed))
         elif obj.ctype is pyomo.core.base.Constraint:
-              print((" "*indent)+" - %s: constraint(expr=%s)"
+              print(prefix+"%s: constraint(expr=%s)"
                   % (str(obj),
                      str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Objective:
-            print((" "*indent)+" - %s: objective(expr=%s)"
+            print(prefix+"%s: objective(expr=%s)"
                   % (str(obj), str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Expression:
-            print((" "*indent)+" - %s: expression(expr=%s)"
+            print(prefix+"%s: expression(expr=%s)"
                   % (str(obj), str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Param:
-            print((" "*indent)+" - %s: parameter(value=%s)"
+            print(prefix+"%s: parameter(value=%s)"
                   % (str(obj), str(obj.value)))
         elif obj.ctype is pyomo.core.base.SOSConstraint:
-            print((" "*indent)+" - %s: sos(level=%s, entries=%s)"
+            print(prefix+"%s: sos(level=%s, entries=%s)"
                   % (str(obj),
                      obj.level,
                      str(["(%s,%s)" % (str(v), w)
@@ -141,12 +148,13 @@ def _pprint(obj, indent=0):
                                          obj.weights)])))
         else:
             assert obj.ctype is pyomo.core.base.Suffix
-            print((" "*indent)+" - %s: suffix(size=%s)"
-                  % (str(obj), str(len(obj))))
+            print(prefix+"%s: suffix(size=%s)"
+                  % (str(obj.name), str(len(obj))))
     else:
         # a block
-        for block in obj.blocks():
-            print("")
+        for i, block in enumerate(obj.blocks()):
+            if i > 0:
+                print("")
             print((" "*indent)+"block: %s" % (str(block)))
             ctypes = block.collect_ctypes(descend_into=False)
             for ctype in sorted(ctypes,
@@ -162,7 +170,7 @@ def _pprint(obj, indent=0):
                                   % (str(c), len(list(c))))
 
                     else:
-                        _pprint(c, indent=indent+1)
+                        pprint(c, indent=indent+1)
 
 #
 # Collecting all of the hacks that needed to be added into

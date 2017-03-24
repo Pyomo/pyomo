@@ -48,6 +48,22 @@ class _TestComponentDictBase(object):
     _container_type = None
     _ctype_factory = None
 
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        cdict = self._container_type({None: self._ctype_factory()})
+        pyomo.core.kernel.pprint(cdict)
+        b = block()
+        b.cdict = cdict
+        pyomo.core.kernel.pprint(cdict)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(cdict)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
+
     def test_ctype(self):
         c = self._container_type()
         ctype = self._ctype_factory().ctype

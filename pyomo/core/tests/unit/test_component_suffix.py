@@ -3,6 +3,7 @@ import collections
 import pickle
 
 import pyutilib.th as unittest
+import pyomo.core.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_list import \
@@ -19,6 +20,8 @@ from pyomo.core.kernel.component_suffix import (suffix,
                                                 suffix_generator)
 from pyomo.core.kernel.component_variable import (variable,
                                                   variable_dict)
+from pyomo.core.kernel.component_constraint import (constraint,
+                                                    constraint_list)
 from pyomo.core.kernel.component_block import (block,
                                                block_dict)
 from pyomo.core.kernel.set_types import (RealSet,
@@ -29,6 +32,28 @@ import six
 from six import StringIO
 
 class Test_suffix(unittest.TestCase):
+
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        v = variable()
+        clist = constraint_list([constraint()])
+        s = suffix()
+        s[v] = 1
+        s[clist] = None
+        pyomo.core.kernel.pprint(s)
+        b = block()
+        b.s = s
+        pyomo.core.kernel.pprint(s)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(s)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
+
+        pyomo.core.kernel.pprint({'a': 1, 'b': 2})
 
     def test_ctype(self):
         s = suffix()

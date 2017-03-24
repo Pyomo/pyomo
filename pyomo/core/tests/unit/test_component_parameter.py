@@ -1,6 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
+import pyomo.core.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
@@ -25,6 +26,22 @@ from pyomo.core.kernel.numvalue import (NumericValue,
 from pyomo.core.base.param import Param
 
 class Test_parameter(unittest.TestCase):
+
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        p = parameter()
+        pyomo.core.kernel.pprint(p)
+        b = block()
+        b.p = p
+        pyomo.core.kernel.pprint(p)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(p)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
 
     def test_ctype(self):
         p = parameter()

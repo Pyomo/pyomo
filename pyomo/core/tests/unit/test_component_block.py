@@ -40,6 +40,7 @@ from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block_tuple,
                                                block_list,
                                                tiny_block)
+from pyomo.core.kernel.component_sos import sos
 from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
@@ -84,6 +85,30 @@ def _collect_expr_components(exp):
     return ans
 
 class TestMisc(unittest.TestCase):
+
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        B = tiny_block()
+        B.s = suffix()
+        B.b = block()
+        B.v = variable()
+        B.c = constraint()
+        B.e = expression()
+        B.o = objective()
+        B.p = parameter()
+        B.s = sos([])
+        pyomo.core.kernel.pprint(B)
+        b = block()
+        b.B = B
+        pyomo.core.kernel.pprint(B)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(B)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
 
     def test_ctype(self):
         b = block()

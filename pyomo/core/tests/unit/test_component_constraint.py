@@ -1,6 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
+import pyomo.core.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
@@ -28,6 +29,24 @@ from pyomo.core.kernel.set_types import (RealSet,
 from pyomo.core.base.constraint import Constraint
 
 class Test_constraint(unittest.TestCase):
+
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        v = variable()
+        c = constraint(1 <= v**2 <= 2)
+        pyomo.core.kernel.pprint(c)
+        print("@@@@")
+        b = block()
+        b.c = c
+        pyomo.core.kernel.pprint(c)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(c)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
 
     def test_ctype(self):
         c = constraint()
