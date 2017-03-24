@@ -91,24 +91,34 @@ def check_skip(tfname_, name):
 
 def filter(line):
     # Ignore certain text when comparing output with baseline
-    line.strip()
-    if line.startswith('password:') or line.startswith('http:') or line.startswith('Job '):
+
+    # Ipopt 3.12.4 puts BACKSPACE (chr(8) / ^H) into the output.
+    line = line.strip(" \n\t"+chr(8))
+
+    if not line:
         return True
-    if 'Total CPU' in line:
-        return True
-    if 'Ipopt' in line:
-        return True
-    if line.startswith('Importing module'):
-        return True
-    if line.startswith('Function'):
-        return True
-    if 'Status: optimal' in line or 'Status: feasible' in line:
-        return True
-    status = 'time:' in line or 'Time:' in line or \
-             line.startswith('[') or 'with format cpxlp' in line or \
-             'usermodel = <module' in line or line.startswith('File') or \
-             'execution time=' in line or 'Solver results file:' in line
-    return status
+    for field in ( '[',
+                   'password:',
+                   'http:',
+                   'Job ',
+                   'Importing module',
+                   'Function',
+                   'File',):
+        if line.startswith(field):
+            return True
+    for field in ( 'Total CPU',
+                   'Ipopt',
+                   'Status: optimal',
+                   'Status: feasible',
+                   'time:',
+                   'Time:',
+                   'with format cpxlp',
+                   'usermodel = <module',
+                   'execution time=',
+                   'Solver results file:' ):
+        if field in line:
+            return True
+    return False
 
 for tdir in testdirs:
 
