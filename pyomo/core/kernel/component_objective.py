@@ -7,8 +7,6 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-import pyutilib.math
-
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _IActiveComponentMixin,

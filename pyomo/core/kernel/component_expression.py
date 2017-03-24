@@ -8,9 +8,6 @@
 #  _________________________________________________________________________
 
 import sys
-import abc
-
-import pyutilib.math
 
 from pyomo.core.kernel.component_interface import \
     (IComponent,

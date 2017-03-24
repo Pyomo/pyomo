@@ -7,8 +7,6 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-import pyutilib.math
-
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _IActiveComponentMixin,
@@ -18,8 +16,7 @@ from pyomo.core.kernel.component_interface import \
 from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
 from pyomo.core.kernel.component_list import ComponentList
-from pyomo.core.kernel.numvalue import (NumericValue,
-                                        potentially_variable)
+from pyomo.core.kernel.numvalue import potentially_variable
 
 import six
 from six.moves import zip

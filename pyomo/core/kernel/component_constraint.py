@@ -7,15 +7,6 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-# TODO: incorporate changes associated with the
-#       inequality-clone-issue branch as this
-#       constraint.expr setter is basically
-#       a copy of what is in constraint.py
-#       (so changes there on master need to be)
-#        duplicated here)
-
-import abc
-
 import pyutilib.math
 
 from pyomo.core.kernel.component_interface import \

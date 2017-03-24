@@ -7,10 +7,6 @@
 #  the U.S. Government retains certain rights in this software.
 #  _________________________________________________________________________
 
-import abc
-
-import pyutilib.math
-
 from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
