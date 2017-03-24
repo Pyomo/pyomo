@@ -39,7 +39,7 @@ class _VirtualSet(object):
     def __lt__(self, other):
         raise TypeError("'<' not supported")
 
-    def ___le__(self, other):
+    def __le__(self, other):
         raise TypeError("<=' not supported")
 
     def __gt__(self, other):
