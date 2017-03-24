@@ -134,13 +134,12 @@ class _validate_interval(object):
     def __getstate__(self): return (self._obj(),)
     def __setstate__(self, state): self._obj = weakref_ref(state[0])
     def __call__(self, x):
+        assert x is not None
         obj = self._obj()
-        if x is not None:
-            return (((obj._bounds[0] is None) or \
-                     (x >= obj._bounds[0])) and \
-                    ((obj._bounds[1] is None) or \
-                     (x <= obj._bounds[1])))
-        return False
+        return (((obj._bounds[0] is None) or \
+                 (x >= obj._bounds[0])) and \
+                ((obj._bounds[1] is None) or \
+                 (x <= obj._bounds[1])))
 
 class RealInterval(RealSet):
     """A virtual set that represents an interval of real values"""
