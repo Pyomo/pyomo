@@ -36,6 +36,7 @@ import pyutilib.th as unittest
 import pyomo.core.base
 from pyomo.core.base.set_types import _AnySet
 from pyomo.environ import *
+from pyomo.core.kernel.set_types import _VirtualSet
 
 _has_numpy = False
 try:
@@ -1342,7 +1343,19 @@ class TestRealSet(unittest.TestCase):
         self.assertEqual(str(x), 'x')
 
     def test_contains(self):
+        x = _VirtualSet()
+        self.assertTrue(None in x)
+        self.assertTrue(10 in x)
+        self.assertTrue(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertTrue(-2.2 in x)
+        self.assertTrue(-10 in x)
         x = RealSet()
+        self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertTrue(1.1 in x)
         self.assertTrue(1 in x)
@@ -1353,6 +1366,7 @@ class TestRealSet(unittest.TestCase):
         self.assertTrue(-2.2 in x)
         self.assertTrue(-10 in x)
         x = RealSet(bounds=(-1, 1))
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1365,6 +1379,7 @@ class TestRealSet(unittest.TestCase):
 
     def test_PositiveReals(self):
         x = PositiveReals
+        self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertTrue(1.1 in x)
         self.assertTrue(1 in x)
@@ -1377,6 +1392,7 @@ class TestRealSet(unittest.TestCase):
 
     def test_NonPositiveReals(self):
         x = NonPositiveReals
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertFalse(1 in x)
@@ -1389,6 +1405,7 @@ class TestRealSet(unittest.TestCase):
 
     def test_NegativeReals(self):
         x = NegativeReals
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertFalse(1 in x)
@@ -1401,6 +1418,7 @@ class TestRealSet(unittest.TestCase):
 
     def test_NonNegativeReals(self):
         x = NonNegativeReals
+        self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertTrue(1.1 in x)
         self.assertTrue(1 in x)
@@ -1413,6 +1431,7 @@ class TestRealSet(unittest.TestCase):
 
     def test_PercentFraction(self):
         x = PercentFraction
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1425,6 +1444,7 @@ class TestRealSet(unittest.TestCase):
 
     def test_UnitInterval(self):
         x = UnitInterval
+        self.assertFalse(None in x)
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1439,6 +1459,7 @@ class TestRealSet(unittest.TestCase):
         x = RealInterval()
         self.assertEqual(x.name,
                          "RealInterval(None, None)")
+        self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertTrue(1.1 in x)
         self.assertTrue(1 in x)

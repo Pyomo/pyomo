@@ -60,7 +60,7 @@ class _VirtualSet(object):
     def __contains__(self, other):
         valid = True
         if self.validate is not None:
-            valid = self.validate(None, other)
+            valid = self.validate(other)
         if valid:
             if (self._bounds is not None):
                 if self._bounds[0] is not None:
@@ -133,7 +133,7 @@ class _validate_interval(object):
     def __init__(self, obj): self._obj = weakref_ref(obj)
     def __getstate__(self): return (self._obj(),)
     def __setstate__(self, state): self._obj = weakref_ref(state[0])
-    def __call__(self, model, x):
+    def __call__(self, x):
         obj = self._obj()
         if x is not None:
             return (((obj._bounds[0] is None) or \
@@ -175,11 +175,11 @@ class IntegerInterval(IntegerSet):
         IntegerSet.__init__(self, **kwds)
 
 Reals=RealSet(name="Reals", doc="A set of real values")
-def validate_PositiveValues(model,x):    return x >  0
-def validate_NonPositiveValues(model,x): return x <= 0
-def validate_NegativeValues(model,x):    return x <  0
-def validate_NonNegativeValues(model,x): return x >= 0
-def validate_PercentFraction(model,x):   return x >= 0 and x <= 1.0
+def validate_PositiveValues(x):    return x >  0
+def validate_NonPositiveValues(x): return x <= 0
+def validate_NegativeValues(x):    return x <  0
+def validate_NonNegativeValues(x): return x >= 0
+def validate_PercentFraction(x):   return x >= 0 and x <= 1.0
 
 PositiveReals    = RealSet(
   name="PositiveReals",
