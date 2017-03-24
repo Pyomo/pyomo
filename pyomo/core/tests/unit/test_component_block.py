@@ -45,6 +45,7 @@ from pyomo.core.base.block import Block
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 import pyomo.core.base.expr
+from pyomo.opt.results import Solution
 
 def _path_to_object_exists(obj, descendent):
     if descendent is obj:
@@ -160,6 +161,69 @@ class TestMisc(unittest.TestCase):
         with self.assertRaises(ValueError):
             b.write(fname, format="sdfdsfsdfsf")
         os.remove(fname)
+
+    def test_load_solution(self):
+        sm = SymbolMap()
+        m = block()
+        sm.addSymbol(m, 'm')
+        m.v = variable()
+        sm.addSymbol(m.v, 'v')
+        m.c = constraint()
+        sm.addSymbol(m.c, 'c')
+        m.o = objective()
+        sm.addSymbol(m.o, 'o')
+        m.vsuffix = suffix(direction=suffix.IMPORT)
+        m.osuffix = suffix(direction=suffix.IMPORT)
+        m.csuffix = suffix(direction=suffix.IMPORT)
+        m.msuffix = suffix(direction=suffix.IMPORT)
+
+        soln = Solution()
+        soln.symbol_map = sm
+        soln.variable['v'] = {"Value": 1.0,
+                              "vsuffix": 'v'}
+        soln.variable['ONE_VAR_CONSTANT'] = None
+        soln.constraint['c'] = {"csuffix": 'c'}
+        soln.constraint['ONE_VAR_CONSTANT'] = None
+        soln.objective['o'] = {"osuffix": 'o'}
+        soln.problem["msuffix"] = 'm'
+
+        m.load_solution(soln)
+
+        self.assertEqual(m.v.value, 1.0)
+        self.assertEqual(m.csuffix[m.c], 'c')
+        self.assertEqual(m.osuffix[m.o], 'o')
+        self.assertEqual(m.msuffix[m], 'm')
+
+        soln.variable['vv'] = {"Value": 1.0,
+                               "vsuffix": 'v'}
+        with self.assertRaises(KeyError):
+            m.load_solution(soln)
+        del soln.variable['vv']
+
+        soln.constraint['cc'] = {"csuffix": 'c'}
+        with self.assertRaises(KeyError):
+            m.load_solution(soln)
+        del soln.constraint['cc']
+
+        soln.objective['oo'] = {"osuffix": 'o'}
+        with self.assertRaises(KeyError):
+            m.load_solution(soln)
+        del soln.objective['oo']
+
+        m.v.fix()
+        with self.assertRaises(ValueError):
+            m.load_solution(soln,
+                            allow_consistent_values_for_fixed_vars=False)
+
+        m.v.fix(1.1)
+        m.load_solution(soln,
+                        allow_consistent_values_for_fixed_vars=True,
+                        comparison_tolerance_for_fixed_vars=0.5)
+        m.v.fix(1.1)
+        with self.assertRaises(ValueError):
+            m.load_solution(soln,
+                            allow_consistent_values_for_fixed_vars=True,
+                            comparison_tolerance_for_fixed_vars=0.05)
 
     # a temporary test to make sure solve and load
     # functionality work (will be moved elsewhere in the

@@ -11,6 +11,7 @@ import copy
 import abc
 import logging
 import weakref
+import math
 from collections import defaultdict
 try:
     from collections import OrderedDict

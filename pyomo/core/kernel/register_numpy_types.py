@@ -15,7 +15,7 @@ from pyomo.core.kernel.numvalue import \
 try:
     import numpy
     _has_numpy = True
-except:
+except:     #pragma:nocover
     _has_numpy = False
 
 #
