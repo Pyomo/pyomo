@@ -10,6 +10,7 @@
 import pyomo.core.kernel.log_config
 from  pyomo.core.kernel.expr import *
 import pyomo.core.kernel.register_numpy_types
+import pyomo.core.kernel.component_interface
 
 import pyomo.opt
 from pyomo.opt import (SolverFactory,
