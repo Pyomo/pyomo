@@ -631,7 +631,7 @@ class _block_base(object):
             format: The file format to use. If this is not
                 specified, the file format will be inferred
                 from the filename suffix.
-            **kwds: Additional keyword options passed the
+            **kwds: Additional keyword options passed to the
                 model writer.
         """
         #
