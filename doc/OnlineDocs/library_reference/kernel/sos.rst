@@ -3,4 +3,4 @@
 
 .. automodule:: pyomo.core.kernel.component_sos
    :show-inheritance:
-   :inherited-members:
+   :members:
