@@ -53,10 +53,27 @@ class ICategorizedObject(object):
     a parent storage object and have a category type.
 
     This class is abstract. It assumes any derived class
-    declares the following attributes (with or without __slots__):
-        - _ctype: The objects category type.
-        - _parent: A weak reference to the object's
-                   parent or None.
+    declares the attributes below at the class or instance
+    level (with or without __slots__):
+
+    Attributes:
+        _ctype: The objects category type.
+        _parent: A weak reference to the object's parent or
+            None.
+        _is_categorized_object (bool): A flag used to
+            indicate the class is an instance of
+            ICategorized object. This is a workaround for
+            the slow behavior of isinstance on classes that
+            use abc.ABCMeta as a metaclass.
+        _is_component (bool): A flag used to indicate that
+            the class is an instance of IComponent. This is
+            a workaround for the slow behavior of isinstance
+            on classes that use abc.ABCMeta as a metaclass.
+        _is_container (bool): A flag used to indicate that
+            the class is an instance IComponentContainer.
+            This is a workaround for the slow behavior of
+            isinstance on classes that use abc.ABCMeta as a
+            metaclass.
     """
     __slots__ = ()
 
@@ -68,12 +85,6 @@ class ICategorizedObject(object):
     _is_categorized_object = True
     _is_component = False
     _is_container = False
-
-    #
-    # Implementations can choose to define these
-    # properties as using __slots__, __dict__, or
-    # by overriding the @property method
-    #
 
     #
     # Interface
@@ -118,20 +129,28 @@ class ICategorizedObject(object):
                 name_buffer={}, # HACK: ignored (required to work with some solver interfaces, but that code should change soon)
                 convert=str):
         """
-        Dynamically generate a name for the object its storage
-        key in a parent. If there is no parent, the method will
-        return None.
+        Dynamically generates a name for this object.
 
         Args:
-            fully_qualified (bool): Generate full name from
-                nested block names. Default is False.
+            fully_qualified (bool): Generate a full name by
+                iterating through all anscestor containers.
+                Default is False.
             convert (function): A function that converts a
                 storage key into a string
-                representation. Default is repr.
+                representation. Default is the built-in
+                function str.
 
         Returns:
-            A string representing the name of the component
-            or None.
+            If a parent exists, this method returns a string
+            representing the name of the object in the
+            context of its parent; otherwise (if no parent
+            exists), this method returns None.
+
+        .. warning::
+            Name generation can be slow. See the
+            generate_names method, found on most containers,
+            for a way to generate a static set of component
+            names.
         """
         parent = self.parent
         if parent is None:
@@ -153,17 +172,42 @@ class ICategorizedObject(object):
     @property
     def name(self):
         """The object's fully qualified name. Alias
-        for obj.getname(fully_qualified=True)."""
+        for obj.getname(fully_qualified=True).
+
+        .. warning::
+            Name generation can be slow. See the
+            generate_names method, found on most containers,
+            for a way to generate a static set of component
+            names.
+        """
         return self.getname(fully_qualified=True)
 
     @property
     def local_name(self):
         """The object's local name within the context of its
-        parent. Alias for obj.getname(fully_qualified=False)."""
+        parent. Alias for obj.getname(fully_qualified=False).
+
+        .. warning::
+            Name generation can be slow. See the
+            generate_names method, found on most containers,
+            for a way to generate a static set of component
+            names.
+        """
         return self.getname(fully_qualified=False)
 
     def __str__(self):
-        """Convert this object to a string."""
+        """Convert this object to a string by first
+        attempting to generate its fully qualified name. If
+        the object does not have a name (because it does not
+        have a parent, then a string containing the class
+        name is returned.
+
+        .. warning::
+            Name generation can be slow. See the
+            generate_names method, found on most containers,
+            for a way to generate a static set of component
+            names.
+        """
         name = self.name
         if name is None:
             return "<"+self.__class__.__name__+">"
@@ -193,7 +237,7 @@ class ICategorizedObject(object):
                 _known[_id] = _known[tmpId]
 
             if not _known[tmpId]:
-                # component is out-of-scope.  shallow copy only
+                # component is out-of-scope. shallow copy only
                 ans = memo[id(self)] = self
                 return ans
 
@@ -245,18 +289,12 @@ class IActiveObject(object):
     __slots__ = ()
 
     #
-    # Implementations can choose to define these
-    # properties as using __slots__, __dict__, or
-    # by overriding the @property method
+    # Interface
     #
 
     active = _abstract_readonly_property(
         doc=("A boolean indicating whether or "
              "not this object is active."))
-
-    #
-    # Interface
-    #
 
     @abc.abstractmethod
     def activate(self, *args, **kwds):
@@ -273,7 +311,13 @@ class IComponent(ICategorizedObject):
     Interface for components that can be stored inside
     objects of type IComponentContainer.
 
-    This class is abstract.
+    This class is abstract, but it partially implements
+    the ICategorizedObject interface by defining the following
+    attributes:
+
+    Attributes:
+        _is_component: True
+        _is_container: False
     """
     _is_component = True
     _is_container = False
@@ -300,9 +344,12 @@ class _IActiveComponentMixin(IActiveObject):
     class.
 
     This class is abstract. It assumes any derived class
-    declares the following attributes (with or without __slots__):
-        - _active: A boolean indicating whethor or not this
-                   component is active.
+    declares the attributes below at the class or instance
+    level (with or without __slots__):
+
+    Attributes:
+        _active (bool): A boolean indicating whethor or not
+            this component is active.
     """
     __slots__ = ()
 
@@ -343,8 +390,16 @@ class _IActiveComponentMixin(IActiveObject):
 
 class IComponentContainer(ICategorizedObject):
     """
-    A container of modeling components and possibly other
+    Interface for containers of components or other
     containers.
+
+    This class is abstract, but it partially implements
+    the ICategorizedObject interface by defining the following
+    attributes:
+
+    Attributes:
+        _is_component: False
+        _is_container: True
     """
     _is_component = False
     _is_container = True
@@ -395,17 +450,20 @@ class _IActiveComponentContainerMixin(IActiveObject):
     for activating and deactivating the container and its
     children.
 
-    This class is abstract. It assumes any derived class
-    declares the following attributes (with or without __slots__):
-        - _active: A boolean indicating whethor or not this
-                   component is active.
+    .. note::
+        This class is abstract. It assumes any derived class
+        declares the attributes below at the class or
+        instance level (with or without __slots__):
+
+        Attributes:
+            _active (int): A integer that keeps track of the number of active children stored under this container.
     """
     __slots__ = ()
 
-    # Should be called any time a new active child is added
-    # or any timing an existing child's active status
-    # changes from False to True
     def _increment_active(self):
+        """This method must be called any time a new active
+        child is added or any time an existing child's
+        active status changes from False to True."""
         assert self._active >= 0
         if self._active == 0:
             # the container itself is currently
@@ -418,10 +476,10 @@ class _IActiveComponentContainerMixin(IActiveObject):
                 parent._increment_active()
         self._active += 1
 
-    # Should be called any time an active is child removed
-    # or any timing an existing child's active status
-    # changes from True to False
     def _decrement_active(self):
+        """This method must be called any time an active is
+        child removed or any time an existing child's active
+        status changes from True to False."""
         self._active -= 1
         assert self._active >= 1
 
@@ -459,7 +517,7 @@ class _IActiveComponentContainerMixin(IActiveObject):
             if isinstance(child, IActiveObject):
                 child.activate(_from_parent_=True)
 
-    def deactivate(self, descend_into=True, _from_parent_=False):
+    def deactivate(self, _from_parent_=False):
         """Deactivate this container and all of its children."""
         assert self._active >= 0
         if self.active and \
@@ -474,7 +532,6 @@ class _IActiveComponentContainerMixin(IActiveObject):
             if isinstance(child, IActiveObject):
                 child.deactivate(_from_parent_=True)
 
-
 #
 # I'm placing this class here for now to avoid
 # creating another file. As soon as we separate AML
@@ -485,7 +542,6 @@ class _IActiveComponentContainerMixin(IActiveObject):
 # used frequently below, so I'm caching it here
 _active_flag_name = "active"
 class _SimpleContainerMixin(object):
-    __slots__ = ()
     """
     A partial implementation of the IComponentContainer
     interface for implementations that store a single
@@ -500,7 +556,11 @@ class _SimpleContainerMixin(object):
     other IComponentContainer implementations that are
     defined with the same ctype.
     """
+    __slots__ = ()
+
     def _prepare_for_add(self, obj):
+        """This method must be called any time a new child
+        is inserted into this container."""
         obj._parent = weakref.ref(self)
         # children that are not of type
         # IActiveObject retain the active status
@@ -510,6 +570,8 @@ class _SimpleContainerMixin(object):
             self._increment_active()
 
     def _prepare_for_delete(self, obj):
+        """This method must be called any time a new child
+        is removed from this container."""
         obj._parent = None
         # children that are not of type
         # IActiveObject retain the active status

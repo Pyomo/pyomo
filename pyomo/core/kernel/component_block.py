@@ -49,7 +49,16 @@ _active_flag_name = "active"
 class IBlockStorage(IComponent,
                     IComponentContainer,
                     _IActiveComponentContainerMixin):
-    """A container that stores multiple types."""
+    """A container that stores multiple types.
+
+    This class is abstract, but it partially implements
+    the ICategorizedObject interface by defining the following
+    attributes:
+
+    Attributes:
+        _is_component: True
+        _is_container: True
+    """
     _is_component = True
     _is_container = True
     _child_storage_delimiter_string = "."
@@ -861,7 +870,7 @@ class block(_block_base, IBlockStorage):
                 types should be included.
             return_key (bool): Set to True to indicate that
                 the return type should be a 2-tuple
-                consisting the child storage key and the
+                consisting of the child storage key and the
                 child object. By default, only the child
                 objects are returned.
 
@@ -1157,7 +1166,7 @@ class tiny_block(_block_base, IBlockStorage):
                 types should be included.
             return_key (bool): Set to True to indicate that
                 the return type should be a 2-tuple
-                consisting the child storage key and the
+                consisting of the child storage key and the
                 child object. By default, only the child
                 objects are returned.
 

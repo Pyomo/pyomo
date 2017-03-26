@@ -90,7 +90,7 @@ class ComponentTuple(_SimpleContainerMixin,
         Args:
             return_key (bool): Set to True to indicate that
                 the return type should be a 2-tuple
-                consisting the child storage key and the
+                consisting of the child storage key and the
                 child object. By default, only the child
                 objects are returned.
 
