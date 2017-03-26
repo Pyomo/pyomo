@@ -196,13 +196,10 @@ class IVariable(IComponent, NumericValue):
         """Returns True because this is a variable."""
         return True
 
-    def _polynomial_degree(self, result):
-        """
-        If the variable is fixed, it represents a constant
-        is a polynomial with degree 0. Otherwise, it has
-        degree 1. This method is used in expressions to
-        compute polynomial degree.
-        """
+    def polynomial_degree(self):
+        """Return the polynomial degree of this expression"""
+        # If the variable is fixed, it represents a constant;
+        # otherwise, it has degree 1.
         if self.fixed:
             return 0
         return 1

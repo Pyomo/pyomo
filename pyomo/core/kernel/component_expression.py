@@ -88,9 +88,6 @@ class IExpression(IComponent, NumericValue):
         """The polynomial degree of the stored expression."""
         return self.expr.polynomial_degree()
 
-    def _polynomial_degree(self, result):
-        return result.pop()
-
     def to_string(self, ostream=None, verbose=None, precedence=0):
         if ostream is None:
             ostream = sys.stdout
@@ -107,13 +104,6 @@ class IExpression(IComponent, NumericValue):
                                 precedence=precedence)
         if _verbose:
             ostream.write("}")
-
-    @property
-    def _parent_expr(self):
-        return None
-    @_parent_expr.setter
-    def _parent_expr(self, value):
-        raise NotImplementedError
 
 class expression(IExpression):
     """A reusable expression."""
@@ -160,9 +150,6 @@ class data_expression(expression):
         that the stored expression can never reference
         variables."""
         return 0
-
-    def _polynomial_degree(self, result):
-        return results.pop()
 
     @property
     def expr(self):

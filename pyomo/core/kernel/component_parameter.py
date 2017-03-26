@@ -60,10 +60,6 @@ class IParameter(IComponent, NumericValue):
         variables."""
         return 0
 
-    def _polynomial_degree(self, result):
-        return results.pop()
-
-
 class parameter(IParameter):
     """A placeholder for a numeric value in an expression."""
     # To avoid a circular import, for the time being, this
