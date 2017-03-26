@@ -481,7 +481,6 @@ class constraint(_mutable_bounds_mixin, IConstraint):
                 # Explicitly dereference the original arglist (otherwise
                 # this runs afoul of the getrefcount logic)
                 expr._args = []
-
                 if len(_args) == 3:
 
                     if _args[0]._potentially_variable():
@@ -506,6 +505,7 @@ class constraint(_mutable_bounds_mixin, IConstraint):
                     self.ub = _args[2]
 
                 else:
+
                     if not _args[1]._potentially_variable():
                         self.lb = None
                         self.body  = _args[0]
@@ -544,18 +544,11 @@ class constraint(_mutable_bounds_mixin, IConstraint):
                 self.ub = None
 
         #
-        # Error check, to ensure that we don't have a constraint that
-        # doesn't depend on any variables / parameters.
-        #
         # Error check, to ensure that we don't have an equality
         # constraint with 'infinite' RHS
         #
-        if self._equality:
-            if self.lb is None:
-                raise ValueError(
-                    "Equality constraint '%s' defined with "
-                    "non-finite term." % (self.name))
-            assert self.lb is self.ub
+        assert not (self.equality and (self.lb is None))
+        assert (not self.equality) or (self.lb is self.ub)
 
 #
 # Note: This class is experimental. The implementation may

@@ -294,6 +294,25 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.lb, 1.0)
         self.assertEqual(c.ub, 1.0)
 
+        vL.value = 2
+        vU.value = 1
+        c.expr = (vL <= vU)
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c.ub, 0)
+        c.expr = (vU >= vL)
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.body(), 1)
+        self.assertEqual(c.ub, 0)
+        c.expr = (vU <= vL)
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.body(), -1)
+        self.assertEqual(c.ub, 0)
+        c.expr = (vL >= vU)
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.body(), -1)
+        self.assertEqual(c.ub, 0)
+
     def test_fixed_variable_stays_in_body(self):
         c = constraint()
         x = variable(value=0.5)
@@ -369,15 +388,33 @@ class Test_constraint(unittest.TestCase):
         pL = parameter()
         pU = parameter()
         c.expr = (pL <= e <= pU)
+        self.assertIs(c.body, e)
+        self.assertIs(c.lb, pL)
+        self.assertIs(c.ub, pU)
         e.expr = None
+        self.assertIs(c.body, e)
+        self.assertIs(c.lb, pL)
+        self.assertIs(c.ub, pU)
         c.expr = (pL <= e <= pU)
+        self.assertIs(c.body, e)
+        self.assertIs(c.lb, pL)
+        self.assertIs(c.ub, pU)
 
         e.expr = 1.0
         eL = data_expression()
         eU = data_expression()
         c.expr = (eL <= e <= eU)
+        self.assertIs(c.body, e)
+        self.assertIs(c.lb, eL)
+        self.assertIs(c.ub, eU)
         e.expr = None
+        self.assertIs(c.body, e)
+        self.assertIs(c.lb, eL)
+        self.assertIs(c.ub, eU)
         c.expr = (eL <= e <= eU)
+        self.assertIs(c.body, e)
+        self.assertIs(c.lb, eL)
+        self.assertIs(c.ub, eU)
 
     # make sure we can use a mutable param that
     # has not been given a value in the upper bound
