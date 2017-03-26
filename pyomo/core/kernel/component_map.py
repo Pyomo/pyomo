@@ -14,21 +14,22 @@ from six import itervalues
 
 class ComponentMap(collections.MutableMapping):
     """
-    This class acts as replacement for dict that allows
-    Pyomo modeling components to be used as entry keys. The
+    This class is a replacement for dict that allows Pyomo
+    modeling components to be used as entry keys. The
     underlying mapping is based on the Python id() of the
-    object, so that hashing can still take place when the
-    object is mutable, unhashable, etc. This class meant
-    for Pyomo components to values. The use of non-Pyomo
-    components as entry keys should be avoided.
+    object, which gets around the problem of hashing
+    subclasses of NumericValue. This class is meant for
+    creating mappings from Pyomo components to values. The
+    use of non-Pyomo components as entry keys should be
+    avoided.
 
     A reference to the object is kept around as long as it
-    has a corresponding entry in the container so that we
-    don't need to worry about id() clashes.
+    has a corresponding entry in the container, so there is
+    no need to worry about id() clashes.
 
     We also override __setstate__ so that we can rebuild the
-    container based on possibly updated object id()'s after
-    a deepcopy or unpickle.
+    container based on possibly updated object ids after
+    a deepcopy or pickle.
 
     *** An instance of this class should never be
     deepcopied/pickled unless it is done so along with the
