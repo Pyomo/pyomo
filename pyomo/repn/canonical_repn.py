@@ -611,7 +611,8 @@ def _collect_linear_sum(exp, idMap, multiplier, coef, varmap, compute_values):
             else:
                 coef[key] = multiplier * six.next(arg_coef_iterator)
         else:
-            _linear_collectors[arg.__class__](arg, idMap, multiplier * six.next(arg_coef_iterator), coef, varmap, compute_values)
+            _get_linear_collector(arg, idMap, multiplier * six.next(arg_coef_iterator),
+                                  coef, varmap, compute_values)
 
 def _collect_linear_prod(exp, idMap, multiplier, coef, varmap, compute_values):
 
@@ -637,7 +638,8 @@ def _collect_linear_prod(exp, idMap, multiplier, coef, varmap, compute_values):
             else:
                 multiplier *= subexp
         else:
-            _linear_collectors[subexp.__class__](subexp, idMap, 1, _coef, _varmap, compute_values)
+            _get_linear_collector(subexp, idMap, 1,
+                                  _coef, _varmap, compute_values)
             if not _varmap:
                 multiplier *= _coef[None]
                 _coef[None] = 0
@@ -662,7 +664,8 @@ def _collect_linear_pow(exp, idMap, multiplier, coef, varmap, compute_values):
             coef[None] += multiplier * exp
     elif value(exp._args[1]) == 1:
         arg = exp._args[0]
-        _linear_collectors[arg.__class__](arg, idMap, multiplier, coef, varmap, compute_values)
+        _get_linear_collector(arg, idMap, multiplier,
+                              coef, varmap, compute_values)
     else:
         raise TypeError( "Unsupported power expression: "+str(exp._args) )
 
@@ -671,10 +674,12 @@ def _collect_branching_expr(exp, idMap, multiplier, coef, varmap, compute_values
     if exp._if.is_fixed():
         if exp._if():
             arg = exp._then
-            _linear_collectors[arg.__class__](arg, idMap, multiplier, coef, varmap, compute_values)
+            _get_linear_collector(arg, idMap, multiplier,
+                                  coef, varmap, compute_values)
         else:
             arg = exp._else
-            _linear_collectors[arg.__class__](arg, idMap, multiplier, coef, varmap, compute_values)
+            _get_linear_collector(arg, idMap, multiplier,
+                                  coef, varmap, compute_values)
     else:
         raise TypeError( "Unsupported dynamic If-Then-Else expression: "+str(exp._args) )
 
@@ -728,17 +733,8 @@ def _collect_identity(exp, idMap, multiplier, coef, varmap, compute_values):
         else:
             coef[None] += multiplier * exp
     else:
-        try:
-            _linear_collectors[exp.__class__](exp, idMap, multiplier, coef, varmap, compute_values)
-        except KeyError:
-            if isinstance(exp, (_VarData, IVariable)):
-                _collect_linear_var(exp, idMap, 1, coef, varmap, compute_values)
-            elif isinstance(exp, (_ExpressionData, IExpression)):
-                _collect_identity(exp, idMap, 1, coef, varmap, compute_values)
-            else:
-                raise ValueError("Unexpected expression (type %s): %s" %
-                                 (type(exp).__name__, str(exp)) )
-
+        _get_linear_collector(exp, idMap, multiplier,
+                              coef, varmap, compute_values)
 
 
 _linear_collectors = {
@@ -748,7 +744,7 @@ _linear_collectors = {
     expr_coopr3._IntrinsicFunctionExpression : _collect_linear_intrinsic,
     _ConnectorData          : _collect_linear_connector,
     SimpleConnector         : _collect_linear_connector,
-    expr_coopr3.Expr_if            : _collect_branching_expr,
+    expr_coopr3.Expr_if     : _collect_branching_expr,
     param._ParamData        : _collect_linear_const,
     param.SimpleParam       : _collect_linear_const,
     param.Param             : _collect_linear_const,
@@ -766,23 +762,35 @@ _linear_collectors = {
     objective              : _collect_identity
     }
 
+def _get_linear_collector(exp, idMap, multiplier,
+                          coef, varmap, compute_values):
+    try:
+        _linear_collectors[exp.__class__](exp, idMap, multiplier,
+                                          coef, varmap, compute_values)
+    except KeyError:
+        if isinstance(exp, (_VarData, IVariable)):
+            _collect_linear_var(exp, idMap, multiplier,
+                                coef, varmap, compute_values)
+        elif isinstance(exp, (param._ParamData, IParameter)):
+            _collect_linear_const(exp, idMap, multiplier,
+                                  coef, varmap, compute_values)
+        elif isinstance(exp, (_ExpressionData, IExpression)):
+            _collect_identity(exp, idMap, multiplier,
+                              coef, varmap, compute_values)
+        elif isinstance(exp, (_ObjectiveData, IObjective)):
+            _collect_identity(exp, idMap, multiplier,
+                              coef, varmap, compute_values)
+        else:
+            raise ValueError( "Unexpected expression (type %s): %s" %
+                              (type(exp).__name__, str(exp)) )
+
 def collect_linear_canonical_repn(exp, idMap, compute_values=True):
 
     idMap.setdefault(None, {})
     coef = { None : 0 }
     varmap = {}
-    try:
-        _linear_collectors[exp.__class__](exp, idMap, 1, coef, varmap, compute_values)
-    except KeyError:
-        if isinstance(exp, (_VarData, IVariable)):
-            _collect_linear_var(exp, idMap, 1, coef, varmap, compute_values)
-        elif isinstance(exp, (param._ParamData, IParameter)):
-            _collect_linear_const(exp, idMap, 1, coef, varmap, compute_values)
-        elif isinstance(exp, (_ExpressionData, IExpression)):
-            _collect_identity(exp, idMap, 1, coef, varmap, compute_values)
-        else:
-            raise ValueError( "Unexpected expression (type %s): %s" %
-                              (type(exp).__name__, str(exp)) )
+    _get_linear_collector(exp, idMap, 1,
+                          coef, varmap, compute_values)
     return coef, varmap
 
 #########################################################################
