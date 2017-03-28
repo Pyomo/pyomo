@@ -2,10 +2,14 @@ import pyomo.environ
 from pyomo.core import *
 from pyomo.gdp import *
 
-'''Problem from TODO
+'''Problem from http://www.minlp.org/library/problem/index.php?i=172&lib=GDP
 We are minimizing the cost of a design of a plant with parallel processing units and storage tanks
 in between. We decide the number and volume of units, and the volume and location of the storage
-tanks. The problem is convexified and has a nonlinear objective and global constraints'''
+tanks. The problem is convexified and has a nonlinear objective and global constraints
+
+NOTE: When I refer to 'gams' in the comments, that is Batch101006_BM.gms for now. It's confusing
+because the _opt file is different (It has hard-coded bigM parameters so that each constraint 
+has the "optimal" bigM).'''
 
 model = AbstractModel()
 
@@ -17,6 +21,14 @@ model.BigM[None] = 1000
 ## Constants from GAMS
 StorageTankSizeFactor = 2*5 # btw, I know 2*5 is 10... I don't know why it's written this way in GAMS?
 StorageTankSizeFactorByProd = 3
+VolumeLB = log(300)
+VolumeUB = log(3500)
+StorageTankSizeLB = log(100)
+StorageTankSizeUB = log(15000)
+UnitsInParallelUB = log(6)
+# TODO: YOU ARE HERE. YOU HAVEN'T ACTUALLY MADE THESE THE BOUNDS YET, NOR HAVE YOU FIGURED OUT WHOSE
+# BOUNDS THEY ARE. AND THERE ARE MORE IN GAMS.
+
 
 ##########
 # Sets
@@ -56,20 +68,17 @@ model.StorageTankSizeFactor = Param(model.STAGES, default=StorageTankSizeFactor)
 model.StorageTankSizeFactorByProd = Param(model.PRODUCTS, model.STAGES, 
                                           default=StorageTankSizeFactorByProd)
 
-# TODO: you are here!! I think the idea below might "work" but bonmin is pisseds, I need to figre out why.
-# TODO: this doesn't work either: I think it would if it was a concrete model... But I'm just being totally braindead about how to mix indices and the sets themselves given that I don't actually have model.PRODUCTS yet...
-# coeffs = {}
-# counter = 1
-# #for i in range(1, len(model.PRODUCTS)+1):
-# for i in model.PRODUCTS:
-#     coeffs[i] = log(counter)
-#     ++counter
+# TODO: bonmin wasn't happy and I think it might have something to do with this?
+# or maybe issues with convexity... I don't know yet.
 def get_log_coeffs(model, i):
     return log(model.PRODUCTS.ord(i))
 
 model.LogCoeffs = Param(model.PRODUCTS, initialize=get_log_coeffs)
 
-# TODO: bounds
+# bounds
+model.volumeLB = Param(model.STAGES, default=VolumeLB)
+model.volumeUB = Param(model.STAGES, default=VolumeUB)
+model.storageTankSizeLB = Param(model.
 
 
 ################
@@ -162,7 +171,7 @@ def storage_tank_selection_disjunct_rule(disjunct, selectStorageTank, j):
         disjunct.batch_size = Constraint(model.PRODUCTS, rule=batch_size_rule)
     else:
         # TODO: this is different in GAMS--they don't make it 0. I don't know why.
-        # min matches the formulation for now.
+        # mine matches the formulation for now.
         disjunct.no_volume = Constraint(expr=model.storageTankSize_log[j] == 0)
         disjunct.no_batch = Constraint(model.PRODUCTS, rule=no_batch_rule)
 model.storage_tank_selection_disjunct = Disjunct([0,1], model.STAGESExceptLast, 
@@ -173,9 +182,21 @@ def select_storage_tanks_rule(model, j):
 model.select_storage_tanks = Disjunction(model.STAGESExceptLast, rule=select_storage_tanks_rule)
 
 # though this is a disjunction in the GAMs model, it is more efficiently formulated this way:
-# TODO: this is a mess. Because i isn't an integer thing. But I need to know its index in the
-# set basically, to do the log thing.
 def units_out_of_phase_rule(model, j):
     return model.unitsOutOfPhase_log[j] == sum(model.LogCoeffs[i] * model.outOfPhase[j,i] \
                                                for i in model.PRODUCTS)
 model.units_out_of_phase = Constraint(model.STAGES, rule=units_out_of_phase_rule)
+
+def units_in_phase_rule(model, j):
+    return model.unitsInPhase_log[j] == sum(model.LogCoeffs[i] * model.inPhase[j,i] \
+                                            for i in model.PRODUCTS)
+model.units_in_phase = Constraint(model.STAGES, rule=units_in_phase_rule)
+
+# and since I didn't do the disjunction as a disjunction, we need to do the XORs:
+def units_out_of_phase_xor_rule(model, j):
+    return sum(model.outOfPhase[j,i] for i in model.PRODUCTS) == 1
+model.units_out_of_phase_xor = Constraint(model.STAGES, rule=units_out_of_phase_xor_rule)
+
+def units_in_phase_xor_rule(model, j):
+    return sum(model.inPhase[j,i] for i in model.PRODUCTS) == 1
+model.units_in_phase_xor = Constraint(model.STAGES, rule=units_in_phase_xor_rule)
