@@ -24,8 +24,11 @@ StorageTankSizeFactorByProd = 3
 VolumeLB = log(300)
 VolumeUB = log(3500)
 StorageTankSizeLB = log(100)
+# I tried this because no storage tank violates the bounds... But it was still infeasible.
+#StorageTankSizeLB = 0
 StorageTankSizeUB = log(15000)
-UnitsInParallelUB = log(6)
+UnitsInPhaseUB = log(6)
+UnitsOutOfPhaseUB = log(6)
 # TODO: YOU ARE HERE. YOU HAVEN'T ACTUALLY MADE THESE THE BOUNDS YET, NOR HAVE YOU FIGURED OUT WHOSE
 # BOUNDS THEY ARE. AND THERE ARE MORE IN GAMS.
 
@@ -69,7 +72,7 @@ model.StorageTankSizeFactorByProd = Param(model.PRODUCTS, model.STAGES,
                                           default=StorageTankSizeFactorByProd)
 
 # TODO: bonmin wasn't happy and I think it might have something to do with this?
-# or maybe issues with convexity... I don't know yet.
+# or maybe issues with convexity or a lack thereof... I don't know yet.
 def get_log_coeffs(model, i):
     return log(model.PRODUCTS.ord(i))
 
@@ -78,7 +81,10 @@ model.LogCoeffs = Param(model.PRODUCTS, initialize=get_log_coeffs)
 # bounds
 model.volumeLB = Param(model.STAGES, default=VolumeLB)
 model.volumeUB = Param(model.STAGES, default=VolumeUB)
-model.storageTankSizeLB = Param(model.
+model.storageTankSizeLB = Param(model.STAGES, default=StorageTankSizeLB)
+model.storageTankSizeUB = Param(model.STAGES, default=StorageTankSizeUB)
+model.unitsInPhaseUB = Param(model.STAGES, default=UnitsInPhaseUB)
+model.unitsOutOfPhaseUB = Param(model.STAGES, default=UnitsOutOfPhaseUB)
 
 
 ################
@@ -88,28 +94,40 @@ model.storageTankSizeLB = Param(model.
 # TODO: right now these match the formulation. There are more in GAMS...
 
 # unit size of stage j
-model.volume = Var(model.STAGES)
-# TODO: GAMS has a batch size indexed just by products that isn't in the formulation... I'm going
-# to try to avoid it for the moment...
-# batch size of product i at stage j
-model.batchSize = Var(model.PRODUCTS, model.STAGES)
-# TODO: this is different in GAMS... They index by stages too?
-# cycle time of product i divided by batch size of product i
-model.cycleTime = Var(model.PRODUCTS)
-# number of units in parallel out-of-phase (or in phase) at stage j
-model.unitsOutOfPhase = Var(model.STAGES)
-model.unitsInPhase = Var(model.STAGES)
-# TODO: what are we going to do as a boundary condition here? For that last stage?
-# size of intermediate storage tank between stage j and j+1
-model.storageTankSize = Var(model.STAGES)
+# model.volume = Var(model.STAGES)
+# # TODO: GAMS has a batch size indexed just by products that isn't in the formulation... I'm going
+# # to try to avoid it for the moment...
+# # batch size of product i at stage j
+# model.batchSize = Var(model.PRODUCTS, model.STAGES)
+# # TODO: this is different in GAMS... They index by stages too?
+# # cycle time of product i divided by batch size of product i
+# model.cycleTime = Var(model.PRODUCTS)
+# # number of units in parallel out-of-phase (or in phase) at stage j
+# model.unitsOutOfPhase = Var(model.STAGES)
+# model.unitsInPhase = Var(model.STAGES)
+# # TODO: what are we going to do as a boundary condition here? For that last stage?
+# # size of intermediate storage tank between stage j and j+1
+# model.storageTankSize = Var(model.STAGES)
 
 # variables for convexified problem
-model.volume_log = Var(model.STAGES)
+# TODO: I am beginning to think these are my only variables actually.
+# GAMS never un-logs them, I don't think. And I think the GAMs ones
+# must be the log ones.
+def get_volume_bounds(model, j):
+    return (model.volumeLB[j], model.volumeUB[j])
+model.volume_log = Var(model.STAGES, bounds=get_volume_bounds)
 model.batchSize_log = Var(model.PRODUCTS, model.STAGES)
 model.cycleTime_log = Var(model.PRODUCTS)
-model.unitsOutOfPhase_log = Var(model.STAGES)
-model.unitsInPhase_log = Var(model.STAGES)
-model.storageTankSize_log = Var(model.STAGES)
+def get_unitsOutOfPhase_bounds(model, j):
+    return (0, model.unitsOutOfPhaseUB[j])
+model.unitsOutOfPhase_log = Var(model.STAGES, bounds=get_unitsOutOfPhase_bounds)
+def get_unitsInPhase_bounds(model, j):
+    return (0, model.unitsInPhaseUB[j])
+model.unitsInPhase_log = Var(model.STAGES, bounds=get_unitsInPhase_bounds)
+def get_storageTankSize_bounds(model, j):
+    return (model.storageTankSizeLB[j], model.storageTankSizeUB[j])
+# TODO: these bounds make it infeasible...
+model.storageTankSize_log = Var(model.STAGES)#, bounds=get_storageTankSize_bounds)
 
 # binary variables for deciding number of parallel units in and out of phase
 model.outOfPhase = Var(model.STAGES, model.PRODUCTS, within=Binary)
@@ -192,7 +210,7 @@ def units_in_phase_rule(model, j):
                                             for i in model.PRODUCTS)
 model.units_in_phase = Constraint(model.STAGES, rule=units_in_phase_rule)
 
-# and since I didn't do the disjunction as a disjunction, we need to do the XORs:
+# and since I didn't do the disjunction as a disjunction, we need the XORs:
 def units_out_of_phase_xor_rule(model, j):
     return sum(model.outOfPhase[j,i] for i in model.PRODUCTS) == 1
 model.units_out_of_phase_xor = Constraint(model.STAGES, rule=units_out_of_phase_xor_rule)

@@ -6,7 +6,7 @@ from pyomo.opt import SolverFactory
 from pyomo.util.plugin import alias
 from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
-# DEBUG
+#DEBUG
 import pdb
 
 class AddSlackVariables(NonIsomorphicTransformation):
@@ -28,7 +28,6 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
         obj_expr = 0
         for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
-            pdb.set_trace()
             if (cons.lower is not None and cons.upper is not None) and \
                value(cons.lower) > value(cons.upper):
                 # this is a structural infeasibility so slacks aren't going to help:
@@ -58,3 +57,5 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
         # make a new objective that minimizes sum of slack variables
         instance._slack_objective = Objective(expr=obj_expr)
+        pdb.set_trace()
+        instance.pprint()
