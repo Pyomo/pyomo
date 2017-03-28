@@ -477,7 +477,6 @@ class Simulator:
                 # Finds time varying parameters and algebraic vars
                 algvars.append(item)
                 
-        # FIXME: add support for time-varying parameters
         if self._intpackage == 'scipy':
             # Function sent to scipy integrator
             def _rhsfun(t,x):

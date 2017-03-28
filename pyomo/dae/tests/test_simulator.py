@@ -11,15 +11,20 @@
 import pyutilib.th as unittest
 
 from pyomo.environ import (
-    ConcreteModel, RangeSet, Param, Var, Set, value, Constraint) 
+    ConcreteModel, RangeSet, Param, Var, Set, value, Constraint, 
+    sin, log, sqrt) 
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 from pyomo.dae.simulator import (
     Simulator, 
     _check_getitemexpression, 
     _check_productexpression,
-    _check_sumexpression)
+    _check_sumexpression, 
+    substitute_getitem_with_casadi_sym,
+    substitute_intrinsic_function_with_casadi,
+    substitute_intrinsic_function)
 from pyomo.core.base import expr as EXPR
+from pyomo.core.base import expr_common
 from pyomo.core.base.template_expr import (
     IndexTemplate, 
     _GetItemIndexer,
@@ -28,13 +33,295 @@ from pyomo.core.base.template_expr import (
     substitute_template_with_value,
 )
 
+
+try:
+    import casadi 
+    casadi_available = True
+except ImportError:
+    casadi_available = False
+
+try:
+    import scipy 
+    scipy_available = True
+except ImportError:
+    scipy_available = False
+
 class TestSimulator(unittest.TestCase):
     def setUp(self):
         self.m = m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0,10))
         m.v = Var(m.t)
         m.dv = DerivativeVar(m.v)
-        m.s = Set(initialize=[1,2,3])
+        m.s = Set(initialize=[1,2,3], ordered=True)
+
+    def test_unsupported_pyomo4_expressions(self):
+
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
+
+        m = self.m 
+        t = IndexTemplate(m.t)
+
+        # Check multiplication by constant
+        e = 5*m.dv[t] == m.v[t]
+
+        with self.assertRaises(TypeError):
+            temp = _check_productexpression(e,0)
+
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def test_invalid_argument_values(self):
+        m = self.m
+        m.w = Var(m.t)
+        m.y = Var()
+
+        with self.assertRaises(DAE_Error):
+            mysim = Simulator(m, package='foo')
+
+        def _con(m,i):
+            return m.v[i] == m.w[i]**2 + m.y
+        m.con = Constraint(m.t, rule=_con)
+
+        with self.assertRaises(DAE_Error):
+            mysim = Simulator(m, package='scipy')
+
+        m.del_component('con')
+        m.del_component('con_index')
+        m.del_component('w')
+        m.del_component('y')
+
+    def test_inequality_constraints(self):
+        m = self.m
+
+        def _deq(m,i):
+            return m.dv[i] >= m.v[i]**2 + m.v[i]
+        m.deq = Constraint(m.t, rule=_deq)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 0)
+        self.assertEqual(len(mysim._derivlist), 0)
+        self.assertEqual(len(mysim._rhsdict), 0)
+
+    def test_separable_diffeq_case2(self):
+        m = self.m
+        m.w = Var(m.t, m.s)
+        m.dw = DerivativeVar(m.w)
+        t = IndexTemplate(m.t)
+
+        def _deqv(m,i):
+            return m.v[i]**2 + m.v[i] == m.dv[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.w[i,j]**2 + m.w[i,j] == m.dw[i,j]
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t,1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t,2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t,1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t,2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+        m.del_component('w')
+        m.del_component('dw')
+
+    def test_separable_diffeq_case3(self):
+        m = self.m
+        m.w = Var(m.t, m.s)
+        m.dw = DerivativeVar(m.w)
+        m.p = Param(initialize=5)
+        m.mp = Param(initialize=5, mutable=True)
+        m.y = Var()
+        
+        t = IndexTemplate(m.t)
+
+        def _deqv(m,i):
+            return  m.p*m.dv[i] == m.v[i]**2 + m.v[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.p*m.dw[i,j] == m.w[i,j]**2 + m.w[i,j] 
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t,1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t,2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t,1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t,2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+
+        def _deqv(m,i):
+            return  m.mp*m.dv[i] == m.v[i]**2 + m.v[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.y*m.dw[i,j] == m.w[i,j]**2 + m.w[i,j] 
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t,1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t,2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t,1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t,2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+        m.del_component('w')
+        m.del_component('dw')
+        m.del_component('p')
+        m.del_component('mp')
+        m.del_component('y')
+
+    def test_separable_diffeq_case4(self):
+        m = self.m
+        m.w = Var(m.t, m.s)
+        m.dw = DerivativeVar(m.w)
+        m.p = Param(initialize=5)
+        m.mp = Param(initialize=5, mutable=True)
+        m.y = Var()
+        
+        t = IndexTemplate(m.t)
+
+        def _deqv(m,i):
+            return  m.v[i]**2 + m.v[i] == m.p*m.dv[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.w[i,j]**2 + m.w[i,j] == m.p*m.dw[i,j]
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t,1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t,2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t,1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t,2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+
+        def _deqv(m,i):
+            return  m.v[i]**2 + m.v[i] == m.mp*m.dv[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.w[i,j]**2 + m.w[i,j] == m.y*m.dw[i,j]
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t,1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t,2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t,1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t,2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+        m.del_component('w')
+        m.del_component('dw')
+        m.del_component('p')
+        m.del_component('mp')
+        m.del_component('y')
+
+    def test_separable_diffeq_case6(self):
+        m = self.m
+        m.w = Var(m.t, m.s)
+        m.dw = DerivativeVar(m.w)
+        m.p = Param(initialize=5)
+        m.mp = Param(initialize=5, mutable=True)
+        m.y = Var()
+        
+        t = IndexTemplate(m.t)
+
+        def _deqv(m,i):
+            return  m.v[i]**2 + m.v[i] == m.dv[i] + m.y
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.w[i,j]**2 + m.w[i,j] == m.y + m.dw[i,j]
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t,1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t,2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t,1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t,2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+
+        def _deqv(m,i):
+            return m.v[i]**2 + m.v[i] ==  m.mp + m.dv[i]
+        m.deqv = Constraint(m.t, rule=_deqv)
+
+        def _deqw(m, i, j):
+            return m.w[i,j]**2 + m.w[i,j] == m.dw[i,j] + m.p
+        m.deqw = Constraint(m.t, m.s, rule=_deqw)
+
+        mysim = Simulator(m)
+
+        self.assertEqual(len(mysim._diffvars), 4)
+        self.assertEqual(mysim._diffvars[0], _GetItemIndexer(m.v[t]))
+        self.assertEqual(mysim._diffvars[1], _GetItemIndexer(m.w[t,1]))
+        self.assertEqual(mysim._diffvars[2], _GetItemIndexer(m.w[t,2]))
+        self.assertEqual(len(mysim._derivlist), 4)
+        self.assertEqual(mysim._derivlist[0], _GetItemIndexer(m.dv[t]))
+        self.assertEqual(mysim._derivlist[1], _GetItemIndexer(m.dw[t,1]))
+        self.assertEqual(mysim._derivlist[2], _GetItemIndexer(m.dw[t,2]))
+        self.assertEqual(len(mysim._rhsdict), 4)
+        m.del_component('deqv')
+        m.del_component('deqw')
+        m.del_component('deqv_index')
+        m.del_component('deqw_index')
+        m.del_component('w')
+        m.del_component('dw')
+        m.del_component('p')
+        m.del_component('mp')
+        m.del_component('y')
 
     def test_sim_initialization_single_index(self):
         m = self.m
@@ -157,8 +444,8 @@ class TestSimulator(unittest.TestCase):
         
         # Only Scipy is supported
         m = self.m
-        with self.assertRaises(DAE_Error):
-            mysim = Simulator(m, package='casadi')
+        # with self.assertRaises(DAE_Error):
+        #     mysim = Simulator(m, package='casadi')
 
         # Can't simulate a model with no ContinuousSet 
         m = ConcreteModel()
@@ -200,14 +487,14 @@ class TestSimulator(unittest.TestCase):
         m.del_component('con1')
 
         # Can't simulate a model with time indexed algebraic variables
-        m = self.m
-        m.a = Var(m.t)
-        def _diffeq(m, t):
-            return m.dv[t] == m.v[t]**2 + m.a[t]
-        m.con = Constraint(m.t, rule=_diffeq)
-        with self.assertRaises(DAE_Error):
-            mysim = Simulator(m)
-        m.del_component('con')
+        # m = self.m
+        # m.a = Var(m.t)
+        # def _diffeq(m, t):
+        #     return m.dv[t] == m.v[t]**2 + m.a[t]
+        # m.con = Constraint(m.t, rule=_diffeq)
+        # with self.assertRaises(DAE_Error):
+        #     mysim = Simulator(m)
+        # m.del_component('con')
 
     def test_non_supported_multi_index(self):
         m = self.m
@@ -258,23 +545,23 @@ class TestSimulator(unittest.TestCase):
         m.del_component('con1_index')
 
         # Can't simulate a model with time indexed algebraic variables
-        m.a2 = Var(m.t, m.s)
-        def _diffeq(m, t, s):
-            return m.dv2[t, s] == m.v2[t, s]**2 + m.a2[t, s]
-        m.con = Constraint(m.t, m.s, rule=_diffeq)
-        with self.assertRaises(DAE_Error):
-            mysim = Simulator(m)
-        m.del_component('con')
-        m.del_component('con_index')
+        # m.a2 = Var(m.t, m.s)
+        # def _diffeq(m, t, s):
+        #     return m.dv2[t, s] == m.v2[t, s]**2 + m.a2[t, s]
+        # m.con = Constraint(m.t, m.s, rule=_diffeq)
+        # with self.assertRaises(DAE_Error):
+        #     mysim = Simulator(m)
+        # m.del_component('con')
+        # m.del_component('con_index')
 
-        m.a3 = Var(m.s, m.t)
-        def _diffeq(m, s, t):
-            return m.dv3[s, t] == m.v3[s, t]**2 + m.a3[s, t]
-        m.con = Constraint(m.s, m.t, rule=_diffeq)
-        with self.assertRaises(DAE_Error):
-            mysim = Simulator(m)
-        m.del_component('con')
-        m.del_component('con_index')
+        # m.a3 = Var(m.s, m.t)
+        # def _diffeq(m, s, t):
+        #     return m.dv3[s, t] == m.v3[s, t]**2 + m.a3[s, t]
+        # m.con = Constraint(m.s, m.t, rule=_diffeq)
+        # with self.assertRaises(DAE_Error):
+        #     mysim = Simulator(m)
+        # m.del_component('con')
+        # m.del_component('con_index')
 
 class TestExpressionCheckers(unittest.TestCase):
     def setUp(self):
@@ -428,3 +715,97 @@ class TestExpressionCheckers(unittest.TestCase):
         self.assertEqual(temp[1]._numerator[0]._coef[1], -5)
         self.assertIs(m.z, temp[1]._numerator[0]._args[2])
         self.assertEqual(temp[1]._numerator[0]._coef[2], 1)
+
+        e = 2 + 5*m.y - m.z == m.v[t]
+        temp = _check_sumexpression(e, 0)
+        self.assertIs(temp, None)
+
+class TestSubstituters(unittest.TestCase):
+    def setUp(self):
+        self.m = m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        m.v = Var(m.t)
+        m.dv = DerivativeVar(m.v)
+
+    @unittest.skipIf(not casadi_available, "Casadi not available")
+    def test_substitute_casadi_sym(self):
+        m = self.m
+        m.y = Var()
+        t = IndexTemplate(m.t)
+
+        e = m.dv[t] + m.v[t] + m.y + t
+        templatemap = {}
+        e2 = substitute_template_expression(e, substitute_getitem_with_casadi_sym, templatemap)
+        self.assertEqual(len(templatemap), 2)
+        self.assertIs(type(e2._args[0]), casadi.SX)
+        self.assertIs(type(e2._args[1]), casadi.SX)
+        self.assertIsNot(type(e2._args[2]), casadi.SX)
+        self.assertIs(type(e2._args[3]), IndexTemplate)
+
+        m.del_component('y')
+        
+    @unittest.skipIf(not casadi_available, "Casadi not available")
+    def test_substitute_casadi_instrinsic1(self):
+        m = self.m
+        m.y = Var()
+        t = IndexTemplate(m.t)
+
+        e = m.v[t] 
+        templatemap = {}
+        e2 = substitute_template_expression(e, substitute_getitem_with_casadi_sym, templatemap)
+        e3 = substitute_intrinsic_function(
+            e2, substitute_intrinsic_function_with_casadi)
+        self.assertIs(type(e3), casadi.SX)
+        
+        m.del_component('y')
+
+    @unittest.skipIf(not casadi_available, "Casadi not available")
+    def test_substitute_casadi_instrinsic2(self):
+        m = self.m
+        m.y = Var()
+        t = IndexTemplate(m.t)
+
+        e = sin(m.dv[t]) + log(m.v[t]) + sqrt(m.y) + m.v[t] + t
+        templatemap = {}
+        e2 = substitute_template_expression(e, substitute_getitem_with_casadi_sym, templatemap)
+        e3 = substitute_intrinsic_function(
+            e2, substitute_intrinsic_function_with_casadi)
+        self.assertIs(e3._args[0]._operator, casadi.sin)
+        self.assertIs(e3._args[1]._operator, casadi.log)
+        self.assertIs(e3._args[2]._operator, casadi.sqrt)
+
+        m.del_component('y')
+
+    @unittest.skipIf(not casadi_available, "Casadi not available")
+    def test_substitute_casadi_instrinsic3(self):
+        m = self.m
+        m.y = Var()
+        t = IndexTemplate(m.t)
+
+        e = sin(m.dv[t]+ m.v[t]) + log(m.v[t]*m.y + m.dv[t]**2) 
+        templatemap = {}
+        e2 = substitute_template_expression(e, substitute_getitem_with_casadi_sym, templatemap)
+        e3 = substitute_intrinsic_function(
+            e2, substitute_intrinsic_function_with_casadi)
+        self.assertIs(e3._args[0]._operator, casadi.sin)
+        self.assertIs(e3._args[1]._operator, casadi.log)
+
+        m.del_component('y')
+
+    @unittest.skipIf(not casadi_available, "Casadi not available")
+    def test_substitute_casadi_instrinsic4(self):
+        m = self.m
+        m.y = Var()
+        t = IndexTemplate(m.t)
+
+        e = m.v[t] * sin(m.dv[t]+ m.v[t])*t
+        templatemap = {}
+        e2 = substitute_template_expression(e, substitute_getitem_with_casadi_sym, templatemap)
+        e3 = substitute_intrinsic_function(
+            e2, substitute_intrinsic_function_with_casadi)
+        self.assertIs(type(e3._numerator[0]), casadi.SX)
+        self.assertIs(e3._numerator[1]._operator, casadi.sin)
+        self.assertIs(type(e3._numerator[2]), IndexTemplate)
+
+        m.del_component('y')
+        
