@@ -3197,6 +3197,35 @@ class TestExpressionUtilities(unittest.TestCase):
                                                        allow_duplicates=True)),
                           [ m.a, m.a, m.a,  ] )
 
+        
+class TestMultiArgumentExpressions(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def test_double_sided_ineq(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=[1.0,2.0,3.0,4.0,5.0])
+
+        m.vmin = Param(m.s, initialize=lambda m,i: i)
+        m.vmax = Param(m.s, initialize=lambda m,i: i**2)
+
+        m.v = Var(m.s)
+
+        def _con(m, i):
+            return m.vmin[i]**2 <= m.v[i] <= m.vmax[i]**2
+        m.con = Constraint(m.s, rule=_con)
+
+        OUTPUT = open(currdir+"/double_ineq.out","w")
+        for i in m.s:
+            print(_con(m,i), file=OUTPUT)
+        display(m.con, ostream=OUTPUT)
+        OUTPUT.close()
+
+        self.assertFileEqualsBaseline(currdir+"/double_ineq.out",currdir+"/double_ineq.txt")
 
 if __name__ == "__main__":
     unittest.main()
