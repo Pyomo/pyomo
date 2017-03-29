@@ -3219,13 +3219,13 @@ class TestMultiArgumentExpressions(unittest.TestCase):
             return m.vmin[i]**2 <= m.v[i] <= m.vmax[i]**2
         m.con = Constraint(m.s, rule=_con)
 
-        OUTPUT = open(currdir+"/double_ineq.out","w")
+        OUTPUT = open(currdir+"/double_ineq_coopr3.out","w")
         for i in m.s:
             print(_con(m,i), file=OUTPUT)
         display(m.con, ostream=OUTPUT)
         OUTPUT.close()
 
-        self.assertFileEqualsBaseline(currdir+"/double_ineq.out",currdir+"/double_ineq.txt")
+        self.assertFileEqualsBaseline(currdir+"/double_ineq_coopr3.out",currdir+"/double_ineq.txt")
 
 if __name__ == "__main__":
     unittest.main()
