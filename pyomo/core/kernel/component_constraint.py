@@ -43,17 +43,13 @@ class IConstraint(IComponent, _IActiveComponentMixin):
     #
 
     body = _abstract_readonly_property(
-        doc=("The body of the "
-             "constraint expression."))
+        doc="The body of the constraint.")
     lb = _abstract_readonly_property(
-        doc=("The lower bound of the "
-             "constraint expression."))
+        doc="The lower bound of the constraint.")
     ub = _abstract_readonly_property(
-        doc=("The upper bound of the "
-             "constraint expression."))
+        doc="The upper bound of the constraint.")
     rhs = _abstract_readonly_property(
-        doc=("The righthand side of the "
-             "constraint expression."))
+        doc="The righthand side of the constraint.")
     equality = _abstract_readonly_property(
         doc=("A boolean indicating whether this "
              "is an equality constraint."))
@@ -142,6 +138,25 @@ class IConstraint(IComponent, _IActiveComponentMixin):
                 return self.lb <= body_expr
             return self.lb <= body_expr <= self.ub
 
+
+    @property
+    def bounds(self):
+        """Get the bounds as a tuple (lb, ub)."""
+        return (self.lb, self.ub)
+
+    def has_lb(self):
+        """Returns False when the lower bound is None or
+        negative infinity"""
+        return not ((self.lb is None) or \
+                    (self.lb == float('-inf')))
+
+    def has_ub(self):
+        """Returns False when the upper bound is None or
+        positive infinity"""
+        return not ((self.ub is None) or \
+                    (self.ub == float('inf')))
+
+
 class _mutable_bounds_mixin(object):
     """
     Use as a base class for IConstraint implementations
@@ -159,6 +174,7 @@ class _mutable_bounds_mixin(object):
 
     @property
     def lb(self):
+        """Get/Set the constraint lower bound."""
         return self._lb
     @lb.setter
     def lb(self, lb):
@@ -176,6 +192,7 @@ class _mutable_bounds_mixin(object):
 
     @property
     def ub(self):
+        """Get/Set the constraint upper bound."""
         return self._ub
     @ub.setter
     def ub(self, ub):
@@ -193,6 +210,7 @@ class _mutable_bounds_mixin(object):
 
     @property
     def rhs(self):
+        """Get/Set the constraint righthand side."""
         if not self.equality:
             raise ValueError(
                 "The rhs property can not be read "
@@ -211,7 +229,16 @@ class _mutable_bounds_mixin(object):
         self._equality = True
 
     @property
+    def bounds(self):
+        """Get/Set the bounds as a tuple (lb, ub)."""
+        return super(_mutable_bounds_mixin, self).bounds
+    @bounds.setter
+    def bounds(self, bounds_tuple):
+        self.lb, self.ub = bounds_tuple
+
+    @property
     def equality(self):
+        """Returns True when this is in equality constraint."""
         return self._equality
     @equality.setter
     def equality(self, equality):

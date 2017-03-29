@@ -90,6 +90,88 @@ class Test_constraint(unittest.TestCase):
         self.assertIs(c.lslack, None)
         self.assertIs(c.uslack, None)
 
+    def test_has_lb_ub(self):
+        c = constraint()
+        self.assertEqual(c.has_lb(), False)
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.has_ub(), False)
+        self.assertEqual(c.ub, None)
+
+        c.lb = float('-inf')
+        self.assertEqual(c.has_lb(), False)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.has_ub(), False)
+        self.assertEqual(c.ub, None)
+
+        c.ub = float('inf')
+        self.assertEqual(c.has_lb(), False)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.has_ub(), False)
+        self.assertEqual(c.ub, float('inf'))
+
+        c.lb = 0
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.has_ub(), False)
+        self.assertEqual(c.ub, float('inf'))
+
+        c.ub = 0
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb, 0)
+        self.assertEqual(c.has_ub(), True)
+        self.assertEqual(c.ub, 0)
+
+        #
+        # edge cases
+        #
+
+        c.lb = float('inf')
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.has_ub(), True)
+        self.assertEqual(c.ub, 0)
+
+        c.ub = float('-inf')
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.has_ub(), True)
+        self.assertEqual(c.ub, float('-inf'))
+
+    def test_bounds_getter_setter(self):
+        c = constraint()
+        self.assertEqual(c.bounds, (None, None))
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.ub, None)
+
+        c.bounds = (1,2)
+        self.assertEqual(c.bounds, (1,2))
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 2)
+
+        c.rhs = 3
+        self.assertEqual(c.bounds, (3,3))
+        self.assertEqual(c.lb, 3)
+        self.assertEqual(c.ub, 3)
+        self.assertEqual(c.rhs, 3)
+        with self.assertRaises(ValueError):
+            c.bounds = (3,3)
+        self.assertEqual(c.bounds, (3,3))
+        self.assertEqual(c.lb, 3)
+        self.assertEqual(c.ub, 3)
+        self.assertEqual(c.rhs, 3)
+        with self.assertRaises(ValueError):
+            c.bounds = (2,2)
+        self.assertEqual(c.bounds, (3,3))
+        self.assertEqual(c.lb, 3)
+        self.assertEqual(c.ub, 3)
+        self.assertEqual(c.rhs, 3)
+        with self.assertRaises(ValueError):
+            c.bounds = (1,2)
+        self.assertEqual(c.bounds, (3,3))
+        self.assertEqual(c.lb, 3)
+        self.assertEqual(c.ub, 3)
+        self.assertEqual(c.rhs, 3)
+
     def test_init_nonexpr(self):
         v = variable()
         c = constraint(lb=0, body=v, ub=1)
