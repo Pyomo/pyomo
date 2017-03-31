@@ -1652,7 +1652,7 @@ generate_expression.clone_counter = 0
 
 
 def generate_relational_expression(etype, lhs, rhs):
-    cloned_from = ((id(lhs), lhs), (id(rhs), rhs))
+    cloned_from = (id(lhs), id(rhs))
     rhs_is_relational = False
     lhs_is_relational = False
 
@@ -1686,9 +1686,9 @@ def generate_relational_expression(etype, lhs, rhs):
         # match, and this should be converted into an equality
         # expression.
         for i,arg in enumerate(prevExpr._cloned_from):
-            if arg[0] == cloned_from[0][0]:
+            if arg == cloned_from[0]:
                 match.append((i,0))
-            elif arg[0] == cloned_from[1][0]:
+            elif arg == cloned_from[1]:
                 match.append((i,1))
         if etype == _eq:
             raise TypeError(chainedInequalityErrorMessage())
