@@ -14,6 +14,7 @@
 from __future__ import print_function
 
 import os
+import six
 import sys
 import re
 from os.path import abspath, dirname
@@ -3221,13 +3222,26 @@ class TestMultiArgumentExpressions(unittest.TestCase):
             return m.vmin[i]**2 <= m.v[i] <= m.vmax[i]**2
         m.con = Constraint(m.s, rule=_con)
 
-        OUTPUT = open(currdir+"/double_ineq_coopr3.out","w")
+        OUT = six.StringIO()
         for i in m.s:
-            print(_con(m,i), file=OUTPUT)
-        display(m.con, ostream=OUTPUT)
-        OUTPUT.close()
+            OUT.write(str(_con(m,i)))
+            OUT.write("\n")
+        display(m.con, ostream=OUT)
 
-        self.assertFileEqualsBaseline(currdir+"/double_ineq_coopr3.out",currdir+"/double_ineq.txt")
+        reference="""v[1.0]  ==  1.0
+4.0  <=  v[2.0]  <=  16.0
+9.0  <=  v[3.0]  <=  81.0
+16.0  <=  v[4.0]  <=  256.0
+25.0  <=  v[5.0]  <=  625.0
+con : Size=5
+    Key : Lower : Body : Upper
+    1.0 :   1.0 : None :   1.0
+    2.0 :   4.0 : None :  16.0
+    3.0 :   9.0 : None :  81.0
+    4.0 :  16.0 : None : 256.0
+    5.0 :  25.0 : None : 625.0
+"""
+        self.assertEqual(OUT.getvalue(), reference)
 
 if __name__ == "__main__":
     unittest.main()
