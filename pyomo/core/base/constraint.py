@@ -748,9 +748,6 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                if tmp is None:
-                    raise ValueError(
-                        _rule_returned_none_error % (self.name,) )
 
             assert None not in self._data
             cdata = self._check_skip_add(None, tmp, condata=self)
@@ -787,11 +784,6 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                if tmp is None:
-                    raise ValueError(
-                        _rule_returned_none_error %
-                        ('%s[%s]' % (self.name, str(ndx)),) )
-
                 cdata = self._check_skip_add(ndx, tmp)
                 if cdata is not None:
                     self._data[ndx] = cdata
@@ -853,12 +845,8 @@ class Constraint(ActiveIndexedComponent):
         if _expr_type in _simple_constraint_rule_types:
             if expr is None:
                 raise ValueError(
-                    "Invalid constraint expression. The constraint "
-                    "expression resolved to None instead of a Pyomo "
-                    "object. Please modify your rule to return "
-                    "Constraint.Skip instead of None."
-                    "\n\nError thrown for Constraint '%s'"
-                    % ( _get_constraint_data_name(self,index),) )
+                    _rule_returned_none_error %
+                    (_get_constraint_data_name(self, index),) )
 
             #
             # There are cases where a user thinks they are generating
