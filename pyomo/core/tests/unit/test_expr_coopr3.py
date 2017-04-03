@@ -11,7 +11,10 @@
 #
 #
 
+from __future__ import print_function
+
 import os
+import six
 import sys
 import re
 from os.path import abspath, dirname
@@ -3197,6 +3200,48 @@ class TestExpressionUtilities(unittest.TestCase):
                                                        allow_duplicates=True)),
                           [ m.a, m.a, m.a,  ] )
 
+        
+class TestMultiArgumentExpressions(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def test_double_sided_ineq(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=[1.0,2.0,3.0,4.0,5.0])
+
+        m.vmin = Param(m.s, initialize=lambda m,i: i)
+        m.vmax = Param(m.s, initialize=lambda m,i: i**2)
+
+        m.v = Var(m.s)
+
+        def _con(m, i):
+            return m.vmin[i]**2 <= m.v[i] <= m.vmax[i]**2
+        m.con = Constraint(m.s, rule=_con)
+
+        OUT = six.StringIO()
+        for i in m.s:
+            OUT.write(str(_con(m,i)))
+            OUT.write("\n")
+        display(m.con, ostream=OUT)
+
+        reference="""v[1.0]  ==  1.0
+4.0  <=  v[2.0]  <=  16.0
+9.0  <=  v[3.0]  <=  81.0
+16.0  <=  v[4.0]  <=  256.0
+25.0  <=  v[5.0]  <=  625.0
+con : Size=5
+    Key : Lower : Body : Upper
+    1.0 :   1.0 : None :   1.0
+    2.0 :   4.0 : None :  16.0
+    3.0 :   9.0 : None :  81.0
+    4.0 :  16.0 : None : 256.0
+    5.0 :  25.0 : None : 625.0
+"""
+        self.assertEqual(OUT.getvalue(), reference)
 
 if __name__ == "__main__":
     unittest.main()
