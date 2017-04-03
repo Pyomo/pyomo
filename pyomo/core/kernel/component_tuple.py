@@ -76,9 +76,13 @@ class ComponentTuple(_SimpleContainerMixin,
     #
 
     def child_key(self, child):
+        """Returns the lookup key associated with a child of
+        this container."""
         return self.index(child)
 
     def child(self, key):
+        """Returns a child of this container given a storage
+        key."""
         try:
             return self.__getitem__(key)
         except (IndexError, TypeError):

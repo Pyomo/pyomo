@@ -419,13 +419,14 @@ class IComponentContainer(ICategorizedObject):
 
     @abc.abstractmethod
     def child_key(self, *args, **kwds):
-        """Returns the lookup key associated with a child of this
-        container."""
+        """Returns the lookup key associated with a child of
+        this container."""
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
     def child(self, *args, **kwds):
-        """Returns a child of this container given a storage key."""
+        """Returns a child of this container given a storage
+        key."""
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod

@@ -189,6 +189,8 @@ class _block_base(object):
                                  _from_parent_=True)
 
     def child(self, key):
+        """Returns a child of this container given a storage
+        key."""
         try:
             return getattr(self, key)
         except AttributeError:
@@ -848,6 +850,8 @@ class block(_block_base, IBlockStorage):
     #    pass
 
     def child_key(self, child):
+        """Returns the lookup key associated with a child of
+        this container."""
         if child.ctype in self._byctype:
             for key, val in iteritems(self._byctype[child.ctype]):
                 if val is child:
@@ -1142,6 +1146,8 @@ class tiny_block(_block_base, IBlockStorage):
     #def components(...)
 
     def child_key(self, child):
+        """Returns the lookup key associated with a child of
+        this container."""
         for key, obj in self._getattrs():
             if obj is child:
                 return key
