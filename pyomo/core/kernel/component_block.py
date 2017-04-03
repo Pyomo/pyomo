@@ -998,69 +998,6 @@ class block(_block_base, IBlockStorage):
                     descend_into=False))
         return ctypes
 
-class block_tuple(ComponentTuple,
-                  _IActiveComponentContainerMixin):
-    """A tuple-style container for blocks."""
-    # To avoid a circular import, for the time being, this
-    # property will be set in block.py
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._active = True
-        super(block_tuple, self).__init__(*args, **kwds)
-
-class block_list(ComponentList,
-                 _IActiveComponentContainerMixin):
-    """A list-style container for blocks."""
-    # To avoid a circular import, for the time being, this
-    # property will be set in block.py
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._active = True
-        super(block_list, self).__init__(*args, **kwds)
-
-class block_dict(ComponentDict,
-                 _IActiveComponentContainerMixin):
-    """A dict-style container for blocks."""
-    # To avoid a circular import, for the time being, this
-    # property will be set in block.py
-    _ctype = None
-    __slots__ = ("_parent",
-                 "_active",
-                 "_data")
-    if six.PY3:
-        # This has to do with a bug in the abc module
-        # prior to python3. They forgot to define the base
-        # class using empty __slots__, so we shouldn't add a slot
-        # for __weakref__ because the base class has a __dict__.
-        __slots__ = list(__slots__) + ["__weakref__"]
-
-    def __init__(self, *args, **kwds):
-        self._parent = None
-        self._active = True
-        super(block_dict, self).__init__(*args, **kwds)
-
 class tiny_block(_block_base, IBlockStorage):
     """
     A memory efficient block for storing a small number
@@ -1227,3 +1164,66 @@ class tiny_block(_block_base, IBlockStorage):
                     active=active,
                     descend_into=False))
         return ctypes
+
+class block_tuple(ComponentTuple,
+                  _IActiveComponentContainerMixin):
+    """A tuple-style container for blocks."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in block.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_active",
+                 "_data")
+    if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+        __slots__ = list(__slots__) + ["__weakref__"]
+
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        self._active = True
+        super(block_tuple, self).__init__(*args, **kwds)
+
+class block_list(ComponentList,
+                 _IActiveComponentContainerMixin):
+    """A list-style container for blocks."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in block.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_active",
+                 "_data")
+    if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+        __slots__ = list(__slots__) + ["__weakref__"]
+
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        self._active = True
+        super(block_list, self).__init__(*args, **kwds)
+
+class block_dict(ComponentDict,
+                 _IActiveComponentContainerMixin):
+    """A dict-style container for blocks."""
+    # To avoid a circular import, for the time being, this
+    # property will be set in block.py
+    _ctype = None
+    __slots__ = ("_parent",
+                 "_active",
+                 "_data")
+    if six.PY3:
+        # This has to do with a bug in the abc module
+        # prior to python3. They forgot to define the base
+        # class using empty __slots__, so we shouldn't add a slot
+        # for __weakref__ because the base class has a __dict__.
+        __slots__ = list(__slots__) + ["__weakref__"]
+
+    def __init__(self, *args, **kwds):
+        self._parent = None
+        self._active = True
+        super(block_dict, self).__init__(*args, **kwds)
