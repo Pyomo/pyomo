@@ -764,7 +764,7 @@ class Constraint(ActiveIndexedComponent):
 
         else:
 
-            if not _init_expr is None:
+            if _init_expr is not None:
                 raise IndexError(
                     "Constraint '%s': Cannot initialize multiple indices "
                     "of a constraint with a single expression" %
