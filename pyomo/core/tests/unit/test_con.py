@@ -351,6 +351,47 @@ class TestConstraintCreation(unittest.TestCase):
         model.c = Constraint(rule=rule)
         self.assertRaises(ValueError, model.create_instance)
 
+    def test_expr_construct_invalid(self):
+        m = ConcreteModel()
+        c = Constraint(rule=lambda m: None)
+        self.assertRaisesRegexp(
+            ValueError, ".*rule returned None",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint([1], rule=lambda m,i: None)
+        self.assertRaisesRegexp(
+            ValueError, ".*rule returned None",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint(rule=lambda m: True)
+        self.assertRaisesRegexp(
+            ValueError,
+            ".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint([1], rule=lambda m,i: True)
+        self.assertRaisesRegexp(
+            ValueError,
+            ".*resolved to a trivial Boolean \(True\).*Constraint\.Feasible",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint(rule=lambda m: False)
+        self.assertRaisesRegexp(
+            ValueError,
+            ".*resolved to a trivial Boolean \(False\).*Constraint\.Infeasible",
+            m.add_component, 'c', c)
+
+        m = ConcreteModel()
+        c = Constraint([1], rule=lambda m,i: False)
+        self.assertRaisesRegexp(
+            ValueError,
+            ".*resolved to a trivial Boolean \(False\).*Constraint\.Infeasible",
+            m.add_component, 'c', c)
+
     def test_nondata_bounds(self):
         model = ConcreteModel()
         model.c = Constraint()
