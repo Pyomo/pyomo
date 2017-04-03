@@ -705,6 +705,14 @@ class Constraint(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
+    #
+    # This method must be defined on subclasses of IndexedComponent
+    #
+    def _default(self, idx):
+        """Returns the default component data value."""
+        cdata = self._data[idx] = _GeneralConstraintData(None, component=self)
+        return cdata
+
 
     def construct(self, data=None):
         """
@@ -786,9 +794,7 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                cdata = self._check_skip_add(ndx, tmp)
-                if cdata is not None:
-                    self._data[ndx] = cdata
+                self._check_skip_add(ndx, tmp)
 
     def _pprint(self):
         """
@@ -908,8 +914,7 @@ class Constraint(ActiveIndexedComponent):
                     % (_get_constraint_data_name(self,index),) )
 
         if condata is None:
-            self._data[index] = condata = \
-                _GeneralConstraintData(None, component=self)
+            condata = self._default(index)
         condata.set_value(expr)
         assert condata.parent_component() is self
 
@@ -1092,10 +1097,7 @@ class IndexedConstraint(Constraint):
     #
     def add(self, index, expr):
         """Add a constraint with a given index."""
-        cdata = self._check_skip_add(index, expr)
-        if cdata is not None:
-            self._data[index] = cdata
-        return cdata
+        return self._check_skip_add(index, expr)
 
     # This should be supported by all indexed components
     def __delitem__(self, index):
@@ -1185,12 +1187,9 @@ class ConstraintList(IndexedConstraint):
 
     def add(self, expr):
         """Add a constraint with an implicit index."""
-        cdata = self._check_skip_add(self._nconstraints + 1, expr)
         self._nconstraints += 1
         self._index.add(self._nconstraints)
-        if cdata is not None:
-            self._data[self._nconstraints] = cdata
-        return cdata
+        return self._check_skip_add(self._nconstraints, expr)
 
 register_component(Constraint, "General constraint expressions.")
 register_component(ConstraintList, "A list of constraint expressions.")
