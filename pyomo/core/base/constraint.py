@@ -143,7 +143,9 @@ def simple_constraintlist_rule( fn ):
 # object.
 #
 def _get_constraint_data_name(constraint, index):
-    if index in constraint._data:
+    if not constraint.is_indexed():
+        return constraint.name
+    elif index in constraint._data:
         ans = constraint._data[index].name
     else:
         constraint._data[index] = _GeneralConstraintData(
