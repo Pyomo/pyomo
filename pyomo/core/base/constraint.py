@@ -136,6 +136,25 @@ def simple_constraintlist_rule( fn ):
 
 
 #
+# Get the fully-qualified name for this index.  If there isn't anything
+# in the _data dict (and there shouldn't be), then add something, get
+# the name, and remove it.  This allows us to get the name of something
+# that we haven't added yet without changing the state of the constraint
+# object.
+#
+def _get_constraint_data_name(constraint, index):
+    if index in constraint._data:
+        ans = constraint._data[index].name
+    else:
+        constraint._data[index] = _GeneralConstraintData(
+            None, component=constraint)
+        try:
+            ans = constraint._data[index].name
+        finally:
+            del constraint._data[index]
+    return ans
+
+#
 # This class is a pure interface
 #
 
@@ -827,27 +846,11 @@ class Constraint(ActiveIndexedComponent):
     # is returned or an exception is raised.
     #
     def _check_skip_add(self, index, expr, condata=None):
-
-        #
-        # Adds a dummy constraint object to the _data
-        # dict just before an error message is generated
-        # so that we can generate a fully qualified name
-        #
-        def _prep_for_error():
-            if condata is None:
-                self._data[index] = _GeneralConstraintData(None,
-                                                           component=self)
-            else:
-                self._data[index] = condata
-
         _expr_type = expr.__class__
         #
         # Convert deprecated expression values
         #
         if _expr_type in _simple_constraint_rule_types:
-
-            _prep_for_error()
-
             if expr is None:
                 raise ValueError(
                     "Invalid constraint expression. The constraint "
@@ -855,7 +858,7 @@ class Constraint(ActiveIndexedComponent):
                     "object. Please modify your rule to return "
                     "Constraint.Skip instead of None."
                     "\n\nError thrown for Constraint '%s'"
-                    % (self._data[index].name))
+                    % ( _get_constraint_data_name(self,index),) )
 
             #
             # There are cases where a user thinks they are generating
@@ -889,7 +892,7 @@ class Constraint(ActiveIndexedComponent):
                     "\n\nError thrown for Constraint '%s'"
                     "\n\nUnresolved (dangling) inequality "
                     "expression: %s"
-                    % (expr, self._data[index].name, buf))
+                    % (expr, _get_constraint_data_name(self,index), buf))
             else:
                 raise ValueError(
                     "Invalid constraint expression. The constraint "
@@ -900,7 +903,7 @@ class Constraint(ActiveIndexedComponent):
                     % (expr,
                        expr and "Feasible" or "Infeasible",
                        expr,
-                       self._data[index].name))
+                       _get_constraint_data_name(self,index)))
 
         #
         # Ignore an 'empty' constraint
@@ -910,10 +913,9 @@ class Constraint(ActiveIndexedComponent):
                (expr == Constraint.Feasible):
                 return None
             if expr == Constraint.Infeasible:
-                _prep_for_error()
                 raise ValueError(
                     "Constraint '%s' is always infeasible"
-                    % self._data[index].name)
+                    % (_get_constraint_data_name(self,index),) )
 
         if condata is None:
             self._data[index] = condata = \
