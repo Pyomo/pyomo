@@ -127,10 +127,10 @@ def update_contset_indexed_component(comp):
                     _update_constraint(comp)
                 elif comp.type() == Expression:
                     _update_expression(comp)
-                elif type(comp) is IndexedBlock: # Only catch Blocks and not components derived
-                    _update_block(comp)          # from Blocks
-                elif isinstance(comp, Piecewise):
+                elif isinstance(comp, Piecewise): 
                     _update_piecewise(comp)
+                elif comp.type() == Block:
+                    _update_block(comp)   
                 else:
                     raise TypeError("Found component %s of type %s indexed "\
                         "by a ContinuousSet. Components of this type are "\
@@ -150,10 +150,10 @@ def update_contset_indexed_component(comp):
                     _update_constraint(comp)
                 elif comp.type() == Expression:
                     _update_expression(comp)
-                elif type(comp) is IndexedBlock: # Only catch Blocks and not components derived
-                    _update_block(comp)          # from Blocks
                 elif isinstance(comp, Piecewise):
                     _update_piecewise(comp)
+                elif comp.type() == Block: 
+                    _update_block(comp)    
                 else:
                     raise TypeError("Found component %s of type %s indexed "\
                         "by a ContinuousSet. Components of this type are "\
@@ -205,9 +205,37 @@ def _update_expression(expre):
 def _update_block(blk):
     """
     This method will construct any additional indices in a block
-    resulting from the discretization of a ContinuousSet.
+    resulting from the discretization of a ContinuousSet. For
+    Block-derived components we check if the Block construct method has
+    been overridden. If not then we update it like a regular block. If
+    construct has been overridden then we try to call the component's
+    update_after_discretization method. If the component hasn't
+    implemented this method then we throw a warning and try to update it
+    like a normal block. The issue, when construct is overridden, is that
+    anything could be happening and we can't automatically assume that
+    treating the block-derived component like a normal block will be
+    sufficient to update it correctly.
+
     """
     
+    # Check if Block construct method is overridden
+    # getattr needed below for Python 2, 3 compatibility
+    if blk.construct.__func__ is not getattr(IndexedBlock.construct,
+                                             '__func__', IndexedBlock.construct):
+        # check for custom update function
+        try :
+            blk.update_after_discretization()
+            return
+        except AttributeError:
+            logger.warning('DAE(misc): Attempting to apply a discretization transformation to '
+                  'the Block-derived component "%s". The component overrides the '
+                  'Block construct method but no update_after_discretization() '
+                  'function was found. Will attempt to update as a standard Block '
+                  'but user should verify that the component was expanded correctly. '
+                  'To suppress this warning, please provide an '
+                  'update_after_discretization() function on Block-derived '
+                  'components that override construct()' %(blk.name))            
+
     # Code taken from the construct() method of Block
     missing_idx = set(blk._index)-set(iterkeys(blk._data))
     for idx in list(missing_idx):
