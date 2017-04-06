@@ -442,10 +442,7 @@ class TestSimulator(unittest.TestCase):
         
     def test_non_supported_single_index(self):
         
-        # Only Scipy is supported
         m = self.m
-        # with self.assertRaises(DAE_Error):
-        #     mysim = Simulator(m, package='casadi')
 
         # Can't simulate a model with no ContinuousSet 
         m = ConcreteModel()
@@ -485,16 +482,6 @@ class TestSimulator(unittest.TestCase):
         with self.assertRaises(DAE_Error):
             mysim = Simulator(m)
         m.del_component('con1')
-
-        # Can't simulate a model with time indexed algebraic variables
-        # m = self.m
-        # m.a = Var(m.t)
-        # def _diffeq(m, t):
-        #     return m.dv[t] == m.v[t]**2 + m.a[t]
-        # m.con = Constraint(m.t, rule=_diffeq)
-        # with self.assertRaises(DAE_Error):
-        #     mysim = Simulator(m)
-        # m.del_component('con')
 
     def test_non_supported_multi_index(self):
         m = self.m
@@ -544,24 +531,64 @@ class TestSimulator(unittest.TestCase):
         m.del_component('con1')
         m.del_component('con1_index')
 
-        # Can't simulate a model with time indexed algebraic variables
-        # m.a2 = Var(m.t, m.s)
-        # def _diffeq(m, t, s):
-        #     return m.dv2[t, s] == m.v2[t, s]**2 + m.a2[t, s]
-        # m.con = Constraint(m.t, m.s, rule=_diffeq)
-        # with self.assertRaises(DAE_Error):
-        #     mysim = Simulator(m)
-        # m.del_component('con')
-        # m.del_component('con_index')
+    def test_scipy_unsupported(self):
 
-        # m.a3 = Var(m.s, m.t)
-        # def _diffeq(m, s, t):
-        #     return m.dv3[s, t] == m.v3[s, t]**2 + m.a3[s, t]
-        # m.con = Constraint(m.s, m.t, rule=_diffeq)
-        # with self.assertRaises(DAE_Error):
-        #     mysim = Simulator(m)
-        # m.del_component('con')
-        # m.del_component('con_index')
+        m = self.m
+        m.a = Var(m.t)
+        def _diffeq(m, t):
+            return 0 == m.v[t]**2 + m.a[t]
+        m.con = Constraint(m.t, rule=_diffeq)
+
+        # Can't simulate a model with algebraic equations using scipy
+        with self.assertRaises(DAE_Error):
+            mysim = Simulator(m, package='scipy')
+        m.del_component('con')
+
+    def test_time_indexed_algebraic(self):
+
+        m = self.m
+        m.a = Var(m.t)
+        def _diffeq(m, t):
+            return m.dv[t] == m.v[t]**2 + m.a[t]
+        m.con = Constraint(m.t, rule=_diffeq)
+        mysim = Simulator(m)
+
+        t = IndexTemplate(m.t)
+
+        self.assertEqual(len(mysim._algvars), 1)
+        self.assertTrue(_GetItemIndexer(m.a[t]) in mysim._algvars)
+        self.assertEqual(len(mysim._alglist), 0)
+        m.del_component('con')
+
+    def test_time_multi_indexed_algebraic(self):
+
+        m = self.m
+        m.v2 = Var(m.t,m.s)
+        m.v3 = Var(m.s,m.t)
+        m.dv2 = DerivativeVar(m.v2)
+        m.dv3 = DerivativeVar(m.v3)
+
+        m.a2 = Var(m.t, m.s)
+        def _diffeq(m, t, s):
+            return m.dv2[t, s] == m.v2[t, s]**2 + m.a2[t, s]
+        m.con = Constraint(m.t, m.s, rule=_diffeq)
+
+        m.a3 = Var(m.s, m.t)
+        def _diffeq2(m, s, t):
+            return m.dv3[s, t] == m.v3[s, t]**2 + m.a3[s, t]
+        m.con2 = Constraint(m.s, m.t, rule=_diffeq2)
+        mysim = Simulator(m)
+        t = IndexTemplate(m.t)
+
+        self.assertEqual(len(mysim._algvars), 6)
+        self.assertTrue(_GetItemIndexer(m.a2[t,1]) in mysim._algvars)
+        self.assertTrue(_GetItemIndexer(m.a2[t,3]) in mysim._algvars)
+        self.assertTrue(_GetItemIndexer(m.a3[1,t]) in mysim._algvars)
+        self.assertTrue(_GetItemIndexer(m.a3[3,t]) in mysim._algvars)
+        m.del_component('con')
+        m.del_component('con_index')
+        m.del_component('con2')
+        m.del_component('con2_index')
 
 class TestExpressionCheckers(unittest.TestCase):
     def setUp(self):
@@ -745,7 +772,7 @@ class TestSubstituters(unittest.TestCase):
         m.del_component('y')
         
     @unittest.skipIf(not casadi_available, "Casadi not available")
-    def test_substitute_casadi_instrinsic1(self):
+    def test_substitute_casadi_intrinsic1(self):
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)
@@ -760,7 +787,7 @@ class TestSubstituters(unittest.TestCase):
         m.del_component('y')
 
     @unittest.skipIf(not casadi_available, "Casadi not available")
-    def test_substitute_casadi_instrinsic2(self):
+    def test_substitute_casadi_intrinsic2(self):
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)
@@ -777,7 +804,7 @@ class TestSubstituters(unittest.TestCase):
         m.del_component('y')
 
     @unittest.skipIf(not casadi_available, "Casadi not available")
-    def test_substitute_casadi_instrinsic3(self):
+    def test_substitute_casadi_intrinsic3(self):
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)
@@ -793,7 +820,7 @@ class TestSubstituters(unittest.TestCase):
         m.del_component('y')
 
     @unittest.skipIf(not casadi_available, "Casadi not available")
-    def test_substitute_casadi_instrinsic4(self):
+    def test_substitute_casadi_intrinsic4(self):
         m = self.m
         m.y = Var()
         t = IndexTemplate(m.t)

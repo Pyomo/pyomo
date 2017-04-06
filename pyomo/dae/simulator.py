@@ -417,7 +417,7 @@ class Simulator:
                                         "or unrecognized differential equation. "
                                         "Constraint '%s' cannot be simulated "
                                         "using Scipy. If you are trying to "
-                                        "simulate a DAE you must use CasADi "
+                                        "simulate a DAE model you must use CasADi "
                                         "as the integration package." 
                                         %(str(con.name)))
                     tempexp = tempexp._args[0] - tempexp._args[1]
@@ -449,7 +449,7 @@ class Simulator:
         # Check to see if we found a RHS for every DerivativeVar in
         # the model
         # FIXME: Not sure how to rework this for multi-index case
-        allderivs = derivs.keys()
+        # allderivs = derivs.keys()
         # if set(allderivs) != set(derivlist):
         #     missing = list(set(allderivs)-set(derivlist))
         #     print("WARNING: Could not find a RHS expression for the "
@@ -466,8 +466,9 @@ class Simulator:
         # Create ordered list of algebraic variables and time-varying
         # parameters
         algvars=[]
+
         for item in iterkeys(templatemap):
-            if item._base.name in allderivs:
+            if item._base.name in derivs.keys():
                 # Make sure there are no DerivativeVars in the
                 # template map
                 raise DAE_Error(
