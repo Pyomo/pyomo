@@ -360,28 +360,16 @@ class Expression(IndexedComponent):
             self._data[index].set_value(new_value)
 
     def _default(self, index):
-        raise KeyError(str(index))
+        self._data[index] = cdata = _GeneralExpressionData(None, component=self)
+        return cdata
 
     def __setitem__(self, ndx, val):
         #
-        # Get the expression data object
+        # Set the value: This relies on the
+        # IndexedComponent.__getitem__() logic to insert the _ExpressionData
+        # into the dictionary if it is not there (which it always will be .
         #
-        exprdata = None
-        if ndx in self._data:
-            exprdata = self._data[ndx]
-        else:
-            _ndx = normalize_index(ndx)
-            if _ndx in self._data:
-                exprdata = self._data[_ndx]
-        if exprdata is None:
-            raise KeyError(
-                "Cannot set the value of Expression '%s' with "
-                "invalid index '%s'"
-                % (self.name, str(ndx)))
-        #
-        # Set the value
-        #
-        exprdata.set_value(val)
+        self[ndx].set_value(val)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """

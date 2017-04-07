@@ -13,6 +13,8 @@ import pyutilib.th as unittest
 from pyomo.environ import *
 from six import StringIO
 
+from pyomo.core.base.expression import _GeneralExpressionData
+
 class TestExpressionData(unittest.TestCase):
 
     def test_exprdata_get_set(self):
@@ -435,8 +437,21 @@ class TestExpression(unittest.TestCase):
         self.assertEqual(model.E.extract_values(),
                          {2:2, 3:3})
         self.assertEqual(len(model.E), 2)
-        with self.assertRaises(KeyError):
-            model.E[1]
+
+    def test_implicit_definition(self):
+        model = ConcreteModel()
+        model.idx = Set(initialize=[1,2,3])
+        model.E = Expression(model.idx, rule=lambda m,i: Expression.Skip)
+        self.assertEqual(len(model.E), 0)
+        expr = model.E[1]
+        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(expr.value, None)
+        model.E[1] = 5
+        self.assertIs(expr, model.E[1])
+        self.assertEqual(model.E.extract_values(), {1:5})
+        model.E[2] = 6
+        self.assertIsNot(expr, model.E[2])
+        self.assertEqual(model.E.extract_values(), {1:5, 2:6})
 
     def test_indexed_construct_expr(self):
         model = ConcreteModel()
