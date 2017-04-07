@@ -539,6 +539,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
             # Fill in the body of the equation
             body_string_buffer = StringIO()
 
+            if constraint_data.body is None:
+                continue
             constraint_data.body.to_string(ostream=body_string_buffer,
                                            verbose=False)
             eqn_body = body_string_buffer.getvalue()
