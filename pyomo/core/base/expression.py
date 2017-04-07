@@ -17,8 +17,7 @@ from pyomo.core.base.component import (ComponentData,
                                        register_component)
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
-    UnindexedComponent_set,
-    normalize_index, )
+    UnindexedComponent_set, )
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
@@ -362,14 +361,6 @@ class Expression(IndexedComponent):
     def _default(self, index):
         self._data[index] = cdata = _GeneralExpressionData(None, component=self)
         return cdata
-
-    def __setitem__(self, ndx, val):
-        #
-        # Set the value: This relies on the
-        # IndexedComponent.__getitem__() logic to insert the _ExpressionData
-        # into the dictionary if it is not there (which it always will be .
-        #
-        self[ndx].set_value(val)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """

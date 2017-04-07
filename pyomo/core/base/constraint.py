@@ -1099,9 +1099,6 @@ class IndexedConstraint(Constraint):
         """Add a constraint with a given index."""
         return self._check_skip_add(index, expr)
 
-    # This should be supported by all indexed components
-    def __delitem__(self, index):
-        del self._data[index]
 
 class ConstraintList(IndexedConstraint):
     """

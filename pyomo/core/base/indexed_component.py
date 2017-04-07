@@ -522,6 +522,26 @@ You can silence this warning by one of three ways:
                   % ( ndx, self.name, )
         raise KeyError(msg)
 
+    def __setitem__(self, ndx, val):
+        #
+        # Set the value: This relies on the __getitem__() / _default()
+        # logic to insert the correct _ComponentData into the dictionary
+        # if it is not there.
+        #
+        self[ndx].set_value(val)
+
+    def __delitem__(self, index):
+        # find the index, and normalize if the simple match fails
+        if index not in self._data:
+            if normalize_index.flatten:
+                index = normalize_index(index)
+            if index not in self._data:
+                raise KeyError(str(index))
+
+        if self.is_indexed():
+            # Remove reference to this object
+            self[index]._component = None
+        del self._data[index]
 
     def _processUnhashableIndex(self, ndx, _exception):
         """Process a call to __getitem__ with unhashable elements

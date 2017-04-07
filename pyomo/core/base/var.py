@@ -15,7 +15,7 @@ from weakref import ref as weakref_ref
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
 from pyomo.core.base.component import ComponentData, register_component
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set, normalize_index
+from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.sets import Set
 from pyomo.core.base.util import is_functor
@@ -512,18 +512,6 @@ class Var(IndexedComponent):
         """
         for index, new_value in iteritems(new_values):
             self[index].set_value(new_value, valid)
-
-    def __setitem__(self, ndx, val):
-        """
-        Define the setitem operation:
-            var[ndx] = val
-        """
-        #
-        # Set the value: This relies on the
-        # IndexedComponent.__getitem__() logic to insert the _VarData
-        # into the dictionary if it is not there.
-        #
-        self[ndx].set_value(val)
 
     def construct(self, data=None):
         """Construct this component."""
