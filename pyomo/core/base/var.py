@@ -519,25 +519,11 @@ class Var(IndexedComponent):
             var[ndx] = val
         """
         #
-        # Get the variable data object
+        # Set the value: This relies on the
+        # IndexedComponent.__getitem__() logic to insert the _VarData
+        # into the dictionary if it is not there.
         #
-        vardata = None
-        if ndx in self._data:
-            vardata = self._data[ndx]
-        elif normalize_index.flatten:
-            _ndx = normalize_index(ndx)
-            if _ndx in self._data:
-                vardata = self._data[_ndx]
-        if vardata is None:
-            if self.is_indexed():
-                vardata = self.add(ndx)
-            else:
-                msg = "Cannot set the value of a simple variable '%s' with index '%s'"
-                raise KeyError(msg % (self.name, str(ndx)))
-        #
-        # Set the value
-        #
-        vardata.set_value(val)
+        self[ndx].set_value(val)
 
     def construct(self, data=None):
         """Construct this component."""
