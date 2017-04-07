@@ -67,6 +67,9 @@ class _ParamData(ComponentData, NumericValue):
         """Clear the data in this component"""
         self.value = None
 
+    def set_value(self, value):
+        self.parent_component()[self.index()] = value
+
     def __call__(self, exception=True):
         """
         Return the value of this object.
