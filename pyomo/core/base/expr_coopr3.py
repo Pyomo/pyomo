@@ -1382,7 +1382,15 @@ def _generate_relational_expression__noCloneCheck(obj):
 
 
 def generate_relational_expression(etype, lhs, rhs):
-    cloned_from = (id(lhs), id(rhs))
+    # We cannot trust Python not to recucle ID's for temporary POD data
+    # (e.g., floats).  So, if it is a "native" type, we will recort the
+    # value, otherwise we will record the ID.  The tuple for native
+    # types is to guarantee that a native value will *never*
+    # accidentally match an ID
+    cloned_from = (
+        id(lhs) if lhs.__class__ not in native_numeric_types else (0,lhs),
+        id(rhs) if rhs.__class__ not in native_numeric_types else (0,rhs)
+    )
     rhs_is_relational = False
     lhs_is_relational = False
 
