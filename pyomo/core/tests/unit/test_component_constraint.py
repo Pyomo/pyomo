@@ -911,27 +911,6 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (float('-inf'), v)
 
-    def test_equality_infinite(self):
-        c = constraint()
-        v = variable()
-        c.expr = (v == 1)
-        with self.assertRaises(ValueError):
-            c.expr = (v == float('inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (v, float('inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (float('inf') == v)
-        with self.assertRaises(ValueError):
-            c.expr = (float('inf'), v)
-        with self.assertRaises(ValueError):
-            c.expr = (v == float('-inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (v, float('-inf'))
-        with self.assertRaises(ValueError):
-            c.expr = (float('-inf') == v)
-        with self.assertRaises(ValueError):
-            c.expr = (float('-inf'), v)
-
     def test_equality_nonnumeric(self):
         c = constraint()
         v = variable()

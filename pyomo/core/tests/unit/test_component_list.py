@@ -674,6 +674,13 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, True)
         for c in clist:
             self.assertEqual(c.active, True)
+        for c in clist.components():
+            self.assertEqual(c.active, True)
+        for c in clist.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(clist.components())), len(clist))
+        self.assertEqual(len(list(clist.components())),
+                         len(list(clist.components(active=True))))
 
         m.deactivate(shallow=False,
                      descend_into=True)
@@ -686,6 +693,9 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, False)
         for c in clist:
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(clist.components())),
+                            len(list(clist.components(active=True))))
+        self.assertEqual(len(list(clist.components(active=True))), 0)
 
         test_c = clist[0]
         clist.remove(test_c)
@@ -699,6 +709,9 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, False)
         for c in clist:
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(clist.components())),
+                            len(list(clist.components(active=True))))
+        self.assertEqual(len(list(clist.components(active=True))), 0)
 
         clist.remove(test_c)
         test_c.activate()
@@ -717,6 +730,16 @@ class _TestActiveComponentListBase(_TestComponentListBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for c in clist.components():
+            if c is test_c:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+        for c in clist.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertNotEqual(len(list(clist.components())),
+                            len(list(clist.components(active=True))))
+        self.assertEqual(len(list(clist.components(active=True))), 1)
 
         m.activate(shallow=False,
                    descend_into=True)
@@ -729,6 +752,13 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, True)
         for c in clist:
             self.assertEqual(c.active, True)
+        for c in clist.components():
+            self.assertEqual(c.active, True)
+        for c in clist.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(clist.components())), len(clist))
+        self.assertEqual(len(list(clist.components())),
+                         len(list(clist.components(active=True))))
 
         m.deactivate(shallow=False,
                      descend_into=True)
@@ -741,6 +771,9 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, False)
         for c in clist:
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(clist.components())),
+                            len(list(clist.components(active=True))))
+        self.assertEqual(len(list(clist.components(active=True))), 0)
 
         clist[len(clist)-1] = self._ctype_factory()
 
@@ -755,6 +788,16 @@ class _TestActiveComponentListBase(_TestComponentListBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for i, c in enumerate(clist.components()):
+            if i == len(clist)-1:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+        for c in clist.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertNotEqual(len(list(clist.components())),
+                            len(list(clist.components(active=True))))
+        self.assertEqual(len(list(clist.components(active=True))), 1)
 
         clist.activate()
 
@@ -766,6 +809,13 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, True)
         for i, c in enumerate(clist):
             self.assertEqual(c.active, True)
+        for c in clist.components():
+            self.assertEqual(c.active, True)
+        for c in clist.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(clist.components())), len(clist))
+        self.assertEqual(len(list(clist.components())),
+                         len(list(clist.components(active=True))))
 
         clist.deactivate()
 
@@ -777,6 +827,9 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, False)
         for i, c in enumerate(clist):
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(clist.components())),
+                            len(list(clist.components(active=True))))
+        self.assertEqual(len(list(clist.components(active=True))), 0)
 
         clist[-1].activate()
 
@@ -791,6 +844,16 @@ class _TestActiveComponentListBase(_TestComponentListBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for i, c in enumerate(clist.components()):
+            if i == len(clist)-1:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+        for c in clist.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertNotEqual(len(list(clist.components())),
+                            len(list(clist.components(active=True))))
+        self.assertEqual(len(list(clist.components(active=True))), 1)
 
         clist.deactivate()
         clist.activate()
@@ -803,6 +866,13 @@ class _TestActiveComponentListBase(_TestComponentListBase):
         self.assertEqual(clist.active, True)
         for i, c in enumerate(clist):
             self.assertEqual(c.active, True)
+        for c in clist.components():
+            self.assertEqual(c.active, True)
+        for c in clist.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(clist.components())), len(clist))
+        self.assertEqual(len(list(clist.components())),
+                         len(list(clist.components(active=True))))
 
     def test_preorder_traversal(self):
         clist, traversal = \

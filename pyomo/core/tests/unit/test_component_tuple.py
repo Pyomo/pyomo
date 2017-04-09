@@ -517,6 +517,13 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(ctuple.active, True)
         for c in ctuple:
             self.assertEqual(c.active, True)
+        for c in ctuple.components():
+            self.assertEqual(c.active, True)
+        for c in ctuple.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(ctuple.components())), len(ctuple))
+        self.assertEqual(len(list(ctuple.components())),
+                         len(list(ctuple.components(active=True))))
 
         m.deactivate(shallow=False,
                      descend_into=True)
@@ -529,6 +536,9 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(ctuple.active, False)
         for c in ctuple:
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(ctuple.components())),
+                            len(list(ctuple.components(active=True))))
+        self.assertEqual(len(list(ctuple.components(active=True))), 0)
 
         test_c = ctuple[0]
         test_c.activate()
@@ -543,6 +553,16 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for c in ctuple.components():
+            if c is test_c:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+        for c in ctuple.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertNotEqual(len(list(ctuple.components())),
+                            len(list(ctuple.components(active=True))))
+        self.assertEqual(len(list(ctuple.components(active=True))), 1)
 
         m.activate(shallow=False,
                    descend_into=True)
@@ -555,6 +575,13 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(ctuple.active, True)
         for c in ctuple:
             self.assertEqual(c.active, True)
+        for c in ctuple.components():
+            self.assertEqual(c.active, True)
+        for c in ctuple.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(ctuple.components())), len(ctuple))
+        self.assertEqual(len(list(ctuple.components())),
+                         len(list(ctuple.components(active=True))))
 
         m.deactivate(shallow=False,
                      descend_into=True)
@@ -567,6 +594,9 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(ctuple.active, False)
         for c in ctuple:
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(ctuple.components())),
+                            len(list(ctuple.components(active=True))))
+        self.assertEqual(len(list(ctuple.components(active=True))), 0)
 
         ctuple.activate()
 
@@ -578,6 +608,13 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(ctuple.active, True)
         for i, c in enumerate(ctuple):
             self.assertEqual(c.active, True)
+        for c in ctuple.components():
+            self.assertEqual(c.active, True)
+        for c in ctuple.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(ctuple.components())), len(ctuple))
+        self.assertEqual(len(list(ctuple.components())),
+                         len(list(ctuple.components(active=True))))
 
         ctuple.deactivate()
 
@@ -589,6 +626,9 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(ctuple.active, False)
         for i, c in enumerate(ctuple):
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(ctuple.components())),
+                            len(list(ctuple.components(active=True))))
+        self.assertEqual(len(list(ctuple.components(active=True))), 0)
 
         ctuple[-1].activate()
 
@@ -603,6 +643,16 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for i, c in enumerate(ctuple.components()):
+            if i == len(ctuple)-1:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+        for c in ctuple.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertNotEqual(len(list(ctuple.components())),
+                            len(list(ctuple.components(active=True))))
+        self.assertEqual(len(list(ctuple.components(active=True))), 1)
 
         ctuple.deactivate()
         ctuple.activate()
@@ -615,6 +665,13 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
         self.assertEqual(ctuple.active, True)
         for i, c in enumerate(ctuple):
             self.assertEqual(c.active, True)
+        for c in ctuple.components():
+            self.assertEqual(c.active, True)
+        for c in ctuple.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(ctuple.components())), len(ctuple))
+        self.assertEqual(len(list(ctuple.components())),
+                         len(list(ctuple.components(active=True))))
 
     def test_preorder_traversal(self):
         ctuple, traversal = \

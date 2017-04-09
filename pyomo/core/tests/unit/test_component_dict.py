@@ -640,6 +640,13 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual(cdict.active, True)
         for c in cdict.values():
             self.assertEqual(c.active, True)
+        for c in cdict.components():
+            self.assertEqual(c.active, True)
+        for c in cdict.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(cdict.components())), len(cdict))
+        self.assertEqual(len(list(cdict.components())),
+                         len(list(cdict.components(active=True))))
 
         m.deactivate(shallow=False,
                      descend_into=True)
@@ -652,6 +659,9 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual(cdict.active, False)
         for c in cdict.values():
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(cdict.components())),
+                            len(list(cdict.components(active=True))))
+        self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         test_key = list(children.keys())[0]
         del cdict[test_key]
@@ -665,6 +675,9 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual(cdict.active, False)
         for c in cdict.values():
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(cdict.components())),
+                            len(list(cdict.components(active=True))))
+        self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         del cdict[test_key]
         children[test_key].activate()
@@ -682,6 +695,17 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for key, c in cdict.components(return_key=True):
+            if key == test_key:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+        for c in cdict.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertNotEqual(len(list(cdict.components())),
+                            len(list(cdict.components(active=True))))
+        self.assertEqual(len(list(cdict.components(active=True))), 1)
+
 
         cdict.deactivate()
         m.activate(shallow=False,
@@ -695,6 +719,13 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual(cdict.active, True)
         for c in cdict.values():
             self.assertEqual(c.active, True)
+        for c in cdict.components():
+            self.assertEqual(c.active, True)
+        for c in cdict.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(cdict.components())), len(cdict))
+        self.assertEqual(len(list(cdict.components())),
+                         len(list(cdict.components(active=True))))
 
         cdict.deactivate()
 
@@ -706,6 +737,9 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual(cdict.active, False)
         for c in cdict.values():
             self.assertEqual(c.active, False)
+        self.assertNotEqual(len(list(cdict.components())),
+                            len(list(cdict.components(active=True))))
+        self.assertEqual(len(list(cdict.components(active=True))), 0)
 
         cdict.activate()
 
@@ -717,6 +751,13 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual(cdict.active, True)
         for c in cdict.values():
             self.assertEqual(c.active, True)
+        for c in cdict.components():
+            self.assertEqual(c.active, True)
+        for c in cdict.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertEqual(len(list(cdict.components())), len(cdict))
+        self.assertEqual(len(list(cdict.components())),
+                         len(list(cdict.components(active=True))))
 
         cdict.deactivate()
         cdict[test_key].activate()
@@ -732,6 +773,16 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
                 self.assertEqual(c.active, True)
             else:
                 self.assertEqual(c.active, False)
+        for key, c in cdict.components(return_key=True):
+            if key == test_key:
+                self.assertEqual(c.active, True)
+            else:
+                self.assertEqual(c.active, False)
+        for c in cdict.components(active=True):
+            self.assertEqual(c.active, True)
+        self.assertNotEqual(len(list(cdict.components())),
+                            len(list(cdict.components(active=True))))
+        self.assertEqual(len(list(cdict.components(active=True))), 1)
 
     def test_preorder_traversal(self):
         cdict, traversal = \

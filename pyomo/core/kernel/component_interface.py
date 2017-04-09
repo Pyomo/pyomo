@@ -581,7 +581,9 @@ class _SimpleContainerMixin(object):
         if getattr(obj, _active_flag_name, False):
             self._decrement_active()
 
-    def components(self, return_key=False):
+    def components(self,
+                   active=None,
+                   return_key=False):
         """
         Generates an efficient traversal of all components
         stored under this container. Components are leaf nodes
@@ -589,6 +591,13 @@ class _SimpleContainerMixin(object):
         for blocks).
 
         Args:
+            active (True/None): Set to True to indicate that
+                only active objects should be included. The
+                default value of None indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*: This
+                flag is ignored for any objects that do not
+                have an active flag.
             return_key (bool): Set to True to indicate that
                 the return type should be a 2-tuple
                 consisting of the local storage key of the
@@ -598,14 +607,28 @@ class _SimpleContainerMixin(object):
 
         Returns: an iterator of objects or (key,object) tuples
         """
+        assert active in (None, True)
+
+        # if not active, then no children can be active
+        if (active is not None) and \
+           not getattr(self, _active_flag_name, True):
+            return
+
         for child_key, child in self.children(return_key=True):
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
             if child._is_component:
                 if return_key:
                     yield child_key, child
                 else:
                     yield child
             else:
-                for item in child.components(return_key=return_key):
+                for item in child.components(return_key=return_key,
+                                             active=active):
                     yield item
 
     def preorder_traversal(self,
