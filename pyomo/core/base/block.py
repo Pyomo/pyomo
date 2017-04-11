@@ -228,6 +228,7 @@ class _BlockData(ActiveComponentData):
     """
     This class holds the fundamental block data.
     """
+    _Block_reserved_words = set()
 
     class PseudoMap(object):
         """
@@ -793,9 +794,9 @@ class _BlockData(ActiveComponentData):
         if not val.valid_model_component():
             raise RuntimeError(
                 "Cannot add '%s' as a component to a block" % str(type(val)) )
-        if name in _Block_reserved_words:
+        if name in self._Block_reserved_words:
             raise ValueError("Attempting to declare a block component using "
-                             "the name of a reserved function:\n\t%s"
+                             "the name of a reserved attribute:\n\t%s"
                              % (name,) )
         if name in self.__dict__:
             raise RuntimeError(
@@ -1944,8 +1945,11 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
     logger.warning("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
     return block.component_data_objects(ctype=ctype, active=False, sort=sort)
 
-
-_Block_reserved_words = set(dir(Block()))
+#
+# Create a Block and record all the default attributes, methods, etc.
+# These will be assumes to be the set of illegal component names.
+#
+_BlockData._Block_reserved_words = set(dir(Block()))
 
 register_component(
     Block, "A component that contains one or more model components." )

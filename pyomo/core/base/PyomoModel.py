@@ -546,6 +546,8 @@ class Model(SimpleBlock):
 
     preprocessor_ep = ExtensionPoint(IPyomoPresolver)
 
+    _Block_reserved_words = set()
+
     def __new__(cls, *args, **kwds):
         if cls != Model:
             return super(Model, cls).__new__(cls)
@@ -980,6 +982,12 @@ class AbstractModel(Model):
     def __init__(self, *args, **kwds):
         Model.__init__(self, *args, **kwds)
 
+
+#
+# Create a Model and record all the default attributes, methods, etc.
+# These will be assumes to be the set of illegal component names.
+#
+Model._Block_reserved_words = set(dir(Model()))
 
 
 register_component(Model, 'Model objects can be used as a component of other models.')
