@@ -372,8 +372,8 @@ class TestExpression(unittest.TestCase):
         with self.assertRaises(KeyError):
             model.E[2] = 1
         model.del_component(model.E)
-        model.index = Set(dimen=3, initialize=[(1,2,3)])
-        model.E = Expression(model.index)
+        model.Index = Set(dimen=3, initialize=[(1,2,3)])
+        model.E = Expression(model.Index)
         model.E[(1,2,3)] = 1
         self.assertEqual(model.E[(1,2,3)], 1)
         # GH: testing this ludicrous behavior simply for
@@ -424,13 +424,13 @@ class TestExpression(unittest.TestCase):
 
     def test_indexed_construct_rule(self):
         model = ConcreteModel()
-        model.index = Set(initialize=[1,2,3])
+        model.Index = Set(initialize=[1,2,3])
         def _some_rule(model, i):
             if i == 1:
                 return Expression.Skip
             else:
                 return i
-        model.E = Expression(model.index,
+        model.E = Expression(model.Index,
                              rule=_some_rule)
         self.assertEqual(model.E.extract_values(),
                          {2:2, 3:3})
@@ -440,19 +440,19 @@ class TestExpression(unittest.TestCase):
 
     def test_indexed_construct_expr(self):
         model = ConcreteModel()
-        model.index = Set(initialize=[1,2,3])
-        model.E = Expression(model.index,
+        model.Index = Set(initialize=[1,2,3])
+        model.E = Expression(model.Index,
                              expr=Expression.Skip)
         self.assertEqual(len(model.E), 0)
-        model.E = Expression(model.index)
+        model.E = Expression(model.Index)
         self.assertEqual(model.E.extract_values(),
                          {1:None, 2:None, 3:None})
         model.del_component(model.E)
-        model.E = Expression(model.index, expr=1.0)
+        model.E = Expression(model.Index, expr=1.0)
         self.assertEqual(model.E.extract_values(),
                          {1:1.0, 2:1.0, 3:1.0})
         model.del_component(model.E)
-        model.E = Expression(model.index,
+        model.E = Expression(model.Index,
                              expr={1: Expression.Skip,
                                    2: Expression.Skip,
                                    3: 1.0})
