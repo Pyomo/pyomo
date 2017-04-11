@@ -987,7 +987,11 @@ class AbstractModel(Model):
 # Create a Model and record all the default attributes, methods, etc.
 # These will be assumes to be the set of illegal component names.
 #
-Model._Block_reserved_words = set(dir(Model()))
+# Note that creating a Model will result in a warning, so we will
+# (arbitrarily) choose a ConcreteModel as the definitive list of
+# reserved names.
+#
+Model._Block_reserved_words = set(dir(ConcreteModel()))
 
 
 register_component(Model, 'Model objects can be used as a component of other models.')
