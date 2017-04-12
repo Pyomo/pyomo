@@ -241,16 +241,19 @@ class TestDaeMisc(unittest.TestCase):
         m.s2 = Set(initialize=[(1,1),(2,2)])
         m.v1 = Var(m.s,m.t,initialize=3)
         m.v2 = Var(m.s,m.t,m.t2,bounds=(4,10),initialize={(1,0,1):22,(2,10,2):22})
+
         def _init(m,i,j,k):
             return i
         m.v3 = Var(m.t,m.s2,bounds=(-5,5),initialize=_init)
         m.v4 = Var(m.s,m.t2,initialize=7, dense=True)
+        m.v5 = Var(m.s2)
 
         generate_finite_elements(m.t,5)
         update_contset_indexed_component(m.v1)
         update_contset_indexed_component(m.v2)
         update_contset_indexed_component(m.v3)
         update_contset_indexed_component(m.v4)
+        update_contset_indexed_component(m.v5)
 
         self.assertTrue(len(m.v1)==18)
         self.assertTrue(len(m.v2)==54)
