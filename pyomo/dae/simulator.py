@@ -322,7 +322,7 @@ class Simulator:
             allkeys = []
             if con.dim() == 0:
                 continue
-            elif con.dim() == 1:
+            elif con._implicit_subsets is None:
                 # Check if the continuous set is the indexing set
                 if not con._index is contset :
                     continue
@@ -331,6 +331,7 @@ class Simulator:
                    noncsidx = (None,)
             else:
                 temp = con._implicit_subsets
+                dimsum = 0
                 csidx = -1
                 noncsidx = None
                 for s in temp:
@@ -340,13 +341,15 @@ class Simulator:
                                 "Cannot simulate the constraint %s because "\
                                 "it is indexed by duplicate ContinuousSets" \
                                 %(con.name)) 
-                        csidx = temp.index(s)
+                        csidx = dimsum
                     elif noncsidx is None:
                         noncsidx = s
                     else:
                         noncsidx = noncsidx.cross(s)
+                    dimsum += s.dimen
                 if csidx == -1:
                     continue
+                
 
             # Get the rule used to construct the constraint
             conrule = con.rule
