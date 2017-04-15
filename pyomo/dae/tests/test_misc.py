@@ -11,15 +11,39 @@
 # Unit Tests for pyomo.dae.misc
 #
 
+import logging
 import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
+
+from six import StringIO
 
 import pyutilib.th as unittest
 
 from pyomo.environ import *
 from pyomo.dae import *
 from pyomo.dae.misc import *
+
+# FIXME: This class was copied from test_block.py. It should be moved
+# to a more general location
+class LoggingIntercept(object):
+    def __init__(self, output, module=None, level=logging.WARNING):
+        self.handler = logging.StreamHandler(output)
+        self.handler.setFormatter(logging.Formatter('%(message)s'))
+        self.handler.setLevel(level)
+        self.level = level
+        self.module = module
+
+    def __enter__(self):
+        logger = logging.getLogger(self.module)
+        self.level = logger.level
+        logger.setLevel(self.handler.level)
+        logger.addHandler(self.handler)
+
+    def __exit__(self, et, ev, tb):
+        logger = logging.getLogger(self.module)
+        logger.removeHandler(self.handler)
+        logger.setLevel(self.level)
 
 class TestDaeMisc(unittest.TestCase):
     
@@ -217,16 +241,19 @@ class TestDaeMisc(unittest.TestCase):
         m.s2 = Set(initialize=[(1,1),(2,2)])
         m.v1 = Var(m.s,m.t,initialize=3)
         m.v2 = Var(m.s,m.t,m.t2,bounds=(4,10),initialize={(1,0,1):22,(2,10,2):22})
+
         def _init(m,i,j,k):
             return i
         m.v3 = Var(m.t,m.s2,bounds=(-5,5),initialize=_init)
         m.v4 = Var(m.s,m.t2,initialize=7, dense=True)
+        m.v5 = Var(m.s2)
 
         generate_finite_elements(m.t,5)
         update_contset_indexed_component(m.v1)
         update_contset_indexed_component(m.v2)
         update_contset_indexed_component(m.v3)
         update_contset_indexed_component(m.v4)
+        update_contset_indexed_component(m.v5)
 
         self.assertTrue(len(m.v1)==18)
         self.assertTrue(len(m.v2)==54)
@@ -708,6 +735,154 @@ class TestDaeMisc(unittest.TestCase):
 
         except TypeError:
             pass  
+
+    def test_update_block_derived(self):
+        class Foo(Block):
+            pass
+
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        def _block_rule(b, t):
+            m = b.model()
+            def _init(m,j):
+                return j*2
+            b.p1 = Param(m.t, default=_init)
+            b.v1 = Var(m.t, initialize=5)
+        m.foo = Foo(m.t, rule=_block_rule)
+        generate_finite_elements(m.t, 5)
+        update_contset_indexed_component(m.foo)
+
+        self.assertEqual(len(m.foo),6)
+        self.assertEqual(len(m.foo[0].p1),6)
+        self.assertEqual(len(m.foo[2].v1),6)
+        self.assertEqual(m.foo[0].p1[6],12)
+
+    def test_update_block_derived_override_construct_nofcn(self):
+        class Foo(Block):
+
+            def construct(self, data=None):
+                Block.construct(self, data)
+
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        def _block_rule(b, t):
+            m = b.model()
+            def _init(m,j):
+                return j*2
+            b.p1 = Param(m.t, default=_init)
+            b.v1 = Var(m.t, initialize=5)
+        m.foo = Foo(m.t, rule=_block_rule)
+        generate_finite_elements(m.t, 5)
+
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            update_contset_indexed_component(m.foo)
+        self.assertIn('transformation to the Block-derived component',
+                      OUTPUT.getvalue())
+        self.assertEqual(len(m.foo),6)
+        self.assertEqual(len(m.foo[0].p1),6)
+        self.assertEqual(len(m.foo[2].v1),6)
+        self.assertEqual(m.foo[0].p1[6],12)
+
+    def test_update_block_derived_override_construct_withfcn(self):
+        class Foo(Block):
+            updated = False
+            def construct(self, data=None):
+                Block.construct(self, data)
+            
+            def update_after_discretization(self):
+                self.updated = True
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        def _block_rule(b, t):
+            m = b.model()
+            def _init(m,j):
+                return j*2
+            b.p1 = Param(m.t, default=_init)
+            b.v1 = Var(m.t, initialize=5)
+        m.foo = Foo(m.t, rule=_block_rule)
+        generate_finite_elements(m.t, 5)
+        update_contset_indexed_component(m.foo)
+
+        self.assertTrue(m.foo.updated)
+        self.assertEqual(len(m.foo),2)
+        self.assertEqual(len(m.foo[0].v1),2)
+
+
+    def test_update_block_derived2(self):
+        class Foo(Block):
+            pass
+
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        m.s = Set(initialize=[1,2,3])
+        def _block_rule(b, t, s):
+            m = b.model()
+            def _init(m,j):
+                return j*2
+            b.p1 = Param(m.t, default=_init)
+            b.v1 = Var(m.t, initialize=5)
+        m.foo = Foo(m.t, m.s, rule=_block_rule)
+        generate_finite_elements(m.t, 5)
+        update_contset_indexed_component(m.foo)
+
+        self.assertEqual(len(m.foo),18)
+        self.assertEqual(len(m.foo[0,1].p1),6)
+        self.assertEqual(len(m.foo[2,2].v1),6)
+        self.assertEqual(m.foo[0,3].p1[6],12)
+
+    def test_update_block_derived_override_construct_nofcn2(self):
+        class Foo(Block):
+
+            def construct(self, data=None):
+                Block.construct(self, data)
+
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        m.s = Set(initialize=[1,2,3])
+        def _block_rule(b, t, s):
+            m = b.model()
+            def _init(m,j):
+                return j*2
+            b.p1 = Param(m.t, default=_init)
+            b.v1 = Var(m.t, initialize=5)
+        m.foo = Foo(m.t, m.s, rule=_block_rule)
+        generate_finite_elements(m.t, 5)
+
+        OUTPUT = StringIO()
+        with LoggingIntercept(OUTPUT, 'pyomo.core'):
+            update_contset_indexed_component(m.foo)
+        self.assertIn('transformation to the Block-derived component',
+                      OUTPUT.getvalue())
+        self.assertEqual(len(m.foo),18)
+        self.assertEqual(len(m.foo[0,1].p1),6)
+        self.assertEqual(len(m.foo[2,2].v1),6)
+        self.assertEqual(m.foo[0,3].p1[6],12)
+
+    def test_update_block_derived_override_construct_withfcn2(self):
+        class Foo(Block):
+            updated = False
+            def construct(self, data=None):
+                Block.construct(self, data)
+            
+            def update_after_discretization(self):
+                self.updated = True
+        m = ConcreteModel()
+        m.t = ContinuousSet(bounds=(0,10))
+        m.s = Set(initialize=[1,2,3])
+        def _block_rule(b, t, s):
+            m = b.model()
+            def _init(m,j):
+                return j*2
+            b.p1 = Param(m.t, default=_init)
+            b.v1 = Var(m.t, initialize=5)
+        m.foo = Foo(m.t, m.s, rule=_block_rule)
+        generate_finite_elements(m.t, 5)
+        update_contset_indexed_component(m.foo)
+
+        self.assertTrue(m.foo.updated)
+        self.assertEqual(len(m.foo),6)
+        self.assertEqual(len(m.foo[0,1].v1),2)
         
     # test add_equality_constraints method
     # def test_add_equality_constraints(self):

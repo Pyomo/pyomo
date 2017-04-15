@@ -40,6 +40,11 @@ class DerivedBlock(SimpleBlock):
         kwargs['ctype'] = DerivedBlock
         super(DerivedBlock, self).__init__(*args, **kwargs)
 
+    def foo(self):
+        pass
+
+DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
+
 
 class LoggingIntercept(object):
     def __init__(self, output, module=None, level=logging.WARNING):
@@ -1972,6 +1977,38 @@ class TestBlock(unittest.TestCase):
         self.assertTrue(hasattr(model, 'vector_constraint'))
         self.assertIs(model.vector_constraint._type, Constraint)
         self.assertEqual(len(model.vector_constraint), 3)
+
+    def test_reserved_words(self):
+        m = ConcreteModel()
+        self.assertRaisesRegexp(
+            ValueError, ".*using the name of a reserved attribute",
+            m.add_component, "add_component", Var())
+        with self.assertRaisesRegexp(
+                ValueError, ".*using the name of a reserved attribute"):
+            m.add_component = Var()
+        m.foo = Var()
+
+        m.b = DerivedBlock()
+        self.assertRaisesRegexp(
+            ValueError, ".*using the name of a reserved attribute",
+            m.b.add_component, "add_component", Var())
+        self.assertRaisesRegexp(
+            ValueError, ".*using the name of a reserved attribute",
+            m.b.add_component, "foo", Var())
+        with self.assertRaisesRegexp(
+                ValueError, ".*using the name of a reserved attribute"):
+            m.b.foo = Var()
+
+        #
+        # Overriding attributes with non-components is (currently) allowed
+        #
+        m.add_component = 5
+        self.assertIs(m.add_component, 5)
+        m.b.add_component = 6
+        self.assertIs(m.b.add_component, 6)
+        m.b.foo = 7
+        self.assertIs(m.b.foo, 7)
+
 
 if __name__ == "__main__":
     unittest.main()
