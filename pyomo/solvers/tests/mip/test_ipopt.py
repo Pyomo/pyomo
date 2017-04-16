@@ -192,5 +192,19 @@ class Test(unittest.TestCase):
                                        tolerance=1e-7)
         #self.sisser_instance.load_solutions(results)
 
+    def test_bad_dof(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.c = ConstraintList()
+        m.c.add(m.x + m.y == 1)
+        m.c.add(m.x - m.y == 0)
+        m.c.add(2*m.x - 3*m.y == 1)
+        m.write('j.nl')
+        res = self.ipopt.solve(m)
+        self.assertEqual(str(res.solver.status), "warning")
+        self.assertEqual(str(res.solver.termination_condition), "other")
+        self.assertTrue("Too few degrees of freedom" in res.solver.message)
+
 if __name__ == "__main__":
     unittest.main()
