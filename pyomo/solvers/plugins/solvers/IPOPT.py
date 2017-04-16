@@ -182,4 +182,19 @@ class IPOPT(SystemCallSolver):
 
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
+    def process_output(self, rc):
+        if os.path.exists(self._results_file):
+            return super(IPOPT, self).process_output(rc)
+        else:
+            res = SolverResults()
+            res.solver.status = SolverStatus.warning
+            res.solver.termination_condition = TerminationCondition.other
+            if os.path.exists(self._log_file):
+                with open(self._log_file) as f:
+                    for line in f:
+                        if "TOO_FEW_DEGREES_OF_FREEDOM" in line:
+                            res.solver.message = line.split(':')[2].strip()
+                            assert "degrees of freedom" in res.solver.message
+            return res
+
 pyutilib.services.register_executable(name="ipopt")

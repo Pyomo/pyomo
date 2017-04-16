@@ -3,6 +3,43 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 5.x.x
+-------------------------------------------------------------------------------
+
+- Adding support for Python 3.6. (#103)
+- Restricting user defined component names on Blocks to avoid overwriting
+  important Block methods. (#126)
+- Updating pyomo.dae transformations to support Block-derived components.
+  (#132, #129, #89)
+- Fix rare issue where numeric constants in the left- and right-hand sides of a
+  double inequality expression were incorrectly mapped to an equality
+  expression even when the values were different.
+- Creating an Ipopt solver plugin with additional functionality for sending
+  options to Ipopt using an options file. Options beginning with 'OF_' will be
+  interpreted as options that should appear in an options file. A warning is
+  printed when this will cause an existing 'ipopt.opt' file in the current
+  working directory to be ignored.
+- Make the Ipopt solver plugin more gracefully handle the case when a solution
+  file is not created by the solver (e.g., when the solver exits because there
+  are too few degrees of freedom). (#135)
+- Reduce time required to import pyomo.environ by delaying checks for
+  availability of solver interfaces until they are used. (#109)
+- Adding support for solving Blocks as if they were Models. (#110, #94)
+- Adding support for declaring components on a model by decorating the rule
+  instead of explicitly invoking the setattr method on the block. This
+  eliminates the normal pattern of the component name appearing in three
+  places. (#99)
+- Fixes to pyomo.gdp transformations for nested blocks.
+- Fixing case in block recursion where descend_into was not being honored.
+- Bug fix that impacted non-serial solver managers.
+- Make checks for is_indexed() more efficient. (#105)
+- Fixes to files for PEP8 compliance.
+- Fix to statues set by CPLEX plugin when problem is unbounded.
+- Improving Param exception messages.
+- Putting a daps release in PySP (#124)
+- Updating the bilinear transform to avoid creating a Set `index`.
+
+-------------------------------------------------------------------------------
 Pyomo 5.1.1
 -------------------------------------------------------------------------------
 
