@@ -43,7 +43,7 @@ from pyomo.repn.ampl_repn import generate_ampl_repn
 
 import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
-from pyomo.core.kernel.component_expression import IExpression
+from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
 
 from six import itervalues, iteritems
@@ -625,7 +625,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write(self._op_string[expr._EqualityExpression])
                 self._print_nonlinear_terms_NL(exp._args[0])
                 self._print_nonlinear_terms_NL(exp._args[1])
-            elif isinstance(exp, (_ExpressionData, IExpression)):
+            elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
                 self._print_nonlinear_terms_NL(exp.expr)
             else:
                 raise ValueError(

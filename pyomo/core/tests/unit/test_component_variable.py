@@ -224,38 +224,6 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.fixed, False)
         self.assertEqual(v.value, None)
 
-    def test_to_string(self):
-        b = block()
-        v = variable()
-        self.assertEqual(str(v), "<variable>")
-        v.to_string()
-        out = StringIO()
-        v.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "<variable>")
-        v.to_string(verbose=False)
-        out = StringIO()
-        v.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "<variable>")
-        v.to_string(verbose=True)
-        out = StringIO()
-        v.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), "<variable>")
-
-        b.v = v
-        self.assertEqual(str(v), "v")
-        v.to_string()
-        out = StringIO()
-        v.to_string(ostream=out)
-        self.assertEqual(out.getvalue(), "v")
-        v.to_string(verbose=False)
-        out = StringIO()
-        v.to_string(ostream=out, verbose=False)
-        self.assertEqual(out.getvalue(), "v")
-        v.to_string(verbose=True)
-        out = StringIO()
-        v.to_string(ostream=out, verbose=True)
-        self.assertEqual(out.getvalue(), "v")
-
     def test_domain(self):
         v = variable(domain=Reals)
         self.assertEqual(v.domain_type, RealSet)

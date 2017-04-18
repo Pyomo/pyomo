@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 from __future__ import division
 
-__all__ = [ 'AmplRepn', 'generate_ampl_repn']
+__all__ = ['AmplRepn', 'generate_ampl_repn']
 
 try:
     basestring
@@ -28,7 +28,7 @@ from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
                                        generate_canonical_repn)
 from pyomo.core.base import expr_common
 
-from pyomo.core.kernel.component_expression import IExpression
+from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
 
 import six
@@ -743,7 +743,7 @@ def _generate_ampl_repn(exp):
         #
         # Expression (the component)
         #
-        elif isinstance(exp, (_ExpressionData, IExpression)):
+        elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
             ampl_repn = _generate_ampl_repn(exp.expr)
             return ampl_repn
 

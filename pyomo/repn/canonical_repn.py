@@ -52,7 +52,7 @@ class TreeWalkerHelper(object):
         _GeneralExpressionData : 6,
     }
 
-from pyomo.core.kernel.component_expression import (IExpression,
+from pyomo.core.kernel.component_expression import (IIdentityExpression,
                                                     expression,
                                                     data_expression)
 from pyomo.core.kernel.component_objective import objective
@@ -406,7 +406,7 @@ def collect_general_canonical_repn(exp, idMap, compute_values):
         #
         # Expression (the component)
         # (faster check)
-        elif isinstance(exp, (_ExpressionData, IExpression)):
+        elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
             return collect_general_canonical_repn(exp.expr,
                                                   idMap,
                                                   compute_values)
@@ -774,7 +774,7 @@ def _get_linear_collector(exp, idMap, multiplier,
         elif isinstance(exp, (param._ParamData, IParameter)):
             _collect_linear_const(exp, idMap, multiplier,
                                   coef, varmap, compute_values)
-        elif isinstance(exp, (_ExpressionData, IExpression)):
+        elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
             _collect_identity(exp, idMap, multiplier,
                               coef, varmap, compute_values)
         elif isinstance(exp, (_ObjectiveData, IObjective)):

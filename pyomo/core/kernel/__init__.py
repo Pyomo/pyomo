@@ -41,7 +41,8 @@ from pyomo.core.kernel.component_parameter import (parameter,
                                                    parameter_list,
                                                    parameter_dict)
 import pyomo.core.kernel.component_expression
-from pyomo.core.kernel.component_expression import (expression,
+from pyomo.core.kernel.component_expression import (noclone,
+                                                    expression,
                                                     data_expression,
                                                     expression_tuple,
                                                     expression_list,
@@ -96,12 +97,19 @@ from pyomo.core.kernel.numvalue import value
 
 # Short term helper method for debugging models
 import pprint as _pprint_
+import six
 def pprint(obj, indent=0):
     """pprint a modeling object"""
     import pyomo.core.base
     if not isinstance(obj, pyomo.core.kernel.component_interface.ICategorizedObject):
-        assert indent == 0
-        _pprint_.pprint(obj, indent=indent+1)
+        if isinstance(obj, pyomo.core.kernel.numvalue.NumericValue):
+            prefix = ""
+            if indent > 0:
+                prefix = (" "*indent)+" - "
+            print(prefix+str(obj))
+        else:
+            assert indent == 0
+            _pprint_.pprint(obj, indent=indent+1)
         return
     if not obj._is_component:
         # a container but not a block
