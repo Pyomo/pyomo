@@ -323,16 +323,6 @@ class IComponent(ICategorizedObject):
     _is_container = False
     __slots__ = ()
 
-    #
-    # Interface
-    #
-
-    def to_string(self, ostream=None, verbose=None, precedence=0):
-        """Write the component string representation to a buffer"""
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write(self.__str__())
-
 class _IActiveComponentMixin(IActiveObject):
     """
     To be used as an additional base class in IComponent
