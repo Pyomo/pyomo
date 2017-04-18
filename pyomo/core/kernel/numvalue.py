@@ -602,6 +602,11 @@ functions.""" % (self.name,))
         """
         return generate_expression(_abs,self, None)
 
+    def to_string(self, ostream=None, verbose=None, precedence=0):
+        if ostream is None:
+            ostream = sys.stdout
+        ostream.write(self.__str__())
+
 class NumericConstant(NumericValue):
     """An object that contains a constant numeric value.
 
@@ -634,11 +639,6 @@ class NumericConstant(NumericValue):
 
     def __str__(self):
         return str(self.value)
-
-    def to_string(self, ostream=None, verbose=None, precedence=0):
-        if ostream is None:
-            ostream = sys.stdout
-        ostream.write(self.__str__())
 
     def __nonzero__(self):
         """Return True if the value is defined and non-zero"""
