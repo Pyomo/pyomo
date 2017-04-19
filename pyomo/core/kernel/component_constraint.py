@@ -672,51 +672,30 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
                                         self._variables))
 
     #
-    # Define the LinearCanonicalRepn abstract methods
+    # Define methods that writers expect when the
+    # _linear_canonical_form flag is True
     #
 
-    @property
-    def variables(self):
-        """Returns the list of non-fixed variables in the
-        body of this constraint."""
+    def canonical_form(self):
+        from pyomo.repn.canonical_repn import \
+            coopr3_CompiledLinearCanonicalRepn
         variables = []
-        for v in self._variables:
-            if v.is_expression():
-                v = v.expr
-            if not v.fixed:
-                variables.append(v)
-        return tuple(variables)
-
-    @property
-    def coefficients(self):
-        """Returns the list of coefficients associated with
-        the non-fixed variables in the body of this
-        constraint."""
         coefficients = []
-        for c, v in zip(self._coefficients,
-                        self._variables):
-            if v.is_expression():
-                v = v.expr
-            if not v.fixed:
-                coefficients.append(c)
-        return tuple(coefficients)
-
-    # for backwards compatibility
-    linear=coefficients
-
-    @property
-    def constant(self):
-        """Returns the constant term associated with the
-        body of this constraint (i.e., from fixed
-        variables)."""
         constant = 0
         for c, v in zip(self._coefficients,
                         self._variables):
             if v.is_expression():
                 v = v.expr
-            if v.fixed:
+            if not v.fixed:
+                variables.append(v)
+                coefficients.append(c)
+            else:
                 constant += value(c) * v()
-        return constant
+        repn = coopr3_CompiledLinearCanonicalRepn()
+        repn.variables = tuple(variables)
+        repn.linear = tuple(coefficients)
+        repn.constant = constant
+        return repn
 
 class constraint_tuple(ComponentTuple,
                        _IActiveComponentContainerMixin):

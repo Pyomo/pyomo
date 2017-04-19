@@ -39,7 +39,8 @@ from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
 from pyomo.core.base import var
 from pyomo.core.base import param
 import pyomo.core.base.suffix
-from pyomo.repn.ampl_repn import generate_ampl_repn
+from pyomo.repn.ampl_repn import (generate_ampl_repn,
+                                  AmplRepn)
 
 import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
@@ -871,8 +872,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         max_rowname_len = len(conname)
 
                 if gen_con_ampl_repn:
-                    ampl_repn = generate_ampl_repn(constraint_data.body)
-                    block_ampl_repn[constraint_data] = ampl_repn
+                    if constraint_data._linear_canonical_form:
+                        canonical_repn = constraint_data.canonical_form()
+                        ampl_repn = AmplRepn()
+                        ampl_repn._nonlinear_vars = tuple()
+                        ampl_repn._linear_vars = canonical_repn.variables
+                        ampl_repn._linear_terms_coef = canonical_repn.linear
+                        ampl_repn._constant = canonical_repn.constant
+                    else:
+                        ampl_repn = generate_ampl_repn(constraint_data.body)
+                        block_ampl_repn[constraint_data] = ampl_repn
                 else:
                     ampl_repn = block_ampl_repn[constraint_data]
 

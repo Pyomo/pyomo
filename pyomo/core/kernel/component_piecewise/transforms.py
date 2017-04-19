@@ -289,8 +289,8 @@ class piecewise_sos2(_PiecewiseLinearFunction):
                              % (bound))
 
         self._c3 = linear_constraint(variables=y_tuple,
-                                    coefficients=(1,)*len(y),
-                                    rhs=1)
+                                     coefficients=(1,)*len(y),
+                                     rhs=1)
         self._c4 = sos2(y)
 
     def validate(self, **kwds):

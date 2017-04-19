@@ -619,14 +619,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         sort=sortOrder,
                         descend_into=False):
 
-                    if constraint_data._linear_canonical_form:
-                        canonical_repn = constraint_data
-                    else:
-                        if gen_con_canonical_repn:
+                    if gen_con_canonical_repn:
+                        if constraint_data._linear_canonical_form:
+                            canonical_repn = constraint_data.canonical_form()
+                        else:
                             canonical_repn = generate_canonical_repn(constraint_data.body)
                             block_canonical_repn[constraint_data] = canonical_repn
-                        else:
-                            canonical_repn = block_canonical_repn[constraint_data]
+                    else:
+                        canonical_repn = block_canonical_repn[constraint_data]
 
                     yield constraint_data, canonical_repn
 
