@@ -1210,16 +1210,6 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertTrue(isinstance(c, _IActiveComponentMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
-    def test_terms(self):
-        c = linear_constraint([],[])
-        self.assertEqual(list(c.terms), [])
-        v1 = variable()
-        c.add_term(v1, 10)
-        self.assertEqual(list(c.terms), [(v1,10)])
-        v2 = variable()
-        c.add_term(v2, 20)
-        self.assertEqual(list(c.terms), [(v1,10),(v2,20)])
-
     def test_active(self):
         c = linear_constraint([],[])
         self.assertEqual(c.active, True)

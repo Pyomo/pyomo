@@ -641,12 +641,6 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
             self._variables.append(v)
             self._coefficients.append(c)
 
-    def add_term(self, var, coef):
-        """Add the term coef*var to the body of this
-        constraint."""
-        self._variables.append(var)
-        self._coefficients.append(coef)
-
     #
     # Override a the default __call__ method on IConstraint
     # to avoid building the body expression
