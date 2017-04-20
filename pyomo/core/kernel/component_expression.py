@@ -126,10 +126,12 @@ class IIdentityExpression(NumericValue):
 
 class noclone(IIdentityExpression):
     """
-    A helper factory class for creating an shared expression
-    objects that will not be cloned. If it is initialized
-    with a value that is not an instance of NumericValue,
-    that value is simply returned.
+    A helper factory class for creating an expression with
+    cloning disabled. This allows the expression to be used
+    in two or more parent expressions without causing a copy
+    to be generated. If it is initialized with a value that
+    is not an instance of NumericValue, that value is simply
+    returned.
     """
     __slots__ = ("_expr",)
 
@@ -209,7 +211,7 @@ class IExpression(IComponent, IIdentityExpression):
         return self.__str__()
 
 class expression(IExpression):
-    """A reusable expression."""
+    """A named, mutable expression."""
     # To avoid a circular import, for the time being, this
     # property will be set in expression.py
     _ctype = None
@@ -235,8 +237,10 @@ class expression(IExpression):
         self._expr = expr
 
 class data_expression(expression):
-    """A reusable expression that is restricted to storage
-    of data expressions."""
+    """A named, mutable expression that is restricted to
+    storage of data expressions. An exception will be raised
+    if an expression is assigned that references (or is
+    allowed to reference) variables."""
     __slots__ = ()
 
     #

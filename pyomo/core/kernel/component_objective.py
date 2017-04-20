@@ -69,7 +69,7 @@ class objective(IObjective):
         self.expr = expr
 
     #
-    # Define the IObjective abstract methods
+    # Define the IExpression abstract methods
     #
 
     @property
@@ -80,7 +80,7 @@ class objective(IObjective):
         self._expr = as_numeric(expr) if (expr is not None) else None
 
     #
-    # Define the IExpression abstract methods
+    # Define the IObjective abstract methods
     #
 
     @property

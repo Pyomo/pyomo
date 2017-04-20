@@ -98,7 +98,7 @@ def characterize_function(breakpoints, values):
     breakpoints are in nondecreasing order. Returns an
     integer that signifies the function characterization and
     the slopes. If the function has step points, some of the
-    slopes may be done.
+    slopes may be None.
     """
     if not is_nondecreasing(breakpoints):
         raise ValueError(

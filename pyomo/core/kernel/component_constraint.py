@@ -585,7 +585,7 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
     """
     A linear constraint defined by a list of variables and
     coefficients. Objects in the variables list can also be
-    expression components that point to a variable.
+    mutable expressions point to a single variable.
     """
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py

@@ -157,7 +157,7 @@ class _PiecewiseLinearFunctionND(tiny_block):
         triangulation.
 
         For the vectorized case, the argument x should be
-        a (n, D) shaped array numpy array.
+        a (n,D)-shaped numpy array.
         """
         assert isinstance(x, collections.Sized)
         if isinstance(x, pyomo.core.kernel.component_piecewise.\
