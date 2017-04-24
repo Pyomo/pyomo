@@ -628,13 +628,13 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def terms(self):
-        """The linear terms in the body of this constraint
-        as (variable, coefficient) tuples"""
+        """An iterator over linear terms in the body of this
+        constraint as (variable, coefficient) tuples"""
         return zip(self._variables, self._coefficients)
     @terms.setter
     def terms(self, terms):
         """Set the linear terms in the body of this constraint
-        using an iterable (variable, coefficient) tuples"""
+        using an iterable of (variable, coefficient) tuples"""
         self._variables = []
         self._coefficients = []
         for v, c in terms:
