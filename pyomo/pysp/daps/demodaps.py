@@ -16,7 +16,7 @@ stsolver = st.StochSolver('cref.py', tree_model)
 stsolver.solve_ef('cplex')
 # the stsolver.scenario_tree has the solution
 csvw.write_csv_soln(stsolver.scenario_tree, "testcref")
-kadsjhf
+
 ### simple tests ####
 print("\n*** 2Stage_AMPL")
 bc.do_2Stage_AMPL_dir('farmer', 'TreeTemplateFile.dat', 'ScenTemplate.dat')
