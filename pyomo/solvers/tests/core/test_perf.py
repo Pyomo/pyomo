@@ -4,9 +4,15 @@
 
 import os
 import gc
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
-datadir = os.path.normpath(currdir+'../../../../pyomo/examples/pyomo/p-median/')+os.sep
+
+# __file__ fails if script is called in different ways on Windows
+# __file__ fails if someone does os.chdir() before
+# sys.argv[0] also fails because it doesn't not always contains the path
+from os.path import abspath, dirname, exists, join
+from inspect import getfile, currentframe
+currdir = dirname(abspath(getfile(currentframe())))
+datadir = os.path.normpath(join(
+    currdir, '..', '..', '..', '..', 'examples', 'pyomo', 'p-median'))+os.sep
 
 import pyutilib.th as unittest
 import pyomo.scripting.convert
