@@ -1176,14 +1176,38 @@ class Test_linear_constraint(unittest.TestCase):
 
     def test_init_nonexpr(self):
         v = variable(value=3)
+
+        c = linear_constraint()
+        self.assertEqual(len(list(c.terms)), 0)
+        self.assertEqual(c.lb, None)
+        self.assertEqual(c.body, 0)
+        self.assertEqual(c.ub, None)
+
         c = linear_constraint([v],[1],lb=0,ub=1)
         self.assertEqual(len(list(c.terms)), 1)
         self.assertEqual(c.lb, 0)
         self.assertEqual(c.body(), 3)
         self.assertEqual(c(), 3)
         self.assertEqual(c.ub, 1)
+        # can't use both terms and variables
+        with self.assertRaises(ValueError):
+            linear_constraint(terms=(),variables=())
+        # can't use both terms and coefficients
+        with self.assertRaises(ValueError):
+            linear_constraint(terms=(),coefficients=())
+        # can't use both all three
+        with self.assertRaises(ValueError):
+            linear_constraint(terms=(),variables=(),coefficients=())
+        # can't use only variables
+        with self.assertRaises(ValueError):
+            linear_constraint(variables=[v])
+        # can't use only coefficients
+        with self.assertRaises(ValueError):
+            linear_constraint(coefficients=[1])
+        # can't use both lb and rhs
         with self.assertRaises(ValueError):
             linear_constraint([v],[1],lb=0,rhs=0)
+        # can't use both ub and rhs
         with self.assertRaises(ValueError):
             linear_constraint([v],[1],ub=0,rhs=0)
 
@@ -1201,6 +1225,31 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertEqual(c.rhs, 1)
         self.assertEqual(c.body(), 3)
         self.assertEqual(c(), 3)
+
+    def test_init_terms(self):
+        v = variable(value=3)
+        c = linear_constraint([],[],rhs=1)
+        c.terms = ((v, 2),)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.body(), 6)
+        self.assertEqual(c(), 6)
+
+        c = linear_constraint(terms=[(v,2)],rhs=1)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.body(), 6)
+        self.assertEqual(c(), 6)
+
+        terms = [(v,2)]
+        c = linear_constraint(terms=iter(terms),rhs=1)
+        self.assertEqual(c.lb, 1)
+        self.assertEqual(c.ub, 1)
+        self.assertEqual(c.rhs, 1)
+        self.assertEqual(c.body(), 6)
+        self.assertEqual(c(), 6)
 
     def test_type(self):
         c = linear_constraint([],[])

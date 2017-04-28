@@ -604,18 +604,41 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
                  "__weakref__")
 
     def __init__(self,
-                 variables,
-                 coefficients,
+                 variables=None,
+                 coefficients=None,
+                 terms=None,
                  lb=None,
                  ub=None,
                  rhs=None):
         self._parent = None
         self._active = True
-        self._variables = list(variables)
-        self._coefficients = list(coefficients)
+        self._variables = None
+        self._coefficients = None
         self._lb = None
         self._ub = None
         self._equality = False
+
+        if terms is not None:
+            if (variables is not None) or \
+               (coefficients is not None):
+                raise ValueError("Both the 'variables' and 'coefficients' "
+                                 "keywords must be None when the 'terms' "
+                                 "keyword is not None")
+            # use the setter method
+            self.terms = terms
+        elif (variables is not None) or \
+             (coefficients is not None):
+            if (variables is None) or \
+               (coefficients is None):
+                raise ValueError("Both the 'variables' and 'coefficients' "
+                                 "keywords must be set when the 'terms' "
+                                 "keyword is None")
+            self._variables = tuple(variables)
+            self._coefficients = tuple(coefficients)
+        else:
+            # it is okay to initialize this with nothing
+            self._variables = ()
+            self._coefficients = ()
 
         if rhs is None:
             self.lb = lb
@@ -638,11 +661,7 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
     def terms(self, terms):
         """Set the linear terms in the body of this constraint
         using an iterable of (variable, coefficient) tuples"""
-        self._variables = []
-        self._coefficients = []
-        for v, c in terms:
-            self._variables.append(v)
-            self._coefficients.append(c)
+        self._variables, self._coefficients = zip(*terms)
 
     #
     # Override a the default __call__ method on IConstraint
@@ -651,9 +670,7 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     def __call__(self, exception=True):
         try:
-            return sum(value(c) * v()
-                       for c,v in zip(self._coefficients,
-                                      self._variables))
+            return sum(value(c)*v() for v,c in self.terms)
         except (ValueError, TypeError):
             if exception:
                 raise
@@ -665,8 +682,7 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def body(self):
-        return sum(c * v for c,v in zip(self._coefficients,
-                                        self._variables))
+        return sum(c * v for v, c in self.terms)
 
     #
     # Define methods that writers expect when the
@@ -679,8 +695,7 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
         variables = []
         coefficients = []
         constant = 0
-        for c, v in zip(self._coefficients,
-                        self._variables):
+        for v, c in self.terms:
             if v.is_expression():
                 v = v.expr
             if not v.fixed:
