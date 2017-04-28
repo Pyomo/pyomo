@@ -242,6 +242,9 @@ class _mutable_bounds_mixin(object):
         return self._equality
     @equality.setter
     def equality(self, equality):
+        """Disable equality by assigning False. Equality can
+        only be activated by assigning to the .rhs
+        property."""
         if equality:
             raise ValueError(
                 "The constraint equality flag can "
