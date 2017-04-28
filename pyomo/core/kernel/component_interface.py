@@ -447,7 +447,9 @@ class _IActiveComponentContainerMixin(IActiveObject):
         instance level (with or without __slots__):
 
         Attributes:
-            _active (int): A integer that keeps track of the number of active children stored under this container.
+            _active (int): A integer that keeps track of the
+                number of active children stored under this
+                container.
     """
     __slots__ = ()
 
