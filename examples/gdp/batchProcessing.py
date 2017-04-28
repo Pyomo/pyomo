@@ -1,5 +1,4 @@
-import pyomo.environ
-from pyomo.core import *
+from pyomo.environ import *
 from pyomo.gdp import *
 
 '''Problem from http://www.minlp.org/library/problem/index.php?i=172&lib=GDP
@@ -21,11 +20,10 @@ model.BigM[None] = 1000
 ## Constants from GAMS
 StorageTankSizeFactor = 2*5 # btw, I know 2*5 is 10... I don't know why it's written this way in GAMS?
 StorageTankSizeFactorByProd = 3
+MinFlow = -log(10000)
 VolumeLB = log(300)
 VolumeUB = log(3500)
 StorageTankSizeLB = log(100)
-# I tried this because no storage tank violates the bounds... But it was still infeasible.
-#StorageTankSizeLB = 0
 StorageTankSizeUB = log(15000)
 UnitsInPhaseUB = log(6)
 UnitsOutOfPhaseUB = log(6)
@@ -37,8 +35,9 @@ UnitsOutOfPhaseUB = log(6)
 # Sets
 ##########
 
-model.PRODUCTS = Set(ordered=True)
+model.PRODUCTS = Set()
 model.STAGES = Set(ordered=True)
+model.PARALLELUNITS = Set(ordered=True)
 
 # TODO: this seems like an over-complicated way to accomplish this task...
 def filter_out_last(model, j):
@@ -55,10 +54,8 @@ model.STAGESExceptLast = Set(initialize=model.STAGES, filter=filter_out_last)
 ###############
 
 model.HorizonTime = Param()
-# alpha1
 model.Alpha1 = Param()
 model.Alpha2 = Param()
-# TODO: this is about to be a mess. A bunch of these are hard-coded into the GAMS model...
 model.Beta1 = Param()
 model.Beta2 = Param()
 
@@ -66,17 +63,19 @@ model.ProductionAmount = Param(model.PRODUCTS)
 model.ProductSizeFactor = Param(model.PRODUCTS, model.STAGES)
 model.ProcessingTime = Param(model.PRODUCTS, model.STAGES)
 
-# These are hard-coded in the GAMS file
+# These are hard-coded in the GAMS file, hence the defaults
 model.StorageTankSizeFactor = Param(model.STAGES, default=StorageTankSizeFactor)
 model.StorageTankSizeFactorByProd = Param(model.PRODUCTS, model.STAGES, 
                                           default=StorageTankSizeFactorByProd)
 
 # TODO: bonmin wasn't happy and I think it might have something to do with this?
 # or maybe issues with convexity or a lack thereof... I don't know yet.
-def get_log_coeffs(model, i):
-    return log(model.PRODUCTS.ord(i))
+# I made PRODUCTS ordered so I could do this... Is that bad? And it does index
+# from 1, right?
+def get_log_coeffs(model, k):
+    return log(model.PARALLELUNITS.ord(k))
 
-model.LogCoeffs = Param(model.PRODUCTS, initialize=get_log_coeffs)
+model.LogCoeffs = Param(model.PARALLELUNITS, initialize=get_log_coeffs)
 
 # bounds
 model.volumeLB = Param(model.STAGES, default=VolumeLB)
@@ -127,11 +126,11 @@ model.unitsInPhase_log = Var(model.STAGES, bounds=get_unitsInPhase_bounds)
 def get_storageTankSize_bounds(model, j):
     return (model.storageTankSizeLB[j], model.storageTankSizeUB[j])
 # TODO: these bounds make it infeasible...
-model.storageTankSize_log = Var(model.STAGES)#, bounds=get_storageTankSize_bounds)
+model.storageTankSize_log = Var(model.STAGES, bounds=get_storageTankSize_bounds)
 
 # binary variables for deciding number of parallel units in and out of phase
-model.outOfPhase = Var(model.STAGES, model.PRODUCTS, within=Binary)
-model.inPhase = Var(model.STAGES, model.PRODUCTS, within=Binary)
+model.outOfPhase = Var(model.STAGES, model.PARALLELUNITS, within=Binary)
+model.inPhase = Var(model.STAGES, model.PARALLELUNITS, within=Binary)
 
 ###############
 # Objective
@@ -188,9 +187,9 @@ def storage_tank_selection_disjunct_rule(disjunct, selectStorageTank, j):
                                                   rule=volume_stage_jPlus1_rule)
         disjunct.batch_size = Constraint(model.PRODUCTS, rule=batch_size_rule)
     else:
-        # TODO: this is different in GAMS--they don't make it 0. I don't know why.
-        # mine matches the formulation for now.
-        disjunct.no_volume = Constraint(expr=model.storageTankSize_log[j] == 0)
+        # The formulation says 0, but GAMS has this constant.
+        # 04/04: Francisco says volume should be free:
+        # disjunct.no_volume = Constraint(expr=model.storageTankSize_log[j] == MinFlow)
         disjunct.no_batch = Constraint(model.PRODUCTS, rule=no_batch_rule)
 model.storage_tank_selection_disjunct = Disjunct([0,1], model.STAGESExceptLast, 
                                        rule=storage_tank_selection_disjunct_rule)
@@ -200,21 +199,32 @@ def select_storage_tanks_rule(model, j):
 model.select_storage_tanks = Disjunction(model.STAGESExceptLast, rule=select_storage_tanks_rule)
 
 # though this is a disjunction in the GAMs model, it is more efficiently formulated this way:
+# TODO: what on earth is k?
 def units_out_of_phase_rule(model, j):
-    return model.unitsOutOfPhase_log[j] == sum(model.LogCoeffs[i] * model.outOfPhase[j,i] \
-                                               for i in model.PRODUCTS)
+    return model.unitsOutOfPhase_log[j] == sum(model.LogCoeffs[k] * model.outOfPhase[j,k] \
+                                               for k in model.PARALLELUNITS)
 model.units_out_of_phase = Constraint(model.STAGES, rule=units_out_of_phase_rule)
 
 def units_in_phase_rule(model, j):
-    return model.unitsInPhase_log[j] == sum(model.LogCoeffs[i] * model.inPhase[j,i] \
-                                            for i in model.PRODUCTS)
+    return model.unitsInPhase_log[j] == sum(model.LogCoeffs[k] * model.inPhase[j,k] \
+                                            for k in model.PARALLELUNITS)
 model.units_in_phase = Constraint(model.STAGES, rule=units_in_phase_rule)
 
 # and since I didn't do the disjunction as a disjunction, we need the XORs:
 def units_out_of_phase_xor_rule(model, j):
-    return sum(model.outOfPhase[j,i] for i in model.PRODUCTS) == 1
+    return sum(model.outOfPhase[j,k] for k in model.PARALLELUNITS) == 1
 model.units_out_of_phase_xor = Constraint(model.STAGES, rule=units_out_of_phase_xor_rule)
 
 def units_in_phase_xor_rule(model, j):
-    return sum(model.inPhase[j,i] for i in model.PRODUCTS) == 1
+    return sum(model.inPhase[j,k] for k in model.PARALLELUNITS) == 1
 model.units_in_phase_xor = Constraint(model.STAGES, rule=units_in_phase_xor_rule)
+
+
+# instance = model.create_instance('batchProcessing1.dat')
+# solver = SolverFactory('baron')
+# TransformationFactory('gdp.bigm').apply_to(instance)
+# TransformationFactory('core.add_slack_variables').apply_to(instance)
+# results = solver.solve(instance)
+# instance.display()
+# instance.solutions.store_to(results)
+# print results

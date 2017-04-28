@@ -57,5 +57,3 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
         # make a new objective that minimizes sum of slack variables
         instance._slack_objective = Objective(expr=obj_expr)
-        pdb.set_trace()
-        instance.pprint()

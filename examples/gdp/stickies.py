@@ -2,8 +2,8 @@ import pyomo.environ
 from pyomo.core import *
 from pyomo.gdp import *
 
-from pyomo.opt import SolverFactory
-from pyomo.core.base import Transformation
+# from pyomo.opt import SolverFactory
+# from pyomo.core.base import Transformation
 
 
 ''' Layout optimization for screening systems in waste paper recovery:
