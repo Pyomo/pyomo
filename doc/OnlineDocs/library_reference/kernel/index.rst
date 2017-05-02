@@ -24,3 +24,4 @@ Modeling objects:
    expression.rst
    sos.rst
    suffix.rst
+   piecewise/index.rst
