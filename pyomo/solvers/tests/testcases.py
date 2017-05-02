@@ -79,6 +79,11 @@ ExpectedFailures['cbc', 'lp', 'LP_duals_maximize'] = \
     "practice this should be reported as a negative number. A ticket has "
     "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125")
 
+ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+     "Cbc fails to report a MILP model as unbounded when it"
+     "is defined as an NL file.")
+
 #
 # PICO
 #
@@ -208,6 +213,10 @@ ExpectedFailures['baron', 'bar', 'QCP_simple'] = \
     (lambda v: v <= _trunk_version,
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
+
+ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+     "Baron fails to report a MILP model as unbounded")
 
 #
 # KNITROAMPL
