@@ -127,20 +127,22 @@ def pprint(obj, indent=0):
             prefix = (" "*indent)+" - "
         # not a block
         if obj.ctype is pyomo.core.base.Var:
-            print(prefix+"%s: variable(value=%s, lb=%s, ub=%s, domain_type=%s, fixed=%s)"
+            print(prefix+"%s: variable(value=%s, bounds=(%s,%s), domain_type=%s, fixed=%s, stale=%s)"
                   % (str(obj),
                      obj.value,
                      obj.lb,
                      obj.ub,
                      obj.domain_type.__name__,
-                     obj.fixed))
+                     obj.fixed,
+                     obj.stale))
         elif obj.ctype is pyomo.core.base.Constraint:
-              print(prefix+"%s: constraint(expr=%s)"
+              print(prefix+"%s: constraint(active=%s, expr=%s)"
                   % (str(obj),
+                     obj.active,
                      str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Objective:
-            print(prefix+"%s: objective(expr=%s)"
-                  % (str(obj), str(obj.expr)))
+            print(prefix+"%s: objective(active=%s, expr=%s)"
+                  % (str(obj), obj.active, str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Expression:
             print(prefix+"%s: expression(expr=%s)"
                   % (str(obj), str(obj.expr)))
@@ -148,8 +150,9 @@ def pprint(obj, indent=0):
             print(prefix+"%s: parameter(value=%s)"
                   % (str(obj), str(obj.value)))
         elif obj.ctype is pyomo.core.base.SOSConstraint:
-            print(prefix+"%s: sos(level=%s, entries=%s)"
+            print(prefix+"%s: sos(active=%s, level=%s, entries=%s)"
                   % (str(obj),
+                     obj.active,
                      obj.level,
                      str(["(%s,%s)" % (str(v), w)
                           for v,w in zip(obj.variables,
