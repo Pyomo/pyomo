@@ -74,7 +74,8 @@ def piecewise_nd(tri,
                       Unifying framework and Extensions"
                       (Vielma, Nemhauser 2008)
 
-    Returns: A block containing the necessary auxiliary
+    Returns:
+        A block containing the necessary auxiliary
         variables and constraints to enforce the piecewise
         linear relationship between the inputs and output.
     """

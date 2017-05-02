@@ -95,7 +95,8 @@ class ComponentDict(_SimpleContainerMixin,
                 child object. By default, only the child
                 objects are returned.
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
         if return_key:
             return iteritems(self._data)

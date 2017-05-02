@@ -56,7 +56,8 @@ class IIdentityExpression(NumericValue):
                 an algebraic expression having the value
                 None). Default is True.
 
-        Returns: A numeric value or None.
+        Returns:
+            numeric value or None
         """
         return value(self._expr, exception=exception)
 

@@ -229,7 +229,8 @@ class _block_base(object):
                 itself. By default, only the objects are
                 returned.
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
         # TODO
@@ -344,7 +345,8 @@ class _block_base(object):
                 itself. By default, only the objects are
                 returned.
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
         # TODO
@@ -459,7 +461,8 @@ class _block_base(object):
                 include components on sub-blocks. Default is
                 True.
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
 
         assert active in (None, True)
@@ -878,7 +881,8 @@ class block(_block_base, IBlockStorage):
                 child object. By default, only the child
                 objects are returned.
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
         if return_key:
             itermethod = iteritems
@@ -972,7 +976,8 @@ class block(_block_base, IBlockStorage):
                 category types should be counted on
                 sub-blocks. Default is True.
 
-        Returns: a set of category types.
+        Returns:
+            set of category types
         """
         assert active in (None, True)
         ctypes = set()
@@ -1113,7 +1118,8 @@ class tiny_block(_block_base, IBlockStorage):
                 child object. By default, only the child
                 objects are returned.
 
-        Returns: an iterator objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
         for key, child in self._getattrs():
             if hasattr(child, '_is_categorized_object') and \
@@ -1149,7 +1155,8 @@ class tiny_block(_block_base, IBlockStorage):
                 category types should be counted on
                 sub-blocks. Default is True.
 
-        Returns: a set of category types.
+        Returns:
+            set of category types
         """
         assert active in (None, True)
         ctypes = set()

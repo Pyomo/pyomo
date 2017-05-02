@@ -131,7 +131,8 @@ def generate_delaunay(variables, num=10, **kwds):
     Generate a Delaunay triangulation of the D-dimensional
     bounded variable domain given a list of D variables.
 
-    Requires the numpy and scipy.spatial packages.
+    Requires numpy and scipy.
+
     Args:
         variables: A list of variables, each having a finite
             upper and lower bound.
@@ -140,7 +141,8 @@ def generate_delaunay(variables, num=10, **kwds):
         **kwds: All additional keywords are passed to the
           scipy.spatial.Delaunay constructor.
 
-    Returns: A scipy.spatial.Delaunay object.
+    Returns:
+        A scipy.spatial.Delaunay object.
     """
     if not (numpy_available and scipy_available):             #pragma:nocover
         raise ImportError(

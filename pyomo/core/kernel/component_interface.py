@@ -597,7 +597,8 @@ class _SimpleContainerMixin(object):
                 itself. By default, only the objects are
                 returned.
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
 
@@ -647,7 +648,8 @@ class _SimpleContainerMixin(object):
             root_key: The key to return with this object
                 (when return_key is True).
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
 
@@ -704,7 +706,8 @@ class _SimpleContainerMixin(object):
             root_key: The key to return with this object
                 (when return_key is True).
 
-        Returns: an iterator of objects or (key,object) tuples
+        Returns:
+            iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
 

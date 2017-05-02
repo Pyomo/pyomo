@@ -61,8 +61,8 @@ def piecewise(breakpoints,
               validate=True,
               warning_tol=1e-8):
     """
-    Transforms a list of breakpoints and values into a mixed-integer
-    representation of a piecewise function.
+    Transforms a list of breakpoints and values into a
+    mixed-integer representation of a piecewise function.
 
     Args:
         breakpoints (list): The list of breakpoints of the
@@ -111,10 +111,10 @@ def piecewise(breakpoints,
             when validation is performed to control the
             tolerance for checking consecutive slopes.
 
-    Returns: A block containing the necessary auxiliary
-        variables and constraints that enforce the piecewise
-        linear relationship between the input and output
-        variable.
+    Returns:
+        A block containing the additional variables and
+        constraints that enforce the piecewise linear
+        relationship between the input and output variable.
     """
     transorm = None
     try:
