@@ -10,7 +10,6 @@
 # Unit Tests for Elements of a Block
 #
 
-import logging
 import os
 import sys
 import six
@@ -26,6 +25,7 @@ import pyutilib.th as unittest
 import pyutilib.services
 
 from pyomo.environ import *
+from pyomo.util.log import LoggingIntercept
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.expr import identify_variables
 from pyomo.opt import *
@@ -44,26 +44,6 @@ class DerivedBlock(SimpleBlock):
         pass
 
 DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
-
-
-class LoggingIntercept(object):
-    def __init__(self, output, module=None, level=logging.WARNING):
-        self.handler = logging.StreamHandler(output)
-        self.handler.setFormatter(logging.Formatter('%(message)s'))
-        self.handler.setLevel(level)
-        self.level = level
-        self.module = module
-
-    def __enter__(self):
-        logger = logging.getLogger(self.module)
-        self.level = logger.level
-        logger.setLevel(self.handler.level)
-        logger.addHandler(self.handler)
-
-    def __exit__(self, et, ev, tb):
-        logger = logging.getLogger(self.module)
-        logger.removeHandler(self.handler)
-        logger.setLevel(self.level)
 
 
 class TestGenerators(unittest.TestCase):
