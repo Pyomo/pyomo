@@ -245,14 +245,12 @@ class PySPConfiguredObject(object):
         return_options = cls.register_options(prefix=prefix)
         for name in bare_options.keys():
             configval = None
-            try:
+            if srcprefix+name in options:
                 configval = options.get(srcprefix+name)
-            except KeyError:
-                configval = None
-                if error_if_missing:
-                    raise
-                else:
-                    continue
+            elif error_if_missing:
+                raise KeyError(srcprefix+name)
+            else:
+                continue
             assert configval is not None
             this_configval = return_options.get(prefix+name)
             check_options_match(this_configval,
@@ -377,14 +375,12 @@ class PySPConfiguredObject(object):
             if any(base is PySPConfiguredObject for base in base.__bases__):
                 for name in base._declared_options:
                     configval = None
-                    try:
-                        configval = options.get(prefix + name)
-                    except KeyError:
-                        configval = None
-                        if error_if_missing:
-                            raise
-                        else:
-                            continue
+                    if prefix+name in options:
+                        configval = options.get(prefix+name)
+                    elif error_if_missing:
+                        raise KeyError(prefix+name)
+                    else:
+                        continue
                     assert configval is not None
                     this_configval = base._declared_options.get(name)
                     include_argparse = False
