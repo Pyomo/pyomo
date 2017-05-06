@@ -505,12 +505,12 @@ class _BlockData(ActiveComponentData):
             del ans['_ampl_repn']
         return ans
 
-    def __setstate__(self, state):
-        # We want the base class's __setstate__ to override our blanket
-        # approach here (i.e., it will handle the _component weakref).
-        for (slot_name, value) in iteritems(state):
-            super(_BlockData, self).__setattr__(slot_name, value)
-        super(_BlockData, self).__setstate__(state)
+    #
+    # The base class __setstate__ is sufficient (assigning all the
+    # pickled attributes to the object is appropriate
+    #
+    #def __setstate__(self, state):
+    #    pass
 
     def __getattr__(self, val):
         if val in ModelComponentFactory.services():

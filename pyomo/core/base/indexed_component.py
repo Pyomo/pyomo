@@ -319,7 +319,7 @@ class IndexedComponent(Component):
         # UnindexedComponent_set set
         if state['_index'] is None:
             state['_index'] = UnindexedComponent_set
-        return super(IndexedComponent, self).__setstate__(state)
+        super(IndexedComponent, self).__setstate__(state)
 
     def to_dense_data(self):
         """TODO"""
