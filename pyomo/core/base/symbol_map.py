@@ -85,10 +85,22 @@ class SymbolMap(object):
         self.aliases = {}
 
     def __getstate__(self):
-        raise RuntimeError("ERROR: The SymbolMap class should never be pickled.")
+        # Note: byObject and bySymbol constitute a bimap.  We only need
+        # to pickle one of them, and bySymbol is easier.
+        return {
+            'bySymbol': tuple(
+                (key, obj()) for key, obj in iteritems(self.bySymbol) ),
+            'aliases': tuple(
+                (key, obj()) for key, obj in iteritems(self.aliases) ),
+        }
 
     def __setstate__(self, state):
-        raise RuntimeError("ERROR: The SymbolMap class should never be unpickled.")
+        self.byObject = dict(
+            (id(obj), key) for key, obj  in state['bySymbol'] )
+        self.bySymbol = dict(
+            (key, weakref_ref(obj)) for key, obj in state['bySymbol'] )
+        self.aliases = dict(
+            (key, weakref_ref(obj)) for key, obj in state['aliases'] )
 
     def addSymbol(self, obj, symb):
         self.byObject[id(obj)] = symb
