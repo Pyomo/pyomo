@@ -254,14 +254,14 @@ def EXTERNAL_initialize_for_admm(manager,
         node_block = Block(concrete=True)
         admm_block.add_component(tree_node.name,
                                  node_block)
-        node_block.index = Set(
+        node_block.node_index = Set(
             ordered=True,
             initialize=sorted(tree_node._standard_variable_ids))
-        node_block.z = Param(node_block.index, initialize=0.0, mutable=True)
-        node_block.y = Param(node_block.index, initialize=0.0, mutable=True)
-        node_block.rho = Param(node_block.index, initialize=0.0, mutable=True)
+        node_block.z = Param(node_block.node_index, initialize=0.0, mutable=True)
+        node_block.y = Param(node_block.node_index, initialize=0.0, mutable=True)
+        node_block.rho = Param(node_block.node_index, initialize=0.0, mutable=True)
 
-        for id_ in node_block.index:
+        for id_ in node_block.node_index:
             varname, index = tree_node._variable_ids[id_]
             var = scenario._instance.find_component(varname)[index]
             admm_block.lagrangian_expression.expr += \

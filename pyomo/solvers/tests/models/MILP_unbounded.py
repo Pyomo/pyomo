@@ -43,4 +43,3 @@ class MILP_unbounded(_BaseTestModel):
 
     def post_solve_test_validation(self, tester, results):
         assert results['Solver'][0]['termination condition'] == TerminationCondition.unbounded
-

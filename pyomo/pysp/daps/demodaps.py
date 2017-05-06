@@ -3,6 +3,7 @@
 # NOTE: If you want to run these as serious tests, you might
 #       want to delete a few files before you run.
 import os
+import pyomo.pysp.plugins.csvsolutionwriter as csvw
 import basicclasses as bc
 import distr2pysp as dp
 import stoch_solver as st
@@ -11,13 +12,10 @@ import stoch_solver as st
 print ("\n*** 2Stage_json")
 tree_model = bc.Tree_2Stage_json_dir('concrete_farmer', 'TreeTemplateFile.json')
 
-solver = st.StochSolver('cref.py', tree_model)
-#ef_instance = solver.solve_ef('cplex')
-#ef_instance.pprint()
-
-####solver.solve_serial_ph('cplex', default_rho=1)
-
-print("foobar... put the solver back")
+stsolver = st.StochSolver('cref.py', tree_model)
+stsolver.solve_ef('cplex')
+# the stsolver.scenario_tree has the solution
+csvw.write_csv_soln(stsolver.scenario_tree, "testcref")
 
 ### simple tests ####
 print("\n*** 2Stage_AMPL")
