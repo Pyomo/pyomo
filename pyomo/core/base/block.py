@@ -716,6 +716,23 @@ class _BlockData(ActiveComponentData):
             return obj
         raise Exception("BOGUS")
 
+    def _flag_vars_as_stale(self):
+        """
+        Configure *all* variables (on active blocks) and
+        their composite _VarData objects as stale. This
+        method is used prior to loading solver
+        results. Variable that did not particpate in the
+        solution are flagged as stale.  E.g., it most cases
+        fixed variables will be flagged as stale since they
+        are compiled out of expressions; however, many
+        solver plugins support including fixed variables in
+        the output problem by overriding bounds in order to
+        minimize preprocessing requirements, meaning fixed
+        variables are not necessarily always stale.
+        """
+        for variable in self.component_objects(Var, active=True):
+            variable.flag_as_stale()
+
     def collect_ctypes(self,
                        active=None,
                        descend_into=True):
@@ -1481,7 +1498,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         A boolean indicating whether or not all *active* components of the
         input model have been properly constructed.
         """
-        if not self._constructed:
+        if not self.parent_component()._constructed:
             return False
         for x in self._decl_order:
             if x[0] is not None and x[0].active and not x[0].is_constructed():
@@ -1683,23 +1700,6 @@ class Block(ActiveIndexedComponent):
 
     def _default(self, idx):
         return self._data.setdefault(idx, _BlockData(self))
-
-    def _flag_vars_as_stale(self):
-        """
-        Configure *all* variables (on active blocks) and
-        their composite _VarData objects as stale. This
-        method is used prior to loading solver
-        results. Variable that did not particpate in the
-        solution are flagged as stale.  E.g., it most cases
-        fixed variables will be flagged as stale since they
-        are compiled out of expressions; however, many
-        solver plugins support including fixed variables in
-        the output problem by overriding bounds in order to
-        minimize preprocessing requirements, meaning fixed
-        variables are not necessarily always stale.
-        """
-        for variable in self.component_objects(Var, active=True):
-            variable.flag_as_stale()
 
     def find_component(self, label_or_component):
         """

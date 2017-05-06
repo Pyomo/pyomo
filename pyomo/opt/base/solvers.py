@@ -540,11 +540,11 @@ class OptSolver(Plugin):
         # If the inputs are models, then validate that they have been
         # constructed! Collect suffix names to try and import from solution.
         #
-        from pyomo.core.base import Block
+        from pyomo.core.base.block import _BlockData
         from pyomo.core.base.suffix import active_import_suffix_generator
         _model = None
         for arg in args:
-            if isinstance(arg, Block):
+            if isinstance(arg, _BlockData):
                 if not arg.is_constructed():
                     raise RuntimeError(
                         "Attempting to solve model=%s with unconstructed "
