@@ -745,12 +745,6 @@ constructed model; returning a clone of the current model instance.""")
         instance._constructed = True
         return instance
 
-    def clone(self):
-        instance = SimpleBlock.clone(self)
-        # Do not keep cloned solutions, which point to the original model
-        instance.solutions.clear()
-        instance.solutions._instance = weakref_ref(instance)
-        return instance
 
     def preprocess(self, preprocessor=None):
         """Apply the preprocess plugins defined by the user"""
