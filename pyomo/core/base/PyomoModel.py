@@ -135,7 +135,6 @@ class ModelSolution(object):
         self.__dict__['_metadata'][name] = val
 
     def __getstate__(self):
-        sys.stdout.write("get_soln\n")
         state = {
             '_metadata': self._metadata,
             '_entry': {}
