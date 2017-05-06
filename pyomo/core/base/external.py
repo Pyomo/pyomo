@@ -149,11 +149,13 @@ class PythonCallbackFunction(ExternalFunction):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
 
     def evaluate(self, args):
-        _id = six.next(args) # global callback function identifier
+        if args.__class__ is types.GeneratorType:
+            args = tuple(args)
+        _id = args[0]
         if _id != self._fcn_id:
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
-        return self._fcn(*tuple(args))
+        return self._fcn(*args[1:])
 
 
 class _ARGLIST(Structure):

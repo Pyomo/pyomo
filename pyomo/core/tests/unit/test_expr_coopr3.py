@@ -11,7 +11,10 @@
 #
 #
 
+from __future__ import print_function
+
 import os
+import six
 import sys
 import re
 from os.path import abspath, dirname
@@ -2547,131 +2550,116 @@ class TestCloneIfNeeded(unittest.TestCase):
 
     def test_cloneCount_intrinsicFunction(self):
         # intrinsicFunction of a simple expression
-        count = EXPR.generate_intrinsic_function_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = log(self.model.c + self.model.a)
-        self.assertEqual( EXPR.generate_intrinsic_function_expression.clone_counter,
-                          count )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count )
 
         # intrinsicFunction of a referenced expression
-        count = EXPR.generate_intrinsic_function_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c + self.model.a
         expr1 = log(expr)
-        self.assertEqual( EXPR.generate_intrinsic_function_expression.clone_counter,
-                          count+1 )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count+1 )
 
 
     def test_cloneCount_relationalExpression_simple(self):
         # relational expression of simple vars
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c < self.model.a
         self.assertEqual(len(expr._args), 2)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count )
 
         # relational expression of simple expressions
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = 2*self.model.c < 2*self.model.a
         self.assertEqual(len(expr._args), 2)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count )
 
         # relational expression of a referenced expression
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c + self.model.a
         expr1 = expr < self.model.d
         self.assertEqual(len(expr._args), 2)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count + 1 )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count + 1 )
 
     def test_cloneCount_relationalExpression_compound(self):
         # relational expression of a compound expression (simple vars)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c < self.model.a < self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count )
 
         # relational expression of a compound expression
         # (non-expression common term)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = 2*self.model.c < self.model.a < 2*self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count )
 
         # relational expression of a compound expression
         # (expression common term)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c < 2 * self.model.a < self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count + 1 )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count + 1 )
 
         # relational expression of a referenced compound expression (1)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c < self.model.a
         expr1 = expr < self.model.d
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count + 1)
+        self.assertEqual( EXPR.generate_expression.clone_counter, count + 1)
 
         # relational expression of a referenced compound expression (2)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = 2*self.model.c < 2*self.model.a
         expr1 = self.model.d < expr
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count + 1)
+        self.assertEqual( EXPR.generate_expression.clone_counter, count + 1)
 
     def test_cloneCount_relationalExpression_compound_reversed(self):
         # relational expression of a compound expression (simple vars)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c > self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count )
 
         # relational expression of a compound expression
         # (non-expression common term)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = 2*self.model.c > self.model.a > 2*self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count )
 
         # relational expression of a compound expression
         # (expression common term)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c > 2 * self.model.a > self.model.d
         expr.to_string()
         self.assertEqual(len(expr._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count + 1 )
+        self.assertEqual( EXPR.generate_expression.clone_counter, count + 1 )
 
         # relational expression of a referenced compound expression (1)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = self.model.c > self.model.a
         expr1 = expr > self.model.d
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count + 1)
+        self.assertEqual( EXPR.generate_expression.clone_counter, count + 1)
 
         # relational expression of a referenced compound expression (2)
-        count = EXPR.generate_relational_expression.clone_counter
+        count = EXPR.generate_expression.clone_counter
         expr = 2*self.model.c > 2*self.model.a
         expr1 = self.model.d > expr
         expr1.to_string()
         self.assertEqual(len(expr1._args), 3)
-        self.assertEqual( EXPR.generate_relational_expression.clone_counter,
-                          count + 1)
+        self.assertEqual( EXPR.generate_expression.clone_counter, count + 1)
 
 class TestCloneExpression(unittest.TestCase):
     def setUp(self):
@@ -3212,6 +3200,48 @@ class TestExpressionUtilities(unittest.TestCase):
                                                        allow_duplicates=True)),
                           [ m.a, m.a, m.a,  ] )
 
+        
+class TestMultiArgumentExpressions(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Coopr 3.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def test_double_sided_ineq(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=[1.0,2.0,3.0,4.0,5.0])
+
+        m.vmin = Param(m.s, initialize=lambda m,i: i)
+        m.vmax = Param(m.s, initialize=lambda m,i: i**2)
+
+        m.v = Var(m.s)
+
+        def _con(m, i):
+            return m.vmin[i]**2 <= m.v[i] <= m.vmax[i]**2
+        m.con = Constraint(m.s, rule=_con)
+
+        OUT = six.StringIO()
+        for i in m.s:
+            OUT.write(str(_con(m,i)))
+            OUT.write("\n")
+        display(m.con, ostream=OUT)
+
+        reference="""v[1.0]  ==  1.0
+4.0  <=  v[2.0]  <=  16.0
+9.0  <=  v[3.0]  <=  81.0
+16.0  <=  v[4.0]  <=  256.0
+25.0  <=  v[5.0]  <=  625.0
+con : Size=5
+    Key : Lower : Body : Upper
+    1.0 :   1.0 : None :   1.0
+    2.0 :   4.0 : None :  16.0
+    3.0 :   9.0 : None :  81.0
+    4.0 :  16.0 : None : 256.0
+    5.0 :  25.0 : None : 625.0
+"""
+        self.assertEqual(OUT.getvalue(), reference)
 
 if __name__ == "__main__":
     unittest.main()

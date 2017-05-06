@@ -12,7 +12,7 @@ import logging
 from pyutilib.misc import Options
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
-from pyomo.solvers.tests.solvers import test_solvers, test_solver_cases
+from pyomo.solvers.tests.solvers import test_solver_cases
 
 
 # For expected failures that appear in all known version
@@ -40,7 +40,7 @@ ExpectedFailures['cplex', 'python', 'QCP_simple'] =\
     (lambda v: v <= _trunk_version,
     "Cplex does not report duals of quadratic constraints.")
 
-ExpectedFailures['cplex', '_cplex_persistent', 'QCP_simple'] =\
+ExpectedFailures['_cplex_persistent', 'python', 'QCP_simple'] =\
     (lambda v: v <= _trunk_version,
     "Cplex does not report duals of quadratic constraints.")
 
@@ -78,6 +78,11 @@ ExpectedFailures['cbc', 'lp', 'LP_duals_maximize'] = \
     "lower bound, Cbc reports the reduced cost as a positive number. In "
     "practice this should be reported as a negative number. A ticket has "
     "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125")
+
+ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+     "Cbc fails to report a MILP model as unbounded when it"
+     "is defined as an NL file.")
 
 #
 # PICO
@@ -209,6 +214,10 @@ ExpectedFailures['baron', 'bar', 'QCP_simple'] = \
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
+ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+     "Baron fails to report a MILP model as unbounded")
+
 #
 # KNITROAMPL
 #
@@ -225,7 +234,6 @@ def test_scenarios(arg=None):
         if not arg is None and not arg(_model):
             continue
         for solver, io in sorted(test_solver_cases()):
-            #_solver      = test_solvers(solver)
             _solver_case = test_solver_cases(solver, io)
 
             # Skip this test case if the solver doesn't support the

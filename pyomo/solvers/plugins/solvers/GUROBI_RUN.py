@@ -69,7 +69,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     # GUROBI doesn't throw an exception if an unknown
     # key is specified, so you have to stare at the
     # output to see if it was accepted.
-    for key, value in options.iteritems():
+    for key, value in options.items():
         model.setParam(key, value)
 
     if 'relax_integrality' in options:
@@ -80,6 +80,11 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
 
     # optimize the model
     model.optimize()
+
+    # This attribute needs to be extracted before
+    # calling model.getVars() or model.getConstrs().
+    # Apparently it gets reset by those methods.
+    wall_time = model.getAttr(GRB.Attr.Runtime)
 
     solver_status = model.getAttr(GRB.Attr.Status)
     solution_status = None
@@ -230,8 +235,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     solnfile.write('status: %s\n' % status)
     solnfile.write('return_code: %s\n' % return_code)
     solnfile.write('message: %s\n' % message)
-    solnfile.write('user_time: %s\n' % str(model.getAttr(GRB.Attr.Runtime)))
-    solnfile.write('system_time: %s\n' % str(0.0))
+    solnfile.write('wall_time: %s\n' % str(wall_time))
     solnfile.write('termination_condition: %s\n' % term_cond)
     solnfile.write('termination_message: %s\n' % message)
 

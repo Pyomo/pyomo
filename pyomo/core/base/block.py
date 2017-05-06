@@ -20,7 +20,7 @@ from operator import itemgetter, attrgetter
 from six import iteritems, itervalues, StringIO, string_types, \
     advance_iterator, PY3
 
-from pyomo.core.base.plugin import *
+from pyomo.core.base.plugin import * # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
     ComponentUID, register_component
 from pyomo.core.base.sets import Set,  _SetDataBase
@@ -29,6 +29,9 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.suffix import ComponentMap
 from pyomo.core.base.indexed_component import IndexedComponent, \
     ActiveIndexedComponent, UnindexedComponent_set
+
+from pyomo.opt.base import ProblemFormat, guess_format
+from pyomo.opt import WriterFactory
 
 logger = logging.getLogger('pyomo.core')
 
@@ -66,6 +69,50 @@ if sys.version_info[0] == 2 and sys.version_info[1] <= 6:
         return new
     weakref.WeakKeyDictionary.__copy__ = weakref.WeakKeyDictionary.copy
     weakref.WeakKeyDictionary.__deepcopy__ = dcwkd
+
+
+class _generic_component_decorator(object):
+    """A generic decorator that wraps Block.__setattr__()
+
+    Arguments
+    ---------
+        component: the Pyomo Component class to construct
+        block: the block onto which to add the new component
+        *args: positional arguments to the Component constructor
+               (*excluding* the block argument)
+        **kwds: keyword arguments to the Component constructor
+    """
+    def __init__(self, component, block, *args, **kwds):
+        self._component = component
+        self._block = block
+        self._args = args
+        self._kwds = kwds
+
+    def __call__(self, rule):
+        setattr(
+            self._block,
+            rule.__name__,
+            self._component(*self._args, rule=rule, **(self._kwds))
+        )
+
+
+class _component_decorator(object):
+    """A class that wraps the _generic_component_decorator, which remembers
+    and provides the Block and component type to the decorator.
+
+    Arguments
+    ---------
+        component: the Pyomo Component class to construct
+        block: the block onto which to add the new component
+
+    """
+    def __init__(self, block, component):
+        self._block = block
+        self._component = component
+
+    def __call__(self, *args, **kwds):
+        return _generic_component_decorator(
+            self._component, self._block, *args, **kwds )
 
 
 class SortComponents(object):
@@ -181,6 +228,7 @@ class _BlockData(ActiveComponentData):
     """
     This class holds the fundamental block data.
     """
+    _Block_reserved_words = set()
 
     class PseudoMap(object):
         """
@@ -464,6 +512,15 @@ class _BlockData(ActiveComponentData):
             super(_BlockData, self).__setattr__(slot_name, value)
         super(_BlockData, self).__setstate__(state)
 
+    def __getattr__(self, val):
+        if val in ModelComponentFactory.services():
+            return _component_decorator(
+                self, ModelComponentFactory.get_class(val).component )
+        # Since the base classes don't support getattr, we can just
+        # throw the "normal" AttributeError
+        raise AttributeError("'%s' object has no attribute '%s'"
+                             % (self.__class__.__name__, val))
+
     def __setattr__(self, name, val):
         """
         Set an attribute of a block data object.
@@ -736,7 +793,11 @@ class _BlockData(ActiveComponentData):
         #
         if not val.valid_model_component():
             raise RuntimeError(
-                "Cannot add '%s' as a component to a model" % str(type(val)) )
+                "Cannot add '%s' as a component to a block" % str(type(val)) )
+        if name in self._Block_reserved_words:
+            raise ValueError("Attempting to declare a block component using "
+                             "the name of a reserved attribute:\n\t%s"
+                             % (name,) )
         if name in self.__dict__:
             raise RuntimeError(
                 "Cannot add component '%s' (type %s) to block '%s': a "
@@ -1265,7 +1326,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #
         # Rely on the _tree_iterator:
         #
-        return self._tree_iterator(ctype=(Block,),
+        if descend_into is True:
+            descend_into = (Block,)
+        elif isclass(descend_into):
+            descend_into = (descend_into,)
+        return self._tree_iterator(ctype=descend_into,
                                    active=active,
                                    sort=sort,
                                    traversal=descent_order)
@@ -1288,8 +1353,14 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # count on us always returning a generator)
         if active is not None and self.active != active:
             return ().__iter__()
-        if self.parent_component().type() not in ctype:
-            return ().__iter__()
+
+        # ALWAYS return the "self" Block, even if it does not match
+        # ctype.  This is because we map this ctype to the
+        # "descend_into" argument in public calling functions: callers
+        # expect that the called thing will be iterated over.
+        #
+        #if self.parent_component().type() not in ctype:
+        #    return ().__iter__()
 
         if traversal is None or \
                 traversal == TraversalStrategy.PrefixDepthFirstSearch:
@@ -1512,6 +1583,72 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 obj.display(prefix=prefix+"    ",ostream=ostream)
 
 
+    #
+    # The following methods are needed to support passing blocks as
+    # models to a solver.
+    #
+
+    def valid_problem_types(self):
+        """This method allows the pyomo.opt convert function to work with a
+        Model object."""
+        return [ProblemFormat.pyomo]
+
+    def write(self,
+              filename=None,
+              format=None,
+              solver_capability=None,
+              io_options={}):
+        """
+        Write the model to a file, with a given format.
+        """
+        #
+        # Guess the format if none is specified
+        #
+        if (filename is None) and (format is None):
+            # Preserving backwards compatibility here.
+            # The function used to be defined with format='lp' by
+            # default, but this led to confusing behavior when a
+            # user did something like 'model.write("f.nl")' and
+            # expected guess_format to create an NL file.
+            format = ProblemFormat.cpxlp
+        if (filename is not None) and (format is None):
+            format = guess_format(filename)
+        problem_writer = WriterFactory(format)
+        if problem_writer is None:
+            raise ValueError(
+                "Cannot write model in format '%s': no model "
+                "writer registered for that format"
+                % str(format))
+
+        if solver_capability is None:
+            solver_capability = lambda x: True
+        (filename, smap) = problem_writer(self,
+                                          filename,
+                                          solver_capability,
+                                          io_options)
+        smap_id = id(smap)
+        if not hasattr(self, 'solutions'):
+            # This is a bit of a hack.  The write() method was moved
+            # here from PyomoModel to support the solution of arbitrary
+            # blocks in a hierarchical model.  However, we cannot import
+            # PyomoModel at the beginning of the file due to a circular
+            # import.  When we rearchitect the solution writers/solver
+            # API, we should revisit this and remove the circular
+            # dependency (we only need it here because we store the
+            # SymbolMap returned by the writer in the solutions).
+            from pyomo.core.base.PyomoModel import ModelSolutions
+            self.solutions = ModelSolutions(self)
+        self.solutions.add_symbol_map(smap)
+
+        if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "Writing model '%s' to file '%s' with format %s",
+                self.name,
+                str(filename),
+                str(format))
+        return filename, smap_id
+
+
 class Block(ActiveIndexedComponent):
     """
     Blocks are indexed components that contain other components
@@ -1525,7 +1662,7 @@ class Block(ActiveIndexedComponent):
     def __new__(cls, *args, **kwds):
         if cls != Block:
             return super(Block, cls).__new__(cls)
-        if args == () or (type(args[0]) == set and args[0] == UnindexedComponent_set and len(args)==1):
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return SimpleBlock.__new__(SimpleBlock)
         else:
             return IndexedBlock.__new__(IndexedBlock)
@@ -1808,6 +1945,11 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
     logger.warning("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
     return block.component_data_objects(ctype=ctype, active=False, sort=sort)
 
+#
+# Create a Block and record all the default attributes, methods, etc.
+# These will be assumes to be the set of illegal component names.
+#
+_BlockData._Block_reserved_words = set(dir(Block()))
 
 register_component(
     Block, "A component that contains one or more model components." )

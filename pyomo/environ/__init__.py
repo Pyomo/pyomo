@@ -29,7 +29,7 @@ else:
 #
 _packages = ['pyomo.opt', 'pyomo.core', 'pyomo.checker', 'pyomo.repn',
              'pyomo.pysp', 'pyomo.neos',
-             'pyomo.openopt', 'pyomo.solvers', 'pyomo.gdp', 'pyomo.mpec',
+             'pyomo.solvers', 'pyomo.gdp', 'pyomo.mpec',
              'pyomo.dae', 'pyomo.bilevel', 'pyomo.scripting']
 #
 # These packages are under development, or they may be omitted in a

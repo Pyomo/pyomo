@@ -15,12 +15,23 @@ from pyomo.environ import *
 from pyomo.core.base.external import (PythonCallbackFunction,
                                       AMPLExternalFunction)
 
+def _g(*args):
+    return len(args)
+
 def _h(*args):
     return 2 + sum(args)
 
 class TestPythonCallbackFunction(unittest.TestCase):
 
-    def test_call(self):
+    def test_call_countArgs(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_g)
+        self.assertIsInstance(m.f, PythonCallbackFunction)
+        self.assertEqual(m.f(), 0)
+        self.assertEqual(m.f(2), 1)
+        self.assertEqual(m.f(2,3), 2)
+
+    def test_call_sumfcn(self):
         m = ConcreteModel()
         m.f = ExternalFunction(_h)
         self.assertIsInstance(m.f, PythonCallbackFunction)

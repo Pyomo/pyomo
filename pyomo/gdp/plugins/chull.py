@@ -23,31 +23,52 @@ from six import iteritems, iterkeys
 
 logger = logging.getLogger('pyomo.core')
 
-# NL_Mode_GrossmannLee is the original NL convex hull from Grossmann &
-# Lee (2003), which substitutes nonlinear constraints
+# NL_Mode_LeeGrossmann is the original NL convex hull from Lee &
+# Grossmann (2000), which substitutes nonlinear constraints
+#
 #     h_ik(x) <= 0
+#
 # with
+#
 #     x_k = sum( nu_ik )
 #     y_ik * h_ik( nu_ik/y_ik ) <= 0
 #
-NL_Mode_GrossmannLee = 1
+# [1] Lee, S., & Grossmann, I. E. (2000). New algorithms for nonlinear
+# generalized disjunctive programming.  Computers and Chemical
+# Engineering, 24, 2125-2141
 #
-# NL_Mode_GrossmannLee is the original NL convex hull from Grossmann &
-# Lee (2003), which substitutes nonlinear constraints
+NL_Mode_LeeGrossmann = 1
+#
+# NL_Mode_GrossmannLee is an updated formulation from Grossmann & Lee
+# (2003), which substitutes nonlinear constraints
+#
 #     h_ik(x) <= 0
+#
 # with
+#
 #     x_k = sum( nu_ik )
 #     (y_ik + eps) * h_ik( nu_ik/(y_ik + eps) ) <= 0
 #
-NL_Mode_LeeGrossmann = 2
+# [2] Grossmann, I. E., & Lee, S. (2003). Generalized disjunctive
+# programming: Nonlinear convex hull relaxation and algorithms.
+# Computational Optimization and Applications, 26, 83-100.
 #
-# NL_Mode_Sawaya is an improved relaxation that avoids numerical issues
-# from the Lee & Grossmann formulation by using:
+NL_Mode_GrossmannLee = 2
+#
+# NL_Mode_FurmanSawayaGrossmann is an improved relaxation that avoids
+# numerical issues from the Lee & Grossmann formulation by using:
+#
 #     x_k = sum( nu_ik )
 #     ((1-eps)*y_ik + eps) * h_ik( nu_ik/((1-eps)*y_ik + eps) ) \
-#        - eps * r_ki(0) * ( 1-y_ik )
+#        - eps * r_ki(0) * ( 1-y_ik ) <= 0
 #
-NL_Mode_Sawaya = 3
+# [3] Furman, K., Sawaya, N., and Grossmann, I.  A computationally
+# useful algebraic representation of nonlinear disjunctive convex sets
+# using the perspective function.  Optimization Online (2016).
+#
+# http://www.optimization-online.org/DB_HTML/2016/07/5544.html.
+#
+NL_Mode_FurmanSawayaGrossmann = 3
 
 EPS = 1e-2
 
@@ -66,9 +87,9 @@ class ConvexHull_Transformation(Transformation):
             Suffix : self._xform_skip,
             }
         self._promote_vars = []
-        #self._mode = NL_Mode_GrossmannLee
         #self._mode = NL_Mode_LeeGrossmann
-        self._mode = NL_Mode_Sawaya
+        #self._mode = NL_Mode_GrossmannLee
+        self._mode = NL_Mode_FurmanSawayaGrossmann
 
     def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
@@ -157,7 +178,7 @@ class ConvexHull_Transformation(Transformation):
         # constraints to force them to 0 when not active.
         for d_data in sorted(disaggregatedVars.values(), key=lambda x: x[0]):
             for e in sorted(d_data[1].values(), key=lambda x: x[0].local_name):
-                v_name = "%s%s" % (d_data[0],e[0].local_name)
+                v_name = "%s%s" % (d_data[0],e[0].name)
                 # add the disaggregated variable
                 block.add_component( v_name, e[2] )
                 e[2].construct()
@@ -282,18 +303,18 @@ class ConvexHull_Transformation(Transformation):
             # We need to evaluate teh expression at the origin *before*
             # we substitute the expression variables with the
             # disaggregated variables
-            if NL and self._mode == NL_Mode_Sawaya:
+            if NL and self._mode == NL_Mode_FurmanSawayaGrossmann:
                 h_0 = value( self._eval_at_origin(
                     NL, c.body.clone(), disjunct.indicator_var, varMap ) )
 
             expr = self._var_subst(NL, c.body, disjunct.indicator_var, varMap)
             if NL:
                 y = disjunct.indicator_var
-                if self._mode == NL_Mode_GrossmannLee:
+                if self._mode == NL_Mode_LeeGrossmann:
                     expr = expr * y
-                elif self._mode == NL_Mode_LeeGrossmann:
+                elif self._mode == NL_Mode_GrossmannLee:
                     expr = (y + EPS) * expr
-                elif self._mode == NL_Mode_Sawaya:
+                elif self._mode == NL_Mode_FurmanSawayaGrossmann:
                     expr = ((1-EPS)*y + EPS)*expr - EPS*h_0*(1-y)
                 else:
                     raise RuntimeError("Unknown NL CHull mode")
@@ -376,11 +397,11 @@ class ConvexHull_Transformation(Transformation):
                                  max(0,value(expr.ub))))
                 varMap[id(expr)] = (expr, y, v)
             if NL:
-                if self._mode == NL_Mode_GrossmannLee:
+                if self._mode == NL_Mode_LeeGrossmann:
                     return varMap[id(expr)][2] / y
-                elif self._mode == NL_Mode_LeeGrossmann:
+                elif self._mode == NL_Mode_GrossmannLee:
                     return varMap[id(expr)][2] / (y+EPS)
-                elif self._mode == NL_Mode_Sawaya:
+                elif self._mode == NL_Mode_FurmanSawayaGrossmann:
                     return varMap[id(expr)][2] / ( (1-EPS)*y + EPS )
                 else:
                     raise RuntimeError("Unknown NL CHull mode")

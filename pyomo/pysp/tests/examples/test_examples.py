@@ -24,7 +24,7 @@ from pyomo.pysp.util.misc import (_get_test_nameserver,
                                   _poll,
                                   _kill)
 import pyomo.environ
-from pyomo.opt import load_solvers
+from pyomo.opt import check_available_solvers
 
 from six import StringIO
 
@@ -51,7 +51,7 @@ pysp_examples_dir = \
          "examples", "pysp")
 examples_dir = join(pysp_examples_dir, "scripting")
 
-solvers = load_solvers('cplex', 'glpk')
+solvers = check_available_solvers('cplex', 'glpk')
 
 @unittest.category('nightly','expensive')
 class TestExamples(unittest.TestCase):
@@ -80,21 +80,21 @@ class TestExamples(unittest.TestCase):
                 pass
         self._tempfiles = []
 
-    @unittest.skipIf(solvers['cplex'] is None,
+    @unittest.skipIf(not 'cplex' in solvers,
                      'cplex not available')
     def test_ef_duals(self):
         cmd = ['python', join(examples_dir, 'ef_duals.py')]
         self._run_cmd(cmd)
         self._cleanup()
 
-    @unittest.skipIf(solvers['cplex'] is None,
+    @unittest.skipIf(not 'cplex' in solvers,
                      'cplex not available')
     def test_benders_scripting(self):
         cmd = ['python', join(examples_dir, 'benders_scripting.py')]
         self._run_cmd(cmd)
         self._cleanup()
 
-    @unittest.skipIf(solvers['cplex'] is None,
+    @unittest.skipIf(not 'cplex' in solvers,
                      'cplex not available')
     def test_admm(self):
         cmd = ['python', join(examples_dir, 'apps', 'admm.py')]
@@ -227,7 +227,7 @@ class TestParallelExamples(unittest.TestCase):
         self._tempfiles = []
 
 
-    @unittest.skipIf(solvers['glpk'] is None,
+    @unittest.skipIf(not 'glpk' in solvers,
                      'glpk not available')
     def test_solve_distributed(self):
         ns_host = '127.0.0.1'
@@ -270,7 +270,7 @@ class TestParallelExamples(unittest.TestCase):
                     pass
         self._cleanup()
 
-    @unittest.skipIf(solvers['cplex'] is None,
+    @unittest.skipIf(not 'cplex' in solvers,
                      'cplex not available')
     def test_admm(self):
         cmd = ['python',

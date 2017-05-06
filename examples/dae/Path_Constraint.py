@@ -22,25 +22,19 @@ from pyomo.environ import *
 from pyomo.dae import *
 
 m = ConcreteModel()
+m.tf = Param(initialize=1)
+m.t = ContinuousSet(bounds=(0,m.tf))
 
-m.t = ContinuousSet(bounds=(0,1))
-
+m.u = Var(m.t, initialize=0)
 m.x1 = Var(m.t)
 m.x2 = Var(m.t)
 m.x3 = Var(m.t)
-m.u = Var(m.t, initialize=0)
 
 m.dx1 = DerivativeVar(m.x1, wrt=m.t)
 m.dx2 = DerivativeVar(m.x2, wrt=m.t)
-m.dx3 = DerivativeVar(m.x3)
+m.dx3 = DerivativeVar(m.x3, wrt=m.t)
 
-m.obj = Objective(expr=m.x3[1])
-
-def _init(m):
-    yield m.x1[0] == 0
-    yield m.x2[0] == -1
-    yield m.x3[0] == 0
-m.init_conditions = ConstraintList(rule=_init)
+m.obj = Objective(expr=m.x3[m.tf])
 
 def _x1dot(m, t):
     if t == 0:
@@ -66,3 +60,8 @@ def _con(m, t):
     return m.x2[t]-8*(t-0.5)**2+0.5 <= 0
 m.con = Constraint(m.t, rule=_con)
 
+def _init(m):
+    yield m.x1[0] == 0
+    yield m.x2[0] == -1
+    yield m.x3[0] == 0
+m.init_conditions = ConstraintList(rule=_init)

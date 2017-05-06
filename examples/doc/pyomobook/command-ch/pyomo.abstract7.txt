@@ -6,7 +6,7 @@ data:
   namespaces: []
 model:
   filename: abstract7.py
-  object name: model
+  object name: null
   type: null
   options:
   linearize expressions: false
@@ -50,8 +50,8 @@ postsolve:
   summary: false
 
 [    0.00] Creating model
-[    0.03] Applying solver
-[    0.04] Processing results
+[    0.02] Applying solver
+[    0.05] Processing results
     Number of solutions: 1
     Solution Information
       Gap: 0.0
@@ -76,7 +76,7 @@ Solver:
       Number of bounded subproblems: 0
       Number of created subproblems: 0
   Error rc: 0
-  Time: 0.00676512718201
+  Time: 0.0271968841553
 Solution: 
 - number of solutions: 1
   number of solutions displayed: 1
@@ -91,6 +91,6 @@ Solution:
       Value: 0.4
   Constraint: No values
 
-[    0.04] Applying Pyomo postprocessing actions
+[    0.05] Applying Pyomo postprocessing actions
 Solution value 0.8
-[    0.04] Pyomo Finished
+[    0.06] Pyomo Finished

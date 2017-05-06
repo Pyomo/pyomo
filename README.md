@@ -3,6 +3,7 @@
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/master/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/Pyomo/pyomo/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/Pyomo/pyomo/?branch=master)
 [![Research software impact](http://depsy.org/api/package/pypi/Pyomo/badge.svg)](http://depsy.org/package/python/Pyomo)
+[![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
 
 ## Pyomo Overview
 
@@ -28,6 +29,7 @@ Pyomo is available under the BSD License.
 
 ### Getting Help
 
+* [Ask a Pyomo Question on StackExchange](https://stackoverflow.com/questions/ask?tags=pyomo)
 * [Pyomo Forum](https://groups.google.com/forum/?hl=en#!forum/pyomo-forum)
 * [Add a Ticket](https://github.com/Pyomo/pyomo/issues/new)
 * [Find a Ticket](https://github.com/Pyomo/pyomo/issues) and **Vote On It**!

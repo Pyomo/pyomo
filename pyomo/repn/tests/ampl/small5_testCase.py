@@ -9,18 +9,15 @@
 #
 # Author:  Gabe Hackebeil
 # Purpose: For regression testing to ensure that the Pyomo
-#          NL writer properly modifies product expressions 
+#          NL writer properly modifies product expressions
 #          with only constant terms in the denominator (that
 #          are involved in nonlinear expressions).
-#          The ASL differentiation routines seem to have a 
+#          The ASL differentiation routines seem to have a
 #          bug that causes the lagrangian hessian to become
-#          dense unless this constant term in moved to the 
-#          numerator. 
+#          dense unless this constant term in moved to the
+#          numerator.
 #
-#          This test model relies on the asl_test executable. It
-#          will not solve if sent to a real optimizer.
-#
-#          This test model relies on the asl_test executable. It
+#          This test model relies on the gjh_asl_json executable. It
 #          will not solve if sent to a real optimizer.
 #
 

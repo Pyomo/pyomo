@@ -1,3 +1,1 @@
-William Hart - lead developer
-John Siirola - lead developer
-Jean-Paul Watson - lead developer
+See www.pyomo.org

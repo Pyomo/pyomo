@@ -53,7 +53,6 @@ from pyomo.core.base.component import register_component, Component, ComponentUI
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 import pyomo.opt
-from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt.results import SolverResults, Solution, SolutionStatus, UndefinedData
 
 from six import itervalues, iteritems, StringIO, string_types
@@ -547,6 +546,8 @@ class Model(SimpleBlock):
 
     preprocessor_ep = ExtensionPoint(IPyomoPresolver)
 
+    _Block_reserved_words = set()
+
     def __new__(cls, *args, **kwds):
         if cls != Model:
             return super(Model, cls).__new__(cls)
@@ -600,10 +601,6 @@ use the AbstractModel or ConcreteModel class instead.""")
     def nobjectives(self):
         self.compute_statistics()
         return self.statistics.number_of_objectives
-
-    def valid_problem_types(self):
-        """This method allows the pyomo.opt convert function to work with a Model object."""
-        return [ProblemFormat.pyomo]
 
     def create_instance( self, filename=None, data=None, name=None,
                          namespace=None, namespaces=None,
@@ -838,7 +835,7 @@ from solvers are immediately loaded into the original model instance.""")
             #
 
             if report_timing is True:
-                import pyomo.core.base.expr_coopr3
+                import pyomo.core.base.expr as EXPR
                 construction_start_time = time.time()
 
             for component_name, component in iteritems(self.component_map()):
@@ -848,11 +845,7 @@ from solvers are immediately loaded into the original model instance.""")
 
                 if report_timing is True:
                     start_time = time.time()
-                    clone_counters = (
-                        pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
-                        )
+                    clone_counters = EXPR.generate_expression.clone_counter
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
 
@@ -866,14 +859,10 @@ from solvers are immediately loaded into the original model instance.""")
                     print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
-                    tmp_clone_counters = (
-                        pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
-                        )
+                    tmp_clone_counters = EXPR.generate_expression.clone_counter
                     if clone_counters != tmp_clone_counters:
                         clone_counters = tmp_clone_counters
-                        print("             Cloning detected! (clone counters: %d, %d, %d)" % clone_counters)
+                        print("             Cloning detected! (clone counters: %d)" % clone_counters)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.
@@ -942,50 +931,6 @@ from solvers are immediately loaded into the original model instance.""")
             print("      Total memory = %d bytes following construction of component=%s (after garbage collection)" % (mem_used, component_name))
 
 
-    def write(self,
-              filename=None,
-              format=None,
-              solver_capability=None,
-              io_options={}):
-        """
-        Write the model to a file, with a given format.
-        """
-        #
-        # Guess the format if none is specified
-        #
-        if (filename is None) and (format is None):
-            # Preserving backwards compatibility here.
-            # The function used to be defined with format='lp' by
-            # default, but this led to confusing behavior when a
-            # user did something like 'model.write("f.nl")' and
-            # expected guess_format to create an NL file.
-            format = ProblemFormat.cpxlp
-        if (filename is not None) and (format is None):
-            format = guess_format(filename)
-        problem_writer = pyomo.opt.WriterFactory(format)
-        if problem_writer is None:
-            raise ValueError(
-                "Cannot write model in format '%s': no model "
-                "writer registered for that format"
-                % str(format))
-
-        if solver_capability is None:
-            solver_capability = lambda x: True
-        (filename, smap) = problem_writer(self,
-                                          filename,
-                                          solver_capability,
-                                          io_options)
-        smap_id = id(smap)
-        self.solutions.add_symbol_map(smap)
-
-        if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
-                "Writing model '%s' to file '%s' with format %s",
-                self.name,
-                str(filename),
-                str(format))
-        return filename, smap_id
-
     def create(self, filename=None, **kwargs):
         """
         Create a concrete instance of this Model, possibly using data
@@ -1037,6 +982,16 @@ class AbstractModel(Model):
     def __init__(self, *args, **kwds):
         Model.__init__(self, *args, **kwds)
 
+
+#
+# Create a Model and record all the default attributes, methods, etc.
+# These will be assumes to be the set of illegal component names.
+#
+# Note that creating a Model will result in a warning, so we will
+# (arbitrarily) choose a ConcreteModel as the definitive list of
+# reserved names.
+#
+Model._Block_reserved_words = set(dir(ConcreteModel()))
 
 
 register_component(Model, 'Model objects can be used as a component of other models.')

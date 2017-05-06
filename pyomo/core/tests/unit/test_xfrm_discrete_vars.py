@@ -13,8 +13,7 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 
-solvers = ['cplex', 'gurobi']
-solver = pyomo.opt.load_solvers(*solvers)
+solvers = pyomo.opt.check_available_solvers('cplex', 'gurobi', 'glpk')
 
 def _generateModel():
     model = ConcreteModel()
@@ -28,11 +27,9 @@ def _generateModel():
 
 class Test(unittest.TestCase):
 
-    @unittest.skipIf( solver['gurobi'] is None and
-                      solver['cplex'] is None , "LP/MIP solver not available")
+    @unittest.skipIf( len(solvers) == 0, "LP/MIP solver not available")
     def test_solve_relax_transform(self):
-        s = [ solver[x] for x in solvers
-              if solver[x] is not None ][0]
+        s = SolverFactory(solvers[0])
         m = _generateModel()
         self.assertIs(m.x.domain, Binary)
         self.assertEqual(m.x.lb, 0)
@@ -50,11 +47,9 @@ class Test(unittest.TestCase):
         self.assertAlmostEqual(m.dual[m.c2], -0.5, 4)
 
 
-    @unittest.skipIf( solver['gurobi'] is None and
-                      solver['cplex'] is None , "LP/MIP solver not available")
+    @unittest.skipIf( len(solvers) == 0, "LP/MIP solver not available")
     def test_solve_fix_transform(self):
-        s = [ solver[x] for x in solvers
-              if solver[x] is not None ][0]
+        s = SolverFactory(solvers[0])
         m = _generateModel()
         self.assertIs(m.x.domain, Binary)
         self.assertEqual(m.x.lb, 0)

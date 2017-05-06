@@ -16,7 +16,6 @@ from pyomo.core import *
 from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData
-from pyomo.core.base.indexed_component import UnindexedComponent_set
 import pyomo.core.base.expr as EXPR
 
 import logging
@@ -47,8 +46,8 @@ class _ComplementarityData(_BlockData):
             #elif e._args[0].is_fixed():
             #    _e = (e._args[0], e._args[1])
             else:
-                tmp = EXPR.generate_expression_bypassCloneCheck(_sub, e._args[0], e._args[1])
-                _e = ( ZeroConstant, tmp)
+                with EXPR.bypass_clone_check():
+                    _e = ( ZeroConstant, e._args[0] - e._args[1])
         elif e.__class__ is EXPR._InequalityExpression:
             if len(e._args) == 3:
                 _e = (e._args[0], e._args[1], e._args[2])
@@ -58,8 +57,8 @@ class _ComplementarityData(_BlockData):
                 elif e._args[0].is_fixed():
                     _e = (e._args[0], e._args[1], None)
                 else:
-                    _e = ( ZeroConstant, EXPR.generate_expression_bypassCloneCheck(
-                            _sub, e._args[1], e._args[0]), None )
+                    with EXPR.bypass_clone_check():
+                        _e = ( ZeroConstant, e._args[1] - e._args[0], None )
         else:
             _e = (None, e, None)
         return _e
@@ -255,8 +254,7 @@ Error thrown for Complementarity "%s"
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index \
-                  if self._index != UnindexedComponent_set else None),
+             ("Index", self._index if self.is_indexed() else None),
              ("Active", self.active),
              ],
             iteritems(self._data),
