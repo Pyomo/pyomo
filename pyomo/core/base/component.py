@@ -296,7 +296,7 @@ class Component(_ComponentBase):
         #
         _base = super(Component,self)
         if hasattr(_base, '__setstate__'):
-            return _base.__setstate__(state)
+            _base.__setstate__(state)
         else:
             for key, val in iteritems(state):
                 # Note: per the Python data model docs, we explicitly
@@ -618,7 +618,7 @@ class ComponentData(_ComponentBase):
         #
         _base = super(ComponentData,self)
         if hasattr(_base, '__setstate__'):
-            return _base.__setstate__(state)
+            _base.__setstate__(state)
         else:
             for key, val in iteritems(state):
                 # Note: per the Python data model docs, we explicitly
