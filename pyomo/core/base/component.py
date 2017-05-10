@@ -148,7 +148,20 @@ class _ComponentBase(object):
         # update the _parent refs appropriately, and since this is a
         # slot-ized class, we cannot overwrite the __deepcopy__
         # attribute to prevent infinite recursion.
-        ans.__setstate__(deepcopy(self.__getstate__(), memo))
+        state = self.__getstate__()
+        try:
+            ans.__setstate__(deepcopy(state, memo))
+        except:
+            new_state = {}
+            for k,v in iteritems(state):
+                try:
+                    new_state[k] = deepcopy(v, memo)
+                except:
+                    logger.error(
+                        "Unable to clone Pyomo component attribute.\n"
+                        "Component '%s' contains an uncopyable field '%s' (%s)"
+                        % ( self.name, k, type(v) ))
+            ans.__setstate__(new_state)
         return ans
 
     def cname(self, *args, **kwds):
@@ -283,7 +296,7 @@ class Component(_ComponentBase):
         #
         _base = super(Component,self)
         if hasattr(_base, '__setstate__'):
-            return _base.__setstate__(state)
+            _base.__setstate__(state)
         else:
             for key, val in iteritems(state):
                 # Note: per the Python data model docs, we explicitly
@@ -605,7 +618,7 @@ class ComponentData(_ComponentBase):
         #
         _base = super(ComponentData,self)
         if hasattr(_base, '__setstate__'):
-            return _base.__setstate__(state)
+            _base.__setstate__(state)
         else:
             for key, val in iteritems(state):
                 # Note: per the Python data model docs, we explicitly
