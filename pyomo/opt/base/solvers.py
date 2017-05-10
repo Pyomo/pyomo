@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ('IOptSolver',
            'OptSolver',
@@ -540,22 +541,22 @@ class OptSolver(Plugin):
         # If the inputs are models, then validate that they have been
         # constructed! Collect suffix names to try and import from solution.
         #
-        from pyomo.core.base import Block
+        from pyomo.core.base.block import _BlockData
         import pyomo.core.base.suffix
         from pyomo.core.kernel.component_block import IBlockStorage
         import pyomo.core.kernel.component_suffix
         _model = None
         for arg in args:
-            if isinstance(arg, (Block, IBlockStorage)):
-                if isinstance(arg, Block):
+            if isinstance(arg, (_BlockData, IBlockStorage)):
+                if isinstance(arg, _BlockData):
                     if not arg.is_constructed():
                         raise RuntimeError(
                             "Attempting to solve model=%s with unconstructed "
-                            "component(s)" % (arg.name))
-                _model = arg
+                            "component(s)" % (arg.name,) )
 
+                _model = arg
                 # import suffixes must be on the top-level model
-                if isinstance(arg, Block):
+                if isinstance(arg, _BlockData):
                     model_suffixes = list(name for (name,comp) \
                                           in pyomo.core.base.suffix.\
                                           active_import_suffix_generator(arg))
