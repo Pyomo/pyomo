@@ -7,18 +7,6 @@ from pyomo.core.kernel.component_variable import variable
 
 class TestSymbolMap(unittest.TestCase):
 
-    def test_no_pickle(self):
-        s = SymbolMap()
-        with self.assertRaises(RuntimeError):
-            s.__getstate__()
-        with self.assertRaises(RuntimeError):
-            s.__setstate__(None)
-        s.addSymbol(variable(), "x")
-        with self.assertRaises(RuntimeError):
-            s.__getstate__()
-        with self.assertRaises(RuntimeError):
-            s.__setstate__(None)
-
     def test_no_labeler(self):
         s = SymbolMap()
         v = variable()
