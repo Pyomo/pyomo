@@ -59,4 +59,3 @@ class QP_simple_nosuffixes(QP_simple):
         QP_simple.__init__(self)
         self.disable_suffix_tests = True
         self.add_results("QP_simple.json")
-
