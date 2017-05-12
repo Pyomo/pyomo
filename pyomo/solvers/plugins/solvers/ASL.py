@@ -138,7 +138,7 @@ class ASL(SystemCallSolver):
             else:
                 env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
 
-        cmd = [executable, '-s', problem_files[0]]
+        cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:
             cmd.insert(0, self._timer)
         #
