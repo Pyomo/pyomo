@@ -3,9 +3,16 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 5.x.x
+Pyomo 5.2
 -------------------------------------------------------------------------------
 
+- Changing the generic ASL solver plugin to use '-AMPL' rather than '-s'
+- Fixed loading solutions into sub-blocks (#127)
+- Cloning a model now preserves any previous solution(s).
+- Fixing pickling of ModelSolutions objects. (#65)
+- Allow cloning of blocks even when attributes cannot be deep copied
+- Fixed how GUROBI_RUN reports the solve time.
+- Added DAPS solver (#139)
 - Adding support for Python 3.6. (#103)
 - Restricting user defined component names on Blocks to avoid overwriting
   important Block methods. (#126)
