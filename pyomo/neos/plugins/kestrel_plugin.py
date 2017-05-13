@@ -25,6 +25,18 @@ logger = logging.getLogger('pyomo.neos')
 error_re = re.compile('error', flags=re.I)
 warn_re = re.compile('warn', flags=re.I)
 
+def _neos_error(msg, results, current_message):
+    logger.error("%s  NEOS log:\n%s" % ( msg, current_message, ))
+    soln_data = results.data
+    if six.PY3:
+        soln_data = soln_data.decode('utf-8')
+    for line in soln_data.splitlines():
+        if error_re.search(line):
+            logger.error(line)
+        elif warn_re.search(line):
+            logger.warn(line)
+
+
 class SolverManager_NEOS(AsynchronousSolverManager):
 
     pyomo.util.plugin.alias('neos', doc="Asynchronously execute solvers on the NEOS server")
@@ -196,7 +208,13 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                         six.print_((results.data).decode('utf-8'), file=OUTPUT)
 
                 rc = None
-                solver_results = opt.process_output(rc)
+                try:
+                    solver_results = opt.process_output(rc)
+                except:
+                    _neos_error( "Error parsing NEOS solution file",
+                                 results, current_message )
+                    return ah
+
                 solver_results._smap_id = smap_id
                 self.results[ah.id] = solver_results
                 opt.deactivate()
@@ -210,17 +228,9 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                                 select=select_index,
                                 default_variable_value=default_variable_value)
                         except:
-                            logger.error(
-                                "Error loading NEOS solution into model.  "
-                                "NEOS log:\n%s" % ( current_message, ))
-                            soln_data = results.data
-                            if six.PY3:
-                                soln_data = soln_data.decode('utf-8')
-                            for line in soln_data.splitlines():
-                                if error_re.search(line):
-                                    logger.error(line)
-                                elif warn_re.search(line):
-                                    logger.warn(line)
+                            _neos_error(
+                                "Error loading NEOS solution into model",
+                                results, current_message )
                         solver_results._smap_id = None
                         solver_results.solution.clear()
                     else:
