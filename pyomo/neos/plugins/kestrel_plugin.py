@@ -91,7 +91,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         # remove it, it will get passed to the NEOS solver.  For solvers
         # like CPLEX 12.7.0, this will cause a fatal error as it is not
         # a known option.
-        if 'timelimit' in user_solver_options:
+        if user_solver_options.get('timelimit',0) is None:
             del user_solver_options['timelimit']
 
         opt = SolverFactory('_neos')
