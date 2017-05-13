@@ -180,8 +180,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
             status = self.kestrel.neos.getJobStatus(jobNumber,
                                                     self._ah[jobNumber].password)
 
-            if not status in ("Running", "Waiting"):
-
+            if status not in ("Running", "Waiting"):
                 # the job is done.
                 ah = self._ah[jobNumber]
                 del self._ah[jobNumber]
