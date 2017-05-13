@@ -12,6 +12,8 @@ import os
 import re
 import six
 
+from six.moves.xmlrpc_client import ProtocolError
+
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
 from pyomo.opt.parallel.async_solver import *
@@ -240,18 +242,33 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
                 return ah
             else:
+                # The job is still running...
+                #
                 # Grab the partial messages from NEOS as you go, in case
-                # you want to output on-the-fly. We don't currently do
-                # this, but the infrastructure is in place.
+                # you want to output on-the-fly. You will only get data
+                # if the job was routed to the "short" priority queue.
                 (current_offset, current_message) = self._neos_log[jobNumber]
                 # TBD: blocking isn't the way to go, but non-blocking
                 # was triggering some exception in kestrel.
-                (message_fragment, new_offset) = \
-                    self.kestrel.neos.getIntermediateResults(jobNumber,
-                                                             self._ah[jobNumber].password,
-                                                             current_offset)
-                six.print_(message_fragment, end="")
-                self._neos_log[jobNumber] = (new_offset, str(current_message) + str(message_fragment.data))
+                #
+                # [5/13/17]: The blocking fetch will timeout in 2
+                # minutes.  If NEOS doesn't produce intermediate results
+                # by then we will need to catch (and eat) the exception
+                try:
+                    (message_fragment, new_offset) \
+                        = self.kestrel.neos.getIntermediateResults(
+                            jobNumber,
+                            self._ah[jobNumber].password,
+                            current_offset )
+                    six.print_(message_fragment, end="")
+                    self._neos_log[jobNumber] = (
+                        new_offset,
+                        current_message + (
+                            message_fragment.data if six.PY2
+                            else (message_fragment.data).decode('utf-8') ) )
+                except ProtocolError:
+                    # The command probably timed out
+                    pass
 
         return None
 
