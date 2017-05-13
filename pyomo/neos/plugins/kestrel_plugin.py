@@ -93,8 +93,10 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         # options must also go after these.
         if solver is not None:
             user_solver_options.update(solver.options)
-        user_solver_options.update(
-            kwds.pop('options', {}))
+        _options = kwds.pop('options', {})
+        if isinstance(_options, six.string_types):
+            _options = OptSolver._options_string_to_dict(_options)
+        user_solver_options.update(_options)
         user_solver_options.update(
             OptSolver._options_string_to_dict(kwds.pop('options_string', '')))
 
