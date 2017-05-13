@@ -86,6 +86,14 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         user_solver_options.update(
             OptSolver._options_string_to_dict(kwds.pop('options_string', '')))
 
+        # JDS: [5/13/17] The following is a HACK.  This timeout flag is
+        # set by pyomo/scripting/util.py:apply_optimizer.  If we do not
+        # remove it, it will get passed to the NEOS solver.  For solvers
+        # like CPLEX 12.7.0, this will cause a fatal error as it is not
+        # a known option.
+        if 'timelimit' in user_solver_options:
+            del user_solver_options['timelimit']
+
         opt = SolverFactory('_neos')
         opt._presolve(*args, **kwds)
         #
