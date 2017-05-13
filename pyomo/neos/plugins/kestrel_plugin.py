@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import os
+import re
 import six
 
 import pyomo.util.plugin
@@ -18,7 +19,11 @@ from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
+import logging
+logger = logging.getLogger('pyomo.neos')
 
+error_re = re.compile('error', flags=re.I)
+warn_re = re.compile('warn', flags=re.I)
 
 class SolverManager_NEOS(AsynchronousSolverManager):
 
@@ -191,10 +196,23 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 if isinstance(args[0], Block):
                     _model = args[0]
                     if load_solutions:
-                        _model.solutions.load_from(
-                            solver_results,
-                            select=select_index,
-                            default_variable_value=default_variable_value)
+                        try:
+                            _model.solutions.load_from(
+                                solver_results,
+                                select=select_index,
+                                default_variable_value=default_variable_value)
+                        except:
+                            logger.error(
+                                "Error loading NEOS solution into model.  "
+                                "NEOS log:\n%s" % ( current_message, ))
+                            soln_data = results.data
+                            if six.PY3:
+                                soln_data = soln_data.decode('utf-8')
+                            for line in soln_data.splitlines():
+                                if error_re.search(line):
+                                    logger.error(line)
+                                elif warn_re.search(line):
+                                    logger.warn(line)
                         solver_results._smap_id = None
                         solver_results.solution.clear()
                     else:
