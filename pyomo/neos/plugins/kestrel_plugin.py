@@ -203,11 +203,12 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
                 return ah
             else:
-                # Grab the partial messages from NEOS as you go, in case you want
-                # to output on-the-fly. We don't currently do this, but the infrastructure
-                # is in place.
+                # Grab the partial messages from NEOS as you go, in case
+                # you want to output on-the-fly. We don't currently do
+                # this, but the infrastructure is in place.
                 (current_offset, current_message) = self._neos_log[jobNumber]
-                # TBD: blocking isn't the way to go, but non-blocking was triggering some exception in kestrel.
+                # TBD: blocking isn't the way to go, but non-blocking
+                # was triggering some exception in kestrel.
                 (message_fragment, new_offset) = \
                     self.kestrel.neos.getIntermediateResults(jobNumber,
                                                              self._ah[jobNumber].password,
