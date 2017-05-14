@@ -66,9 +66,19 @@ class kestrelAMPL:
         self.setup_connection()
 
     def setup_connection(self):
-        if 'HTTP_PROXY' in os.environ:
+        # on *NIX, the proxy can show up either upper or lowercase.
+        # Prefer lower case, and prefer HTTPS over HTTP if the urlscheme
+        # is https.
+        proxy = os.environ.get(
+            'http_proxy', os.environ.get(
+                'HTTP_PROXY', ''))
+        if urlscheme == 'https':
+            proxy = os.environ.get(
+                'https_proxy', os.environ.get(
+                    'HTTPS_PROXY', proxy))
+        if proxy:
             p = ProxiedTransport()
-            p.set_proxy(os.environ['HTTP_PROXY'])
+            p.set_proxy(proxy)
             self.neos = xmlrpclib.ServerProxy(urlscheme+"://www.neos-server.org:"+port,transport=p)
         else:
             self.neos = xmlrpclib.ServerProxy(urlscheme+"://www.neos-server.org:"+port)
