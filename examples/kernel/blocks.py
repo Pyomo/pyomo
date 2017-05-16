@@ -44,7 +44,7 @@ b.o = pmo.objective(
 #
 
 # The tiny_block class uses more efficient storage for the
-# case where there are a small number children on a block.
+# case when a small number of objects are placed on the block.
 class Widget(pmo.tiny_block):
     def __init__(self, p, input=None):
         super(Widget, self).__init__()
