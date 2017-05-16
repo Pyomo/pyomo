@@ -33,3 +33,5 @@ doc = {
 'path':     'Nonlinear MCP solver',
 'snopt':    'SQP NLP solver'
 }
+
+import pyomo.neos.log_config

@@ -175,6 +175,13 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
             else:
                 # minimize
                 obj_value = float('-inf')
+        elif term_cond == "infeasible":
+            if (sense < 0):
+                # maximize
+                obj_value = float('-inf')
+            else:
+                # minimize
+                obj_value = float('inf')
 
     # write the solution file
     solnfile = open(soln_file, "w+")

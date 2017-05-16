@@ -15,17 +15,17 @@ matrix:
     env:                             CATEGORY="parallel" EXTRAS="yes"
   #
   - python: '3.5'
-    env:                             CATEGORY="nightly"
-  - python: '3.5'
     env:                             CATEGORY="nightly"  EXTRAS="yes"
   - python: '3.5'
     env:                             CATEGORY="parallel" EXTRAS="yes"
+  #
   - python: '3.6'
     env:                             CATEGORY="nightly"
-#  - python: '3.6'
-#    env:                             CATEGORY="nightly"  EXTRAS="yes"
-#  - python: '3.6'
-#    env:                             CATEGORY="parallel" EXTRAS="yes"
+  #- python: '3.6'
+  #  env:                             CATEGORY="nightly"  EXTRAS="yes"
+  #- python: '3.6'
+  #  env:                             CATEGORY="parallel" EXTRAS="yes"
+
 #  - python: pypy
 #    env:                             CATEGORY="nightly"
   #

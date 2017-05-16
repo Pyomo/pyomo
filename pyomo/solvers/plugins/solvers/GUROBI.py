@@ -417,11 +417,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                     elif (tokens[0] == 'gap'):
                         soln.gap = float(tokens[1])
                     elif (tokens[0] == 'objective'):
-                        soln.objective['__default_objective__'] = {'Value': float(tokens[1])}
-                        if results.problem.sense == ProblemSense.minimize:
-                            results.problem.upper_bound = float(tokens[1])
-                        else:
-                            results.problem.lower_bound = float(tokens[1])
+                        if tokens[1].strip() != 'None':
+                            soln.objective['__default_objective__'] = \
+                                {'Value': float(tokens[1])}
+                            if results.problem.sense == ProblemSense.minimize:
+                                results.problem.upper_bound = float(tokens[1])
+                            else:
+                                results.problem.lower_bound = float(tokens[1])
                     elif (tokens[0] == 'constraintdual'):
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":
