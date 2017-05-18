@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals, maximize, ConstraintList
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
-
 
 @register_model
 class QCP_simple(_BaseTestModel):
@@ -49,10 +49,9 @@ class QCP_simple(_BaseTestModel):
     def warmstart_model(self):
         assert self.model is not None
         model = self.model
-        model.x = 1
-        model.y = 1
-        model.z = 1
-
+        model.x.value = 1
+        model.y.value = 1
+        model.z.value = 1
 
 @register_model
 class QCP_simple_nosuffixes(QCP_simple):
@@ -64,3 +63,28 @@ class QCP_simple_nosuffixes(QCP_simple):
         QCP_simple.__init__(self)
         self.disable_suffix_tests = True
         self.add_results("QCP_simple.json")
+
+@register_model
+class QCP_simple_kernel(QCP_simple):
+
+    test_pickling = False
+
+    def _generate_model(self):
+        self.model = pmo.block()
+        model = self.model
+        model._name = self.description
+
+        model.x = pmo.variable(domain=NonNegativeReals)
+        model.y = pmo.variable(domain=NonNegativeReals)
+        model.z = pmo.variable(domain=NonNegativeReals)
+        model.fixed_var = pmo.variable()
+        model.fixed_var.fix(0.2)
+        model.q1 = pmo.variable(ub=0.2)
+        model.q2 = pmo.variable(lb=-2)
+        model.obj = pmo.objective(model.x+model.q1-model.q2,sense=maximize)
+        model.c0 = pmo.constraint(model.x+model.y+model.z == 1)
+        model.qc0 = pmo.constraint(model.x**2 + model.y**2 + model.fixed_var <= model.z**2)
+        model.qc1 = pmo.constraint(model.x**2 <= model.y*model.z)
+        model.c = pmo.constraint_dict()
+        model.c[1] = pmo.constraint(lb=0, body=-model.q1**2 + model.fixed_var)
+        model.c[2] = pmo.constraint(body=model.q2**2 + model.fixed_var, ub=5)
