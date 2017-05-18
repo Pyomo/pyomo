@@ -690,6 +690,12 @@ class _block_base(object):
         else:
             return smap
 
+    def _flag_vars_as_stale(self):
+        from pyomo.core.kernel.component_variable import variable
+        for var in self.components(variable.ctype,
+                                   active=True):
+            var.stale = True
+
     def load_solution(self,
                       solution,
                       allow_consistent_values_for_fixed_vars=False,
@@ -754,6 +760,7 @@ class _block_base(object):
         #
         # Load variable data
         #
+        self._flag_vars_as_stale()
         var_skip_attrs = ['id','canonical_label']
         for label, entry in iteritems(solution.variable):
             var_value = symbol_map.getObject(label)
