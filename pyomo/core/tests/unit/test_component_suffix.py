@@ -55,6 +55,13 @@ class Test_suffix(unittest.TestCase):
 
         pyomo.core.kernel.pprint({'a': 1, 'b': 2})
 
+    def test_str(self):
+        s = suffix()
+        self.assertEqual(str(s), "<suffix>")
+        b = block()
+        b.s = s
+        self.assertEqual(str(s), "s")
+
     def test_ctype(self):
         s = suffix()
         self.assertIs(s.ctype, Suffix)

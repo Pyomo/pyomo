@@ -27,7 +27,16 @@ logger = logging.getLogger('pyomo.core')
 
 _noarg = object()
 
-class suffix(ComponentMap, IComponent, _IActiveComponentMixin):
+# Note: ComponentMap is first in the inheritance chain
+#       because its __getstate__ / __setstate__ methods
+#       contain some special hacks that allow it to be used
+#       for the AML-Suffix object as well (hopefully,
+#       temporary). As a result, we need to override the
+#       __str__ method on this class so that suffix behaves
+#       like IComponent instead of ComponentMap
+class suffix(ComponentMap,
+             IComponent,
+             _IActiveComponentMixin):
     """
     A container for storing extranious model data that can
     be imported to or exported from a solver.
@@ -77,6 +86,9 @@ class suffix(ComponentMap, IComponent, _IActiveComponentMixin):
     #
     # Interface
     #
+
+    def __str__(self):
+        return IComponent.__str__(self)
 
     @property
     def export_enabled(self):

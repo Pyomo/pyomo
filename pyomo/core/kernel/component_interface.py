@@ -311,8 +311,8 @@ class IComponent(ICategorizedObject):
     Interface for components that can be stored inside
     objects of type IComponentContainer.
 
-    This class is abstract, but it partially implements
-    the ICategorizedObject interface by defining the following
+    This class is abstract, but it partially implements the
+    ICategorizedObject interface by defining the following
     attributes:
 
     Attributes:
