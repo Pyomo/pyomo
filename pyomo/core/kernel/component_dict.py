@@ -103,6 +103,10 @@ class ComponentDict(_SimpleContainerMixin,
         else:
             return itervalues(self._data)
 
+    def _fast_insert(self, key, item):
+        self._prepare_for_add(item)
+        self._data[key] = item
+
     #
     # Define the MutableMapping abstract methods
     #
@@ -113,8 +117,7 @@ class ComponentDict(_SimpleContainerMixin,
                 if key in self._data:
                     self._prepare_for_delete(
                         self._data[key])
-                self._prepare_for_add(item)
-                self._data[key] = item
+                self._fast_insert(key, item)
                 return
             elif (key in self._data) and (self._data[key] is item):
                 # a very special case that makes sense to handle
@@ -179,3 +182,33 @@ class ComponentDict(_SimpleContainerMixin,
 
     def __ne__(self, other):
         return not (self == other)
+
+def create_component_dict(container, type_, keys, *args, **kwds):
+    """A utility function for constructing a ComponentDict
+    container of objects with the same initialization data.
+
+    Note that this function bypasses a few safety checks
+    when adding the objects into the container, so it should
+    only be used in cases where this is okay.
+
+    Args:
+        container: The container type. Must be a subclass of
+            ComponentDict.
+        type_: The object type to populate the container
+            with. Must have the same ctype as the container
+            argument.
+        keys: The set of keys to used to populate the
+            ComponentDict.
+        *args: arguments passed to the type_ argument when
+            creating a new object.
+        **kwds: keywords passed to the type_ argument when
+            creating a new object.
+
+    returns A fully populated container.
+    """
+    assert container.ctype == type_.ctype
+    assert issubclass(container, ComponentDict)
+    cdict = container()
+    for key in keys:
+        cdict._fast_insert(key, type_(*args, **kwds))
+    return cdict

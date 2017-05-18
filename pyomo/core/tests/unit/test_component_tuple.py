@@ -13,15 +13,20 @@ import collections
 
 import pyutilib.th as unittest
 import pyomo.environ
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
-                                                   IComponent,
-                                                   _IActiveComponentMixin,
-                                                   IComponentContainer,
-                                                   _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_interface import \
+    (ICategorizedObject,
+     IActiveObject,
+     IComponent,
+     _IActiveComponentMixin,
+     IComponentContainer,
+     _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_tuple import (ComponentTuple,
+                                               create_component_tuple)
 from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_list)
+
+import six
 
 #
 # There are no fully implemented test suites in this
@@ -68,6 +73,7 @@ class _TestComponentTupleBase(object):
         self.assertTrue(isinstance(ctuple, ICategorizedObject))
         self.assertTrue(isinstance(ctuple, IComponentContainer))
         self.assertFalse(isinstance(ctuple, IComponent))
+        self.assertTrue(isinstance(ctuple, ComponentTuple))
         self.assertTrue(isinstance(ctuple, collections.Sequence))
         self.assertTrue(issubclass(type(ctuple), collections.Sequence))
 
@@ -478,6 +484,35 @@ class _TestComponentTupleBase(object):
                          [(k,id(c)) for k,c in ctuple.postorder_traversal(
                              return_key=True)])
         return ctuple, traversal
+
+    def test_create_component_tuple(self):
+        ctuple1 = self._container_type(
+            self._ctype_factory()
+            for i in range(5))
+        self.assertEqual(len(ctuple1), 5)
+        for obj in ctuple1:
+            self.assertIs(obj.parent, ctuple1)
+        objects = iter(ctuple1)
+        def type_(x, y=None):
+            self.assertEqual(x, 1)
+            self.assertEqual(y, 'a')
+        type_ = lambda x, y=None: six.next(objects)
+        type_.ctype = ctuple1.ctype
+        # this will result in ctuple1 and ctuple2
+        # being "equal" in that they both store the
+        # same objects, except that ctuple2 has stolen
+        # ownership of the objects from ctuple1 (all of the
+        # .parent weakrefs have been changed)
+        ctuple2 = create_component_tuple(self._container_type,
+                                       type_,
+                                       5, 1, y='a')
+        self.assertEqual(len(ctuple2), 5)
+        self.assertEqual(ctuple1, ctuple2)
+        self.assertIsNot(ctuple1, ctuple2)
+        for obj in ctuple1:
+            self.assertIs(obj.parent, ctuple2)
+        for obj in ctuple2:
+            self.assertIs(obj.parent, ctuple2)
 
 class _TestActiveComponentTupleBase(_TestComponentTupleBase):
 

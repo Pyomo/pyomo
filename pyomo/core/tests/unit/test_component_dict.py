@@ -16,15 +16,20 @@ except ImportError:                         #pragma:nocover
 
 import pyutilib.th as unittest
 import pyomo.environ
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
-                                                   IComponent,
-                                                   _IActiveComponentMixin,
-                                                   IComponentContainer,
-                                                   _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_interface import \
+    (ICategorizedObject,
+     IActiveObject,
+     IComponent,
+     _IActiveComponentMixin,
+     IComponentContainer,
+     _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_dict import (ComponentDict,
+                                              create_component_dict)
 from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_dict)
+
+import six
 
 #
 # There are no fully implemented test suites in this
@@ -113,6 +118,7 @@ class _TestComponentDictBase(object):
         self.assertTrue(isinstance(cdict, ICategorizedObject))
         self.assertTrue(isinstance(cdict, IComponentContainer))
         self.assertFalse(isinstance(cdict, IComponent))
+        self.assertTrue(isinstance(cdict, ComponentDict))
         self.assertTrue(isinstance(cdict, collections.Mapping))
         self.assertTrue(isinstance(cdict, collections.MutableMapping))
         self.assertTrue(issubclass(type(cdict), collections.Mapping))
@@ -596,6 +602,36 @@ class _TestComponentDictBase(object):
                          [(k,id(c)) for k,c in cdict.postorder_traversal(
                              return_key=True)])
         return cdict, traversal
+
+    def test_create_component_dict(self):
+        cdict1 = self._container_type(
+            (i, self._ctype_factory())
+            for i in range(5))
+        self.assertEqual(len(cdict1), 5)
+        for obj in cdict1.values():
+            self.assertIs(obj.parent, cdict1)
+        objects = iter(cdict1.values())
+        def type_(x, y=None):
+            self.assertEqual(x, 1)
+            self.assertEqual(y, 'a')
+        type_ = lambda x, y=None: six.next(objects)
+        type_.ctype = cdict1.ctype
+        # this will result in cdict1 and cdict2
+        # being "equal" in that they both store the
+        # same objects, except that cdict2 has stolen
+        # ownership of the objects from cdict1 (all of the
+        # .parent weakrefs have been changed)
+        cdict2 = create_component_dict(self._container_type,
+                                       type_,
+                                       range(5),
+                                       1, y='a')
+        self.assertEqual(len(cdict2), 5)
+        self.assertEqual(cdict1, cdict2)
+        self.assertIsNot(cdict1, cdict2)
+        for obj in cdict1.values():
+            self.assertIs(obj.parent, cdict2)
+        for obj in cdict2.values():
+            self.assertIs(obj.parent, cdict2)
 
 class _TestActiveComponentDictBase(_TestComponentDictBase):
 

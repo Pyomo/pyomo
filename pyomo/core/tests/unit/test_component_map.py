@@ -96,14 +96,8 @@ class TestComponentMap(unittest.TestCase):
         self.assertEqual(len(c), 1)
         self.assertEqual(c[v], 1)
 
-    def test_init1(self):
+    def test_init(self):
         cmap = ComponentMap()
-        self.assertTrue(isinstance(cmap, collections.Mapping))
-        self.assertTrue(isinstance(cmap, collections.MutableMapping))
-        self.assertTrue(issubclass(type(cmap), collections.Mapping))
-        self.assertTrue(issubclass(type(cmap), collections.MutableMapping))
-
-    def test_init2(self):
         cmap = ComponentMap(self._components)
         with self.assertRaises(TypeError):
             cmap = ComponentMap(*self._components)
@@ -117,7 +111,7 @@ class TestComponentMap(unittest.TestCase):
 
     def test_str(self):
         cmap = ComponentMap()
-        self.assertEqual(str(cmap), "{}")
+        self.assertEqual(str(cmap), "ComponentMap({})")
         cmap.update(self._components)
         str(cmap)
 

@@ -11,6 +11,8 @@ import collections
 
 from pyomo.core.kernel.component_tuple import ComponentTuple
 
+from six.moves import xrange as range
+
 class ComponentList(ComponentTuple,
                     collections.MutableSequence):
     """
@@ -73,6 +75,7 @@ class ComponentList(ComponentTuple,
                    item.ctype))
 
     def insert(self, i, item):
+        """S.insert(index, object) -- insert object before index"""
         self._insert(i, item)
 
     def __delitem__(self, i):
@@ -87,8 +90,39 @@ class ComponentList(ComponentTuple,
     # as we shuffle items
 
     def reverse(self):
-        'S.reverse() -- reverse *IN PLACE*'
+        """S.reverse() -- reverse *IN PLACE*"""
         n = len(self)
         data = self._data
         for i in range(n//2):
             data[i], data[n-i-1] = data[n-i-1], data[i]
+
+def create_component_list(container, type_, size, *args, **kwds):
+    """A utility function for constructing a ComponentList
+    container of objects with the same initialization data.
+
+    Note that this function bypasses a few safety checks
+    when adding the objects into the container, so it should
+    only be used in cases where this is okay.
+
+    Args:
+        container: The container type. Must be a subclass of
+            ComponentList.
+        type_: The object type to populate the container
+            with. Must have the same ctype as the container
+            argument.
+        size (int): The number of objects to place in the
+            ComponentList.
+        *args: arguments passed to the type_ argument when
+            creating a new object.
+        **kwds: keywords passed to the type_ argument when
+            creating a new object.
+
+    returns A fully populated container.
+    """
+    assert size >= 0
+    assert container.ctype == type_.ctype
+    assert issubclass(container, ComponentList)
+    clist = container()
+    for i in range(size):
+        clist._fast_insert(i, type_(*args, **kwds))
+    return clist

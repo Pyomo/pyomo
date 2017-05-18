@@ -13,15 +13,20 @@ import collections
 
 import pyutilib.th as unittest
 import pyomo.environ
-from pyomo.core.kernel.component_interface import (ICategorizedObject,
-                                                   IActiveObject,
-                                                   IComponent,
-                                                   _IActiveComponentMixin,
-                                                   IComponentContainer,
-                                                   _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_interface import \
+    (ICategorizedObject,
+     IActiveObject,
+     IComponent,
+     _IActiveComponentMixin,
+     IComponentContainer,
+     _IActiveComponentContainerMixin)
+from pyomo.core.kernel.component_list import (ComponentList,
+                                              create_component_list)
 from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_list)
+
+import six
 
 #
 # There are no fully implemented test suites in this
@@ -68,6 +73,7 @@ class _TestComponentListBase(object):
         self.assertTrue(isinstance(clist, ICategorizedObject))
         self.assertTrue(isinstance(clist, IComponentContainer))
         self.assertFalse(isinstance(clist, IComponent))
+        self.assertTrue(isinstance(clist, ComponentList))
         self.assertTrue(isinstance(clist, collections.Sequence))
         self.assertTrue(issubclass(type(clist), collections.Sequence))
         self.assertTrue(isinstance(clist, collections.MutableSequence))
@@ -635,6 +641,35 @@ class _TestComponentListBase(object):
                          [(k,id(c)) for k,c in clist.postorder_traversal(
                              return_key=True)])
         return clist, traversal
+
+    def test_create_component_list(self):
+        clist1 = self._container_type(
+            self._ctype_factory()
+            for i in range(5))
+        self.assertEqual(len(clist1), 5)
+        for obj in clist1:
+            self.assertIs(obj.parent, clist1)
+        objects = iter(clist1)
+        def type_(x, y=None):
+            self.assertEqual(x, 1)
+            self.assertEqual(y, 'a')
+        type_ = lambda x, y=None: six.next(objects)
+        type_.ctype = clist1.ctype
+        # this will result in clist1 and clist2
+        # being "equal" in that they both store the
+        # same objects, except that clist2 has stolen
+        # ownership of the objects from clist1 (all of the
+        # .parent weakrefs have been changed)
+        clist2 = create_component_list(self._container_type,
+                                       type_,
+                                       5, 1, y='a')
+        self.assertEqual(len(clist2), 5)
+        self.assertEqual(clist1, clist2)
+        self.assertIsNot(clist1, clist2)
+        for obj in clist1:
+            self.assertIs(obj.parent, clist2)
+        for obj in clist2:
+            self.assertIs(obj.parent, clist2)
 
 class _TestActiveComponentListBase(_TestComponentListBase):
 

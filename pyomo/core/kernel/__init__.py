@@ -28,8 +28,11 @@ from pyomo.core.kernel.component_block import (block,
 import pyomo.core.kernel.component_variable
 from pyomo.core.kernel.component_variable import (variable,
                                                   variable_tuple,
+                                                  create_variable_tuple,
                                                   variable_list,
-                                                  variable_dict)
+                                                  create_variable_list,
+                                                  variable_dict,
+                                                  create_variable_dict)
 import pyomo.core.kernel.component_constraint
 from pyomo.core.kernel.component_constraint import (constraint,
                                                     linear_constraint,

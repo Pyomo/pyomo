@@ -13,6 +13,8 @@ from pyomo.core.kernel.component_interface import \
     (IComponentContainer,
      _SimpleContainerMixin)
 
+from six.moves import xrange as range
+
 class ComponentTuple(_SimpleContainerMixin,
                      IComponentContainer,
                      collections.Sequence):
@@ -46,12 +48,14 @@ class ComponentTuple(_SimpleContainerMixin,
             for item in args[0]:
                 self._insert(len(self), item)
 
+    def _fast_insert(self, i, item):
+        self._prepare_for_add(item)
+        self._data.insert(i, item)
 
     def _insert(self, i, item):
         if item.ctype == self.ctype:
             if item._parent is None:
-                self._prepare_for_add(item)
-                self._data.insert(i, item)
+                self._fast_insert(i, item)
                 return
             # see note about allowing components to live
             # in more than one container
@@ -122,7 +126,7 @@ class ComponentTuple(_SimpleContainerMixin,
     # We want to avoid generating Pyomo expressions due to
     # comparison of values.
 
-    # Convert both objects to a plain list of (type(val),
+    # Convert both objects to a plain tuple of (type(val),
     # id(val)) tuples and compare that instead.
     def __eq__(self, other):
         if not isinstance(other, (collections.Set,
@@ -175,3 +179,36 @@ class ComponentTuple(_SimpleContainerMixin,
         cnt = sum(1 for _v in self._data if id(_v) == item_id)
         assert cnt == 1
         return cnt
+
+def create_component_tuple(container, type_, size, *args, **kwds):
+    """A utility function for constructing a ComponentTuple
+    container of objects with the same initialization data.
+
+    Note that this function bypasses a few safety checks
+    when adding the objects into the container, so it should
+    only be used in cases where this is okay.
+
+    Args:
+        container: The container type. Must be a subclass of
+            ComponentTuple.
+        type_: The object type to populate the container
+            with. Must have the same ctype as the container
+            argument.
+        size (int): The number of objects to place in the
+            ComponentTuple.
+        *args: arguments passed to the type_ argument when
+            creating a new object.
+        **kwds: keywords passed to the type_ argument when
+            creating a new object.
+
+    returns A fully populated container.
+    """
+    assert size >= 0
+    assert container.ctype == type_.ctype
+    assert issubclass(container, ComponentTuple)
+    ctuple = container()
+    ctuple._data = []
+    for i in range(size):
+        ctuple._fast_insert(i, type_(*args, **kwds))
+    ctuple._data = tuple(ctuple._data)
+    return ctuple

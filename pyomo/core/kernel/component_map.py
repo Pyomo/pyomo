@@ -59,8 +59,8 @@ class ComponentMap(collections.MutableMapping):
         # object id() may have changed after unpickling,
         # so we rebuild the dictionary keys
         self._dict = \
-            dict((id(component), (component,val)) \
-                 for component, val in itervalues(state['_dict']))
+            dict((id(obj), (obj,val)) \
+                 for obj, val in itervalues(state['_dict']))
 
     def __getstate__(self):
         # *** Temporary hack to allow this class to be used
@@ -85,32 +85,32 @@ class ComponentMap(collections.MutableMapping):
         tmp = dict()
         for c,v in self.items():
             tmp[str(c)+" (id="+str(id(c))+")"] = v
-        return str(tmp)
+        return "ComponentMap("+str(tmp)+")"
 
     #
     # Implement MutableMapping abstract methods
     #
 
-    def __getitem__(self, component):
+    def __getitem__(self, obj):
         try:
-            return self._dict[id(component)][1]
+            return self._dict[id(obj)][1]
         except KeyError:
             raise KeyError("Component with id '%s': %s"
-                           % (id(component), str(component)))
+                           % (id(obj), str(obj)))
 
-    def __setitem__(self, component, value):
-        self._dict[id(component)] = (component,value)
+    def __setitem__(self, obj, val):
+        self._dict[id(obj)] = (obj,val)
 
-    def __delitem__(self, component):
+    def __delitem__(self, obj):
         try:
-            del self._dict[id(component)]
+            del self._dict[id(obj)]
         except KeyError:
             raise KeyError("Component with id '%s': %s"
-                           % (id(component), str(component)))
+                           % (id(obj), str(obj)))
 
     def __iter__(self):
-        return (component \
-                for component, value in \
+        return (obj \
+                for obj, val in \
                 itervalues(self._dict))
 
     def __len__(self):
@@ -143,8 +143,8 @@ class ComponentMap(collections.MutableMapping):
     # qualified names.
     #
 
-    def __contains__(self, component):
-        return id(component) in self._dict
+    def __contains__(self, obj):
+        return id(obj) in self._dict
 
     def clear(self):
         'D.clear() -> None.  Remove all items from D.'

@@ -22,8 +22,11 @@ from pyomo.core.kernel.component_variable import \
     (IVariable,
      variable,
      variable_dict,
+     create_variable_dict,
      variable_tuple,
+     create_variable_tuple,
      variable_list,
+     create_variable_list,
      _extract_domain_type_and_bounds)
 from pyomo.core.kernel.component_block import block
 from pyomo.core.kernel.set_types import (RealSet,
@@ -650,20 +653,77 @@ class Test_variable(unittest.TestCase):
         b.activate()
         self.assertEqual(b.active, True)
 
+class _variable_subclass(variable):
+    pass
+
 class Test_variable_dict(_TestComponentDictBase,
                          unittest.TestCase):
     _container_type = variable_dict
     _ctype_factory = lambda self: variable()
+
+    def test_create_variable_dict(self):
+        vdict = create_variable_dict(range(5),
+                                     lb=1, ub=10)
+        self.assertEqual(len(vdict), 5)
+        for v in vdict.values():
+            self.assertIs(v.parent, vdict)
+            self.assertEqual(v.bounds, (1,10))
+            self.assertIs(type(v), variable)
+
+        vdict = create_variable_dict(range(5),
+                                     type_=_variable_subclass,
+                                     lb=1, ub=10)
+        self.assertEqual(len(vdict), 5)
+        for v in vdict.values():
+            self.assertIs(v.parent, vdict)
+            self.assertEqual(v.bounds, (1,10))
+            self.assertIs(type(v), _variable_subclass)
 
 class Test_variable_tuple(_TestComponentTupleBase,
                           unittest.TestCase):
     _container_type = variable_tuple
     _ctype_factory = lambda self: variable()
 
+    def test_create_variable_tuple(self):
+        vtuple = create_variable_tuple(5,
+                                       lb=1, ub=10)
+        self.assertEqual(len(vtuple), 5)
+        for v in vtuple:
+            self.assertIs(v.parent, vtuple)
+            self.assertEqual(v.bounds, (1,10))
+            self.assertIs(type(v), variable)
+
+        vtuple = create_variable_tuple(5,
+                                       type_=_variable_subclass,
+                                       lb=1, ub=10)
+        self.assertEqual(len(vtuple), 5)
+        for v in vtuple:
+            self.assertIs(v.parent, vtuple)
+            self.assertEqual(v.bounds, (1,10))
+            self.assertIs(type(v), _variable_subclass)
+
 class Test_variable_list(_TestComponentListBase,
                          unittest.TestCase):
     _container_type = variable_list
     _ctype_factory = lambda self: variable()
+
+    def test_create_variable_list(self):
+        vlist = create_variable_list(5,
+                                     lb=1, ub=10)
+        self.assertEqual(len(vlist), 5)
+        for v in vlist:
+            self.assertIs(v.parent, vlist)
+            self.assertEqual(v.bounds, (1,10))
+            self.assertIs(type(v), variable)
+
+        vlist = create_variable_list(5,
+                                     type_=_variable_subclass,
+                                     lb=1, ub=10)
+        self.assertEqual(len(vlist), 5)
+        for v in vlist:
+            self.assertIs(v.parent, vlist)
+            self.assertEqual(v.bounds, (1,10))
+            self.assertIs(type(v), _variable_subclass)
 
 if __name__ == "__main__":
     unittest.main()

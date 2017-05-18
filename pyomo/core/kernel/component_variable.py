@@ -11,9 +11,12 @@ from pyomo.core.kernel.component_interface import \
     (IComponent,
      _abstract_readwrite_property,
      _abstract_readonly_property)
-from pyomo.core.kernel.component_dict import ComponentDict
-from pyomo.core.kernel.component_tuple import ComponentTuple
-from pyomo.core.kernel.component_list import ComponentList
+from pyomo.core.kernel.component_dict import (ComponentDict,
+                                              create_component_dict)
+from pyomo.core.kernel.component_tuple import (ComponentTuple,
+                                               create_component_tuple)
+from pyomo.core.kernel.component_list import (ComponentList,
+                                              create_component_list)
 from pyomo.core.kernel.numvalue import NumericValue
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
@@ -285,6 +288,14 @@ class variable_tuple(ComponentTuple):
         self._parent = None
         super(variable_tuple, self).__init__(*args, **kwds)
 
+def create_variable_tuple(size, *args, **kwds):
+    type_ = kwds.pop('type_', variable)
+    return create_component_tuple(variable_tuple,
+                                  type_,
+                                  size,
+                                  *args,
+                                  **kwds)
+
 class variable_list(ComponentList):
     """A list-style container for variables."""
     # To avoid a circular import, for the time being, this
@@ -303,6 +314,14 @@ class variable_list(ComponentList):
         self._parent = None
         super(variable_list, self).__init__(*args, **kwds)
 
+def create_variable_list(size, *args, **kwds):
+    type_ = kwds.pop('type_', variable)
+    return create_component_list(variable_list,
+                                 type_,
+                                 size,
+                                 *args,
+                                 **kwds)
+
 class variable_dict(ComponentDict):
     """A dict-style container for variables."""
     # To avoid a circular import, for the time being, this
@@ -320,3 +339,11 @@ class variable_dict(ComponentDict):
     def __init__(self, *args, **kwds):
         self._parent = None
         super(variable_dict, self).__init__(*args, **kwds)
+
+def create_variable_dict(keys, *args, **kwds):
+    type_ = kwds.pop('type_', variable)
+    return create_component_dict(variable_dict,
+                                 type_,
+                                 keys,
+                                 *args,
+                                 **kwds)
