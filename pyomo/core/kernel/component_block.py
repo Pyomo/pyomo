@@ -766,7 +766,7 @@ class _block_base(object):
                 #    create a dummy variable in the model
                 #    map at the same time the objective
                 #    expression is being constructed.
-                if label == "ONE_VAR_CONSTANT":
+                if "ONE_VAR_CONST" in label:
                     continue
                 else:
                     raise KeyError("Variable associated with symbol '%s' "
@@ -810,7 +810,7 @@ class _block_base(object):
                 #
                 # This is a hack - see above.
                 #
-                if label.endswith('ONE_VAR_CONSTANT'):
+                if "ONE_VAR_CONST" in label:
                     continue
                 else:
                     raise KeyError("Constraint associated with symbol '%s' "

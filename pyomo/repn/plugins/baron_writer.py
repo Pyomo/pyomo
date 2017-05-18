@@ -30,8 +30,11 @@ from pyomo.core.base.numvalue import is_fixed, value
 from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
-from pyomo.core.base.suffix import active_export_suffix_generator
+import pyomo.core.base.suffix
 from pyomo.repn import LinearCanonicalRepn
+import pyomo.core.kernel.component_suffix
+from pyomo.core.kernel.component_block import IBlockStorage
+
 
 from six import iteritems, StringIO, iterkeys
 from six.moves import xrange
@@ -221,12 +224,21 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #
         # Check for active suffixes to export
         #
+        if isinstance(model, IBlockStorage):
+            suffix_gen = lambda b: pyomo.core.kernel.component_suffix.\
+                         export_suffix_generator(b,
+                                                 active=True,
+                                                 return_key=True,
+                                                 descend_into=False)
+        else:
+            suffix_gen = lambda b: pyomo.core.base.suffix.\
+                         active_export_suffix_generator(b)
         r_o_eqns = []
         c_eqns = []
         l_eqns = []
         branching_priorities_suffixes = []
         for block in all_blocks_list:
-            for name, suffix in active_export_suffix_generator(block):
+            for name, suffix in suffix_gen(block):
                 if name == 'branching_priorities':
                     branching_priorities_suffixes.append(suffix)
                 elif name == 'constraint_types':
@@ -492,6 +504,25 @@ class ProblemWriter_bar(AbstractProblemWriter):
         # Example: ' x[1] ' -> ' x3 '
         #FIXME: 7/18/14 CLH: This may cause mistakes if spaces in
         #                    variable names are allowed
+        if isinstance(model, IBlockStorage):
+            mutable_param_gen = lambda b: \
+                                b.components(ctype=Param,
+                                             descend_into=False)
+        else:
+            def mutable_param_gen(b):
+                for param in block.component_objects(Param):
+                    if param._mutable and param.is_indexed():
+                        param_data_iter = \
+                            (param_data for index, param_data
+                             in iteritems(param))
+                    elif not param.is_indexed():
+                        param_data_iter = iter([param])
+                    else:
+                        param_data_iter = iter([])
+
+                    for param_data in param_data_iter:
+                        yield param_data
+
         vstring_to_bar_dict = {}
         pstring_to_bar_dict = {}
         for block in all_blocks_list:
@@ -505,22 +536,13 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 vstring_to_bar_dict[variable_string] = \
                     ' '+object_symbol_dictionary[id(var_data)]+' '
 
-            for param in block.component_objects(Param, active=True):
-                if param._mutable and param.is_indexed():
-                    param_data_iter = \
-                        (param_data for index, param_data in iteritems(param))
-                elif not param.is_indexed():
-                    param_data_iter = iter([param])
-                else:
-                    param_data_iter = iter([])
+            for param_data in mutable_param_gen(block):
+                param_stream = StringIO()
+                param_data.to_string(ostream=param_stream, verbose=False)
+                param_string = param_stream.getvalue()
 
-                for param_data in param_data_iter:
-                    param_stream = StringIO()
-                    param_data.to_string(ostream=param_stream, verbose=False)
-                    param_string = param_stream.getvalue()
-
-                    param_string = ' '+param_string+' '
-                    pstring_to_bar_dict[param_string] = ' '+str(param_data())+' '
+                param_string = ' '+param_string+' '
+                pstring_to_bar_dict[param_string] = ' '+str(param_data())+' '
 
         # Equation Definition
         string_template = '%'+self._precision_string
