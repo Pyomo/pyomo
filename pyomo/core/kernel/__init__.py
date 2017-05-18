@@ -18,6 +18,7 @@ from pyomo.opt import (SolverFactory,
                        TerminationCondition)
 import pyomo.opt.base
 from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 import pyomo.core.kernel.component_block
 from pyomo.core.kernel.component_block import (block,
                                                tiny_block,
