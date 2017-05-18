@@ -153,7 +153,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             mst_file.write("<header/>\n")
             mst_file.write("<quality/>\n")
             mst_file.write("<variables>\n")
-            for var in instance.component_data_objects(Var):
+            for var in instance.component_data_objects(Var, active=True):
                 if (var.value is not None) and \
                    (id(var) in byObject):
                     name = byObject[id(var)]
