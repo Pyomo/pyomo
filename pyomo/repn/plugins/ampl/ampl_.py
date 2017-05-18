@@ -36,7 +36,9 @@ from pyomo.core.base import expr, SymbolMap, Block
 import pyomo.core.base.expr_common
 from pyomo.core.base.var import Var
 from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
+from pyomo.core.base.numvalue import (NumericConstant,
+                                      native_numeric_types,
+                                      value)
 from pyomo.core.base import var
 from pyomo.core.base import param
 import pyomo.core.base.suffix
@@ -919,12 +921,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 U = None
                 if constraint_data.lower is not None:
                     L = _get_bound(constraint_data.lower)
+                else:
+                    assert constraint_data.upper is not None
                 if constraint_data.upper is not None:
                     U = _get_bound(constraint_data.upper)
+                else:
+                    assert constraint_data.lower is not None
+                if constraint_data.equality:
+                    assert L == U
 
                 offset = ampl_repn._constant
-                #if constraint_data.equality:
-                #    assert L == U
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:

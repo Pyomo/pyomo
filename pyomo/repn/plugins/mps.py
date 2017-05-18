@@ -495,6 +495,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                                             labeler)
 
             if constraint_data.equality:
+                assert value(constraint_data.lower) == \
+                    value(constraint_data.upper)
                 label = 'c_e_' + con_symbol + '_'
                 alias_symbol_func(symbol_map, constraint_data, label)
                 output_file.write(" E  %s\n" % (label))
@@ -524,6 +526,9 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     bound = constraint_data.lower
                     bound = self._get_bound(bound) - offset
                     rhs_data.append((label, _no_negative_zero(bound)))
+                else:
+                    assert constraint_data.upper is not None
+
                 if constraint_data.upper is not None:
                     if constraint_data.lower is not None:
                         label = 'r_u_' + con_symbol + '_'
@@ -540,6 +545,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     bound = constraint_data.upper
                     bound = self._get_bound(bound) - offset
                     rhs_data.append((label, _no_negative_zero(bound)))
+                else:
+                    assert constraint_data.lower is not None
 
         if len(column_data[-1]) > 0:
             # ONE_VAR_CONSTANT = 1

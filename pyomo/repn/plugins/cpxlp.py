@@ -676,6 +676,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
 
             if constraint_data.equality:
+                assert value(constraint_data.lower) == \
+                    value(constraint_data.upper)
                 label = 'c_e_' + con_symbol + '_'
                 alias_symbol_func(symbol_map, constraint_data, label)
                 output_file.write(label+':\n')
@@ -708,6 +710,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     bound = _get_bound(bound) - offset
                     output_file.write(geq_string_template
                                       % (_no_negative_zero(bound)))
+                else:
+                    assert constraint_data.upper is not None
+
                 if constraint_data.upper is not None:
                     if constraint_data.lower is not None:
                         label = 'r_u_' + con_symbol + '_'
@@ -725,6 +730,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     bound = _get_bound(bound) - offset
                     output_file.write(leq_string_template
                                       % (_no_negative_zero(bound)))
+                else:
+                    assert constraint_data.lower is not None
 
         if not have_nontrivial:
             logger.warning('Empty constraint block written in LP format '  \
