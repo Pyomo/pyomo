@@ -290,7 +290,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
                 if var_data.is_continuous():
                     if (var_data.lb is not None) and \
-                       (var_data.lb >= 0):
+                       (self._get_bound(var_data.lb) >= 0):
                         TypeList = PosVars
                     else:
                         TypeList = Vars
@@ -343,7 +343,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 if var_data.fixed:
                     var_data_lb = var_data.value
                 else:
-                    var_data_lb = var_data.lb
+                    var_data_lb = self._get_bound(var_data.lb)
                     if var_data_lb == -infinity:
                         var_data_lb = None
 
@@ -369,7 +369,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 if var_data.fixed:
                     var_data_ub = var_data.value
                 else:
-                    var_data_ub = var_data.ub
+                    var_data_ub = self._get_bound(var_data.ub)
                     if var_data_ub == infinity:
                         var_data_ub = None
 
