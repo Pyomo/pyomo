@@ -199,10 +199,10 @@ def create_component_dict(container, type_, keys, *args, **kwds):
             argument.
         keys: The set of keys to used to populate the
             ComponentDict.
-        *args: arguments passed to the type_ argument when
-            creating a new object.
-        **kwds: keywords passed to the type_ argument when
-            creating a new object.
+        *args: arguments used to construct the objects
+            placed in the container.
+        **kwds: keywords used to construct the objects
+            placed in the container.
 
     Returns:
         A fully populated container.

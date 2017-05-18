@@ -299,10 +299,10 @@ def create_variable_tuple(size, *args, **kwds):
         type_: The object type to populate the container
             with. Must have the same ctype as
             variable_tuple. Default: variable
-        *args: arguments passed to the type_ argument when
-            creating a new object.
-        **kwds: keywords passed to the type_ argument when
-            creating a new object.
+        *args: arguments used to construct the objects
+            placed in the container.
+        **kwds: keywords used to construct the objects
+            placed in the container.
 
     Returns:
         A fully populated container.
@@ -343,10 +343,10 @@ def create_variable_list(size, *args, **kwds):
         type_: The object type to populate the container
             with. Must have the same ctype as
             variable_list. Default: variable
-        *args: arguments passed to the type_ argument when
-            creating a new object.
-        **kwds: keywords passed to the type_ argument when
-            creating a new object.
+        *args: arguments used to construct the objects
+            placed in the container.
+        **kwds: keywords used to construct the objects
+            placed in the container.
 
     Returns:
         A fully populated container.
@@ -387,10 +387,10 @@ def create_variable_dict(keys, *args, **kwds):
         type_: The object type to populate the container
             with. Must have the same ctype as
             variable_dict. Default: variable.
-        *args: arguments passed to the type_ argument when
-            creating a new object.
-        **kwds: keywords passed to the type_ argument when
-            creating a new object.
+        *args: arguments used to construct the objects
+            placed in the container.
+        **kwds: keywords used to construct the objects
+            placed in the container.
 
     Returns:
         A fully populated container.
