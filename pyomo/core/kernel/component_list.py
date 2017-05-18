@@ -117,7 +117,8 @@ def create_component_list(container, type_, size, *args, **kwds):
         **kwds: keywords passed to the type_ argument when
             creating a new object.
 
-    returns A fully populated container.
+    Returns:
+        A fully populated container.
     """
     assert size >= 0
     assert container.ctype == type_.ctype

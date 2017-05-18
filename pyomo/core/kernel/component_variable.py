@@ -289,6 +289,24 @@ class variable_tuple(ComponentTuple):
         super(variable_tuple, self).__init__(*args, **kwds)
 
 def create_variable_tuple(size, *args, **kwds):
+    """
+    Utility function for building a fully populated
+    variable_tuple container.
+
+    Args:
+        size (int): The number of objects to place in the
+            variable_tuple.
+        type_: The object type to populate the container
+            with. Must have the same ctype as
+            variable_tuple. Default: variable
+        *args: arguments passed to the type_ argument when
+            creating a new object.
+        **kwds: keywords passed to the type_ argument when
+            creating a new object.
+
+    Returns:
+        A fully populated container.
+    """
     type_ = kwds.pop('type_', variable)
     return create_component_tuple(variable_tuple,
                                   type_,
@@ -315,6 +333,24 @@ class variable_list(ComponentList):
         super(variable_list, self).__init__(*args, **kwds)
 
 def create_variable_list(size, *args, **kwds):
+    """
+    Utility function for building a fully populated
+    variable_list container.
+
+    Args:
+        size (int): The number of objects to place in the
+            variable_list.
+        type_: The object type to populate the container
+            with. Must have the same ctype as
+            variable_list. Default: variable
+        *args: arguments passed to the type_ argument when
+            creating a new object.
+        **kwds: keywords passed to the type_ argument when
+            creating a new object.
+
+    Returns:
+        A fully populated container.
+    """
     type_ = kwds.pop('type_', variable)
     return create_component_list(variable_list,
                                  type_,
@@ -341,6 +377,24 @@ class variable_dict(ComponentDict):
         super(variable_dict, self).__init__(*args, **kwds)
 
 def create_variable_dict(keys, *args, **kwds):
+    """
+    Utility function for building a fully populated
+    variable_dict container.
+
+    Args:
+        keys: The set of keys to used to populate the
+            variable_dict.
+        type_: The object type to populate the container
+            with. Must have the same ctype as
+            variable_dict. Default: variable.
+        *args: arguments passed to the type_ argument when
+            creating a new object.
+        **kwds: keywords passed to the type_ argument when
+            creating a new object.
+
+    Returns:
+        A fully populated container.
+    """
     type_ = kwds.pop('type_', variable)
     return create_component_dict(variable_dict,
                                  type_,

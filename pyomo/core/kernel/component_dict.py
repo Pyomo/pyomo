@@ -204,7 +204,8 @@ def create_component_dict(container, type_, keys, *args, **kwds):
         **kwds: keywords passed to the type_ argument when
             creating a new object.
 
-    returns A fully populated container.
+    Returns:
+        A fully populated container.
     """
     assert container.ctype == type_.ctype
     assert issubclass(container, ComponentDict)
