@@ -97,11 +97,12 @@ class GeneralCanonicalRepn(dict):
     # we assume the underlying dictionary is the only thing
 
     def __getstate__(self):
-        return self.items()
+        return {'items': tuple(self.items())}
 
-    def __setstate__(self, dictionary):
+    def __setstate__(self, state):
+        assert len(state) == 1
         self.clear()
-        self.update(dictionary)
+        self.update(state)
         self._hash = None
 
     def __str__(self):
