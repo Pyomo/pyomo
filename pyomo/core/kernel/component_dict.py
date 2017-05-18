@@ -44,14 +44,14 @@ class ComponentDict(_SimpleContainerMixin,
     other IComponentContainer implementations that are
     defined with the same ctype.
 
-    The optional keyword 'ordered' can be set to True to
-    indicate that an OrderedDict should be used as the
-    underlying storage dictionary.
+    The optional keyword 'ordered' can be set to True/False
+    to enable/disable the use of an OrderedDict as the
+    underlying storage dictionary (default is True).
     """
     __slots__ = ()
 
     def __init__(self, *args, **kwds):
-        ordered = kwds.pop('ordered', False)
+        ordered = kwds.pop('ordered', True)
         if len(kwds):
             raise ValueError("Unexpected keywords used "
                              "to initialize class: %s"

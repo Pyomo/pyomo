@@ -90,9 +90,11 @@ class _TestComponentDictBase(object):
 
     def test_ordered_init(self):
         cdict = self._container_type()
-        self.assertEqual(type(cdict._data), dict)
+        self.assertEqual(type(cdict._data), OrderedDict)
+        self.assertNotEqual(type(cdict._data), dict)
         cdict = self._container_type(ordered=False)
         self.assertEqual(type(cdict._data), dict)
+        self.assertNotEqual(type(cdict._data), OrderedDict)
         cdict = self._container_type(ordered=True)
         self.assertNotEqual(type(cdict._data), dict)
         self.assertEqual(type(cdict._data), OrderedDict)
