@@ -42,6 +42,13 @@ def _no_negative_zero(val):
         return 0
     return val
 
+def _get_bound(exp):
+    if exp is None:
+        return None
+    if is_fixed(exp):
+        return value(exp)
+    raise ValueError("non-fixed bound or weight: " + str(exp))
+
 class ProblemWriter_mps(AbstractProblemWriter):
 
     pyomo.util.plugin.alias('mps', 'Generate the corresponding MPS file')
@@ -173,13 +180,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
 
         return output_filename, symbol_map
 
-    def _get_bound(self, exp):
-        if exp is None:
-            return None
-        if is_fixed(exp):
-            return value(exp)
-        raise ValueError("non-fixed bound: " + str(exp))
-
     def _extract_variable_coefficients(
             self,
             row_label,
@@ -246,11 +246,17 @@ class ProblemWriter_mps(AbstractProblemWriter):
                   variable_symbol_map,
                   soscondata,
                   output_file):
-        if soscondata.num_variables() == 0:
+
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
+
+        if len(sos_items) == 0:
             return
+
         output_file.write("SOS\n")
 
-        sos_items = list(soscondata.get_items())
         level = soscondata.level
 
         # I think there are many flavors to the SOS
@@ -262,6 +268,12 @@ class ProblemWriter_mps(AbstractProblemWriter):
 
         sos_template_string = "    %s %"+self._precision_string+"\n"
         for vardata, weight in sos_items:
+            weight = _get_bound(weight)
+            if weight < 0:
+                raise ValueError(
+                    "Cannot use negative weight %f "
+                    "for variable %s is special ordered "
+                    "set %s " % (weight, vardata.name, soscondata.name))
             if vardata.fixed:
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
@@ -507,7 +519,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     quadmatrix_data,
                     variable_to_column)
                 bound = constraint_data.lower
-                bound = self._get_bound(bound) - offset
+                bound = _get_bound(bound) - offset
                 rhs_data.append((label, _no_negative_zero(bound)))
             else:
                 if constraint_data.lower is not None:
@@ -524,7 +536,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         quadmatrix_data,
                         variable_to_column)
                     bound = constraint_data.lower
-                    bound = self._get_bound(bound) - offset
+                    bound = _get_bound(bound) - offset
                     rhs_data.append((label, _no_negative_zero(bound)))
                 else:
                     assert constraint_data.upper is not None
@@ -543,7 +555,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         quadmatrix_data,
                         variable_to_column)
                     bound = constraint_data.upper
-                    bound = self._get_bound(bound) - offset
+                    bound = _get_bound(bound) - offset
                     rhs_data.append((label, _no_negative_zero(bound)))
                 else:
                     assert constraint_data.lower is not None
@@ -660,8 +672,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     continue
 
                 # convert any -0 to 0 to make baseline diffing easier
-                vardata_lb = _no_negative_zero(self._get_bound(vardata.lb))
-                vardata_ub = _no_negative_zero(self._get_bound(vardata.ub))
+                vardata_lb = _no_negative_zero(_get_bound(vardata.lb))
+                vardata_ub = _no_negative_zero(_get_bound(vardata.ub))
                 unbounded_lb = (vardata_lb is None) or (vardata_lb == -infinity)
                 unbounded_ub = (vardata_ub is None) or (vardata_ub == infinity)
                 treat_as_integer = False
