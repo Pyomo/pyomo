@@ -24,6 +24,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
+from pyomo.core.kernel.component_block import IBlockStorage
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -128,18 +129,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         from pyomo.core.base import Var
 
-        # in principle, one could use a Python XML writer library like
-        # xml.dom.minidom.  it works, but it is slow. hence, the
-        # explicit direct-write of XML below.
-
-        mst_file = open(self._warm_start_file_name, "w")
-
-        mst_file.write("<?xml version=\"1.0\" ?>\n")
-        mst_file.write("<CPLEXSolution version=\"1.0\">\n")
-        mst_file.write("<header/>\n")
-        mst_file.write("<quality/>\n")
-        mst_file.write("<variables>\n")
-
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
@@ -147,17 +136,34 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
-        smap = instance.solutions.symbol_map[self._smap_id]
+        if isinstance(instance, IBlockStorage):
+            smap = getattr(instance,"._symbol_maps")\
+                   [self._smap_id]
+        else:
+            smap = instance.solutions.symbol_map[self._smap_id]
         byObject = smap.byObject
-        for var in instance.component_data_objects(Var, active=True):
-            if (var.value is not None) and (id(var) in byObject):
-                name = byObject[id(var)]
-                mst_file.write("<variable index=\"%d\" name=\"%s\" value=\"%f\" />\n" % (output_index, name, var.value))
-                output_index = output_index + 1
 
-        mst_file.write("</variables>\n")
-        mst_file.write("</CPLEXSolution>\n")
-        mst_file.close()
+        # in principle, one could use a Python XML writer library like
+        # xml.dom.minidom.  it works, but it is slow. hence, the
+        # explicit direct-write of XML below.
+
+        with open(self._warm_start_file_name, "w") as mst_file:
+            mst_file.write("<?xml version=\"1.0\" ?>\n")
+            mst_file.write("<CPLEXSolution version=\"1.0\">\n")
+            mst_file.write("<header/>\n")
+            mst_file.write("<quality/>\n")
+            mst_file.write("<variables>\n")
+            for var in instance.component_data_objects(Var):
+                if (var.value is not None) and \
+                   (id(var) in byObject):
+                    name = byObject[id(var)]
+                    mst_file.write("<variable index=\"%d\" "
+                                   "name=\"%s\" value=\"%f\" />\n"
+                                   % (output_index, name, var.value))
+                    output_index = output_index + 1
+
+            mst_file.write("</variables>\n")
+            mst_file.write("</CPLEXSolution>\n")
 
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
