@@ -20,8 +20,10 @@ Pyomo is available under the BSD License.
 ### Installation
 
 #### PyPI [![PyPI](https://img.shields.io/pypi/v/pyomo.svg?maxAge=2592000)]()
-
-[comment]: # (PyPI download stats appear to be broken: [![PyPI](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=2592000)]())
+<!---
+# PyPI download stats appear to be broken
+[![PyPI](https://img.shields.io/pypi/dm/pyomo.svg?maxAge=2592000)]()
+--->
 
     pip install pyomo
     
