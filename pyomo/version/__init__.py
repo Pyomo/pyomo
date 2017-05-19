@@ -26,8 +26,8 @@ _init_url="$URL$"
 _major=5
 _minor=2
 _micro=0
-#_releaselevel='invalid'
-_releaselevel='final'
+_releaselevel='invalid'
+#_releaselevel='final'
 _serial=0
 
 if _releaselevel == 'final':
