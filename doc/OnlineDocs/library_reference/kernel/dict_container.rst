@@ -1,6 +1,8 @@
-:mod:`pyomo.kernel.component_dict` --- Dict-like Storage Container
-===================================================================
+Dict-like Object Storage
+========================
 
-.. automodule:: pyomo.core.kernel.component_dict
+.. autoclass:: pyomo.core.kernel.component_dict.ComponentDict
    :show-inheritance:
    :members:
+   :inherited-members:
+   :special-members:

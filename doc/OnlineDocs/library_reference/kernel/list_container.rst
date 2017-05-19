@@ -1,6 +1,8 @@
-:mod:`pyomo.kernel.component_list` --- List-like Storage Container
-===================================================================
+List-like Object Storage
+========================
 
-.. automodule:: pyomo.core.kernel.component_list
+.. autoclass:: pyomo.core.kernel.component_list.ComponentList
    :show-inheritance:
    :members:
+   :inherited-members:
+   :special-members:

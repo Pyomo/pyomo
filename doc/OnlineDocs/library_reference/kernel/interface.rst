@@ -1,6 +1,7 @@
-:mod:`pyomo.kernel.component_interface` --- Base Interface for Modeling Objects
-===============================================================================
+Base Object Storage Interface
+=============================
 
 .. automodule:: pyomo.core.kernel.component_interface
    :show-inheritance:
    :members:
+   :private-members:

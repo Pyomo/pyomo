@@ -1,6 +1,8 @@
-:mod:`pyomo.kernel.component_tuple` --- Tuple-like Storage Container
-====================================================================
+Tuple-like Object Storage
+=========================
 
-.. automodule:: pyomo.core.kernel.component_tuple
+.. autoclass:: pyomo.core.kernel.component_tuple.ComponentTuple
    :show-inheritance:
    :members:
+   :inherited-members:
+   :special-members:

@@ -1,6 +1,7 @@
-:mod:`pyomo.kernel.component_block` --- Blocks
-==============================================
+Blocks
+======
 
 .. automodule:: pyomo.core.kernel.component_block
-   :show-inheritance:
    :members:
+   :inherited-members:
+   :show-inheritance:
