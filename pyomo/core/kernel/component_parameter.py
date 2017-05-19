@@ -61,7 +61,7 @@ class IParameter(IComponent, NumericValue):
         return 0
 
 class parameter(IParameter):
-    """A placeholder for a numeric value in an expression."""
+    """A placeholder for a mutable, numeric value."""
     # To avoid a circular import, for the time being, this
     # property will be set in param.py
     _ctype = None
@@ -78,6 +78,7 @@ class parameter(IParameter):
 
     @property
     def value(self):
+        """The value of the paramater"""
         return self._value
     @value.setter
     def value(self, value):

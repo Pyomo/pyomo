@@ -218,11 +218,11 @@ class variable(IVariable):
     _ctype = None
     __slots__ = ("_parent",
                  "_domain_type",
-                 "lb",
-                 "ub",
-                 "value",
-                 "fixed",
-                 "stale",
+                 "_lb",
+                 "_ub",
+                 "_value",
+                 "_fixed",
+                 "_stale",
                  "__weakref__")
 
     def __init__(self,
@@ -234,24 +234,65 @@ class variable(IVariable):
                  fixed=False):
         self._parent = None
         self._domain_type = RealSet
-        self.lb = lb
-        self.ub = ub
-        self.value = value
-        self.fixed = fixed
-        self.stale = True
+        self._lb = lb
+        self._ub = ub
+        self._value = value
+        self._fixed = fixed
+        self._stale = True
         if (domain_type is not None) or \
            (domain is not None):
-            self._domain_type, self.lb, self.ub = \
+            self._domain_type, self._lb, self._ub = \
                 _extract_domain_type_and_bounds(domain_type,
                                                 domain,
                                                 lb, ub)
+
+    @property
+    def lb(self):
+        """The lower bound of the variable"""
+        return self._lb
+    @lb.setter
+    def lb(self, lb):
+        self._lb = lb
+
+    @property
+    def ub(self):
+        """The upper bound of the variable"""
+        return self._ub
+    @ub.setter
+    def ub(self, ub):
+        self._ub = ub
+
+    @property
+    def value(self):
+        """The value of the variable"""
+        return self._value
+    @value.setter
+    def value(self, value):
+        self._value = value
+
+    @property
+    def fixed(self):
+        """The fixed status of the variable"""
+        return self._fixed
+    @fixed.setter
+    def fixed(self, fixed):
+        self._fixed = fixed
+
+    @property
+    def stale(self):
+        """The stale status of the variable"""
+        return self._stale
+    @stale.setter
+    def stale(self, stale):
+        self._stale = stale
+
     @property
     def domain_type(self):
-        """Return the domain type"""
+        """The domain type of the variable (e.g.,
+        :class:`RealSet`, :class:`IntegerSet`)"""
         return self._domain_type
     @domain_type.setter
     def domain_type(self, domain_type):
-        """Set the domain type"""
         if domain_type not in IVariable._valid_domain_types:
             raise ValueError(
                 "Domain type '%s' is not valid. Must be "
@@ -260,9 +301,10 @@ class variable(IVariable):
         self._domain_type = domain_type
 
     def _set_domain(self, domain):
-        """Set the domain. This method updates the
-        domain_type property and sets the upper and
-        lower bounds to the domain bounds."""
+        """Set the domain of the variable. This method
+        updates the :attr:`domain_type` property and
+        overwrites the :attr:`lb` and :attr:`ub` properties
+        with the domain bounds."""
         self.domain_type, self.lb, self.ub = \
             _extract_domain_type_and_bounds(None,
                                             domain,
@@ -290,22 +332,21 @@ class variable_tuple(ComponentTuple):
 
 def create_variable_tuple(size, *args, **kwds):
     """
-    Utility function for building a fully populated
-    variable_tuple container.
+    Generates a full :class:`variable_tuple`.
 
     Args:
         size (int): The number of objects to place in the
             variable_tuple.
         type_: The object type to populate the container
             with. Must have the same ctype as
-            variable_tuple. Default: variable
+            variable_tuple. Default: :class:`variable`
         *args: arguments used to construct the objects
             placed in the container.
         **kwds: keywords used to construct the objects
             placed in the container.
 
     Returns:
-        A fully populated container.
+        a fully populated :class:'variable_tuple`
     """
     type_ = kwds.pop('type_', variable)
     return create_component_tuple(variable_tuple,
@@ -334,22 +375,21 @@ class variable_list(ComponentList):
 
 def create_variable_list(size, *args, **kwds):
     """
-    Utility function for building a fully populated
-    variable_list container.
+    Generates a full :class:`variable_list`.
 
     Args:
         size (int): The number of objects to place in the
             variable_list.
         type_: The object type to populate the container
             with. Must have the same ctype as
-            variable_list. Default: variable
+            variable_list. Default: :class:`variable`
         *args: arguments used to construct the objects
             placed in the container.
         **kwds: keywords used to construct the objects
             placed in the container.
 
     Returns:
-        A fully populated container.
+        a fully populated :class:`variable_list`
     """
     type_ = kwds.pop('type_', variable)
     return create_component_list(variable_list,
@@ -378,22 +418,21 @@ class variable_dict(ComponentDict):
 
 def create_variable_dict(keys, *args, **kwds):
     """
-    Utility function for building a fully populated
-    variable_dict container.
+    Generates a full :class:`variable_dict`.
 
     Args:
         keys: The set of keys to used to populate the
             variable_dict.
         type_: The object type to populate the container
             with. Must have the same ctype as
-            variable_dict. Default: variable.
+            variable_dict. Default: :class:`variable`
         *args: arguments used to construct the objects
             placed in the container.
         **kwds: keywords used to construct the objects
             placed in the container.
 
     Returns:
-        A fully populated container.
+        a fully populated :class:`variable_dict`
     """
     type_ = kwds.pop('type_', variable)
     return create_component_dict(variable_dict,

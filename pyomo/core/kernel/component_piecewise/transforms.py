@@ -7,9 +7,13 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 """
-This module contains a library of transformations for
-representing a piecewise linear function using a
-mixed-interger problem formulation.
+This module contains transformations for representing a
+piecewise linear function using a mixed-interger problem
+formulation. Reference::
+
+  Mixed-Integer Models for Non-separable Piecewise Linear \
+Optimization: Unifying framework and Extensions (Vielma, \
+Nemhauser 2008)
 """
 
 # ****** NOTE: Nothing in this file relies on integer division *******
@@ -48,7 +52,6 @@ from six.moves import xrange, zip
 logger = logging.getLogger('pyomo.core')
 
 registered_transforms = {}
-
 #TODO: (simplify,
 #       warning_domain_coverage,
 #       unbounded_domain_var,
@@ -80,25 +83,23 @@ def piecewise(breakpoints,
             the piecewise linear function.
         output: The variable constrained to be the output of
             the piecewise linear function.
-        bound (str): The type of bound on the output to
-            generate. Can be one of:
-                - 'lb': y <= f(x)
-                - 'eq': y  = f(x)
-                - 'ub': y >= f(x)
+        bound (str): The type of bound to impose on the
+            output expression. Can be one of:
+
+              - 'lb': y <= f(x)
+              - 'eq': y  = f(x)
+              - 'ub': y >= f(x)
         repn (str): The type of piecewise representation to
-            use. Can be one of:
+            use. Choices are shown below (+ means step
+            functions are supported)
+
                 - 'sos2': standard representation using sos2 constraints (+)
-                -  'dcc': disaggregated convex combination (*+)
-                - 'dlog': logarithmic disaggregated convex combination (*+)
-                -   'cc': convex combination (*+)
-                -  'log': logarithmic branching convex combination (*+)
-                -   'mc': multiple choice (*)
-                -  'inc': incremental method (*+)
-           + supports step functions
-           * source: "Mixed-Integer Models for Non-separable
-                      Piecewise Linear Optimization:
-                      Unifying framework and Extensions"
-                      (Vielma, Nemhauser 2008)
+                -  'dcc': disaggregated convex combination (+)
+                - 'dlog': logarithmic disaggregated convex combination (+)
+                -   'cc': convex combination (+)
+                -  'log': logarithmic branching convex combination (+)
+                -   'mc': multiple choice
+                -  'inc': incremental method (+)
         validate (bool): Indicates whether or not to perform
             validation of the data in the breakpoints and
             values lists. The default is True. Validation

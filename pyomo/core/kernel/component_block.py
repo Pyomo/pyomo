@@ -189,8 +189,13 @@ class _block_base(object):
                                  _from_parent_=True)
 
     def child(self, key):
-        """Returns a child of this container given a storage
-        key."""
+        """Get the child object associated with a given
+        storage key for this container.
+
+        Raises:
+            KeyError: if the argument is not a storage key
+                for any children of this container
+        """
         try:
             return getattr(self, key)
         except AttributeError:
@@ -860,14 +865,18 @@ class block(_block_base, IBlockStorage):
     #    pass
 
     def child_key(self, child):
-        """Returns the lookup key associated with a child of
-        this container."""
+        """Get the lookup key associated with a child of
+        this container.
+
+        Raises:
+            ValueError: if the argument is not a child of
+                this container
+        """
         if child.ctype in self._byctype:
             for key, val in iteritems(self._byctype[child.ctype]):
                 if val is child:
                     return key
-        raise ValueError("No child entry: %s"
-                         % (child))
+        raise ValueError
 
     #
     # Define the IBlockStorage abstract methods
@@ -1095,13 +1104,17 @@ class tiny_block(_block_base, IBlockStorage):
     #def components(...)
 
     def child_key(self, child):
-        """Returns the lookup key associated with a child of
-        this container."""
+        """Get the lookup key associated with a child of
+        this container.
+
+        Raises:
+            ValueError: if the argument is not a child of
+                this container
+        """
         for key, obj in self._getattrs():
             if obj is child:
                 return key
-        raise ValueError("No child entry: %s"
-                         % (child))
+        raise ValueError
 
     # overridden by the IBlockStorage interface
     #def children(...)

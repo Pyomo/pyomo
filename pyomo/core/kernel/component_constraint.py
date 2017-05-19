@@ -138,7 +138,6 @@ class IConstraint(IComponent, _IActiveComponentMixin):
                 return self.lb <= body_expr
             return self.lb <= body_expr <= self.ub
 
-
     @property
     def bounds(self):
         """Get the bounds as a tuple (lb, ub)."""
@@ -320,6 +319,7 @@ class constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def body(self):
+        """The body of the constraint expression"""
         return self._body
     @body.setter
     def body(self, body):
@@ -335,12 +335,17 @@ class constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def expr(self):
-        """Get the expression on this constraint."""
+        """The full constraint expression:
+
+            - lb <= body <= ub: for range constraints
+            - lb <= body: for lower bounding constraints
+            - ub >= body: for upper bounding constraints
+            - body == rhs: for equality constraints
+        """
         return super(constraint,self).expr
 
     @expr.setter
     def expr(self, expr):
-        """Set the expression on this constraint."""
 
         self._equality = False
         if expr is None:
@@ -586,9 +591,12 @@ class constraint(_mutable_bounds_mixin, IConstraint):
 #
 class linear_constraint(_mutable_bounds_mixin, IConstraint):
     """
-    A linear constraint defined by a list of variables and
-    coefficients. Objects in the variables list can also be
-    mutable expressions point to a single variable.
+    A linear constraint.
+
+    A linear constraint is defined by a list of variables
+    and coefficients, along with, bounds or a right-hand
+    side. Objects in the variables list can also be mutable
+    expressions pointing to a single variable.
     """
     # To avoid a circular import, for the time being, this
     # property will be set in constraint.py

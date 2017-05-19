@@ -7,9 +7,13 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 """
-This module contains a library of transformations for
-representing a multivariate piecewise linear function using
-a mixed-interger problem formulation.
+This module contains transformations for representing a
+multivariate piecewise linear function using a
+mixed-interger problem formulation. Reference::
+
+  Mixed-Integer Models for Non-separable Piecewise Linear \
+Optimization: Unifying framework and Extensions (Vielma, \
+Nemhauser 2008)
 """
 
 import logging
@@ -43,17 +47,18 @@ def piecewise_nd(tri,
 
     Args:
         tri (scipy.spatial.Delaunay): A triangulation over
-            the discretized variable domain. Required
-            attributes:
-           - points: An (npoints, D) shaped array listing the
-                     D-dimensional coordinates of the
-                     discretization points.
-           - simplices: An (nsimplices, D+1) shaped array of
-                        integers specifying the D+1 indices
-                        of the points vector that define
-                        each simplex of the triangulation.
-           ** util.generate_delaunay can be use to build
-              this input.
+            the discretized variable domain. Can be
+            generated using a list of variables using the
+            utility function :func:`util.generate_delaunay`.
+            Required attributes:
+
+              - points: An (npoints, D) shaped array listing
+                the D-dimensional coordinates of the
+                discretization points.
+              - simplices: An (nsimplices, D+1) shaped array
+                of integers specifying the D+1 indices of
+                the points vector that define each simplex
+                of the triangulation.
         values (numpy.array): An (npoints,) shaped array of
             the values of the piecewise function at each of
             coordinates in the triangulation points array.
@@ -61,18 +66,16 @@ def piecewise_nd(tri,
             bound as the inputs of the piecewise function.
         output: The variable constrained to be the output of
             the piecewise linear function.
-        bound (str): The type of bound on the output to
-            generate. Can be one of:
-                - 'lb': y <= f(x)
-                - 'eq': y  = f(x)
-                - 'ub': y >= f(x)
+        bound (str): The type of bound to impose on the
+            output expression. Can be one of:
+
+              - 'lb': y <= f(x)
+              - 'eq': y  = f(x)
+              - 'ub': y >= f(x)
         repn (str): The type of piecewise representation to
             use. Can be one of:
-                - 'cc': convex combination (*)
-           * source: "Mixed-Integer Models for Non-separable
-                      Piecewise Linear Optimization:
-                      Unifying framework and Extensions"
-                      (Vielma, Nemhauser 2008)
+
+                - 'cc': convex combination
 
     Returns:
         A block containing the necessary auxiliary

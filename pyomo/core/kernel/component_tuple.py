@@ -20,12 +20,14 @@ class ComponentTuple(_SimpleContainerMixin,
                      collections.Sequence):
     """
     A partial implementation of the IComponentContainer
-    interface that presents tuple-like storage functionality
+    interface that presents tuple-like storage
+    functionality.
 
     Complete implementations need to set the _ctype property
     at the class level, declare the remaining required
     abstract properties of the IComponentContainer base
-    class, and declare an slot named _data if using __slots__.
+    class, and declare an slot named _data if using
+    __slots__.
 
     Note that this implementation allows nested storage of
     other IComponentContainer implementations that are
@@ -80,13 +82,23 @@ class ComponentTuple(_SimpleContainerMixin,
     #
 
     def child_key(self, child):
-        """Returns the lookup key associated with a child of
-        this container."""
+        """Get the lookup key associated with a child of
+        this container.
+
+        Raises:
+            ValueError: if the argument is not a child of
+                this container
+        """
         return self.index(child)
 
     def child(self, key):
-        """Returns a child of this container given a storage
-        key."""
+        """Get the child object associated with a given
+        storage key for this container.
+
+        Raises:
+            KeyError: if the argument is not a storage key
+                for any children of this container
+        """
         try:
             return self.__getitem__(key)
         except (IndexError, TypeError):

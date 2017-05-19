@@ -73,17 +73,27 @@ class ComponentDict(_SimpleContainerMixin,
     #
 
     def child_key(self, child):
-        """Returns the lookup key associated with a child of
-        this container."""
+        """Get the lookup key associated with a child of
+        this container.
+
+        Raises:
+            ValueError: if the argument is not a child of
+                this container
+        """
         for key, val in iteritems(self._data):
             if val is child:
                 return key
         raise ValueError
 
     def child(self, key):
-        """Returns a child of this container given a storage
-        key."""
-        return self.__getitem__(key)
+        """Get the child object associated with a given
+        storage key for this container.
+
+        Raises:
+            KeyError: if the argument is not a storage key
+                for any children of this container
+        """
+        return self[key]
 
     def children(self, return_key=False):
         """Iterate over the children of this container.

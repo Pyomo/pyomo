@@ -172,7 +172,7 @@ class ICategorizedObject(object):
     @property
     def name(self):
         """The object's fully qualified name. Alias
-        for obj.getname(fully_qualified=True).
+        for :func:`obj.getname(fully_qualified=True)`.
 
         .. warning::
             Name generation can be slow. See the
@@ -185,7 +185,7 @@ class ICategorizedObject(object):
     @property
     def local_name(self):
         """The object's local name within the context of its
-        parent. Alias for obj.getname(fully_qualified=False).
+        parent. Alias for :func:`obj.getname(fully_qualified=False)`.
 
         .. warning::
             Name generation can be slow. See the
