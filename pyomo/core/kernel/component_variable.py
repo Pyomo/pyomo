@@ -214,7 +214,7 @@ class IVariable(IComponent, NumericValue):
 class variable(IVariable):
     """A decision variable"""
     # To avoid a circular import, for the time being, this
-    # property will be set in var.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_domain_type",
@@ -315,7 +315,7 @@ class variable(IVariable):
 class variable_tuple(ComponentTuple):
     """A tuple-style container for variables."""
     # To avoid a circular import, for the time being, this
-    # property will be set in var.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")
@@ -358,7 +358,7 @@ def create_variable_tuple(size, *args, **kwds):
 class variable_list(ComponentList):
     """A list-style container for variables."""
     # To avoid a circular import, for the time being, this
-    # property will be set in var.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")
@@ -401,7 +401,7 @@ def create_variable_list(size, *args, **kwds):
 class variable_dict(ComponentDict):
     """A dict-style container for variables."""
     # To avoid a circular import, for the time being, this
-    # property will be set in var.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")

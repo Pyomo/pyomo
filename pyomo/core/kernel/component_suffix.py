@@ -42,7 +42,7 @@ class suffix(ComponentMap,
     be imported to or exported from a solver.
     """
     # To avoid a circular import, for the time being, this
-    # property will be set in suffix.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",

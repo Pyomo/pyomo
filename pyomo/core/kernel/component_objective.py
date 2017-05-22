@@ -51,7 +51,7 @@ class IObjective(IExpression, _IActiveComponentMixin):
 class objective(IObjective):
     """An optimization objective."""
     # To avoid a circular import, for the time being, this
-    # property will be set in objective.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -101,7 +101,7 @@ class objective(IObjective):
 class objective_tuple(ComponentTuple, _IActiveComponentContainerMixin):
     """A tuple-style container for objectives."""
     # To avoid a circular import, for the time being, this
-    # property will be set in objective.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -121,7 +121,7 @@ class objective_tuple(ComponentTuple, _IActiveComponentContainerMixin):
 class objective_list(ComponentList, _IActiveComponentContainerMixin):
     """A list-style container for objectives."""
     # To avoid a circular import, for the time being, this
-    # property will be set in objective.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -141,7 +141,7 @@ class objective_list(ComponentList, _IActiveComponentContainerMixin):
 class objective_dict(ComponentDict, _IActiveComponentContainerMixin):
     """A dict-style container for objectives."""
     # To avoid a circular import, for the time being, this
-    # property will be set in objective.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",

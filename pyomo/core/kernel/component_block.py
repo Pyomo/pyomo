@@ -838,7 +838,7 @@ class _block_base(object):
 class block(_block_base, IBlockStorage):
     """An implementation of the IBlockStorage interface."""
     # To avoid a circular import, for the time being, this
-    # property will be set in block.py
+    # property will be set externally
     _ctype = None
     def __init__(self):
         self._parent = None
@@ -1026,7 +1026,7 @@ class tiny_block(_block_base, IBlockStorage):
     of child components.
     """
     # To avoid a circular import, for the time being, this
-    # property will be set in block.py
+    # property will be set externally
     _ctype = None
     def __init__(self):
         self._parent = None
@@ -1198,7 +1198,7 @@ class block_tuple(ComponentTuple,
                   _IActiveComponentContainerMixin):
     """A tuple-style container for blocks."""
     # To avoid a circular import, for the time being, this
-    # property will be set in block.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -1219,7 +1219,7 @@ class block_list(ComponentList,
                  _IActiveComponentContainerMixin):
     """A list-style container for blocks."""
     # To avoid a circular import, for the time being, this
-    # property will be set in block.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -1240,7 +1240,7 @@ class block_dict(ComponentDict,
                  _IActiveComponentContainerMixin):
     """A dict-style container for blocks."""
     # To avoid a circular import, for the time being, this
-    # property will be set in block.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",

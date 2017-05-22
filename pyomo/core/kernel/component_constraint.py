@@ -43,16 +43,16 @@ class IConstraint(IComponent, _IActiveComponentMixin):
     #
 
     body = _abstract_readonly_property(
-        doc="The body of the constraint.")
+        doc="The body of the constraint")
     lb = _abstract_readonly_property(
-        doc="The lower bound of the constraint.")
+        doc="The lower bound of the constraint")
     ub = _abstract_readonly_property(
-        doc="The upper bound of the constraint.")
+        doc="The upper bound of the constraint")
     rhs = _abstract_readonly_property(
-        doc="The righthand side of the constraint.")
+        doc="The right-hand side of the constraint")
     equality = _abstract_readonly_property(
         doc=("A boolean indicating whether this "
-             "is an equality constraint."))
+             "is an equality constraint"))
 
     _linear_canonical_form = _abstract_readonly_property(
         doc=("Indicates whether or not the class or "
@@ -140,7 +140,7 @@ class IConstraint(IComponent, _IActiveComponentMixin):
 
     @property
     def bounds(self):
-        """Get the bounds as a tuple (lb, ub)."""
+        """The bounds of the constraint as a tuple (lb, ub)"""
         return (self.lb, self.ub)
 
     def has_lb(self):
@@ -173,7 +173,7 @@ class _mutable_bounds_mixin(object):
 
     @property
     def lb(self):
-        """Get/Set the constraint lower bound."""
+        """The lower bound of the constraint"""
         return self._lb
     @lb.setter
     def lb(self, lb):
@@ -191,7 +191,7 @@ class _mutable_bounds_mixin(object):
 
     @property
     def ub(self):
-        """Get/Set the constraint upper bound."""
+        """The upper bound of the constraint"""
         return self._ub
     @ub.setter
     def ub(self, ub):
@@ -209,7 +209,7 @@ class _mutable_bounds_mixin(object):
 
     @property
     def rhs(self):
-        """Get/Set the constraint righthand side."""
+        """The right-hand side of the constraint"""
         if not self.equality:
             raise ValueError(
                 "The rhs property can not be read "
@@ -229,7 +229,7 @@ class _mutable_bounds_mixin(object):
 
     @property
     def bounds(self):
-        """Get/Set the bounds as a tuple (lb, ub)."""
+        """The bounds of the constraint as a tuple (lb, ub)"""
         return super(_mutable_bounds_mixin, self).bounds
     @bounds.setter
     def bounds(self, bounds_tuple):
@@ -251,12 +251,12 @@ class _mutable_bounds_mixin(object):
                 "an expression to the rhs property "
                 "(e.g., con.rhs = con.lb).")
         assert not equality
-        self._equality = equality
+        self._equality = False
 
 class constraint(_mutable_bounds_mixin, IConstraint):
     """An algebraic constraint."""
     # To avoid a circular import, for the time being, this
-    # property will be set in constraint.py
+    # property will be set externally
     _ctype = None
     _linear_canonical_form = False
     __slots__ = ("_parent",
@@ -319,7 +319,7 @@ class constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def body(self):
-        """The body of the constraint expression"""
+        """The body of the constraint"""
         return self._body
     @body.setter
     def body(self, body):
@@ -589,7 +589,8 @@ class constraint(_mutable_bounds_mixin, IConstraint):
 # Note: This class is experimental. The implementation may
 #       change or it may go away.
 #
-class linear_constraint(_mutable_bounds_mixin, IConstraint):
+class linear_constraint(_mutable_bounds_mixin,
+                        IConstraint):
     """
     A linear constraint.
 
@@ -599,7 +600,7 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
     expressions pointing to a single variable.
     """
     # To avoid a circular import, for the time being, this
-    # property will be set in constraint.py
+    # property will be set externally
     _ctype = None
     _linear_canonical_form = True
     __slots__ = ("_parent",
@@ -662,12 +663,12 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def terms(self):
-        """An iterator over linear terms in the body of this
+        """An iterator over the terms in the body of this
         constraint as (variable, coefficient) tuples"""
         return zip(self._variables, self._coefficients)
     @terms.setter
     def terms(self, terms):
-        """Set the linear terms in the body of this constraint
+        """Set the terms in the body of this constraint
         using an iterable of (variable, coefficient) tuples"""
         self._variables, self._coefficients = zip(*terms)
 
@@ -690,6 +691,7 @@ class linear_constraint(_mutable_bounds_mixin, IConstraint):
 
     @property
     def body(self):
+        """The body of the constraint"""
         return sum(c * v for v, c in self.terms)
 
     #
@@ -721,7 +723,7 @@ class constraint_tuple(ComponentTuple,
                        _IActiveComponentContainerMixin):
     """A tuple-style container for constraints."""
     # To avoid a circular import, for the time being, this
-    # property will be set in constraint.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -741,7 +743,7 @@ class constraint_list(ComponentList,
                       _IActiveComponentContainerMixin):
     """A list-style container for constraints."""
     # To avoid a circular import, for the time being, this
-    # property will be set in constraint.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -761,7 +763,7 @@ class constraint_dict(ComponentDict,
                       _IActiveComponentContainerMixin):
     """A dict-style container for constraints."""
     # To avoid a circular import, for the time being, this
-    # property will be set in constraint.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",

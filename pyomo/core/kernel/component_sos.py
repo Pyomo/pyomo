@@ -61,7 +61,7 @@ class ISOS(IComponent, _IActiveComponentMixin):
 class sos(ISOS):
     """A Special Ordered Set of type n."""
     # To avoid a circular import, for the time being, this
-    # property will be set in sos.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -116,7 +116,7 @@ class sos_tuple(ComponentTuple,
                 _IActiveComponentContainerMixin):
     """A tuple-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
-    # property will be set in sos.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -137,7 +137,7 @@ class sos_list(ComponentList,
                _IActiveComponentContainerMixin):
     """A list-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
-    # property will be set in sos.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",
@@ -158,7 +158,7 @@ class sos_dict(ComponentDict,
                _IActiveComponentContainerMixin):
     """A dict-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
-    # property will be set in sos.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_active",

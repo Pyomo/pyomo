@@ -63,7 +63,7 @@ class IParameter(IComponent, NumericValue):
 class parameter(IParameter):
     """A placeholder for a mutable, numeric value."""
     # To avoid a circular import, for the time being, this
-    # property will be set in param.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_value",
@@ -87,7 +87,7 @@ class parameter(IParameter):
 class parameter_tuple(ComponentTuple):
     """A tuple-style container for parameters."""
     # To avoid a circular import, for the time being, this
-    # property will be set in param.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")
@@ -105,7 +105,7 @@ class parameter_tuple(ComponentTuple):
 class parameter_list(ComponentList):
     """A list-style container for parameters."""
     # To avoid a circular import, for the time being, this
-    # property will be set in param.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")
@@ -123,7 +123,7 @@ class parameter_list(ComponentList):
 class parameter_dict(ComponentDict):
     """A dict-style container for parameters."""
     # To avoid a circular import, for the time being, this
-    # property will be set in param.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")

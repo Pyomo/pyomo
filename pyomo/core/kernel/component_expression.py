@@ -214,7 +214,7 @@ class IExpression(IComponent, IIdentityExpression):
 class expression(IExpression):
     """A named, mutable expression."""
     # To avoid a circular import, for the time being, this
-    # property will be set in expression.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_expr",
@@ -271,7 +271,7 @@ class data_expression(expression):
 class expression_tuple(ComponentTuple):
     """A tuple-style container for expressions."""
     # To avoid a circular import, for the time being, this
-    # property will be set in expression.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")
@@ -289,7 +289,7 @@ class expression_tuple(ComponentTuple):
 class expression_list(ComponentList):
     """A list-style container for expressions."""
     # To avoid a circular import, for the time being, this
-    # property will be set in expression.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")
@@ -307,7 +307,7 @@ class expression_list(ComponentList):
 class expression_dict(ComponentDict):
     """A dict-style container for expressions."""
     # To avoid a circular import, for the time being, this
-    # property will be set in expression.py
+    # property will be set externally
     _ctype = None
     __slots__ = ("_parent",
                  "_data")
