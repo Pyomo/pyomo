@@ -15,8 +15,8 @@ import pyomo.version as pyomo
 class Tests(unittest.TestCase):
 
     def test_releaselevel(self):
-        self.assertTrue( pyomo.version_info[3]
-                         in ('trunk','trunk {git}','VOTD','final') )
+        _relLevel = pyomo.version_info[3].split('{')[0].strip()
+        self.assertIn( _relLevel,('devel','VOTD','final') )
 
     def test_version(self):
         try:

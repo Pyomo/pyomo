@@ -271,9 +271,11 @@ def create_model(data):
     # Find the Model objects
     #
     _models = {}
+    _model_IDS = set()
     for _name, _obj in iteritems(data.local.usermodel.__dict__):
-        if isinstance(_obj, Model):
+        if isinstance(_obj, Model) and id(_obj) not in _model_IDS:
             _models[_name] = _obj
+            _model_IDS.add(id(_obj))
     model_name = data.options.model.object_name
     if len(_models) == 1:
         _name  = list(_models.keys())[0]
