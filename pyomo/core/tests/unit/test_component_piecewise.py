@@ -11,7 +11,7 @@ from pyomo.core.kernel.component_interface import \
      IActiveObject,
      IComponent,
      IComponentContainer,
-     _IActiveComponentContainerMixin)
+     _ActiveComponentContainerMixin)
 from pyomo.core.kernel.component_block import (IBlockStorage,
                                                block,
                                                block_dict,
@@ -324,7 +324,7 @@ class Test_piecewise(unittest.TestCase):
             self.assertTrue(isinstance(p, IActiveObject))
             self.assertTrue(isinstance(p, IComponent))
             self.assertTrue(isinstance(p, IComponentContainer))
-            self.assertTrue(isinstance(p, _IActiveComponentContainerMixin))
+            self.assertTrue(isinstance(p, _ActiveComponentContainerMixin))
             self.assertTrue(isinstance(p, tiny_block))
             self.assertTrue(isinstance(p, IBlockStorage))
 
@@ -459,7 +459,7 @@ class Test_piecewise_nd(unittest.TestCase):
             self.assertTrue(isinstance(p, IActiveObject))
             self.assertTrue(isinstance(p, IComponent))
             self.assertTrue(isinstance(p, IComponentContainer))
-            self.assertTrue(isinstance(p, _IActiveComponentContainerMixin))
+            self.assertTrue(isinstance(p, _ActiveComponentContainerMixin))
             self.assertTrue(isinstance(p, tiny_block))
             self.assertTrue(isinstance(p, IBlockStorage))
 

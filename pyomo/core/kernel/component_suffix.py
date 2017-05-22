@@ -13,7 +13,7 @@ import pyutilib.math
 
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _IActiveComponentMixin,
+     _ActiveComponentMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_map import ComponentMap
@@ -36,7 +36,7 @@ _noarg = object()
 #       like IComponent instead of ComponentMap
 class suffix(ComponentMap,
              IComponent,
-             _IActiveComponentMixin):
+             _ActiveComponentMixin):
     """
     A container for storing extranious model data that can
     be imported to or exported from a solver.

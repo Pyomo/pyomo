@@ -11,7 +11,7 @@ from pyomo.core.tests.unit.test_component_list import \
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                    IActiveObject,
                                                    IComponent,
-                                                   _IActiveComponentMixin,
+                                                   _ActiveComponentMixin,
                                                    IComponentContainer)
 from pyomo.core.kernel.component_suffix import (suffix,
                                                 export_suffix_generator,
@@ -108,7 +108,7 @@ class Test_suffix(unittest.TestCase):
         self.assertTrue(isinstance(s, ICategorizedObject))
         self.assertTrue(isinstance(s, IActiveObject))
         self.assertTrue(isinstance(s, IComponent))
-        self.assertTrue(isinstance(s, _IActiveComponentMixin))
+        self.assertTrue(isinstance(s, _ActiveComponentMixin))
         self.assertTrue(isinstance(s, collections.Mapping))
         self.assertTrue(isinstance(s, collections.MutableMapping))
         self.assertTrue(issubclass(type(s), collections.Mapping))

@@ -23,7 +23,7 @@ from pyomo.core.kernel.component_interface import \
      ICategorizedObject,
      IComponent,
      IComponentContainer,
-     _IActiveComponentContainerMixin)
+     _ActiveComponentContainerMixin)
 from pyomo.core.kernel.component_objective import IObjective
 from pyomo.core.kernel.component_variable import IVariable
 from pyomo.core.kernel.component_constraint import IConstraint
@@ -48,7 +48,7 @@ _active_flag_name = "active"
 
 class IBlockStorage(IComponent,
                     IComponentContainer,
-                    _IActiveComponentContainerMixin):
+                    _ActiveComponentContainerMixin):
     """A container that stores multiple types.
 
     This class is abstract, but it partially implements
@@ -497,7 +497,7 @@ class _block_base(object):
                 assert child._is_container
                 # child is a container (but not a block)
                 if (active is not None) and \
-                   isinstance(child, _IActiveComponentContainerMixin):
+                   isinstance(child, _ActiveComponentContainerMixin):
                     for component_key, component in child.components(return_key=True):
                         if getattr(component,
                                    _active_flag_name,
@@ -933,7 +933,7 @@ class block(_block_base, IBlockStorage):
                 self._order[name] = obj
                 obj._parent = weakref.ref(self)
                 # children that are not of type
-                # _IActiveComponentMixin retain the active status
+                # _ActiveComponentMixin retain the active status
                 # of their parent, which is why the default
                 # return value from getattr is False
                 if getattr(obj, _active_flag_name, False):
@@ -1195,7 +1195,7 @@ class tiny_block(_block_base, IBlockStorage):
         return ctypes
 
 class block_tuple(ComponentTuple,
-                  _IActiveComponentContainerMixin):
+                  _ActiveComponentContainerMixin):
     """A tuple-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -1216,7 +1216,7 @@ class block_tuple(ComponentTuple,
         super(block_tuple, self).__init__(*args, **kwds)
 
 class block_list(ComponentList,
-                 _IActiveComponentContainerMixin):
+                 _ActiveComponentContainerMixin):
     """A list-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -1237,7 +1237,7 @@ class block_list(ComponentList,
         super(block_list, self).__init__(*args, **kwds)
 
 class block_dict(ComponentDict,
-                 _IActiveComponentContainerMixin):
+                 _ActiveComponentContainerMixin):
     """A dict-style container for blocks."""
     # To avoid a circular import, for the time being, this
     # property will be set externally

@@ -20,9 +20,9 @@ from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
      IActiveObject,
      IComponent,
-     _IActiveComponentMixin,
+     _ActiveComponentMixin,
      IComponentContainer,
-     _IActiveComponentContainerMixin)
+     _ActiveComponentContainerMixin)
 from pyomo.core.kernel.component_dict import (ComponentDict,
                                               create_component_dict)
 from pyomo.core.kernel.component_block import (IBlockStorage,
@@ -638,10 +638,10 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
     def test_active_type(self):
         cdict = self._container_type()
         self.assertTrue(isinstance(cdict, IComponentContainer))
-        self.assertTrue(isinstance(cdict, _IActiveComponentContainerMixin))
+        self.assertTrue(isinstance(cdict, _ActiveComponentContainerMixin))
         self.assertTrue(isinstance(cdict, ICategorizedObject))
         self.assertFalse(isinstance(cdict, IComponent))
-        self.assertFalse(isinstance(cdict, _IActiveComponentMixin))
+        self.assertFalse(isinstance(cdict, _ActiveComponentMixin))
 
     def test_active(self):
         children = {}

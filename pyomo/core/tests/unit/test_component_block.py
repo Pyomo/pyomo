@@ -13,7 +13,7 @@ from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
                                                  IComponentContainer,
-                                                 _IActiveComponentContainerMixin)
+                                                 _ActiveComponentContainerMixin)
 from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.core.kernel.symbol_map import SymbolMap
 from pyomo.core.kernel.component_suffix import suffix
@@ -1684,7 +1684,7 @@ class _Test_block(_Test_block_base):
         self.assertTrue(isinstance(b, IActiveObject))
         self.assertTrue(isinstance(b, IComponent))
         self.assertTrue(isinstance(b, IComponentContainer))
-        self.assertTrue(isinstance(b, _IActiveComponentContainerMixin))
+        self.assertTrue(isinstance(b, _ActiveComponentContainerMixin))
         self.assertTrue(isinstance(b, IBlockStorage))
 
     def test_overwrite(self):

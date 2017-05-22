@@ -9,8 +9,8 @@
 
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _IActiveComponentMixin,
-     _IActiveComponentContainerMixin,
+     _ActiveComponentMixin,
+     _ActiveComponentContainerMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -21,7 +21,7 @@ from pyomo.core.kernel.numvalue import potentially_variable
 import six
 from six.moves import zip
 
-class ISOS(IComponent, _IActiveComponentMixin):
+class ISOS(IComponent, _ActiveComponentMixin):
     """
     The interface for Special Ordered Sets.
     """
@@ -113,7 +113,7 @@ def sos2(variables, weights=None):
     return sos(variables, weights=weights, level=2)
 
 class sos_tuple(ComponentTuple,
-                _IActiveComponentContainerMixin):
+                _ActiveComponentContainerMixin):
     """A tuple-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -134,7 +134,7 @@ class sos_tuple(ComponentTuple,
         super(sos_tuple, self).__init__(*args, **kwds)
 
 class sos_list(ComponentList,
-               _IActiveComponentContainerMixin):
+               _ActiveComponentContainerMixin):
     """A list-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -155,7 +155,7 @@ class sos_list(ComponentList,
         super(sos_list, self).__init__(*args, **kwds)
 
 class sos_dict(ComponentDict,
-               _IActiveComponentContainerMixin):
+               _ActiveComponentContainerMixin):
     """A dict-style container for Special Ordered Sets."""
     # To avoid a circular import, for the time being, this
     # property will be set externally

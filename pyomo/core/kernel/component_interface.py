@@ -323,14 +323,14 @@ class IComponent(ICategorizedObject):
     _is_container = False
     __slots__ = ()
 
-class _IActiveComponentMixin(IActiveObject):
+class _ActiveComponentMixin(IActiveObject):
     """
     To be used as an additional base class in IComponent
     implementations to add fuctionality for activating and
     deactivating the component.
 
     Any container that stores implementations of this type
-    should use _IActiveComponentContainerMixin as a base
+    should use _ActiveComponentContainerMixin as a base
     class.
 
     This class is abstract. It assumes any derived class
@@ -434,7 +434,7 @@ class IComponentContainer(ICategorizedObject):
         """A generator over all descendents in postfix order."""
         raise NotImplementedError     #pragma:nocover
 
-class _IActiveComponentContainerMixin(IActiveObject):
+class _ActiveComponentContainerMixin(IActiveObject):
     """
     To be used as an additional base class in
     IComponentContainer implementations to add fuctionality

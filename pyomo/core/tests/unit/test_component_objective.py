@@ -11,7 +11,7 @@ from pyomo.core.tests.unit.test_component_list import \
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                    IActiveObject,
                                                    IComponent,
-                                                   _IActiveComponentMixin,
+                                                   _ActiveComponentMixin,
                                                    IComponentContainer)
 from pyomo.core.kernel.component_objective import (IObjective,
                                                    objective,
@@ -96,7 +96,7 @@ class Test_objective(unittest.TestCase):
         self.assertTrue(isinstance(o, ICategorizedObject))
         self.assertTrue(isinstance(o, IActiveObject))
         self.assertTrue(isinstance(o, IComponent))
-        self.assertTrue(isinstance(o, _IActiveComponentMixin))
+        self.assertTrue(isinstance(o, _ActiveComponentMixin))
         self.assertTrue(isinstance(o, IObjective))
         self.assertTrue(isinstance(o, NumericValue))
 

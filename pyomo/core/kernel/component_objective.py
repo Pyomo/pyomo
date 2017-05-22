@@ -9,8 +9,8 @@
 
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _IActiveComponentMixin,
-     _IActiveComponentContainerMixin,
+     _ActiveComponentMixin,
+     _ActiveComponentContainerMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -25,7 +25,7 @@ import six
 minimize=1
 maximize=-1
 
-class IObjective(IExpression, _IActiveComponentMixin):
+class IObjective(IExpression, _ActiveComponentMixin):
     """
     The interface for optimization objectives.
     """
@@ -98,7 +98,7 @@ class objective(IObjective):
                 "[minimize (%s), maximize (%s)]. Invalid "
                 "value: %s'" % (minimize, maximize, sense))
 
-class objective_tuple(ComponentTuple, _IActiveComponentContainerMixin):
+class objective_tuple(ComponentTuple, _ActiveComponentContainerMixin):
     """A tuple-style container for objectives."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -118,7 +118,7 @@ class objective_tuple(ComponentTuple, _IActiveComponentContainerMixin):
         self._active = True
         super(objective_tuple, self).__init__(*args, **kwds)
 
-class objective_list(ComponentList, _IActiveComponentContainerMixin):
+class objective_list(ComponentList, _ActiveComponentContainerMixin):
     """A list-style container for objectives."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -138,7 +138,7 @@ class objective_list(ComponentList, _IActiveComponentContainerMixin):
         self._active = True
         super(objective_list, self).__init__(*args, **kwds)
 
-class objective_dict(ComponentDict, _IActiveComponentContainerMixin):
+class objective_dict(ComponentDict, _ActiveComponentContainerMixin):
     """A dict-style container for objectives."""
     # To avoid a circular import, for the time being, this
     # property will be set externally

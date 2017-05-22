@@ -17,9 +17,9 @@ from pyomo.core.kernel.component_interface import \
     (ICategorizedObject,
      IActiveObject,
      IComponent,
-     _IActiveComponentMixin,
+     _ActiveComponentMixin,
      IComponentContainer,
-     _IActiveComponentContainerMixin)
+     _ActiveComponentContainerMixin)
 from pyomo.core.kernel.component_tuple import (ComponentTuple,
                                                create_component_tuple)
 from pyomo.core.kernel.component_block import (IBlockStorage,
@@ -519,10 +519,10 @@ class _TestActiveComponentTupleBase(_TestComponentTupleBase):
     def test_active_type(self):
         ctuple = self._container_type()
         self.assertTrue(isinstance(ctuple, IComponentContainer))
-        self.assertTrue(isinstance(ctuple, _IActiveComponentContainerMixin))
+        self.assertTrue(isinstance(ctuple, _ActiveComponentContainerMixin))
         self.assertTrue(isinstance(ctuple, ICategorizedObject))
         self.assertFalse(isinstance(ctuple, IComponent))
-        self.assertFalse(isinstance(ctuple, _IActiveComponentMixin))
+        self.assertFalse(isinstance(ctuple, _ActiveComponentMixin))
 
     def test_active(self):
         index = list(range(4))

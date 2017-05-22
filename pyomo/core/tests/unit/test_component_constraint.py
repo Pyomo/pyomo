@@ -11,7 +11,7 @@ from pyomo.core.tests.unit.test_component_list import \
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                    IActiveObject,
                                                    IComponent,
-                                                   _IActiveComponentMixin,
+                                                   _ActiveComponentMixin,
                                                    IComponentContainer)
 from pyomo.core.kernel.component_constraint import (IConstraint,
                                                     constraint,
@@ -37,7 +37,6 @@ class Test_constraint(unittest.TestCase):
         v = variable()
         c = constraint(1 <= v**2 <= 2)
         pyomo.core.kernel.pprint(c)
-        print("@@@@")
         b = block()
         b.c = c
         pyomo.core.kernel.pprint(c)
@@ -206,7 +205,7 @@ class Test_constraint(unittest.TestCase):
         self.assertTrue(isinstance(c, ICategorizedObject))
         self.assertTrue(isinstance(c, IActiveObject))
         self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _IActiveComponentMixin))
+        self.assertTrue(isinstance(c, _ActiveComponentMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):
@@ -1132,6 +1131,23 @@ class Test_constraint(unittest.TestCase):
 
 class Test_linear_constraint(unittest.TestCase):
 
+    def test_pprint(self):
+        # Not really testing what the output is, just that
+        # an error does not occur. The pprint functionality
+        # is still in the early stages.
+        v = variable()
+        c = linear_constraint(lb=1, terms=[(v,1)], ub=1)
+        pyomo.core.kernel.pprint(c)
+        b = block()
+        b.c = c
+        pyomo.core.kernel.pprint(c)
+        pyomo.core.kernel.pprint(b)
+        m = block()
+        m.b = b
+        pyomo.core.kernel.pprint(c)
+        pyomo.core.kernel.pprint(b)
+        pyomo.core.kernel.pprint(m)
+
     def test_ctype(self):
         c = linear_constraint([],[])
         self.assertIs(c.ctype, Constraint)
@@ -1256,7 +1272,7 @@ class Test_linear_constraint(unittest.TestCase):
         self.assertTrue(isinstance(c, ICategorizedObject))
         self.assertTrue(isinstance(c, IActiveObject))
         self.assertTrue(isinstance(c, IComponent))
-        self.assertTrue(isinstance(c, _IActiveComponentMixin))
+        self.assertTrue(isinstance(c, _ActiveComponentMixin))
         self.assertTrue(isinstance(c, IConstraint))
 
     def test_active(self):

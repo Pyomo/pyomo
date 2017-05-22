@@ -11,8 +11,8 @@ import pyutilib.math
 
 from pyomo.core.kernel.component_interface import \
     (IComponent,
-     _IActiveComponentMixin,
-     _IActiveComponentContainerMixin,
+     _ActiveComponentMixin,
+     _ActiveComponentContainerMixin,
      _abstract_readwrite_property,
      _abstract_readonly_property)
 from pyomo.core.kernel.component_dict import ComponentDict
@@ -30,7 +30,7 @@ from pyomo.core.kernel import expr as EXPR
 import six
 from six.moves import zip
 
-class IConstraint(IComponent, _IActiveComponentMixin):
+class IConstraint(IComponent, _ActiveComponentMixin):
     """
     The interface for optimization constraints.
     """
@@ -720,7 +720,7 @@ class linear_constraint(_mutable_bounds_mixin,
         return repn
 
 class constraint_tuple(ComponentTuple,
-                       _IActiveComponentContainerMixin):
+                       _ActiveComponentContainerMixin):
     """A tuple-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -740,7 +740,7 @@ class constraint_tuple(ComponentTuple,
         super(constraint_tuple, self).__init__(*args, **kwds)
 
 class constraint_list(ComponentList,
-                      _IActiveComponentContainerMixin):
+                      _ActiveComponentContainerMixin):
     """A list-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -760,7 +760,7 @@ class constraint_list(ComponentList,
         super(constraint_list, self).__init__(*args, **kwds)
 
 class constraint_dict(ComponentDict,
-                      _IActiveComponentContainerMixin):
+                      _ActiveComponentContainerMixin):
     """A dict-style container for constraints."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
