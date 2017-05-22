@@ -33,6 +33,8 @@ from pyomo.core.base import (SymbolMap,
 from pyomo.repn import generate_canonical_repn
 from pyomo.solvers import wrappers
 
+from pyomo.core.kernel.component_block import IBlockStorage
+
 from six import itervalues, iterkeys, iteritems, advance_iterator
 from six.moves import xrange
 from pyomo.solvers.plugins.solvers.CPLEXDirect import (CPLEXDirect,
@@ -159,6 +161,8 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
         cplex_instance = self._active_cplex_instance
 
+        self._has_quadratic_objective = False
+
         cntr = 0
         for block in pyomo_instance.block_data_objects(active=True):
             gen_obj_canonical_repn = \
@@ -270,7 +274,6 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
         self._has_quadratic_constraints = False
         self._has_quadratic_objective = False
-        used_sos_constraints = False
 
         self._active_cplex_instance = CPLEXDirect._cplex_module.Cplex()
 
@@ -281,7 +284,14 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
         self._symbol_map = SymbolMap()
         self._instance = pyomo_instance
-        pyomo_instance.solutions.add_symbol_map(self._symbol_map)
+        if isinstance(pyomo_instance, IBlockStorage):
+            # BIG HACK
+            if not hasattr(pyomo_instance, "._symbol_maps"):
+                setattr(pyomo_instance, "._symbol_maps", {})
+            getattr(pyomo_instance, "._symbol_maps")[id(self._symbol_map)] = \
+                self._symbol_map
+        else:
+            pyomo_instance.solutions.add_symbol_map(self._symbol_map)
         self._smap_id = id(self._symbol_map)
 
         # we use this when iterating over the constraints because it
@@ -292,9 +302,10 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
         # cplex wants the caller to set the problem type, which is (for
         # current purposes) strictly based on variable type counts.
-        num_binary_variables = 0
-        num_integer_variables = 0
-        num_continuous_variables = 0
+        self._num_binary_variables = 0
+        self._num_integer_variables = 0
+        self._num_continuous_variables = 0
+        self._used_sos_constraints = False
 
         #############################################
         # populate the variables in the cplex model #
@@ -340,13 +351,13 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
             if var_data.is_integer():
                 var_types.append(self._active_cplex_instance.variables.type.integer)
-                num_integer_variables += 1
+                self._num_integer_variables += 1
             elif var_data.is_binary():
                 var_types.append(self._active_cplex_instance.variables.type.binary)
-                num_binary_variables += 1
+                self._num_binary_variables += 1
             elif var_data.is_continuous():
                 var_types.append(self._active_cplex_instance.variables.type.continuous)
-                num_continuous_variables += 1
+                self._num_continuous_variables += 1
             else:
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary.")
@@ -535,7 +546,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                                        SOS = [modelSOS.varnames[key],
                                               modelSOS.weights[key]])
                 self._referenced_variable_ids.update(modelSOS.varids[key])
-            used_sos_constraints = True
+            self._used_sos_constraints = True
 
         self._active_cplex_instance.linear_constraints.add(
             lin_expr=expressions,
@@ -557,49 +568,6 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
         #############################################
 
         self.compile_objective(pyomo_instance)
-
-        ################################################
-        # populate the problem type in the cplex model #
-        ################################################
-
-        # This gets rid of the annoying "Freeing MIP data." message.
-        def _filter_freeing_mip_data(val):
-            if val.strip() == 'Freeing MIP data.':
-                return ""
-            return val
-        self._active_cplex_instance.set_warning_stream(sys.stderr,
-                                                       fn=_filter_freeing_mip_data)
-
-        if (self._has_quadratic_objective is True) or \
-           (self._has_quadratic_constraints is True):
-            if (num_integer_variables > 0) or \
-               (num_binary_variables > 0) or \
-               (used_sos_constraints):
-                if self._has_quadratic_constraints is True:
-                    self._active_cplex_instance.set_problem_type(
-                        self._active_cplex_instance.problem_type.MIQCP)
-                else:
-                    self._active_cplex_instance.set_problem_type(
-                        self._active_cplex_instance.problem_type.MIQP)
-            else:
-                if self._has_quadratic_constraints is True:
-                    self._active_cplex_instance.set_problem_type(
-                        self._active_cplex_instance.problem_type.QCP)
-                else:
-                    self._active_cplex_instance.set_problem_type(
-                        self._active_cplex_instance.problem_type.QP)
-        elif (num_integer_variables > 0) or \
-             (num_binary_variables > 0) or \
-             (used_sos_constraints):
-            self._active_cplex_instance.set_problem_type(
-                self._active_cplex_instance.problem_type.MILP)
-        else:
-            self._active_cplex_instance.set_problem_type(
-                self._active_cplex_instance.problem_type.LP)
-
-        # restore the warning stream without our filter function
-        self._active_cplex_instance.set_warning_stream(sys.stderr)
-
 
     #
     # simple method to query whether a Pyomo instance has already been
@@ -667,8 +635,58 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
             assert self._skip_trivial_constraints == \
                 kwds["skip_trivial_constraints"]
 
-        if self._smap_id not in self._instance.solutions.symbol_map:
-            self._instance.solutions.add_symbol_map(self._symbol_map)
+        if isinstance(self._instance, IBlockStorage):
+            # BIG HACK
+            if not hasattr(self._instance, "._symbol_maps"):
+                setattr(self._instance, "._symbol_maps", {})
+            getattr(self._instance, "._symbol_maps")[id(self._symbol_map)] = \
+                self._symbol_map
+        else:
+            if self._smap_id not in self._instance.solutions.symbol_map:
+                self._instance.solutions.add_symbol_map(self._symbol_map)
+
+
+        ################################################
+        # populate the problem type in the cplex model #
+        ################################################
+
+        # This gets rid of the annoying "Freeing MIP data." message.
+        def _filter_freeing_mip_data(val):
+            if val.strip() == 'Freeing MIP data.':
+                return ""
+            return val
+        self._active_cplex_instance.set_warning_stream(sys.stderr,
+                                                       fn=_filter_freeing_mip_data)
+
+        if (self._has_quadratic_objective is True) or \
+           (self._has_quadratic_constraints is True):
+            if (self._num_integer_variables > 0) or \
+               (self._num_binary_variables > 0) or \
+               (self._used_sos_constraints):
+                if self._has_quadratic_constraints is True:
+                    self._active_cplex_instance.set_problem_type(
+                        self._active_cplex_instance.problem_type.MIQCP)
+                else:
+                    self._active_cplex_instance.set_problem_type(
+                        self._active_cplex_instance.problem_type.MIQP)
+            else:
+                if self._has_quadratic_constraints is True:
+                    self._active_cplex_instance.set_problem_type(
+                        self._active_cplex_instance.problem_type.QCP)
+                else:
+                    self._active_cplex_instance.set_problem_type(
+                        self._active_cplex_instance.problem_type.QP)
+        elif (self._num_integer_variables > 0) or \
+             (self._num_binary_variables > 0) or \
+             (self._used_sos_constraints):
+            self._active_cplex_instance.set_problem_type(
+                self._active_cplex_instance.problem_type.MILP)
+        else:
+            self._active_cplex_instance.set_problem_type(
+                self._active_cplex_instance.problem_type.LP)
+
+        # restore the warning stream without our filter function
+        self._active_cplex_instance.set_warning_stream(sys.stderr)
 
         CPLEXDirect._presolve(self, *args, **kwds)
 
