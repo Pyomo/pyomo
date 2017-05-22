@@ -26,8 +26,7 @@ class ComponentTuple(_SimpleContainerMixin,
     Complete implementations need to set the _ctype property
     at the class level, declare the remaining required
     abstract properties of the IComponentContainer base
-    class, and declare an slot named _data if using
-    __slots__.
+    class, and declare a slot or attribute named _data.
 
     Note that this implementation allows nested storage of
     other IComponentContainer implementations that are
@@ -89,7 +88,9 @@ class ComponentTuple(_SimpleContainerMixin,
             ValueError: if the argument is not a child of
                 this container
         """
-        return self.index(child)
+        if getattr(child, "parent", None) is self:
+            return self.index(child)
+        raise ValueError
 
     def child(self, key):
         """Get the child object associated with a given

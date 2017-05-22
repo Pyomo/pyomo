@@ -22,8 +22,7 @@ class ComponentList(ComponentTuple,
     Complete implementations need to set the _ctype property
     at the class level, declare the remaining required
     abstract properties of the IComponentContainer base
-    class, and declare an slot named _data if using
-    __slots__.
+    class, and declare a slot or attribute named _data.
 
     Note that this implementation allows nested storage of
     other IComponentContainer implementations that are

@@ -38,7 +38,7 @@ class ComponentDict(_SimpleContainerMixin,
     Complete implementations need to set the _ctype property
     at the class level, declare the remaining required
     abstract properties of the IComponentContainer base
-    class, and declare an slot named _data if using __slots__.
+    class, and declare a slot or attribute named _data.
 
     Note that this implementation allows nested storage of
     other IComponentContainer implementations that are
@@ -80,9 +80,10 @@ class ComponentDict(_SimpleContainerMixin,
             ValueError: if the argument is not a child of
                 this container
         """
-        for key, val in iteritems(self._data):
-            if val is child:
-                return key
+        if getattr(child, "parent", None) is self:
+            for key, val in iteritems(self._data):
+                if val is child:
+                    return key
         raise ValueError
 
     def child(self, key):

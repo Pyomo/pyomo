@@ -872,10 +872,11 @@ class block(_block_base, IBlockStorage):
             ValueError: if the argument is not a child of
                 this container
         """
-        if child.ctype in self._byctype:
-            for key, val in iteritems(self._byctype[child.ctype]):
-                if val is child:
-                    return key
+        if getattr(child, "parent", None) is self:
+            if child.ctype in self._byctype:
+                for key, val in iteritems(self._byctype[child.ctype]):
+                    if val is child:
+                        return key
         raise ValueError
 
     #
@@ -1111,9 +1112,10 @@ class tiny_block(_block_base, IBlockStorage):
             ValueError: if the argument is not a child of
                 this container
         """
-        for key, obj in self._getattrs():
-            if obj is child:
-                return key
+        if getattr(child, "parent", None) is self:
+            for key, obj in self._getattrs():
+                if obj is child:
+                    return key
         raise ValueError
 
     # overridden by the IBlockStorage interface
