@@ -1,7 +1,7 @@
 import pickle
 
 import pyutilib.th as unittest
-import pyomo.core.kernel
+import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \

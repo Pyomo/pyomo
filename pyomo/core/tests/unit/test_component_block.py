@@ -3,6 +3,7 @@ import os
 import pickle
 
 import pyutilib.th as unittest
+import pyomo.kernel
 from pyomo.core.tests.unit.test_component_dict import \
     _TestActiveComponentDictBase
 from pyomo.core.tests.unit.test_component_tuple import \
