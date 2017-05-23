@@ -300,13 +300,10 @@ class Test(unittest.TestCase):
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
-        if "dill" in sys.modules:
+        with self.assertRaises((pickle.PicklingError,
+                                TypeError,
+                                AttributeError)):
             pickle.dumps(instance)
-        else:
-            with self.assertRaises((pickle.PicklingError,
-                                    TypeError,
-                                    AttributeError)):
-                pickle.dumps(instance)
 
     # verifies that we can print a constructed model and
     # obtain identical results before and after
