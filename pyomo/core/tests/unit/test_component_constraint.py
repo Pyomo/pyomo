@@ -924,47 +924,158 @@ class Test_constraint(unittest.TestCase):
         L = 1
         U = 5
 
+        cE = constraint(rhs=L, body=x)
+        x.value = 4
+        self.assertEqual(cE.body(), 4)
+        self.assertEqual(cE.slack, -3)
+        self.assertEqual(cE.lslack, 3)
+        self.assertEqual(cE.uslack, -3)
+        x.value = 6
+        self.assertEqual(cE.body(), 6)
+        self.assertEqual(cE.slack, -5)
+        self.assertEqual(cE.lslack, 5)
+        self.assertEqual(cE.uslack, -5)
+        x.value = 0
+        self.assertEqual(cE.body(), 0)
+        self.assertEqual(cE.slack, -1)
+        self.assertEqual(cE.lslack, -1)
+        self.assertEqual(cE.uslack, 1)
+
+        cE = constraint(rhs=U, body=x)
+        x.value = 4
+        self.assertEqual(cE.body(), 4)
+        self.assertEqual(cE.slack, -1)
+        self.assertEqual(cE.lslack, -1)
+        self.assertEqual(cE.uslack, 1)
+        x.value = 6
+        self.assertEqual(cE.body(), 6)
+        self.assertEqual(cE.slack, -1)
+        self.assertEqual(cE.lslack, 1)
+        self.assertEqual(cE.uslack, -1)
+        x.value = 0
+        self.assertEqual(cE.body(), 0)
+        self.assertEqual(cE.slack, -5)
+        self.assertEqual(cE.lslack, -5)
+        self.assertEqual(cE.uslack, 5)
+
         cL = constraint(lb=L, body=x)
         x.value = 4
+        self.assertEqual(cL.body(), 4)
         self.assertEqual(cL.slack, 3)
         self.assertEqual(cL.lslack, 3)
         self.assertEqual(cL.uslack, float('inf'))
         x.value = 6
+        self.assertEqual(cL.body(), 6)
         self.assertEqual(cL.slack, 5)
         self.assertEqual(cL.lslack, 5)
         self.assertEqual(cL.uslack, float('inf'))
         x.value = 0
+        self.assertEqual(cL.body(), 0)
         self.assertEqual(cL.slack, -1)
         self.assertEqual(cL.lslack, -1)
         self.assertEqual(cL.uslack, float('inf'))
 
+        cL = constraint(lb=float('-inf'), body=x)
+        x.value = 4
+        self.assertEqual(cL.body(), 4)
+        self.assertEqual(cL.slack, float('inf'))
+        self.assertEqual(cL.lslack, float('inf'))
+        self.assertEqual(cL.uslack, float('inf'))
+        x.value = 6
+        self.assertEqual(cL.body(), 6)
+        self.assertEqual(cL.slack, float('inf'))
+        self.assertEqual(cL.lslack, float('inf'))
+        self.assertEqual(cL.uslack, float('inf'))
+        x.value = 0
+        self.assertEqual(cL.body(), 0)
+        self.assertEqual(cL.slack, float('inf'))
+        self.assertEqual(cL.lslack, float('inf'))
+        self.assertEqual(cL.uslack, float('inf'))
+
         cU = constraint(body=x, ub=U)
         x.value = 4
+        self.assertEqual(cU.body(), 4)
         self.assertEqual(cU.slack, 1)
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, 1)
         x.value = 6
+        self.assertEqual(cU.body(), 6)
         self.assertEqual(cU.slack, -1)
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, -1)
         x.value = 0
+        self.assertEqual(cU.body(), 0)
         self.assertEqual(cU.slack, 5)
         self.assertEqual(cU.lslack, float('inf'))
         self.assertEqual(cU.uslack, 5)
 
+        cU = constraint(body=x, ub=float('inf'))
+        x.value = 4
+        self.assertEqual(cU.body(), 4)
+        self.assertEqual(cU.slack, float('inf'))
+        self.assertEqual(cU.lslack, float('inf'))
+        self.assertEqual(cU.uslack, float('inf'))
+        x.value = 6
+        self.assertEqual(cU.body(), 6)
+        self.assertEqual(cU.slack, float('inf'))
+        self.assertEqual(cU.lslack, float('inf'))
+        self.assertEqual(cU.uslack, float('inf'))
+        x.value = 0
+        self.assertEqual(cU.body(), 0)
+        self.assertEqual(cU.slack, float('inf'))
+        self.assertEqual(cU.lslack, float('inf'))
+        self.assertEqual(cU.uslack, float('inf'))
+
         cR = constraint(lb=L, body=x, ub=U)
         x.value = 4
+        self.assertEqual(cR.body(), 4)
         self.assertEqual(cR.slack, 1)
         self.assertEqual(cR.lslack, 3)
         self.assertEqual(cR.uslack, 1)
         x.value = 6
+        self.assertEqual(cR.body(), 6)
         self.assertEqual(cR.slack, -1)
         self.assertEqual(cR.lslack, 5)
         self.assertEqual(cR.uslack, -1)
         x.value = 0
+        self.assertEqual(cR.body(), 0)
         self.assertEqual(cR.slack, -1)
         self.assertEqual(cR.lslack, -1)
         self.assertEqual(cR.uslack, 5)
+
+        cR = constraint(body=x)
+        x.value = 4
+        self.assertEqual(cR.body(), 4)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 6
+        self.assertEqual(cR.body(), 6)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 0
+        self.assertEqual(cR.body(), 0)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+
+        cR = constraint(body=x, lb=float('-inf'), ub=float('inf'))
+        x.value = 4
+        self.assertEqual(cR.body(), 4)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 6
+        self.assertEqual(cR.body(), 6)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
+        x.value = 0
+        self.assertEqual(cR.body(), 0)
+        self.assertEqual(cR.slack, float('inf'))
+        self.assertEqual(cR.lslack, float('inf'))
+        self.assertEqual(cR.uslack, float('inf'))
 
     def test_expr(self):
 

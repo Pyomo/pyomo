@@ -156,7 +156,7 @@ class IConstraint(IComponent, _ActiveComponentMixin):
                     (self.ub == float('inf')))
 
 
-class _mutable_bounds_mixin(object):
+class _MutableBoundsConstraintMixin(object):
     """
     Use as a base class for IConstraint implementations
     that allow adjusting the lb, ub, rhs, and equality
@@ -217,11 +217,18 @@ class _mutable_bounds_mixin(object):
         return self._lb
     @rhs.setter
     def rhs(self, rhs):
-        if rhs is not None:
+        if rhs is None:
+            # None has a different meaning depending on the
+            # context (lb or ub), so there is no way to
+            # interpret this
+            raise ValueError(
+                "Constraint right-hand side can not "
+                "be assigned a value of None.")
+        else:
             tmp = as_numeric(rhs)
             if tmp._potentially_variable():
                 raise ValueError(
-                    "Constraint righthand side must be "
+                    "Constraint right-hand side must be "
                     "expressions restricted to data.")
         self._lb = rhs
         self._ub = rhs
@@ -230,7 +237,7 @@ class _mutable_bounds_mixin(object):
     @property
     def bounds(self):
         """The bounds of the constraint as a tuple (lb, ub)"""
-        return super(_mutable_bounds_mixin, self).bounds
+        return super(_MutableBoundsConstraintMixin, self).bounds
     @bounds.setter
     def bounds(self, bounds_tuple):
         self.lb, self.ub = bounds_tuple
@@ -253,7 +260,8 @@ class _mutable_bounds_mixin(object):
         assert not equality
         self._equality = False
 
-class constraint(_mutable_bounds_mixin, IConstraint):
+class constraint(_MutableBoundsConstraintMixin,
+                 IConstraint):
     """An algebraic constraint."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
@@ -589,7 +597,7 @@ class constraint(_mutable_bounds_mixin, IConstraint):
 # Note: This class is experimental. The implementation may
 #       change or it may go away.
 #
-class linear_constraint(_mutable_bounds_mixin,
+class linear_constraint(_MutableBoundsConstraintMixin,
                         IConstraint):
     """
     A linear constraint.
