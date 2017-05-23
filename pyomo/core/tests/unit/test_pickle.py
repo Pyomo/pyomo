@@ -21,6 +21,8 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 
+import six
+
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)
 def constr_rule(model,a):
@@ -300,10 +302,13 @@ class Test(unittest.TestCase):
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
-        with self.assertRaises((pickle.PicklingError,
-                                TypeError,
-                                AttributeError)):
+        if (not six.PY3) and ('dill' in sys.modules):
             pickle.dumps(instance)
+        else:
+            with self.assertRaises((pickle.PicklingError,
+                                    TypeError,
+                                    AttributeError)):
+                pickle.dumps(instance)
 
     # verifies that we can print a constructed model and
     # obtain identical results before and after
