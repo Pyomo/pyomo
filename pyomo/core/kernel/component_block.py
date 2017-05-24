@@ -136,8 +136,7 @@ class _block_base(object):
                 operation on the top-level block is
                 sufficient.
         """
-        # TODO
-        from pyomo.core.base.block import Block
+        block_ctype = self.ctype
         if (not self.active) and \
            (not _from_parent_):
             # inform the parent
@@ -150,10 +149,10 @@ class _block_base(object):
                 if isinstance(child, IActiveObject):
                     child.activate(_from_parent_=True)
         if descend_into:
-            for block in self.components(ctype=Block):
-                block.activate(shallow=shallow,
-                               descend_into=False,
-                               _from_parent_=True)
+            for obj in self.components(ctype=block_ctype):
+                obj.activate(shallow=shallow,
+                             descend_into=False,
+                             _from_parent_=True)
 
     def deactivate(self,
                    shallow=True,
@@ -173,8 +172,7 @@ class _block_base(object):
                 operation on the top-level block is
                 sufficient.
         """
-        # TODO
-        from pyomo.core.base.block import Block
+        block_ctype = self.ctype
         if self.active and \
            (not _from_parent_):
             # inform the parent
@@ -187,10 +185,10 @@ class _block_base(object):
                 if isinstance(child, IActiveObject):
                     child.deactivate(_from_parent_=True)
         if descend_into:
-            for block in self.components(ctype=Block):
-                block.deactivate(shallow=shallow,
-                                 descend_into=False,
-                                 _from_parent_=True)
+            for obj in self.components(ctype=block_ctype):
+                obj.deactivate(shallow=shallow,
+                               descend_into=False,
+                               _from_parent_=True)
 
     def child(self, key):
         """Get the child object associated with a given
@@ -248,8 +246,7 @@ class _block_base(object):
             iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
-        # TODO
-        from pyomo.core.base.block import Block
+        block_ctype = self.ctype
 
         # if this block is not active, then nothing below it
         # can be active
@@ -258,7 +255,7 @@ class _block_base(object):
 
         if include_all_parents or \
            (ctype is _no_ctype) or \
-           (ctype is Block):
+           (ctype is block_ctype):
             if return_key:
                 yield root_key, self
             else:
@@ -268,7 +265,7 @@ class _block_base(object):
             # check for appropriate ctype
             if (ctype is not _no_ctype) and \
                (child.ctype is not ctype) and \
-               (child.ctype is not Block):
+               (child.ctype is not block_ctype):
                 continue
 
             # check active status (if appropriate)
@@ -285,7 +282,7 @@ class _block_base(object):
                     yield child
             elif not child._is_component:
                 # a container and not a component (thus, not a block)
-                if child.ctype is Block:
+                if child.ctype is block_ctype:
                     # this is a simple container of blocks
                     # Note: we treat the simple block
                     #   containers differently because we
@@ -299,7 +296,7 @@ class _block_base(object):
                         if not obj._is_component:
                             # a container of blocks
                             if (ctype is _no_ctype) or \
-                               (ctype is Block) or \
+                               (ctype is block_ctype) or \
                                include_all_parents:
                                 if return_key:
                                     yield obj_key, obj
@@ -389,8 +386,7 @@ class _block_base(object):
                 :const:`False`.
         """
         assert active in (None, True)
-        # TODO
-        from pyomo.core.base.block import Block
+        block_ctype = self.ctype
 
         # if this block is not active, then nothing below it
         # can be active
@@ -400,7 +396,7 @@ class _block_base(object):
         go = True
         if include_all_parents or \
            (ctype is _no_ctype) or \
-           (ctype is Block):
+           (ctype is block_ctype):
             if include_key:
                 go = visit(root_key, self)
             else:
@@ -412,7 +408,7 @@ class _block_base(object):
             # check for appropriate ctype
             if (ctype is not _no_ctype) and \
                (child.ctype is not ctype) and \
-               (child.ctype is not Block):
+               (child.ctype is not block_ctype):
                 continue
 
             # check active status (if appropriate)
@@ -429,7 +425,7 @@ class _block_base(object):
                     visit(child)
             elif not child._is_component:
                 # a container and not a component (thus, not a block)
-                if child.ctype is Block:
+                if child.ctype is block_ctype:
                     # this is a simple container of blocks
                     # Note: we treat the simple block
                     #   containers differently because we
@@ -449,7 +445,7 @@ class _block_base(object):
                             # a simple container of blocks
                             go = True
                             if (ctype is _no_ctype) or \
-                               (ctype is Block) or \
+                               (ctype is block_ctype) or \
                                include_all_parents:
                                 if include_key:
                                     go = visit(obj_key, obj)
@@ -528,8 +524,7 @@ class _block_base(object):
             iterator of objects or (key,object) tuples
         """
         assert active in (None, True)
-        # TODO
-        from pyomo.core.base.block import Block
+        block_ctype = self.ctype
 
         # if this block is not active, then nothing below it
         # can be active
@@ -541,7 +536,7 @@ class _block_base(object):
             # check for appropriate ctype
             if (ctype is not _no_ctype) and \
                (child.ctype is not ctype) and \
-               (child.ctype is not Block):
+               (child.ctype is not block_ctype):
                 continue
 
             # check active status (if appropriate)
@@ -558,7 +553,7 @@ class _block_base(object):
                     yield child
             elif not child._is_component:
                 # a container and not a component (thus, not a block)
-                if child.ctype is Block:
+                if child.ctype is block_ctype:
                     # this is a simple container of blocks
                     # Note: we treat the simple block
                     #   containers differently because we
@@ -572,7 +567,7 @@ class _block_base(object):
                         if not obj._is_component:
                             # a container of blocks
                             if (ctype is _no_ctype) or \
-                               (ctype is Block) or \
+                               (ctype is block_ctype) or \
                                include_all_parents:
                                 if return_key:
                                     yield obj_key, obj
@@ -607,7 +602,7 @@ class _block_base(object):
 
         if include_all_parents or \
            (ctype is _no_ctype) or \
-           (ctype is Block):
+           (ctype is block_ctype):
             if return_key:
                 yield root_key, self
             else:
@@ -651,8 +646,7 @@ class _block_base(object):
         """
 
         assert active in (None, True)
-        # TODO
-        from pyomo.core.base.block import Block
+        block_ctype = self.ctype
 
         # if this block is not active, then nothing below it
         # can be active
@@ -692,7 +686,7 @@ class _block_base(object):
 
         if descend_into:
             # now recurse into subblocks
-            for child in self.children(ctype=Block):
+            for child in self.children(ctype=block_ctype):
 
                 # check active status (if appropriate)
                 if (active is not None) and \
@@ -733,8 +727,7 @@ class _block_base(object):
         included (as the first item in the generator).
         """
         assert active in (None, True)
-        # TODO
-        from pyomo.core.base.block import Block
+        block_ctype = self.ctype
 
         # if this block is not active, then nothing below it
         # can be active
@@ -742,7 +735,7 @@ class _block_base(object):
             return
 
         yield self
-        for component in self.components(ctype=Block,
+        for component in self.components(ctype=block_ctype,
                                          active=active,
                                          descend_into=descend_into):
             yield component
@@ -786,8 +779,6 @@ class _block_base(object):
             mapping component objects to names.
         """
         assert active in (None, True)
-        # TODO
-        from pyomo.core.base.block import Block
 
         names = ComponentMap()
 
