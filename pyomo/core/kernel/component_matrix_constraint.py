@@ -232,6 +232,28 @@ class _MatrixConstraintData(IConstraint,
         return repn
 
 class matrix_constraint(constraint_tuple):
+    """
+    A container for constraints of the form L <= Ax <= b.
+
+    Args:
+        A: A scipy sparse matrix or 2D numpy array (always
+            copied)
+        lb: A scalar or array with the same number of rows
+            as A that is set to the lower bound of the
+            constraints
+        ub: A scalar or array with the same number of rows
+            as A that is set to the upper bound of the
+            constraints
+        rhs: A scalar or array with the same number of rows
+            as A that is set to the right-hand side the
+            constraints (implies equality constraints)
+        variable_order: A list with the same number of
+            columns as A that stores the variable associated
+            with each column
+        sparse: Indicates whether or not sparse storage (CSR
+            format) should be used to store A. Default is
+            True.
+    """
     __slots__ = ("_A",
                  "_sparse",
                  "_lb",

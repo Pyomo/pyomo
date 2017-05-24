@@ -10,6 +10,7 @@ Summary
    pyomo.core.kernel.component_constraint.constraint_tuple
    pyomo.core.kernel.component_constraint.constraint_list
    pyomo.core.kernel.component_constraint.constraint_dict
+   pyomo.core.kernel.component_matrix_constraint.matrix_constraint
 
 Member Documentation
 ~~~~~~~~~~~~~~~~~~~~
@@ -26,5 +27,8 @@ Member Documentation
    :show-inheritance:
    :members:
 .. autoclass:: pyomo.core.kernel.component_constraint.constraint_dict
+   :show-inheritance:
+   :members:
+.. autoclass:: pyomo.core.kernel.component_matrix_constraint.matrix_constraint
    :show-inheritance:
    :members:
