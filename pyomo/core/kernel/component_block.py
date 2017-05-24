@@ -51,13 +51,13 @@ class IBlockStorage(IComponent,
                     _ActiveComponentContainerMixin):
     """A container that stores multiple types.
 
-    This class is abstract, but it partially implements
-    the ICategorizedObject interface by defining the following
-    attributes:
+    This class is abstract, but it partially implements the
+    :class:`ICategorizedObject` interface by defining the
+    following attributes:
 
     Attributes:
-        _is_component: True
-        _is_container: True
+        _is_component: :const:`True`
+        _is_container: :const:`True`
     """
     _is_component = True
     _is_container = True
@@ -86,10 +86,10 @@ class IBlockStorage(IComponent,
     def clone(self):
         """
         Clones this block. Returns a new block with whose
-        parent pointer is set to None. Any components
-        encountered that are descendents of this
-        block will be deepcopied, otherwise a reference
-        to the original component is retained.
+        parent pointer is set to :const:`None`. Any
+        components encountered that are descendents of this
+        block will be deepcopied, otherwise a reference to
+        the original component is retained.
         """
         new_block = copy.deepcopy(
             self, {'__block_scope__': {id(self):True, id(None):False}} )
@@ -106,8 +106,9 @@ class IBlockStorage(IComponent,
 
 class _block_base(object):
     """
-    A base class shared by 'block' and 'tiny_block' that
-    implements a few IBlockStorage abstract methods.
+    A base class shared by :class:`block` and
+    :class:`tiny_block` that implements a few
+    :class:`IBlockStorage` abstract methods.
     """
     __slots__ = ()
 
@@ -122,7 +123,7 @@ class _block_base(object):
                  shallow=True,
                  descend_into=False,
                  _from_parent_=False):
-        """Activate this block.
+        """Activates this block.
 
         Args:
             shallow (bool): If False, all children of the
@@ -156,7 +157,7 @@ class _block_base(object):
                    shallow=True,
                    descend_into=False,
                    _from_parent_=False):
-        """Deactivate this block.
+        """Deactivates this block.
 
         Args:
             shallow (bool): If False, all children of the
@@ -216,23 +217,26 @@ class _block_base(object):
             ctype: Indicate the type of components to
                 include. The default value indicates that
                 all types should be included.
-            active (True/None): Set to True to indicate that
-                only active objects should be included. The
-                default value of None indicates that all
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
                 components (including those that have been
-                deactivated) should be included. *Note*: This
-                flag is ignored for any objects that do not
-                have an active flag.
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
             include_parent_blocks (bool): Indicates if
               parent block containers should be included
               even when the ctype is set to something that
-              is not Block. Default is True.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the local storage key of the
-                object within its parent and the object
-                itself. By default, only the objects are
-                returned.
+              is not Block. Default is :const:`True`.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the local storage key
+                of the object within its parent and the
+                object itself. By default, only the objects
+                are returned.
+            root_key: The key to return with this object.
+                Ignored when return_key is False.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -332,23 +336,26 @@ class _block_base(object):
             ctype: Indicate the type of components to
                 include. The default value indicates that
                 all types should be included.
-            active (True/None): Set to True to indicate that
-                only active objects should be included. The
-                default value of None indicates that all
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
                 components (including those that have been
-                deactivated) should be included. *Note*: This
-                flag is ignored for any objects that do not
-                have an active flag.
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
             include_parent_blocks (bool): Indicates if
               parent block containers should be included
               even when the ctype is set to something that
-              is not Block. Default is True.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the local storage key of the
-                object within its parent and the object
-                itself. By default, only the objects are
-                returned.
+              is not Block. Default is :const:`True`.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the local storage key
+                of the object within its parent and the
+                object itself. By default, only the objects
+                are returned.
+            root_key: The key to return with this object.
+                Ignored when return_key is False.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -449,22 +456,23 @@ class _block_base(object):
             ctype: Indicate the type of components to
                 include. The default value indicates that
                 all types should be included.
-            active (True/None): Set to True to indicate that
-                only active objects should be included. The
-                default value of None indicates that all
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
                 components (including those that have been
-                deactivated) should be included. *Note*: This
-                flag is ignored for any objects that do not
-                have an active flag.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the local storage key of the
-                object within its parent and the object
-                itself. By default, only the objects are
-                returned.
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the local storage key
+                of the object within its parent and the
+                object itself. By default, only the objects
+                are returned.
             descend_into (bool): Indicates whether or not to
                 include components on sub-blocks. Default is
-                True.
+                :const:`True`.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -583,18 +591,19 @@ class _block_base(object):
 
         Args:
             ctype: Indicate the type of components to
-                include.  The default value indicates that
+                include. The default value indicates that
                 all types should be included.
-            active (True/None): Set to True to indicate that
-                only active components should be
-                included. The default value of None
-                indicates that all components (including
-                those that have been deactivated) should be
-                included. *Note*: This flag is ignored for
-                any objects that do not have an active flag.
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                components should be included. The default
+                value of :const:`None` indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
             descend_into (bool): Indicates whether or not to
                 include components on sub-blocks. Default is
-                True.
+                :const:`True`.
             convert (function): A function that converts a
                 storage key into a string
                 representation. Default is str.
@@ -653,6 +662,9 @@ class _block_base(object):
                 from the filename suffix.
             **kwds: Additional keyword options passed to the
                 model writer.
+
+        Returns:
+            a :class:`SymbolMap`
         """
         #
         # Guess the format if none is specified
@@ -709,8 +721,8 @@ class _block_base(object):
         Load a solution.
 
         Args:
-            solution: A pyomo.opt.Solution object with
-                a symbol map.
+            solution: A :class:`pyomo.opt.Solution` object
+                with a symbol map.
             allow_consistent_values_for_fixed_vars:
                 Indicates whether a solution can specify
                 consistent values for variables that are
@@ -836,7 +848,7 @@ class _block_base(object):
                         attr_value
 
 class block(_block_base, IBlockStorage):
-    """An implementation of the IBlockStorage interface."""
+    """An implementation of the :class:`IBlockStorage` interface."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
@@ -892,11 +904,11 @@ class block(_block_base, IBlockStorage):
             ctype: Indicate the type of children to iterate
                 over. The default value indicates that all
                 types should be included.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the child storage key and the
-                child object. By default, only the child
-                objects are returned.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the child storage key
+                and the child object. By default, only the
+                child objects are returned.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -982,16 +994,17 @@ class block(_block_base, IBlockStorage):
         this block.
 
         Args:
-            active (True/None): Set to True to indicate that
-                only active categorized objects should be
-                counted. The default value of None indicates
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                categorized objects should be counted. The
+                default value of :const:`None` indicates
                 that all categorized objects (including
                 those that have been deactivated) should be
                 counted. *Note*: This flag is ignored for
                 any objects that do not have an active flag.
             descend_into (bool): Indicates whether or not
                 category types should be counted on
-                sub-blocks. Default is True.
+                sub-blocks. Default is :const:`True`.
 
         Returns:
             set of category types
@@ -1134,11 +1147,11 @@ class tiny_block(_block_base, IBlockStorage):
             ctype: Indicate the type of children to iterate
                 over. The default value indicates that all
                 types should be included.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the child storage key and the
-                child object. By default, only the child
-                objects are returned.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the child storage key
+                and the child object. By default, only the
+                child objects are returned.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -1166,16 +1179,17 @@ class tiny_block(_block_base, IBlockStorage):
         this block.
 
         Args:
-            active (True/None): Set to True to indicate that
-                only active categorized objects should be
-                counted. The default value of None indicates
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                categorized objects should be counted. The
+                default value of :const:`None` indicates
                 that all categorized objects (including
                 those that have been deactivated) should be
                 counted. *Note*: This flag is ignored for
                 any objects that do not have an active flag.
             descend_into (bool): Indicates whether or not
                 category types should be counted on
-                sub-blocks. Default is True.
+                sub-blocks. Default is :const:`True`.
 
         Returns:
             set of category types

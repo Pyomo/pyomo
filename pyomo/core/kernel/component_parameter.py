@@ -50,8 +50,8 @@ class IParameter(IComponent, NumericValue):
         return True
 
     def _potentially_variable(self):
-        """Returns False because this object can never
-        reference variables."""
+        """Returns :const:`False` because this object can
+        never reference variables."""
         return False
 
     def polynomial_degree(self):

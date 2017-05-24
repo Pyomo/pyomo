@@ -102,12 +102,13 @@ def piecewise(breakpoints,
                 -  'inc': incremental method (+)
         validate (bool): Indicates whether or not to perform
             validation of the data in the breakpoints and
-            values lists. The default is True. Validation
-            can be performed manually after the piecewise
-            object is created by calling the validate()
-            method. Validation should be performed anytime
-            the data in the breakpoints or values lists
-            changes (e.g., when using mutable parameters)
+            values lists. The default is
+            :const:`True`. Validation can be performed
+            manually after the piecewise object is created
+            by calling the validate() method. Validation
+            should be performed anytime the data in the
+            breakpoints or values lists changes (e.g., when
+            using mutable parameters)
         warning_tol (float): Passed to the validate method
             when validation is performed to control the
             tolerance for checking consecutive slopes.

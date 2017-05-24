@@ -87,7 +87,7 @@ class IVariable(IComponent, NumericValue):
 
     domain_type = _abstract_readwrite_property(
         doc=("The domain type of the variable "
-             "(RealSet or IntegerSet)"))
+             "(:class:`RealSet` or :class:`IntegerSet`)"))
     lb = _abstract_readwrite_property(
         doc="The lower bound of the variable")
     ub = _abstract_readwrite_property(
@@ -114,8 +114,8 @@ class IVariable(IComponent, NumericValue):
     def fix(self, *val):
         """
         Fix the variable. Sets the fixed indicator to
-        True. An optional value argument will update the
-        variable's value before fixing.
+        :const:`True`. An optional value argument will
+        update the variable's value before fixing.
         """
         if len(val) == 1:
             self.value = val[0]
@@ -125,20 +125,21 @@ class IVariable(IComponent, NumericValue):
         self.fixed = True
 
     def unfix(self):
-        """Free the variable. Sets the fixed indicator to False."""
+        """Free the variable. Sets the fixed indicator to
+        :const:`False`."""
         self.fixed = False
 
     free=unfix
 
     def has_lb(self):
-        """Returns False when the lower bound is None or
-        negative infinity"""
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
         return not ((self.lb is None) or \
                     (self.lb == float('-inf')))
 
     def has_ub(self):
-        """Returns False when the upper bound is None or
-        positive infinity"""
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
         return not ((self.ub is None) or \
                     (self.ub == float('inf')))
 
@@ -148,22 +149,26 @@ class IVariable(IComponent, NumericValue):
     #
 
     def is_continuous(self):
-        """Returns True when the domain type is RealSet."""
+        """Returns :const:`True` when the domain type is
+        :class:`RealSet`."""
         return issubclass(self.domain_type, RealSet)
 
     # this could be expanded to include semi-continuous
     # where as is_integer would not
     def is_discrete(self):
-        """Returns True when the domain type is IntegerSet."""
+        """Returns :const:`True` when the domain type is
+        :class:`IntegerSet`."""
         return issubclass(self.domain_type, IntegerSet)
 
     def is_integer(self):
-        """Returns True when the domain type is IntegerSet."""
+        """Returns :const:`True` when the domain type is
+        :class:`IntegerSet`."""
         return issubclass(self.domain_type, IntegerSet)
 
     def is_binary(self):
-        """Returns True when the domain type is IntegerSet
-        and the bounds are within [0,1]."""
+        """Returns :const:`True` when the domain type is
+        :class:`IntegerSet` and the bounds are within
+        [0,1]."""
         return self.is_integer() and \
             (self.lb is not None) and \
             (self.ub is not None) and \
@@ -172,15 +177,13 @@ class IVariable(IComponent, NumericValue):
 
 # TODO?
 #    def is_semicontinuous(self):
-#        """
-#        Returns True when the domain class is SemiContinuous.
-#        """
+#        """Returns :const:`True` when the domain class is
+#        SemiContinuous."""
 #        return issubclass(self.domain_type, SemiRealSet)
 
 #    def is_semiinteger(self):
-#        """
-#        Returns True when the domain class is SemiInteger.
-#        """
+#        """Returns :const:`True` when the domain class is
+#        SemiInteger."""
 #        return issubclass(self.domain_type, SemiIntegerSet)
 
     #
@@ -188,19 +191,23 @@ class IVariable(IComponent, NumericValue):
     #
 
     def is_fixed(self):
-        """Returns True if this variable is fixed, otherwise returns False."""
+        """Returns :const:`True` if this variable is fixed,
+        otherwise returns :const:`False`."""
         return self.fixed
 
     def is_constant(self):
-        """Returns False because this is not a constant in an expression."""
+        """Returns :const:`False` because this is not a
+        constant in an expression."""
         return False
 
     def _potentially_variable(self):
-        """Returns True because this is a variable."""
+        """Returns :const:`True` because this is a
+        variable."""
         return True
 
     def polynomial_degree(self):
-        """Return the polynomial degree of this expression"""
+        """Return the polynomial degree of this
+        expression"""
         # If the variable is fixed, it represents a constant;
         # otherwise, it has degree 1.
         if self.fixed:
@@ -290,8 +297,8 @@ class variable(IVariable):
 
     @property
     def domain_type(self):
-        """The domain type of the variable (e.g.,
-        :class:`RealSet`, :class:`IntegerSet`)"""
+        """The domain type of the variable (:class:`RealSet`
+        or :class:`IntegerSet`)"""
         return self._domain_type
     @domain_type.setter
     def domain_type(self, domain_type):

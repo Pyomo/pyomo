@@ -54,7 +54,7 @@ class IIdentityExpression(NumericValue):
                 more objects not being initialized to a
                 numeric value (e.g, one or more variables in
                 an algebraic expression having the value
-                None). Default is True.
+                None). Default is :const:`True`.
 
         Returns:
             numeric value or None

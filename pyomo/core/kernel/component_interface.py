@@ -59,7 +59,7 @@ class ICategorizedObject(object):
     Attributes:
         _ctype: The objects category type.
         _parent: A weak reference to the object's parent or
-            None.
+            :const:`None`.
         _is_categorized_object (bool): A flag used to
             indicate the class is an instance of
             ICategorized object. This is a workaround for
@@ -134,7 +134,7 @@ class ICategorizedObject(object):
         Args:
             fully_qualified (bool): Generate a full name by
                 iterating through all anscestor containers.
-                Default is False.
+                Default is :const:`False`.
             convert (function): A function that converts a
                 storage key into a string
                 representation. Default is the built-in
@@ -144,7 +144,7 @@ class ICategorizedObject(object):
             If a parent exists, this method returns a string
             representing the name of the object in the
             context of its parent; otherwise (if no parent
-            exists), this method returns None.
+            exists), this method returns :const:`None`.
 
         .. warning::
             Name generation can be slow. See the
@@ -171,8 +171,8 @@ class ICategorizedObject(object):
 
     @property
     def name(self):
-        """The object's fully qualified name. Alias
-        for :func:`obj.getname(fully_qualified=True)`.
+        """The object's fully qualified name. Alias for
+        `obj.getname(fully_qualified=True)`.
 
         .. warning::
             Name generation can be slow. See the
@@ -185,7 +185,8 @@ class ICategorizedObject(object):
     @property
     def local_name(self):
         """The object's local name within the context of its
-        parent. Alias for :func:`obj.getname(fully_qualified=False)`.
+        parent. Alias for
+        `obj.getname(fully_qualified=False)`.
 
         .. warning::
             Name generation can be slow. See the
@@ -298,12 +299,12 @@ class IActiveObject(object):
 
     @abc.abstractmethod
     def activate(self, *args, **kwds):
-        """Set the active attribute to True"""
+        """Set the active attribute to :const:`True`"""
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
     def deactivate(self, *args, **kwds):
-        """Set the active attribute to False"""
+        """Set the active attribute to :const:`False`"""
         raise NotImplementedError     #pragma:nocover
 
 class IComponent(ICategorizedObject):
@@ -316,8 +317,8 @@ class IComponent(ICategorizedObject):
     attributes:
 
     Attributes:
-        _is_component: True
-        _is_container: False
+        _is_component: :const:`True`
+        _is_container: :const:`False`
     """
     _is_component = True
     _is_container = False
@@ -383,13 +384,13 @@ class IComponentContainer(ICategorizedObject):
     Interface for containers of components or other
     containers.
 
-    This class is abstract, but it partially implements
-    the ICategorizedObject interface by defining the following
+    This class is abstract, but it partially implements the
+    ICategorizedObject interface by defining the following
     attributes:
 
     Attributes:
-        _is_component: False
-        _is_container: True
+        _is_component: :const:`False`
+        _is_container: :const:`True`
     """
     _is_component = False
     _is_container = True
@@ -456,7 +457,8 @@ class _ActiveComponentContainerMixin(IActiveObject):
     def _increment_active(self):
         """This method must be called any time a new active
         child is added or any time an existing child's
-        active status changes from False to True."""
+        active status changes from :const:`False` to
+        :const:`True`."""
         assert self._active >= 0
         if self._active == 0:
             # the container itself is currently
@@ -472,7 +474,8 @@ class _ActiveComponentContainerMixin(IActiveObject):
     def _decrement_active(self):
         """This method must be called any time an active is
         child removed or any time an existing child's active
-        status changes from True to False."""
+        status changes from :const:`True` to
+        :const:`False`."""
         self._active -= 1
         assert self._active >= 1
 
@@ -495,7 +498,7 @@ class _ActiveComponentContainerMixin(IActiveObject):
         """Activate this container. All children of this
         container will be activated and the active flag on
         all ancestors of this container will be set to
-        True."""
+        :const:`True`."""
         assert self._active >= 0
         if (not self.active) and \
            (not _from_parent_):
@@ -546,8 +549,8 @@ class _SimpleContainerMixin(object):
     class.
 
     Note that this implementation allows nested storage of
-    other IComponentContainer implementations that are
-    defined with the same ctype.
+    other :class:`IComponentContainer` implementations that
+    are defined with the same ctype.
     """
     __slots__ = ()
 
@@ -578,24 +581,25 @@ class _SimpleContainerMixin(object):
                    return_key=False):
         """
         Generates an efficient traversal of all components
-        stored under this container. Components are leaf nodes
-        in a storage tree (not containers themselves, except
-        for blocks).
+        stored under this container. Components are leaf
+        nodes in a storage tree (not containers themselves,
+        except for blocks).
 
         Args:
-            active (True/None): Set to True to indicate that
-                only active objects should be included. The
-                default value of None indicates that all
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
                 components (including those that have been
-                deactivated) should be included. *Note*: This
-                flag is ignored for any objects that do not
-                have an active flag.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the local storage key of the
-                object within its parent and the object
-                itself. By default, only the objects are
-                returned.
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the local storage key
+                of the object within its parent and the
+                object itself. By default, only the objects
+                are returned.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -632,21 +636,22 @@ class _SimpleContainerMixin(object):
         Generates a preorder traversal of the storage tree.
 
         Args:
-            active (True/None): Set to True to indicate that
-                only active objects should be included. The
-                default value of None indicates that all
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
                 components (including those that have been
-                deactivated) should be included. *Note*: This
-                flag is ignored for any objects that do not
-                have an active flag.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the local storage key of the
-                object within its parent and the object
-                itself. By default, only the objects are
-                returned.
-            root_key: The key to return with this object
-                (when return_key is True).
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the local storage key
+                of the object within its parent and the
+                object itself. By default, only the objects
+                are returned.
+            root_key: The key to return with this object.
+                Ignored when return_key is :const:`False`.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -690,21 +695,22 @@ class _SimpleContainerMixin(object):
         Generates a postorder traversal of the storage tree.
 
         Args:
-            active (True/None): Set to True to indicate that
-                only active objects should be included. The
-                default value of None indicates that all
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
                 components (including those that have been
-                deactivated) should be included. *Note*: This
-                flag is ignored for any objects that do not
-                have an active flag.
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the local storage key of the
-                object within its parent and the object
-                itself. By default, only the objects are
-                returned.
-            root_key: The key to return with this object
-                (when return_key is True).
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the local storage key
+                of the object within its parent and the
+                object itself. By default, only the objects
+                are returned.
+            root_key: The key to return with this object.
+                Ignored when return_key is :const:`False`.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -752,17 +758,18 @@ class _SimpleContainerMixin(object):
         container.
 
         Args:
-            active (True/None): Set to True to indicate that
-                only active components should be
-                included. The default value of None
-                indicates that all components (including
-                those that have been deactivated) should be
-                included. *Note*: This flag is ignored for
-                any objects that do not have an active flag.
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                components should be included. The default
+                value of :const:`None` indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
             descend_into (bool): Indicates whether or not to
                 include subcomponents of any container
                 objects that are not components. Default is
-                True.
+                :const:`True`.
             convert (function): A function that converts a
                 storage key into a string
                 representation. Default is str.

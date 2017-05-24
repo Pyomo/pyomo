@@ -109,11 +109,11 @@ class ComponentTuple(_SimpleContainerMixin,
         """Iterate over the children of this container.
 
         Args:
-            return_key (bool): Set to True to indicate that
-                the return type should be a 2-tuple
-                consisting of the child storage key and the
-                child object. By default, only the child
-                objects are returned.
+            return_key (bool): Set to :const:`True` to
+                indicate that the return type should be a
+                2-tuple consisting of the child storage key
+                and the child object. By default, only the
+                child objects are returned.
 
         Returns:
             iterator of objects or (key,object) tuples

@@ -156,8 +156,9 @@ class _MatrixConstraintData(IConstraint,
     def rhs(self):
         """The right-hand side of the constraint. This
         property can only be read when the equality property
-        is True. Assigning to this property implicitly sets
-        the equality property to True."""
+        is :const:`True`. Assigning to this property
+        implicitly sets the equality property to
+        :const:`True`."""
         if not self.equality:
             raise ValueError(
                 "The rhs property can not be read "
@@ -191,11 +192,12 @@ class _MatrixConstraintData(IConstraint,
 
     @property
     def equality(self):
-        """Returns True when this is in equality constraint.
+        """Returns :const:`True` when this is in equality
+        constraint.
 
-        Disable equality by assigning False. Equality can
-        only be activated by assigning a value to the .rhs
-        property."""
+        Disable equality by assigning
+        :const:`False`. Equality can only be activated by
+        assigning a value to the .rhs property."""
         return self.parent.equality[self._index]
     @equality.setter
     def equality(self, equality):
@@ -252,7 +254,7 @@ class matrix_constraint(constraint_tuple):
             with each column
         sparse: Indicates whether or not sparse storage (CSR
             format) should be used to store A. Default is
-            True.
+            :const:`True`.
     """
     __slots__ = ("_A",
                  "_sparse",
@@ -379,9 +381,10 @@ class matrix_constraint(constraint_tuple):
         """The array of constraint right-hand sides. Can be
         set to a scalar or a numpy array of the same
         dimension. This property can only be read when the
-        equality property is True on every index. Assigning
-        to this property implicitly sets the equality
-        property to True on every index."""
+        equality property is :const:`True` on every
+        index. Assigning to this property implicitly sets
+        the equality property to :const:`True` on every
+        index."""
         if not self.equality.all():
             raise ValueError(
                 "The rhs array can not be read when "

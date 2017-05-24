@@ -37,10 +37,8 @@ _noarg = object()
 class suffix(ComponentMap,
              IComponent,
              _ActiveComponentMixin):
-    """
-    A container for storing extranious model data that can
-    be imported to or exported from a solver.
-    """
+    """A container for storing extranious model data that
+    can be imported to or exported from a solver."""
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
@@ -92,18 +90,14 @@ class suffix(ComponentMap,
 
     @property
     def export_enabled(self):
-        """
-        Returns True when this suffix is enabled for export to
-        solvers.
-        """
+        """Returns :const:`True` when this suffix is enabled
+        for export to solvers."""
         return bool(self._direction & suffix.EXPORT)
 
     @property
     def import_enabled(self):
-        """
-        Returns True when this suffix is enabled for import from
-        solutions.
-        """
+        """Returns :const:`True` when this suffix is enabled
+        for import from solutions."""
         return bool(self._direction & suffix.IMPORT)
 
     @property
@@ -207,20 +201,24 @@ def export_suffix_generator(blk,
         datatype: Restricts the suffixes included in the
             returned generator to those matching the
             provided suffix datatype.
-        active (True/None): Set to True to indicate that
-            only active suffixes should be included. The
-            default value of None indicates that all
-            suffixes (including those that have been
-            deactivated) should be included.
+        active (:const:`True`/:const:`None`): Set to
+            :const:`True` to indicate that only active
+            suffixes should be included. The default value
+            of :const:`None` indicates that all suffixes
+            (including those that have been deactivated)
+            should be included.
         descend_into (bool): Indicates whether or not to
-            include suffixes on sub-blocks. Default is True.
-        return_key (bool): Set to True to indicate that the
-            return type should be a 2-tuple consisting of
-            the local storage key of the suffix within its
-            parent and the suffix itself. By default, only
-            the suffixes are returned.
+            include suffixes on sub-blocks. Default is
+            :const:`True`.
+        return_key (bool): Set to :const:`True` to indicate
+            that the return type should be a 2-tuple
+            consisting of the local storage key of the
+            suffix within its parent and the suffix
+            itself. By default, only the suffixes are
+            returned.
 
-    Returns: an iterator of suffixes or (key,suffix) tuples
+    Returns:
+        iterator of suffixes or (key,suffix) tuples
     """
     for name, suf in filter(lambda x: (x[1].export_enabled and \
                                        ((datatype is _noarg) or \
@@ -248,20 +246,24 @@ def import_suffix_generator(blk,
         datatype: Restricts the suffixes included in the
             returned generator to those matching the
             provided suffix datatype.
-        active (True/None): Set to True to indicate that
-            only active suffixes should be included. The
-            default value of None indicates that all
-            suffixes (including those that have been
-            deactivated) should be included.
+        active (:const:`True`/:const:`None`): Set to
+            :const:`True` to indicate that only active
+            suffixes should be included. The default value
+            of :const:`None` indicates that all suffixes
+            (including those that have been deactivated)
+            should be included.
         descend_into (bool): Indicates whether or not to
-            include suffixes on sub-blocks. Default is True.
-        return_key (bool): Set to True to indicate that the
-            return type should be a 2-tuple consisting of
-            the local storage key of the suffix within its
-            parent and the suffix itself. By default, only
-            the suffixes are returned.
+            include suffixes on sub-blocks. Default is
+            :const:`True`.
+        return_key (bool): Set to :const:`True` to indicate
+            that the return type should be a 2-tuple
+            consisting of the local storage key of the
+            suffix within its parent and the suffix
+            itself. By default, only the suffixes are
+            returned.
 
-    Returns: an iterator of suffixes or (key,suffix) tuples
+    Returns:
+        iterator of suffixes or (key,suffix) tuples
     """
     for name, suf in filter(lambda x: (x[1].import_enabled and \
                                        ((datatype is _noarg) or \
@@ -289,20 +291,24 @@ def local_suffix_generator(blk,
         datatype: Restricts the suffixes included in the
             returned generator to those matching the
             provided suffix datatype.
-        active (True/None): Set to True to indicate that
-            only active suffixes should be included. The
-            default value of None indicates that all
-            suffixes (including those that have been
-            deactivated) should be included.
+        active (:const:`True`/:const:`None`): Set to
+            :const:`True` to indicate that only active
+            suffixes should be included. The default value
+            of :const:`None` indicates that all suffixes
+            (including those that have been deactivated)
+            should be included.
         descend_into (bool): Indicates whether or not to
-            include suffixes on sub-blocks. Default is True.
-        return_key (bool): Set to True to indicate that the
-            return type should be a 2-tuple consisting of
-            the local storage key of the suffix within its
-            parent and the suffix itself. By default, only
-            the suffixes are returned.
+            include suffixes on sub-blocks. Default is
+            :const:`True`.
+        return_key (bool): Set to :const:`True` to indicate
+            that the return type should be a 2-tuple
+            consisting of the local storage key of the
+            suffix within its parent and the suffix
+            itself. By default, only the suffixes are
+            returned.
 
-    Returns: an iterator of suffixes or (key,suffix) tuples
+    Returns:
+        iterator of suffixes or (key,suffix) tuples
     """
     for name, suf in filter(lambda x: (x[1].direction is suffix.LOCAL and \
                                        ((datatype is _noarg) or \
@@ -330,20 +336,24 @@ def suffix_generator(blk,
         datatype: Restricts the suffixes included in the
             returned generator to those matching the
             provided suffix datatype.
-        active (True/None): Set to True to indicate that
-            only active suffixes should be included. The
-            default value of None indicates that all
-            suffixes (including those that have been
-            deactivated) should be included.
+        active (:const:`True`/:const:`None`): Set to
+            :const:`True` to indicate that only active
+            suffixes should be included. The default value
+            of :const:`None` indicates that all suffixes
+            (including those that have been deactivated)
+            should be included.
         descend_into (bool): Indicates whether or not to
-            include suffixes on sub-blocks. Default is True.
-        return_key (bool): Set to True to indicate that the
-            return type should be a 2-tuple consisting of
-            the local storage key of the suffix within its
-            parent and the suffix itself. By default, only
-            the suffixes are returned.
+            include suffixes on sub-blocks. Default is
+            :const:`True`.
+        return_key (bool): Set to :const:`True` to indicate
+            that the return type should be a 2-tuple
+            consisting of the local storage key of the
+            suffix within its parent and the suffix
+            itself. By default, only the suffixes are
+            returned.
 
-    Returns: an iterator of suffixes or (key,suffix) tuples
+    Returns:
+        iterator of suffixes or (key,suffix) tuples
     """
     for name, suf in filter(lambda x: ((datatype is _noarg) or \
                                        (x[1].datatype is datatype)),

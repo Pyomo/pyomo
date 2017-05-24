@@ -146,14 +146,14 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         return (self.lb, self.ub)
 
     def has_lb(self):
-        """Returns False when the lower bound is None or
-        negative infinity"""
+        """Returns :const:`False` when the lower bound is
+        None or negative infinity"""
         return not ((self.lb is None) or \
                     (self.lb == float('-inf')))
 
     def has_ub(self):
-        """Returns False when the upper bound is None or
-        positive infinity"""
+        """Returns :const:`False` when the upper bound is
+        None or positive infinity"""
         return not ((self.ub is None) or \
                     (self.ub == float('inf')))
 
@@ -246,11 +246,12 @@ class _MutableBoundsConstraintMixin(object):
 
     @property
     def equality(self):
-        """Returns True when this is in equality constraint.
+        """Returns :const:`True` when this is in equality
+        constraint.
 
-        Disable equality by assigning False. Equality can
-        only be activated by assigning a value to the .rhs
-        property."""
+        Disable equality by assigning
+        :const:`False`. Equality can only be activated by
+        assigning a value to the .rhs property."""
         return self._equality
     @equality.setter
     def equality(self, equality):
