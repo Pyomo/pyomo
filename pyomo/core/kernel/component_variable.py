@@ -209,6 +209,8 @@ class IVariable(IComponent, NumericValue):
 
     def __call__(self, exception=True):
         """Return the value of this variable."""
+        if exception and (self.value is None):
+            raise ValueError("value is None")
         return self.value
 
 class variable(IVariable):

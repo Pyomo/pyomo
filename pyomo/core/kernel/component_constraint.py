@@ -74,7 +74,9 @@ class IConstraint(IComponent, _ActiveComponentMixin):
 
     def __call__(self, exception=True):
         """Compute the value of the body of this constraint."""
-        if self.body is None:
+        if exception and (self.body is None):
+            raise ValueError("constraint body is None")
+        elif self.body is None:
             return None
         return self.body(exception=exception)
 
@@ -84,7 +86,7 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         # this method is written so that constraint
         # types that build the body expression on the
         # fly do not have to here
-        body = self()
+        body = self(exception=False)
         if body is None:
             return None
         elif self.lb is None:
@@ -98,7 +100,7 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         # this method is written so that constraint
         # types that build the body expression on the
         # fly do not have to here
-        body = self()
+        body = self(exception=False)
         if body is None:
             return None
         elif self.ub is None:
@@ -112,7 +114,7 @@ class IConstraint(IComponent, _ActiveComponentMixin):
         # this method is written so that constraint
         # types that build the body expression on the
         # fly do not have to here
-        body = self()
+        body = self(exception=False)
         if body is None:
             return None
         elif self.lb is None:
@@ -244,18 +246,19 @@ class _MutableBoundsConstraintMixin(object):
 
     @property
     def equality(self):
-        """Returns True when this is in equality constraint."""
+        """Returns True when this is in equality constraint.
+
+        Disable equality by assigning False. Equality can
+        only be activated by assigning a value to the .rhs
+        property."""
         return self._equality
     @equality.setter
     def equality(self, equality):
-        """Disable equality by assigning False. Equality can
-        only be activated by assigning to the .rhs
-        property."""
         if equality:
             raise ValueError(
                 "The constraint equality flag can "
                 "only be set to True by assigning "
-                "an expression to the rhs property "
+                "a value to the rhs property "
                 "(e.g., con.rhs = con.lb).")
         assert not equality
         self._equality = False
@@ -687,10 +690,12 @@ class linear_constraint(_MutableBoundsConstraintMixin,
 
     def __call__(self, exception=True):
         try:
-            return sum(value(c)*v() for v,c in self.terms)
+            return sum(value(c, exception=exception) * \
+                       v(exception=exception) for v,c in self.terms)
         except (ValueError, TypeError):
             if exception:
-                raise
+                raise ValueError("one or more terms "
+                                 "could not be evaluated")
             return None
 
     #

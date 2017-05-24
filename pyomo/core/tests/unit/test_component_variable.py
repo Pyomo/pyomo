@@ -652,6 +652,21 @@ class Test_variable(unittest.TestCase):
         b.activate()
         self.assertEqual(b.active, True)
 
+    def test_call(self):
+        v = variable()
+        self.assertEqual(v.value, None)
+        with self.assertRaises(ValueError):
+            v()
+        with self.assertRaises(ValueError):
+            v(exception=True)
+        self.assertEqual(v(exception=False), None)
+
+        v.value = 2
+        self.assertEqual(v.value, 2)
+        self.assertEqual(v(), 2)
+        self.assertEqual(v(exception=True), 2)
+        self.assertEqual(v(exception=False), 2)
+
 class _variable_subclass(variable):
     pass
 

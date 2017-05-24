@@ -84,7 +84,11 @@ class Test_constraint(unittest.TestCase):
         self.assertIs(c.lb, None)
         self.assertIs(c.ub, None)
         self.assertEqual(c.equality, False)
-        self.assertEqual(c(), None)
+        with self.assertRaises(ValueError):
+            self.assertEqual(c(), None)
+        with self.assertRaises(ValueError):
+            self.assertEqual(c(exception=True), None)
+        self.assertEqual(c(exception=False), None)
         self.assertIs(c.slack, None)
         self.assertIs(c.lslack, None)
         self.assertIs(c.uslack, None)
@@ -304,6 +308,9 @@ class Test_constraint(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             c.rhs = 'a'
+
+        with self.assertRaises(ValueError):
+            c.rhs = None
 
     def test_nondata_bounds(self):
         c = constraint()
@@ -940,6 +947,13 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(cE.slack, -1)
         self.assertEqual(cE.lslack, -1)
         self.assertEqual(cE.uslack, 1)
+        x.value = None
+        with self.assertRaises(ValueError):
+            cE.body()
+        self.assertEqual(cE.body(exception=False), None)
+        self.assertEqual(cE.slack, None)
+        self.assertEqual(cE.lslack, None)
+        self.assertEqual(cE.uslack, None)
 
         cE = constraint(rhs=U, body=x)
         x.value = 4
@@ -1615,8 +1629,10 @@ class Test_linear_constraint(unittest.TestCase):
 
         v = variable()
         c = linear_constraint([v],[2])
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             c()
+        with self.assertRaises(ValueError):
+            c(exception=True)
         self.assertEqual(c(exception=False), None)
         repn = c.canonical_form()
         self.assertEqual(len(repn.variables), 1)
@@ -1635,8 +1651,10 @@ class Test_linear_constraint(unittest.TestCase):
         v.value = None
         e = expression(v)
         c = linear_constraint([e],[1])
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             c()
+        with self.assertRaises(ValueError):
+            c(exception=True)
         self.assertEqual(c(exception=False), None)
         repn = c.canonical_form()
         self.assertEqual(len(repn.variables), 1)
