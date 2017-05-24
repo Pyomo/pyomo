@@ -126,13 +126,15 @@ class _block_base(object):
         """Activates this block.
 
         Args:
-            shallow (bool): If False, all children of the
-                block will be activated. By default, the
-                active status of children are not changed.
+            shallow (bool): If :const:`False`, all children
+                of the block will be activated. By default,
+                the active status of children are not
+                changed.
             descend_into (bool): Indicates whether or not to
                 perform the same action on sub-blocks. The
-                default is False, as a shallow operation on
-                the top-level block is sufficient.
+                default is :const:`False`, as a shallow
+                operation on the top-level block is
+                sufficient.
         """
         # TODO
         from pyomo.core.base.block import Block
@@ -160,15 +162,16 @@ class _block_base(object):
         """Deactivates this block.
 
         Args:
-            shallow (bool): If False, all children of the
-                block will be deactivated. By default, the
-                active status of children are not changed,
-                but they become effectively inactive for
-                anything above this block.
+            shallow (bool): If :const:`False`, all children
+                of the block will be deactivated. By
+                default, the active status of children are
+                not changed, but they become effectively
+                inactive for anything above this block.
             descend_into (bool): Indicates whether or not to
                 perform the same action on sub-blocks. The
-                default is False, as a shallow operation on
-                the top-level block is sufficient.
+                default is :const:`False`, as a shallow
+                operation on the top-level block is
+                sufficient.
         """
         # TODO
         from pyomo.core.base.block import Block
@@ -236,7 +239,8 @@ class _block_base(object):
                 object itself. By default, only the objects
                 are returned.
             root_key: The key to return with this object.
-                Ignored when return_key is False.
+                Ignored when :attr:`return_key` is
+                :const:`False`.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -355,7 +359,8 @@ class _block_base(object):
                 object itself. By default, only the objects
                 are returned.
             root_key: The key to return with this object.
-                Ignored when return_key is False.
+                Ignored when :attr:`return_key` is
+                :const:`False`.
 
         Returns:
             iterator of objects or (key,object) tuples

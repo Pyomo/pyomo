@@ -651,7 +651,8 @@ class _SimpleContainerMixin(object):
                 object itself. By default, only the objects
                 are returned.
             root_key: The key to return with this object.
-                Ignored when return_key is :const:`False`.
+                Ignored when :attr:`return_key` is
+                :const:`False`.
 
         Returns:
             iterator of objects or (key,object) tuples
@@ -710,7 +711,8 @@ class _SimpleContainerMixin(object):
                 object itself. By default, only the objects
                 are returned.
             root_key: The key to return with this object.
-                Ignored when return_key is :const:`False`.
+                Ignored when :attr:`return_key` is
+                :const:`False`.
 
         Returns:
             iterator of objects or (key,object) tuples
