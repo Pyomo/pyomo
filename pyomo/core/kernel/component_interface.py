@@ -676,6 +676,7 @@ class _SimpleContainerMixin(object):
                 continue
 
             if child._is_component:
+                # this is a leaf node
                 if return_key:
                     yield key, child
                 else:
@@ -732,6 +733,7 @@ class _SimpleContainerMixin(object):
                 continue
 
             if child._is_component:
+                # this is a leaf node
                 if return_key:
                     yield key, child
                 else:

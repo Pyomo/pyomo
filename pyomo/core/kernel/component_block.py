@@ -208,7 +208,7 @@ class _block_base(object):
     def preorder_traversal(self,
                            ctype=_no_ctype,
                            active=None,
-                           include_parent_blocks=True,
+                           include_all_parents=True,
                            return_key=False,
                            root_key=None):
         """
@@ -228,10 +228,12 @@ class _block_base(object):
                 deactivated) should be included. *Note*:
                 This flag is ignored for any objects that do
                 not have an active flag.
-            include_parent_blocks (bool): Indicates if
-              parent block containers should be included
-              even when the ctype is set to something that
-              is not Block. Default is :const:`True`.
+            include_all_parents (bool): Indicates if all
+                parent containers (such as blocks and simple
+                block containers) should be included in the
+                traversal even when the :attr:`ctype`
+                keyword is set to something that is not
+                Block. Default is :const:`True`.
             return_key (bool): Set to :const:`True` to
                 indicate that the return type should be a
                 2-tuple consisting of the local storage key
@@ -254,7 +256,7 @@ class _block_base(object):
         if active and (not self.active):
             return
 
-        if include_parent_blocks or \
+        if include_all_parents or \
            (ctype is _no_ctype) or \
            (ctype is Block):
             if return_key:
@@ -275,16 +277,21 @@ class _block_base(object):
                 continue
 
             if not child._is_container:
-                # not a block and not a container,
+                # not a container (thus, also not a block),
                 # so it is a leaf node
                 if return_key:
                     yield key, child
                 else:
                     yield child
             elif not child._is_component:
-                # not a block
+                # a container and not a component (thus, not a block)
                 if child.ctype is Block:
-                    # but a container of blocks
+                    # this is a simple container of blocks
+                    # Note: we treat the simple block
+                    #   containers differently because we
+                    #   want to propagate the ctype filter
+                    #   beyond the simple container methods
+                    #   (which don't have a ctype keyword)
                     for obj_key, obj in child.preorder_traversal(
                             active=active,
                             return_key=True,
@@ -293,7 +300,7 @@ class _block_base(object):
                             # a container of blocks
                             if (ctype is _no_ctype) or \
                                (ctype is Block) or \
-                               include_parent_blocks:
+                               include_all_parents:
                                 if return_key:
                                     yield obj_key, obj
                                 else:
@@ -303,7 +310,7 @@ class _block_base(object):
                             for item in obj.preorder_traversal(
                                     ctype=ctype,
                                     active=active,
-                                    include_parent_blocks=include_parent_blocks,
+                                    include_all_parents=include_all_parents,
                                     return_key=return_key,
                                     root_key=obj_key):
                                 yield item
@@ -316,11 +323,11 @@ class _block_base(object):
                             root_key=key):
                         yield item
             else:
-                # a block
+                # a block, call its traversal method
                 for item in child.preorder_traversal(
                         ctype=ctype,
                         active=active,
-                        include_parent_blocks=include_parent_blocks,
+                        include_all_parents=include_all_parents,
                         return_key=return_key,
                         root_key=key):
                     yield item
@@ -328,7 +335,7 @@ class _block_base(object):
     def postorder_traversal(self,
                             ctype=_no_ctype,
                             active=None,
-                            include_parent_blocks=True,
+                            include_all_parents=True,
                             return_key=False,
                             root_key=None):
         """
@@ -348,10 +355,12 @@ class _block_base(object):
                 deactivated) should be included. *Note*:
                 This flag is ignored for any objects that do
                 not have an active flag.
-            include_parent_blocks (bool): Indicates if
-              parent block containers should be included
-              even when the ctype is set to something that
-              is not Block. Default is :const:`True`.
+            include_all_parents (bool): Indicates if all
+                parent containers (such as blocks and simple
+                block containers) should be included in the
+                traversal even when the :attr:`ctype`
+                keyword is set to something that is not
+                Block. Default is :const:`True`.
             return_key (bool): Set to :const:`True` to
                 indicate that the return type should be a
                 2-tuple consisting of the local storage key
@@ -388,16 +397,21 @@ class _block_base(object):
                 continue
 
             if not child._is_container:
-                # not a block and not a container,
+                # not a container (thus, also not a block),
                 # so it is a leaf node
                 if return_key:
                     yield key, child
                 else:
                     yield child
             elif not child._is_component:
-                # not a block
+                # a container and not a component (thus, not a block)
                 if child.ctype is Block:
-                    # but a container of blocks
+                    # this is a simple container of blocks
+                    # Note: we treat the simple block
+                    #   containers differently because we
+                    #   want to propagate the ctype filter
+                    #   beyond the simple container methods
+                    #   (which don't have a ctype keyword)
                     for obj_key, obj in child.postorder_traversal(
                             active=active,
                             return_key=True,
@@ -406,7 +420,7 @@ class _block_base(object):
                             # a container of blocks
                             if (ctype is _no_ctype) or \
                                (ctype is Block) or \
-                               include_parent_blocks:
+                               include_all_parents:
                                 if return_key:
                                     yield obj_key, obj
                                 else:
@@ -416,7 +430,7 @@ class _block_base(object):
                             for item in obj.postorder_traversal(
                                     ctype=ctype,
                                     active=active,
-                                    include_parent_blocks=include_parent_blocks,
+                                    include_all_parents=include_all_parents,
                                     return_key=return_key,
                                     root_key=obj_key):
                                 yield item
@@ -429,16 +443,16 @@ class _block_base(object):
                             root_key=key):
                         yield item
             else:
-                # a block
+                # a block, call its traversal method
                 for item in child.postorder_traversal(
                         ctype=ctype,
                         active=active,
-                        include_parent_blocks=include_parent_blocks,
+                        include_all_parents=include_all_parents,
                         return_key=return_key,
                         root_key=key):
                     yield item
 
-        if include_parent_blocks or \
+        if include_all_parents or \
            (ctype is _no_ctype) or \
            (ctype is Block):
             if return_key:
@@ -632,7 +646,7 @@ class _block_base(object):
         if descend_into:
             traversal = self.preorder_traversal(ctype=ctype,
                                                 active=active,
-                                                include_parent_blocks=True,
+                                                include_all_parents=True,
                                                 return_key=True)
             # skip the root (this block)
             six.next(traversal)

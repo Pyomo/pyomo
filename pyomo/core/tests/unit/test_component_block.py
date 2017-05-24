@@ -679,11 +679,11 @@ class _Test_block_base(object):
         # little easier to debug
         self.assertEqual(
             [str(obj) for obj in self._block.preorder_traversal(ctype=Var,
-                                                                include_parent_blocks=False)],
+                                                                include_all_parents=False)],
             [str(obj) for obj in self._preorder if obj.ctype is Var])
         self.assertEqual(
             [id(obj) for obj in self._block.preorder_traversal(ctype=Var,
-                                                               include_parent_blocks=False)],
+                                                               include_all_parents=False)],
             [id(obj) for obj in self._preorder if obj.ctype is Var])
 
     def test_postorder_traversal(self):
@@ -712,11 +712,11 @@ class _Test_block_base(object):
         # little easier to debug
         self.assertEqual(
             [str(obj) for obj in self._block.postorder_traversal(ctype=Var,
-                                                                include_parent_blocks=False)],
+                                                                include_all_parents=False)],
             [str(obj) for obj in self._postorder if obj.ctype is Var])
         self.assertEqual(
             [id(obj) for obj in self._block.postorder_traversal(ctype=Var,
-                                                               include_parent_blocks=False)],
+                                                               include_all_parents=False)],
             [id(obj) for obj in self._postorder if obj.ctype is Var])
 
     def test_child_key(self):

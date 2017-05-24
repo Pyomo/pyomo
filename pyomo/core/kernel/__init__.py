@@ -210,7 +210,7 @@ from pyomo.core.kernel.component_block import _block_base
 def _component_map(self, *args, **kwds):
     import six
     kwds['return_key'] = True
-    kwds['include_parent_blocks'] = False
+    kwds['include_all_parents'] = False
     traversal = self.preorder_traversal(*args, **kwds)
     d = {}
     for key, obj in traversal:
