@@ -306,35 +306,98 @@ class TestMisc(unittest.TestCase):
         b.v = variable()
         b.c1 = constraint()
         b.c1.deactivate()
-        b.c2 = constraint()
+        b.c2 = constraint_list()
+        b.c2.append(constraint_list())
+        b.B = block_list()
+        b.B.append(block_list())
+        b.B[0].append(tiny_block())
+        b.B[0][0].c = constraint()
+        b.B[0][0].b = block()
+        b.B[0].deactivate()
 
         self.assertEqual(
             [obj.name for obj in b.preorder_traversal()],
-            [None, 'v', 'c1', 'c2'])
+            [None,'v','c1','c2','c2[0]','B','B[0]','B[0][0]','B[0][0].c','B[0][0].b'])
         self.assertEqual(
             [obj.name for obj in b.preorder_traversal(active=True)],
-            [None, 'v', 'c2'])
+            [None,'v','c2','c2[0]','B'])
         self.assertEqual(
             [obj.name for obj in b.preorder_traversal(ctype=Constraint)],
-            [None, 'c1', 'c2'])
+            [None,'c1','c2','c2[0]','B','B[0]','B[0][0]','B[0][0].c','B[0][0].b'])
+        self.assertEqual(
+            [obj.name for obj in b.preorder_traversal(ctype=Constraint,
+                                                      include_all_parents=False)],
+            ['c1','c2','c2[0]','B[0][0].c'])
         self.assertEqual(
             [obj.name for obj in b.preorder_traversal(ctype=Constraint,
                                                       active=True)],
-            [None, 'c2'])
+            [None, 'c2', 'c2[0]', 'B'])
+        self.assertEqual(
+            [obj.name for obj in b.preorder_traversal(ctype=Constraint,
+                                                      include_all_parents=False,
+                                                      active=True)],
+            ['c2', 'c2[0]'])
+
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        b.preorder_visit(visit)
+        self.assertEqual(
+            [obj.name for obj in visit.traversal],
+            [None,'v','c1','c2','c2[0]','B','B[0]','B[0][0]','B[0][0].c','B[0][0].b'])
+        visit.traversal = []
+        b.preorder_visit(visit, active=True)
+        self.assertEqual(
+            [obj.name for obj in visit.traversal],
+            [None,'v','c2','c2[0]','B'])
+        visit.traversal = []
+        b.preorder_visit(visit, ctype=Constraint)
+        self.assertEqual(
+            [obj.name for obj in visit.traversal],
+            [None,'c1','c2','c2[0]','B','B[0]','B[0][0]','B[0][0].c','B[0][0].b'])
+        visit.traversal = []
+        b.preorder_visit(visit, ctype=Constraint, include_all_parents=False)
+        self.assertEqual(
+            [obj.name for obj in visit.traversal],
+            ['c1','c2','c2[0]','B[0][0].c'])
+        visit.traversal = []
+        b.preorder_visit(visit, ctype=Constraint, active=True)
+        self.assertEqual(
+            [obj.name for obj in visit.traversal],
+            [None, 'c2', 'c2[0]', 'B'])
+        visit.traversal = []
+        b.preorder_visit(visit,
+                         ctype=Constraint,
+                         active=True,
+                         include_all_parents=False)
+        self.assertEqual(
+            [obj.name for obj in visit.traversal],
+            ['c2', 'c2[0]'])
+
 
         self.assertEqual(
             [obj.name for obj in b.postorder_traversal()],
-            ['v', 'c1', 'c2', None])
+            ['v','c1','c2[0]','c2','B[0][0].c','B[0][0].b','B[0][0]','B[0]','B',None])
         self.assertEqual(
             [obj.name for obj in b.postorder_traversal(active=True)],
-            ['v', 'c2', None])
+            ['v','c2[0]','c2','B',None])
         self.assertEqual(
             [obj.name for obj in b.postorder_traversal(ctype=Constraint)],
-            ['c1', 'c2', None])
+            ['c1','c2[0]','c2','B[0][0].c','B[0][0].b','B[0][0]','B[0]','B',None])
+        self.assertEqual(
+            [obj.name for obj in b.postorder_traversal(ctype=Constraint,
+                                                       include_all_parents=False)],
+            ['c1','c2[0]','c2','B[0][0].c'])
         self.assertEqual(
             [obj.name for obj in b.postorder_traversal(ctype=Constraint,
                                                        active=True)],
-            ['c2', None])
+            ['c2[0]','c2','B',None])
+        self.assertEqual(
+            [obj.name for obj in b.postorder_traversal(ctype=Constraint,
+                                                       include_all_parents=False,
+                                                       active=True)],
+            ['c2[0]', 'c2'])
 
     # test how clone behaves when there are
     # references to components on a different block
@@ -684,6 +747,57 @@ class _Test_block_base(object):
         self.assertEqual(
             [id(obj) for obj in self._block.preorder_traversal(ctype=Var,
                                                                include_all_parents=False)],
+            [id(obj) for obj in self._preorder if obj.ctype is Var])
+
+    def test_preorder_visit(self):
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        self._block.preorder_visit(visit)
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in visit.traversal],
+            [str(obj) for obj in self._preorder])
+        self.assertEqual(
+            [id(obj) for obj in visit.traversal],
+            [id(obj) for obj in self._preorder])
+        def visit(k,x):
+            visit.traversal.append((k,x))
+            return True
+        visit.traversal = []
+        self._block.preorder_visit(visit, include_key=True)
+        self.assertEqual(
+            [(k,id(obj)) for k,obj in visit.traversal],
+            [((obj.parent.child_key(obj) if obj.parent is not None else None),id(obj)) for obj in self._preorder])
+
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        self._block.preorder_visit(visit, ctype=Var)
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in visit.traversal],
+            [str(obj) for obj in self._preorder if obj.ctype in (Block, Var)])
+        self.assertEqual(
+            [id(obj) for obj in visit.traversal],
+            [id(obj) for obj in self._preorder if obj.ctype in (Block, Var)])
+
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        self._block.preorder_visit(visit, ctype=Var, include_all_parents=False)
+        # this first test makes failures a
+        # little easier to debug
+        self.assertEqual(
+            [str(obj) for obj in visit.traversal],
+            [str(obj) for obj in self._preorder if obj.ctype is Var])
+        self.assertEqual(
+            [id(obj) for obj in visit.traversal],
             [id(obj) for obj in self._preorder if obj.ctype is Var])
 
     def test_postorder_traversal(self):
@@ -2012,12 +2126,33 @@ class _Test_tiny_block(_Test_block_base):
         b.deactivate()
         self.assertNotEqual(len(list(b.preorder_traversal())), 0)
         self.assertEqual(len(list(b.preorder_traversal(active=True))), 0)
+
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        b.preorder_visit(visit)
+        self.assertNotEqual(len(visit.traversal), 0)
+        visit.traversal = []
+        b.preorder_visit(visit, active=True)
+        self.assertEqual(len(visit.traversal), 0)
+        def visit(x):
+            visit.traversal.append(x)
+            return x.active
+        visit.traversal = []
+        b.preorder_visit(visit)
+        self.assertEqual(len(visit.traversal), 1)
+        self.assertIs(visit.traversal[0], b)
+
         self.assertNotEqual(len(list(b.postorder_traversal())), 0)
         self.assertEqual(len(list(b.postorder_traversal(active=True))), 0)
+
         self.assertNotEqual(len(list(b.components())), 0)
         self.assertEqual(len(list(b.components(active=True))), 0)
+
         self.assertNotEqual(len(list(b.blocks())), 0)
         self.assertEqual(len(list(b.blocks(active=True))), 0)
+
         self.assertNotEqual(len(list(b.generate_names())), 0)
         self.assertEqual(len(list(b.generate_names(active=True))), 0)
 

@@ -30,7 +30,9 @@ from pyomo.core.kernel.component_variable import \
 from pyomo.core.kernel.component_parameter import parameter
 from pyomo.core.kernel.component_expression import (expression,
                                                     data_expression)
-from pyomo.core.kernel.component_block import block
+from pyomo.core.kernel.component_block import (block,
+                                               tiny_block,
+                                               block_list)
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet)
 from pyomo.core.base.constraint import Constraint
@@ -1112,6 +1114,56 @@ class Test_matrix_constraint(unittest.TestCase):
         self.assertEqual(repn.variables, ())
         self.assertEqual(repn.linear, ())
         self.assertEqual(repn.constant, 4)
+
+    def test_preorder_visit(self):
+        # test that we can use the advanced preorder_visit
+        # function on a block to efficiently check for these
+        # constraint containers (without iterating over
+        # their children)
+        A = numpy.ones((3,3))
+
+        m = block()
+        m.c = matrix_constraint(A)
+        m.B = block_list()
+        m.B.append(tiny_block())
+        m.B[0].c = matrix_constraint(A)
+        m.b = block()
+        m.b.c = constraint_dict()
+        m.b.c[None] = matrix_constraint(A)
+        m.b.c[1] = matrix_constraint(A)
+        m.b.c[2] = constraint()
+
+        # don't visit things below a matrix constraint
+        # (e.g., cases where we want to handle it in bulk)
+        def visit_mc(x):
+            visit_mc.count += 1
+            if isinstance(x, matrix_constraint):
+                return False
+            return True
+        visit_mc.count = 0
+
+        def visit_all(x):
+            visit_all.count += 1
+            return True
+        visit_all.count = 0
+
+        m.preorder_visit(visit_mc,
+                         ctype=matrix_constraint.ctype,
+                         include_all_parents=False)
+        self.assertEqual(visit_mc.count, 6)
+        visit_mc.count = 0
+
+        m.preorder_visit(visit_all,
+                         ctype=matrix_constraint.ctype,
+                         include_all_parents=False)
+        #   number of matrix constraints (4)
+        # + number of plain constraints (4*3 + 1)
+        # + number of other constraint containers (1)
+        self.assertEqual(visit_all.count, 18)
+
+        self.assertEqual(
+            len(list(m.components(ctype=constraint.ctype))),
+            13)
 
 if __name__ == "__main__":
     unittest.main()

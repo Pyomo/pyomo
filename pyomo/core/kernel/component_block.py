@@ -332,6 +332,159 @@ class _block_base(object):
                         root_key=key):
                     yield item
 
+    def preorder_visit(self,
+                       visit,
+                       ctype=_no_ctype,
+                       active=None,
+                       include_all_parents=True,
+                       include_key=False,
+                       root_key=None):
+        """
+        Visits each node in the storage tree using a
+        preorder traversal. This includes all components and
+        all component containers (optionally) matching the
+        requested type.
+
+        Args:
+            visit: A function that is called on each node in
+                the storage tree. When the
+                :attr:`include_key` keyword is
+                :const:`False`, the function signature
+                should be `visit(node) -> [True|False]`.
+                When the :attr:`include_key` keyword is
+                :const:`True`, the function signature should
+                be `visit(key,node) -> [True|False]`. When
+                the return value of the function evaluates
+                to to :const:`True`, this indicates that the
+                traversal should continue with the children
+                of the current node; otherwise, the
+                traversal does not go below the current
+                node.
+            ctype: Indicate the type of components to
+                include. The default value indicates that
+                all types should be included.
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
+            include_all_parents (bool): Indicates if all
+                parent containers (such as blocks and simple
+                block containers) should be included in the
+                traversal even when the :attr:`ctype`
+                keyword is set to something that is not
+                Block. Default is :const:`True`.
+            include_key (bool): Set to :const:`True` to
+                indicate that 2 arguments should be passed
+                to the visit function, with the first being
+                the local storage key of the object within
+                its parent and the second being the object
+                itself. By default, only the objects are
+                passed to the function.
+            root_key: The key to pass with this object.
+                Ignored when :attr:`include_key` is
+                :const:`False`.
+        """
+        assert active in (None, True)
+        # TODO
+        from pyomo.core.base.block import Block
+
+        # if this block is not active, then nothing below it
+        # can be active
+        if active and (not self.active):
+            return
+
+        go = True
+        if include_all_parents or \
+           (ctype is _no_ctype) or \
+           (ctype is Block):
+            if include_key:
+                go = visit(root_key, self)
+            else:
+                go = visit(self)
+        if not go:
+            return
+        for key, child in self.children(return_key=True):
+
+            # check for appropriate ctype
+            if (ctype is not _no_ctype) and \
+               (child.ctype is not ctype) and \
+               (child.ctype is not Block):
+                continue
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if not child._is_container:
+                # not a container (thus, also not a block),
+                # so it is a leaf node
+                if include_key:
+                    visit(key, child)
+                else:
+                    visit(child)
+            elif not child._is_component:
+                # a container and not a component (thus, not a block)
+                if child.ctype is Block:
+                    # this is a simple container of blocks
+                    # Note: we treat the simple block
+                    #   containers differently because we
+                    #   want to propagate the ctype filter
+                    #   beyond the simple container methods
+                    #   (which don't have a ctype keyword)
+                    stack = [(key,child)]
+                    while len(stack):
+                        obj_key, obj = stack.pop()
+
+                        # check active status (if appropriate)
+                        if (active is not None) and \
+                           not getattr(obj, _active_flag_name, True):
+                            continue
+
+                        if not obj._is_component:
+                            # a simple container of blocks
+                            go = True
+                            if (ctype is _no_ctype) or \
+                               (ctype is Block) or \
+                               include_all_parents:
+                                if include_key:
+                                    go = visit(obj_key, obj)
+                                else:
+                                    go = visit(obj)
+                            if go:
+                                stack.extend(
+                                    obj.children(return_key=True))
+                        else:
+                            # a block
+                            obj.preorder_visit(
+                                visit,
+                                ctype=ctype,
+                                active=active,
+                                include_all_parents=include_all_parents,
+                                include_key=include_key,
+                                root_key=obj_key)
+
+                else:
+                    # a simple container, call its visit method
+                    child.preorder_visit(
+                        visit,
+                        active=active,
+                        include_key=include_key,
+                        root_key=key)
+            else:
+                # a block, call its visit method
+                child.preorder_visit(
+                    visit,
+                    ctype=ctype,
+                    active=active,
+                    include_all_parents=include_all_parents,
+                    include_key=include_key,
+                    root_key=key)
+
     def postorder_traversal(self,
                             ctype=_no_ctype,
                             active=None,

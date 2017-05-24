@@ -577,6 +577,48 @@ class _TestComponentDictBase(object):
                              return_key=True)])
         return cdict, traversal
 
+    def test_preorder_visit(self):
+        traversal = []
+        cdict = self._container_type(ordered=True)
+        traversal.append((None,cdict))
+        cdict[0] = self._ctype_factory()
+        traversal.append((0,cdict[0]))
+        cdict[1] = self._container_type(ordered=True)
+        traversal.append((1,cdict[1]))
+        cdict[1][0] = self._ctype_factory()
+        traversal.append((0,cdict[1][0]))
+        cdict[2] = self._ctype_factory()
+        traversal.append((2,cdict[2]))
+
+        def visit(x):
+            visit.traversal.append(x)
+            return False
+        visit.traversal = []
+        cdict.preorder_visit(visit)
+        self.assertEqual(len(visit.traversal), 1)
+        self.assertIs(visit.traversal[0], cdict)
+
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        cdict.preorder_visit(visit)
+        self.assertEqual([c.name for k,c in traversal],
+                         [c.name for c in visit.traversal])
+        self.assertEqual([id(c) for k,c in traversal],
+                         [id(c) for c in visit.traversal])
+
+        def visit(k,x):
+            visit.traversal.append((k,x))
+            return True
+        visit.traversal = []
+        cdict.preorder_visit(visit, include_key=True)
+        self.assertEqual([(k,c.name) for k,c in traversal],
+                         [(k,c.name) for k,c in visit.traversal])
+        self.assertEqual([(k,id(c)) for k,c in traversal],
+                         [(k,id(c)) for k,c in visit.traversal])
+        return cdict, traversal
+
     def test_postorder_traversal(self):
         traversal = []
         cdict = self._container_type(ordered=True)
@@ -826,6 +868,7 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         cdict, traversal = \
             super(_TestActiveComponentDictBase, self).\
             test_preorder_traversal()
+
         cdict[1].deactivate()
         self.assertEqual([c.name for k,c in traversal if c.active],
                          [c.name for c in cdict.preorder_traversal(
@@ -833,16 +876,62 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual([id(c) for k,c in traversal if c.active],
                          [id(c) for c in cdict.preorder_traversal(
                              active=True)])
+
         cdict.deactivate()
         self.assertEqual(len(list(cdict.preorder_traversal(active=True))),
                          0)
         self.assertEqual(len(list(cdict.generate_names(active=True))),
                          0)
 
+    def test_preorder_visit(self):
+        cdict, traversal = \
+            super(_TestActiveComponentDictBase, self).\
+            test_preorder_visit()
+
+        cdict[1].deactivate()
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        cdict.preorder_visit(visit, active=True)
+        self.assertEqual([c.name for k,c in traversal if c.active],
+                         [c.name for c in visit.traversal])
+        self.assertEqual([id(c) for k,c in traversal if c.active],
+                         [id(c) for c in visit.traversal])
+
+        def visit(x):
+            visit.traversal.append(x)
+            return x.active
+        visit.traversal = []
+        cdict.preorder_visit(visit)
+        self.assertEqual([None,'[0]','[1]','[2]'],
+                         [c.name for c in visit.traversal])
+        self.assertEqual([id(cdict),id(cdict[0]),id(cdict[1]),id(cdict[2])],
+                         [id(c) for c in visit.traversal])
+
+        cdict.deactivate()
+        def visit(x):
+            visit.traversal.append(x)
+            return True
+        visit.traversal = []
+        cdict.preorder_visit(visit, active=True)
+        self.assertEqual(len(visit.traversal), 0)
+        self.assertEqual(len(list(cdict.generate_names(active=True))),
+                         0)
+
+        def visit(x):
+            visit.traversal.append(x)
+            return x.active
+        visit.traversal = []
+        cdict.preorder_visit(visit)
+        self.assertEqual(len(visit.traversal), 1)
+        self.assertIs(visit.traversal[0], cdict)
+
     def test_postorder_traversal(self):
         cdict, traversal = \
             super(_TestActiveComponentDictBase, self).\
             test_postorder_traversal()
+
         cdict[1].deactivate()
         self.assertEqual([c.name for k,c in traversal if c.active],
                          [c.name for c in cdict.postorder_traversal(
@@ -850,6 +939,7 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
         self.assertEqual([id(c) for k,c in traversal if c.active],
                          [id(c) for c in cdict.postorder_traversal(
                              active=True)])
+
         cdict.deactivate()
         self.assertEqual(len(list(cdict.postorder_traversal(active=True))),
                          0)

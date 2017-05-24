@@ -431,6 +431,11 @@ class IComponentContainer(ICategorizedObject):
         raise NotImplementedError     #pragma:nocover
 
     @abc.abstractmethod
+    def preorder_visit(self, *args, **kwds):
+        """Visit all descendents in prefix order."""
+        raise NotImplementedError     #pragma:nocover
+
+    @abc.abstractmethod
     def postorder_traversal(self, *args, **kwds):
         """A generator over all descendents in postfix order."""
         raise NotImplementedError     #pragma:nocover
@@ -688,6 +693,84 @@ class _SimpleContainerMixin(object):
                         return_key=return_key,
                         root_key=key):
                     yield item
+
+    def preorder_visit(self,
+                       visit,
+                       active=None,
+                       include_key=False,
+                       root_key=None):
+        """
+        Visits each node in the storage tree using a
+        preorder traversal.
+
+        Args:
+            visit: A function that is called on each node in
+                the storage tree. When the
+                :attr:`include_key` keyword is
+                :const:`False`, the function signature
+                should be `visit(node) -> [True|False]`.
+                When the :attr:`include_key` keyword is
+                :const:`True`, the function signature should
+                be `visit(key,node) -> [True|False]`. When
+                the return value of the function evaluates
+                to to :const:`True`, this indicates that the
+                traversal should continue with the children
+                of the current node; otherwise, the
+                traversal does not go below the current
+                node.
+            active (:const:`True`/:const:`None`): Set to
+                :const:`True` to indicate that only active
+                objects should be included. The default
+                value of :const:`None` indicates that all
+                components (including those that have been
+                deactivated) should be included. *Note*:
+                This flag is ignored for any objects that do
+                not have an active flag.
+            include_key (bool): Set to :const:`True` to
+                indicate that 2 arguments should be passed
+                to the visit function, with the first being
+                the local storage key of the object within
+                its parent and the second being the object
+                itself. By default, only the objects are
+                passed to the function.
+            root_key: The key to pass with this object.
+                Ignored when :attr:`include_key` is
+                :const:`False`.
+        """
+        assert active in (None, True)
+
+        # if not active, then no children can be active
+        if (active is not None) and \
+           not getattr(self, _active_flag_name, True):
+            return
+
+        go = True
+        if include_key:
+            go = visit(root_key, self)
+        else:
+            go = visit(self)
+        if not go:
+            return
+        for key, child in self.children(return_key=True):
+
+            # check active status (if appropriate)
+            if (active is not None) and \
+               not getattr(child, _active_flag_name, True):
+                continue
+
+            if child._is_component:
+                # this is a leaf node
+                if include_key:
+                    visit(key, child)
+                else:
+                    visit(child)
+            else:
+                assert child._is_container
+                child.preorder_visit(
+                    visit,
+                    active=active,
+                    include_key=include_key,
+                    root_key=key)
 
     def postorder_traversal(self,
                             active=None,
