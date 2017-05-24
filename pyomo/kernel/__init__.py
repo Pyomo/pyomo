@@ -30,11 +30,16 @@ del Var
 
 # set up the Constraint ctype
 from pyomo.core.base import Constraint
+from pyomo.core.kernel.component_matrix_constraint \
+    import _MatrixConstraintData
 constraint._ctype = Constraint
 linear_constraint._ctype = Constraint
 constraint_tuple._ctype = Constraint
 constraint_list._ctype = Constraint
 constraint_dict._ctype = Constraint
+_MatrixConstraintData._ctype = Constraint
+matrix_constraint._ctype = Constraint
+del _MatrixConstraintData
 del Constraint
 
 # set up the Param ctype

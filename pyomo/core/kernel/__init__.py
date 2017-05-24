@@ -39,6 +39,9 @@ from pyomo.core.kernel.component_constraint import (constraint,
                                                     constraint_tuple,
                                                     constraint_list,
                                                     constraint_dict)
+import pyomo.core.kernel.component_matrix_constraint
+from pyomo.core.kernel.component_matrix_constraint import \
+    matrix_constraint
 import pyomo.core.kernel.component_parameter
 from pyomo.core.kernel.component_parameter import (parameter,
                                                    parameter_tuple,
