@@ -13,7 +13,7 @@ import sys
 import argparse
 
 from pyutilib.misc import Options
-from pyomo.opt import ProblemFormat, ProblemConfigFactory
+from pyomo.opt import ProblemFormat, ProblemConfigFactory, guess_format
 from pyomo.scripting.pyomo_parser import add_subparser, CustomHelpFormatter
 
 
@@ -47,16 +47,14 @@ def run_convert(options=Options(), parser=None):
     if options.model.save_format is None and not options.model.save_file is None and '.' in options.model.save_file:
         options.model.save_format = options.model.save_file.split('.')[-1]
     #
+    _format = guess_format(options.model.save_file)
+
     if options.model.save_format == 'dakota':
         return convert_dakota(options, parser)
-    elif options.model.save_format == 'lp':
-        return convert(options, parser, ProblemFormat.cpxlp)
-    elif options.model.save_format == 'nl':
-        return convert(options, parser, ProblemFormat.nl)
-    elif options.model.save_format == 'osil':
-        return convert(options, parser, ProblemFormat.osil)
-    else:
+    elif _format is None:
         raise RuntimeError("Unspecified target conversion format!")
+    else:
+        return convert(options, parser, _format)
 
 
 def convert_exec(args, unparsed):
