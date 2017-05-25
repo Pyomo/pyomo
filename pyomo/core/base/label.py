@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 
 __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
-           'AlphaNumTextLabeler','NameLabeler', 'CuidLabeler']
+           'AlphaNumericTextLabeler','NameLabeler', 'CuidLabeler']
 
 import six
 if six.PY3:
@@ -95,7 +95,7 @@ class TextLabeler(object):
     def __call__(self, obj):
         return cpxlp_label_from_name(obj.getname(True, self.name_buffer))
 
-class AlphaNumTextLabeler(object):
+class AlphaNumericTextLabeler(object):
     def __init__(self):
         self.name_buffer = {}
 
