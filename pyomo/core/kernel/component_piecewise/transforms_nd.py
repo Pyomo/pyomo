@@ -160,6 +160,18 @@ class PiecewiseLinearFunctionND(object):
         self._tri = tri
         self._values = values
 
+    def __getstate__(self):
+        """Required for older versions of the pickle
+        protocol since this class uses __slots__"""
+        return dict((key, getattr(self, key))
+                    for key in self.__slots__)
+
+    def __setstate__(self, state):
+        """Required for older versions of the pickle
+        protocol since this class uses __slots__"""
+        for key in state:
+            setattr(self, key, state[key])
+
     @property
     def triangulation(self):
         """The triangulation over the domain of this function"""

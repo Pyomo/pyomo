@@ -225,6 +225,18 @@ class PiecewiseLinearFunction(object):
         if validate:
             self.validate(**kwds)
 
+    def __getstate__(self):
+        """Required for older versions of the pickle
+        protocol since this class uses __slots__"""
+        return dict((key, getattr(self, key))
+                    for key in self.__slots__)
+
+    def __setstate__(self, state):
+        """Required for older versions of the pickle
+        protocol since this class uses __slots__"""
+        for key in state:
+            setattr(self, key, state[key])
+
     def validate(self,
                  equal_slopes_tolerance=1e-6):
         """
