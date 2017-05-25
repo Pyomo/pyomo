@@ -12,6 +12,7 @@ __all__ = ['Var', '_VarData', 'VarList']
 
 import logging
 from weakref import ref as weakref_ref
+import warnings
 
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
@@ -266,7 +267,7 @@ class _GeneralVarData(_VarData):
     these attributes in certain cases.
     """
 
-    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', 'stale')
+    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', 'stale', 'gurobipy_var')
 
     def __init__(self, domain=Reals, component=None):
         #
@@ -288,6 +289,7 @@ class _GeneralVarData(_VarData):
         self._domain = None
         self.fixed = False
         self.stale = True
+        self.gurobipy_var = None
         # don't call the property setter here because
         # the SimplVar constructor will fail
         if hasattr(domain, 'bounds'):
@@ -383,6 +385,10 @@ class _GeneralVarData(_VarData):
                 "Non-fixed input of type '%s' supplied as variable lower "
                 "bound - legal types must be fixed expressions or variables."
                 % (type(val),))
+        if self.gurobipy_var is not None:
+            if self.is_fixed():
+                raise RuntimeError('Cannot change the lb of a fixed gurobipy var')
+            self.gurobipy_var.setAttr('lb', val)
 
     def setub(self, val):
         """
@@ -398,6 +404,10 @@ class _GeneralVarData(_VarData):
                 "bound - legal types are fixed expressions or variables."
                 "parameters"
                 % (type(val),))
+        if self.gurobipy_var is not None:
+            if self.is_fixed():
+                raise RuntimeError('Cannot change the ub of a fixed gurobipy var')
+            self.gurobipy_var.setAttr('ub', val)
 
     def fix(self, *val):
         """
@@ -409,10 +419,17 @@ class _GeneralVarData(_VarData):
             self.value = val[0]
         elif len(val) > 1:
             raise TypeError("fix expected at most 1 arguments, got %d" % (len(val)))
+        if self.gurobipy_var is not None:
+            self.gurobipy_var.setAttr('lb', val[0])
+            self.gurobipy_var.setAttr('ub', val[0])
 
     def unfix(self):
         """Sets the fixed indicator to False."""
         self.fixed = False
+        if self.gurobipy_var is not None:
+            self.gurobipy_var.setAttr('lb', self.lb)
+            self.gurobipy_var.setAttr('ub', self.ub)
+
 
     free = unfix
 

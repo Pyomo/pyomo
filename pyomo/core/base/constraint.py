@@ -1123,6 +1123,7 @@ class ConstraintList(IndexedConstraint):
         """Constructor"""
         args = (Set(),)
         self._nconstraints = 0
+        self.gurobi_model = None
         if 'expr' in kwargs:
             raise ValueError(
                 "ConstraintList does not accept the 'expr' keyword")
@@ -1199,6 +1200,8 @@ class ConstraintList(IndexedConstraint):
         self._index.add(self._nconstraints)
         if cdata is not None:
             self._data[self._nconstraints] = cdata
+        if self.gurobi_model is not None:
+            self.gurobi_model._add_gurobipy_constraint_to_gurobi_model(cdata)
         return cdata
 
 register_component(Constraint, "General constraint expressions.")
