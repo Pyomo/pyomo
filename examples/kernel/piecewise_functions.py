@@ -7,7 +7,7 @@ import pyomo.kernel as pmo
 breakpoints = [1,2,3,4]
 values = [1,2,1,2]
 
-x = pmo.variable()
+x = pmo.variable(lb=1, ub=4)
 y = pmo.variable()
 p = pmo.piecewise(breakpoints,
                   values,
@@ -17,12 +17,16 @@ p = pmo.piecewise(breakpoints,
                   bound='eq')
 
 # change the input and output variables
-z = pmo.variable()
+z = pmo.variable(lb=1, ub=4)
 q = pmo.variable()
 p.input.expr = z
 p.output.expr = q
 
-# evalute the function
+# re-validate the function after changing inputs
+# (will raise PiecewiseValidationError when validation fails)
+p.validate()
+
+# evaluate the function
 assert p(1) == 1
 assert p(1.5) == 1.5
 assert p(2) == 2
@@ -53,7 +57,7 @@ breakpoints[3].value = 4
 values[3].value = 2
 p.validate()
 
-# evalute the function
+# evaluate the function
 assert p(1) == 1
 assert p(1.5) == 1.5
 assert p(2) == 2
@@ -70,7 +74,7 @@ function_points = [2.0, -2.5, 3.0, 1.0]
 
 m = pmo.block()
 
-m.x = pmo.variable()
+m.x = pmo.variable(lb=-1, ub=2.0)
 m.y = pmo.variable()
 
 m.o = pmo.objective(m.y)
