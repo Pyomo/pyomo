@@ -8,8 +8,8 @@
 #  _________________________________________________________________________
 """
 This module contains transformations for representing a
-piecewise linear function using a mixed-interger problem
-formulation. Reference::
+single-variate piecewise linear function using a
+mixed-interger problem formulation. Reference::
 
   Mixed-Integer Models for Non-separable Piecewise Linear \
 Optimization: Unifying framework and Extensions (Vielma, \
@@ -32,7 +32,8 @@ from pyomo.core.kernel.numvalue import value
 from pyomo.core.kernel.set_types import Binary
 from pyomo.core.kernel.component_block import tiny_block
 from pyomo.core.kernel.component_expression import expression
-from pyomo.core.kernel.component_variable import (variable_list,
+from pyomo.core.kernel.component_variable import (IVariable,
+                                                  variable_list,
                                                   variable_dict,
                                                   variable)
 from pyomo.core.kernel.component_constraint import (constraint,
@@ -44,7 +45,8 @@ from pyomo.core.kernel.component_piecewise.util import \
      is_nondecreasing,
      is_positive_power_of_two,
      log2floor,
-     generate_gray_code)
+     generate_gray_code,
+     PiecewiseValidationError)
 
 import six
 from six.moves import xrange, zip
@@ -52,9 +54,7 @@ from six.moves import xrange, zip
 logger = logging.getLogger('pyomo.core')
 
 registered_transforms = {}
-#TODO: (simplify,
-#       warning_domain_coverage,
-#       unbounded_domain_var,
+
 def piecewise(breakpoints,
               values,
               input=None,
@@ -62,23 +62,30 @@ def piecewise(breakpoints,
               bound='eq',
               repn='sos2',
               validate=True,
-              warning_tol=1e-8):
+              simplify=True,
+              **kwds):
     """
-    Transforms a list of breakpoints and values into a
-    mixed-integer representation of a piecewise function.
+    Models a single-variate piecewise linear function.
+
+    This function takes a list breakpoints and function
+    values describing a piecewise linear function and
+    transforms this input data into a block of variables and
+    constraints that enforce a piecewise linear relationship
+    between an input variable and an output variable. In the
+    general case, this transformation requires the use of
+    discrete decision variables.
 
     Args:
         breakpoints (list): The list of breakpoints of the
             piecewise linear function. This can be a list of
             numbers or a list of objects that store mutable
             data (e.g., mutable parameters). If mutable data
-            is used validation might need to be delayed
-            using the 'validate' keyword. The breakpoints
-            list must be in non-decreasing order.
-        values (list): The list of values of the piecewise linear
-            function at each of the breakpoints. This list
-            must be the same length as the breakpoints
-            argument.
+            is used validation might need to be disabled by
+            setting the :attr:`validate` keyword to
+            :const:`False`. The list of breakpoints must be
+            in non-decreasing order.
+        values (list): The values of the piecewise linear
+            function corresponding to the breakpoints.
         input: The variable constrained to be the input of
             the piecewise linear function.
         output: The variable constrained to be the output of
@@ -101,24 +108,35 @@ def piecewise(breakpoints,
                 -   'mc': multiple choice
                 -  'inc': incremental method (+)
         validate (bool): Indicates whether or not to perform
-            validation of the data in the breakpoints and
-            values lists. The default is
+            validation of the input data. The default is
             :const:`True`. Validation can be performed
             manually after the piecewise object is created
-            by calling the validate() method. Validation
-            should be performed anytime the data in the
-            breakpoints or values lists changes (e.g., when
-            using mutable parameters)
-        warning_tol (float): Passed to the validate method
-            when validation is performed to control the
-            tolerance for checking consecutive slopes.
+            by calling the :meth:`validate`
+            method. Validation should be performed any time
+            the inputs are changed (e.g., when using mutable
+            parameters in the breakpoints list or when the
+            input variable changes).
+        simplify (bool): Indicates whether or not to attempt
+            to simplify the piecewise representation to
+            avoid using discrete variables. This can be done
+            when the feasible region for the output
+            variable, with respect to the piecewise function
+            and the bound type, is a convex set. Default is
+            :const:`True`. Validation is required to perform
+            simplification, so this keyword is ignored when
+            the :attr:`validate` keyword is :attr:`False`.
+        **kwds: Additional keywords are passed to the
+            validate method when the :attr:`validate`
+            keyword is :const:`True`; otherwise, they are
+            ignored.
 
     Returns:
-        A block containing the additional variables and
-        constraints that enforce the piecewise linear
-        relationship between the input and output variable.
+        TransformedPiecewiseLinearFunction: a block \
+            containing variables and constraints that \
+            enforce the piecewise linear relationship \
+            between the input and output expressions
     """
-    transorm = None
+    transform = None
     try:
         transform = registered_transforms[repn]
     except KeyError:
@@ -129,28 +147,70 @@ def piecewise(breakpoints,
                str(sorted(registered_transforms.keys()))))
     assert transform is not None
 
-    return transform(breakpoints,
-                     values,
+    if not validate:
+        # can not simplify if we do not validate
+        simplify = False
+
+    func = PiecewiseLinearFunction(breakpoints,
+                                   values,
+                                   validate=False)
+
+    if simplify and \
+       (transform is not piecewise_convex):
+        ftype = func.validate(**kwds)
+
+        if (bound == 'eq') and \
+           (ftype == characterize_function.affine):
+            transform = piecewise_convex
+        elif (bound == 'lb') and \
+             (ftype in (characterize_function.affine,
+                        characterize_function.convex)):
+            transform = piecewise_convex
+        elif (bound == 'ub') and \
+             (ftype in (characterize_function.affine,
+                        characterize_function.concave)):
+            transform = piecewise_convex
+
+    return transform(func,
                      input=input,
                      output=output,
                      bound=bound,
-                     validate=validate)
+                     validate=validate,
+                     **kwds)
 
-class _PiecewiseLinearFunction(tiny_block):
+class PiecewiseLinearFunction(object):
+    """A piecewise linear function
+
+    Piecewise linear functions are defined by a list of
+    breakpoints and a function value for each
+    breakpoint. The function value between breakpoints is
+    implied through linear interpolation.
+
+    Args:
+        breakpoints (list): The list of function
+            breakpoints.
+        values (list): The list of function values (one for
+            each breakpoint).
+        validate (bool): Indicates whether or not to perform
+            validation of the input data. The default is
+            :const:`True`. Validation can be performed
+            manually after the piecewise object is created
+            by calling the :meth:`validate`
+            method. Validation should be performed any time
+            the inputs are changed (e.g., when using mutable
+            parameters in the breakpoints list).
+        **kwds: Additional keywords are passed to the
+            :meth:`validate` method when the :attr:`validate`
+            keyword is :const:`True`; otherwise, they are
+            ignored.
     """
-    A piecewise linear function defined by a list of
-    breakpoints and values.
-    """
+    __slots__ = ("_breakpoints", "_values")
 
     def __init__(self,
                  breakpoints,
                  values,
-                 input=None,
-                 output=None,
-                 validate=True):
-        super(_PiecewiseLinearFunction, self).__init__()
-        self._input = expression(input)
-        self._output = expression(output)
+                 validate=True,
+                 **kwds):
         self._breakpoints = breakpoints
         self._values = values
         if type(self._breakpoints) is not tuple:
@@ -163,63 +223,52 @@ class _PiecewiseLinearFunction(tiny_block):
                 "the number of function values (%s)"
                 % (len(self._breakpoints), len(self._values)))
         if validate:
-            self.validate()
+            self.validate(**kwds)
 
-    def validate(self, warning_tol=1e-8):
+    def validate(self,
+                 equal_slopes_tolerance=1e-6):
         """
         Validate this piecewise linear function by verifying
         various properties of the breakpoints and values
-        lists, including that the list of breakpoints is
-        nondecreasing.
+        lists (e.g., that the list of breakpoints is
+        nondecreasing).
 
         Args:
-            warning_tol (float): Tolerance used when
-                generating warnings about consecutive slopes
-                of the piecewise function being nearly
-                equal.
+            equal_slopes_tolerance (float): Tolerance used
+                check if consecutive slopes are nearly
+                equal. If any are found, validation will
+                fail. Default is 1e-6.
 
         Returns:
-            - 1: indicates that the function is affine
-            - 2: indicates that the function is convex
-            - 3: indicates that the function is concave
-            - 4: indicates that the function has one or
-                 more steps
-            - 5: none of the above
+            int:
+                a function characterization code (see \
+                :func:`util.characterize_function`)
+
+        Raises:
+            PiecewiseValidationError: if validation fails
         """
+
         breakpoints = [value(x) for x in self._breakpoints]
         values = [value(x) for x in self._values]
         if not is_nondecreasing(breakpoints):
-            raise AssertionError(
+            raise PiecewiseValidationError(
                 "The list of breakpoints is not nondecreasing: %s"
                 % (str(breakpoints)))
 
-        type_, slopes = characterize_function(breakpoints, values)
+        ftype, slopes = characterize_function(breakpoints, values)
         for i in xrange(1, len(slopes)):
             if (slopes[i-1] is not None) and \
                (slopes[i] is not None) and \
-               (abs(slopes[i-1] - slopes[i]) <= warning_tol):
-                logger.warning(
-                    "Piecewise linear validation detected slopes "
+               (abs(slopes[i-1] - slopes[i]) <= equal_slopes_tolerance):
+                raise PiecewiseValidationError(
+                    "Piecewise function validation detected slopes "
                     "of consecutive line segments to be within %s "
                     "of one another. This may cause numerical issues. "
-                    "To disable this warning, increase the "
-                    "warning tolerance." % (warning_tol))
+                    "To avoid this error, set the 'equal_slopes_tolerance' "
+                    "keyword to a smaller value or disable validation."
+                    % (equal_slopes_tolerance))
 
-        return type_
-
-    @property
-    def input(self):
-        """Returns the expression that stores the input to
-        the piecewise function. The returned object can be updated
-        by assigning to its .expr property."""
-        return self._input
-
-    @property
-    def output(self):
-        """Returns the expression that stores the output of
-        the piecewise function. The returned object can be updated
-        by assigning to its .expr property."""
-        return self._output
+        return ftype
 
     @property
     def breakpoints(self):
@@ -232,8 +281,9 @@ class _PiecewiseLinearFunction(tiny_block):
         return self._values
 
     def __call__(self, x):
-        """Evaluates the piecewise function using interpolation"""
-        # Note: One could implement binary search here to
+        """Evaluates the piecewise linear function at the
+        given point using interpolation"""
+        # TODO: One could implement binary search here to
         #       speed this up. I don't see this
         #       functionality being used very often (and the
         #       list of breakpoints probably isn't too
@@ -255,14 +305,277 @@ class _PiecewiseLinearFunction(tiny_block):
                             value(self.breakpoints[0]),
                             value(self.breakpoints[-1])))
 
-class piecewise_sos2(_PiecewiseLinearFunction):
+class TransformedPiecewiseLinearFunction(tiny_block):
+    """Base class for transformed piecewise linear functions
+
+    A transformed piecewise linear functions is a block of
+    variables and constraints that enforce a piecewise
+    linear relationship between an input variable and an
+    output variable.
+
+    Args:
+        f (:class:`PiecewiseLinearFunction`): The piecewise
+            linear function to transform.
+        input: The variable constrained to be the input of
+            the piecewise linear function.
+        output: The variable constrained to be the output of
+            the piecewise linear function.
+        bound (str): The type of bound to impose on the
+            output expression. Can be one of:
+
+              - 'lb': y <= f(x)
+              - 'eq': y  = f(x)
+              - 'ub': y >= f(x)
+        validate (bool): Indicates whether or not to perform
+            validation of the input data. The default is
+            :const:`True`. Validation can be performed
+            manually after the piecewise object is created
+            by calling the :meth:`validate`
+            method. Validation should be performed any time
+            the inputs are changed (e.g., when using mutable
+            parameters in the breakpoints list or when the
+            input variable changes).
+        **kwds: Additional keywords are passed to the
+            :meth:`validate` method when the :attr:`validate`
+            keyword is :const:`True`; otherwise, they are
+            ignored.
     """
+
+    def __init__(self,
+                 f,
+                 input=None,
+                 output=None,
+                 bound='eq',
+                 validate=True,
+                 **kwds):
+        super(TransformedPiecewiseLinearFunction, self).__init__()
+        assert isinstance(f, PiecewiseLinearFunction)
+        if bound not in ('lb', 'ub', 'eq'):
+            raise ValueError("Invalid bound type %r. Must be "
+                             "one of: ['lb','ub','eq']"
+                             % (bound))
+        self._bound = bound
+        self._f = f
+        self._input = expression(input)
+        self._output = expression(output)
+        if validate:
+            self.validate(**kwds)
+
+    @property
+    def input(self):
+        """The expression that stores the input to the
+        piecewise function. The returned object can be
+        updated by assigning to its :attr:`expr`
+        attribute."""
+        return self._input
+
+    @property
+    def output(self):
+        """The expression that stores the output of the
+        piecewise function. The returned object can be
+        updated by assigning to its :attr:`expr`
+        attribute."""
+        return self._output
+
+    @property
+    def bound(self):
+        """The bound type assigned to the piecewise
+        relationship ('lb','ub','eq')."""
+        return self._bound
+
+    def validate(self,
+                 equal_slopes_tolerance=1e-6,
+                 require_bounded_input_variable=True,
+                 require_variable_domain_coverage=True):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        Args:
+            equal_slopes_tolerance (float): Tolerance used
+                check if consecutive slopes are nearly
+                equal. If any are found, validation will
+                fail. Default is 1e-6.
+            require_bounded_input_variable (bool): Indicates
+                if the input variable is required to have
+                finite upper and lower bounds. Default is
+                :const:`True`. Setting this keyword to
+                :const:`False` can be used to allow general
+                expressions to be used as the input in place
+                of a variable.
+            require_variable_domain_coverage (bool):
+                Indicates if the function domain (defined by
+                the endpoints of the breakpoints list) needs
+                to cover the entire domain of the input
+                variable. Default is :const:`True`. Ignored
+                for any bounds of variables that are not
+                finite, or when the input is not assigned a
+                variable.
+
+        Returns:
+            int:
+                a function characterization code (see \
+                :func:`util.characterize_function`)
+
+        Raises:
+            PiecewiseValidationError: if validation fails
+        """
+        ftype = self._f.validate(
+            equal_slopes_tolerance=equal_slopes_tolerance)
+        assert ftype in (1,2,3,4,5)
+
+        input_var = self._input.expr
+        if not isinstance(input_var, IVariable):
+            input_var = None
+
+        if require_bounded_input_variable and \
+           ((input_var is None) or \
+            (not input_var.has_lb()) or \
+            (not input_var.has_ub())):
+                raise PiecewiseValidationError(
+                    "Piecewise function input is not a "
+                    "variable with finite upper and lower "
+                    "bounds: %s. To avoid this error, set the "
+                    "'require_bounded_input_variable' keyword "
+                    "to False or disable validation."
+                    % (str(input_var)))
+
+        if require_variable_domain_coverage and \
+           (input_var is not None):
+            domain_lb = value(self.breakpoints[0])
+            domain_ub = value(self.breakpoints[-1])
+            if input_var.has_lb() and \
+               value(input_var.lb) < domain_lb:
+                raise PiecewiseValidationError(
+                    "Piecewise function domain does not include "
+                    "the lower bound of the input variable: "
+                    "%s.ub = %s > %s. To avoid this error, set "
+                    "the 'require_variable_domain_coverage' "
+                    "keyword to False or disable validation."
+                    % (input_var.name,
+                       value(input_var.lb),
+                       domain_lb))
+            if input_var.has_ub() and \
+               value(input_var.ub) > domain_ub:
+                raise PiecewiseValidationError(
+                    "Piecewise function domain does not include "
+                    "the upper bound of the input variable: "
+                    "%s.ub = %s > %s. To avoid this error, set "
+                    "the 'require_variable_domain_coverage' "
+                    "keyword to False or disable validation."
+                    % (input_var.name,
+                       value(input_var.ub),
+                       domain_ub))
+
+        return ftype
+
+    @property
+    def breakpoints(self):
+        """The set of breakpoints used to defined this function"""
+        return self._f.breakpoints
+
+    @property
+    def values(self):
+        """The set of values used to defined this function"""
+        return self._f.values
+
+    def __call__(self, x):
+        """Evaluates the piecewise linear function at the
+        given point using interpolation"""
+        return self._f(x)
+
+class piecewise_convex(TransformedPiecewiseLinearFunction):
+    """Simple convex piecewise representation
+
+    Expresses a piecewise linear function with a convex
+    feasible region for the output variable using a simple
+    collection of linear constraints.
+    """
+
+    def __init__(self, *args, **kwds):
+        super(piecewise_convex, self).__init__(*args, **kwds)
+
+        breakpoints = self.breakpoints
+        values = self.values
+        self._c = constraint_list()
+        for i in xrange(len(breakpoints)-1):
+            X0 = breakpoints[i]
+            F_AT_X0 = values[i]
+            dF_AT_X0 = (values[i+1] - F_AT_X0) / \
+                       (breakpoints[i+1] - X0)
+            const = F_AT_X0 - dF_AT_X0*X0
+            con = linear_constraint(
+                (self.output, self.input),
+                (-1, dF_AT_X0))
+            if self.bound == 'ub':
+                con.lb = -const
+            elif self.bound == 'lb':
+                con.ub = -const
+            else:
+                assert self.bound == 'eq'
+                con.rhs = -const
+            self._c.append(con)
+
+        # In order to enforce the same behavior as actual
+        # piecewise constraints, we need to constrain the
+        # input expression to be between first and last
+        # breakpoint. This might be duplicating the
+        # variable, but its not always the case, and there's
+        # no guarantee that the input "variable" is not a
+        # more general linear expression.
+        self._c.append(linear_constraint(
+            terms=[(self.input, 1)],
+            lb=self.breakpoints[0],
+            ub=self.breakpoints[-1]))
+
+    def validate(self, **kwds):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        See base class documentation for keyword
+        descriptions.
+        """
+        ftype = super(piecewise_convex, self).validate(**kwds)
+        if (self.bound == 'eq') and \
+           (ftype != characterize_function.affine):
+            raise PiecewiseValidationError(
+                "The bound type is 'eq' but the function "
+                "was not characterized as affine (only two "
+                "breakpoints). The 'convex' piecewise "
+                "representation does not support this function.")
+        elif (self.bound == 'lb') and \
+             (ftype not in (characterize_function.affine,
+                            characterize_function.convex)):
+            raise PiecewiseValidationError(
+                "The bound type is 'lb' but the function "
+                "was not characterized as convex or affine. "
+                "The 'convex' piecewise representation does "
+                "not support this function.")
+        elif (self.bound == 'ub') and \
+             (ftype not in (characterize_function.affine,
+                            characterize_function.concave)):
+            raise PiecewiseValidationError(
+                "The bound type is 'ub' but the function "
+                "was not characterized as concave or affine. "
+                "The 'convex' piecewise representation does "
+                "not support this function.")
+        return ftype
+
+registered_transforms['convex'] = piecewise_convex
+
+class piecewise_sos2(TransformedPiecewiseLinearFunction):
+    """Discrete SOS2 piecewise representation
+
     Expresses a piecewise linear function using
     the SOS2 formulation.
     """
 
     def __init__(self, *args, **kwds):
-        bound = kwds.pop('bound', 'eq')
         super(piecewise_sos2, self).__init__(*args, **kwds)
 
         # create vars
@@ -279,16 +592,13 @@ class piecewise_sos2(_PiecewiseLinearFunction):
         self._c2 = linear_constraint(
             variables=y_tuple + (self.output,),
             coefficients=self.values + (-1,))
-        if bound == 'ub':
+        if self.bound == 'ub':
             self._c2.lb = 0
-        elif bound == 'lb':
+        elif self.bound == 'lb':
             self._c2.ub = 0
-        elif bound == 'eq':
-            self._c2.rhs = 0
         else:
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            assert self.bound == 'eq'
+            self._c2.rhs = 0
 
         self._c3 = linear_constraint(variables=y_tuple,
                                      coefficients=(1,)*len(y),
@@ -296,18 +606,27 @@ class piecewise_sos2(_PiecewiseLinearFunction):
         self._c4 = sos2(y)
 
     def validate(self, **kwds):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        See base class documentation for keyword
+        descriptions.
+        """
         return super(piecewise_sos2, self).validate(**kwds)
 
 registered_transforms['sos2'] = piecewise_sos2
 
-class piecewise_dcc(_PiecewiseLinearFunction):
-    """
+class piecewise_dcc(TransformedPiecewiseLinearFunction):
+    """Discrete DCC piecewise representation
+
     Expresses a piecewise linear function using
     the DCC formulation.
     """
 
     def __init__(self, *args, **kwds):
-        bound = kwds.pop('bound', 'eq')
         super(piecewise_dcc, self).__init__(*args, **kwds)
 
         # create index sets
@@ -344,16 +663,13 @@ class piecewise_dcc(_PiecewiseLinearFunction):
             coefficients=tuple(self.values[v]
                                for p in polytopes
                                for v in polytope_verts(p)) + (-1,))
-        if bound == 'ub':
+        if self.bound == 'ub':
             self._c2.lb = 0
-        elif bound == 'lb':
+        elif self.bound == 'lb':
             self._c2.ub = 0
-        elif bound == 'eq':
-            self._c2.rhs = 0
         else:
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            assert self.bound == 'eq'
+            self._c2.rhs = 0
 
         self._c3 = constraint_list()
         for p in polytopes:
@@ -370,18 +686,27 @@ class piecewise_dcc(_PiecewiseLinearFunction):
             rhs=1)
 
     def validate(self, **kwds):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        See base class documentation for keyword
+        descriptions.
+        """
         return super(piecewise_dcc, self).validate(**kwds)
 
 registered_transforms['dcc'] = piecewise_dcc
 
-class piecewise_cc(_PiecewiseLinearFunction):
-    """
+class piecewise_cc(TransformedPiecewiseLinearFunction):
+    """Discrete CC piecewise representation
+
     Expresses a piecewise linear function using
     the CC formulation.
     """
 
     def __init__(self, *args, **kwds):
-        bound = kwds.pop('bound', 'eq')
         super(piecewise_cc, self).__init__(*args, **kwds)
 
         # create index sets
@@ -413,16 +738,13 @@ class piecewise_cc(_PiecewiseLinearFunction):
         self._c2 = linear_constraint(
             variables=lmbda_tuple + (self.output,),
             coefficients=self.values + (-1,))
-        if bound == 'ub':
+        if self.bound == 'ub':
             self._c2.lb = 0
-        elif bound == 'lb':
+        elif self.bound == 'lb':
             self._c2.ub = 0
-        elif bound == 'eq':
-            self._c2.rhs = 0
         else:
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            assert self.bound == 'eq'
+            self._c2.rhs = 0
 
         self._c3 = linear_constraint(
             variables=lmbda_tuple,
@@ -443,18 +765,27 @@ class piecewise_cc(_PiecewiseLinearFunction):
             rhs=1)
 
     def validate(self, **kwds):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        See base class documentation for keyword
+        descriptions.
+        """
         return super(piecewise_cc, self).validate(**kwds)
 
 registered_transforms['cc'] = piecewise_cc
 
-class piecewise_mc(_PiecewiseLinearFunction):
-    """
+class piecewise_mc(TransformedPiecewiseLinearFunction):
+    """Discrete MC piecewise representation
+
     Expresses a piecewise linear function using
     the MC formulation.
     """
 
     def __init__(self, *args, **kwds):
-        bound = kwds.pop('bound', 'eq')
         super(piecewise_mc, self).__init__(*args, **kwds)
 
         # create indexers
@@ -487,16 +818,13 @@ class piecewise_mc(_PiecewiseLinearFunction):
         self._c2 = linear_constraint(
             variables=lmbda_tuple + y_tuple + (self.output,),
             coefficients=slopes + intercepts + (-1,))
-        if bound == 'ub':
+        if self.bound == 'ub':
             self._c2.lb = 0
-        elif bound == 'lb':
+        elif self.bound == 'lb':
             self._c2.ub = 0
-        elif bound == 'eq':
-            self._c2.rhs = 0
         else:
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            assert self.bound == 'eq'
+            self._c2.rhs = 0
 
         self._c3 = constraint_list()
         self._c4 = constraint_list()
@@ -516,24 +844,33 @@ class piecewise_mc(_PiecewiseLinearFunction):
             rhs=1)
 
     def validate(self, **kwds):
-        type_ = super(piecewise_mc, self).validate(**kwds)
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        See base class documentation for keyword
+        descriptions.
+        """
+        ftype = super(piecewise_mc, self).validate(**kwds)
         # this representation does not support step functions
-        if type_ == 4:
-            raise AssertionError(
-                "The MC piecewise representation does "
+        if ftype == characterize_function.step:
+            raise PiecewiseValidationError(
+                "The 'mc' piecewise representation does "
                 "not support step functions.")
-        return type_
+        return ftype
 
 registered_transforms['mc'] = piecewise_mc
 
-class piecewise_inc(_PiecewiseLinearFunction):
-    """
+class piecewise_inc(TransformedPiecewiseLinearFunction):
+    """Discrete INC piecewise representation
+
     Expresses a piecewise linear function using
     the INC formulation.
     """
 
     def __init__(self, *args, **kwds):
-        bound = kwds.pop('bound', 'eq')
         super(piecewise_inc, self).__init__(*args, **kwds)
 
         # create indexers
@@ -561,16 +898,13 @@ class piecewise_inc(_PiecewiseLinearFunction):
             coefficients=(-1,) + tuple(self.values[p+1] - \
                                        self.values[p]
                                        for p in polytopes))
-        if bound == 'ub':
+        if self.bound == 'ub':
             self._c2.lb = -self.values[0]
-        elif bound == 'lb':
+        elif self.bound == 'lb':
             self._c2.ub = -self.values[0]
-        elif bound == 'eq':
-            self._c2.rhs = -self.values[0]
         else:
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            assert self.bound == 'eq'
+            self._c2.rhs = -self.values[0]
 
         self._c3 = constraint_list()
         self._c4 = constraint_list()
@@ -585,34 +919,47 @@ class piecewise_inc(_PiecewiseLinearFunction):
                 ub=0))
 
     def validate(self, **kwds):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        See base class documentation for keyword
+        descriptions.
+        """
         return super(piecewise_inc, self).validate(**kwds)
 
 registered_transforms['inc'] = piecewise_inc
 
-class piecewise_dlog(_PiecewiseLinearFunction):
-    """
-    Expresses a piecewise linear function using
-    the DLOG formulation.
+class piecewise_dlog(TransformedPiecewiseLinearFunction):
+    """Discrete DLOG piecewise representation
+
+    Expresses a piecewise linear function using the DLOG
+    formulation. This formulation uses logarithmic number of
+    discrete variables in terms of number of breakpoints.
     """
 
     def __init__(self, *args, **kwds):
-        bound = kwds.pop('bound', 'eq')
         super(piecewise_dlog, self).__init__(*args, **kwds)
 
-        if not is_positive_power_of_two(len(self.breakpoints)-1):
+        breakpoints = self.breakpoints
+        values = self.values
+
+        if not is_positive_power_of_two(len(breakpoints)-1):
             raise ValueError("The list of breakpoints must be "
                              "of length (2^n)+1 for some positive "
                              "integer n. Invalid length: %s"
-                             % (len(self.breakpoints)))
+                             % (len(breakpoints)))
 
         # create branching schemes
-        L = log2floor(len(self.breakpoints)-1)
-        assert 2**L == len(self.breakpoints)-1
+        L = log2floor(len(breakpoints)-1)
+        assert 2**L == len(breakpoints)-1
         B_LEFT, B_RIGHT = self._branching_scheme(L)
 
         # create indexers
-        polytopes = range(len(self.breakpoints)-1)
-        vertices = range(len(self.breakpoints))
+        polytopes = range(len(breakpoints)-1)
+        vertices = range(len(breakpoints))
         def polytope_verts(p):
             return xrange(p,p+2)
 
@@ -630,7 +977,7 @@ class piecewise_dlog(_PiecewiseLinearFunction):
             variables=(self.input,) + tuple(lmbda[p,v]
                                             for p in polytopes
                                             for v in polytope_verts(p)),
-            coefficients=(-1,) + tuple(self.breakpoints[v]
+            coefficients=(-1,) + tuple(breakpoints[v]
                                        for p in polytopes
                                        for v in polytope_verts(p)),
             rhs=0)
@@ -639,19 +986,16 @@ class piecewise_dlog(_PiecewiseLinearFunction):
             variables=(self.output,) + tuple(lmbda[p,v]
                                              for p in polytopes
                                              for v in polytope_verts(p)),
-            coefficients=(-1,) + tuple(self.values[v]
+            coefficients=(-1,) + tuple(values[v]
                                        for p in polytopes
                                        for v in polytope_verts(p)))
-        if bound == 'ub':
+        if self.bound == 'ub':
             self._c2.lb = 0
-        elif bound == 'lb':
+        elif self.bound == 'lb':
             self._c2.ub = 0
-        elif bound == 'eq':
-            self._c2.rhs = 0
         else:
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            assert self.bound == 'eq'
+            self._c2.rhs = 0
 
         self._c3 = linear_constraint(
             variables=tuple(lmbda.values()),
@@ -702,33 +1046,46 @@ class piecewise_dlog(_PiecewiseLinearFunction):
         return B_LEFT, B_RIGHT
 
     def validate(self, **kwds):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        See base class documentation for keyword
+        descriptions.
+        """
         return super(piecewise_dlog, self).validate(**kwds)
 
 registered_transforms['dlog'] = piecewise_dlog
 
-class piecewise_log(_PiecewiseLinearFunction):
-    """
-    Expresses a piecewise linear function using
-    the LOG formulation.
+class piecewise_log(TransformedPiecewiseLinearFunction):
+    """Discrete LOG piecewise representation
+
+    Expresses a piecewise linear function using the LOG
+    formulation. This formulation uses logarithmic number of
+    discrete variables in terms of number of breakpoints.
     """
 
     def __init__(self, *args, **kwds):
-        bound = kwds.pop('bound', 'eq')
         super(piecewise_log, self).__init__(*args, **kwds)
 
-        if not is_positive_power_of_two(len(self.breakpoints)-1):
+        breakpoints = self.breakpoints
+        values = self.values
+
+        if not is_positive_power_of_two(len(breakpoints)-1):
             raise ValueError("The list of breakpoints must be "
                              "of length (2^n)+1 for some positive "
                              "integer n. Invalid length: %s"
-                             % (len(self.breakpoints)))
+                             % (len(breakpoints)))
 
         # create branching schemes
-        L = log2floor(len(self.breakpoints)-1)
+        L = log2floor(len(breakpoints)-1)
         S,B_LEFT,B_RIGHT = self._branching_scheme(L)
 
         # create indexers
-        polytopes = range(len(self.breakpoints) - 1)
-        vertices = range(len(self.breakpoints))
+        polytopes = range(len(breakpoints) - 1)
+        vertices = range(len(breakpoints))
 
         # create vars
         lmbda = self._lmbda = variable_list(
@@ -740,22 +1097,19 @@ class piecewise_log(_PiecewiseLinearFunction):
         # create piecewise constraints
         self._c1 = linear_constraint(
             variables=(self.input,) + tuple(lmbda),
-            coefficients=(-1,) + self.breakpoints,
+            coefficients=(-1,) + breakpoints,
             rhs=0)
 
         self._c2 = linear_constraint(
             variables=(self.output,) + tuple(lmbda),
-            coefficients=(-1,) + self.values)
-        if bound == 'ub':
+            coefficients=(-1,) + values)
+        if self.bound == 'ub':
             self._c2.lb = 0
-        elif bound == 'lb':
+        elif self.bound == 'lb':
             self._c2.ub = 0
-        elif bound == 'eq':
-            self._c2.rhs = 0
         else:
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            assert self.bound == 'eq'
+            self._c2.rhs = 0
 
         self._c3 = linear_constraint(
             variables=tuple(lmbda),
@@ -791,6 +1145,15 @@ class piecewise_log(_PiecewiseLinearFunction):
         return S, L, R
 
     def validate(self, **kwds):
+        """
+        Validate this piecewise linear function by verifying
+        various properties of the breakpoints, values, and
+        input variable (e.g., that the list of breakpoints
+        is nondecreasing).
+
+        See base class documentation for keyword
+        descriptions.
+        """
         return super(piecewise_log, self).validate(**kwds)
 
 registered_transforms['log'] = piecewise_log

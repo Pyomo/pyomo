@@ -1,5 +1,5 @@
-Piecewise Functions
-===================
+Piecewise Function Library
+==========================
 
 Modules
 

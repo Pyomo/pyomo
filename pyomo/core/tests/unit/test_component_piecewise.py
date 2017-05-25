@@ -21,10 +21,12 @@ from pyomo.core.kernel.component_block import (IBlockStorage,
 from pyomo.core.kernel.component_variable import (variable,
                                                   variable_list)
 from pyomo.core.kernel.component_piecewise.transforms import \
-    _PiecewiseLinearFunction
+    (PiecewiseLinearFunction,
+     TransformedPiecewiseLinearFunction)
 import pyomo.core.kernel.component_piecewise.transforms as transforms
 from pyomo.core.kernel.component_piecewise.transforms_nd import \
-    _PiecewiseLinearFunctionND
+    (PiecewiseLinearFunctionND,
+     TransformedPiecewiseLinearFunctionND)
 import pyomo.core.kernel.component_piecewise.transforms_nd as transforms_nd
 import pyomo.core.kernel.component_piecewise.util as util
 from pyomo.core.base.block import Block
@@ -235,44 +237,39 @@ class Test_piecewise(unittest.TestCase):
 
     def test_pickle(self):
         for key in transforms.registered_transforms:
+            v = variable(lb=1,ub=3)
             p = transforms.piecewise([1,2,3],
                                      [1,2,1],
+                                     input=v,
+                                     validate=False,
                                      repn=key)
             self.assertEqual(p.parent, None)
+            self.assertEqual(p.input.expr.parent, None)
+            self.assertIs(p.input.expr, v)
             pup = pickle.loads(
                 pickle.dumps(p))
             self.assertEqual(pup.parent, None)
+            self.assertEqual(pup.input.expr.parent, None)
+            self.assertIsNot(pup.input.expr, v)
             b = block()
+            b.v = v
             b.p = p
             self.assertIs(p.parent, b)
+            self.assertEqual(p.input.expr.parent, b)
             bup = pickle.loads(
                 pickle.dumps(b))
             pup = bup.p
             self.assertIs(pup.parent, bup)
+            self.assertEqual(pup.input.expr.parent, bup)
+            self.assertIs(pup.input.expr, bup.v)
+            self.assertIsNot(pup.input.expr, b.v)
 
     def test_call(self):
-        # lists not the same length
-        with self.assertRaises(ValueError):
-            _PiecewiseLinearFunction([1,2,3],
-                                     [1,2,1,1])
-        # lists not the same length
-        with self.assertRaises(ValueError):
-            _PiecewiseLinearFunction([1,2,3,4],
-                                     [1,2,1])
 
-        # breakpoints list not nondecreasing
-        with self.assertRaises(AssertionError):
-            _PiecewiseLinearFunction([1,3,2],
-                                     [1,2,1])
-
-        p = _PiecewiseLinearFunction([1,3,2],
-                                     [1,2,1],
-                                     validate=False)
-        with self.assertRaises(AssertionError):
-            p.validate()
-
-        f = _PiecewiseLinearFunction([1,2,3],
-                                     [1,2,1])
+        g = PiecewiseLinearFunction([1,2,3],
+                                    [1,2,1])
+        f = TransformedPiecewiseLinearFunction(
+            g, require_bounded_input_variable=False)
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, Block)
         self.assertEqual(f(1), 1)
@@ -286,8 +283,10 @@ class Test_piecewise(unittest.TestCase):
             f(4.1)
 
         # step function
-        f = _PiecewiseLinearFunction([1,2,2,3],
-                                     [1,2,3,4])
+        g = PiecewiseLinearFunction([1,2,2,3],
+                                    [1,2,3,4])
+        f = TransformedPiecewiseLinearFunction(
+            g, require_bounded_input_variable=False)
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, Block)
         self.assertEqual(f(1), 1)
@@ -301,8 +300,13 @@ class Test_piecewise(unittest.TestCase):
             f(3.1)
 
         # another step function
-        f = _PiecewiseLinearFunction([1,1,2,3],
-                                     [1,2,3,4])
+        g = PiecewiseLinearFunction([1,1,2,3],
+                                    [1,2,3,4],
+                                    equal_slopes_tolerance=-1)
+        f = TransformedPiecewiseLinearFunction(
+            g,
+            require_bounded_input_variable=False,
+            equal_slopes_tolerance=-1)
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, Block)
         self.assertEqual(f(1), 1)
@@ -319,7 +323,9 @@ class Test_piecewise(unittest.TestCase):
         for key in transforms.registered_transforms:
             p = transforms.piecewise([1,2,3],
                                      [1,2,1],
-                                     repn=key)
+                                     repn=key,
+                                     validate=False)
+            self.assertTrue(isinstance(p, TransformedPiecewiseLinearFunction))
             self.assertTrue(isinstance(p, transforms.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
             self.assertTrue(isinstance(p, IActiveObject))
@@ -334,6 +340,7 @@ class Test_piecewise(unittest.TestCase):
         self.assertTrue(repn in transforms.registered_transforms)
         transforms.piecewise([1,2,3],
                              [1,2,1],
+                             validate=False,
                              repn=repn)
 
         repn = '_bad_repn_'
@@ -341,6 +348,21 @@ class Test_piecewise(unittest.TestCase):
         with self.assertRaises(ValueError):
             transforms.piecewise([1,2,3],
                                  [1,2,1],
+                                 validate=False,
+                                 repn=repn)
+        with self.assertRaises(ValueError):
+            transforms.piecewise([1,2,3],
+                                 [1,2,1],
+                                 input=variable(lb=1,ub=3),
+                                 validate=True,
+                                 simplify=False,
+                                 repn=repn)
+        with self.assertRaises(ValueError):
+            transforms.piecewise([1,2,3],
+                                 [1,2,1],
+                                 input=variable(lb=1,ub=3),
+                                 validate=True,
+                                 simplify=True,
                                  repn=repn)
 
     def test_init(self):
@@ -349,8 +371,14 @@ class Test_piecewise(unittest.TestCase):
                 for args in [([1,2,3], [1,2,1]),
                              ([1,2,3,4,5],[1,2,1,2,1]),
                              ([1,2,3,4,5,6,7,8,9],[1,2,1,2,1,2,1,2,1])]:
-                    kwds = {'repn': key, 'bound': bound}
+                    kwds = {'repn': key, 'bound': bound, 'validate': False}
                     if bound == 'bad':
+                        with self.assertRaises(ValueError):
+                            transforms.piecewise(*args, **kwds)
+                        kwds['simplify'] = True
+                        with self.assertRaises(ValueError):
+                            transforms.piecewise(*args, **kwds)
+                        kwds['simplify'] = False
                         with self.assertRaises(ValueError):
                             transforms.piecewise(*args, **kwds)
                     else:
@@ -358,39 +386,262 @@ class Test_piecewise(unittest.TestCase):
                         self.assertTrue(
                             isinstance(p, transforms.registered_transforms[key]))
                         self.assertTrue(
-                            isinstance(p, _PiecewiseLinearFunction))
+                            isinstance(p, TransformedPiecewiseLinearFunction))
                         self.assertEqual(p.active, True)
                         self.assertIs(p.parent, None)
+                        kwds['simplify'] = True
+                        p = transforms.piecewise(*args, **kwds)
+                        self.assertTrue(
+                            isinstance(p, transforms.registered_transforms[key]))
+                        self.assertTrue(
+                            isinstance(p, TransformedPiecewiseLinearFunction))
+                        self.assertEqual(p.active, True)
+                        self.assertIs(p.parent, None)
+                        kwds['simplify'] = False
+                        p = transforms.piecewise(*args, **kwds)
+                        self.assertTrue(
+                            isinstance(p, transforms.registered_transforms[key]))
+                        self.assertTrue(
+                            isinstance(p, TransformedPiecewiseLinearFunction))
+                        self.assertEqual(p.active, True)
+                        self.assertIs(p.parent, None)
+
+    def test_bad_init(self):
+
+        # lists not the same length
+        with self.assertRaises(ValueError):
+            PiecewiseLinearFunction([1,2,3],
+                                    [1,2,1,1],
+                                    validate=False)
+        # lists not the same length
+        with self.assertRaises(ValueError):
+            PiecewiseLinearFunction([1,2,3,4],
+                                    [1,2,1],
+                                    validate=False)
+
+        # breakpoints list not nondecreasing
+        with self.assertRaises(util.PiecewiseValidationError):
+            PiecewiseLinearFunction([1,3,2],
+                                    [1,2,1])
+
+        PiecewiseLinearFunction([1,3,2],
+                                [1,2,1],
+                                validate=False)
+
+        PiecewiseLinearFunction([1,2,3],
+                                [1,1,1+2e-6],
+                                equal_slopes_tolerance=1e-6)
+
+        # consecutive slopes are "equal"
+        with self.assertRaises(util.PiecewiseValidationError):
+            PiecewiseLinearFunction([1,2,3],
+                                    [1,1,1+2e-6],
+                                    equal_slopes_tolerance=3e-6)
+
+        PiecewiseLinearFunction([1,2,3],
+                                [1,1,1+2e-6],
+                                validate=False)
+
+        f = PiecewiseLinearFunction([1,2,3],
+                                    [1,2,1])
+        TransformedPiecewiseLinearFunction(f,
+                                           input=variable(lb=1,ub=3),
+                                           require_bounded_input_variable=True)
+
+        TransformedPiecewiseLinearFunction(f,
+                                input=variable(lb=1,ub=3),
+                                require_bounded_input_variable=False)
+
+        # variable is not bounded
+        with self.assertRaises(util.PiecewiseValidationError):
+            TransformedPiecewiseLinearFunction(f,
+                                    input=variable(lb=1),
+                                    require_bounded_input_variable=True)
+        TransformedPiecewiseLinearFunction(f,
+                                input=variable(lb=1),
+                                require_bounded_input_variable=False)
+        with self.assertRaises(util.PiecewiseValidationError):
+            TransformedPiecewiseLinearFunction(f,
+                                    input=variable(ub=3),
+                                    require_bounded_input_variable=True)
+        TransformedPiecewiseLinearFunction(f,
+                                input=variable(ub=3),
+                                require_bounded_input_variable=False)
+        with self.assertRaises(util.PiecewiseValidationError):
+            TransformedPiecewiseLinearFunction(f,
+                                    require_bounded_input_variable=True)
+        TransformedPiecewiseLinearFunction(f,
+                                require_bounded_input_variable=False)
+
+        # variable domain is not fully covered
+        with self.assertRaises(util.PiecewiseValidationError):
+            TransformedPiecewiseLinearFunction(f,
+                                    input=variable(lb=0),
+                                    require_bounded_input_variable=False,
+                                    require_variable_domain_coverage=True)
+        TransformedPiecewiseLinearFunction(f,
+                                input=variable(lb=0),
+                                require_bounded_input_variable=False,
+                                require_variable_domain_coverage=False)
+        with self.assertRaises(util.PiecewiseValidationError):
+            TransformedPiecewiseLinearFunction(f,
+                                    input=variable(ub=4),
+                                    require_bounded_input_variable=False,
+                                    require_variable_domain_coverage=True)
+        TransformedPiecewiseLinearFunction(f,
+                                input=variable(ub=4),
+                                require_bounded_input_variable=False,
+                                require_variable_domain_coverage=False)
 
     def test_bad_init_log_types(self):
         # lists are not of length: (2^n) + 1
         with self.assertRaises(ValueError):
-            transforms.piecewise([1,2,3,4],[1,2,3,4],repn='dlog')
+            transforms.piecewise([1,2,3,4],[1,2,3,4],repn='dlog',validate=False)
         with self.assertRaises(ValueError):
-            transforms.piecewise([1,2,3,4],[1,2,3,4],repn='log')
+            transforms.piecewise([1,2,3,4],[1,2,3,4],repn='log',validate=False)
 
     def test_step(self):
         breakpoints = [1,2,2]
         values = [1,0,1]
+        v = variable()
+        v.bounds = min(breakpoints), max(breakpoints)
         for key in transforms.registered_transforms:
-            if key == 'mc':
-                with self.assertRaises(AssertionError):
-                    transforms.piecewise(breakpoints, values, repn=key)
+            if key in ('mc','convex'):
+                with self.assertRaises(util.PiecewiseValidationError):
+                    transforms.piecewise(breakpoints,
+                                         values,
+                                         input=v,
+                                         repn=key)
             else:
-                p = transforms.piecewise(breakpoints, values, repn=key)
+                p = transforms.piecewise(breakpoints,
+                                         values,
+                                         input=v,
+                                         repn=key)
                 self.assertEqual(p.validate(), 4)
+
+    def test_simplify(self):
+        v = variable(lb=1, ub=3)
+        convex_breakpoints = [1,2,3]
+        convex_values = [1,0,1]
+        for key in transforms.registered_transforms:
+            for bound in ('lb','ub','eq'):
+                if (key == 'convex') and \
+                   (bound != 'lb'):
+                    with self.assertRaises(util.PiecewiseValidationError):
+                        transforms.piecewise(convex_breakpoints,
+                                             convex_values,
+                                             input=v,
+                                             repn=key,
+                                             bound=bound,
+                                             simplify=False)
+                    with self.assertRaises(util.PiecewiseValidationError):
+                        transforms.piecewise(convex_breakpoints,
+                                             convex_values,
+                                             input=v,
+                                             repn=key,
+                                             bound=bound,
+                                             simplify=True)
+                else:
+                    p = transforms.piecewise(convex_breakpoints,
+                                             convex_values,
+                                             input=v,
+                                             repn=key,
+                                             bound=bound,
+                                             simplify=False)
+                    self.assertTrue(
+                        isinstance(p, transforms.registered_transforms[key]))
+                    self.assertEqual(p.validate(), util.characterize_function.convex)
+                    p = transforms.piecewise(convex_breakpoints,
+                                             convex_values,
+                                             input=v,
+                                             repn=key,
+                                             bound=bound,
+                                             simplify=True)
+                    if bound == 'lb':
+                        self.assertTrue(
+                            isinstance(p, transforms.registered_transforms['convex']))
+                    else:
+                        self.assertTrue(
+                            isinstance(p, transforms.registered_transforms[key]))
+
+        concave_breakpoints = [1,2,3]
+        concave_values = [-1,0,-1]
+        for key in transforms.registered_transforms:
+            for bound in ('lb','ub','eq'):
+                if (key == 'convex') and \
+                   (bound != 'ub'):
+                    with self.assertRaises(util.PiecewiseValidationError):
+                        transforms.piecewise(concave_breakpoints,
+                                             concave_values,
+                                             input=v,
+                                             repn=key,
+                                             bound=bound,
+                                             simplify=False)
+                    with self.assertRaises(util.PiecewiseValidationError):
+                        transforms.piecewise(concave_breakpoints,
+                                             concave_values,
+                                             input=v,
+                                             repn=key,
+                                             bound=bound,
+                                             simplify=True)
+                else:
+                    p = transforms.piecewise(concave_breakpoints,
+                                             concave_values,
+                                             input=v,
+                                             repn=key,
+                                             bound=bound,
+                                             simplify=False)
+                    self.assertTrue(
+                        isinstance(p, transforms.registered_transforms[key]))
+                    self.assertEqual(p.validate(), util.characterize_function.concave)
+                    p = transforms.piecewise(concave_breakpoints,
+                                             concave_values,
+                                             input=v,
+                                             repn=key,
+                                             bound=bound,
+                                             simplify=True)
+                    if bound == 'ub':
+                        self.assertTrue(
+                            isinstance(p, transforms.registered_transforms['convex']))
+                    else:
+                        self.assertTrue(
+                            isinstance(p, transforms.registered_transforms[key]))
+
+        affine_breakpoints = [1,3]
+        affine_values = [1,3]
+        for key in transforms.registered_transforms:
+            for bound in ('lb','ub','eq'):
+                p = transforms.piecewise(affine_breakpoints,
+                                         affine_values,
+                                         input=v,
+                                         repn=key,
+                                         bound=bound,
+                                         simplify=False)
+                self.assertTrue(
+                    isinstance(p, transforms.registered_transforms[key]))
+                self.assertEqual(p.validate(), util.characterize_function.affine)
+                p = transforms.piecewise(affine_breakpoints,
+                                         affine_values,
+                                         input=v,
+                                         repn=key,
+                                         bound=bound,
+                                         simplify=True)
+                self.assertTrue(
+                    isinstance(p, transforms.registered_transforms['convex']))
 
 class Test_piecewise_dict(_TestActiveComponentDictBase,
                           unittest.TestCase):
     _container_type = block_dict
     _ctype_factory = lambda self: transforms.piecewise([1,2,3],
-                                                       [1,2,1])
+                                                       [1,2,1],
+                                                       validate=False)
 
 class Test_piecewise_list(_TestActiveComponentListBase,
                           unittest.TestCase):
     _container_type = block_list
     _ctype_factory = lambda self: transforms.piecewise([1,2,3],
-                                                       [1,2,1])
+                                                       [1,2,1],
+                                                       validate=False)
 
 @unittest.skipUnless(util.numpy_available and util.scipy_available,
                      "Numpy or Scipy is not available")
@@ -423,7 +674,8 @@ class Test_piecewise_nd(unittest.TestCase):
         tri = util.generate_delaunay(vlist, num=3)
         x, y = tri.points.T
         values = x*y
-        f = _PiecewiseLinearFunctionND(tri, values)
+        g = PiecewiseLinearFunctionND(tri, values)
+        f = TransformedPiecewiseLinearFunctionND(g)
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, Block)
         self.assertTrue(util.numpy.isclose(f(tri.points), values).all())
@@ -441,7 +693,8 @@ class Test_piecewise_nd(unittest.TestCase):
         tri = util.generate_delaunay(vlist, num=10)
         x, y, z = tri.points.T
         values = x*y*z
-        f = _PiecewiseLinearFunctionND(tri, values)
+        g = PiecewiseLinearFunctionND(tri, values)
+        f = TransformedPiecewiseLinearFunctionND(g)
         self.assertTrue(f.parent is None)
         self.assertEqual(f.ctype, Block)
         self.assertTrue(util.numpy.isclose(f(tri.points), values).all())
@@ -455,6 +708,7 @@ class Test_piecewise_nd(unittest.TestCase):
             p = transforms_nd.piecewise_nd(_test_tri,
                                            _test_values,
                                            repn=key)
+            self.assertTrue(isinstance(p, TransformedPiecewiseLinearFunctionND))
             self.assertTrue(isinstance(p, transforms_nd.registered_transforms[key]))
             self.assertTrue(isinstance(p, ICategorizedObject))
             self.assertTrue(isinstance(p, IActiveObject))
@@ -491,7 +745,7 @@ class Test_piecewise_nd(unittest.TestCase):
                     self.assertTrue(
                         isinstance(p, transforms_nd.registered_transforms[key]))
                     self.assertTrue(
-                        isinstance(p, _PiecewiseLinearFunctionND))
+                        isinstance(p, TransformedPiecewiseLinearFunctionND))
                     self.assertEqual(p.active, True)
                     self.assertIs(p.parent, None)
 

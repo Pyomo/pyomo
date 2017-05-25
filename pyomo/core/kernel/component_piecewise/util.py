@@ -29,6 +29,10 @@ try:
 except:             #pragma:nocover
     pass
 
+class PiecewiseValidationError(Exception):
+    """An exception raised when validation of piecewise
+    linear functions fail."""
+
 def is_constant(vals):
     """Checks if a list of points is constant"""
     if len(vals) <= 1:
@@ -64,11 +68,9 @@ def is_positive_power_of_two(x):
         return ( (x & (x - 1)) == 0 )
 
 def log2floor(n):
-    """
-    Returns the exact value of floor(log2(n)).
-    No floating point calculations are used.
-    Requires positive integer type.
-    """
+    """Computes the exact value of floor(log2(n)) without
+    using floating point calculations. Input argument must
+    be a positive integer."""
     assert n > 0
     return n.bit_length() - 1
 
@@ -93,12 +95,32 @@ def generate_gray_code(nbits):
 
 def characterize_function(breakpoints, values):
     """
-    Characterizes a piecewise linear function as affine (1),
-    convex (2), concave (3), step (4), or None (5). Assumes
-    breakpoints are in nondecreasing order. Returns an
-    integer that signifies the function characterization and
-    the slopes. If the function has step points, some of the
-    slopes may be None.
+    Characterizes a piecewise linear function described by a
+    list of breakpoints and function values.
+
+    Args:
+        breakpoints (list): The list of breakpoints of the
+            piecewise linear function. It is assumed that
+            the list of breakpoints is in non-decreasing
+            order.
+        values (list): The values of the piecewise linear
+            function corresponding to the breakpoints.
+
+    Returns:
+        (int, list): a function characterization code and \
+            the list of slopes.
+
+    .. note::
+        The function characterization codes are
+
+          * 1: affine
+          * 2: convex
+          * 3: concave
+          * 4: step
+          * 5: other
+
+        If the function has step points, some of the slopes
+        may be :const:`None`.
     """
     if not is_nondecreasing(breakpoints):
         raise ValueError(
@@ -116,15 +138,20 @@ def characterize_function(breakpoints, values):
         slopes.append(slope)
 
     if step:
-        return 4, slopes # step
+        return characterize_function.step, slopes
     elif is_constant(slopes):
-        return 1, slopes # affine
+        return characterize_function.affine, slopes
     elif is_nondecreasing(slopes):
-        return 2, slopes # convex
+        return characterize_function.convex, slopes
     elif is_nonincreasing(slopes):
-        return 3, slopes # concave
+        return characterize_function.concave, slopes
     else:
-        return 5, slopes # none of the above
+        return characterize_function.other, slopes
+characterize_function.affine  = 1
+characterize_function.convex  = 2
+characterize_function.concave = 3
+characterize_function.step    = 4
+characterize_function.other   = 5
 
 def generate_delaunay(variables, num=10, **kwds):
     """

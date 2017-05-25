@@ -8,7 +8,7 @@
 #  _________________________________________________________________________
 """
 This module contains transformations for representing a
-multivariate piecewise linear function using a
+multi-variate piecewise linear function using a
 mixed-interger problem formulation. Reference::
 
   Mixed-Integer Models for Non-separable Piecewise Linear \
@@ -40,10 +40,16 @@ def piecewise_nd(tri,
                  bound='eq',
                  repn='cc'):
     """
-    Transforms a D-dimensional triangulation and a list of
-    function values associated with the points of the
-    triangulation into a mixed-integer representation of a
-    piecewise function over a D-dimensional domain.
+    Models a multi-variate piecewise linear function.
+
+    This function takes a D-dimensional triangulation and a
+    list of function values associated with the points of
+    the triangulation and transforms this input data into a
+    block of variables and constraints that enforce a
+    piecewise linear relationship between an D-dimensional
+    vector of input variable and a single output
+    variable. In the general case, this transformation
+    requires the use of discrete decision variables.
 
     Args:
         tri (scipy.spatial.Delaunay): A triangulation over
@@ -78,11 +84,13 @@ def piecewise_nd(tri,
                 - 'cc': convex combination
 
     Returns:
-        A block containing the necessary auxiliary
-        variables and constraints to enforce the piecewise
-        linear relationship between the inputs and output.
+        TransformedPiecewiseLinearFunctionND: a block \
+            containing variables and constraints that \
+            enforce the piecewise linear relationship \
+            between the array of input expressions and the \
+            single output expression
     """
-    transorm = None
+    transform = None
     try:
         transform = registered_transforms[repn]
     except KeyError:
@@ -93,23 +101,48 @@ def piecewise_nd(tri,
                str(sorted(registered_transforms.keys()))))
     assert transform is not None
 
-    return transform(tri,
-                     values,
+    func = PiecewiseLinearFunctionND(tri,
+                                     values)
+
+    return transform(func,
                      input=input,
                      output=output,
                      bound=bound)
 
-class _PiecewiseLinearFunctionND(tiny_block):
+class PiecewiseLinearFunctionND(object):
+    """A multi-variate piecewise linear function
+
+    Multi-varite piecewise linear functions are defined by a
+    triangulation over a finite domain and a list of
+    function values associated with the points of the
+    triangulation.  The function value between points in the
+    triangulation is implied through linear interpolation.
+
+    Args:
+        tri (scipy.spatial.Delaunay): A triangulation over
+            the discretized variable domain. Can be
+            generated using a list of variables using the
+            utility function :func:`util.generate_delaunay`.
+            Required attributes:
+
+              - points: An (npoints, D) shaped array listing
+                the D-dimensional coordinates of the
+                discretization points.
+              - simplices: An (nsimplices, D+1) shaped array
+                of integers specifying the D+1 indices of
+                the points vector that define each simplex
+                of the triangulation.
+        values (numpy.array): An (npoints,) shaped array of
+            the values of the piecewise function at each of
+            coordinates in the triangulation points array.
     """
-    A piecewise linear function defined over a D-dimensional
-    triangulation.
-    """
+    __slots__ = ("_tri", "_values")
 
     def __init__(self,
                  tri,
                  values,
-                 input=None,
-                 output=None):
+                 validate=True,
+                 **kwds):
         assert pyomo.core.kernel.component_piecewise.util.numpy_available
         assert pyomo.core.kernel.component_piecewise.util.scipy_available
         assert isinstance(tri,
@@ -124,33 +157,22 @@ class _PiecewiseLinearFunctionND(tiny_block):
         assert nsimplices > 0
         assert npoints > 0
         assert ndim > 0
-
-        super(_PiecewiseLinearFunctionND, self).__init__()
         self._tri = tri
         self._values = values
-        if input is None:
-            input = [None]*ndim
-        self._input = expression_tuple(
-            expression(input[i]) for i in range(ndim))
-        self._output = expression(output)
 
     @property
-    def input(self):
-        """Returns the list of expressions that store the
-        inputs to the piecewise function. The returned
-        objects can be updated by assigning to their .expr
-        property."""
-        return self._input
+    def triangulation(self):
+        """The triangulation over the domain of this function"""
+        return self._tri
 
     @property
-    def output(self):
-        """Returns the expression that stores the output of
-        the piecewise function. The returned object can be updated
-        by assigning to its .expr property."""
-        return self._output
+    def values(self):
+        """The set of values used to defined this function"""
+        return self._values
 
     def __call__(self, x):
-        """Evaluates the piecewise function using
+        """
+        Evaluates the piecewise linear function using
         interpolation. This method supports vectorized
         function calls as the interpolation process can be
         expensive for high dimensional data.
@@ -174,7 +196,7 @@ class _PiecewiseLinearFunctionND(tiny_block):
                 multi = False
         else:
             multi = False
-        ndim = len(self.input)
+        _, ndim = self._tri.points.shape
         i = self._tri.find_simplex(x)
         if multi:
             Tinv = self._tri.transform[i,:ndim]
@@ -193,20 +215,114 @@ class _PiecewiseLinearFunctionND(tiny_block):
             val += (1-b.sum())*self._values[s[ndim]]
             return val
 
-class piecewise_nd_cc(_PiecewiseLinearFunctionND):
+class TransformedPiecewiseLinearFunctionND(tiny_block):
+    """Base class for transformed multi-variate piecewise
+    linear functions
+
+    A transformed multi-variate piecewise linear functions
+    is a block of variables and constraints that enforce a
+    piecewise linear relationship between an vector input
+    variables and a single output variable.
+
+    Args:
+        f (:class:`PiecewiseLinearFunctionND`): The
+            multi-variate piecewise linear function to
+            transform.
+        input: The variable constrained to be the input of
+            the piecewise linear function.
+        output: The variable constrained to be the output of
+            the piecewise linear function.
+        bound (str): The type of bound to impose on the
+            output expression. Can be one of:
+
+              - 'lb': y <= f(x)
+              - 'eq': y  = f(x)
+              - 'ub': y >= f(x)
     """
-    Expresses a multivariate piecewise linear function using
-    the CC formulation.
+
+    def __init__(self,
+                 f,
+                 input=None,
+                 output=None,
+                 bound='eq'):
+        super(TransformedPiecewiseLinearFunctionND, self).__init__()
+        assert isinstance(f, PiecewiseLinearFunctionND)
+        if bound not in ('lb', 'ub', 'eq'):
+            raise ValueError("Invalid bound type %r. Must be "
+                             "one of: ['lb','ub','eq']"
+                             % (bound))
+        self._bound = bound
+        self._f = f
+        _,ndim = f._tri.points.shape
+        if input is None:
+            input = [None]*ndim
+        self._input = expression_tuple(
+            expression(input[i]) for i in range(ndim))
+        self._output = expression(output)
+
+    @property
+    def input(self):
+        """The tuple of expressions that store the
+        inputs to the piecewise function. The returned
+        objects can be updated by assigning to their
+        :attr:`expr` attribute."""
+        return self._input
+
+    @property
+    def output(self):
+        """The expression that stores the output of the
+        piecewise function. The returned object can be
+        updated by assigning to its :attr:`expr`
+        attribute."""
+        return self._output
+
+    @property
+    def bound(self):
+        """The bound type assigned to the piecewise
+        relationship ('lb','ub','eq')."""
+        return self._bound
+
+    @property
+    def triangulation(self):
+        """The triangulation over the domain of this function"""
+        return self._f.triangulation
+
+    @property
+    def values(self):
+        """The set of values used to defined this function"""
+        return self._f.values
+
+    def __call__(self, x):
+        """
+        Evaluates the piecewise linear function using
+        interpolation. This method supports vectorized
+        function calls as the interpolation process can be
+        expensive for high dimensional data.
+
+        For the case when a single point is provided, the
+        argument x should be a (D,) shaped numpy array or
+        list, where D is the dimension of points in the
+        triangulation.
+
+        For the vectorized case, the argument x should be
+        a (n,D)-shaped numpy array.
+        """
+        return self._f(x)
+
+class piecewise_nd_cc(TransformedPiecewiseLinearFunctionND):
+    """Discrete CC multi-variate piecewise representation
+
+    Expresses a multi-variate piecewise linear function
+    using the CC formulation.
     """
 
     def __init__(self, *args, **kwds):
-        bound = kwds.pop('bound', 'eq')
         super(piecewise_nd_cc, self).__init__(*args, **kwds)
 
         ndim = len(self.input)
-        nsimplices = len(self._tri.simplices)
-        npoints = len(self._tri.points)
-        pointsT = list(zip(*self._tri.points))
+        nsimplices = len(self.triangulation.simplices)
+        npoints = len(self.triangulation.points)
+        pointsT = list(zip(*self.triangulation.points))
 
         # create index objects
         dimensions = range(ndim)
@@ -231,17 +347,14 @@ class piecewise_nd_cc(_PiecewiseLinearFunctionND):
 
         self._c2 = linear_constraint(
             variables=lmbda_tuple + (self.output,),
-            coefficients=tuple(self._values) + (-1,))
-        if bound == 'ub':
+            coefficients=tuple(self.values) + (-1,))
+        if self.bound == 'ub':
             self._c2.lb = 0
-        elif bound == 'lb':
+        elif self.bound == 'lb':
             self._c2.ub = 0
-        elif bound == 'eq':
-            self._c2.rhs = 0
         else:
-            raise ValueError("Invalid bound type %r. Must be "
-                             "one of: ['lb','ub','eq']"
-                             % (bound))
+            assert self.bound == 'eq'
+            self._c2.rhs = 0
 
         self._c3 = linear_constraint(
             variables=lmbda_tuple,
@@ -252,7 +365,7 @@ class piecewise_nd_cc(_PiecewiseLinearFunctionND):
         # which avoids an n^2 lookup when generating the
         # constraint
         vertex_to_simplex = [[] for v in vertices]
-        for s, simplex in enumerate(self._tri.simplices):
+        for s, simplex in enumerate(self.triangulation.simplices):
             for v in simplex:
                 vertex_to_simplex[v].append(s)
 
