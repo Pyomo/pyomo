@@ -25,7 +25,7 @@ from pyomo.core.base import (SortComponents,
                              BooleanSet, Constraint,
                              IntegerSet, Objective,
                              Var, Param)
-from pyomo.core.base.numvalue import is_fixed, value
+from pyomo.core.base.numvalue import is_fixed, value, as_numeric
 from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
@@ -576,8 +576,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
             # Fill in the body of the equation
             body_string_buffer = StringIO()
 
-            constraint_data.body.to_string(ostream=body_string_buffer,
-                                           verbose=False)
+            as_numeric(constraint_data.body).to_string(
+                ostream=body_string_buffer,
+                verbose=False)
             eqn_body = body_string_buffer.getvalue()
 
             # First, pad the equation so that if there is a
