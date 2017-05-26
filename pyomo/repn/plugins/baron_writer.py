@@ -55,14 +55,6 @@ logger = logging.getLogger('pyomo.core')
 #       but not for numbers appearing in the objective
 #       or constraints (which are written from to_string)
 
-# TODO: The variables section needs to be written after the
-#       objectives and constraint expressions have been
-#       queried. We only want to include the variables that
-#       were actually used. This affects the .stale flag on
-#       variables when loading results.
-
-# TODO: Add support for output_fixed_variable_bounds
-
 class ProblemWriter_bar(AbstractProblemWriter):
 
     #pyomo.util.plugin.alias('baron_writer')
@@ -93,122 +85,22 @@ class ProblemWriter_bar(AbstractProblemWriter):
             return value(exp)
         raise ValueError("non-fixed bound: " + str(exp))
 
-    def __call__(self,
-                 model,
-                 output_filename,
-                 solver_capability,
-                 io_options):
+    def _write_equations_section(self,
+                                 model,
+                                 output_file,
+                                 all_blocks_list,
+                                 active_components_data_var,
+                                 symbol_map,
+                                 labeler,
+                                 create_symbol_func,
+                                 create_symbols_func,
+                                 alias_symbol_func,
+                                 object_symbol_dictionary,
+                                 output_fixed_variable_bounds,
+                                 skip_trivial_constraints,
+                                 sorter):
 
-        # Make sure not to modify the user's dictionary, they may be
-        # reusing it outside of this call
-        io_options = dict(io_options)
-
-        # NOTE: io_options is a simple dictionary of keyword-value
-        #       pairs specific to this writer.
-        symbolic_solver_labels = \
-            io_options.pop("symbolic_solver_labels", False)
-        labeler = io_options.pop("labeler", None)
-
-        # How much effort do we want to put into ensuring the
-        # LP file is written deterministically for a Pyomo model:
-        #    0 : None
-        #    1 : sort keys of indexed components (default)
-        #    2 : sort keys AND sort names (over declaration order)
-        file_determinism = io_options.pop("file_determinism", 1)
-
-        sorter = SortComponents.unsorted
-        if file_determinism >= 1:
-            sorter = sorter | SortComponents.indices
-            if file_determinism >= 2:
-                sorter = sorter | SortComponents.alphabetical
-
-        # TODO
-        #output_fixed_variable_bounds = \
-        #    io_options.pop("output_fixed_variable_bounds", False)
-
-        # Skip writing constraints whose body section is fixed (i.e.,
-        # no variables)
-        skip_trivial_constraints = \
-            io_options.pop("skip_trivial_constraints", False)
-
-        # Note: Baron does not allow specification of runtime
-        #       option outside of this file, so we add support
-        #       for them here
-        solver_options = io_options.pop("solver_options", {})
-
-        if len(io_options):
-            raise ValueError(
-                "ProblemWriter_baron_writer passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
-
-        if symbolic_solver_labels and (labeler is not None):
-            raise ValueError("Baron problem writer: Using both the "
-                             "'symbolic_solver_labels' and 'labeler' "
-                             "I/O options is forbidden")
-
-        if output_filename is None:
-            output_filename = model.name + ".bar"
-
-        output_file=open(output_filename, "w")
-
-        # Process the options. Rely on baron to catch
-        # and reset bad option values
-        output_file.write("OPTIONS {\n")
-        summary_found = False
-        if len(solver_options):
-            for key, val in iteritems(solver_options):
-                if (key.lower() == 'summary'):
-                    summary_found = True
-                if key.endswith("Name"):
-                    output_file.write(key+": \""+str(val)+"\";\n")
-                else:
-                    output_file.write(key+": "+str(val)+";\n")
-        if not summary_found:
-            # The 'summary option is defaulted to 0, so that no
-            # summary file is generated in the directory where the
-            # user calls baron. Check if a user explicitly asked for
-            # a summary file.
-            output_file.write("Summary: 0;\n")
-        output_file.write("}\n\n")
-
-        if symbolic_solver_labels:
-            labeler = AlphaNumTextLabeler()
-        elif labeler is None:
-            labeler = NumericLabeler('x')
-
-        symbol_map = SymbolMap()
-        sm_bySymbol = symbol_map.bySymbol
         referenced_variable_ids = set()
-
-        #cache frequently called functions
-        create_symbol_func = SymbolMap.createSymbol
-        create_symbols_func = SymbolMap.createSymbols
-        alias_symbol_func = SymbolMap.alias
-
-        # Cache the list of model blocks so we don't have to call
-        # model.block_data_objects() many many times, which is slow
-        # for indexed blocks
-        all_blocks_list = list(model.block_data_objects(active=True,
-                                                        sort=sorter,
-                                                        descend_into=True))
-        active_components_data_var = {}
-        for block in all_blocks_list:
-            tmp = active_components_data_var[id(block)] = \
-                  list(obj for obj in block.component_data_objects(Var,
-                                                                   active=True,
-                                                                   sort=sorter,
-                                                                   descend_into=False))
-            create_symbols_func(symbol_map, tmp, labeler)
-
-            # GAH: Not sure this is necessary, and also it would break for
-            #      non-mutable indexed params so I am commenting out for now.
-            #for param_data in active_components_data(block, Param, sort=sorter):
-                #instead of checking if param_data._mutable:
-                #if not param_data.is_constant():
-                #    create_symbol_func(symbol_map, param_data, labeler)
-
-        symbol_map_variable_ids = set(symbol_map.byObject.keys())
-        object_symbol_dictionary = symbol_map.byObject
 
         def _skip_trivial(constraint_data):
             if skip_trivial_constraints:
@@ -282,134 +174,6 @@ class ProblemWriter_bar(AbstractProblemWriter):
         #    for key,label in iteritems(object_symbol_dictionary):
         #        label = label.replace('(','___')
         #        object_symbol_dictionary[key] = label.replace(')','__')
-
-        #
-        # BINARY_VARIABLES, INTEGER_VARIABLES, POSITIVE_VARIABLES, VARIABLES
-        #
-
-        BinVars = []
-        IntVars = []
-        PosVars = []
-        Vars = []
-        for block in all_blocks_list:
-            for var_data in active_components_data_var[id(block)]:
-
-                if var_data.is_continuous():
-                    if var_data.has_lb() and \
-                       (self._get_bound(var_data.lb) >= 0):
-                        TypeList = PosVars
-                    else:
-                        TypeList = Vars
-                elif var_data.is_binary():
-                    TypeList = BinVars
-                elif var_data.is_integer():
-                    TypeList = IntVars
-                else:
-                    assert False
-
-                var_name = object_symbol_dictionary[id(var_data)]
-                #if len(var_name) > 15:
-                #    logger.warning(
-                #        "Variable symbol '%s' for variable %s exceeds maximum "
-                #        "character limit for BARON. Solver may fail"
-                #        % (var_name, var_data.name))
-
-                TypeList.append(var_name)
-
-        if len(BinVars) > 0:
-            output_file.write('BINARY_VARIABLES ')
-            for var_name in BinVars[:-1]:
-                output_file.write(str(var_name)+', ')
-            output_file.write(str(BinVars[-1])+';\n\n')
-        if len(IntVars) > 0:
-            output_file.write('INTEGER_VARIABLES ')
-            for var_name in IntVars[:-1]:
-                output_file.write(str(var_name)+', ')
-            output_file.write(str(IntVars[-1])+';\n\n')
-
-        output_file.write('POSITIVE_VARIABLES ')
-        output_file.write('ONE_VAR_CONST__')
-        for var_name in PosVars:
-            output_file.write(', '+str(var_name))
-        output_file.write(';\n\n')
-
-        if len(Vars) > 0:
-            output_file.write('VARIABLES ')
-            for var_name in Vars[:-1]:
-                output_file.write(str(var_name)+', ')
-            output_file.write(str(Vars[-1])+';\n\n')
-
-        #
-        # LOWER_BOUNDS
-        #
-
-        LowerBoundHeader = False
-        for block in all_blocks_list:
-            for var_data in active_components_data_var[id(block)]:
-                if var_data.fixed:
-                    var_data_lb = var_data.value
-                else:
-                    var_data_lb = None
-                    if var_data.has_lb():
-                        var_data_lb = self._get_bound(var_data.lb)
-
-                if var_data_lb is not None:
-                    if LowerBoundHeader is False:
-                        output_file.write("LOWER_BOUNDS{\n")
-                        LowerBoundHeader = True
-                    name_to_output = object_symbol_dictionary[id(var_data)]
-                    lb_string_template = '%s: %'+self._precision_string+';\n'
-                    output_file.write(lb_string_template
-                                      % (name_to_output, var_data_lb))
-
-        if LowerBoundHeader:
-            output_file.write("}\n\n")
-
-        #
-        # UPPER_BOUNDS
-        #
-
-        UpperBoundHeader = False
-        for block in all_blocks_list:
-            for var_data in active_components_data_var[id(block)]:
-                if var_data.fixed:
-                    var_data_ub = var_data.value
-                else:
-                    var_data_ub = None
-                    if var_data.has_ub():
-                        var_data_ub = self._get_bound(var_data.ub)
-
-                if var_data_ub is not None:
-                    if UpperBoundHeader is False:
-                        output_file.write("UPPER_BOUNDS{\n")
-                        UpperBoundHeader = True
-                    name_to_output = object_symbol_dictionary[id(var_data)]
-                    ub_string_template = '%s: %'+self._precision_string+';\n'
-                    output_file.write(ub_string_template
-                                      % (name_to_output, var_data_ub))
-
-        if UpperBoundHeader:
-            output_file.write("}\n\n")
-
-        #
-        # BRANCHING_PRIORITIES
-        #
-
-        # Specifyig priorities requires that the pyomo model has established an
-        # EXTERNAL, float suffix called 'branching_priorities' on the model
-        # object, indexed by the relevant variable
-        BranchingPriorityHeader = False
-        for suffix in branching_priorities_suffixes:
-            for var_data, priority in iteritems(suffix):
-                if priority is not None:
-                    if not BranchingPriorityHeader:
-                        output_file.write('BRANCHING_PRIORITIES{\n')
-                        BranchingPriorityHeader = True
-                    name_to_output = object_symbol_dictionary[id(var_data)]
-                    output_file.write(name_to_output+': '+str(priority)+';\n')
-
-        if BranchingPriorityHeader:
-            output_file.write("}\n\n")
 
         #
         # EQUATIONS
@@ -535,6 +299,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     for param_data in param_data_iter:
                         yield param_data
 
+        vstring_to_var_dict = {}
         vstring_to_bar_dict = {}
         pstring_to_bar_dict = {}
         for block in all_blocks_list:
@@ -543,10 +308,15 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 variable_stream = StringIO()
                 var_data.to_string(ostream=variable_stream, verbose=False)
                 variable_string = variable_stream.getvalue()
-
                 variable_string = ' '+variable_string+' '
-                vstring_to_bar_dict[variable_string] = \
-                    ' '+object_symbol_dictionary[id(var_data)]+' '
+                vstring_to_var_dict[variable_string] = var_data
+                if output_fixed_variable_bounds or (not var_data.fixed):
+                    vstring_to_bar_dict[variable_string] = \
+                        ' '+object_symbol_dictionary[id(var_data)]+' '
+                else:
+                    assert var_data.value is not None
+                    vstring_to_bar_dict[variable_string] = \
+                        (' %.17r ' % (var_data.value))
 
             for param_data in mutable_param_gen(block):
                 param_stream = StringIO()
@@ -554,7 +324,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 param_string = param_stream.getvalue()
 
                 param_string = ' '+param_string+' '
-                pstring_to_bar_dict[param_string] = ' '+str(param_data())+' '
+                pstring_to_bar_dict[param_string] = \
+                    (' %.17r ' % (param_data()))
 
         # Equation Definition
         string_template = '%'+self._precision_string
@@ -607,12 +378,12 @@ class ProblemWriter_bar(AbstractProblemWriter):
                       for variable_string, bar_string in iteritems(vstring_to_bar_dict)
                       if variable_string in eqn_body]
             for variable_string, bar_string in vnames:
+                var_data = vstring_to_var_dict[variable_string]
+                if output_fixed_variable_bounds or (not var_data.fixed):
+                    referenced_variable_ids.add(id(var_data))
                 eqn_body = eqn_body.replace(variable_string, bar_string)
             for param_string, bar_string in iteritems(pstring_to_bar_dict):
                 eqn_body = eqn_body.replace(param_string, bar_string)
-            referenced_variable_ids.update(
-                id(sm_bySymbol[bar_string.strip()]())
-                for variable_string, bar_string in vnames)
             ################################################
 
             if len(vnames) == 0:
@@ -722,15 +493,306 @@ class ProblemWriter_bar(AbstractProblemWriter):
                           for variable_string, bar_string in iteritems(vstring_to_bar_dict)
                           if variable_string in obj_string]
                 for variable_string, bar_string in vnames:
+                    var_data = var_data = vstring_to_var_dict[variable_string]
+                    if output_fixed_variable_bounds or (not var_data.fixed):
+                        referenced_variable_ids.add(id(var_data))
                     obj_string = obj_string.replace(variable_string, bar_string)
                 for param_string, bar_string in iteritems(pstring_to_bar_dict):
                     obj_string = obj_string.replace(param_string, bar_string)
-                referenced_variable_ids.update(
-                    id(sm_bySymbol[bar_string.strip()]())
-                    for variable_string, bar_string in vnames)
                 ################################################
 
         output_file.write(obj_string+";\n\n")
+
+        return referenced_variable_ids, branching_priorities_suffixes
+
+    def __call__(self,
+                 model,
+                 output_filename,
+                 solver_capability,
+                 io_options):
+
+        # Make sure not to modify the user's dictionary, they may be
+        # reusing it outside of this call
+        io_options = dict(io_options)
+
+        # NOTE: io_options is a simple dictionary of keyword-value
+        #       pairs specific to this writer.
+        symbolic_solver_labels = \
+            io_options.pop("symbolic_solver_labels", False)
+        labeler = io_options.pop("labeler", None)
+
+        # How much effort do we want to put into ensuring the
+        # LP file is written deterministically for a Pyomo model:
+        #    0 : None
+        #    1 : sort keys of indexed components (default)
+        #    2 : sort keys AND sort names (over declaration order)
+        file_determinism = io_options.pop("file_determinism", 1)
+
+        sorter = SortComponents.unsorted
+        if file_determinism >= 1:
+            sorter = sorter | SortComponents.indices
+            if file_determinism >= 2:
+                sorter = sorter | SortComponents.alphabetical
+
+        output_fixed_variable_bounds = \
+            io_options.pop("output_fixed_variable_bounds", False)
+
+        # Skip writing constraints whose body section is fixed (i.e.,
+        # no variables)
+        skip_trivial_constraints = \
+            io_options.pop("skip_trivial_constraints", False)
+
+        # Note: Baron does not allow specification of runtime
+        #       option outside of this file, so we add support
+        #       for them here
+        solver_options = io_options.pop("solver_options", {})
+
+        if len(io_options):
+            raise ValueError(
+                "ProblemWriter_baron_writer passed unrecognized io_options:\n\t" +
+                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
+
+        if symbolic_solver_labels and (labeler is not None):
+            raise ValueError("Baron problem writer: Using both the "
+                             "'symbolic_solver_labels' and 'labeler' "
+                             "I/O options is forbidden")
+
+        if output_filename is None:
+            output_filename = model.name + ".bar"
+
+        output_file=open(output_filename, "w")
+
+        # Process the options. Rely on baron to catch
+        # and reset bad option values
+        output_file.write("OPTIONS {\n")
+        summary_found = False
+        if len(solver_options):
+            for key, val in iteritems(solver_options):
+                if (key.lower() == 'summary'):
+                    summary_found = True
+                if key.endswith("Name"):
+                    output_file.write(key+": \""+str(val)+"\";\n")
+                else:
+                    output_file.write(key+": "+str(val)+";\n")
+        if not summary_found:
+            # The 'summary option is defaulted to 0, so that no
+            # summary file is generated in the directory where the
+            # user calls baron. Check if a user explicitly asked for
+            # a summary file.
+            output_file.write("Summary: 0;\n")
+        output_file.write("}\n\n")
+
+        if symbolic_solver_labels:
+            labeler = AlphaNumTextLabeler()
+        elif labeler is None:
+            labeler = NumericLabeler('x')
+
+        symbol_map = SymbolMap()
+        sm_bySymbol = symbol_map.bySymbol
+
+        #cache frequently called functions
+        create_symbol_func = SymbolMap.createSymbol
+        create_symbols_func = SymbolMap.createSymbols
+        alias_symbol_func = SymbolMap.alias
+
+        # Cache the list of model blocks so we don't have to call
+        # model.block_data_objects() many many times, which is slow
+        # for indexed blocks
+        all_blocks_list = list(model.block_data_objects(active=True,
+                                                        sort=sorter,
+                                                        descend_into=True))
+        active_components_data_var = {}
+        for block in all_blocks_list:
+            tmp = active_components_data_var[id(block)] = \
+                  list(obj for obj in block.component_data_objects(Var,
+                                                                   active=True,
+                                                                   sort=sorter,
+                                                                   descend_into=False))
+            create_symbols_func(symbol_map, tmp, labeler)
+
+            # GAH: Not sure this is necessary, and also it would break for
+            #      non-mutable indexed params so I am commenting out for now.
+            #for param_data in active_components_data(block, Param, sort=sorter):
+                #instead of checking if param_data._mutable:
+                #if not param_data.is_constant():
+                #    create_symbol_func(symbol_map, param_data, labeler)
+
+        symbol_map_variable_ids = set(symbol_map.byObject.keys())
+        object_symbol_dictionary = symbol_map.byObject
+
+        #
+        # Go through the objectives and constraints and generate
+        # the output so that we can obtain the set of referenced
+        # variables.
+        #
+        equation_section_stream = StringIO()
+        referenced_variable_ids, branching_priorities_suffixes = \
+            self._write_equations_section(
+                model,
+                equation_section_stream,
+                all_blocks_list,
+                active_components_data_var,
+                symbol_map,
+                labeler,
+                create_symbol_func,
+                create_symbols_func,
+                alias_symbol_func,
+                object_symbol_dictionary,
+                output_fixed_variable_bounds,
+                skip_trivial_constraints,
+                sorter)
+
+        #
+        # BINARY_VARIABLES, INTEGER_VARIABLES, POSITIVE_VARIABLES, VARIABLES
+        #
+
+        BinVars = []
+        IntVars = []
+        PosVars = []
+        Vars = []
+        for block in all_blocks_list:
+            for var_data in active_components_data_var[id(block)]:
+
+                if id(var_data) not in referenced_variable_ids:
+                    continue
+
+                if var_data.is_continuous():
+                    if var_data.has_lb() and \
+                       (self._get_bound(var_data.lb) >= 0):
+                        TypeList = PosVars
+                    else:
+                        TypeList = Vars
+                elif var_data.is_binary():
+                    TypeList = BinVars
+                elif var_data.is_integer():
+                    TypeList = IntVars
+                else:
+                    assert False
+
+                var_name = object_symbol_dictionary[id(var_data)]
+                #if len(var_name) > 15:
+                #    logger.warning(
+                #        "Variable symbol '%s' for variable %s exceeds maximum "
+                #        "character limit for BARON. Solver may fail"
+                #        % (var_name, var_data.name))
+
+                TypeList.append(var_name)
+
+        if len(BinVars) > 0:
+            output_file.write('BINARY_VARIABLES ')
+            for var_name in BinVars[:-1]:
+                output_file.write(str(var_name)+', ')
+            output_file.write(str(BinVars[-1])+';\n\n')
+        if len(IntVars) > 0:
+            output_file.write('INTEGER_VARIABLES ')
+            for var_name in IntVars[:-1]:
+                output_file.write(str(var_name)+', ')
+            output_file.write(str(IntVars[-1])+';\n\n')
+
+        output_file.write('POSITIVE_VARIABLES ')
+        output_file.write('ONE_VAR_CONST__')
+        for var_name in PosVars:
+            output_file.write(', '+str(var_name))
+        output_file.write(';\n\n')
+
+        if len(Vars) > 0:
+            output_file.write('VARIABLES ')
+            for var_name in Vars[:-1]:
+                output_file.write(str(var_name)+', ')
+            output_file.write(str(Vars[-1])+';\n\n')
+
+        #
+        # LOWER_BOUNDS
+        #
+
+        LowerBoundHeader = False
+        for block in all_blocks_list:
+            for var_data in active_components_data_var[id(block)]:
+
+                if id(var_data) not in referenced_variable_ids:
+                    continue
+
+                if var_data.fixed:
+                    if output_fixed_variable_bounds:
+                        var_data_lb = var_data.value
+                    else:
+                        var_data_lb = None
+                else:
+                    var_data_lb = None
+                    if var_data.has_lb():
+                        var_data_lb = self._get_bound(var_data.lb)
+
+                if var_data_lb is not None:
+                    if LowerBoundHeader is False:
+                        output_file.write("LOWER_BOUNDS{\n")
+                        LowerBoundHeader = True
+                    name_to_output = object_symbol_dictionary[id(var_data)]
+                    lb_string_template = '%s: %'+self._precision_string+';\n'
+                    output_file.write(lb_string_template
+                                      % (name_to_output, var_data_lb))
+
+        if LowerBoundHeader:
+            output_file.write("}\n\n")
+
+        #
+        # UPPER_BOUNDS
+        #
+
+        UpperBoundHeader = False
+        for block in all_blocks_list:
+            for var_data in active_components_data_var[id(block)]:
+
+                if id(var_data) not in referenced_variable_ids:
+                    continue
+
+                if var_data.fixed:
+                    if output_fixed_variable_bounds:
+                        var_data_ub = var_data.value
+                    else:
+                        var_data_ub = None
+                else:
+                    var_data_ub = None
+                    if var_data.has_ub():
+                        var_data_ub = self._get_bound(var_data.ub)
+
+                if var_data_ub is not None:
+                    if UpperBoundHeader is False:
+                        output_file.write("UPPER_BOUNDS{\n")
+                        UpperBoundHeader = True
+                    name_to_output = object_symbol_dictionary[id(var_data)]
+                    ub_string_template = '%s: %'+self._precision_string+';\n'
+                    output_file.write(ub_string_template
+                                      % (name_to_output, var_data_ub))
+
+        if UpperBoundHeader:
+            output_file.write("}\n\n")
+
+        #
+        # BRANCHING_PRIORITIES
+        #
+
+        # Specifyig priorities requires that the pyomo model has established an
+        # EXTERNAL, float suffix called 'branching_priorities' on the model
+        # object, indexed by the relevant variable
+        BranchingPriorityHeader = False
+        for suffix in branching_priorities_suffixes:
+            for var_data, priority in iteritems(suffix):
+                if id(var_data) not in referenced_variable_ids:
+                    continue
+                if priority is not None:
+                    if not BranchingPriorityHeader:
+                        output_file.write('BRANCHING_PRIORITIES{\n')
+                        BranchingPriorityHeader = True
+                    name_to_output = object_symbol_dictionary[id(var_data)]
+                    output_file.write(name_to_output+': '+str(priority)+';\n')
+
+        if BranchingPriorityHeader:
+            output_file.write("}\n\n")
+
+        #
+        # Now write the objective and equations section
+        #
+        output_file.write(equation_section_stream.getvalue())
 
         #
         # STARTING_POINT
@@ -739,6 +801,10 @@ class ProblemWriter_bar(AbstractProblemWriter):
         string_template = '%s: %'+self._precision_string+';\n'
         for block in all_blocks_list:
             for var_data in active_components_data_var[id(block)]:
+
+                if id(var_data) not in referenced_variable_ids:
+                    continue
+
                 starting_point = var_data.value
                 if starting_point is not None:
                     var_name = object_symbol_dictionary[id(var_data)]
