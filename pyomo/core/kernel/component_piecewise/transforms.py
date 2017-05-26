@@ -63,7 +63,9 @@ def piecewise(breakpoints,
               repn='sos2',
               validate=True,
               simplify=True,
-              **kwds):
+              equal_slopes_tolerance=1e-6,
+              require_bounded_input_variable=True,
+              require_variable_domain_coverage=True):
     """
     Models a single-variate piecewise linear function.
 
@@ -125,10 +127,28 @@ def piecewise(breakpoints,
             :const:`True`. Validation is required to perform
             simplification, so this keyword is ignored when
             the :attr:`validate` keyword is :attr:`False`.
-        **kwds: Additional keywords are passed to the
-            validate method when the :attr:`validate`
-            keyword is :const:`True`; otherwise, they are
-            ignored.
+        equal_slopes_tolerance (float): Tolerance used check
+            if consecutive slopes are nearly equal. If any
+            are found, validation will fail. Default is
+            1e-6. This keyword is ignored when the
+            :attr:`validate` keyword is :attr:`False`.
+        require_bounded_input_variable (bool): Indicates if
+            the input variable is required to have finite
+            upper and lower bounds. Default is
+            :const:`True`. Setting this keyword to
+            :const:`False` can be used to allow general
+            expressions to be used as the input in place of
+            a variable. This keyword is ignored when the
+            :attr:`validate` keyword is :attr:`False`.
+        require_variable_domain_coverage (bool): Indicates
+            if the function domain (defined by the endpoints
+            of the breakpoints list) needs to cover the
+            entire domain of the input variable. Default is
+            :const:`True`. Ignored for any bounds of
+            variables that are not finite, or when the input
+            is not assigned a variable. This keyword is
+            ignored when the :attr:`validate` keyword is
+            :attr:`False`.
 
     Returns:
         TransformedPiecewiseLinearFunction: a block \
@@ -157,7 +177,8 @@ def piecewise(breakpoints,
 
     if simplify and \
        (transform is not piecewise_convex):
-        ftype = func.validate(**kwds)
+        ftype = func.validate(
+            equal_slopes_tolerance=equal_slopes_tolerance)
 
         if (bound == 'eq') and \
            (ftype == characterize_function.affine):
@@ -176,7 +197,12 @@ def piecewise(breakpoints,
                      output=output,
                      bound=bound,
                      validate=validate,
-                     **kwds)
+                     equal_slopes_tolerance=\
+                        equal_slopes_tolerance,
+                     require_bounded_input_variable=\
+                        require_bounded_input_variable,
+                     require_variable_domain_coverage=\
+                        require_variable_domain_coverage)
 
 class PiecewiseLinearFunction(object):
     """A piecewise linear function
