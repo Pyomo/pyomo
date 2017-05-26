@@ -90,6 +90,41 @@ class GurobiModel(pe.ConcreteModel):
         elif isinstance(value, pe.Constraint):
             self._add_gurobipy_constraint_to_gurobi_model(name, value)
 
+    def __delattr__(self, name):
+        item = getattr(self, name)
+        if isinstance(item, pe.Var):
+            gurobipy_var = getattr(self.gmc, name)
+            if item.is_indexed():
+                index_set = item.index_set()
+                for i in index_set:
+                    child_var = gurobipy_var[i]
+                    self.gmc.model.remove(child_var)
+            else:
+                self.gmc.model.remove(gurobipy_var)
+            delattr(self.gmc, name)
+
+        elif isinstance(item, pe.ConstraintList):
+            gurobipy_con = getattr(self.gmc, name)
+            for child_con in gurobipy_con:
+                self.gmc.model.remove(child_con)
+            delattr(self.gmc, name)
+
+        elif isinstance(item, pe.Constraint):
+            gurobipy_con = getattr(self.gmc, name)
+            if item.is_indexed():
+                index_set = item.index_set()
+                for i in index_set:
+                    child_con = gurobipy_con[i]
+                    if 'Awaiting Model Update' in str(child_con):
+                        self.gmc.model.update()
+                    self.gmc.model.remove(child_con)
+            else:
+                self.gmc.model.remove(gurobipy_con)
+            delattr(self.gmc, name)
+
+        super(GurobiModel, self).__delattr__(name)
+
+
     def _add_gurobipy_var_to_gurobi_model(self, name, value):
         if value.is_indexed():
             index_set = list(value.index_set())
