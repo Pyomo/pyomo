@@ -414,7 +414,6 @@ class _GeneralVarData(_VarData):
         """Sets the fixed indicator to False."""
         self.fixed = False
 
-
     free = unfix
 
 class Var(IndexedComponent):
