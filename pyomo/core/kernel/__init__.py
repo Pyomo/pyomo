@@ -133,9 +133,11 @@ def pprint(obj, indent=0):
         if indent > 0:
             prefix = (" "*indent)+" - "
         # not a block
+        clsname = obj.__class__.__name__
         if obj.ctype is pyomo.core.base.Var:
-            print(prefix+"%s: variable(value=%s, bounds=(%s,%s), domain_type=%s, fixed=%s, stale=%s)"
+            print(prefix+"%s: %s(value=%s, bounds=(%s,%s), domain_type=%s, fixed=%s, stale=%s)"
                   % (str(obj),
+                     clsname,
                      obj.value,
                      obj.lb,
                      obj.ub,
@@ -143,22 +145,24 @@ def pprint(obj, indent=0):
                      obj.fixed,
                      obj.stale))
         elif obj.ctype is pyomo.core.base.Constraint:
-              print(prefix+"%s: constraint(active=%s, expr=%s)"
+              print(prefix+"%s: %s(active=%s, expr=%s)"
                   % (str(obj),
+                     clsname,
                      obj.active,
                      str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Objective:
-            print(prefix+"%s: objective(active=%s, expr=%s)"
-                  % (str(obj), obj.active, str(obj.expr)))
+            print(prefix+"%s: %s(active=%s, expr=%s)"
+                  % (str(obj), clsname, obj.active, str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Expression:
-            print(prefix+"%s: expression(expr=%s)"
-                  % (str(obj), str(obj.expr)))
+            print(prefix+"%s: %s(expr=%s)"
+                  % (str(obj), clsname, str(obj.expr)))
         elif obj.ctype is pyomo.core.base.Param:
-            print(prefix+"%s: parameter(value=%s)"
-                  % (str(obj), str(obj.value)))
+            print(prefix+"%s: %s(value=%s)"
+                  % (str(obj), clsname, str(obj.value)))
         elif obj.ctype is pyomo.core.base.SOSConstraint:
-            print(prefix+"%s: sos(active=%s, level=%s, entries=%s)"
+            print(prefix+"%s: %s(active=%s, level=%s, entries=%s)"
                   % (str(obj),
+                     clsname,
                      obj.active,
                      obj.level,
                      str(["(%s,%s)" % (str(v), w)
@@ -166,8 +170,8 @@ def pprint(obj, indent=0):
                                          obj.weights)])))
         else:
             assert obj.ctype is pyomo.core.base.Suffix
-            print(prefix+"%s: suffix(size=%s)"
-                  % (str(obj.name), str(len(obj))))
+            print(prefix+"%s: %s(size=%s)"
+                  % (str(obj.name), clsname,str(len(obj))))
     else:
         # a block
         for i, block in enumerate(obj.blocks()):
