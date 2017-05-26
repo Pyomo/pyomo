@@ -1862,6 +1862,11 @@ class _Test_block(_Test_block_base):
         self.assertIs(c.parent, None)
         b.b = c
         self.assertIs(c.parent, b)
+        b.x = 2
+        self.assertTrue(hasattr(b, 'x'))
+        self.assertEqual(b.x, 2)
+        del b.x
+        self.assertTrue(not hasattr(b, 'x'))
 
     def test_collect_ctypes(self):
         b = block()
@@ -2079,6 +2084,11 @@ class _Test_tiny_block(_Test_block_base):
         self.assertIs(c.parent, None)
         b.b = c
         self.assertIs(c.parent, b)
+        b.x = 2
+        self.assertTrue(hasattr(b, 'x'))
+        self.assertEqual(b.x, 2)
+        del b.x
+        self.assertTrue(not hasattr(b, 'x'))
 
     def test_staticblock_setattr(self):
         b = _MyBlockBase()

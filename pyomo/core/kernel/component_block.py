@@ -1210,11 +1210,6 @@ class tiny_block(_block_base, IBlockStorage):
         self._active = True
         self._order = []
 
-    def _getattrs(self):
-        """Returns all modeling objects on this block."""
-        for key in self._order:
-            yield key, getattr(self, key)
-
     def __setattr__(self, name, obj):
         if hasattr(obj, '_is_categorized_object'):
             if obj._parent is None:
@@ -1264,8 +1259,11 @@ class tiny_block(_block_base, IBlockStorage):
             obj._parent = None
             for ndx, key in enumerate(self._order):
                 if getattr(self, key) is obj:
-                    del self._order[ndx]
                     break
+            else:        #pragma:nocover
+                # shouldn't happen
+                assert False
+            del self._order[ndx]
             # children that are not of type
             # IActiveObject retain the active status
             # of their parent, which is why the default
@@ -1290,8 +1288,8 @@ class tiny_block(_block_base, IBlockStorage):
                 this container
         """
         if getattr(child, "parent", None) is self:
-            for key, obj in self._getattrs():
-                if obj is child:
+            for key in self._order:
+                if getattr(self, key) is child:
                     return key
         raise ValueError
 
@@ -1320,10 +1318,9 @@ class tiny_block(_block_base, IBlockStorage):
         Returns:
             iterator of objects or (key,object) tuples
         """
-        for key, child in self._getattrs():
-            if hasattr(child, '_is_categorized_object') and \
-               ((ctype is _no_ctype) or \
-                (child.ctype == ctype)):
+        for key in self._order:
+            child = getattr(self, key)
+            if (ctype is _no_ctype) or (child.ctype == ctype):
                 if return_key:
                     yield key, child
                 else:
