@@ -14,7 +14,6 @@
 
 import logging
 import itertools
-from pyutilib.math import infinity
 
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -289,7 +288,7 @@ class ProblemWriter_bar(AbstractProblemWriter):
             for var_data in active_components_data_var[id(block)]:
 
                 if var_data.is_continuous():
-                    if (var_data.lb is not None) and \
+                    if var_data.has_lb() and \
                        (self._get_bound(var_data.lb) >= 0):
                         TypeList = PosVars
                     else:
@@ -343,9 +342,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 if var_data.fixed:
                     var_data_lb = var_data.value
                 else:
-                    var_data_lb = self._get_bound(var_data.lb)
-                    if var_data_lb == -infinity:
-                        var_data_lb = None
+                    var_data_lb = None
+                    if var_data.has_lb():
+                        var_data_lb = self._get_bound(var_data.lb)
 
                 if var_data_lb is not None:
                     if LowerBoundHeader is False:
@@ -369,9 +368,9 @@ class ProblemWriter_bar(AbstractProblemWriter):
                 if var_data.fixed:
                     var_data_ub = var_data.value
                 else:
-                    var_data_ub = self._get_bound(var_data.ub)
-                    if var_data_ub == infinity:
-                        var_data_ub = None
+                    var_data_ub = None
+                    if var_data.has_ub():
+                        var_data_ub = self._get_bound(var_data.ub)
 
                 if var_data_ub is not None:
                     if UpperBoundHeader is False:
@@ -432,6 +431,12 @@ class ProblemWriter_bar(AbstractProblemWriter):
                                                                 active=True,
                                                                 sort=sorter,
                                                                 descend_into=False):
+
+
+                if (not constraint_data.has_lb()) and \
+                   (not constraint_data.has_ub()):
+                    assert not constraint_data.equality
+                    continue # non-binding, so skip
 
                 if (not _skip_trivial(constraint_data)) and \
                    (constraint_data not in non_standard_eqns):
@@ -630,22 +635,22 @@ class ProblemWriter_bar(AbstractProblemWriter):
                               % self._get_bound(constraint_data.upper))
 
             # Greater than constraint
-            elif constraint_data.upper is None:
+            elif not constraint_data.has_ub():
                 eqn_rhs = ' >= ' + \
                           str(string_template
                               % self._get_bound(constraint_data.lower))
                 eqn_lhs = ''
 
             # Less than constraint
-            elif constraint_data.lower is None:
+            elif not constraint_data.has_lb():
                 eqn_rhs = ' <= ' + \
                           str(string_template
                               % self._get_bound(constraint_data.upper))
                 eqn_lhs = ''
 
             # Double-sided constraint
-            elif (constraint_data.upper is not None) and \
-                 (constraint_data.lower is not None):
+            elif constraint_data.has_lb() and \
+                 constraint_data.has_ub():
                 eqn_lhs = str(string_template
                               % self._get_bound(constraint_data.lower)) + \
                           ' <= '

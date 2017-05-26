@@ -17,7 +17,6 @@ import math
 
 import pyutilib.services
 from pyutilib.misc import Bunch, Options
-from pyutilib.math import infinity
 
 import pyomo.util.plugin
 from pyomo.opt.base import *
@@ -112,12 +111,12 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                 # compiled out of any description of the constraints
                 return
             else:
-                if var_data.lb is None:
+                if not var_data.has_lb():
                     var_lb = -CPLEXDirect._cplex_module.infinity
                 else:
                     var_lb = value(var_data.lb)
 
-                if var_data.ub is None:
+                if not var_data.has_ub():
                     var_ub = CPLEXDirect._cplex_module.infinity
                 else:
                     var_ub= value(var_data.ub)
@@ -339,12 +338,12 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
             self._cplex_variable_ids[var_name] = len(self._cplex_variable_ids)
 
-            if (var_data.lb is None) or (var_data.lb == -infinity):
+            if not var_data.has_lb():
                 var_lbs.append(-CPLEXDirect._cplex_module.infinity)
             else:
                 var_lbs.append(value(var_data.lb))
 
-            if (var_data.ub is None) or (var_data.ub == infinity):
+            if not var_data.has_ub():
                 var_ubs.append(CPLEXDirect._cplex_module.infinity)
             else:
                 var_ubs.append(value(var_data.ub))
@@ -405,8 +404,9 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                                                     active=True,
                                                     descend_into=False):
 
-                if (con.lower is None) and \
-                   (con.upper is None):
+                if (not con.has_lb()) and \
+                   (not con.has_ub()):
+                    assert not con.equality
                     continue  # not binding at all, don't bother
 
                 con_repn = None
@@ -469,17 +469,19 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                         qsenses.append('E')
                         qrhss.append(self._get_bound(con.lower) - offset)
 
-                    elif (con.lower is not None) and (con.upper is not None):
+                    elif con.has_lb() and con.has_ub():
+
                         raise RuntimeError(
                             "The CPLEXDirect plugin can not translate range "
                             "constraints containing quadratic expressions.")
 
-                    elif con.lower is not None:
-                        assert con.upper is None
+                    elif con.has_lb():
+                        assert not con.has_ub()
                         qsenses.append('G')
                         qrhss.append(self._get_bound(con.lower) - offset)
 
                     else:
+                        assert con.has_ub()
                         qsenses.append('L')
                         qrhss.append(self._get_bound(con.upper) - offset)
 
@@ -496,7 +498,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                         rhss.append(self._get_bound(con.lower) - offset)
                         range_values.append(0.0)
 
-                    elif (con.lower is not None) and (con.upper is not None):
+                    elif con.has_lb() and con.has_ub():
                         # ranged constraint.
                         senses.append('R')
                         lower_bound = self._get_bound(con.lower) - offset
@@ -504,12 +506,13 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                         rhss.append(lower_bound)
                         range_values.append(upper_bound - lower_bound)
 
-                    elif con.lower is not None:
+                    elif con.has_lb():
                         senses.append('G')
                         rhss.append(self._get_bound(con.lower) - offset)
                         range_values.append(0.0)
 
                     else:
+                        assert con.has_ub()
                         senses.append('L')
                         rhss.append(self._get_bound(con.upper) - offset)
                         range_values.append(0.0)

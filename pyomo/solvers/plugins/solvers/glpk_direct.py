@@ -175,12 +175,13 @@ class GLPKDirect ( OptSolver ):
                     continue
 
                 lb = ub = 0.0
-                if var.lb is None and var.ub is None:
+                if (not var.has_lb()) and \
+                   (not var.has_ub()):
                     var_type = GLP_FR
-                elif var.lb is None:
+                elif not var.has_lb():
                     var_type = GLP_UB
                     ub = value(var.ub)
-                elif var.ub is None:
+                elif not var.has_ub():
                     var_type = GLP_LO
                     lb = value(var.lb)
                 else:
@@ -218,7 +219,8 @@ class GLPKDirect ( OptSolver ):
             for ii in constraint_set:
                 constraint = constraint_set[ ii ]
                 if not constraint.active: continue
-                elif constraint.lower is None and constraint.upper is None:
+                elif (not constraint.has_lb()) and \
+                     (not constraint.has_ub()):
                     continue
 
                 expression = model_canonical_repn.get(constraint)
@@ -237,10 +239,10 @@ class GLPKDirect ( OptSolver ):
                 if constraint.equality:
                     var_type = GLP_FX    # Fixed
                     lbound = ubound = constraint.lower() - offset
-                elif constraint.lower is None:
+                elif not constraint.has_lb():
                     var_type = GLP_UP    # Upper bounded only
                     ubound += constraint.upper()
-                elif constraint.upper is None:
+                elif not constraint.has_ub():
                     var_type = GLP_LO    # Lower bounded only
                     lbound += constraint.lower()
                 else:

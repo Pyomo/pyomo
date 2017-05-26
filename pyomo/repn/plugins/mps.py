@@ -19,7 +19,6 @@ import operator
 from six import iteritems, iterkeys, StringIO
 from six.moves import xrange
 
-from pyutilib.math import infinity
 from pyutilib.misc import PauseGC
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -522,8 +521,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 bound = _get_bound(bound) - offset
                 rhs_data.append((label, _no_negative_zero(bound)))
             else:
-                if constraint_data.lower is not None:
-                    if constraint_data.upper is not None:
+                if constraint_data.has_lb():
+                    if constraint_data.has_ub():
                         label = 'r_l_' + con_symbol + '_'
                     else:
                         label = 'c_l_' + con_symbol + '_'
@@ -539,10 +538,10 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     bound = _get_bound(bound) - offset
                     rhs_data.append((label, _no_negative_zero(bound)))
                 else:
-                    assert constraint_data.upper is not None
+                    assert constraint_data.has_ub()
 
-                if constraint_data.upper is not None:
-                    if constraint_data.lower is not None:
+                if constraint_data.has_ub():
+                    if constraint_data.has_lb():
                         label = 'r_u_' + con_symbol + '_'
                     else:
                         label = 'c_u_' + con_symbol + '_'
@@ -558,7 +557,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     bound = _get_bound(bound) - offset
                     rhs_data.append((label, _no_negative_zero(bound)))
                 else:
-                    assert constraint_data.lower is not None
+                    assert constraint_data.has_lb()
 
         if len(column_data[-1]) > 0:
             # ONE_VAR_CONSTANT = 1
@@ -674,8 +673,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                 # convert any -0 to 0 to make baseline diffing easier
                 vardata_lb = _no_negative_zero(_get_bound(vardata.lb))
                 vardata_ub = _no_negative_zero(_get_bound(vardata.ub))
-                unbounded_lb = (vardata_lb is None) or (vardata_lb == -infinity)
-                unbounded_ub = (vardata_ub is None) or (vardata_ub == infinity)
+                unbounded_lb = not vardata.has_lb()
+                unbounded_ub = not vardata.has_ub()
                 treat_as_integer = False
                 if vardata.is_binary():
                     if (vardata_lb == 0) and (vardata_ub == 1):

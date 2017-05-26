@@ -26,7 +26,6 @@ import os
 import time
 
 from pyutilib.misc import PauseGC
-from pyutilib.math import infinity
 
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -919,14 +918,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 L = None
                 U = None
-                if constraint_data.lower is not None:
+                if constraint_data.has_lb():
                     L = _get_bound(constraint_data.lower)
                 else:
-                    assert constraint_data.upper is not None
-                if constraint_data.upper is not None:
+                    assert constraint_data.has_ub()
+                if constraint_data.has_ub():
                     U = _get_bound(constraint_data.upper)
                 else:
-                    assert constraint_data.lower is not None
+                    assert constraint_data.has_lb()
                 if constraint_data.equality:
                     assert L == U
 
@@ -1031,7 +1030,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if var.is_binary():
                 L = var.lb
                 U = var.ub
-                if L is None or U is None:
+                if (L is None) or (U is None):
                     raise ValueError("Variable " + str(var.name) +\
                                      "is binary, but does not have lb and ub set")
                 LinearVarsBool.add(var_ID)
@@ -1578,12 +1577,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     raise ValueError("Variable cannot be fixed to a value of None.")
                 L = U = _get_bound(var.value)
             else:
-                L = _get_bound(var.lb)
-                if L == -infinity:
-                    L = None
-                U = _get_bound(var.ub)
-                if U == infinity:
-                    U = None
+                L = None
+                if var.has_lb():
+                    L = _get_bound(var.lb)
+                U = None
+                if var.has_ub():
+                    U = _get_bound(var.ub)
             if L is not None:
                 if U is not None:
                     if L == U:

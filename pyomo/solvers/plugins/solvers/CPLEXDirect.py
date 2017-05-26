@@ -19,7 +19,6 @@ import math
 
 import pyutilib.services
 from pyutilib.misc import Bunch, Options
-from pyutilib.math import infinity
 
 import pyomo.util.plugin
 from pyomo.opt.base import *
@@ -419,11 +418,11 @@ class CPLEXDirect(OptSolver):
             var_names.append(symbol_map.getSymbol( var, labeler ))
             var_symbol_pairs.append((var, varname))
 
-            if (var.lb is None) or (var.lb == -infinity):
+            if not var.has_lb():
                 var_lbs.append(-CPLEXDirect._cplex_module.infinity)
             else:
                 var_lbs.append(value(var.lb))
-            if (var.ub is None) or (var.ub == infinity):
+            if not var.has_ub():
                 var_ubs.append(CPLEXDirect._cplex_module.infinity)
             else:
                 var_ubs.append(value(var.ub))
@@ -584,8 +583,9 @@ class CPLEXDirect(OptSolver):
                                                     active=True,
                                                     descend_into=False):
 
-                if (con.lower is None) and \
-                   (con.upper is None):
+                if (not con.has_lb()) and \
+                   (not con.has_ub()):
+                    assert not con.equality
                     continue  # not binding at all, don't bother
 
                 con_repn = None
@@ -647,17 +647,18 @@ class CPLEXDirect(OptSolver):
                         qsenses.append('E')
                         qrhss.append(self._get_bound(con.lower) - offset)
 
-                    elif (con.lower is not None) and (con.upper is not None):
+                    elif con.has_lb() and con.has_ub():
                         raise RuntimeError(
                             "The CPLEXDirect plugin can not translate range "
                             "constraints containing quadratic expressions.")
 
-                    elif con.lower is not None:
-                        assert con.upper is None
+                    elif con.has_lb():
+                        assert not con.has_ub()
                         qsenses.append('G')
                         qrhss.append(self._get_bound(con.lower) - offset)
 
                     else:
+                        assert con.has_ub()
                         qsenses.append('L')
                         qrhss.append(self._get_bound(con.upper) - offset)
 
@@ -674,7 +675,7 @@ class CPLEXDirect(OptSolver):
                         rhss.append(self._get_bound(con.lower) - offset)
                         range_values.append(0.0)
 
-                    elif (con.lower is not None) and (con.upper is not None):
+                    elif con.has_lb() and con.has_ub():
                         # ranged constraint.
                         senses.append('R')
                         lower_bound = self._get_bound(con.lower) - offset
@@ -682,12 +683,13 @@ class CPLEXDirect(OptSolver):
                         rhss.append(lower_bound)
                         range_values.append(upper_bound - lower_bound)
 
-                    elif con.lower is not None:
+                    elif con.has_lb():
                         senses.append('G')
                         rhss.append(self._get_bound(con.lower) - offset)
                         range_values.append(0.0)
 
                     else:
+                        assert con.has_ub()
                         senses.append('L')
                         rhss.append(self._get_bound(con.upper) - offset)
                         range_values.append(0.0)

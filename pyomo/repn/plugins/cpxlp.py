@@ -19,7 +19,6 @@ import operator
 from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
 
-from pyutilib.math import infinity
 from pyutilib.misc import PauseGC
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -693,8 +692,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                   % (_no_negative_zero(bound)))
                 output_file.write("\n")
             else:
-                if constraint_data.lower is not None:
-                    if constraint_data.upper is not None:
+                if constraint_data.has_lb():
+                    if constraint_data.has_ub():
                         label = 'r_l_' + con_symbol + '_'
                     else:
                         label = 'c_l_' + con_symbol + '_'
@@ -711,10 +710,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     output_file.write(geq_string_template
                                       % (_no_negative_zero(bound)))
                 else:
-                    assert constraint_data.upper is not None
+                    assert constraint_data.has_ub()
 
-                if constraint_data.upper is not None:
-                    if constraint_data.lower is not None:
+                if constraint_data.has_ub():
+                    if constraint_data.has_lb():
                         label = 'r_u_' + con_symbol + '_'
                     else:
                         label = 'c_u_' + con_symbol + '_'
@@ -731,7 +730,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     output_file.write(leq_string_template
                                       % (_no_negative_zero(bound)))
                 else:
-                    assert constraint_data.lower is not None
+                    assert constraint_data.has_lb()
 
         if not have_nontrivial:
             logger.warning('Empty constraint block written in LP format '  \
@@ -857,7 +856,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             # conflict with Pyomo, which assumes -inf and +inf
             # (which we would argue is more rational).
             output_file.write("   ")
-            if (vardata_lb is not None) and (vardata_lb != -infinity):
+            if vardata.has_lb():
                 output_file.write(lb_string_template
                                   % (_no_negative_zero(vardata_lb)))
             else:
@@ -869,7 +868,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     "numeric values expressed in scientific notation")
 
             output_file.write(name_to_output)
-            if (vardata_ub is not None) and (vardata_ub != infinity):
+            if vardata.has_ub():
                 output_file.write(ub_string_template
                                   % (_no_negative_zero(vardata_ub)))
             else:
