@@ -64,7 +64,7 @@ def guess_format(filename):
     formats['jsn']=ResultsFormat.json
     formats['json']=ResultsFormat.json
     formats['results']=ResultsFormat.yaml
-    for fmt in formats:
-        if filename.endswith('.'+fmt):
-            return formats[fmt]
-    return None
+    if filename:
+        return formats.get(filename.split('.')[-1].strip(), None)
+    else:
+        return None
