@@ -3,8 +3,10 @@ The classes defined here are meant to facilitate the direct use of gurobipy thro
 """
 import pyomo
 import pyomo.environ as pe
-import gurobipy
-
+try:
+    import gurobipy
+except:
+    pass
 
 _using_pyomo4_trees = False
 if pyomo.core.base.expr_common.mode == pyomo.core.base.expr_common.Mode.pyomo4_trees:
@@ -26,10 +28,11 @@ def get_gurobipy_expr_from_pyomo_expr(expr):
     expr_type = type(expr)
     if expr.is_expression():
         if expr_type is pyomo.core.base.expr._SumExpression:
-            return sum(expr._coef[i] * get_gurobipy_expr_from_pyomo_expr(expr._args[i]) for i in range(len(expr._args)))
+            return expr._const + sum(expr._coef[i] * get_gurobipy_expr_from_pyomo_expr(expr._args[i]) for i in range(len(expr._args)))
         elif expr_type is pyomo.core.base.expr._ProductExpression:
             new_expr = expr._coef
-            for i, child in enumerate(expr._args):
+            assert len(expr._denominator) == 0
+            for i, child in enumerate(expr._numerator):
                 new_expr *= get_gurobipy_expr_from_pyomo_expr(child)
             return new_expr
         elif expr_type is pyomo.core.base.expr._PowExpression:
@@ -41,6 +44,9 @@ def get_gurobipy_expr_from_pyomo_expr(expr):
         elif expr_type is pyomo.core.base.expr._InequalityExpression:
             assert len(expr._args) == 2
             return get_gurobipy_expr_from_pyomo_expr(expr._args[0]) <= get_gurobipy_expr_from_pyomo_expr(expr._args[1])
+        elif isinstance(expr, pyomo.core.base.expression.Expression):
+            assert len(expr._args) == 1
+            return get_gurobipy_expr_from_pyomo_expr(expr._args[0])
         else:
             raise ValueError('Unsupported expression type: {0}'.format(expr_type))
     elif isinstance(expr, pyomo.core.base.var._VarData):
@@ -90,6 +96,15 @@ class GurobiModel(pe.ConcreteModel):
         elif isinstance(value, pe.Constraint):
             self._add_gurobipy_constraint_to_gurobi_model(name, value)
 
+        elif isinstance(value, pe.Objective):
+            if value.sense == 1:
+                sense = gurobipy.GRB.MINIMIZE
+            elif value.sense == -1:
+                sense = gurobipy.GRB.MAXIMIZE
+            else:
+                raise ValueError('objective sense not recognized.')
+            self.gmc.model.setObjective(get_gurobipy_expr_from_pyomo_expr(value.expr), sense=sense)
+
     def __delattr__(self, name):
         item = getattr(self, name)
         if isinstance(item, pe.Var):
@@ -123,7 +138,6 @@ class GurobiModel(pe.ConcreteModel):
             delattr(self.gmc, name)
 
         super(GurobiModel, self).__delattr__(name)
-
 
     def _add_gurobipy_var_to_gurobi_model(self, name, value):
         if value.is_indexed():
@@ -178,3 +192,9 @@ class GurobiModel(pe.ConcreteModel):
         gurobipy_con = self.gmc.model.addConstr(get_gurobipy_expr_from_pyomo_expr(value.expr), name=name+str(index))
         con[index] = gurobipy_con
         setattr(value, 'gurobipy_con', gurobipy_con)
+
+    def solve(self):
+        self.gmc.model.optimize()
+        for pyomo_var in self.component_data_objects(pe.Var, descend_into=True):
+            gurobipy_var = pyomo_var.gurobipy_var
+            pyomo_var.value = gurobipy_var.x
