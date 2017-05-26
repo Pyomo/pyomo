@@ -1104,13 +1104,11 @@ class IndexedConstraint(Constraint):
         cdata = self._check_skip_add(index, expr)
         if cdata is not None:
             self._data[index] = cdata
-            self._index.add(index)
         return cdata
 
     # This should be supported by all indexed components
     def __delitem__(self, index):
         del self._data[index]
-        self._index.remove(index)
 
 class ConstraintList(IndexedConstraint):
     """
