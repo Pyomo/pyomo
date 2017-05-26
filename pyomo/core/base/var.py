@@ -70,6 +70,18 @@ class _VarData(ComponentData, NumericValue):
     # Interface
     #
 
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        return not ((self.lb is None) or \
+                    (self.lb == float('-inf')))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        return not ((self.ub is None) or \
+                    (self.ub == float('inf')))
+
     @property
     def bounds(self):
         """Returns the tuple (lower bound, upper bound)."""

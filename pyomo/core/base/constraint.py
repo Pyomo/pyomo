@@ -192,6 +192,19 @@ class _ConstraintData(ActiveComponentData):
             return None
         return self.body(exception=exception)
 
+
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        return not ((self.lower is None) or \
+                    (self.lower == float('-inf')))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        return not ((self.upper is None) or \
+                    (self.upper == float('inf')))
+
     def lslack(self):
         """
         Returns the value of f(x)-L for constraints of the form:
