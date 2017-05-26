@@ -67,8 +67,6 @@ class QCP_simple_nosuffixes(QCP_simple):
 @register_model
 class QCP_simple_kernel(QCP_simple):
 
-    test_pickling = False
-
     def _generate_model(self):
         self.model = pmo.block()
         model = self.model
@@ -88,3 +86,14 @@ class QCP_simple_kernel(QCP_simple):
         model.c = pmo.constraint_dict()
         model.c[1] = pmo.constraint(lb=0, body=-model.q1**2 + model.fixed_var)
         model.c[2] = pmo.constraint(body=model.q2**2 + model.fixed_var, ub=5)
+
+@register_model
+class QCP_simple_nosuffixes_kernel(QCP_simple_kernel):
+
+    description = "QCP_simple_nosuffixes"
+    test_pickling = False
+
+    def __init__(self):
+        QCP_simple.__init__(self)
+        self.disable_suffix_tests = True
+        self.add_results("QCP_simple.json")
