@@ -289,7 +289,7 @@ class _GeneralConstraintData(_ConstraintData):
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ('_body', '_lower', '_upper', '_equality', 'gurobipy_con')
+    __slots__ = ('_body', '_lower', '_upper', '_equality')
 
     def __init__(self,  expr, component=None):
         #
@@ -301,7 +301,6 @@ class _GeneralConstraintData(_ConstraintData):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
         self._active = True
-        self.gurobipy_con = None
 
         self._body = None
         self._lower = None
@@ -681,7 +680,6 @@ class Constraint(ActiveIndexedComponent):
     def __init__(self, *args, **kwargs):
         self.rule = kwargs.pop('rule', None)
         self._init_expr = kwargs.pop('expr', None)
-        self.gurobi_model = None
         #if self.rule is None and self._init_expr is None:
         #    raise ValueError("A simple Constraint component requires a 'rule' or 'expr' option")
         kwargs.setdefault('ctype', Constraint)
@@ -1107,8 +1105,6 @@ class IndexedConstraint(Constraint):
         if cdata is not None:
             self._data[index] = cdata
             self._index.add(index)
-        if self.gurobi_model is not None:
-            self.gurobi_model._new_constraint_for_indexed_constraint(self.name, index, cdata)
         return cdata
 
     # This should be supported by all indexed components
@@ -1205,8 +1201,6 @@ class ConstraintList(IndexedConstraint):
         self._index.add(self._nconstraints)
         if cdata is not None:
             self._data[self._nconstraints] = cdata
-        if self.gurobi_model is not None:
-            self.gurobi_model._new_constraint_for_constraint_list(self.name, cdata)
         return cdata
 
 register_component(Constraint, "General constraint expressions.")
