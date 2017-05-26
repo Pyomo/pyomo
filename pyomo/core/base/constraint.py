@@ -196,14 +196,16 @@ class _ConstraintData(ActiveComponentData):
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
-        return not ((self.lower is None) or \
-                    (self.lower == float('-inf')))
+        lb = self.lower
+        return (lb is not None) and \
+            (value(lb) != float('-inf'))
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
-        return not ((self.upper is None) or \
-                    (self.upper == float('inf')))
+        ub = self.upper
+        return (ub is not None) and \
+            (value(ub) != float('inf'))
 
     def lslack(self):
         """

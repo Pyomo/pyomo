@@ -439,6 +439,8 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.lb, None)
         self.assertEqual(v.ub, None)
         self.assertEqual(v.bounds, (None, None))
+        self.assertEqual(v.has_lb(), False)
+        self.assertEqual(v.has_ub(), False)
 
         v.lb = 0
         v.ub = 1
@@ -542,6 +544,104 @@ class Test_variable(unittest.TestCase):
         self.assertEqual(v.lb, None)
         self.assertEqual(v.ub, None)
         self.assertEqual(v.bounds, (None, None))
+        self.assertEqual(v.has_lb(), False)
+        self.assertEqual(v.has_ub(), False)
+
+        v.bounds = (float('-inf'), float('inf'))
+        self.assertEqual(v.domain_type, RealSet)
+        self.assertEqual(v.is_continuous(), True)
+        self.assertEqual(v.is_discrete(), False)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), False)
+        self.assertEqual(v.lb, float('-inf'))
+        self.assertEqual(v.ub, float('inf'))
+        self.assertEqual(v.bounds, (float('-inf'),float('inf')))
+        self.assertEqual(v.has_lb(), False)
+        self.assertEqual(v.has_ub(), False)
+
+        pL = parameter()
+        v.lb = pL
+        pU = parameter()
+        v.ub = pU
+
+        v.domain_type = IntegerSet
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        with self.assertRaises(ValueError):
+            v.is_binary()
+        self.assertEqual(v.is_integer(), True)
+        self.assertIs(v.lb, pL)
+        with self.assertRaises(ValueError):
+            v.has_lb()
+        self.assertIs(v.ub, pU)
+        with self.assertRaises(ValueError):
+            v.has_ub()
+
+        pL.value = 0
+        pU.value = 1
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), True)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb(), 0)
+        self.assertEqual(v.ub(), 1)
+        self.assertEqual(v.has_lb(), True)
+        self.assertEqual(v.has_ub(), True)
+
+        pL.value = 0
+        pU.value = 0
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), True)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb(), 0)
+        self.assertEqual(v.ub(), 0)
+
+        pL.value = 1
+        pU.value = 1
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), True)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb(), 1)
+        self.assertEqual(v.ub(), 1)
+
+        v.domain = Binary
+        pU.value = 2
+        v.ub = pU
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb, 0)
+        self.assertEqual(v.ub(), 2)
+
+        pL.value = -1
+        v.lb = pL
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb(), -1)
+        self.assertEqual(v.ub(), 2)
+
+        pL.value = float('-inf')
+        pU.value = float('inf')
+        self.assertEqual(v.domain_type, IntegerSet)
+        self.assertEqual(v.is_continuous(), False)
+        self.assertEqual(v.is_discrete(), True)
+        self.assertEqual(v.is_binary(), False)
+        self.assertEqual(v.is_integer(), True)
+        self.assertEqual(v.lb(), float('-inf'))
+        self.assertEqual(v.ub(), float('inf'))
+        self.assertEqual(v.has_lb(), False)
+        self.assertEqual(v.has_ub(), False)
 
     def test_bounds_setter(self):
         v = variable()

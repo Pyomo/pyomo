@@ -124,10 +124,6 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, 0)
 
-        #
-        # edge cases
-        #
-
         c.lb = float('inf')
         self.assertEqual(c.has_lb(), True)
         self.assertEqual(c.lb, float('inf'))
@@ -139,6 +135,82 @@ class Test_constraint(unittest.TestCase):
         self.assertEqual(c.lb, float('inf'))
         self.assertEqual(c.has_ub(), True)
         self.assertEqual(c.ub, float('-inf'))
+
+        c.rhs = float('inf')
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb, float('inf'))
+        self.assertEqual(c.has_ub(), False)
+        self.assertEqual(c.ub, float('inf'))
+
+        c.rhs = float('-inf')
+        self.assertEqual(c.has_lb(), False)
+        self.assertEqual(c.lb, float('-inf'))
+        self.assertEqual(c.has_ub(), True)
+        self.assertEqual(c.ub, float('-inf'))
+
+        c.equality = False
+        pL = parameter()
+        c.lb = pL
+        pU = parameter()
+        c.ub = pU
+
+        with self.assertRaises(ValueError):
+            self.assertEqual(c.has_lb(), False)
+        self.assertIs(c.lb, pL)
+        with self.assertRaises(ValueError):
+            self.assertEqual(c.has_ub(), False)
+        self.assertIs(c.ub, pU)
+
+        pL.value = float('-inf')
+        self.assertEqual(c.has_lb(), False)
+        self.assertEqual(c.lb(), float('-inf'))
+        with self.assertRaises(ValueError):
+            self.assertEqual(c.has_ub(), False)
+        self.assertIs(c.ub, pU)
+
+        pU.value = float('inf')
+        self.assertEqual(c.has_lb(), False)
+        self.assertEqual(c.lb(), float('-inf'))
+        self.assertEqual(c.has_ub(), False)
+        self.assertEqual(c.ub(), float('inf'))
+
+        pL.value = 0
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.has_ub(), False)
+        self.assertEqual(c.ub(), float('inf'))
+
+        pU.value = 0
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb(), 0)
+        self.assertEqual(c.has_ub(), True)
+        self.assertEqual(c.ub(), 0)
+
+        pL.value = float('inf')
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb(), float('inf'))
+        self.assertEqual(c.has_ub(), True)
+        self.assertEqual(c.ub(), 0)
+
+        pU.value = float('-inf')
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb(), float('inf'))
+        self.assertEqual(c.has_ub(), True)
+        self.assertEqual(c.ub(), float('-inf'))
+
+        pL.value = float('inf')
+        c.rhs = pL
+        self.assertEqual(c.has_lb(), True)
+        self.assertEqual(c.lb(), float('inf'))
+        self.assertEqual(c.has_ub(), False)
+        self.assertEqual(c.ub(), float('inf'))
+
+        pL.value = float('-inf')
+        c.rhs = pL
+        self.assertEqual(c.has_lb(), False)
+        self.assertEqual(c.lb(), float('-inf'))
+        self.assertEqual(c.has_ub(), True)
+        self.assertEqual(c.ub(), float('-inf'))
 
     def test_bounds_getter_setter(self):
         c = constraint()

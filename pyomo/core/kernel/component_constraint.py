@@ -148,16 +148,17 @@ class IConstraint(IComponent, _ActiveComponentMixin):
 
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
-        None or negative infinity"""
-        return not ((self.lb is None) or \
-                    (self.lb == float('-inf')))
+        :const:`None` or negative infinity"""
+        lb = self.lb
+        return (lb is not None) and \
+            (value(lb) != float('-inf'))
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
-        None or positive infinity"""
-        return not ((self.ub is None) or \
-                    (self.ub == float('inf')))
-
+        :const:`None` or positive infinity"""
+        ub = self.ub
+        return (ub is not None) and \
+            (value(ub) != float('inf'))
 
 class _MutableBoundsConstraintMixin(object):
     """

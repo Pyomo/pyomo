@@ -18,7 +18,8 @@ from pyomo.core.kernel.component_tuple import (ComponentTuple,
                                                create_component_tuple)
 from pyomo.core.kernel.component_list import (ComponentList,
                                               create_component_list)
-from pyomo.core.kernel.numvalue import NumericValue
+from pyomo.core.kernel.numvalue import (NumericValue,
+                                        value)
 from pyomo.core.kernel.set_types import (RealSet,
                                          IntegerSet,
                                          BooleanSet,
@@ -135,14 +136,16 @@ class IVariable(IComponent, NumericValue):
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
-        return not ((self.lb is None) or \
-                    (self.lb == float('-inf')))
+        lb = self.lb
+        return (lb is not None) and \
+            (value(lb) != float('-inf'))
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
-        return not ((self.ub is None) or \
-                    (self.ub == float('inf')))
+        ub = self.ub
+        return (ub is not None) and \
+            (value(ub) != float('inf'))
 
     #
     # Convenience methods mainly used by the solver
@@ -170,11 +173,12 @@ class IVariable(IComponent, NumericValue):
         """Returns :const:`True` when the domain type is
         :class:`IntegerSet` and the bounds are within
         [0,1]."""
+        lb, ub = self.bounds
         return self.is_integer() and \
-            (self.lb is not None) and \
-            (self.ub is not None) and \
-            (self.lb >= 0) and \
-            (self.ub <= 1)
+            (lb is not None) and \
+            (ub is not None) and \
+            (value(lb) >= 0) and \
+            (value(ub) <= 1)
 
 # TODO?
 #    def is_semicontinuous(self):

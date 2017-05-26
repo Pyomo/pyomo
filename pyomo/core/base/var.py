@@ -73,14 +73,16 @@ class _VarData(ComponentData, NumericValue):
     def has_lb(self):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
-        return not ((self.lb is None) or \
-                    (self.lb == float('-inf')))
+        lb = self.lb
+        return (lb is not None) and \
+            (value(lb) != float('-inf'))
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
-        return not ((self.ub is None) or \
-                    (self.ub == float('inf')))
+        ub = self.ub
+        return (ub is not None) and \
+            (value(ub) != float('inf'))
 
     @property
     def bounds(self):
