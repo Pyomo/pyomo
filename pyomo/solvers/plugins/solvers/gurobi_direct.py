@@ -357,10 +357,11 @@ class gurobi_direct ( OptSolver ):
 
                 if isinstance(obj_repn, LinearCanonicalRepn):
 
-                    if obj_repn.constant != None:
+                    if obj_repn.constant is not None:
                         obj_expr.addConstant(obj_repn.constant)
 
-                    if obj_repn.linear != None:
+                    if (obj_repn.linear is not None) and \
+                       (len(obj_repn.linear) > 0):
 
                         for i in xrange(len(obj_repn.linear)):
                             var_coefficient = obj_repn.linear[i]
@@ -426,7 +427,9 @@ class gurobi_direct ( OptSolver ):
                     continue  # not binding at all, don't bother
 
                 con_repn = None
-                if isinstance(constraint_data, LinearCanonicalRepn):
+                if constraint_data._linear_canonical_form:
+                    con_repn = constraint_data.canonical_form()
+                elif isinstance(constraint_data, LinearCanonicalRepn):
                     con_repn = constraint_data
                 else:
                     if gen_con_canonical_repn:
@@ -455,7 +458,8 @@ class gurobi_direct ( OptSolver ):
                         offset = constant
                     expr = gurobi_direct._gurobi_module.LinExpr() + offset
 
-                    if coefficients is not None:
+                    if (coefficients is not None) and \
+                       (len(coefficients) > 0):
 
                         linear_coefs = list()
                         linear_vars = list()

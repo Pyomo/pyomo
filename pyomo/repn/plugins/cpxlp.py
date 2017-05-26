@@ -31,7 +31,8 @@ from pyomo.core.base import \
      ComponentMap, is_fixed)
 from pyomo.repn import (generate_canonical_repn,
                         canonical_degree,
-                        GeneralCanonicalRepn)
+                        GeneralCanonicalRepn,
+                        LinearCanonicalRepn)
 
 logger = logging.getLogger('pyomo.core')
 
@@ -211,7 +212,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             # optimization (these might be generated on the fly)
             #
             coefficients = x.linear
-            if coefficients is not None:
+            if (coefficients is not None) and \
+               (len(coefficients) > 0):
                 variables = x.variables
 
                 # the 99% case is when the input instance is a linear
@@ -619,14 +621,21 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         sort=sortOrder,
                         descend_into=False):
 
-                    if gen_con_canonical_repn:
-                        if constraint_data._linear_canonical_form:
-                            canonical_repn = constraint_data.canonical_form()
-                        else:
+                    if (not constraint_data.has_lb()) and \
+                       (not constraint_data.has_ub()):
+                        assert not constraint_data.equality
+                        continue # non-binding, so skip
+
+                    if constraint_data._linear_canonical_form:
+                        canonical_repn = constraint_data.canonical_form()
+                    elif isinstance(constraint_data, LinearCanonicalRepn):
+                        canonical_repn = constraint_data
+                    else:
+                        if gen_con_canonical_repn:
                             canonical_repn = generate_canonical_repn(constraint_data.body)
                             block_canonical_repn[constraint_data] = canonical_repn
-                    else:
-                        canonical_repn = block_canonical_repn[constraint_data]
+                        else:
+                            canonical_repn = block_canonical_repn[constraint_data]
 
                     yield constraint_data, canonical_repn
 

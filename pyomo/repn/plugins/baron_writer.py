@@ -212,8 +212,15 @@ class ProblemWriter_bar(AbstractProblemWriter):
 
         def _skip_trivial(constraint_data):
             if skip_trivial_constraints:
-                if isinstance(constraint_data, LinearCanonicalRepn):
-                    if constraint_data.variables is None:
+                if constraint_data._linear_canonical_form:
+                    repn = constraint_data.canonical_form()
+                    if (repn.variables is None) or \
+                       (len(repn.variables) == 0):
+                        return True
+                elif isinstance(constraint_data, LinearCanonicalRepn):
+                    repn = constraint_data
+                    if (repn.variables is None) or \
+                       (len(repn.variables) == 0):
                         return True
                 else:
                     if constraint_data.body.polynomial_degree() == 0:

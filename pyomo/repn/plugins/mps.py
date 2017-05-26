@@ -200,7 +200,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
         if isinstance(canonical_repn, LinearCanonicalRepn):
             constant = canonical_repn.constant
             coefficients = canonical_repn.linear
-            if coefficients is not None:
+            if (coefficients is not None) and \
+               (len(coefficients) > 0):
                 variables = canonical_repn.variables
 
                 # the 99% case is when the input instance is a linear
@@ -465,12 +466,18 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         sort=sortOrder,
                         descend_into=False):
 
-                    if isinstance(constraint_data, LinearCanonicalRepn):
+                    if (not constraint_data.has_lb()) and \
+                       (not constraint_data.has_ub()):
+                        assert not constraint_data.equality
+                        continue # non-binding, so skip
+
+                    if constraint_data._linear_canonical_form:
+                        canonical_repn = constraint_data.canonical_form()
+                    elif isinstance(constraint_data, LinearCanonicalRepn):
                         canonical_repn = constraint_data
                     else:
                         if gen_con_canonical_repn:
-                            canonical_repn = generate_canonical_repn(
-                                constraint_data.body)
+                            canonical_repn = generate_canonical_repn(constraint_data.body)
                             block_canonical_repn[constraint_data] = canonical_repn
                         else:
                             canonical_repn = block_canonical_repn[constraint_data]

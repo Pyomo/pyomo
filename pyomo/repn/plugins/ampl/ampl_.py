@@ -48,6 +48,7 @@ import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
+from pyomo.repn import LinearCanonicalRepn
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
@@ -868,24 +869,32 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                 active=True,
                                                                 sort=sorter,
                                                                 descend_into=False):
+
                 if symbolic_solver_labels:
                     conname = name_labeler(constraint_data)
                     if len(conname) > max_rowname_len:
                         max_rowname_len = len(conname)
 
-                if gen_con_ampl_repn:
-                    if constraint_data._linear_canonical_form:
-                        canonical_repn = constraint_data.canonical_form()
-                        ampl_repn = AmplRepn()
-                        ampl_repn._nonlinear_vars = tuple()
-                        ampl_repn._linear_vars = canonical_repn.variables
-                        ampl_repn._linear_terms_coef = canonical_repn.linear
-                        ampl_repn._constant = canonical_repn.constant
-                    else:
+                if constraint_data._linear_canonical_form:
+                    canonical_repn = constraint_data.canonical_form()
+                    ampl_repn = AmplRepn()
+                    ampl_repn._nonlinear_vars = tuple()
+                    ampl_repn._linear_vars = canonical_repn.variables
+                    ampl_repn._linear_terms_coef = canonical_repn.linear
+                    ampl_repn._constant = canonical_repn.constant
+                elif isinstance(constraint_data, LinearCanonicalRepn):
+                    canonical_repn = constraint_data
+                    ampl_repn = AmplRepn()
+                    ampl_repn._nonlinear_vars = tuple()
+                    ampl_repn._linear_vars = canonical_repn.variables
+                    ampl_repn._linear_terms_coef = canonical_repn.linear
+                    ampl_repn._constant = canonical_repn.constant
+                else:
+                    if gen_con_ampl_repn:
                         ampl_repn = generate_ampl_repn(constraint_data.body)
                         block_ampl_repn[constraint_data] = ampl_repn
-                else:
-                    ampl_repn = block_ampl_repn[constraint_data]
+                    else:
+                        ampl_repn = block_ampl_repn[constraint_data]
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints

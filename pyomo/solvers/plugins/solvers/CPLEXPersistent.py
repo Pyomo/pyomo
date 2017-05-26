@@ -200,7 +200,8 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                     obj_repn = block_canonical_repn[obj_data]
 
                 if (isinstance(obj_repn, LinearCanonicalRepn) and \
-                    (obj_repn.linear == None)) or \
+                    ((obj_repn.linear == None) or \
+                     (len(obj_repn.linear) == 0))) or \
                     canonical_is_constant(obj_repn):
                     print("Warning: Constant objective detected, replacing "
                           "with a placeholder to prevent solver failure.")
@@ -410,7 +411,9 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                     continue  # not binding at all, don't bother
 
                 con_repn = None
-                if isinstance(con, LinearCanonicalRepn):
+                if con._linear_canonical_form:
+                    con_repn = con.canonical_form()
+                elif isinstance(con, LinearCanonicalRepn):
                     con_repn = con
                 else:
                     if gen_con_canonical_repn:
@@ -426,8 +429,9 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                 # possible that the body of the constraint consists of only a
                 # constant, in which case the "variable" of
                 if isinstance(con_repn, LinearCanonicalRepn):
-                    if (con_repn.linear is None) and \
-                       self._skip_trivial_constraints:
+                    if self._skip_trivial_constraints and \
+                       ((con_repn.linear is None) or \
+                        (len(con_repn.linear) == 0)):
                        continue
                 else:
                     # we shouldn't come across a constant canonical repn
