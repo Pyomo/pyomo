@@ -582,15 +582,23 @@ def apply_optimizer(data, instance=None):
             keywords['file_determinism'] = data.options.model.file_determinism
         keywords['tee'] = data.options.runtime.stream_output
         keywords['timelimit'] = getattr(data.options.solvers[0].options, 'timelimit', 0)
+
+        # FIXME: solver_io and executable are not being used
+        #        in the case of a non-serial solver manager
+
         #
         # Call the solver
         #
         if solver_mngr_name == 'serial':
             #
-            # If we're running locally, then we create the optimizer and pass it into the 
-            # solver manager.
+            # If we're running locally, then we create the
+            # optimizer and pass it into the solver manager.
             #
-            with SolverFactory(solver, solver_io=data.options.solvers[0].io_format) as opt:
+            sf_kwds = {}
+            sf_kwds['solver_io'] = data.options.solvers[0].io_format
+            if data.options.solvers[0].solver_executable is not None:
+                sf_kwds['executable'] = data.options.solvers[0].solver_executable
+            with SolverFactory(solver, **sf_kwds) as opt:
                 if opt is None:
                     raise ValueError("Problem constructing solver `%s`" % str(solver))
 
