@@ -74,9 +74,7 @@ def _extract_domain_type_and_bounds(domain_type,
 
 
 class IVariable(IComponent, NumericValue):
-    """
-    The interface for optimization variables.
-    """
+    """The interface for decision variables"""
     __slots__ = ()
 
     _valid_domain_types = (RealSet, IntegerSet)
@@ -226,7 +224,53 @@ class IVariable(IComponent, NumericValue):
         return self.value
 
 class variable(IVariable):
-    """A decision variable"""
+    """A decision variable
+
+    Decision variables are used in objectives and
+    constraints to define an optimization problem.
+
+    Args:
+        domain_type: Sets the domain type of the
+            variable. Must be one of :const:`RealSet` or
+            :const:`IntegerSet`. Can be updated later by
+            assigning to the :attr:`domain_type`
+            property. The default value of :const:`None` is
+            equivalent to :const:`RealSet`, unless the
+            :attr:`domain` keyword is used.
+        domain: Sets the domain of the variable. This
+            updates the :attr:`domain_type`, :attr:`lb`, and
+            :attr:`ub` properties of the variable. The
+            default value of :const:`None` implies that this
+            keyword is ignored. This keyword can not be used
+            in combination with the :attr:`domain_type`
+            keyword.
+        lb: Sets the lower bound of the variable. Can be
+            updated later by assigning to the :attr:`lb`
+            property on the variable. Default is
+            :const:`None`, which is equivalent to
+            :const:`-inf`.
+        ub: Sets the upper bound of the variable. Can be
+            updated later by assigning to the :attr:`ub`
+            property on the variable. Default is
+            :const:`None`, which is equivalent to
+            :const:`+inf`.
+        value: Sets the value of the variable. Can be
+            updated later by assigning to the :attr:`value`
+            property on the variable. Default is
+            :const:`None`.
+        fixed (bool): Sets the fixed status of the
+            variable. Can be updated later by assigning to
+            the :attr:`fixed` property or by calling the
+            :meth:`fix` method. Default is :const:`False`.
+
+    Examples:
+        >>> # A continuous variable with infinite bounds
+        >>> x = pmo.variable()
+        >>> # A binary variable
+        >>> x = pmo.variable(domain=pmo.Binary)
+        >>> # Also a binary variable
+        >>> x = pmo.variable(domain_type=pmo.IntegerSet, lb=0, ub=1)
+    """
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None

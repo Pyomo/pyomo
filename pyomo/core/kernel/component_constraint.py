@@ -32,9 +32,7 @@ import six
 from six.moves import zip
 
 class IConstraint(IComponent, _ActiveComponentMixin):
-    """
-    The interface for optimization constraints.
-    """
+    """The interface for constraints"""
     __slots__ = ()
 
     #
@@ -83,7 +81,8 @@ class IConstraint(IComponent, _ActiveComponentMixin):
 
     @property
     def lslack(self):
-        """Lower slack (body - lb)"""
+        """Lower slack (body - lb). Returns :const:`None` if
+        a value for the body can not be computed."""
         # this method is written so that constraint
         # types that build the body expression on the
         # fly do not have to here
@@ -97,7 +96,8 @@ class IConstraint(IComponent, _ActiveComponentMixin):
 
     @property
     def uslack(self):
-        """Upper slack (ub - body)"""
+        """Upper slack (ub - body). Returns :const:`None` if
+        a value for the body can not be computed."""
         # this method is written so that constraint
         # types that build the body expression on the
         # fly do not have to here
@@ -111,7 +111,8 @@ class IConstraint(IComponent, _ActiveComponentMixin):
 
     @property
     def slack(self):
-        """min(lslack, uslack)"""
+        """min(lslack, uslack). Returns :const:`None` if a
+        value for the body can not be computed."""
         # this method is written so that constraint
         # types that build the body expression on the
         # fly do not have to here
@@ -248,7 +249,7 @@ class _MutableBoundsConstraintMixin(object):
 
     @property
     def equality(self):
-        """Returns :const:`True` when this is in equality
+        """Returns :const:`True` when this is an equality
         constraint.
 
         Disable equality by assigning
@@ -268,7 +269,61 @@ class _MutableBoundsConstraintMixin(object):
 
 class constraint(_MutableBoundsConstraintMixin,
                  IConstraint):
-    """An algebraic constraint."""
+    """A general algebraic constraint
+
+    Algebraic constraints store relational expressions
+    composed of linear or nonlinear functions involving
+    decision variables.
+
+    Args:
+        expr: Sets the relational expression for the
+            constraint. Can be updated later by assigning to
+            the :attr:`expr` property on the
+            constraint. When this keyword is used, values
+            for the :attr:`body`, :attr:`lb`, :attr:`ub`,
+            and :attr:`rhs` attributes are automatically
+            determined based on the relational expression
+            type. Default value is :const:`None`.
+        body: Sets the body of the constraint. Can be
+            updated later by assigning to the :attr:`body`
+            property on the constraint. Default is
+            :const:`None`. This keyword should not be used
+            in combination with the :attr:`expr` keyword.
+        lb: Sets the lower bound of the constraint. Can be
+            updated later by assigning to the :attr:`lb`
+            property on the constraint. Default is
+            :const:`None`, which is equivalent to
+            :const:`-inf`. This keyword should not be used
+            in combination with the :attr:`expr` keyword.
+        ub: Sets the upper bound of the constraint. Can be
+            updated later by assigning to the :attr:`ub`
+            property on the constraint. Default is
+            :const:`None`, which is equivalent to
+            :const:`+inf`. This keyword should not be used
+            in combination with the :attr:`expr` keyword.
+        rhs: Sets the right-hand side of the constraint. Can
+            be updated later by assigning to the :attr:`rhs`
+            property on the constraint. The default value of
+            :const:`None` implies that this keyword is
+            ignored. Otherwise, use of this keyword implies
+            that the :attr:`equality` property is set to
+            :const:`True`. This keyword should not be used
+            in combination with the :attr:`expr` keyword.
+
+    Examples:
+        >>> # A decision variable used to define constraints
+        >>> x = pmo.variable()
+        >>> # An upper bound constraint
+        >>> c = pmo.constraint(0.5*x <= 1)
+        >>> # (equivalent form)
+        >>> c = pmo.constraint(body=0.5*x, ub=1)
+        >>> # A range constraint
+        >>> c = pmo.constraint(lb=-1, body=0.5*x, ub=1)
+        >>> # An nonlinear equality constraint
+        >>> c = pmo.constraint(x**2 == 1)
+        >>> # (equivalent form)
+        >>> c = pmo.constraint(body=x**2, rhs=1)
+    """
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
@@ -283,8 +338,8 @@ class constraint(_MutableBoundsConstraintMixin,
 
     def __init__(self,
                  expr=None,
-                 lb=None,
                  body=None,
+                 lb=None,
                  ub=None,
                  rhs=None):
         self._parent = None
@@ -605,13 +660,62 @@ class constraint(_MutableBoundsConstraintMixin,
 #
 class linear_constraint(_MutableBoundsConstraintMixin,
                         IConstraint):
-    """
-    A linear constraint.
+    """A linear constraint
 
-    A linear constraint is defined by a list of variables
-    and coefficients, along with, bounds or a right-hand
-    side. Objects in the variables list can also be mutable
-    expressions pointing to a single variable.
+    A linear constraint stores a linear relational
+    expression defined by a list of variables and
+    coefficients. This class can be used to reduce build
+    time and memory for an optimization model. It also
+    increases the speed at which the model can be output to
+    a solver.
+
+    Args:
+        variables (list): Sets the list of variables in the
+            linear expression defining the body of the
+            constraint. Can be updated later by assigning to
+            the :attr:`variables` property on the
+            constraint.
+        coefficients (list): Sets the list of coefficients
+            for the variables in the linear expression
+            defining the body of the constraint. Can be
+            updated later by assigning to the
+            :attr:`coefficients` property on the constraint.
+        terms (list): An alternative way of initializing the
+            :attr:`variables` and :attr:`coefficients` lists
+            using an iterable of (variable, coefficient)
+            tuples. Can be updated later by assigning to the
+            :attr:`terms` property on the constraint. This
+            keyword should not be used in combination with
+            the :attr:`variables` or :attr:`coefficients`
+            keywords.
+        lb: Sets the lower bound of the constraint. Can be
+            updated later by assigning to the :attr:`lb`
+            property on the constraint. Default is
+            :const:`None`, which is equivalent to
+            :const:`-inf`.
+        ub: Sets the upper bound of the constraint. Can be
+            updated later by assigning to the :attr:`ub`
+            property on the constraint. Default is
+            :const:`None`, which is equivalent to
+            :const:`+inf`.
+        rhs: Sets the right-hand side of the constraint. Can
+            be updated later by assigning to the :attr:`rhs`
+            property on the constraint. The default value of
+            :const:`None` implies that this keyword is
+            ignored. Otherwise, use of this keyword implies
+            that the :attr:`equality` property is set to
+            :const:`True`.
+
+    Examples:
+        >>> # Decision variables used to define constraints
+        >>> x = pmo.variable()
+        >>> y = pmo.variable()
+        >>> # An upper bound constraint
+        >>> c = pmo.constraint(variables=[x,y], coefficients=[1,2], ub=1)
+        >>> # (equivalent form)
+        >>> c = pmo.constraint(terms=[(x,1), (y,2)], ub=1)
+        >>> # (equivalent form using a general constraint)
+        >>> c = pmo.constraint(x + 2*y <= 1)
     """
     # To avoid a circular import, for the time being, this
     # property will be set externally

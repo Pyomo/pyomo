@@ -193,7 +193,7 @@ class _MatrixConstraintData(IConstraint,
 
     @property
     def equality(self):
-        """Returns :const:`True` when this is in equality
+        """Returns :const:`True` when this is an equality
         constraint.
 
         Disable equality by assigning
