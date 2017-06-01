@@ -34,7 +34,8 @@ try:
     _operatorMap = {
         sympy.Add: _sum,
         sympy.Mul: _prod,
-        sympy.Pow: lambda x,y: x**y,
+        sympy.Pow: lambda x, y: x**y,
+        sympy.exp: lambda x: core.exp(x),
         sympy.log: lambda x: core.log(x),
         sympy.sin: lambda x: core.sin(x),
         sympy.asin: lambda x: core.asin(x),
