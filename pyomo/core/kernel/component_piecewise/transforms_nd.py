@@ -24,9 +24,11 @@ import collections
 from pyomo.core.kernel.component_block import tiny_block
 from pyomo.core.kernel.set_types import Binary
 from pyomo.core.kernel.component_variable import (variable,
-                                                  variable_list)
+                                                  variable_dict,
+                                                  variable_tuple)
 from pyomo.core.kernel.component_constraint import (linear_constraint,
-                                                    constraint_list)
+                                                    constraint_list,
+                                                    constraint_tuple)
 from pyomo.core.kernel.component_expression import (expression,
                                                     expression_tuple)
 import pyomo.core.kernel.component_piecewise.util
@@ -87,10 +89,9 @@ def piecewise_nd(tri,
 
     Returns:
         TransformedPiecewiseLinearFunctionND: a block \
-            containing variables and constraints that \
-            enforce the piecewise linear relationship \
-            between the array of input expressions and the \
-            single output expression
+            containing any new variables, constraints, and \
+            other components used by the piecewise \
+            representation
     """
     transform = None
     try:
@@ -344,36 +345,40 @@ class piecewise_nd_cc(TransformedPiecewiseLinearFunctionND):
         vertices = range(npoints)
 
         # create vars
-        lmbda = self._lmbda = variable_list(
+        self.v = variable_dict()
+        lmbda = self.v['lambda'] = variable_tuple(
             variable(lb=0) for v in vertices)
-        y = self._y = variable_list(
+        y = self.v['y'] = variable_tuple(
             variable(domain=Binary) for s in simplices)
-
-        # create constraints
         lmbda_tuple = tuple(lmbda)
 
-        self._c1 = constraint_list()
+        # create constraints
+        self.c = constraint_list()
+
+        clist = []
         for d in dimensions:
-            self._c1.append(linear_constraint(
+            clist.append(linear_constraint(
                 variables=lmbda_tuple + (self.input[d],),
                 coefficients=tuple(pointsT[d]) + (-1,),
                 rhs=0))
+        self.c.append(constraint_tuple(clist))
+        del clist
 
-        self._c2 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=lmbda_tuple + (self.output,),
-            coefficients=tuple(self.values) + (-1,))
+            coefficients=tuple(self.values) + (-1,)))
         if self.bound == 'ub':
-            self._c2.lb = 0
+            self.c[-1].lb = 0
         elif self.bound == 'lb':
-            self._c2.ub = 0
+            self.c[-1].ub = 0
         else:
             assert self.bound == 'eq'
-            self._c2.rhs = 0
+            self.c[-1].rhs = 0
 
-        self._c3 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=lmbda_tuple,
             coefficients=(1,)*len(lmbda_tuple),
-            rhs=1)
+            rhs=1))
 
         # generate a map from vertex index to simplex index,
         # which avoids an n^2 lookup when generating the
@@ -383,17 +388,19 @@ class piecewise_nd_cc(TransformedPiecewiseLinearFunctionND):
             for v in simplex:
                 vertex_to_simplex[v].append(s)
 
-        self._c4 = constraint_list()
+        clist = []
         for v in vertices:
             variables = tuple(y[s] for s in vertex_to_simplex[v])
-            self._c4.append(linear_constraint(
+            clist.append(linear_constraint(
                 variables=variables + (lmbda[v],),
                 coefficients=(1,)*len(variables) + (-1,),
                 lb=0))
+        self.c.append(constraint_tuple(clist))
+        del clist
 
-        self._c5 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=y,
             coefficients=(1,)*len(y),
-            rhs=1)
+            rhs=1))
 
 registered_transforms['cc'] = piecewise_nd_cc

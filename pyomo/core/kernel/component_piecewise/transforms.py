@@ -28,18 +28,18 @@ import logging
 # really do require (2^n)+1 points or if there is a way to
 # handle the between sizes.
 
-__all__ = ("piecewise",)
-
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.kernel.set_types import Binary
 from pyomo.core.kernel.component_block import tiny_block
 from pyomo.core.kernel.component_expression import expression
 from pyomo.core.kernel.component_variable import (IVariable,
                                                   variable_list,
+                                                  variable_tuple,
                                                   variable_dict,
                                                   variable)
 from pyomo.core.kernel.component_constraint import (constraint,
                                                     constraint_list,
+                                                    constraint_tuple,
                                                     linear_constraint)
 from pyomo.core.kernel.component_sos import sos2
 from pyomo.core.kernel.component_piecewise.util import \
@@ -153,10 +153,9 @@ def piecewise(breakpoints,
             :attr:`False`.
 
     Returns:
-        TransformedPiecewiseLinearFunction: a block \
-            containing variables and constraints that \
-            enforce the piecewise linear relationship \
-            between the input and output expressions
+        TransformedPiecewiseLinearFunction: a block that \
+            stores any new variables, constraints, and other \
+            components used by the piecewise representation
     """
     transform = None
     try:
@@ -200,19 +199,19 @@ def piecewise(breakpoints,
                      bound=bound,
                      validate=validate,
                      equal_slopes_tolerance=\
-                        equal_slopes_tolerance,
+                         equal_slopes_tolerance,
                      require_bounded_input_variable=\
-                        require_bounded_input_variable,
+                         require_bounded_input_variable,
                      require_variable_domain_coverage=\
-                        require_variable_domain_coverage)
+                         require_variable_domain_coverage)
 
 class PiecewiseLinearFunction(object):
     """A piecewise linear function
 
     Piecewise linear functions are defined by a list of
-    breakpoints and a function value for each
-    breakpoint. The function value between breakpoints is
-    implied through linear interpolation.
+    breakpoints and a list function values corresponding to
+    each breakpoint. The function value between breakpoints
+    is implied through linear interpolation.
 
     Args:
         breakpoints (list): The list of function
@@ -539,7 +538,7 @@ class piecewise_convex(TransformedPiecewiseLinearFunction):
 
         breakpoints = self.breakpoints
         values = self.values
-        self._c = constraint_list()
+        self.c = constraint_list()
         for i in xrange(len(breakpoints)-1):
             X0 = breakpoints[i]
             F_AT_X0 = values[i]
@@ -556,7 +555,7 @@ class piecewise_convex(TransformedPiecewiseLinearFunction):
             else:
                 assert self.bound == 'eq'
                 con.rhs = -const
-            self._c.append(con)
+            self.c.append(con)
 
         # In order to enforce the same behavior as actual
         # piecewise constraints, we need to constrain the
@@ -565,7 +564,7 @@ class piecewise_convex(TransformedPiecewiseLinearFunction):
         # variable, but its not always the case, and there's
         # no guarantee that the input "variable" is not a
         # more general linear expression.
-        self._c.append(linear_constraint(
+        self.c.append(linear_constraint(
             terms=[(self.input, 1)],
             lb=self.breakpoints[0],
             ub=self.breakpoints[-1]))
@@ -619,31 +618,34 @@ class piecewise_sos2(TransformedPiecewiseLinearFunction):
         super(piecewise_sos2, self).__init__(*args, **kwds)
 
         # create vars
-        y = self._y = variable_list(
+        y = self.v = variable_tuple(
             variable(lb=0) for i in xrange(len(self.breakpoints)))
         y_tuple = tuple(y)
 
         # create piecewise constraints
-        self._c1 = linear_constraint(
-             variables=y_tuple + (self.input,),
-             coefficients=self.breakpoints + (-1,),
-             rhs=0)
+        self.c = constraint_list()
 
-        self._c2 = linear_constraint(
+        self.c.append(linear_constraint(
+            variables=y_tuple + (self.input,),
+            coefficients=self.breakpoints + (-1,),
+            rhs=0))
+
+        self.c.append(linear_constraint(
             variables=y_tuple + (self.output,),
-            coefficients=self.values + (-1,))
+            coefficients=self.values + (-1,)))
         if self.bound == 'ub':
-            self._c2.lb = 0
+            self.c[-1].lb = 0
         elif self.bound == 'lb':
-            self._c2.ub = 0
+            self.c[-1].ub = 0
         else:
             assert self.bound == 'eq'
-            self._c2.rhs = 0
+            self.c[-1].rhs = 0
 
-        self._c3 = linear_constraint(variables=y_tuple,
-                                     coefficients=(1,)*len(y),
-                                     rhs=1)
-        self._c4 = sos2(y)
+        self.c.append(linear_constraint(variables=y_tuple,
+                                        coefficients=(1,)*len(y),
+                                        rhs=1))
+
+        self.s = sos2(y)
 
     def validate(self, **kwds):
         """
@@ -676,54 +678,59 @@ class piecewise_dcc(TransformedPiecewiseLinearFunction):
             return xrange(p,p+2)
 
         # create vars
-        lmbda = self._lmbda = variable_dict(
+        self.v = variable_dict()
+        lmbda = self.v['lambda'] = variable_dict(
             ((p,v), variable(lb=0))
             for p in polytopes
             for v in vertices)
-        y = self._y = variable_list(
+        y = self.v['y'] = variable_tuple(
             variable(domain=Binary)
             for p in polytopes)
 
         # create piecewise constraints
-        self._c1 = linear_constraint(
+        self.c = constraint_list()
+
+        self.c.append(linear_constraint(
             variables=tuple(lmbda[p,v]
                             for p in polytopes
                             for v in polytope_verts(p)) + \
                       (self.input,),
             coefficients=tuple(self.breakpoints[v]
                                for p in polytopes
-                               for v in polytope_verts(p)) + (-1,),
-            rhs=0)
+                               for v in polytope_verts(p)) + \
+                      (-1,),
+            rhs=0))
 
-        self._c2 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=tuple(lmbda[p,v]
                             for p in polytopes
                             for v in polytope_verts(p)) + \
                       (self.output,),
             coefficients=tuple(self.values[v]
                                for p in polytopes
-                               for v in polytope_verts(p)) + (-1,))
+                               for v in polytope_verts(p)) + (-1,)))
         if self.bound == 'ub':
-            self._c2.lb = 0
+            self.c[-1].lb = 0
         elif self.bound == 'lb':
-            self._c2.ub = 0
+            self.c[-1].ub = 0
         else:
             assert self.bound == 'eq'
-            self._c2.rhs = 0
+            self.c[-1].rhs = 0
 
-        self._c3 = constraint_list()
+        clist = []
         for p in polytopes:
             variables = tuple(lmbda[p,v] for v in polytope_verts(p))
-            self._c3.append(
+            clist.append(
                 linear_constraint(
                     variables=variables + (y[p],),
                     coefficients=(1,)*len(variables) + (-1,),
                     rhs=0))
+        self.c.append(constraint_tuple(clist))
 
-        self._c4 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=tuple(y),
             coefficients=(1,)*len(y),
-            rhs=1)
+            rhs=1))
 
     def validate(self, **kwds):
         """
@@ -761,48 +768,52 @@ class piecewise_cc(TransformedPiecewiseLinearFunction):
                 return [v-1,v]
 
         # create vars
-        lmbda = self._lmbda = variable_list(
+        self.v = variable_dict()
+        lmbda = self.v['lambda'] = variable_tuple(
             variable(lb=0) for v in vertices)
-        y = self._y = variable_list(
+        y = self.v['y'] = variable_tuple(
             variable(domain=Binary)
             for p in polytopes)
 
         lmbda_tuple = tuple(lmbda)
 
         # create piecewise constraints
-        self._c1 = linear_constraint(
+        self.c = constraint_list()
+
+        self.c.append(linear_constraint(
             variables=lmbda_tuple + (self.input,),
             coefficients=self.breakpoints + (-1,),
-            rhs=0)
+            rhs=0))
 
-        self._c2 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=lmbda_tuple + (self.output,),
-            coefficients=self.values + (-1,))
+            coefficients=self.values + (-1,)))
         if self.bound == 'ub':
-            self._c2.lb = 0
+            self.c[-1].lb = 0
         elif self.bound == 'lb':
-            self._c2.ub = 0
+            self.c[-1].ub = 0
         else:
             assert self.bound == 'eq'
-            self._c2.rhs = 0
+            self.c[-1].rhs = 0
 
-        self._c3 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=lmbda_tuple,
             coefficients=(1,)*len(lmbda),
-            rhs=1)
+            rhs=1))
 
-        self._c4 = constraint_list()
+        clist = []
         for v in vertices:
             variables = tuple(y[p] for p in vertex_polys(v))
-            self._c4.append(linear_constraint(
+            clist.append(linear_constraint(
                 variables=variables + (lmbda[v],),
                 coefficients=(1,)*len(variables) + (-1,),
                 lb=0))
+        self.c.append(constraint_tuple(clist))
 
-        self._c5 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=tuple(y),
             coefficients=(1,)*len(y),
-            rhs=1)
+            rhs=1))
 
     def validate(self, **kwds):
         """
@@ -842,46 +853,51 @@ class piecewise_mc(TransformedPiecewiseLinearFunction):
                            for p in polytopes)
 
         # create vars
-        lmbda = self._lmbda = variable_list(variable()
-                                    for p in polytopes)
+        self.v = variable_dict()
+        lmbda = self.v['lambda'] = variable_tuple(
+            variable() for p in polytopes)
         lmbda_tuple = tuple(lmbda)
-        y = self._y = variable_list(variable(domain=Binary)
-                                    for p in polytopes)
+        y = self.v['y'] = variable_tuple(
+            variable(domain=Binary) for p in polytopes)
         y_tuple = tuple(y)
 
         # create piecewise constraints
-        self._c1 = linear_constraint(
+        self.c = constraint_list()
+
+        self.c.append(linear_constraint(
             variables=lmbda_tuple + (self.input,),
             coefficients=(1,)*len(lmbda) + (-1,),
-            rhs=0)
+            rhs=0))
 
-        self._c2 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=lmbda_tuple + y_tuple + (self.output,),
-            coefficients=slopes + intercepts + (-1,))
+            coefficients=slopes + intercepts + (-1,)))
         if self.bound == 'ub':
-            self._c2.lb = 0
+            self.c[-1].lb = 0
         elif self.bound == 'lb':
-            self._c2.ub = 0
+            self.c[-1].ub = 0
         else:
             assert self.bound == 'eq'
-            self._c2.rhs = 0
+            self.c[-1].rhs = 0
 
-        self._c3 = constraint_list()
-        self._c4 = constraint_list()
+        clist1 = []
+        clist2 = []
         for p in polytopes:
-            self._c3.append(linear_constraint(
+            clist1.append(linear_constraint(
                 variables=(y[p], lmbda[p]),
                 coefficients=(self.breakpoints[p], -1),
                 ub=0))
-            self._c4.append(linear_constraint(
+            clist2.append(linear_constraint(
                 variables=(lmbda[p], y[p]),
                 coefficients=(1, -self.breakpoints[p+1]),
                 ub=0))
+        self.c.append(constraint_tuple(clist1))
+        self.c.append(constraint_tuple(clist2))
 
-        self._c5 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=y_tuple,
             coefficients=(1,)*len(y),
-            rhs=1)
+            rhs=1))
 
     def validate(self, **kwds):
         """
@@ -917,46 +933,51 @@ class piecewise_inc(TransformedPiecewiseLinearFunction):
         polytopes = range(len(self.breakpoints)-1)
 
         # create vars
-        delta = self._delta = variable_list(
+        self.v = variable_dict()
+        delta = self.v['delta'] = variable_tuple(
             variable() for p in polytopes)
         delta[0].ub = 1
         delta[-1].lb = 0
         delta_tuple = tuple(delta)
-        y = self._y = variable_list(
+        y = self.v['y'] = variable_tuple(
             variable(domain=Binary) for p in polytopes[:-1])
 
         # create piecewise constraints
-        self._c1 = linear_constraint(
+        self.c = constraint_list()
+
+        self.c.append(linear_constraint(
             variables=(self.input,) + delta_tuple,
             coefficients=(-1,) + tuple(self.breakpoints[p+1] - \
                                        self.breakpoints[p]
                                        for p in polytopes),
-            rhs=-self.breakpoints[0])
+            rhs=-self.breakpoints[0]))
 
-        self._c2 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=(self.output,) + delta_tuple,
             coefficients=(-1,) + tuple(self.values[p+1] - \
                                        self.values[p]
-                                       for p in polytopes))
+                                       for p in polytopes)))
         if self.bound == 'ub':
-            self._c2.lb = -self.values[0]
+            self.c[-1].lb = -self.values[0]
         elif self.bound == 'lb':
-            self._c2.ub = -self.values[0]
+            self.c[-1].ub = -self.values[0]
         else:
             assert self.bound == 'eq'
-            self._c2.rhs = -self.values[0]
+            self.c[-1].rhs = -self.values[0]
 
-        self._c3 = constraint_list()
-        self._c4 = constraint_list()
+        clist1 = []
+        clist2 = []
         for p in polytopes[:-1]:
-            self._c3.append(linear_constraint(
+            clist1.append(linear_constraint(
                 variables=(delta[p+1], y[p]),
                 coefficients=(1, -1),
                 ub=0))
-            self._c4.append(linear_constraint(
+            clist2.append(linear_constraint(
                 variables=(y[p], delta[p]),
                 coefficients=(1, -1),
                 ub=0))
+        self.c.append(constraint_tuple(clist1))
+        self.c.append(constraint_tuple(clist2))
 
     def validate(self, **kwds):
         """
@@ -1004,63 +1025,68 @@ class piecewise_dlog(TransformedPiecewiseLinearFunction):
             return xrange(p,p+2)
 
         # create vars
-        lmbda = self._lmbda = variable_dict(
+        self.v = variable_dict()
+        lmbda = self.v['lambda'] = variable_dict(
             ((p,v), variable(lb=0))
             for p in polytopes
             for v in polytope_verts(p))
-        y = self._y = variable_list(
-            variable(domain=Binary)
-            for i in range(L))
+        y = self.v['y'] = variable_tuple(
+            variable(domain=Binary) for i in range(L))
 
         # create piecewise constraints
-        self._c1 = linear_constraint(
+        self.c = constraint_list()
+
+        self.c.append(linear_constraint(
             variables=(self.input,) + tuple(lmbda[p,v]
                                             for p in polytopes
                                             for v in polytope_verts(p)),
             coefficients=(-1,) + tuple(breakpoints[v]
                                        for p in polytopes
                                        for v in polytope_verts(p)),
-            rhs=0)
+            rhs=0))
 
-        self._c2 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=(self.output,) + tuple(lmbda[p,v]
                                              for p in polytopes
                                              for v in polytope_verts(p)),
             coefficients=(-1,) + tuple(values[v]
                                        for p in polytopes
-                                       for v in polytope_verts(p)))
+                                       for v in polytope_verts(p))))
         if self.bound == 'ub':
-            self._c2.lb = 0
+            self.c[-1].lb = 0
         elif self.bound == 'lb':
-            self._c2.ub = 0
+            self.c[-1].ub = 0
         else:
             assert self.bound == 'eq'
-            self._c2.rhs = 0
+            self.c[-1].rhs = 0
 
-        self._c3 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=tuple(lmbda.values()),
             coefficients=(1,)*len(lmbda),
-            rhs=1)
+            rhs=1))
 
-        self._c4 = constraint_list()
+        clist = []
         for i in range(L):
             variables = tuple(lmbda[p,v]
                               for p in B_LEFT[i]
                               for v in polytope_verts(p))
-            self._c4.append(linear_constraint(
+            clist.append(linear_constraint(
                 variables=variables + (y[i],),
                 coefficients=(1,)*len(variables) + (-1,),
                 ub=0))
+        self.c.append(constraint_tuple(clist))
+        del clist
 
-        self._c5 = constraint_list()
+        clist = []
         for i in range(L):
             variables = tuple(lmbda[p,v]
                               for p in B_RIGHT[i]
                               for v in polytope_verts(p))
-            self._c5.append(linear_constraint(
+            clist.append(linear_constraint(
                 variables=variables + (y[i],),
                 coefficients=(1,)*len(variables) + (1,),
                 ub=1))
+        self.c.append(constraint_tuple(clist))
 
     def _branching_scheme(self, L):
         N = 2**L
@@ -1128,49 +1154,54 @@ class piecewise_log(TransformedPiecewiseLinearFunction):
         vertices = range(len(breakpoints))
 
         # create vars
-        lmbda = self._lmbda = variable_list(
-            variable(lb=0)
-            for v in vertices)
-        y = self._y = variable_list(variable(domain=Binary)
-                                    for s in S)
+        self.v = variable_dict()
+        lmbda = self.v['lambda'] = variable_tuple(
+            variable(lb=0) for v in vertices)
+        y = self.v['y'] = variable_list(
+            variable(domain=Binary) for s in S)
 
         # create piecewise constraints
-        self._c1 = linear_constraint(
+        self.c = constraint_list()
+
+        self.c.append(linear_constraint(
             variables=(self.input,) + tuple(lmbda),
             coefficients=(-1,) + breakpoints,
-            rhs=0)
+            rhs=0))
 
-        self._c2 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=(self.output,) + tuple(lmbda),
-            coefficients=(-1,) + values)
+            coefficients=(-1,) + values))
         if self.bound == 'ub':
-            self._c2.lb = 0
+            self.c[-1].lb = 0
         elif self.bound == 'lb':
-            self._c2.ub = 0
+            self.c[-1].ub = 0
         else:
             assert self.bound == 'eq'
-            self._c2.rhs = 0
+            self.c[-1].rhs = 0
 
-        self._c3 = linear_constraint(
+        self.c.append(linear_constraint(
             variables=tuple(lmbda),
             coefficients=(1,)*len(lmbda),
-            rhs=1)
+            rhs=1))
 
-        self._c4 = constraint_list()
+        clist = []
         for s in S:
             variables=tuple(lmbda[v] for v in B_LEFT[s])
-            self._c4.append(linear_constraint(
+            clist.append(linear_constraint(
                 variables=variables + (y[s],),
                 coefficients=(1,)*len(variables) + (-1,),
                 ub=0))
+        self.c.append(constraint_tuple(clist))
+        del clist
 
-        self._c5 = constraint_list()
+        clist = []
         for s in S:
             variables=tuple(lmbda[v] for v in B_RIGHT[s])
-            self._c5.append(linear_constraint(
+            clist.append(linear_constraint(
                 variables=variables + (y[s],),
                 coefficients=(1,)*len(variables) + (1,),
                 ub=1))
+        self.c.append(constraint_tuple(clist))
 
     def _branching_scheme(self, n):
         N = 2**n
