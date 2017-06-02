@@ -1093,7 +1093,9 @@ class block(_block_base, IBlockStorage):
     def __setattr__(self, name, obj):
         if hasattr(obj, '_is_categorized_object'):
             if obj._parent is None:
-                if name in self.__dict__:
+                if hasattr(self, name) and \
+                   hasattr(getattr(self, name),
+                           '_is_categorized_object'):
                     logger.warning(
                         "Implicitly replacing the categorized attribute "
                         "%s (type=%s) on block with a new object "
@@ -1213,7 +1215,9 @@ class tiny_block(_block_base, IBlockStorage):
     def __setattr__(self, name, obj):
         if hasattr(obj, '_is_categorized_object'):
             if obj._parent is None:
-                if hasattr(self, name):
+                if hasattr(self, name) and \
+                   hasattr(getattr(self,name),
+                           '_is_categorized_object'):
                     logger.warning(
                         "Implicitly replacing the categorized attribute "
                         "%s (type=%s) on block with a new object "
