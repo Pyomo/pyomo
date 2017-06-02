@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['SymbolMap', 'symbol_map_from_instance']
 
@@ -85,10 +86,22 @@ class SymbolMap(object):
         self.aliases = {}
 
     def __getstate__(self):
-        raise RuntimeError("ERROR: The SymbolMap class should never be pickled.")
+        # Note: byObject and bySymbol constitute a bimap.  We only need
+        # to pickle one of them, and bySymbol is easier.
+        return {
+            'bySymbol': tuple(
+                (key, obj()) for key, obj in iteritems(self.bySymbol) ),
+            'aliases': tuple(
+                (key, obj()) for key, obj in iteritems(self.aliases) ),
+        }
 
     def __setstate__(self, state):
-        raise RuntimeError("ERROR: The SymbolMap class should never be unpickled.")
+        self.byObject = dict(
+            (id(obj), key) for key, obj  in state['bySymbol'] )
+        self.bySymbol = dict(
+            (key, weakref_ref(obj)) for key, obj in state['bySymbol'] )
+        self.aliases = dict(
+            (key, weakref_ref(obj)) for key, obj in state['aliases'] )
 
     def addSymbol(self, obj, symb):
         self.byObject[id(obj)] = symb

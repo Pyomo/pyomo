@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['Constraint', '_ConstraintData', 'ConstraintList',
            'simple_constraint_rule', 'simple_constraintlist_rule']
@@ -390,9 +391,12 @@ class _GeneralConstraintData(_ConstraintData):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
-                    self._lower = self._upper = ZeroConstant
-                    self._body = EXPR.generate_expression_bypassCloneCheck(
-                        _sub, arg0, arg1)
+                    with EXPR.bypass_clone_check():
+                        self._lower = self._upper = ZeroConstant
+                        self._body = arg0
+                        self._body -= arg1
+                    #self._body = EXPR.generate_expression_bypassCloneCheck(
+                    #    _sub, arg0, arg1)
             #
             # Form inequality expression
             #
@@ -495,9 +499,12 @@ class _GeneralConstraintData(_ConstraintData):
                     self._lower = self._upper = _args[0]
                     self._body = _args[1]
                 else:
-                    self._lower = self._upper = ZeroConstant
-                    self._body = EXPR.generate_expression_bypassCloneCheck(
-                        _sub, _args[0], _args[1] )
+                    with EXPR.bypass_clone_check():
+                        self._lower = self._upper = ZeroConstant
+                        self._body = _args[0]
+                        self._body -= _args[1]
+                    #self._body = EXPR.generate_expression_bypassCloneCheck(
+                    #    _sub, _args[0], _args[1] )
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
@@ -561,10 +568,13 @@ class _GeneralConstraintData(_ConstraintData):
                         self._body  = _args[1]
                         self._upper = None
                     else:
-                        self._lower = None
-                        self._body  = EXPR.generate_expression_bypassCloneCheck(
-                            _sub, _args[0], _args[1])
-                        self._upper = ZeroConstant
+                        with EXPR.bypass_clone_check():
+                            self._lower = None
+                            self._body = _args[0]
+                            self._body -= _args[1]
+                            self._upper = ZeroConstant
+                        #self._body  = EXPR.generate_expression_bypassCloneCheck(
+                        #    _sub, _args[0], _args[1])
 
         #
         # Replace numeric bound values with a NumericConstant object,

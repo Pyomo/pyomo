@@ -1,14 +1,18 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import os
+import re
 import six
+
+from six.moves.xmlrpc_client import ProtocolError
 
 import pyomo.util.plugin
 from pyomo.opt.parallel.manager import *
@@ -17,6 +21,22 @@ from pyomo.opt.base import SolverFactory, OptSolver
 from pyomo.core.base import Block
 import pyomo.neos.kestrel
 
+import logging
+logger = logging.getLogger('pyomo.neos')
+
+error_re = re.compile('error', flags=re.I)
+warn_re = re.compile('warn', flags=re.I)
+
+def _neos_error(msg, results, current_message):
+    logger.error("%s  NEOS log:\n%s" % ( msg, current_message, ))
+    soln_data = results.data
+    if six.PY3:
+        soln_data = soln_data.decode('utf-8')
+    for line in soln_data.splitlines():
+        if error_re.search(line):
+            logger.error(line)
+        elif warn_re.search(line):
+            logger.warn(line)
 
 
 class SolverManager_NEOS(AsynchronousSolverManager):
@@ -75,10 +95,20 @@ class SolverManager_NEOS(AsynchronousSolverManager):
         # options must also go after these.
         if solver is not None:
             user_solver_options.update(solver.options)
-        user_solver_options.update(
-            kwds.pop('options', {}))
+        _options = kwds.pop('options', {})
+        if isinstance(_options, six.string_types):
+            _options = OptSolver._options_string_to_dict(_options)
+        user_solver_options.update(_options)
         user_solver_options.update(
             OptSolver._options_string_to_dict(kwds.pop('options_string', '')))
+
+        # JDS: [5/13/17] The following is a HACK.  This timeout flag is
+        # set by pyomo/scripting/util.py:apply_optimizer.  If we do not
+        # remove it, it will get passed to the NEOS solver.  For solvers
+        # like CPLEX 12.7.0, this will cause a fatal error as it is not
+        # a known option.
+        if user_solver_options.get('timelimit',0) is None:
+            del user_solver_options['timelimit']
 
         opt = SolverFactory('_neos')
         opt._presolve(*args, **kwds)
@@ -152,8 +182,7 @@ class SolverManager_NEOS(AsynchronousSolverManager):
             status = self.kestrel.neos.getJobStatus(jobNumber,
                                                     self._ah[jobNumber].password)
 
-            if not status in ("Running", "Waiting"):
-
+            if status not in ("Running", "Waiting"):
                 # the job is done.
                 ah = self._ah[jobNumber]
                 del self._ah[jobNumber]
@@ -182,7 +211,13 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                         six.print_((results.data).decode('utf-8'), file=OUTPUT)
 
                 rc = None
-                solver_results = opt.process_output(rc)
+                try:
+                    solver_results = opt.process_output(rc)
+                except:
+                    _neos_error( "Error parsing NEOS solution file",
+                                 results, current_message )
+                    return ah
+
                 solver_results._smap_id = smap_id
                 self.results[ah.id] = solver_results
                 opt.deactivate()
@@ -190,10 +225,15 @@ class SolverManager_NEOS(AsynchronousSolverManager):
                 if isinstance(args[0], Block):
                     _model = args[0]
                     if load_solutions:
-                        _model.solutions.load_from(
-                            solver_results,
-                            select=select_index,
-                            default_variable_value=default_variable_value)
+                        try:
+                            _model.solutions.load_from(
+                                solver_results,
+                                select=select_index,
+                                default_variable_value=default_variable_value)
+                        except:
+                            _neos_error(
+                                "Error loading NEOS solution into model",
+                                results, current_message )
                         solver_results._smap_id = None
                         solver_results.solution.clear()
                     else:
@@ -202,17 +242,33 @@ class SolverManager_NEOS(AsynchronousSolverManager):
 
                 return ah
             else:
-                # Grab the partial messages from NEOS as you go, in case you want
-                # to output on-the-fly. We don't currently do this, but the infrastructure
-                # is in place.
+                # The job is still running...
+                #
+                # Grab the partial messages from NEOS as you go, in case
+                # you want to output on-the-fly. You will only get data
+                # if the job was routed to the "short" priority queue.
                 (current_offset, current_message) = self._neos_log[jobNumber]
-                # TBD: blocking isn't the way to go, but non-blocking was triggering some exception in kestrel.
-                (message_fragment, new_offset) = \
-                    self.kestrel.neos.getIntermediateResults(jobNumber,
-                                                             self._ah[jobNumber].password,
-                                                             current_offset)
-                six.print_(message_fragment, end="")
-                self._neos_log[jobNumber] = (new_offset, str(current_message) + str(message_fragment.data))
+                # TBD: blocking isn't the way to go, but non-blocking
+                # was triggering some exception in kestrel.
+                #
+                # [5/13/17]: The blocking fetch will timeout in 2
+                # minutes.  If NEOS doesn't produce intermediate results
+                # by then we will need to catch (and eat) the exception
+                try:
+                    (message_fragment, new_offset) \
+                        = self.kestrel.neos.getIntermediateResults(
+                            jobNumber,
+                            self._ah[jobNumber].password,
+                            current_offset )
+                    six.print_(message_fragment, end="")
+                    self._neos_log[jobNumber] = (
+                        new_offset,
+                        current_message + (
+                            message_fragment.data if six.PY2
+                            else (message_fragment.data).decode('utf-8') ) )
+                except ProtocolError:
+                    # The command probably timed out
+                    pass
 
         return None
 

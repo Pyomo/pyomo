@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = [ 'Connector' ]
 
@@ -107,7 +108,7 @@ class _ConnectorData(ComponentData, NumericValue):
 
     def _iter_vars(self):
         for var in itervalues(self.vars):
-            if var.is_expression() or not var.is_indexed():
+            if not hasattr(var, 'is_indexed') or not var.is_indexed():
                 yield var
             else:
                 for v in itervalues(var):
@@ -205,10 +206,10 @@ class Connector(IndexedComponent):
                     _len = '-'
                 elif _k in v.aggregators:
                     _len = '*'
-                elif _v.is_expression() or not _v.is_indexed():
-                    _len = 1
-                else:
+                elif hasattr(_v,'__len__'):
                     _len = len(_v)
+                else:
+                    _len = 1
                 yield _k, _len, str(_v)
         return ( [("Size", len(self)),
                   ("Index", self._index if self.is_indexed() else None),
@@ -238,7 +239,7 @@ class Connector(IndexedComponent):
             for _k, _v in sorted(iteritems(v.vars)):
                 if _v is None:
                     _val = '-'
-                elif _v.is_expression() or not _v.is_indexed():
+                elif not hasattr(_v, 'is_indexed') or not _v.is_indexed():
                     _val = str(value( _v ))
                 else:
                     _val = "{%s}" % (', '.join('%r: %r' % (
@@ -267,14 +268,7 @@ class SimpleConnector(Connector, _ConnectorData):
 
 class IndexedConnector(Connector):
     """An array of connectors"""
-
-    # These methods are normally found on the NumericValue
-    # interface, but they are here to trick the expression
-    # system into reporting errors about trying to use
-    # "indexed NumericValue" objects in expressions
-    def as_numeric(self): return self
-    def is_expression(self): return False
-    def is_relational(self): return False
+    pass
 
 
 register_component(

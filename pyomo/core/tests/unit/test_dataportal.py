@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 #
 # Unit Tests for DataPortal objects
 #
@@ -453,8 +454,8 @@ class PyomoDataPortal(unittest.TestCase):
         self.assertEqual(sorted(md.keys()), ['A', 'a','b','c','d','e'])
         self.assertEqual(sorted(md.keys('ns1')), ['A', 'a', 'e'])
         # values()
-        self.assertEqual(sorted(md.values(),      key=lambda x: tuple(x+[0]) if type(x) is list else tuple(x) if not type(x) is int else (x, )), [-4, -3, -2, -1, {1:10, 3:30, 5:50}, [1,3,5]])
-        self.assertEqual(sorted(md.values('ns1'), key=lambda x: tuple(x+[0]) if type(x) is list else tuple(x) if not type(x) is int else (x, )), [1, [7,9,11], {7:70, 9:90, 11:110}])
+        self.assertEqual(sorted(md.values(),      key=lambda x: tuple(sorted(x)+[0]) if type(x) is list else tuple(sorted(x.values())) if not type(x) is int else (x, )), [-4, -3, -2, -1, [1,3,5], {1:10, 3:30, 5:50}])
+        self.assertEqual(sorted(md.values('ns1'), key=lambda x: tuple(sorted(x)+[0]) if type(x) is list else tuple(sorted(x.values())) if not type(x) is int else (x, )), [1, [7,9,11], {7:70, 9:90, 11:110}])
         # items()
         self.assertEqual(sorted(md.items()), [('A', [1,3,5]), ('a',-1), ('b',-2), ('c',-3), ('d',-4), ('e', {1:10, 3:30, 5:50})])
         self.assertEqual(sorted(md.items('ns1')), [('A', [7,9,11]), ('a',1), ('e',{7:70, 9:90, 11:110})])

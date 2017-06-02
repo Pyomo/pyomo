@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 
 import os
@@ -24,7 +25,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
-from pyomo.solvers.plugins.solvers.GLPK import _glpk_version
+from pyomo.solvers.plugins.solvers.GLPK import _glpk_version, configure_glpk
 
 from six import iteritems, string_types
 import logging
@@ -55,6 +56,7 @@ class GLPKSHELL_4_42(SystemCallSolver):
         doc='Shell interface to the GNU Linear Programming Kit (4.42-4.59)')
 
     def __init__ (self, **kwargs):
+        configure_glpk()
         #
         # Call base constructor
         #
@@ -413,6 +415,7 @@ class GLPKSHELL_old(SystemCallSolver):
     alias('_glpk_shell_old', doc='Shell interface to the GNU Linear Programming Kit (before 4.42)')
 
     def __init__(self, **kwds):
+        configure_glpk()
         #
         # Call base constructor
         #

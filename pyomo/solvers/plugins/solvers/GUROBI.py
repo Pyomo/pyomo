@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import os
 import sys
@@ -416,11 +417,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                     elif (tokens[0] == 'gap'):
                         soln.gap = float(tokens[1])
                     elif (tokens[0] == 'objective'):
-                        soln.objective['__default_objective__'] = {'Value': float(tokens[1])}
-                        if results.problem.sense == ProblemSense.minimize:
-                            results.problem.upper_bound = float(tokens[1])
-                        else:
-                            results.problem.lower_bound = float(tokens[1])
+                        if tokens[1].strip() != 'None':
+                            soln.objective['__default_objective__'] = \
+                                {'Value': float(tokens[1])}
+                            if results.problem.sense == ProblemSense.minimize:
+                                results.problem.upper_bound = float(tokens[1])
+                            else:
+                                results.problem.lower_bound = float(tokens[1])
                     elif (tokens[0] == 'constraintdual'):
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":

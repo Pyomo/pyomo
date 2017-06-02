@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 """Pyomo: Python Optimization Modeling Objects
 
@@ -23,9 +24,10 @@ _init_url="$URL$"
 # VOTD build. releaselever should be left at 'invalid' for trunk
 # development and set to 'final' for releases.
 _major=5
-_minor=1
-_micro=1
+_minor=2
+_micro=0
 _releaselevel='invalid'
+#_releaselevel='final'
 _serial=0
 
 if _releaselevel == 'final':
@@ -39,9 +41,15 @@ elif '/trunk/' in _init_url or len(_init_url) == 5:
     _rootdir = join(dirname(abspath(getfile(currentframe()))), '..', '..')
 
     if exists(join(_rootdir, '.svn')):
-        _releaselevel = 'trunk'             #pragma:nocover
+        _releaselevel = 'devel {svn}'       #pragma:nocover
     elif exists(join(_rootdir, '.git')):
-        _releaselevel = 'trunk {git}'       #pragma:nocover
+        try:
+            with open(join(_rootdir, '.git', 'HEAD')) as FILE:
+                _ref = FILE.readline().strip()            #pragma:nocover
+            _releaselevel = 'devel {%s}' % (
+                _ref.split('/')[-1].split('\\')[-1], )    #pragma:nocover
+        except:
+            _releaselevel = 'devel'         #pragma:nocover
     else:
         _releaselevel = 'VOTD'              #pragma:nocover
 

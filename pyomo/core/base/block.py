@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
             'active_components', 'components', 'active_components_data',
@@ -228,6 +229,7 @@ class _BlockData(ActiveComponentData):
     """
     This class holds the fundamental block data.
     """
+    _Block_reserved_words = set()
 
     class PseudoMap(object):
         """
@@ -504,12 +506,12 @@ class _BlockData(ActiveComponentData):
             del ans['_ampl_repn']
         return ans
 
-    def __setstate__(self, state):
-        # We want the base class's __setstate__ to override our blanket
-        # approach here (i.e., it will handle the _component weakref).
-        for (slot_name, value) in iteritems(state):
-            super(_BlockData, self).__setattr__(slot_name, value)
-        super(_BlockData, self).__setstate__(state)
+    #
+    # The base class __setstate__ is sufficient (assigning all the
+    # pickled attributes to the object is appropriate
+    #
+    #def __setstate__(self, state):
+    #    pass
 
     def __getattr__(self, val):
         if val in ModelComponentFactory.services():
@@ -715,6 +717,23 @@ class _BlockData(ActiveComponentData):
             return obj
         raise Exception("BOGUS")
 
+    def _flag_vars_as_stale(self):
+        """
+        Configure *all* variables (on active blocks) and
+        their composite _VarData objects as stale. This
+        method is used prior to loading solver
+        results. Variable that did not particpate in the
+        solution are flagged as stale.  E.g., it most cases
+        fixed variables will be flagged as stale since they
+        are compiled out of expressions; however, many
+        solver plugins support including fixed variables in
+        the output problem by overriding bounds in order to
+        minimize preprocessing requirements, meaning fixed
+        variables are not necessarily always stale.
+        """
+        for variable in self.component_objects(Var, active=True):
+            variable.flag_as_stale()
+
     def collect_ctypes(self,
                        active=None,
                        descend_into=True):
@@ -792,7 +811,11 @@ class _BlockData(ActiveComponentData):
         #
         if not val.valid_model_component():
             raise RuntimeError(
-                "Cannot add '%s' as a component to a model" % str(type(val)) )
+                "Cannot add '%s' as a component to a block" % str(type(val)) )
+        if name in self._Block_reserved_words:
+            raise ValueError("Attempting to declare a block component using "
+                             "the name of a reserved attribute:\n\t%s"
+                             % (name,) )
         if name in self.__dict__:
             raise RuntimeError(
                 "Cannot add component '%s' (type %s) to block '%s': a "
@@ -1476,7 +1499,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         A boolean indicating whether or not all *active* components of the
         input model have been properly constructed.
         """
-        if not self._constructed:
+        if not self.parent_component()._constructed:
             return False
         for x in self._decl_order:
             if x[0] is not None and x[0].active and not x[0].is_constructed():
@@ -1678,23 +1701,6 @@ class Block(ActiveIndexedComponent):
 
     def _default(self, idx):
         return self._data.setdefault(idx, _BlockData(self))
-
-    def _flag_vars_as_stale(self):
-        """
-        Configure *all* variables (on active blocks) and
-        their composite _VarData objects as stale. This
-        method is used prior to loading solver
-        results. Variable that did not particpate in the
-        solution are flagged as stale.  E.g., it most cases
-        fixed variables will be flagged as stale since they
-        are compiled out of expressions; however, many
-        solver plugins support including fixed variables in
-        the output problem by overriding bounds in order to
-        minimize preprocessing requirements, meaning fixed
-        variables are not necessarily always stale.
-        """
-        for variable in self.component_objects(Var, active=True):
-            variable.flag_as_stale()
 
     def find_component(self, label_or_component):
         """
@@ -1940,6 +1946,11 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
     logger.warning("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
     return block.component_data_objects(ctype=ctype, active=False, sort=sort)
 
+#
+# Create a Block and record all the default attributes, methods, etc.
+# These will be assumes to be the set of illegal component names.
+#
+_BlockData._Block_reserved_words = set(dir(Block()))
 
 register_component(
     Block, "A component that contains one or more model components." )

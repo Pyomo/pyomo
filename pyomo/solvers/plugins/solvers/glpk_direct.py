@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 # NOTE: this solver is disabled (see the first try block below).  This
 # code is out of date, and this code is not regularly tested by Pyomo developers.
@@ -16,22 +17,26 @@
 
 import sys
 _glpk_version = None
-try:
-    # import all the glp_* functions
-    if False:  # DISABLED
-        from glpk import *
-        glpk_python_api_exists = True
-    else:
+glpk_python_api_exists = None
+def configure_glpk_direct():
+    global _glpk_version
+    global glpk_python_api_exists
+    try:
+        # import all the glp_* functions
+        if False:  # DISABLED
+            import glpk
+            glpk_python_api_exists = True
+        else:
+            glpk_python_api_exists = False
+    except ImportError:
         glpk_python_api_exists = False
-except ImportError:
-    glpk_python_api_exists = False
-except Exception as e:
-    # other forms of exceptions can be thrown by the glpk python
-    # import. For example, an error in code invoked by the module's
-    # __init__.  We should continue gracefully and not cause a fatal
-    # error in Pyomo.
-    print("Import of glpk failed - glpk message="+str(e)+"\n")
-    glpk_python_api_exists = False
+    except Exception as e:
+        # other forms of exceptions can be thrown by the glpk python
+        # import. For example, an error in code invoked by the module's
+        # __init__.  We should continue gracefully and not cause a fatal
+        # error in Pyomo.
+        print("Import of glpk failed - glpk message="+str(e)+"\n")
+        glpk_python_api_exists = False
 
 from pyutilib.misc import Bunch, Options
 
