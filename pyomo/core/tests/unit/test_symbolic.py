@@ -182,7 +182,7 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertEqual(s(e), s(exp(m.x)))
 
         e = differentiate(exp(2 * m.x), wrt=m.x)
-        self.assertEqual(s(e), s(2 * exp(2 * m.x)))
+        self.assertEqual(s(e), s(2. * exp(2. * m.x)))
 
 
     def test_nondifferentiable(self):
