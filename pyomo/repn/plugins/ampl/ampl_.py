@@ -727,7 +727,42 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
-            os.environ["PYOMO_AMPLFUNC"] = "\n".join(sorted(external_Libs))
+            # The ASL AMPLFUNC environment variable is nominally a
+            # whitespace-separated string of library names.  Beginning
+            # sometime between 2010 and 2012, the ASL added support for
+            # simple quoted strings: the first non-whitespace character
+            # can be either " or '.  When that is detected, the ASL
+            # parser will continue to the next occurance of that
+            # character (i.e., no escaping is allowed).  We will use
+            # that same logic here to quote any strings with spaces
+            # ... bearing in mind that this will only work with solvers
+            # compiled against versions of the ASL more recent than
+            # ~2012.
+            #
+            # We are (arbitrarily) chosing to use newline as the field
+            # separator.
+            env_str = ''
+            for _lib in external_Libs:
+                _lib = _lib.strip()
+                if ( ' ' not in _lib
+                     or ( _lib[0]=='"' and _lib[-1]=='"'
+                          and '"' not in _lib[1:-1] )
+                     or ( _lib[0]=="'" and _lib[-1]=="'"
+                          and "'" not in _lib[1:-1] ) ):
+                    pass
+                elif '"' not in _lib:
+                    _lib = '"' + _lib + '"'
+                elif "'" not in _lib:
+                    _lib = "'" + _lib + "'"
+                else:
+                    raise RuntimeError(
+                        "Cannot pass the AMPL external function library\n\t%s\n"
+                        "to the ASL because the string contains spaces, "
+                        "single quote and\ndouble quote characters." % (_lib,))
+                if env_str:
+                    env_str += "\n"
+                env_str += _lib
+            os.environ["PYOMO_AMPLFUNC"] = env_str
         elif "PYOMO_AMPLFUNC" in os.environ:
             del os.environ["PYOMO_AMPLFUNC"]
 
