@@ -10,7 +10,6 @@
 
 
 import os
-import copy
 import six
 
 import pyutilib.services
@@ -126,7 +125,7 @@ class ASL(SystemCallSolver):
         #
         # Define command line
         #
-        env=copy.copy(os.environ)
+        env=os.environ.copy()
         #
         # Merge the PYOMO_AMPLFUNC (externals defined within
         # Pyomo/Pyomo) with any user-specified external function

@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import os
-import copy
 
 import pyutilib.services
 import pyutilib.misc
@@ -109,7 +108,7 @@ class SCIPAMPL(SystemCallSolver):
         #
         # Define command line
         #
-        env=copy.copy(os.environ)
+        env=os.environ.copy()
 
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:
