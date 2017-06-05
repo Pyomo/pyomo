@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -73,72 +73,76 @@ _intrinsic_function_operators = {
     'abs':    'o15'}
 
 # build string templates
+def _build_op_template():
+    _op_template = {}
+    _op_comment = {}
 
-_op_template = {}
-_op_comment = {}
+    prod_template = "o2{C}\n"
+    prod_comment = "\t#*"
+    div_template = "o3{C}\n"
+    div_comment = "\t#/"
+    if _using_pyomo4_trees:
+        _op_template[expr._ProductExpression] = prod_template
+        _op_comment[expr._ProductExpression] = prod_comment
+        _op_template[expr._DivisionExpression] = div_template
+        _op_comment[expr._DivisionExpression] = div_comment
+    else:
+        _op_template[expr._ProductExpression] = (prod_template,
+                                                 div_template)
+        _op_comment[expr._ProductExpression] = (prod_comment,
+                                                div_comment)
+    del prod_template
+    del prod_comment
+    del div_template
+    del div_comment
 
-prod_template = "o2{C}\n"
-prod_comment = "\t#*"
-div_template = "o3{C}\n"
-div_comment = "\t#/"
-if _using_pyomo4_trees:
-    _op_template[expr._ProductExpression] = prod_template
-    _op_comment[expr._ProductExpression] = prod_comment
-    _op_template[expr._DivisionExpression] = div_template
-    _op_comment[expr._DivisionExpression] = div_comment
-else:
-    _op_template[expr._ProductExpression] = (prod_template,
-                                             div_template)
-    _op_comment[expr._ProductExpression] = (prod_comment,
-                                            div_comment)
-del prod_template
-del prod_comment
-del div_template
-del div_comment
+    _op_template[expr._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
+                                                      "h%d:%s{C}\n") #string arg
+    _op_comment[expr._ExternalFunctionExpression] = ("\t#%s", #function
+                                                     "")      #string arg
 
-_op_template[expr._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
-                                                  "h%d:%s{C}\n") #string arg
-_op_comment[expr._ExternalFunctionExpression] = ("\t#%s", #function
-                                                 "")      #string arg
+    for opname in _intrinsic_function_operators:
+        _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
+        _op_comment[opname] = "\t#"+opname
 
-for opname in _intrinsic_function_operators:
-    _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
-    _op_comment[opname] = "\t#"+opname
+    _op_template[expr.Expr_if] = "o35{C}\n"
+    _op_comment[expr.Expr_if] = "\t#if"
 
-_op_template[expr.Expr_if] = "o35{C}\n"
-_op_comment[expr.Expr_if] = "\t#if"
+    _op_template[expr._InequalityExpression] = ("o21{C}\n", # and
+                                                "o22{C}\n", # <
+                                                "o23{C}\n") # <=
+    _op_comment[expr._InequalityExpression] = ("\t#and", # and
+                                               "\t#lt",  # <
+                                               "\t#le")  # <=
 
-_op_template[expr._InequalityExpression] = ("o21{C}\n", # and
-                                            "o22{C}\n", # <
-                                            "o23{C}\n") # <=
-_op_comment[expr._InequalityExpression] = ("\t#and", # and
-                                           "\t#lt",  # <
-                                           "\t#le")  # <=
+    _op_template[expr._EqualityExpression] = "o24{C}\n"
+    _op_comment[expr._EqualityExpression] = "\t#eq"
 
-_op_template[expr._EqualityExpression] = "o24{C}\n"
-_op_comment[expr._EqualityExpression] = "\t#eq"
+    _op_template[var._VarData] = "v%d{C}\n"
+    _op_comment[var._VarData] = "\t#%s"
 
-_op_template[var._VarData] = "v%d{C}\n"
-_op_comment[var._VarData] = "\t#%s"
+    _op_template[param._ParamData] = "n%r{C}\n"
+    _op_comment[param._ParamData] = ""
 
-_op_template[param._ParamData] = "n%r{C}\n"
-_op_comment[param._ParamData] = ""
+    _op_template[NumericConstant] = "n%r{C}\n"
+    _op_comment[NumericConstant] = ""
 
-_op_template[NumericConstant] = "n%r{C}\n"
-_op_comment[NumericConstant] = ""
+    _op_template[expr._SumExpression] = (
+        "o54{C}\n%d\n", # nary +
+        "o0{C}\n",      # +
+        "o2\n" + _op_template[NumericConstant] ) # * coef
+    _op_comment[expr._SumExpression] = ("\t#sumlist", # nary +
+                                        "\t#+",       # +
+                                        _op_comment[NumericConstant]) # * coef
+    if _using_pyomo4_trees:
+        _op_template[expr._LinearExpression] = _op_template[expr._SumExpression]
+        _op_comment[expr._LinearExpression] = _op_comment[expr._SumExpression]
 
-_op_template[expr._SumExpression] = ("o54{C}\n%d\n", # nary +
-                                     "o0{C}\n",      # +
-                                     "o2\n" + _op_template[NumericConstant]) # * coef
-_op_comment[expr._SumExpression] = ("\t#sumlist", # nary +
-                                    "\t#+",       # +
-                                    _op_comment[NumericConstant]) # * coef
-if _using_pyomo4_trees:
-    _op_template[expr._LinearExpression] = _op_template[expr._SumExpression]
-    _op_comment[expr._LinearExpression] = _op_comment[expr._SumExpression]
+        _op_template[expr._NegationExpression] = "o16{C}\n"
+        _op_comment[expr._NegationExpression] = "\t#-"
 
-    _op_template[expr._NegationExpression] = "o16{C}\n"
-    _op_comment[expr._NegationExpression] = "\t#-"
+    return _op_template, _op_comment
+
 
 class StopWatch(object):
 
@@ -261,6 +265,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                  filename,
                  solver_capability,
                  io_options):
+
+        # Rebuild the OP template (as the expression tree system may
+        # have been switched)
+        _op_template, _op_comment = _build_op_template()
 
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
