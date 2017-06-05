@@ -431,7 +431,10 @@ def _generate_ampl_repn(exp):
                 return ampl_repn
 
             else: # is linear or constant
-                ampl_repn = current_repn = arg_repns[0]
+                if arg_repns:
+                    ampl_repn = current_repn = arg_repns[0]
+                else:
+                    ampl_repn = _generate_ampl_repn(1)
                 for i in xrange(1,len(arg_repns)):
                     e_repn = arg_repns[i]
                     ampl_repn = AmplRepn()
