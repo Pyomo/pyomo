@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 #
 # Problem Writer for CPLEX LP Format Files
@@ -18,7 +19,6 @@ import operator
 from six import iterkeys, iteritems, StringIO
 from six.moves import xrange
 
-from pyutilib.math import infinity
 from pyutilib.misc import PauseGC
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -31,6 +31,7 @@ from pyomo.core.base import \
      ComponentMap, is_fixed)
 from pyomo.repn import (generate_canonical_repn,
                         canonical_degree,
+                        GeneralCanonicalRepn,
                         LinearCanonicalRepn)
 
 logger = logging.getLogger('pyomo.core')
@@ -40,6 +41,13 @@ def _no_negative_zero(val):
     if val == 0:
         return 0
     return val
+
+def _get_bound(exp):
+    if exp is None:
+        return None
+    if is_fixed(exp):
+        return value(exp)
+    raise ValueError("non-fixed bound or weight: " + str(exp))
 
 class ProblemWriter_cpxlp(AbstractProblemWriter):
 
@@ -165,13 +173,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         return output_filename, symbol_map
 
-    def _get_bound(self, exp):
-        if exp is None:
-            return None
-        if is_fixed(exp):
-            return value(exp)
-        raise ValueError("non-fixed bound: " + str(exp))
-
     def _print_expr_canonical(self,
                               x,
                               output_file,
@@ -194,22 +195,25 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         assert (not force_objective_constant) or (is_objective)
 
         # cache - this is referenced numerous times.
-        if isinstance(x, LinearCanonicalRepn):
+        if not isinstance(x, GeneralCanonicalRepn):
             var_hashes = None # not needed
+            linear_canonical = True
         else:
             var_hashes = x[-1]
+            linear_canonical = False
 
         #
         # Linear
         #
         linear_coef_string_template = '%+'+self._precision_string+' %s\n'
-        if isinstance(x, LinearCanonicalRepn):
+        if linear_canonical:
 
             #
             # optimization (these might be generated on the fly)
             #
             coefficients = x.linear
-            if coefficients is not None:
+            if (coefficients is not None) and \
+               (len(coefficients) > 0):
                 variables = x.variables
 
                 # the 99% case is when the input instance is a linear
@@ -356,7 +360,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # Constant offset
         #
-        if isinstance(x, LinearCanonicalRepn):
+        if linear_canonical:
             constant = x.constant
         else:
             if 0 in x:
@@ -390,10 +394,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         """
         Prints the SOS constraint associated with the _SOSConstraintData object
         """
-        if soscondata.num_variables() == 0:
+
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
+
+        if len(sos_items) == 0:
             return
 
-        sos_items = list(soscondata.get_items())
         level = soscondata.level
 
         output_file.write('%s: S%s::\n'
@@ -401,6 +410,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         sos_template_string = "%s:%"+self._precision_string+"\n"
         for vardata, weight in sos_items:
+            weight = _get_bound(weight)
+            if weight < 0:
+                raise ValueError(
+                    "Cannot use negative weight %f "
+                    "for variable %s is special ordered "
+                    "set %s " % (weight, vardata.name, soscondata.name))
             if vardata.fixed:
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
@@ -570,8 +585,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         if numObj == 0:
             raise ValueError(
-                "ERROR: No objectives defined for input model '%s'; "
-                " cannot write legal LP file" % str(model.name))
+                "ERROR: No objectives defined for input model. "
+                "Cannot write legal LP file.")
 
         # Constraints
         #
@@ -606,7 +621,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         sort=sortOrder,
                         descend_into=False):
 
-                    if isinstance(constraint_data, LinearCanonicalRepn):
+                    if (not constraint_data.has_lb()) and \
+                       (not constraint_data.has_ub()):
+                        assert not constraint_data.equality
+                        continue # non-binding, so skip
+
+                    if constraint_data._linear_canonical_form:
+                        canonical_repn = constraint_data.canonical_form()
+                    elif isinstance(constraint_data, LinearCanonicalRepn):
                         canonical_repn = constraint_data
                     else:
                         if gen_con_canonical_repn:
@@ -662,6 +684,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             con_symbol = create_symbol_func(symbol_map, constraint_data, labeler)
 
             if constraint_data.equality:
+                assert value(constraint_data.lower) == \
+                    value(constraint_data.upper)
                 label = 'c_e_' + con_symbol + '_'
                 alias_symbol_func(symbol_map, constraint_data, label)
                 output_file.write(label+':\n')
@@ -672,13 +696,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                               False,
                                               column_order)
                 bound = constraint_data.lower
-                bound = self._get_bound(bound) - offset
+                bound = _get_bound(bound) - offset
                 output_file.write(eq_string_template
                                   % (_no_negative_zero(bound)))
                 output_file.write("\n")
             else:
-                if constraint_data.lower is not None:
-                    if constraint_data.upper is not None:
+                if constraint_data.has_lb():
+                    if constraint_data.has_ub():
                         label = 'r_l_' + con_symbol + '_'
                     else:
                         label = 'c_l_' + con_symbol + '_'
@@ -691,11 +715,14 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   False,
                                                   column_order)
                     bound = constraint_data.lower
-                    bound = self._get_bound(bound) - offset
+                    bound = _get_bound(bound) - offset
                     output_file.write(geq_string_template
                                       % (_no_negative_zero(bound)))
-                if constraint_data.upper is not None:
-                    if constraint_data.lower is not None:
+                else:
+                    assert constraint_data.has_ub()
+
+                if constraint_data.has_ub():
+                    if constraint_data.has_lb():
                         label = 'r_u_' + con_symbol + '_'
                     else:
                         label = 'c_u_' + con_symbol + '_'
@@ -708,9 +735,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                                                   False,
                                                   column_order)
                     bound = constraint_data.upper
-                    bound = self._get_bound(bound) - offset
+                    bound = _get_bound(bound) - offset
                     output_file.write(leq_string_template
                                       % (_no_negative_zero(bound)))
+                else:
+                    assert constraint_data.has_lb()
 
         if not have_nontrivial:
             logger.warning('Empty constraint block written in LP format '  \
@@ -815,17 +844,17 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 vardata_lb = value(vardata.value)
                 vardata_ub = value(vardata.value)
             else:
-                vardata_lb = self._get_bound(vardata.lb)
-                vardata_ub = self._get_bound(vardata.ub)
+                vardata_lb = _get_bound(vardata.lb)
+                vardata_ub = _get_bound(vardata.ub)
 
             name_to_output = variable_symbol_dictionary[id(vardata)]
 
             # track the number of integer and binary variables, so we know whether
             # to output the general / binary sections below.
-            if vardata.is_integer():
-                integer_vars.append(name_to_output)
-            elif vardata.is_binary():
+            if vardata.is_binary():
                 binary_vars.append(name_to_output)
+            elif vardata.is_integer():
+                integer_vars.append(name_to_output)
             elif not vardata.is_continuous():
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary."
@@ -836,7 +865,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             # conflict with Pyomo, which assumes -inf and +inf
             # (which we would argue is more rational).
             output_file.write("   ")
-            if (vardata_lb is not None) and (vardata_lb != -infinity):
+            if vardata.has_lb():
                 output_file.write(lb_string_template
                                   % (_no_negative_zero(vardata_lb)))
             else:
@@ -848,7 +877,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     "numeric values expressed in scientific notation")
 
             output_file.write(name_to_output)
-            if (vardata_ub is not None) and (vardata_ub != infinity):
+            if vardata.has_ub():
                 output_file.write(ub_string_template
                                   % (_no_negative_zero(vardata_ub)))
             else:

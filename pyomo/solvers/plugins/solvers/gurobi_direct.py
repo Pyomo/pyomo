@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 import re
@@ -18,32 +19,40 @@ from six.moves import xrange
 
 logger = logging.getLogger('pyomo.solvers')
 
+_GUROBI_VERSION_MAJOR = None
 _gurobi_version = None
-try:
-    # import all the glp_* functions
-    from gurobipy import *
-    # create a version tuple of length 4
-    _gurobi_version = gurobi.version()
-    while(len(_gurobi_version) < 4):
-        _gurobi_version += (0,)
-    _gurobi_version = _gurobi_version[:4]
-    _GUROBI_VERSION_MAJOR = _gurobi_version[0]
-    gurobi_python_api_exists = True
-except ImportError:
-    gurobi_python_api_exists = False
-except Exception as e:
-    # other forms of exceptions can be thrown by the gurobi python
-    # import. for example, a gurobipy.GurobiError exception is thrown
-    # if all tokens for Gurobi are already in use. assuming, of
-    # course, the license is a token license. unfortunately, you can't
-    # import without a license, which means we can't test for the
-    # exception above!
-    print("Import of gurobipy failed - gurobi message="+str(e)+"\n")
-    gurobi_python_api_exists = False
+gurobi_python_api_exists = None
+def configure_gurobi_direct():
+    global _GUROBI_VERSION_MAJOR
+    global _gurobi_version
+    global gurobi_python_api_exists
+    if _gurobi_version is not None:
+        return
+    try:
+        # import all the glp_* functions
+        import gurobipy
+        gurobi_direct._gurobi_module = gurobipy
+        # create a version tuple of length 4
+        _gurobi_version = gurobipy.gurobi.version()
+        while(len(_gurobi_version) < 4):
+            _gurobi_version += (0,)
+        _gurobi_version = _gurobi_version[:4]
+        _GUROBI_VERSION_MAJOR = _gurobi_version[0]
+        gurobi_python_api_exists = True
+    except ImportError:
+        gurobi_python_api_exists = False
+    except Exception as e:
+        # other forms of exceptions can be thrown by the gurobi python
+        # import. for example, a gurobipy.GurobiError exception is thrown
+        # if all tokens for Gurobi are already in use. assuming, of
+        # course, the license is a token license. unfortunately, you can't
+        # import without a license, which means we can't test for the
+        # exception above!
+        print("Import of gurobipy failed - gurobi message="+str(e)+"\n")
+        gurobi_python_api_exists = False
 
 import pyutilib.services
 from pyutilib.misc import Bunch, Options
-from pyutilib.math import infinity
 
 from pyomo.util.plugin import alias
 from pyomo.opt.base import *
@@ -59,10 +68,13 @@ from pyomo.core.base import (SymbolMap,
 from pyomo.core.base.numvalue import value
 from pyomo.repn import generate_canonical_repn
 
+from pyomo.core.kernel.component_block import IBlockStorage
+
 GRB_MAX = -1
 GRB_MIN = 1
 
 class ModelSOS(object):
+
     def __init__(self):
         self.sosType = {}
         self.sosName = {}
@@ -73,7 +85,10 @@ class ModelSOS(object):
 
     def count_constraint(self,symbol_map,labeler,variable_symbol_map,gurobi_var_map,soscondata):
 
-        sos_items = list(soscondata.get_items())
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
         level = soscondata.level
 
         if len(sos_items) == 0:
@@ -84,9 +99,9 @@ class ModelSOS(object):
         varids = self.varids[self.block_cntr] = []
         weights = self.weights[self.block_cntr] = []
         if level == 1:
-            self.sosType[self.block_cntr] = GRB.SOS_TYPE1
+            self.sosType[self.block_cntr] = gurobi_direct._gurobi_module.GRB.SOS_TYPE1
         elif level == 2:
-            self.sosType[self.block_cntr] = GRB.SOS_TYPE2
+            self.sosType[self.block_cntr] = gurobi_direct._gurobi_module.GRB.SOS_TYPE2
         else:
             raise ValueError("Unsupported SOSConstraint level %s" % level)
 
@@ -138,7 +153,10 @@ class gurobi_direct ( OptSolver ):
     alias('_gurobi_direct',
           doc='Direct Python interface to the Gurobi optimization solver.')
 
+    _gurobi_module = None
+
     def __init__(self, **kwds):
+        configure_gurobi_direct()
         #
         # Call base class constructor
         #
@@ -203,7 +221,7 @@ class gurobi_direct ( OptSolver ):
         from pyomo.repn import LinearCanonicalRepn, canonical_degree
 
         try:
-            grbmodel = Model(name=pyomo_instance.name)
+            grbmodel = gurobi_direct._gurobi_module.Model()
         except Exception:
             e = sys.exc_info()[1]
             msg = 'Unable to create Gurobi model.  Have you installed the Python'\
@@ -215,9 +233,16 @@ class gurobi_direct ( OptSolver ):
         else:
             labeler = NumericLabeler('x')
         # cache to avoid dictionary getitem calls in the loops below.
-        self_symbol_map = self._symbol_map = SymbolMap()
-        pyomo_instance.solutions.add_symbol_map(self_symbol_map)
-        self._smap_id = id(self_symbol_map)
+        symbol_map = self._symbol_map = SymbolMap()
+        self._smap_id = id(symbol_map)
+        if isinstance(pyomo_instance, IBlockStorage):
+            # BIG HACK (see pyomo.core.kernel write function)
+            if not hasattr(pyomo_instance, "._symbol_maps"):
+                setattr(pyomo_instance, "._symbol_maps", {})
+            getattr(pyomo_instance,
+                    "._symbol_maps")[self._smap_id] = symbol_map
+        else:
+            pyomo_instance.solutions.add_symbol_map(symbol_map)
 
         # we use this when iterating over the constraints because it
         # will have a much smaller hash table, we also use this for
@@ -232,30 +257,30 @@ class gurobi_direct ( OptSolver ):
         self._referenced_variable_ids.clear()
 
         # cache to avoid dictionary getitem calls in the loop below.
-        grb_infinity = GRB.INFINITY
+        grb_infinity = gurobi_direct._gurobi_module.GRB.INFINITY
 
         for var_value in pyomo_instance.component_data_objects(Var, active=True):
 
             lb = -grb_infinity
             ub = grb_infinity
 
-            if (var_value.lb is not None) and (var_value.lb != -infinity):
+            if var_value.has_lb():
                 lb = value(var_value.lb)
-            if (var_value.ub is not None) and (var_value.ub != infinity):
+            if var_value.has_ub():
                 ub = value(var_value.ub)
 
             # _VarValue objects will not be in the symbol map yet, so
             # avoid some checks.
-            var_value_label = self_symbol_map.createSymbol(var_value, labeler)
+            var_value_label = symbol_map.createSymbol(var_value, labeler)
             var_symbol_pairs.append((var_value, var_value_label))
 
             # be sure to impart the integer and binary nature of any variables
-            if var_value.is_integer():
-                var_type = GRB.INTEGER
-            elif var_value.is_binary():
-                var_type = GRB.BINARY
+            if var_value.is_binary():
+                var_type = gurobi_direct._gurobi_module.GRB.BINARY
+            elif var_value.is_integer():
+                var_type = gurobi_direct._gurobi_module.GRB.INTEGER
             elif var_value.is_continuous():
-                var_type = GRB.CONTINUOUS
+                var_type = gurobi_direct._gurobi_module.GRB.CONTINUOUS
             else:
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary.")
@@ -303,7 +328,7 @@ class gurobi_direct ( OptSolver ):
                    (level > 2):
                     raise RuntimeError(
                         "Solver does not support SOS level %s constraints" % (level,))
-                modelSOS.count_constraint(self_symbol_map,
+                modelSOS.count_constraint(symbol_map,
                                           labeler,
                                           self_variable_symbol_map,
                                           pyomo_gurobi_variable_map,
@@ -322,7 +347,7 @@ class gurobi_direct ( OptSolver ):
 
                 sense = GRB_MIN if (obj_data.is_minimizing()) else GRB_MAX
                 grbmodel.ModelSense = sense
-                obj_expr = LinExpr()
+                obj_expr = gurobi_direct._gurobi_module.LinExpr()
 
                 if gen_obj_canonical_repn:
                     obj_repn = generate_canonical_repn(obj_data.expr)
@@ -332,10 +357,11 @@ class gurobi_direct ( OptSolver ):
 
                 if isinstance(obj_repn, LinearCanonicalRepn):
 
-                    if obj_repn.constant != None:
+                    if obj_repn.constant is not None:
                         obj_expr.addConstant(obj_repn.constant)
 
-                    if obj_repn.linear != None:
+                    if (obj_repn.linear is not None) and \
+                       (len(obj_repn.linear) > 0):
 
                         for i in xrange(len(obj_repn.linear)):
                             var_coefficient = obj_repn.linear[i]
@@ -359,10 +385,10 @@ class gurobi_direct ( OptSolver ):
                                               pyomo_gurobi_variable_map[label])
 
                     if 2 in obj_repn:
-                        obj_expr = QuadExpr(obj_expr)
+                        obj_expr = gurobi_direct._gurobi_module.QuadExpr(obj_expr)
                         hash_to_variable_map = obj_repn[-1]
                         for quad_repn, coef in iteritems(obj_repn[2]):
-                            gurobi_expr = QuadExpr(coef)
+                            gurobi_expr = gurobi_direct._gurobi_module.QuadExpr(coef)
                             for var_hash, exponent in iteritems(quad_repn):
                                 vardata = hash_to_variable_map[var_hash]
                                 self._referenced_variable_ids.add(id(vardata))
@@ -386,7 +412,7 @@ class gurobi_direct ( OptSolver ):
                 # _ObjectiveData objects will not be in the symbol map
                 # yet, so avoid some checks.
                 self._objective_label = \
-                    self_symbol_map.createSymbol(obj_data, labeler)
+                    symbol_map.createSymbol(obj_data, labeler)
 
                 grbmodel.setObjective(obj_expr, sense=sense)
 
@@ -395,12 +421,15 @@ class gurobi_direct ( OptSolver ):
                                                                 active=True,
                                                                 descend_into=False):
 
-                if (constraint_data.lower is None) and \
-                   (constraint_data.upper is None):
+                if (not constraint_data.has_lb()) and \
+                   (not constraint_data.has_ub()):
+                    assert not constraint_data.equality
                     continue  # not binding at all, don't bother
 
                 con_repn = None
-                if isinstance(constraint_data, LinearCanonicalRepn):
+                if constraint_data._linear_canonical_form:
+                    con_repn = constraint_data.canonical_form()
+                elif isinstance(constraint_data, LinearCanonicalRepn):
                     con_repn = constraint_data
                 else:
                     if gen_con_canonical_repn:
@@ -413,7 +442,7 @@ class gurobi_direct ( OptSolver ):
                 # _ConstraintData objects will not be in the symbol
                 # map yet, so avoid some checks.
                 constraint_label = \
-                    self_symbol_map.createSymbol(constraint_data, labeler)
+                    symbol_map.createSymbol(constraint_data, labeler)
 
                 trivial = False
                 if isinstance(con_repn, LinearCanonicalRepn):
@@ -427,9 +456,10 @@ class gurobi_direct ( OptSolver ):
 
                     if constant is not None:
                         offset = constant
-                    expr = LinExpr() + offset
+                    expr = gurobi_direct._gurobi_module.LinExpr() + offset
 
-                    if coefficients is not None:
+                    if (coefficients is not None) and \
+                       (len(coefficients) > 0):
 
                         linear_coefs = list()
                         linear_vars = list()
@@ -443,7 +473,7 @@ class gurobi_direct ( OptSolver ):
                             linear_coefs.append(var_coefficient)
                             linear_vars.append(pyomo_gurobi_variable_map[label])
 
-                        expr += LinExpr(linear_coefs, linear_vars)
+                        expr += gurobi_direct._gurobi_module.LinExpr(linear_coefs, linear_vars)
 
                     else:
 
@@ -453,7 +483,7 @@ class gurobi_direct ( OptSolver ):
 
                     if 0 in con_repn:
                         offset = con_repn[0][None]
-                    expr = LinExpr() + offset
+                    expr = gurobi_direct._gurobi_module.LinExpr() + offset
 
                     if 1 in con_repn: # first-order terms
 
@@ -468,7 +498,7 @@ class gurobi_direct ( OptSolver ):
                             linear_coefs.append( var_coefficient )
                             linear_vars.append( pyomo_gurobi_variable_map[label] )
 
-                        expr += LinExpr(linear_coefs, linear_vars)
+                        expr += gurobi_direct._gurobi_module.LinExpr(linear_coefs, linear_vars)
 
                     if 2 in con_repn: # quadratic constraint
                         if _GUROBI_VERSION_MAJOR < 5:
@@ -476,12 +506,12 @@ class gurobi_direct ( OptSolver ):
                                 "The gurobi_direct plugin does not handle quadratic "
                                 "constraint expressions for Gurobi major versions "
                                 "< 5. Current version: Gurobi %s.%s%s"
-                                % (gurobi.version()))
+                                % (gurobi_direct._gurobi_module.gurobi.version()))
 
-                        expr = QuadExpr(expr)
+                        expr = gurobi_direct._gurobi_module.QuadExpr(expr)
                         hash_to_variable_map = con_repn[-1]
                         for quad_repn, coef in iteritems(con_repn[2]):
-                            gurobi_expr = QuadExpr(coef)
+                            gurobi_expr = gurobi_direct._gurobi_module.QuadExpr(coef)
                             for var_hash, exponent in iteritems(quad_repn):
                                 vardata = hash_to_variable_map[var_hash]
                                 self._referenced_variable_ids.add(id(vardata))
@@ -503,7 +533,7 @@ class gurobi_direct ( OptSolver ):
                 if (not trivial) or (not self._skip_trivial_constraints):
 
                     if constraint_data.equality:
-                        sense = GRB.EQUAL
+                        sense = gurobi_direct._gurobi_module.GRB.EQUAL
                         bound = self._get_bound(constraint_data.lower)
                         grbmodel.addConstr(lhs=expr,
                                            sense=sense,
@@ -511,8 +541,8 @@ class gurobi_direct ( OptSolver ):
                                            name=constraint_label)
                     else:
                         # L <= body <= U
-                        if (constraint_data.upper is not None) and \
-                           (constraint_data.lower is not None):
+                        if constraint_data.has_lb() and \
+                           constraint_data.has_ub():
                             grb_con = grbmodel.addRange(
                                 expr,
                                 self._get_bound(constraint_data.lower),
@@ -521,22 +551,23 @@ class gurobi_direct ( OptSolver ):
                             _self_range_con_var_pairs.append((grb_con,range_var_idx))
                             range_var_idx += 1
                         # body <= U
-                        elif constraint_data.upper is not None:
+                        elif constraint_data.has_ub():
                             bound = self._get_bound(constraint_data.upper)
                             if bound < float('inf'):
                                 grbmodel.addConstr(
                                     lhs=expr,
-                                    sense=GRB.LESS_EQUAL,
+                                    sense=gurobi_direct._gurobi_module.GRB.LESS_EQUAL,
                                     rhs=bound,
                                     name=constraint_label
                                     )
                         # L <= body
                         else:
+                            assert constraint_data.has_lb()
                             bound = self._get_bound(constraint_data.lower)
                             if bound > -float('inf'):
                                 grbmodel.addConstr(
                                     lhs=expr,
-                                    sense=GRB.GREATER_EQUAL,
+                                    sense=gurobi_direct._gurobi_module.GRB.GREATER_EQUAL,
                                     rhs=bound,
                                     name=constraint_label
                                     )
@@ -561,8 +592,8 @@ class gurobi_direct ( OptSolver ):
                                      % (vardata.name,pyomo_instance.name,))
 
                 grbvar = pyomo_gurobi_variable_map[varname]
-                grbvar.setAttr(GRB.Attr.UB, vardata.value)
-                grbvar.setAttr(GRB.Attr.LB, vardata.value)
+                grbvar.setAttr(gurobi_direct._gurobi_module.GRB.Attr.UB, vardata.value)
+                grbvar.setAttr(gurobi_direct._gurobi_module.GRB.Attr.LB, vardata.value)
 
         grbmodel.update()
 
@@ -578,7 +609,9 @@ class gurobi_direct ( OptSolver ):
         for symbol, vardata_ref in iteritems(self._variable_symbol_map.bySymbol):
             vardata = vardata_ref()
             if vardata.value is not None:
-                self._pyomo_gurobi_variable_map[symbol].setAttr(GRB.Attr.Start, vardata.value)
+                self._pyomo_gurobi_variable_map[symbol].setAttr(
+                    gurobi_direct._gurobi_module.GRB.Attr.Start,
+                    vardata.value)
 
     def _presolve(self, *args, **kwds):
 
@@ -631,7 +664,7 @@ class gurobi_direct ( OptSolver ):
             msg = "The gurobi_direct plugin method '_presolve' must be supplied "\
                   "a single problem instance - %s were supplied"
             raise ValueError(msg % len(args))
-        elif not isinstance(model, Model):
+        elif not isinstance(model, (Model, IBlockStorage)):
             raise ValueError("The problem instance supplied to the "            \
                  "gurobi_direct plugin '_presolve' method must be of type 'Model'")
 
@@ -708,14 +741,16 @@ class gurobi_direct ( OptSolver ):
 
         if 'relax_integrality' in self.options:
             for v in prob.getVars():
-                if v.vType != GRB.CONTINUOUS:
-                    v.vType = GRB.CONTINUOUS
+                if v.vType != gurobi_direct._gurobi_module.GRB.CONTINUOUS:
+                    v.vType = gurobi_direct._gurobi_module.GRB.CONTINUOUS
             prob.update()
 
         if _GUROBI_VERSION_MAJOR >= 5:
             for suffix in self._suffixes:
                 if re.match(suffix, "dual"):
-                    prob.setParam(GRB.Param.QCPDual, 1)
+                    prob.setParam(
+                        gurobi_direct._gurobi_module.GRB.Param.QCPDual,
+                        1)
 
         # Actually solve the problem.
         prob.optimize()
@@ -729,20 +764,34 @@ class gurobi_direct ( OptSolver ):
 
     def _gurobi_get_solution_status ( self ):
         status = self._gurobi_instance.Status
-        if   GRB.OPTIMAL         == status: return SolutionStatus.optimal
-        elif GRB.INFEASIBLE      == status: return SolutionStatus.infeasible
-        elif GRB.CUTOFF          == status: return SolutionStatus.other
-        elif GRB.INF_OR_UNBD     == status: return SolutionStatus.other
-        elif GRB.INTERRUPTED     == status: return SolutionStatus.other
-        elif GRB.LOADED          == status: return SolutionStatus.other
-        elif GRB.SUBOPTIMAL      == status: return SolutionStatus.other
-        elif GRB.UNBOUNDED       == status: return SolutionStatus.other
-        elif GRB.ITERATION_LIMIT == status: return SolutionStatus.stoppedByLimit
-        elif GRB.NODE_LIMIT      == status: return SolutionStatus.stoppedByLimit
-        elif GRB.SOLUTION_LIMIT  == status: return SolutionStatus.stoppedByLimit
-        elif GRB.TIME_LIMIT      == status: return SolutionStatus.stoppedByLimit
-        elif GRB.NUMERIC         == status: return SolutionStatus.error
-        raise RuntimeError('Unknown solution status returned by Gurobi solver')
+        if   gurobi_direct._gurobi_module.GRB.OPTIMAL == status:
+            return SolutionStatus.optimal
+        elif gurobi_direct._gurobi_module.GRB.INFEASIBLE == status:
+            return SolutionStatus.infeasible
+        elif gurobi_direct._gurobi_module.GRB.CUTOFF == status:
+            return SolutionStatus.other
+        elif gurobi_direct._gurobi_module.GRB.INF_OR_UNBD == status:
+            return SolutionStatus.other
+        elif gurobi_direct._gurobi_module.GRB.INTERRUPTED == status:
+            return SolutionStatus.other
+        elif gurobi_direct._gurobi_module.GRB.LOADED == status:
+            return SolutionStatus.other
+        elif gurobi_direct._gurobi_module.GRB.SUBOPTIMAL == status:
+            return SolutionStatus.other
+        elif gurobi_direct._gurobi_module.GRB.UNBOUNDED == status:
+            return SolutionStatus.other
+        elif gurobi_direct._gurobi_module.GRB.ITERATION_LIMIT == status:
+            return SolutionStatus.stoppedByLimit
+        elif gurobi_direct._gurobi_module.GRB.NODE_LIMIT == status:
+            return SolutionStatus.stoppedByLimit
+        elif gurobi_direct._gurobi_module.GRB.SOLUTION_LIMIT == status:
+            return SolutionStatus.stoppedByLimit
+        elif gurobi_direct._gurobi_module.GRB.TIME_LIMIT == status:
+            return SolutionStatus.stoppedByLimit
+        elif gurobi_direct._gurobi_module.GRB.NUMERIC == status:
+            return SolutionStatus.error
+        raise RuntimeError("Unknown solution status returned by "
+                           "Gurobi solver")
 
     def _postsolve(self):
 
@@ -772,7 +821,7 @@ class gurobi_direct ( OptSolver ):
 
         gprob = self._gurobi_instance
 
-        if (gprob.getAttr(GRB.Attr.IsMIP)):
+        if (gprob.getAttr(gurobi_direct._gurobi_module.GRB.Attr.IsMIP)):
             extract_reduced_costs = False
             extract_duals = False
 
@@ -793,7 +842,8 @@ class gurobi_direct ( OptSolver ):
         soln_variables = soln.variable
         soln_constraints = soln.constraint
 
-        solver.name = "Gurobi %s.%s%s" % gurobi.version()
+        solver.name = ("Gurobi %s.%s%s"
+                       % gurobi_direct._gurobi_module.gurobi.version())
         solver.wallclock_time = gprob.Runtime
 
         if gprob.Status == 1: # problem is loaded, but no solution
@@ -986,7 +1036,3 @@ class gurobi_direct ( OptSolver ):
 
         # let the base class deal with returning results.
         return OptSolver._postsolve(self)
-
-if not gurobi_python_api_exists:
-    SolverFactory().deactivate('_gurobi_direct')
-    SolverFactory().deactivate('_mock_gurobi_direct')

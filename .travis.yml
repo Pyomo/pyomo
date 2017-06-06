@@ -15,17 +15,19 @@ matrix:
     env:                             CATEGORY="parallel" EXTRAS="yes"
   #
   - python: '3.5'
-    env:                             CATEGORY="nightly"
-  - python: '3.5'
     env:                             CATEGORY="nightly"  EXTRAS="yes"
   - python: '3.5'
     env:                             CATEGORY="parallel" EXTRAS="yes"
+  #
   - python: '3.6'
     env:                             CATEGORY="nightly"
-  - python: '3.6'
-    env:                             CATEGORY="nightly"  EXTRAS="yes"
-  - python: '3.6'
-    env:                             CATEGORY="parallel" EXTRAS="yes"
+  #- python: '3.6'
+  #  env:                             CATEGORY="nightly"  EXTRAS="yes"
+  #- python: '3.6'
+  #  env:                             CATEGORY="parallel" EXTRAS="yes"
+
+#  - python: pypy
+#    env:                             CATEGORY="nightly"
   #
   #- python: '2.7'
   #  env: PYRO="Pyro" JYTHON="org.python:jython-installer:2.7.0"
@@ -55,6 +57,11 @@ install:
 - if [ -n "${YAML}" ]; then pip install pyyaml; fi
 - if [ -n "${PYRO}" ]; then pip install $PYRO; fi
 - if [ -n "${EXTRAS}" ]; then conda install -y --channel conda-forge pyomo.extras; fi
+- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+     if [ -n "${EXTRAS}" ]; then
+        pip install scipy;
+     fi
+  fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
 - conda install -y --channel conda-forge glpk
 - conda install -y --channel cachemeorg ipopt_bin

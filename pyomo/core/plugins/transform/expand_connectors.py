@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -141,8 +142,8 @@ class ExpandConnectors(Transformation):
                 _len = (
                     #-3 if v is None else
                     -2 if k in c.aggregators else
-                    -1 if v.is_expression() or not v.is_indexed() else
-                    len(v) )
+                    -1 if not hasattr(v, 'is_indexed') or not v.is_indexed()
+                    else len(v) )
                 ref[k] = ( v, _len, c )
 
         if not ref:
@@ -177,8 +178,8 @@ class ExpandConnectors(Transformation):
                 _len = (
                     -3 if _v is None else
                     -2 if k in c.aggregators else
-                    -1 if _v.is_expression() or not _v.is_indexed() else
-                    len(_v) )
+                    -1 if not hasattr(_v, 'is_indexed') or not _v.is_indexed()
+                    else len(_v) )
                 if (_len >= 0) ^ (v[1] >= 0):
                     raise ValueError(
                         "Connector mismatch: Connector variable '%s' mixing "

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 #
 # Unit Tests for Suffix
 #
@@ -37,18 +38,18 @@ def simple_obj_rule(model,i):
 
 
 class TestSuffixMethods(unittest.TestCase):
-    
+
     # test __init__
     def test_init(self):
         model = ConcreteModel()
         # no keywords
         model.junk = Suffix()
         model.del_component('junk')
-        
+
         for direction,datatype in itertools.product(Suffix.SuffixDirections,Suffix.SuffixDatatypes):
             model.junk = Suffix(direction=direction,datatype=datatype)
             model.del_component('junk')
-            
+
     # test import_enabled
     def test_import_enabled(self):
         model = ConcreteModel()
@@ -61,14 +62,14 @@ class TestSuffixMethods(unittest.TestCase):
         model.test_in = Suffix(direction=Suffix.EXPORT)
         self.assertTrue(model.test_in.import_enabled() is False)
 
-        model.test_inout = Suffix(direction=Suffix.IMPORT_EXPORT)        
+        model.test_inout = Suffix(direction=Suffix.IMPORT_EXPORT)
         self.assertTrue(model.test_inout.import_enabled() is True)
 
     # test export_enabled
     def test_export_enabled(self):
         model = ConcreteModel()
 
-        model.test_local = Suffix(direction=Suffix.LOCAL)        
+        model.test_local = Suffix(direction=Suffix.LOCAL)
         self.assertTrue(model.test_local.export_enabled() is False)
 
         model.test_out = Suffix(direction=Suffix.IMPORT)
@@ -682,14 +683,14 @@ class TestSuffixMethods(unittest.TestCase):
 
         model.junk.set_value(model.y[2],1.0)
         model.junk.set_value(model.z,2.0)
-        
+
         self.assertTrue(model.junk.get(model.x) is None)
         self.assertTrue(model.junk.get(model.y) is None)
         self.assertTrue(model.junk.get(model.y[1]) is None)
         self.assertEqual(model.junk.get(model.y[2]), 1.0)
         self.assertEqual(model.junk.get(model.z), None)
         self.assertEqual(model.junk.get(model.z[1]), 2.0)
-        
+
         model.junk.set_all_values(3.0)
 
         self.assertTrue(model.junk.get(model.x) is None)
@@ -709,7 +710,7 @@ class TestSuffixMethods(unittest.TestCase):
 
         model.y[2].set_suffix_value('junk', 1.0)
         model.z.set_suffix_value('junk', 2.0)
-        
+
         self.assertTrue(model.x.get_suffix_value('junk') is None)
         self.assertTrue(model.y.get_suffix_value('junk') is None)
         self.assertTrue(model.y[1].get_suffix_value('junk') is None)
@@ -736,7 +737,7 @@ class TestSuffixMethods(unittest.TestCase):
 
         model.y[2].set_suffix_value(model.junk, 1.0)
         model.z.set_suffix_value(model.junk, 2.0)
-        
+
         self.assertTrue(model.x.get_suffix_value(model.junk) is None)
         self.assertTrue(model.y.get_suffix_value(model.junk) is None)
         self.assertTrue(model.y[1].get_suffix_value(model.junk) is None)
@@ -770,7 +771,7 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertEqual(model.junk.get(model.z),3.0)
 
 
-    # test clear_value 
+    # test clear_value
     def test_clear_value(self):
         model = ConcreteModel()
         model.junk = Suffix()
@@ -783,7 +784,7 @@ class TestSuffixMethods(unittest.TestCase):
         model.junk.set_value(model.y[2],1.0)
         model.junk.set_value(model.z,2.0)
         model.junk.set_value(model.z[1],4.0)
-        
+
         self.assertTrue(model.junk.get(model.x) == -1.0)
         self.assertTrue(model.junk.get(model.y) == None)
         self.assertTrue(model.junk.get(model.y[1]) == -2.0)
@@ -863,7 +864,7 @@ class TestSuffixMethods(unittest.TestCase):
         self.assertTrue(model.junk.get_direction() is Suffix.IMPORT)
         model.junk.set_direction(Suffix.IMPORT_EXPORT)
         self.assertTrue(model.junk.get_direction() is Suffix.IMPORT_EXPORT)
-        
+
     # test that calling set_direction with a bad value fails
     def test_set_direction_badvalue(self):
         model = ConcreteModel()
@@ -873,7 +874,7 @@ class TestSuffixMethods(unittest.TestCase):
         except ValueError:
             pass
         else:
-            self.fail("Calling set_datatype with a bad type should fail.")    
+            self.fail("Calling set_datatype with a bad type should fail.")
 
     # test __str__
     def test_str(self):

@@ -3,8 +3,11 @@
 
 
 Pyomo supports distributed computing via the Python "PYRO" package.
-PYRO stands for PYthon Remote Objects. Full documentation of PYRO
-is available from:  http://pyro.sourceforge.net/.
+PYRO stands for PYthon Remote Objects. There are two widely-available
+versions of PYRO, both of which Pyomo supports: PYRO3 and PYRO4.  PYRO3
+only works with Python 2.x whereas PYRO4 supports both Python 2.x and
+3.x.  Full documentation of PYRO is available from:
+https://pythonhosted.org/Pyro4/.
 
 The following describes a "quick-start" process for creating and
 using a client and multiple solvers on a single, presumably multi-core
@@ -18,6 +21,8 @@ Windows are qualitatively identical - the sole difference is that
 you can't (or at least we haven't figured out how to) put processes
 in the background on Windows. The work-around is simply (albeit
 painfully) to launch the various processes in distinct shells.
+
+This process should work for both PYRO3 and PYRO4 installations.
 
 === Step 1: Starting a Name Server ===
 

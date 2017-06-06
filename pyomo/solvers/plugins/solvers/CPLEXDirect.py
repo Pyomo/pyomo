@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 
 import logging
@@ -18,7 +19,6 @@ import math
 
 import pyutilib.services
 from pyutilib.misc import Bunch, Options
-from pyutilib.math import infinity
 
 import pyomo.util.plugin
 from pyomo.opt.base import *
@@ -34,6 +34,8 @@ from pyomo.core.base import (SymbolMap,
 from pyomo.repn import generate_canonical_repn
 from pyomo.solvers import wrappers
 
+from pyomo.core.kernel.component_block import IBlockStorage
+
 from six import itervalues, iterkeys, iteritems, advance_iterator
 from six.moves import xrange
 
@@ -45,24 +47,30 @@ except:
     basestring = str
 
 _cplex_version = None
-try:
-    import cplex
-    from cplex.exceptions import CplexError, CplexSolverError
-    # create a version tuple of length 4
-    _cplex_version = tuple(int(i) for i in cplex.Cplex().get_version().split('.'))
-    while(len(_cplex_version) < 4):
-        _cplex_version += (0,)
-    _cplex_version = _cplex_version[:4]
-    cplex_import_available=True
-except ImportError:
-    cplex_import_available=False
-except Exception as e:
-    # other forms of exceptions can be thrown by CPLEX python
-    # import.  For example, an error in code invoked by the module's
-    # __init__.  We should continue gracefully and not cause a fatal
-    # error in Pyomo.
-    print("Import of cplex failed - cplex message=%s\n" % (e,) )
-    cplex_import_available=False
+cplex_import_available = None
+def configure_cplex():
+    global _cplex_version
+    global cplex_import_available
+    if not cplex_import_available is None:
+        return
+    try:
+        import cplex
+        CPLEXDirect._cplex_module = cplex
+        # create a version tuple of length 4
+        _cplex_version = tuple(int(i) for i in cplex.Cplex().get_version().split('.'))
+        while(len(_cplex_version) < 4):
+            _cplex_version += (0,)
+        _cplex_version = _cplex_version[:4]
+        cplex_import_available=True
+    except ImportError:
+        cplex_import_available=False
+    except Exception as e:
+        # other forms of exceptions can be thrown by CPLEX python
+        # import.  For example, an error in code invoked by the module's
+        # __init__.  We should continue gracefully and not cause a fatal
+        # error in Pyomo.
+        print("Import of cplex failed - cplex message=%s\n" % (e,) )
+        cplex_import_available=False
 
 class CplexSolverWrapper(wrappers.MIPSolverWrapper):
 
@@ -85,7 +93,10 @@ class ModelSOS(object):
 
     def count_constraint(self,symbol_map,labeler,variable_symbol_map,soscondata):
 
-        sos_items = list(soscondata.get_items())
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
         level = soscondata.level
 
         if len(sos_items) == 0:
@@ -96,9 +107,9 @@ class ModelSOS(object):
         varids = self.varids[self.block_cntr] = []
         weights = self.weights[self.block_cntr] = []
         if level == 1:
-            self.sosType[self.block_cntr] = cplex.Cplex.SOS.type.SOS1
+            self.sosType[self.block_cntr] = CPLEXDirect._cplex_module.Cplex.SOS.type.SOS1
         elif level == 2:
-            self.sosType[self.block_cntr] = cplex.Cplex.SOS.type.SOS2
+            self.sosType[self.block_cntr] = CPLEXDirect._cplex_module.Cplex.SOS.type.SOS2
         else:
             raise ValueError("Unsupported SOSConstraint level %s" % level)
 
@@ -117,15 +128,15 @@ class ModelSOS(object):
 class CPLEXDirect(OptSolver):
     """The CPLEX LP/MIP solver
     """
-
+    _cplex_module = None
     pyomo.util.plugin.alias('_cplex_direct',
                             doc='Direct Python interface to the CPLEX LP/MIP solver')
 
     def __init__(self, **kwds):
+        configure_cplex()
         #
         # Call base class constructor
         #
-
         # This gets overridden by CPLEXPersistent
         if 'type' not in kwds:
             kwds['type'] = 'cplexdirect'
@@ -225,7 +236,7 @@ class CPLEXDirect(OptSolver):
         if as_pairs is True:
             return pairs, offset
         else:
-            expr = cplex.SparsePair(ind=variables, val=coefficients)
+            expr = CPLEXDirect._cplex_module.SparsePair(ind=variables, val=coefficients)
             return expr, offset
 
     #
@@ -253,7 +264,8 @@ class CPLEXDirect(OptSolver):
 
         self_variable_symbol_map = self._variable_symbol_map
 
-        if variables != None:
+        if (variables is not None) and \
+           (len(variables) > 0):
 
             for var_value, var_coefficient in zip(variables, coefficients):
 
@@ -285,7 +297,7 @@ class CPLEXDirect(OptSolver):
         if as_pairs is True:
             return pairs, offset
         else:
-            expr = cplex.SparsePair(ind=variable_identifiers, val=variable_coefficients)
+            expr = CPLEXDirect._cplex_module.SparsePair(ind=variable_identifiers, val=variable_coefficients)
             return expr, offset
 
     #
@@ -329,9 +341,9 @@ class CPLEXDirect(OptSolver):
         if as_triples is True:
             return triples
         else:
-            expr = cplex.SparseTriple(ind1=variables1,
-                                      ind2=variables2,
-                                      val=coefficients)
+            expr = CPLEXDirect._cplex_module.SparseTriple(ind1=variables1,
+                                              ind2=variables2,
+                                              val=coefficients)
             return expr
 
     #
@@ -351,8 +363,8 @@ class CPLEXDirect(OptSolver):
         cplex_instance = None
 
         try:
-            cplex_instance = cplex.Cplex()
-        except CplexError:
+            cplex_instance = CPLEXDirect._cplex_module.Cplex()
+        except CPLEXDirect._cplex_module.exceptions.CplexError:
             e = sys.exc_info()[1]
             msg = 'Unable to create Cplex model.  Have you installed the Python'\
             '\n       bindings for Cplex?\n\n\tError message: %s'
@@ -364,8 +376,15 @@ class CPLEXDirect(OptSolver):
         else:
             labeler = NumericLabeler('x')
         symbol_map = SymbolMap()
-        pyomo_instance.solutions.add_symbol_map(symbol_map)
         self._smap_id = id(symbol_map)
+        if isinstance(pyomo_instance, IBlockStorage):
+            # BIG HACK (see pyomo.core.kernel write function)
+            if not hasattr(pyomo_instance, "._symbol_maps"):
+                setattr(pyomo_instance, "._symbol_maps", {})
+            getattr(pyomo_instance,
+                    "._symbol_maps")[self._smap_id] = symbol_map
+        else:
+            pyomo_instance.solutions.add_symbol_map(symbol_map)
 
         # we use this when iterating over the constraints because it
         # will have a much smaller hash table, we also use this for
@@ -400,20 +419,20 @@ class CPLEXDirect(OptSolver):
             var_names.append(symbol_map.getSymbol( var, labeler ))
             var_symbol_pairs.append((var, varname))
 
-            if (var.lb is None) or (var.lb == -infinity):
-                var_lbs.append(-cplex.infinity)
+            if not var.has_lb():
+                var_lbs.append(-CPLEXDirect._cplex_module.infinity)
             else:
                 var_lbs.append(value(var.lb))
-            if (var.ub is None) or (var.ub == infinity):
-                var_ubs.append(cplex.infinity)
+            if not var.has_ub():
+                var_ubs.append(CPLEXDirect._cplex_module.infinity)
             else:
                 var_ubs.append(value(var.ub))
-            if var.is_integer():
-                var_types.append(cplex_instance.variables.type.integer)
-                num_integer_variables += 1
-            elif var.is_binary():
+            if var.is_binary():
                 var_types.append(cplex_instance.variables.type.binary)
                 num_binary_variables += 1
+            elif var.is_integer():
+                var_types.append(cplex_instance.variables.type.integer)
+                num_integer_variables += 1
             elif var.is_continuous():
                 var_types.append(cplex_instance.variables.type.continuous)
                 num_continuous_variables += 1
@@ -502,7 +521,8 @@ class CPLEXDirect(OptSolver):
                     obj_repn = block_canonical_repn[obj_data]
 
                 if (isinstance(obj_repn, LinearCanonicalRepn) and \
-                    (obj_repn.linear == None)) or \
+                    ((obj_repn.linear is None) or \
+                     (len(obj_repn.linear) == 0))) or \
                     canonical_is_constant(obj_repn):
                     print("Warning: Constant objective detected, replacing " + \
                           "with a placeholder to prevent solver failure.")
@@ -565,12 +585,15 @@ class CPLEXDirect(OptSolver):
                                                     active=True,
                                                     descend_into=False):
 
-                if (con.lower is None) and \
-                   (con.upper is None):
+                if (not con.has_lb()) and \
+                   (not con.has_ub()):
+                    assert not con.equality
                     continue  # not binding at all, don't bother
 
                 con_repn = None
-                if isinstance(con, LinearCanonicalRepn):
+                if con._linear_canonical_form:
+                    con_repn = con.canonical_form()
+                elif isinstance(con, LinearCanonicalRepn):
                     con_repn = con
                 else:
                     if gen_con_canonical_repn:
@@ -586,8 +609,9 @@ class CPLEXDirect(OptSolver):
                 # possible that the body of the constraint consists of only a
                 # constant, in which case the "variable" of
                 if isinstance(con_repn, LinearCanonicalRepn):
-                    if (con_repn.linear is None) and \
-                       self._skip_trivial_constraints:
+                    if self._skip_trivial_constraints and \
+                       ((con_repn.linear is None) or \
+                        (len(con_repn.linear) == 0)):
                        continue
                 else:
                     # we shouldn't come across a constant canonical repn
@@ -617,7 +641,7 @@ class CPLEXDirect(OptSolver):
                 #Quadratic constraints
                 if quadratic:
                     if expr is None:
-                        expr = cplex.SparsePair(ind=[0],val=[0.0])
+                        expr = CPLEXDirect._cplex_module.SparsePair(ind=[0],val=[0.0])
                     quadratic_constraints = True
 
                     qexpr = self._encode_constraint_body_quadratic(con_repn, labeler)
@@ -628,17 +652,18 @@ class CPLEXDirect(OptSolver):
                         qsenses.append('E')
                         qrhss.append(self._get_bound(con.lower) - offset)
 
-                    elif (con.lower is not None) and (con.upper is not None):
+                    elif con.has_lb() and con.has_ub():
                         raise RuntimeError(
                             "The CPLEXDirect plugin can not translate range "
                             "constraints containing quadratic expressions.")
 
-                    elif con.lower is not None:
-                        assert con.upper is None
+                    elif con.has_lb():
+                        assert not con.has_ub()
                         qsenses.append('G')
                         qrhss.append(self._get_bound(con.lower) - offset)
 
                     else:
+                        assert con.has_ub()
                         qsenses.append('L')
                         qrhss.append(self._get_bound(con.upper) - offset)
 
@@ -655,7 +680,7 @@ class CPLEXDirect(OptSolver):
                         rhss.append(self._get_bound(con.lower) - offset)
                         range_values.append(0.0)
 
-                    elif (con.lower is not None) and (con.upper is not None):
+                    elif con.has_lb() and con.has_ub():
                         # ranged constraint.
                         senses.append('R')
                         lower_bound = self._get_bound(con.lower) - offset
@@ -663,12 +688,13 @@ class CPLEXDirect(OptSolver):
                         rhss.append(lower_bound)
                         range_values.append(upper_bound - lower_bound)
 
-                    elif con.lower is not None:
+                    elif con.has_lb():
                         senses.append('G')
                         rhss.append(self._get_bound(con.lower) - offset)
                         range_values.append(0.0)
 
                     else:
+                        assert con.has_ub()
                         senses.append('L')
                         rhss.append(self._get_bound(con.upper) - offset)
                         range_values.append(0.0)
@@ -845,7 +871,7 @@ class CPLEXDirect(OptSolver):
             raise ValueError(msg % len(args))
 
         model = args[ 0 ]
-        if not isinstance(model, Model):
+        if not isinstance(model, (Model, IBlockStorage)):
             msg = "The problem instance supplied to the CPLEXDirect plugin " \
                   "method '_presolve' must be of type 'Model' - "\
                   "interface does not currently support file names"
@@ -859,10 +885,14 @@ class CPLEXDirect(OptSolver):
         # below), relies on a "clean" symbol map
         vars_to_delete = set(self._variable_symbol_map.byObject.keys()) - \
                          self._referenced_variable_ids
-        sm_byObject = model.solutions.symbol_map[self._smap_id].byObject
-        sm_bySymbol = model.solutions.symbol_map[self._smap_id].bySymbol
-        #sm_bySymbol = self._symbol_map.bySymbol
-        assert(len(model.solutions.symbol_map[self._smap_id].aliases) == 0)
+        if isinstance(model, IBlockStorage):
+            symbol_map = getattr(model,
+                                 "._symbol_maps")[self._smap_id]
+        else:
+            symbol_map = model.solutions.symbol_map[self._smap_id]
+        sm_byObject = symbol_map.byObject
+        sm_bySymbol = symbol_map.bySymbol
+        assert len(symbol_map.aliases) == 0
         var_sm_byObject = self._variable_symbol_map.byObject
         var_sm_bySymbol = self._variable_symbol_map.bySymbol
         for varid in vars_to_delete:
@@ -1067,7 +1097,7 @@ class CPLEXDirect(OptSolver):
                 relative_gap = cplex_instance.solution.MIP.get_mip_relative_gap()
                 absolute_gap = upper_bound - lower_bound
                 soln.gap = absolute_gap
-            except CplexSolverError:
+            except CPLEXDirect._cplex_module.exceptions.CplexSolverError:
                 # something went wrong during the solve and no solution
                 # exists
                 pass
@@ -1139,7 +1169,13 @@ class CPLEXDirect(OptSolver):
                     soln_constraint[q_constraint_names[i]] = \
                         {"Slack" : slack_values[i]}
 
-            byObject = self._instance.solutions.symbol_map[self._smap_id].byObject
+            if isinstance(self._instance, IBlockStorage):
+                symbol_map = getattr(self._instance,
+                                     "._symbol_maps")[self._smap_id]
+            else:
+                symbol_map = self._instance.solutions.\
+                             symbol_map[self._smap_id]
+            byObject = symbol_map.byObject
             referenced_varnames = set(byObject[varid]
                                       for varid in self._referenced_variable_ids)
             names_to_delete = set(soln_variable.keys())-referenced_varnames
@@ -1196,18 +1232,18 @@ class CPLEXDirect(OptSolver):
         # Called from OptSolver
         #
         cplex_callback = {
-            "node-callback":        cplex.callbacks.NodeCallback,
-            "solve-callback":       cplex.callbacks.SolveCallback,
-            "branch-callback":      cplex.callbacks.BranchCallback,
-            "heuristic-callback":   cplex.callbacks.HeuristicCallback,
-            "incumbent-callback":   cplex.callbacks.IncumbentCallback,
-            "cut-callback":         cplex.callbacks.UserCutCallback,
-            "lazycut-callback":     cplex.callbacks.LazyConstraintCallback,
-            "crossover-callback":   cplex.callbacks.CrossoverCallback,
-            "barrier-callback":     cplex.callbacks.BarrierCallback,
-            "simplex-callback":     cplex.callbacks.SimplexCallback,
-            "presolve-callback":    cplex.callbacks.PresolveCallback,
-            "tuning-callback":      cplex.callbacks.TuningCallback
+            "node-callback":        CPLEXDirect._cplex_module.callbacks.NodeCallback,
+            "solve-callback":       CPLEXDirect._cplex_module.callbacks.SolveCallback,
+            "branch-callback":      CPLEXDirect._cplex_module.callbacks.BranchCallback,
+            "heuristic-callback":   CPLEXDirect._cplex_module.callbacks.HeuristicCallback,
+            "incumbent-callback":   CPLEXDirect._cplex_module.callbacks.IncumbentCallback,
+            "cut-callback":         CPLEXDirect._cplex_module.callbacks.UserCutCallback,
+            "lazycut-callback":     CPLEXDirect._cplex_module.callbacks.LazyConstraintCallback,
+            "crossover-callback":   CPLEXDirect._cplex_module.callbacks.CrossoverCallback,
+            "barrier-callback":     CPLEXDirect._cplex_module.callbacks.BarrierCallback,
+            "simplex-callback":     CPLEXDirect._cplex_module.callbacks.SimplexCallback,
+            "presolve-callback":    CPLEXDirect._cplex_module.callbacks.PresolveCallback,
+            "tuning-callback":      CPLEXDirect._cplex_module.callbacks.TuningCallback
             }
         #
         for name in self._callback:
@@ -1229,7 +1265,3 @@ class CPLEXDirect(OptSolver):
                                   "name":name,
                                   "__call__":call_fn})
             self._active_cplex_instance.register_callback(CallbackClass)
-
-if cplex_import_available is False:
-    SolverFactory().deactivate('_cplex_direct')
-    SolverFactory().deactivate('_mock_cplexdirect')

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 #
 # AMPL Problem Writer Plugin
@@ -25,7 +26,6 @@ import os
 import time
 
 from pyutilib.misc import PauseGC
-from pyutilib.math import infinity
 
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -35,11 +35,20 @@ from pyomo.core.base import expr, SymbolMap, Block
 import pyomo.core.base.expr_common
 from pyomo.core.base.var import Var
 from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
+from pyomo.core.base.numvalue import (NumericConstant,
+                                      native_numeric_types,
+                                      value)
 from pyomo.core.base import var
 from pyomo.core.base import param
-from pyomo.core.base.suffix import active_export_suffix_generator
-from pyomo.repn.ampl_repn import generate_ampl_repn
+import pyomo.core.base.suffix
+from pyomo.repn.ampl_repn import (generate_ampl_repn,
+                                  AmplRepn)
+
+import pyomo.core.kernel.component_suffix
+from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.component_expression import IIdentityExpression
+from pyomo.core.kernel.component_variable import IVariable
+from pyomo.repn import LinearCanonicalRepn
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
@@ -72,72 +81,84 @@ _intrinsic_function_operators = {
     'abs':    'o15'}
 
 # build string templates
+def _build_op_template():
+    _op_template = {}
+    _op_comment = {}
 
-_op_template = {}
-_op_comment = {}
+    prod_template = "o2{C}\n"
+    prod_comment = "\t#*"
+    div_template = "o3{C}\n"
+    div_comment = "\t#/"
+    if _using_pyomo4_trees:
+        _op_template[expr._ProductExpression] = prod_template
+        _op_comment[expr._ProductExpression] = prod_comment
+        _op_template[expr._DivisionExpression] = div_template
+        _op_comment[expr._DivisionExpression] = div_comment
+    else:
+        _op_template[expr._ProductExpression] = (prod_template,
+                                                 div_template)
+        _op_comment[expr._ProductExpression] = (prod_comment,
+                                                div_comment)
+    del prod_template
+    del prod_comment
+    del div_template
+    del div_comment
 
-prod_template = "o2{C}\n"
-prod_comment = "\t#*"
-div_template = "o3{C}\n"
-div_comment = "\t#/"
-if _using_pyomo4_trees:
-    _op_template[expr._ProductExpression] = prod_template
-    _op_comment[expr._ProductExpression] = prod_comment
-    _op_template[expr._DivisionExpression] = div_template
-    _op_comment[expr._DivisionExpression] = div_comment
-else:
-    _op_template[expr._ProductExpression] = (prod_template,
-                                             div_template)
-    _op_comment[expr._ProductExpression] = (prod_comment,
-                                            div_comment)
-del prod_template
-del prod_comment
-del div_template
-del div_comment
+    _op_template[expr._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
+                                                      "h%d:%s{C}\n") #string arg
+    _op_comment[expr._ExternalFunctionExpression] = ("\t#%s", #function
+                                                     "")      #string arg
 
-_op_template[expr._ExternalFunctionExpression] = ("f%d %d{C}\n", #function
-                                                  "h%d:%s{C}\n") #string arg
-_op_comment[expr._ExternalFunctionExpression] = ("\t#%s", #function
-                                                 "")      #string arg
+    for opname in _intrinsic_function_operators:
+        _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
+        _op_comment[opname] = "\t#"+opname
 
-for opname in _intrinsic_function_operators:
-    _op_template[opname] = _intrinsic_function_operators[opname]+"{C}\n"
-    _op_comment[opname] = "\t#"+opname
+    _op_template[expr.Expr_if] = "o35{C}\n"
+    _op_comment[expr.Expr_if] = "\t#if"
 
-_op_template[expr.Expr_if] = "o35{C}\n"
-_op_comment[expr.Expr_if] = "\t#if"
+    _op_template[expr._InequalityExpression] = ("o21{C}\n", # and
+                                                "o22{C}\n", # <
+                                                "o23{C}\n") # <=
+    _op_comment[expr._InequalityExpression] = ("\t#and", # and
+                                               "\t#lt",  # <
+                                               "\t#le")  # <=
 
-_op_template[expr._InequalityExpression] = ("o21{C}\n", # and
-                                            "o22{C}\n", # <
-                                            "o23{C}\n") # <=
-_op_comment[expr._InequalityExpression] = ("\t#and", # and
-                                           "\t#lt",  # <
-                                           "\t#le")  # <=
+    _op_template[expr._EqualityExpression] = "o24{C}\n"
+    _op_comment[expr._EqualityExpression] = "\t#eq"
 
-_op_template[expr._EqualityExpression] = "o24{C}\n"
-_op_comment[expr._EqualityExpression] = "\t#eq"
+    _op_template[var._VarData] = "v%d{C}\n"
+    _op_comment[var._VarData] = "\t#%s"
 
-_op_template[var._VarData] = "v%d{C}\n"
-_op_comment[var._VarData] = "\t#%s"
+    _op_template[param._ParamData] = "n%r{C}\n"
+    _op_comment[param._ParamData] = ""
 
-_op_template[param._ParamData] = "n%r{C}\n"
-_op_comment[param._ParamData] = ""
+    _op_template[NumericConstant] = "n%r{C}\n"
+    _op_comment[NumericConstant] = ""
 
-_op_template[NumericConstant] = "n%r{C}\n"
-_op_comment[NumericConstant] = ""
+    _op_template[expr._SumExpression] = (
+        "o54{C}\n%d\n", # nary +
+        "o0{C}\n",      # +
+        "o2\n" + _op_template[NumericConstant] ) # * coef
+    _op_comment[expr._SumExpression] = ("\t#sumlist", # nary +
+                                        "\t#+",       # +
+                                        _op_comment[NumericConstant]) # * coef
+    if _using_pyomo4_trees:
+        _op_template[expr._LinearExpression] = _op_template[expr._SumExpression]
+        _op_comment[expr._LinearExpression] = _op_comment[expr._SumExpression]
 
-_op_template[expr._SumExpression] = ("o54{C}\n%d\n", # nary +
-                                     "o0{C}\n",      # +
-                                     "o2\n" + _op_template[NumericConstant]) # * coef
-_op_comment[expr._SumExpression] = ("\t#sumlist", # nary +
-                                    "\t#+",       # +
-                                    _op_comment[NumericConstant]) # * coef
-if _using_pyomo4_trees:
-    _op_template[expr._LinearExpression] = _op_template[expr._SumExpression]
-    _op_comment[expr._LinearExpression] = _op_comment[expr._SumExpression]
+        _op_template[expr._NegationExpression] = "o16{C}\n"
+        _op_comment[expr._NegationExpression] = "\t#-"
 
-    _op_template[expr._NegationExpression] = "o16{C}\n"
-    _op_comment[expr._NegationExpression] = "\t#-"
+    return _op_template, _op_comment
+
+
+
+def _get_bound(exp):
+    if exp is None:
+        return None
+    if is_fixed(exp):
+        return value(exp)
+    raise ValueError("non-fixed bound or weight: " + str(exp))
 
 class StopWatch(object):
 
@@ -201,7 +222,12 @@ class ModelSOS(object):
         ampl_var_id = self.ampl_var_id
         varID_map = self.varID_map
 
-        if soscondata.num_variables() == 0:
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
+
+        if len(sos_items) == 0:
             return
 
         level = soscondata.level
@@ -221,9 +247,15 @@ class ModelSOS(object):
                              "which is not supported by the NL file interface" \
                                  % (soscondata.name, level))
 
-        for vardata, weight in soscondata.get_items():
+        for vardata, weight in sos_items:
+            weight = _get_bound(weight)
+            if weight < 0:
+                raise ValueError(
+                    "Cannot use negative weight %f "
+                    "for variable %s is special ordered "
+                    "set %s " % (weight, vardata.name, soscondata.name))
             if vardata.fixed:
-                raise RuntimeError(
+                raise ValueError(
                     "SOSConstraint '%s' includes a fixed Variable '%s'. "
                     "This is currently not supported. Deactivate this constraint "
                     "in order to proceed"
@@ -260,6 +292,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                  filename,
                  solver_capability,
                  io_options):
+
+        # Rebuild the OP template (as the expression tree system may
+        # have been switched)
+        _op_template, _op_comment = _build_op_template()
 
         # Make sure not to modify the user's dictionary, they may be
         # reusing it outside of this call
@@ -363,13 +399,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._varID_map = None
         self._op_string = None
         return filename, symbol_map
-
-    def _get_bound(self, exp):
-        if exp is None:
-            return None
-        if is_fixed(exp):
-            return value(exp)
-        raise ValueError("non-fixed bound: " + str(exp))
 
     def _print_nonlinear_terms_NL(self, exp):
         OUTPUT = self._OUTPUT
@@ -608,14 +637,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write(self._op_string[expr._EqualityExpression])
                 self._print_nonlinear_terms_NL(exp._args[0])
                 self._print_nonlinear_terms_NL(exp._args[1])
-            elif isinstance(exp, _ExpressionData):
+            elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
                 self._print_nonlinear_terms_NL(exp.expr)
             else:
                 raise ValueError(
                     "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
                     % (exp_type))
 
-        elif isinstance(exp,var._VarData) and (not exp.is_fixed()):
+        elif isinstance(exp, (var._VarData, IVariable)) and \
+             (not exp.is_fixed()):
             #(self._output_fixed_variable_bounds or
             if not self._symbolic_solver_labels:
                 OUTPUT.write(self._op_string[var._VarData]
@@ -718,7 +748,42 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
-            os.environ["PYOMO_AMPLFUNC"] = "\n".join(sorted(external_Libs))
+            # The ASL AMPLFUNC environment variable is nominally a
+            # whitespace-separated string of library names.  Beginning
+            # sometime between 2010 and 2012, the ASL added support for
+            # simple quoted strings: the first non-whitespace character
+            # can be either " or '.  When that is detected, the ASL
+            # parser will continue to the next occurance of that
+            # character (i.e., no escaping is allowed).  We will use
+            # that same logic here to quote any strings with spaces
+            # ... bearing in mind that this will only work with solvers
+            # compiled against versions of the ASL more recent than
+            # ~2012.
+            #
+            # We are (arbitrarily) chosing to use newline as the field
+            # separator.
+            env_str = ''
+            for _lib in external_Libs:
+                _lib = _lib.strip()
+                if ( ' ' not in _lib
+                     or ( _lib[0]=='"' and _lib[-1]=='"'
+                          and '"' not in _lib[1:-1] )
+                     or ( _lib[0]=="'" and _lib[-1]=="'"
+                          and "'" not in _lib[1:-1] ) ):
+                    pass
+                elif '"' not in _lib:
+                    _lib = '"' + _lib + '"'
+                elif "'" not in _lib:
+                    _lib = "'" + _lib + "'"
+                else:
+                    raise RuntimeError(
+                        "Cannot pass the AMPL external function library\n\t%s\n"
+                        "to the ASL because the string contains spaces, "
+                        "single quote and\ndouble quote characters." % (_lib,))
+                if env_str:
+                    env_str += "\n"
+                env_str += _lib
+            os.environ["PYOMO_AMPLFUNC"] = env_str
         elif "PYOMO_AMPLFUNC" in os.environ:
             del os.environ["PYOMO_AMPLFUNC"]
 
@@ -847,16 +912,32 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                 active=True,
                                                                 sort=sorter,
                                                                 descend_into=False):
+
                 if symbolic_solver_labels:
                     conname = name_labeler(constraint_data)
                     if len(conname) > max_rowname_len:
                         max_rowname_len = len(conname)
 
-                if gen_con_ampl_repn:
-                    ampl_repn = generate_ampl_repn(constraint_data.body)
-                    block_ampl_repn[constraint_data] = ampl_repn
+                if constraint_data._linear_canonical_form:
+                    canonical_repn = constraint_data.canonical_form()
+                    ampl_repn = AmplRepn()
+                    ampl_repn._nonlinear_vars = tuple()
+                    ampl_repn._linear_vars = canonical_repn.variables
+                    ampl_repn._linear_terms_coef = canonical_repn.linear
+                    ampl_repn._constant = canonical_repn.constant
+                elif isinstance(constraint_data, LinearCanonicalRepn):
+                    canonical_repn = constraint_data
+                    ampl_repn = AmplRepn()
+                    ampl_repn._nonlinear_vars = tuple()
+                    ampl_repn._linear_vars = canonical_repn.variables
+                    ampl_repn._linear_terms_coef = canonical_repn.linear
+                    ampl_repn._constant = canonical_repn.constant
                 else:
-                    ampl_repn = block_ampl_repn[constraint_data]
+                    if gen_con_ampl_repn:
+                        ampl_repn = generate_ampl_repn(constraint_data.body)
+                        block_ampl_repn[constraint_data] = ampl_repn
+                    else:
+                        ampl_repn = block_ampl_repn[constraint_data]
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
@@ -889,14 +970,18 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 L = None
                 U = None
-                if constraint_data.lower is not None:
-                    L = self._get_bound(constraint_data.lower)
-                if constraint_data.upper is not None:
-                    U = self._get_bound(constraint_data.upper)
+                if constraint_data.has_lb():
+                    L = _get_bound(constraint_data.lower)
+                else:
+                    assert constraint_data.has_ub()
+                if constraint_data.has_ub():
+                    U = _get_bound(constraint_data.upper)
+                else:
+                    assert constraint_data.has_lb()
+                if constraint_data.equality:
+                    assert L == U
 
                 offset = ampl_repn._constant
-                #if constraint_data.equality:
-                #    assert L == U
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:
@@ -952,8 +1037,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     raise Exception(
                         "Solver does not support SOS level %s constraints"
                         % (level,))
-                LinearVars.update(self_varID_map[id(vardata)]
-                                  for vardata in soscondata.get_variables())
+                if hasattr(soscondata, "get_variables"):
+                    LinearVars.update(self_varID_map[id(vardata)]
+                                      for vardata in soscondata.get_variables())
+                else:
+                    LinearVars.update(self_varID_map[id(vardata)]
+                                      for vardata in soscondata.variables)
 
         # create the ampl constraint ids
         self_ampl_con_id.update(
@@ -990,15 +1079,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         for var_ID in LinearVars:
             var = Vars_dict[var_ID]
-            if var.is_integer():
-                LinearVarsInt.add(var_ID)
-            elif var.is_binary():
+            if var.is_binary():
                 L = var.lb
                 U = var.ub
-                if L is None or U is None:
+                if (L is None) or (U is None):
                     raise ValueError("Variable " + str(var.name) +\
                                      "is binary, but does not have lb and ub set")
                 LinearVarsBool.add(var_ID)
+            elif var.is_integer():
+                LinearVarsInt.add(var_ID)
             elif not var.is_continuous():
                 raise TypeError("Invalid domain type for variable with name '%s'. "
                                 "Variable is not continuous, integer, or binary.")
@@ -1261,8 +1350,17 @@ class ProblemWriter_nl(AbstractProblemWriter):
         obj_tag = 2
         prob_tag = 3
         suffix_dict = {}
+        if isinstance(model, IBlockStorage):
+            suffix_gen = lambda b: pyomo.core.kernel.component_suffix.\
+                         export_suffix_generator(b,
+                                                 active=True,
+                                                 return_key=True,
+                                                 descend_into=False)
+        else:
+            suffix_gen = lambda b: pyomo.core.base.suffix.\
+                         active_export_suffix_generator(b)
         for block in all_blocks_list:
-            for name, suf in active_export_suffix_generator(block):
+            for name, suf in suffix_gen(block):
                 if len(suf):
                     suffix_dict.setdefault(name,[]).append(suf)
         if not ('sosno' in suffix_dict):
@@ -1313,7 +1411,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for suffix_name, suffixes in iteritems(suffix_dict):
             datatypes = set()
             for suffix in suffixes:
-                datatype = suffix.get_datatype()
+                try:
+                    datatype = suffix.datatype
+                except AttributeError:
+                    datatype = suffix.get_datatype()
                 if datatype not in (Suffix.FLOAT,Suffix.INT):
                     raise ValueError(
                         "The Pyomo NL file writer requires that all active export "
@@ -1526,27 +1627,24 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         "file." % (var.name, model.name))
                 if var.value is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
-                L = var.value
-                U = var.value
+                L = U = _get_bound(var.value)
             else:
-                L = var.lb
-                if L == -infinity:
-                    L = None
-                U = var.ub
-                if U == infinity:
-                    U = None
+                L = None
+                if var.has_lb():
+                    L = _get_bound(var.lb)
+                U = None
+                if var.has_ub():
+                    U = _get_bound(var.ub)
             if L is not None:
-                Lv = value(L)
                 if U is not None:
-                    Uv = value(U)
-                    if Lv == Uv:
-                        var_bound_list.append("4 %r\n" % (Lv))
+                    if L == U:
+                        var_bound_list.append("4 %r\n" % (L))
                     else:
-                        var_bound_list.append("0 %r %r\n" % (Lv, Uv))
+                        var_bound_list.append("0 %r %r\n" % (L, U))
                 else:
-                    var_bound_list.append("2 %r\n" % (Lv))
+                    var_bound_list.append("2 %r\n" % (L))
             elif U is not None:
-                var_bound_list.append("1 %r\n" % (value(U)))
+                var_bound_list.append("1 %r\n" % (U))
             else:
                 var_bound_list.append("3\n")
 

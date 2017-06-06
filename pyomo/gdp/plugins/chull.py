@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import weakref
 import logging
@@ -178,7 +179,7 @@ class ConvexHull_Transformation(Transformation):
         # constraints to force them to 0 when not active.
         for d_data in sorted(disaggregatedVars.values(), key=lambda x: x[0]):
             for e in sorted(d_data[1].values(), key=lambda x: x[0].local_name):
-                v_name = "%s%s" % (d_data[0],e[0].local_name)
+                v_name = "%s%s" % (d_data[0],e[0].name)
                 # add the disaggregated variable
                 block.add_component( v_name, e[2] )
                 e[2].construct()

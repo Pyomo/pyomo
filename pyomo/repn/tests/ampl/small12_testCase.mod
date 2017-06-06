@@ -1,9 +1,9 @@
 #
 # Author:  Gabe Hackebeil
-# Purpose: For testing to ensure that the Pyomo NL writer properly 
+# Purpose: For testing to ensure that the Pyomo NL writer properly
 #          handles the Expr_if component.
 #
-#          This test model relies on the asl_test executable. It
+#          This test model relies on the gjh_asl_json executable. It
 #          will not solve if sent to a real optimizer.
 #
 
@@ -21,7 +21,7 @@ var vP2  := 2;
 
 minimize obj: 10.0*if(v0)then(vTrue)else(vFalse);
 
-s.t. 
+s.t.
      # True/False
      c1: if(0) then(vTrue) else(vFalse) = pFalse;
      c2: if(1) then(vTrue) else(vFalse) = pTrue;
@@ -45,7 +45,7 @@ s.t.
      c12: if(vN1*10.0 > 0) then(vTrue) else(vFalse) = pFalse;
      c13: if(v0*10.0  > 0) then(vTrue) else(vFalse) = pFalse;
      c14: if(vP1*10.0 > 0) then(vTrue) else(vFalse) = pTrue;
-     
+
      # -1 <= x <= 1
      c15: if(-1        <= vN2 <= 1) then(vTrue) else(vFalse) = pFalse;
      c16: if(-1*vP1    <= vN1 <= 1) then(vTrue) else(vFalse) = pTrue;

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 #
 
 import pyutilib.th as unittest
@@ -15,12 +16,23 @@ from pyomo.environ import *
 from pyomo.core.base.external import (PythonCallbackFunction,
                                       AMPLExternalFunction)
 
+def _g(*args):
+    return len(args)
+
 def _h(*args):
     return 2 + sum(args)
 
 class TestPythonCallbackFunction(unittest.TestCase):
 
-    def test_call(self):
+    def test_call_countArgs(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_g)
+        self.assertIsInstance(m.f, PythonCallbackFunction)
+        self.assertEqual(m.f(), 0)
+        self.assertEqual(m.f(2), 1)
+        self.assertEqual(m.f(2,3), 2)
+
+    def test_call_sumfcn(self):
         m = ConcreteModel()
         m.f = ExternalFunction(_h)
         self.assertIsInstance(m.f, PythonCallbackFunction)

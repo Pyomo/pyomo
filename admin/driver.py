@@ -186,8 +186,7 @@ def perform_tests(package, coverage=False, omit=None, cat='nightly'):
     if platform == 'win':
         sys.stdout.write( str(subprocess.call(['cmd','/c']+cmd)) + '\n' )
     else:
-        import copy
-        env = copy.copy(os.environ)
+        env = os.environ.copy()
         for badness in ['__PYVENV_LAUNCHER__']:
             if badness in env:
                 del env[badness]

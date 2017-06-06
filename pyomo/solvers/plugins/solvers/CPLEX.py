@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 
 import os
@@ -23,6 +24,7 @@ from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
 from pyomo.solvers.mockmip import MockMIP
+from pyomo.core.kernel.component_block import IBlockStorage
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -127,18 +129,6 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
 
         from pyomo.core.base import Var
 
-        # in principle, one could use a Python XML writer library like
-        # xml.dom.minidom.  it works, but it is slow. hence, the
-        # explicit direct-write of XML below.
-
-        mst_file = open(self._warm_start_file_name, "w")
-
-        mst_file.write("<?xml version=\"1.0\" ?>\n")
-        mst_file.write("<CPLEXSolution version=\"1.0\">\n")
-        mst_file.write("<header/>\n")
-        mst_file.write("<quality/>\n")
-        mst_file.write("<variables>\n")
-
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
@@ -146,17 +136,34 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
-        smap = instance.solutions.symbol_map[self._smap_id]
+        if isinstance(instance, IBlockStorage):
+            smap = getattr(instance,"._symbol_maps")\
+                   [self._smap_id]
+        else:
+            smap = instance.solutions.symbol_map[self._smap_id]
         byObject = smap.byObject
-        for var in instance.component_data_objects(Var, active=True):
-            if (var.value is not None) and (id(var) in byObject):
-                name = byObject[id(var)]
-                mst_file.write("<variable index=\"%d\" name=\"%s\" value=\"%f\" />\n" % (output_index, name, var.value))
-                output_index = output_index + 1
 
-        mst_file.write("</variables>\n")
-        mst_file.write("</CPLEXSolution>\n")
-        mst_file.close()
+        # in principle, one could use a Python XML writer library like
+        # xml.dom.minidom.  it works, but it is slow. hence, the
+        # explicit direct-write of XML below.
+
+        with open(self._warm_start_file_name, "w") as mst_file:
+            mst_file.write("<?xml version=\"1.0\" ?>\n")
+            mst_file.write("<CPLEXSolution version=\"1.0\">\n")
+            mst_file.write("<header/>\n")
+            mst_file.write("<quality/>\n")
+            mst_file.write("<variables>\n")
+            for var in instance.component_data_objects(Var, active=True):
+                if (var.value is not None) and \
+                   (id(var) in byObject):
+                    name = byObject[id(var)]
+                    mst_file.write("<variable index=\"%d\" "
+                                   "name=\"%s\" value=\"%f\" />\n"
+                                   % (output_index, name, var.value))
+                    output_index = output_index + 1
+
+            mst_file.write("</variables>\n")
+            mst_file.write("</CPLEXSolution>\n")
 
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
@@ -422,7 +429,19 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     results.solver.status = SolverStatus.ok
                 results.solver.termination_condition = TerminationCondition.infeasible
                 results.solver.termination_message = ' '.join(tokens)
-            elif (len(tokens) == 6 and tokens[2] == "Integer" and tokens[3] == "infeasible" and tokens[5] == "unbounded.") or (len(tokens) >= 5 and tokens[0] == "Presolve" and tokens[2] == "Unbounded" and tokens[4] == "infeasible."):
+            elif ((len(tokens) == 6) and \
+                  (tokens[2] == "Integer") and \
+                  (tokens[3] == "infeasible") and \
+                  (tokens[5] == "unbounded.")) or \
+                 ((len(tokens) >= 4) and \
+                  (tokens[0] == "MIP") and \
+                  (tokens[1] == "-") and \
+                  (tokens[2] == "Integer") and \
+                  (tokens[3] == "unbounded:")) or \
+                 ((len(tokens) >= 5) and \
+                  (tokens[0] == "Presolve") and \
+                  (tokens[2] == "Unbounded") and \
+                  (tokens[4] == "infeasible.")):
                 # if CPLEX has previously printed an error message, reduce it to a warning -
                 # there is a strong indication it recovered, but we can't be sure.
                 if results.solver.status == SolverStatus.error:

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import sys
 import inspect
@@ -46,8 +47,8 @@ class _ComplementarityData(_BlockData):
             #elif e._args[0].is_fixed():
             #    _e = (e._args[0], e._args[1])
             else:
-                tmp = EXPR.generate_expression_bypassCloneCheck(_sub, e._args[0], e._args[1])
-                _e = ( ZeroConstant, tmp)
+                with EXPR.bypass_clone_check():
+                    _e = ( ZeroConstant, e._args[0] - e._args[1])
         elif e.__class__ is EXPR._InequalityExpression:
             if len(e._args) == 3:
                 _e = (e._args[0], e._args[1], e._args[2])
@@ -57,8 +58,8 @@ class _ComplementarityData(_BlockData):
                 elif e._args[0].is_fixed():
                     _e = (e._args[0], e._args[1], None)
                 else:
-                    _e = ( ZeroConstant, EXPR.generate_expression_bypassCloneCheck(
-                            _sub, e._args[1], e._args[0]), None )
+                    with EXPR.bypass_clone_check():
+                        _e = ( ZeroConstant, e._args[1] - e._args[0], None )
         else:
             _e = (None, e, None)
         return _e
