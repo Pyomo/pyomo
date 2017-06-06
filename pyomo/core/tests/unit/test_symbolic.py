@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -176,6 +176,13 @@ class SymbolicDerivatives(unittest.TestCase):
         e = differentiate(log10(log10(m.x)), wrt=m.x)
         self.assertTrue(e.is_expression())
         self.assertEqual(s(e), s(1./log(10)*m.x**-1.*log(m.x)**-1.))
+
+        e = differentiate(exp(m.x), wrt=m.x)
+        self.assertTrue(e.is_expression())
+        self.assertEqual(s(e), s(exp(m.x)))
+
+        e = differentiate(exp(2 * m.x), wrt=m.x)
+        self.assertEqual(s(e), s(2. * exp(2. * m.x)))
 
 
     def test_nondifferentiable(self):
