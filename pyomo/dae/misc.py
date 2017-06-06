@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 
@@ -118,50 +119,38 @@ def update_contset_indexed_component(comp):
     if comp.type() is Param:
         return
 
-    if comp.dim() == 1:
-        if comp._index.type() == ContinuousSet:
-            if comp._index.get_changed():
-                if isinstance(comp, Var):
-                    _update_var(comp)
-                elif comp.type() == Constraint:
-                    _update_constraint(comp)
-                elif comp.type() == Expression:
-                    _update_expression(comp)
-                elif type(comp) is IndexedBlock: # Only catch Blocks and not components derived
-                    _update_block(comp)          # from Blocks
-                elif isinstance(comp, Piecewise):
-                    _update_piecewise(comp)
-                else:
-                    raise TypeError("Found component %s of type %s indexed "\
-                        "by a ContinuousSet. Components of this type are "\
-                        "not currently supported by the automatic "\
-                        "discretization transformation in pyomo.dae. "\
-                        "Try adding the component to the model "\
-                        "after discretizing. Alert the pyomo developers "\
-                        "for more assistance." %(str(comp),comp.type()))
-    elif comp.dim() > 1:
+    # Components indexed by a ContinuousSet must have a dimension of at
+    # least 1
+    if comp.dim() == 0:
+        return
+
+    # Extract the indexing sets. Must treat components with a single
+    # index separately from components with multiple indexing sets.
+    if comp._implicit_subsets is None:
+        indexset = [comp._index]
+    else:
         indexset = comp._implicit_subsets
 
-        for s in indexset:
-            if s.type() == ContinuousSet and s.get_changed():
-                if isinstance(comp, Var): # Don't use the type() method here because we want to catch
-                    _update_var(comp)     # DerivativeVar components as well as Var components
-                elif comp.type() == Constraint:
-                    _update_constraint(comp)
-                elif comp.type() == Expression:
-                    _update_expression(comp)
-                elif type(comp) is IndexedBlock: # Only catch Blocks and not components derived
-                    _update_block(comp)          # from Blocks
-                elif isinstance(comp, Piecewise):
-                    _update_piecewise(comp)
-                else:
-                    raise TypeError("Found component %s of type %s indexed "\
-                        "by a ContinuousSet. Components of this type are "\
-                        "not currently supported by the automatic "\
-                        "discretization transformation in pyomo.dae. "\
-                        "Try adding the component to the model "\
-                        "after discretizing. Alert the pyomo developers "\
-                        "for more assistance." %(str(comp),comp.type()))
+    for s in indexset:
+        if s.type() == ContinuousSet and s.get_changed():
+            if isinstance(comp, Var): # Don't use the type() method here because we want to catch
+                _update_var(comp)     # DerivativeVar components as well as Var components
+            elif comp.type() == Constraint:
+                _update_constraint(comp)
+            elif comp.type() == Expression:
+                _update_expression(comp)
+            elif isinstance(comp, Piecewise):
+                _update_piecewise(comp)
+            elif comp.type() == Block: 
+                _update_block(comp)    
+            else:
+                raise TypeError("Found component %s of type %s indexed "\
+                    "by a ContinuousSet. Components of this type are "\
+                    "not currently supported by the automatic "\
+                    "discretization transformation in pyomo.dae. "\
+                    "Try adding the component to the model "\
+                    "after discretizing. Alert the pyomo developers "\
+                    "for more assistance." %(str(comp),comp.type()))
 
 def _update_var(v):
     """
@@ -205,9 +194,37 @@ def _update_expression(expre):
 def _update_block(blk):
     """
     This method will construct any additional indices in a block
-    resulting from the discretization of a ContinuousSet.
+    resulting from the discretization of a ContinuousSet. For
+    Block-derived components we check if the Block construct method has
+    been overridden. If not then we update it like a regular block. If
+    construct has been overridden then we try to call the component's
+    update_after_discretization method. If the component hasn't
+    implemented this method then we throw a warning and try to update it
+    like a normal block. The issue, when construct is overridden, is that
+    anything could be happening and we can't automatically assume that
+    treating the block-derived component like a normal block will be
+    sufficient to update it correctly.
+
     """
     
+    # Check if Block construct method is overridden
+    # getattr needed below for Python 2, 3 compatibility
+    if blk.construct.__func__ is not getattr(IndexedBlock.construct,
+                                             '__func__', IndexedBlock.construct):
+        # check for custom update function
+        try :
+            blk.update_after_discretization()
+            return
+        except AttributeError:
+            logger.warning('DAE(misc): Attempting to apply a discretization transformation to '
+                  'the Block-derived component "%s". The component overrides the '
+                  'Block construct method but no update_after_discretization() '
+                  'function was found. Will attempt to update as a standard Block '
+                  'but user should verify that the component was expanded correctly. '
+                  'To suppress this warning, please provide an '
+                  'update_after_discretization() function on Block-derived '
+                  'components that override construct()' %(blk.name))            
+
     # Code taken from the construct() method of Block
     missing_idx = set(blk._index)-set(iterkeys(blk._data))
     for idx in list(missing_idx):

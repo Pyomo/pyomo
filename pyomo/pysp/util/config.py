@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 #
 # This module is meant as a tool for developers. Rarely should a user
@@ -119,11 +120,17 @@ class PySPConfigBlock(ConfigBlock):
         """Displays the list of options registered to this
         block. The optional keyword 'ostream' can be a file
         like object to write to."""
-        outstr = super(PySPConfigBlock, self).display(**kwds)
-        if ostream is None:
-            print(outstr)
-        else:
-            ostream.write(outstr)
+        # Note: this functionality has been migrated into the
+        # PyUtilib.ConfigBlock.  We will attempt the new API and fall
+        # back on the old one in case PyUtilib is too old.
+        try:
+            super(PySPConfigBlock, self).display(ostream=ostream, **kwds)
+        except TypeError:
+            outstr = super(PySPConfigBlock, self).display(**kwds)
+            if ostream is None:
+                print(outstr)
+            else:
+                ostream.write(outstr)
 
 def check_options_match(opt1,
                         opt2,
@@ -188,13 +195,13 @@ def check_options_match(opt1,
 # making sure nothing is overwritten
 #
 def safe_declare_option(configblock,
-                         name,
-                         configvalue,
-                         ap_group=None,
-                         relax_default_check=False,
-                         declare_for_argparse=False,
-                         ap_args=None,
-                         ap_kwds=None):
+                        name,
+                        configvalue,
+                        ap_group=None,
+                        relax_default_check=False,
+                        declare_for_argparse=False,
+                        ap_args=None,
+                        ap_kwds=None):
     assert isinstance(configblock, PySPConfigBlock)
     assert configvalue._parent == None
     assert configvalue._userSet == False

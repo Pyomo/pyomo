@@ -1,22 +1,38 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2008 Sandia Corporation.
-#  This software is distributed under the BSD License.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  For more information, see the Pyomo README.txt file.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 from __future__ import division
 from copy import deepcopy
 from six import StringIO
 
+import logging
+
+try:
+    from sys import getrefcount
+    _getrefcount_available = True
+except ImportError:
+    logger = logging.getLogger('pyomo.core')
+    logger.warning(
+        "This python interpreter does not support sys.getrefcount()\n"
+        "Pyomo cannot automatically guarantee that expressions do not become\n"
+        "entangled (multiple expressions that share common subexpressions).\n")
+    getrefcount = None
+    _getrefcount_available = False
+
 class Mode(object):
     coopr3_trees = (1,)
     pyomo4_trees = (2,)
-mode = _default_mode = Mode.pyomo4_trees
-mode = _default_mode = Mode.coopr3_trees
+if _getrefcount_available:
+    mode = _default_mode = Mode.coopr3_trees
+else:
+    mode = _default_mode = Mode.pyomo4_trees
 
 def clone_expression(exp, substitute=None):
     memo = {'__block_scope__': { id(None): False }}

@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 
 import os
@@ -422,7 +423,19 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                     results.solver.status = SolverStatus.ok
                 results.solver.termination_condition = TerminationCondition.infeasible
                 results.solver.termination_message = ' '.join(tokens)
-            elif (len(tokens) == 6 and tokens[2] == "Integer" and tokens[3] == "infeasible" and tokens[5] == "unbounded.") or (len(tokens) >= 5 and tokens[0] == "Presolve" and tokens[2] == "Unbounded" and tokens[4] == "infeasible."):
+            elif ((len(tokens) == 6) and \
+                  (tokens[2] == "Integer") and \
+                  (tokens[3] == "infeasible") and \
+                  (tokens[5] == "unbounded.")) or \
+                 ((len(tokens) >= 4) and \
+                  (tokens[0] == "MIP") and \
+                  (tokens[1] == "-") and \
+                  (tokens[2] == "Integer") and \
+                  (tokens[3] == "unbounded:")) or \
+                 ((len(tokens) >= 5) and \
+                  (tokens[0] == "Presolve") and \
+                  (tokens[2] == "Unbounded") and \
+                  (tokens[4] == "infeasible.")):
                 # if CPLEX has previously printed an error message, reduce it to a warning -
                 # there is a strong indication it recovered, but we can't be sure.
                 if results.solver.status == SolverStatus.error:

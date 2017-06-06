@@ -1,0 +1,228 @@
+
+\chapter{Other Constraint and Expression Components}
+\label{chap:ref-other}
+\chaptermark{Other Constraint and Expression Components}
+
+
+%\abstract*{ONLINE ABSTRACT}
+
+\abstract{
+This chapter describes other modeling components that describe
+constraints and expressions.  This includes components that describe
+model sub-expressions and SOS constraints.
+}
+
+\section{Named Expressions \label{sec:NamedExpressions}}
+
+Pyomo expressions are used to define objectives and constraints.
+Pyomo expressions are objects consisting of variables, parameters,
+numeric constants, operators and intrinsic functions.  Pyomo
+expressions are organized into tree-like structures which can be
+evaluated and from which canonical structures like linear and
+quadratic polynomials can be derived.
+
+Pyomo does not make any attempt to identify common sub-expressions
+across the components in a model.  When a user knows of common
+substructure in their model, this structure can be exploited to
+declare a model with a more compact representation.  In some contexts,
+this compact representation can also be leveraged to define a model
+in a manner that requires much less memory.
+
+The \code{Expression} component can be used to declare names for
+model expressions that are used within a model.
+A simple declaration of an \code{Expression} object declares a
+single expression:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-other-components/expr_declaration.py}{decl1}{6}{12}
+The \code{expr} and \code{initialize} options can be used to declare
+a single expression.  This example illustrates that when the
+expression is changed, the objective expression using this value is also
+changed.  Similarly, the following example illustrates that the value of 
+an expression containing variables will change when the variable values change:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-other-components/expr_declaration.py}{decl2}{17}{26}
+
+The \code{rule} and \code{initialize} options can be used to declare
+rule functions for indexed \code{Expression} objects:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-other-components/expr_declaration.py}{decl3}{31}{38}
+Again, this example illustrates how the value of an objective expression
+changes when the value of named sub-expressions change.  Further, 
+these changes may include
+changing variable values as well as entire expressions, as the following
+example illustrates:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-other-components/expr_declaration.py}{decl4}{43}{55}
+The \code{initialize} option can also be used to specify a dictionary of
+expressions, thereby avoiding the need for a rule function:
+\spacedlisting{pyomo/examples/doc/pyomobook/ref-other-components/expr_declaration.py}{decl5}{60}{71}
+Note that the value of an indexed expression can be set without referencing
+the \code{value} attribute, whereas the \code{value} attribute was needed to
+set the value of simple expressions.
+
+
+\section{SOS Constraints}
+
+A special ordered set (SOS) is an ordered set of variables that is
+used to constrain an optimization model~\cite{BeaTom70}. Special
+order sets are leveraged in branch-and-bound solver to support
+branching on sets of variables rather than individual variables.
+SOS declarations are recognized by most integer programming solver
+libraries because they often help speed up search.
+
+There are two types of special ordered sets:
+\begin{itemize}
+
+\item \textbf{SOS1}: For the set of variables, at most
+one can take a strictly positive value and all others have a value
+of zero.
+
+\item \textbf{SOS2}: For the set of variables, at most
+two can take a strictly positive value and all others have a value
+of zero.  Further, two nonzero variables must be consecutive in
+their ordering.
+
+\end{itemize}
+Although special ordered sets can be defined with continuous
+variables, they are frequently applied to binary variables.  For
+example, a binary SOS1 set corresponds to selecting one from a set
+of possibilities.
+
+
+The Pyomo component \code{SOSConstraint} is used to declare constraints
+that are implied by SOS declarations.  Table~\ref{table:ref-other:sos:attr}
+describes the attributes of \code{SOSConstraint} objects, and
+Table~\ref{table:ref-other:sos:methods} describes methods of
+\code{SOSConstraint} objects.
+
+\subsection{Simple Declarations}
+
+\index{sos!declaration}
+A simple declaration of an \code{SOSConstraint} object declares a single SOS:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl1}{7}{8}
+A \code{SOSConstraint} object defines the variables in the SOS as well as the type of the SOS: SOS1 or SOS2.  This example uses the \code{var} option to specify the variables
+in the SOS, and the \code{sos} option is used to specify the SOS type.  The \code{level} option can also be used to specify the SOS type:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl2}{15}{16}
+If the SOS type is two, then the variables must be defined over an ordered set:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl3}{23}{25}
+
+The \code{index} option can be used to specify a subset of the variables that are
+included in the SOS.  For example:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl4}{32}{33}
+If the \code{index} argument is a Python list, then the \code{SOSConstraint} object
+uses this list to define the ordering within the SOS.  Hence, in a type 2 SOS the variables may be defined over an unordered set if an index list is specified:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl5}{40}{41}
+
+The \code{weights} option can be used to specify weights for the
+SOS variables.  The weights are non-negative numbers that is
+passed to a solver to guide branching decisions.\comment{Say more
+about the meaning/relevance of weights?}  If the \code{weights} is omitted, then the variables
+are given weights from $1$ to $N$, where $N$ is the number of
+variables in the SOS.  For example, this is equivalent to the following 
+SOS declaration:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl6}{48}{50}
+Note that weights are specified with a dictionary, since the 
+SOS variables may not be ordered.
+
+\subsection{Declarations with Rule Functions}
+
+\index{sos!rule} Another way to declare a \code{SOSConstraint}
+object is to provide a function that returns variables and weights
+for the SOS.  The \code{rule} or \code{initialize} option is used
+to specify the name of the function.  The following declarations
+of \code{SOSConstraint} object are equivalent:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl7}{57}{63}
+
+The \code{rule} option can be used to initialize indexed \code{SOSConstraint} objects.
+Pyomo iterates over all elements of the index set during
+object construction, passing each set element to the function:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl8}{70}{74}
+In some contexts, it may be convenient to not define a SOS for some
+index values.  If the construction rule returns \code{SOSConstraint.Skip}, then
+the objective is ignored:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl9}{81}{87}
+As with other indexed components, if multiple index sets are specified
+then Pyomo iterates over the cross product of all sets.
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl10}{94}{98}
+
+In the previous examples, the rule functions returned a list of
+variables that define the SOS.  A rule function may also return a
+list of variable weights.  For example:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl11}{105}{114}
+Note that the variable component \code{x} is not defined over an
+ordered set.  This rule function ensures that the variables and
+weights are defined in a consistent order.
+
+A rule function returns a list that defines the order of the variables
+for a type 2 SOS.  Consider the following example:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl12}{121}{128}
+The variable component \code{x} is not defined over an ordered set, 
+but the rule function ensures that the variables are defined in a fixed order.
+
+Note that the \code{rule} and \code{initialize} options are cannot
+be used with the \code{var}, \code{index} or \code{weights} options.
+Rule functions provide all of the functionality that these three
+options support.  Further, the rule functions allow the specification of a
+wider range of SOSs.  The following example illustrates the
+specification of an SOS with two variable components:
+\listing{pyomo/examples/doc/pyomobook/ref-other-components/sos_declaration.py}{decl13}{135}{141}
+
+
+
+\section{Discussion}
+
+The \code{Expression} component implements named expressions as
+sub-expressions in a model that can be re-used.  Another approach
+has been considered for Pyomo, where expressions are equated with
+decision variables.  This could allow searching on the value of
+sub-expressions, and the model representation would be more sparse.
+The design of the \code{Expression} component is motivated by the
+fact that variables can easily be associated with expressions through
+normal constraint declarations.
+
+
+
+
+
+\begin{subappendices}
+
+\section{Tables}
+
+\begin{table}
+
+\begin{tabular}{p{1.5in} p{3.0in}}\hline
+Component Attribute & Description\\ \hline
+active & A boolean that is \code{True} if the SOS constraint is active in the model.\\
+doc & A string describing this variable\\
+domain & A set that is used to validate variable values\\
+name &  The variable name\\
+& \\ \hline
+Component Data Attribute & Description\\ \hline
+active & A boolean that is \code{True} if the SOS constraint is active in the model.\\
+level & The SOS type.\\
+\end{tabular}
+
+\caption{\label{table:ref-other:sos:attr} Attributes of the \code{SOSConstraint} class and its component data class.}
+\end{table}
+
+
+\begin{table}
+
+\begin{tabular}{p{1.5in} p{3.0in}}\hline
+Component Method & Description\\ \hline
+flag\_as\_stale() & Set the stale attribute to \code{True}.\\
+get\_values(...) & Return a dictionary of index-value pairs.\\
+reset() & Reset the variable values to their initial values.\\
+set\_values(...) & Set the variable values with a dictionary of index-value pairs.\\
+& \\ \hline
+Component Data Method & Description\\ \hline
+add(...) & Add a SOS constraint for a specified index.\\
+get\_items() & A generator that returns a list of (variable, weight) tuples.\\
+get\_variables() & A generator that returns a list of SOS variables.\\
+num\_variables() & Return the number of variables in the SOS.\\
+set\_items(...) & Set the variables and weights for the SOS.\\
+\end{tabular}
+
+\caption{\label{table:ref-other:sos:methods} Methods of the \code{SOSConstraint} class and its component data class.}
+\end{table}
+
+
+
+\end{subappendices}
+

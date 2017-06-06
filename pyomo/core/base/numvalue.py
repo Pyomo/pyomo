@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = [ 'value', 'NumericValue', 'as_numeric', 'NumericConstant',
             'is_constant', 'is_fixed']
@@ -571,12 +572,12 @@ functions.""" % (self.name,))
         """
         return generate_expression(_ipow,self,other)
 
-    def __neg__(self):
+    def __neg__(self, targetRefs=0):
         """ Negation
 
         (Called in response to '- self'.)
         """
-        return generate_expression(_neg,self, None)
+        return generate_expression(_neg, self, None, targetRefs)
 
     def __pos__(self):
         """ Positive expression

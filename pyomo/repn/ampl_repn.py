@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 from __future__ import division
 
 __all__ = [ 'AmplRepn', 'generate_ampl_repn']
@@ -107,14 +108,18 @@ class AmplRepn(object):
         output = StringIO()
         output.write("\n")
         output.write("constant:       "+str(self._constant)+"\n")
-        output.write("linear vars:    "+str(self._linear_vars)+"\n")
-        output.write("linear coef:    "+str(self._linear_terms_coef)+"\n")
-        output.write("nonlinear expr:\n")
-        try:
-            self._nonlinear_expr.pprint(ostream=output)
-        except AttributeError:
-            output.write(str(self._nonlinear_expr)+"\n")
-        output.write("nonlinear vars: "+str(self._nonlinear_vars)+"\n")
+        output.write("linear vars:    "+str([v_.name for _,v_ in sorted(self._linear_vars.items(), key=lambda x: x[0])])+"\n")
+        output.write("linear coef:    "+str([c_ for _,c_ in sorted(self._linear_terms_coef.items(), key=lambda x: x[0])])+"\n")
+        if self._nonlinear_expr is None:
+            output.write("nonlinear expr: None\n")
+        else:
+            output.write("nonlinear expr:\n")
+            try:
+                self._nonlinear_expr.to_string(ostream=output)
+                output.write("\n")
+            except AttributeError:
+                output.write(str([(i,str(e)) for i,e in self._nonlinear_expr])+"\n")
+        output.write("nonlinear vars: "+str([v_.name for _,v_ in sorted(self._nonlinear_vars.items(), key=lambda x: x[0])])+"\n")
         output.write("\n")
         ret_str = output.getvalue()
         output.close()
@@ -216,6 +221,9 @@ class AmplRepn(object):
         return True
 
 def _generate_ampl_repn(exp):
+#    print("")
+#    print(type(exp))
+#    print(str(exp))
     ampl_repn = AmplRepn()
 
     # We need to do this not at the global scope in case someone changed
@@ -225,6 +233,8 @@ def _generate_ampl_repn(exp):
     exp_type = type(exp)
     if exp_type in native_numeric_types:
         ampl_repn._constant = value(exp)
+#        print("native numeric type")
+#        print(ampl_repn)
         return ampl_repn
 
     #
@@ -266,7 +276,8 @@ def _generate_ampl_repn(exp):
                                 (exp_coef, child_repn._nonlinear_expr))
                     # adjust the nonlinear vars
                     ampl_repn._nonlinear_vars.update(child_repn._nonlinear_vars)
-
+#            print("_LinearExpression [pyomo4 trees]")
+#            print(ampl_repn)
             return ampl_repn
 
         elif _using_pyomo4_trees and (exp_type is Expr._SumExpression):
@@ -298,6 +309,8 @@ def _generate_ampl_repn(exp):
                             (1, child_repn._nonlinear_expr))
                 # adjust the nonlinear vars
                 ampl_repn._nonlinear_vars.update(child_repn._nonlinear_vars)
+#            print("_SumExpression [pyomo4 trees]")
+#            print(ampl_repn)
             return ampl_repn
 
         elif exp_type is Expr._SumExpression:
@@ -333,6 +346,8 @@ def _generate_ampl_repn(exp):
                                 (exp_coef, child_repn._nonlinear_expr))
                     # adjust the nonlinear vars
                     ampl_repn._nonlinear_vars.update(child_repn._nonlinear_vars)
+#            print("_SumExpression")
+#            print(ampl_repn)
             return ampl_repn
 
         #
@@ -367,6 +382,8 @@ def _generate_ampl_repn(exp):
                     arg_repn = _generate_ampl_repn(e)
                     ampl_repn._nonlinear_vars.update(arg_repn._linear_vars)
                     ampl_repn._nonlinear_vars.update(arg_repn._nonlinear_vars)
+#                print("_ProductExpression (nonlinear due to nonfixed denominator)")
+#                print(ampl_repn)
                 return ampl_repn
 
             #
@@ -393,6 +410,8 @@ def _generate_ampl_repn(exp):
                 # expression becomes trivial.
                 elif e_repn._constant == 0.0:
                     ampl_repn = e_repn
+#                    print("_ProductExpression (numerator 0)")
+#                    print(ampl_repn)
                     return ampl_repn
 
             is_nonlinear = False
@@ -407,10 +426,15 @@ def _generate_ampl_repn(exp):
                 for repn in arg_repns:
                     ampl_repn._nonlinear_vars.update(repn._linear_vars)
                     ampl_repn._nonlinear_vars.update(repn._nonlinear_vars)
+#                print("_ProductExpression (nonlinear numerator - fixed denominator)")
+#                print(ampl_repn)
                 return ampl_repn
 
             else: # is linear or constant
-                ampl_repn = current_repn = arg_repns[0]
+                if arg_repns:
+                    ampl_repn = current_repn = arg_repns[0]
+                else:
+                    ampl_repn = _generate_ampl_repn(1)
                 for i in xrange(1,len(arg_repns)):
                     e_repn = arg_repns[i]
                     ampl_repn = AmplRepn()
@@ -445,7 +469,8 @@ def _generate_ampl_repn(exp):
             ampl_repn._constant *= exp._coef/denom
             for var_ID in ampl_repn._linear_terms_coef:
                 ampl_repn._linear_terms_coef[var_ID] *= exp._coef/denom
-
+#            print("_ProductExpression (linear numerator - fixed denominator)")
+#            print(ampl_repn)
             return ampl_repn
 
         elif _using_pyomo4_trees and (exp_type is Expr._ProductExpression):
@@ -473,6 +498,8 @@ def _generate_ampl_repn(exp):
                 # expression becomes trivial.
                 elif e_repn._constant == 0.0:
                     ampl_repn = e_repn
+#                    print("_ProductExpression [pyomo4 trees] (numerator 0)")
+#                    print(ampl_repn)
                     return ampl_repn
 
             is_nonlinear = False
@@ -487,6 +514,8 @@ def _generate_ampl_repn(exp):
                 for repn in arg_repns:
                     ampl_repn._nonlinear_vars.update(repn._linear_vars)
                     ampl_repn._nonlinear_vars.update(repn._nonlinear_vars)
+#                print("_ProductExpression [pyomo4 trees] (linear)")
+#                print(ampl_repn)
                 return ampl_repn
 
             # is linear or constant
@@ -519,7 +548,8 @@ def _generate_ampl_repn(exp):
                                 e_repn._linear_terms_coef[e_var_ID]
                     ampl_repn._linear_vars.update(e_repn._linear_vars)
                 current_repn = ampl_repn
-
+#            print("_ProductExpression [pyomo4 trees] (nonlinear)")
+#            print(ampl_repn)
             return ampl_repn
 
         elif _using_pyomo4_trees and (exp_type is Expr._DivisionExpression):
@@ -539,6 +569,8 @@ def _generate_ampl_repn(exp):
                     arg_repn = _generate_ampl_repn(e)
                     ampl_repn._nonlinear_vars.update(arg_repn._linear_vars)
                     ampl_repn._nonlinear_vars.update(arg_repn._nonlinear_vars)
+#                print("_DivisionExpression (nonlinear due to nonfixed denominator)")
+#                print(ampl_repn)
                 return ampl_repn
 
             denominator = value(denominator)
@@ -551,43 +583,57 @@ def _generate_ampl_repn(exp):
             #
 
             # build up the ampl_repn for the numerator
-            ampl_repn = _generate_ampl_repn(numerator)
+            numerator_repn = _generate_ampl_repn(numerator)
             # check if the expression is not nonlinear else it is nonlinear
-            if ampl_repn._nonlinear_expr is not None:
+            if numerator_repn._nonlinear_expr is not None:
                 # do like AMPL and simply return the expression
                 # without extracting the potentially linear part
                 # (be sure to set this to the original expression,
                 # not just the numerators)
+                ampl_repn = AmplRepn()
                 ampl_repn._nonlinear_expr = exp
+                ampl_repn._nonlinear_vars.update(numerator_repn._linear_vars)
+                ampl_repn._nonlinear_vars.update(numerator_repn._nonlinear_vars)
+#                print("_DivisionExpression (nonlinear numerator - fixed denominator)")
+#                print(ampl_repn)
                 return ampl_repn
 
             #
             # OK, we have a linear numerator with a constant denominator
             #
+            ampl_repn = numerator_repn
+            del numerator_repn
 
             # update any constants and coefficients by dividing
             # by the fixed denominator
             ampl_repn._constant /= denominator
             for var_ID in ampl_repn._linear_terms_coef:
                 ampl_repn._linear_terms_coef[var_ID] /= denominator
-
+#            print("_DivisionExpression (linear numerator - fixed denominator)")
+#            print(ampl_repn)
             return ampl_repn
 
         elif _using_pyomo4_trees and (exp_type is Expr._NegationExpression):
             assert len(exp._args) == 1
             ampl_repn = _generate_ampl_repn(exp._args[0])
-            if ampl_repn._nonlinear_expr is not None:
-                # do like AMPL and simply return the expression
-                # without extracting the potentially linear part
-                ampl_repn._nonlinear_expr = exp
-                return ampl_repn
+            # here it is easy enough to preserve separation of
+            # any linear and nonlinear subexpressions
+            if type(ampl_repn._nonlinear_expr) is list:
+                ampl_repn._nonlinear_expr = \
+                    [(-c_, e_) for c_,e_ in ampl_repn._nonlinear_expr]
+#                print("_NegationExpression [pyomo4 trees] (nonlinear)")
+            elif ampl_repn._nonlinear_expr is not None:
+                ampl_repn._nonlinear_expr = Expr._NegationExpression(
+                    (ampl_repn._nonlinear_expr,))
+#                print("_NegationExpression [pyomo4 trees] (nonlinear)")
 
             # this subexpression is linear, so update any
             # constants and coefficients by negating them
             ampl_repn._constant *= -1
             for var_ID in ampl_repn._linear_terms_coef:
                 ampl_repn._linear_terms_coef[var_ID] *= -1
-
+#            print("_NegationExpression [pyomo4 trees] (linear)")
+#            print(ampl_repn)
             return ampl_repn
 
         #
@@ -614,6 +660,8 @@ def _generate_ampl_repn(exp):
                 ampl_repn._nonlinear_vars.update(exponent_repn._nonlinear_vars)
                 ampl_repn._nonlinear_vars.update(base_repn._linear_vars)
                 ampl_repn._nonlinear_vars.update(exponent_repn._linear_vars)
+#            print("_PowExpression")
+#            print(ampl_repn)
             return ampl_repn
 
         #
@@ -646,6 +694,8 @@ def _generate_ampl_repn(exp):
             # the argument is fixed, we can simply evaluate this expression
             if exp._args[0].is_fixed():
                 ampl_repn._constant = value(exp)
+#                print("_IntrinsicFunctionExpression (fixed)")
+#                print(ampl_repn)
                 return ampl_repn
 
             # this is inefficient since it is using much more than what we need
@@ -654,6 +704,8 @@ def _generate_ampl_repn(exp):
             ampl_repn._nonlinear_expr = exp
             ampl_repn._nonlinear_vars = child_repn._nonlinear_vars
             ampl_repn._nonlinear_vars.update(child_repn._linear_vars)
+#            print("_IntrinsicFunctionExpression (nonlinear)")
+#            print(ampl_repn)
             return ampl_repn
 
         #
@@ -711,6 +763,8 @@ def _generate_ampl_repn(exp):
         #    ampl_repn = _generate_ampl_repn(exp.value)
         #    return ampl_repn
         ampl_repn._constant = value(exp)
+#        print("fixed expression")
+#        print(ampl_repn)
         return ampl_repn
 
     #
@@ -719,10 +773,14 @@ def _generate_ampl_repn(exp):
     elif isinstance(exp, _VarData):
         if exp.fixed:
             ampl_repn._constant = exp.value
+#            print("fixed variable")
+#            print(ampl_repn)
             return ampl_repn
         var_ID = id(exp)
         ampl_repn._linear_terms_coef[var_ID] = 1.0
         ampl_repn._linear_vars[var_ID] = exp
+#        print("variable")
+#        print(ampl_repn)
         return ampl_repn
 
     #

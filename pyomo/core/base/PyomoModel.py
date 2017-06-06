@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['Model', 'ConcreteModel', 'AbstractModel', 'global_option']
 
@@ -121,7 +122,11 @@ class ModelSolution(object):
 
     def __getattr__(self, name):
         if name[0] == '_':
-            return self.__dict__[name]
+            if name in self.__dict__:
+                return self.__dict__[name]
+            else:
+                raise AttributeError( "'%s' object has no attribute '%s'"
+                                      % (self.__class__.__name__, name) )
         return self.__dict__['_metadata'][name]
 
     def __setattr__(self, name, val):
@@ -129,6 +134,36 @@ class ModelSolution(object):
             self.__dict__[name] = val
             return
         self.__dict__['_metadata'][name] = val
+
+    def __getstate__(self):
+        state = {
+            '_metadata': self._metadata,
+            '_entry': {}
+        }
+        for (name, data) in iteritems(self._entry):
+            tmp = state['_entry'][name] = []
+            # Note: We must convert all weakrefs to hard refs and
+            # not indirect references like ComponentUIDs because
+            # when it comes time to unpickle, we cannot count on the
+            # model instance to have already been reconstructed --
+            # so things like CUID.find_component will fail (return
+            # None).
+            for obj, entry in itervalues(data):
+                if obj is None or obj() is None:
+                    logger.warn(
+                        "Solution component in '%s' no longer "
+                        "accessible: %s!" % ( name, entry ))
+                else:
+                    tmp.append( ( obj(), entry ) )
+        return state
+
+    def __setstate__(self, state):
+        self._metadata = state['_metadata']
+        self._entry = {}
+        for name, data in iteritems(state['_entry']):
+            tmp = self._entry[name] = {}
+            for obj, entry in data:
+                tmp[ id(obj) ] = ( weakref_ref(obj), entry )
 
 
 class ModelSolutions(object):
@@ -148,33 +183,15 @@ class ModelSolutions(object):
         state = {}
         state['index'] = self.index
         state['_instance'] = self._instance()
-        solutions = []
-        for soln in self.solutions:
-            soln_ = {}
-            soln_['metadata'] = soln._metadata
-            tmp = {}
-            for (name, data) in iteritems(soln._entry):
-                tmp[name] = {}
-                tmp[name].update( (ComponentUID(obj()), entry) for (obj, entry) in itervalues(data) )
-            soln_['entry'] = tmp
-            solutions.append(soln_)
-        state['solutions'] = solutions
+        state['solutions'] = self.solutions
+        state['symbol_map'] = self.symbol_map
         return state
 
     def __setstate__(self, state):
-        self.clear()
-        self.index = state['index']
-        self._instance = weakref_ref(state['_instance'])
-        instance = self._instance()
-        for soln in state['solutions']:
-            soln_ = ModelSolution()
-            soln_._metadata = soln['metadata']
-            for key,value in iteritems(soln['entry']):
-                d = soln_._entry[key]
-                for cuid, entry in iteritems(value):
-                    obj = cuid.find_component(instance)
-                    d[id(obj)] = (obj, entry)
-            self.solutions.append(soln_)
+        for key, val in iteritems(state):
+            setattr(self, key, val)
+        # Restore the instance weakref
+        self._instance = weakref_ref(self._instance)
 
     def __len__(self):
         return len(self.solutions)
@@ -546,6 +563,8 @@ class Model(SimpleBlock):
 
     preprocessor_ep = ExtensionPoint(IPyomoPresolver)
 
+    _Block_reserved_words = set()
+
     def __new__(cls, *args, **kwds):
         if cls != Model:
             return super(Model, cls).__new__(cls)
@@ -726,12 +745,6 @@ constructed model; returning a clone of the current model instance.""")
         instance._constructed = True
         return instance
 
-    def clone(self):
-        instance = SimpleBlock.clone(self)
-        # Do not keep cloned solutions, which point to the original model
-        instance.solutions.clear()
-        instance.solutions._instance = weakref_ref(instance)
-        return instance
 
     def preprocess(self, preprocessor=None):
         """Apply the preprocess plugins defined by the user"""
@@ -833,7 +846,7 @@ from solvers are immediately loaded into the original model instance.""")
             #
 
             if report_timing is True:
-                import pyomo.core.base.expr_coopr3
+                import pyomo.core.base.expr as EXPR
                 construction_start_time = time.time()
 
             for component_name, component in iteritems(self.component_map()):
@@ -843,11 +856,7 @@ from solvers are immediately loaded into the original model instance.""")
 
                 if report_timing is True:
                     start_time = time.time()
-                    clone_counters = (
-                        pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
-                        )
+                    clone_counters = EXPR.generate_expression.clone_counter
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
 
@@ -861,14 +870,10 @@ from solvers are immediately loaded into the original model instance.""")
                     print("    %%6.%df seconds required to construct component=%s; %d indicies total" \
                               % (total_time>=0.005 and 2 or 0, component_name, clen) \
                               % total_time)
-                    tmp_clone_counters = (
-                        pyomo.core.base.expr_coopr3.generate_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_relational_expression.clone_counter,
-                        pyomo.core.base.expr_coopr3.generate_intrinsic_function_expression.clone_counter,
-                        )
+                    tmp_clone_counters = EXPR.generate_expression.clone_counter
                     if clone_counters != tmp_clone_counters:
                         clone_counters = tmp_clone_counters
-                        print("             Cloning detected! (clone counters: %d, %d, %d)" % clone_counters)
+                        print("             Cloning detected! (clone counters: %d)" % clone_counters)
 
             # Note: As is, connectors are expanded when using command-line pyomo but not calling model.create(...) in a Python script.
             # John says this has to do with extension points which are called from commandline but not when writing scripts.
@@ -988,6 +993,16 @@ class AbstractModel(Model):
     def __init__(self, *args, **kwds):
         Model.__init__(self, *args, **kwds)
 
+
+#
+# Create a Model and record all the default attributes, methods, etc.
+# These will be assumes to be the set of illegal component names.
+#
+# Note that creating a Model will result in a warning, so we will
+# (arbitrarily) choose a ConcreteModel as the definitive list of
+# reserved names.
+#
+Model._Block_reserved_words = set(dir(ConcreteModel()))
 
 
 register_component(Model, 'Model objects can be used as a component of other models.')

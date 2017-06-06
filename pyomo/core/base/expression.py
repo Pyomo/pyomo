@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['Expression', '_ExpressionData']
 
@@ -67,12 +68,34 @@ class _ExpressionData(NumericValue):
         return (self.expr,)
 
     def _arguments(self):
-        """A generator of subexpressions involved in this expressions operation."""
-        yield self.expr
+        """A tuple of subexpressions involved in this expressions operation."""
+        return (self.expr,)
+
+    def _precedence(self):
+        return 0
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.name)
 
     def clone(self):
         """Return a clone of this expression (no-op)."""
         return self
+
+    def _apply_operation(self, result):
+        # This "expression" is a no-op wrapper, so just return the inner
+        # result
+        return result[0]
+
+    def _is_constant_combiner(self):
+        # We cannot allow elimination/simplification of Expression objects
+        return lambda x: False
+
+    def _is_fixed_combiner(self):
+        return lambda x: x[0]
+
+    def _potentially_variable_combiner(self):
+        # Expression objects are potentially variable by definition
+        return lambda x: True
 
     def polynomial_degree(self):
         """A tuple of subexpressions involved in this expressions operation."""
