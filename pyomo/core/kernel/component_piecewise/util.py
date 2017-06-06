@@ -73,7 +73,14 @@ def log2floor(n):
     using floating point calculations. Input argument must
     be a positive integer."""
     assert n > 0
-    return n.bit_length() - 1
+    try:
+        return n.bit_length() - 1
+    except AttributeError:
+        # int.bit_length() was introduced in Python 2.7.  Fallback to a
+        # brute-force calculation if bit_length is not available.
+        s = bin(n)         # binary representation:  bin(37) --> '0b100101'
+        s = s.lstrip('0b') # remove leading zeros and 'b'
+        return len(s)
 
 def generate_gray_code(nbits):
     """Generates a Gray code of nbits as list of lists"""
