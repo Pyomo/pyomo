@@ -19,10 +19,10 @@ class ComponentPerformanceBase(object):
     def _create_model(self, ctype, **kwds):
         self.model = ConcreteModel()
         self.model.x = Var()
-        self.model.index = Set(initialize=sorted(range(1000000)))
+        self.model.IDX = Set(initialize=sorted(range(1000000)))
         self.model.del_component('test_component')
         self.model.test_component = \
-            ctype(self.model.index, **kwds)
+            ctype(self.model.IDX, **kwds)
 
     @classmethod
     def setUp(self):

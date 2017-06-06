@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ('IOptSolver',
            'OptSolver',
@@ -540,19 +541,34 @@ class OptSolver(Plugin):
         # If the inputs are models, then validate that they have been
         # constructed! Collect suffix names to try and import from solution.
         #
-        from pyomo.core.base import Block
-        from pyomo.core.base.suffix import active_import_suffix_generator
+        from pyomo.core.base.block import _BlockData
+        import pyomo.core.base.suffix
+        from pyomo.core.kernel.component_block import IBlockStorage
+        import pyomo.core.kernel.component_suffix
         _model = None
         for arg in args:
-            if isinstance(arg, Block):
-                if not arg.is_constructed():
-                    raise RuntimeError(
-                        "Attempting to solve model=%s with unconstructed "
-                        "component(s)" % (arg.name,) )
-                _model = arg
+            if isinstance(arg, (_BlockData, IBlockStorage)):
+                if isinstance(arg, _BlockData):
+                    if not arg.is_constructed():
+                        raise RuntimeError(
+                            "Attempting to solve model=%s with unconstructed "
+                            "component(s)" % (arg.name,) )
 
-                model_suffixes = list(name for (name,comp) \
-                                      in active_import_suffix_generator(arg))
+                _model = arg
+                # import suffixes must be on the top-level model
+                if isinstance(arg, _BlockData):
+                    model_suffixes = list(name for (name,comp) \
+                                          in pyomo.core.base.suffix.\
+                                          active_import_suffix_generator(arg))
+                else:
+                    assert isinstance(arg, IBlockStorage)
+                    model_suffixes = list(name for (name,comp) \
+                                          in pyomo.core.kernel.component_suffix.\
+                                          import_suffix_generator(arg,
+                                                                  active=True,
+                                                                  descend_into=False,
+                                                                  return_key=True))
+
                 if len(model_suffixes) > 0:
                     kwds_suffixes = kwds.setdefault('suffixes',[])
                     for name in model_suffixes:
@@ -610,16 +626,33 @@ class OptSolver(Plugin):
             result._smap_id = self._smap_id
             result._smap = None
             if _model:
-                if self._load_solutions:
-                    _model.solutions.load_from(
-                        result,
-                        select=self._select_index,
-                        default_variable_value=self._default_variable_value)
-                    result._smap_id = None
-                    result.solution.clear()
+                if isinstance(_model, IBlockStorage):
+                    assert self._default_variable_value is None
+                    if len(result.solution) == 1:
+                        result.solution(0).symbol_map = \
+                            getattr(_model, "._symbol_maps")[result._smap_id]
+                        if self._load_solutions:
+                            _model.load_solution(result.solution(0))
+                            result.solution.clear()
+                    else:
+                        assert len(result.solution) == 0
+                    # see the hack in the write method
+                    # we don't want this to stick around on the model
+                    # after the solve
+                    assert len(getattr(_model, "._symbol_maps")) == 1
+                    delattr(_model, "._symbol_maps")
+                    del result._smap_id
                 else:
-                    result._smap = _model.solutions.symbol_map[self._smap_id]
-                    _model.solutions.delete_symbol_map(self._smap_id)
+                    if self._load_solutions:
+                        _model.solutions.load_from(
+                            result,
+                            select=self._select_index,
+                            default_variable_value=self._default_variable_value)
+                        result._smap_id = None
+                        result.solution.clear()
+                    else:
+                        result._smap = _model.solutions.symbol_map[self._smap_id]
+                        _model.solutions.delete_symbol_map(self._smap_id)
             postsolve_completion_time = time.time()
 
             if self._report_timing:

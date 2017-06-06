@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 
@@ -118,50 +119,38 @@ def update_contset_indexed_component(comp):
     if comp.type() is Param:
         return
 
-    if comp.dim() == 1:
-        if comp._index.type() == ContinuousSet:
-            if comp._index.get_changed():
-                if isinstance(comp, Var):
-                    _update_var(comp)
-                elif comp.type() == Constraint:
-                    _update_constraint(comp)
-                elif comp.type() == Expression:
-                    _update_expression(comp)
-                elif isinstance(comp, Piecewise): 
-                    _update_piecewise(comp)
-                elif comp.type() == Block:
-                    _update_block(comp)   
-                else:
-                    raise TypeError("Found component %s of type %s indexed "\
-                        "by a ContinuousSet. Components of this type are "\
-                        "not currently supported by the automatic "\
-                        "discretization transformation in pyomo.dae. "\
-                        "Try adding the component to the model "\
-                        "after discretizing. Alert the pyomo developers "\
-                        "for more assistance." %(str(comp),comp.type()))
-    elif comp.dim() > 1:
+    # Components indexed by a ContinuousSet must have a dimension of at
+    # least 1
+    if comp.dim() == 0:
+        return
+
+    # Extract the indexing sets. Must treat components with a single
+    # index separately from components with multiple indexing sets.
+    if comp._implicit_subsets is None:
+        indexset = [comp._index]
+    else:
         indexset = comp._implicit_subsets
 
-        for s in indexset:
-            if s.type() == ContinuousSet and s.get_changed():
-                if isinstance(comp, Var): # Don't use the type() method here because we want to catch
-                    _update_var(comp)     # DerivativeVar components as well as Var components
-                elif comp.type() == Constraint:
-                    _update_constraint(comp)
-                elif comp.type() == Expression:
-                    _update_expression(comp)
-                elif isinstance(comp, Piecewise):
-                    _update_piecewise(comp)
-                elif comp.type() == Block: 
-                    _update_block(comp)    
-                else:
-                    raise TypeError("Found component %s of type %s indexed "\
-                        "by a ContinuousSet. Components of this type are "\
-                        "not currently supported by the automatic "\
-                        "discretization transformation in pyomo.dae. "\
-                        "Try adding the component to the model "\
-                        "after discretizing. Alert the pyomo developers "\
-                        "for more assistance." %(str(comp),comp.type()))
+    for s in indexset:
+        if s.type() == ContinuousSet and s.get_changed():
+            if isinstance(comp, Var): # Don't use the type() method here because we want to catch
+                _update_var(comp)     # DerivativeVar components as well as Var components
+            elif comp.type() == Constraint:
+                _update_constraint(comp)
+            elif comp.type() == Expression:
+                _update_expression(comp)
+            elif isinstance(comp, Piecewise):
+                _update_piecewise(comp)
+            elif comp.type() == Block: 
+                _update_block(comp)    
+            else:
+                raise TypeError("Found component %s of type %s indexed "\
+                    "by a ContinuousSet. Components of this type are "\
+                    "not currently supported by the automatic "\
+                    "discretization transformation in pyomo.dae. "\
+                    "Try adding the component to the model "\
+                    "after discretizing. Alert the pyomo developers "\
+                    "for more assistance." %(str(comp),comp.type()))
 
 def _update_var(v):
     """

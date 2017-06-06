@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 #
 # Unit Tests for odbc.ini file handler
 #
@@ -20,13 +21,13 @@ try:
     import pyodbc
     pyodbc_available = True
 
-    from pyomo.core.data.db_table import ODBCConfig, ODBCError
+    from pyomo.core.plugins.data.db_table import ODBCConfig, ODBCError
 except ImportError:
     pyodbc_available = False
 
 @unittest.skipIf(not pyodbc_available, "PyODBC is not installed.")
 class TestODBCIni(unittest.TestCase):
-    
+
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
 
@@ -58,7 +59,7 @@ Database = test2.xls
 [ODBC]
 UNICODE = UTF-8
 """
-    
+
     def test_create(self):
         config = ODBCConfig()
         self.assertIsNone(config.file)
@@ -74,7 +75,7 @@ UNICODE = UTF-8
         self.assertEquals({'testdb' : self.ACCESS_CONFIGSTR}, config.sources)
         self.assertEquals({'testdb' : {'Database' : "testdb.mdb"}}, config.source_specs)
         self.assertEquals({}, config.odbc_info)
-    
+
     def test_init_complex_data(self):
         config = ODBCConfig(data=self.complex_data)
         self.assertEquals({'test1' : self.ACCESS_CONFIGSTR, 'test2' : self.EXCEL_CONFIGSTR}, config.sources)
@@ -105,7 +106,7 @@ UNICODE = UTF-8
         config.add_source("testdb", self.ACCESS_CONFIGSTR)
         config.add_source_spec("testdb", {'Database' : "testdb.mdb"})
         self.assertEquals({'testdb' : {'Database' : "testdb.mdb"}}, config.source_specs)
-    
+
     def test_add_spec_bad(self):
         config = ODBCConfig()
         with self.assertRaises(ODBCError):

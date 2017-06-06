@@ -1,14 +1,19 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-import pyomo.core.base.log_config
+import pyomo.core.kernel
 from pyomo.core.base.config import PyomoOptions
+
+from pyomo.core.kernel import (ComponentMap,
+                               minimize,
+                               maximize)
 
 from pyomo.core.base.expr import *
 from pyomo.core.base.numvalue import *
@@ -17,6 +22,7 @@ from pyomo.core.base.label import *
 from pyomo.core.base.plugin import *
 from pyomo.core.base.DataPortal import *
 from pyomo.core.base.symbol_map import *
+
 #
 # Components
 #
@@ -45,8 +51,6 @@ from pyomo.core.base.util import *
 from pyomo.core.base.rangeset import *
 
 from pyomo.core.base.instance2dat import *
-
-from pyomo.core.base.register_numpy_types import *
 
 #
 # This is a hack to strip out modules, which shouldn't have been included in these imports

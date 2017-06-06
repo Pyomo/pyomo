@@ -1,16 +1,32 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, RangeSet, ConstraintList
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 from pyomo.repn.beta.matrix import compile_block_linear_constraints
 
+has_numpy = False
+try:
+    import numpy
+    has_numpy = True
+except:
+    pass
+
+has_scipy = False
+try:
+    import scipy
+    import scipy.sparse
+    has_scipy = True
+except:
+    pass
 
 @register_model
 class LP_compiled(_BaseTestModel):
@@ -102,5 +118,116 @@ class LP_compiled(_BaseTestModel):
         assert self.model is not None
         model = self.model
         for i in model.s:
-            model.x[i] = None
+            model.x[i].value = None
 
+if has_numpy and has_scipy:
+    # TODO: we need to somehow label this as a skip rather
+    #       than not defining the test class
+
+    @register_model
+    class LP_compiled_dense_kernel(LP_compiled):
+
+        def _get_dense_data(self):
+            assert has_numpy and has_scipy
+            A = numpy.array(
+                [[1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  1.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                 [0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]],
+                dtype=float)
+            lb = numpy.array(
+                [-1.0, -numpy.inf, -1.0, -1.0,
+                 1.0, 1.0, -1.0, -1.0,
+                 1.0, 1.0, -1.0, -2.0,
+                 -1.0, -numpy.inf, 0.0, -2.0,
+                 -3.0, -1.0, -numpy.inf, 0.0,
+                 -2.0, -numpy.inf])
+            ub = numpy.array([
+                numpy.inf, 1.0, -1.0, -1.0,
+                1.0, 1.0, -1.0, -1.0,
+                1.0, 1.0, 2.0, 1.0,
+                numpy.inf, 1.0, 0.0, 1.0,
+                0.0, numpy.inf, 0.0, 0.0,
+                numpy.inf, 2.0])
+            eq_index = [2,3,4,5,14,19]
+
+            return A, lb, ub, eq_index
+
+        def _generate_base_model(self):
+
+            self.model = pmo.block()
+            model = self.model
+            model._name = self.description
+
+            model.s = list(range(1,13))
+            model.x = pmo.variable_dict(
+                ((i, pmo.variable()) for i in model.s))
+            model.x[1].lb = -1
+            model.x[1].ub = 1
+            model.x[2].lb = -1
+            model.x[2].ub = 1
+            model.obj = pmo.objective(expr=sum(model.x[i]*((-1)**(i+1))
+                                               for i in model.s))
+            variable_order = [
+                model.x[3],
+                model.x[4],
+                model.x[5],
+                model.x[6],
+                model.x[7],
+                model.x[8],
+                model.x[9],
+                model.x[10],
+                model.x[11],
+                model.x[12]]
+
+            return variable_order
+
+        def _generate_model(self):
+            variable_order = self._generate_base_model()
+            model = self.model
+            A, lb, ub, eq_index = self._get_dense_data()
+            model.Amatrix = pmo.matrix_constraint(
+                A, lb=lb, ub=ub,
+                variable_order=variable_order,
+                sparse=False)
+            for i in eq_index:
+                assert model.Amatrix[i].lb == \
+                    model.Amatrix[i].ub
+                model.Amatrix[i].rhs = \
+                    model.Amatrix[i].lb
+
+    @register_model
+    class LP_compiled_sparse_kernel(
+            LP_compiled_dense_kernel):
+
+        def _generate_model(self):
+            variable_order = self._generate_base_model()
+            model = self.model
+            A, lb, ub, eq_index = self._get_dense_data()
+            model.Amatrix = pmo.matrix_constraint(
+                A, lb=lb, ub=ub,
+                variable_order=variable_order,
+                sparse=True)
+            for i in eq_index:
+                assert model.Amatrix[i].lb == \
+                    model.Amatrix[i].ub
+                model.Amatrix[i].rhs = \
+                    model.Amatrix[i].lb

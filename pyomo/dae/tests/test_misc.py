@@ -1,17 +1,17 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 #
 # Unit Tests for pyomo.dae.misc
 #
 
-import logging
 import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
@@ -21,29 +21,9 @@ from six import StringIO
 import pyutilib.th as unittest
 
 from pyomo.environ import *
+from pyomo.util.log import LoggingIntercept
 from pyomo.dae import *
 from pyomo.dae.misc import *
-
-# FIXME: This class was copied from test_block.py. It should be moved
-# to a more general location
-class LoggingIntercept(object):
-    def __init__(self, output, module=None, level=logging.WARNING):
-        self.handler = logging.StreamHandler(output)
-        self.handler.setFormatter(logging.Formatter('%(message)s'))
-        self.handler.setLevel(level)
-        self.level = level
-        self.module = module
-
-    def __enter__(self):
-        logger = logging.getLogger(self.module)
-        self.level = logger.level
-        logger.setLevel(self.handler.level)
-        logger.addHandler(self.handler)
-
-    def __exit__(self, et, ev, tb):
-        logger = logging.getLogger(self.module)
-        logger.removeHandler(self.handler)
-        logger.setLevel(self.level)
 
 class TestDaeMisc(unittest.TestCase):
     
@@ -241,16 +221,19 @@ class TestDaeMisc(unittest.TestCase):
         m.s2 = Set(initialize=[(1,1),(2,2)])
         m.v1 = Var(m.s,m.t,initialize=3)
         m.v2 = Var(m.s,m.t,m.t2,bounds=(4,10),initialize={(1,0,1):22,(2,10,2):22})
+
         def _init(m,i,j,k):
             return i
         m.v3 = Var(m.t,m.s2,bounds=(-5,5),initialize=_init)
         m.v4 = Var(m.s,m.t2,initialize=7, dense=True)
+        m.v5 = Var(m.s2)
 
         generate_finite_elements(m.t,5)
         update_contset_indexed_component(m.v1)
         update_contset_indexed_component(m.v2)
         update_contset_indexed_component(m.v3)
         update_contset_indexed_component(m.v4)
+        update_contset_indexed_component(m.v5)
 
         self.assertTrue(len(m.v1)==18)
         self.assertTrue(len(m.v2)==54)

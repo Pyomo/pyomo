@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import pyutilib.th as unittest
 
@@ -20,7 +21,7 @@ def s(e):
     return str(e).replace(' ','')
 
 @unittest.skipIf( not _sympy_available,
-                  "Symbolic derivatives require teh sympy package" )
+                  "Symbolic derivatives require the sympy package" )
 class SymbolicDerivatives(unittest.TestCase):
     def test_single_derivatives(self):
         m = ConcreteModel()
@@ -176,6 +177,13 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertTrue(e.is_expression())
         self.assertEqual(s(e), s(1./log(10)*m.x**-1.*log(m.x)**-1.))
 
+        e = differentiate(exp(m.x), wrt=m.x)
+        self.assertTrue(e.is_expression())
+        self.assertEqual(s(e), s(exp(m.x)))
+
+        e = differentiate(exp(2 * m.x), wrt=m.x)
+        self.assertEqual(s(e), s(2. * exp(2. * m.x)))
+
 
     def test_nondifferentiable(self):
         m = ConcreteModel()
@@ -208,3 +216,6 @@ class SymbolicDerivatives(unittest.TestCase):
             DeveloperError,
             "sympy expression .* not found in the operator map",
             _map_sympy2pyomo, bogus(), {x:m.x})
+
+if __name__ == "__main__":
+    unittest.main()

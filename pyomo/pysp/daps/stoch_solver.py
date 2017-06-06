@@ -53,11 +53,15 @@ class StochSolver:
         self.scenario_tree.linkInInstances(instances)        
 
     #=========================
-    def solve_ef(self, subsolver, sopts = None):
-        # Solve the stochastic program directly using the extensive form.
-        # subsolver: the solver to call (e.g., 'ipopt')
-        # sopts: dictionary of solver options
-        # Returns the entire ef_instance populated with the solution.
+    def solve_ef(self, subsolver, sopts = None, tee = False):
+        """
+        Solve the stochastic program directly using the extensive form.
+        args:
+        subsolver: the solver to call (e.g., 'ipopt')
+        sopts: dictionary of solver options
+        tee: the usual to indicate dynamic solver output to terminal.
+        Update the scenario tree, populated with the solution.
+        """
         
         ef_instance = create_ef_instance(self.scenario_tree, verbose_output=True)
         solver = SolverFactory(subsolver)
@@ -65,8 +69,10 @@ class StochSolver:
             for key in sopts:
                 solver.options[key] = sopts[key]
 
-        solver.solve(ef_instance) # , tee = True)
-        return ef_instance
+        solver.solve(ef_instance, tee = tee)
+
+        self.scenario_tree.pullScenarioSolutionsFromInstances()
+        self.scenario_tree.snapshotSolutionFromScenarios() # update nodes
 
     #=========================
     def solve_serial_ph(self, subsolver, default_rho, phopts = None, sopts = None):
