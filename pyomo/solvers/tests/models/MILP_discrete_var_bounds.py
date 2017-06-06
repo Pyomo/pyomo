@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Binary, Integers, NonNegativeReals
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
-
 
 @register_model
 class MILP_discrete_var_bounds(_BaseTestModel):
@@ -49,10 +49,34 @@ class MILP_discrete_var_bounds(_BaseTestModel):
     def warmstart_model(self):
         assert self.model is not None
         model = self.model
-        model.w2 = None
-        model.x2 = 1
-        model.yb = 0
-        model.zb = 1
-        model.yi = None
-        model.zi = 0
+        model.w2.value = None
+        model.x2.value = 1
+        model.yb.value = 0
+        model.zb.value = 1
+        model.yi.value = None
+        model.zi.value = 0
 
+@register_model
+class MILP_discrete_var_bounds_kernel(MILP_discrete_var_bounds):
+
+    def _generate_model(self):
+        self.model = pmo.block()
+        model = self.model
+        model._name = self.description
+
+        model.w2 = pmo.variable(domain=pmo.Binary)
+        model.x2 = pmo.variable(domain_type=pmo.IntegerSet,
+                                lb=0, ub=1)
+        model.yb = pmo.variable(domain_type=pmo.IntegerSet,
+                                lb=1, ub=1)
+        model.zb = pmo.variable(domain_type=pmo.IntegerSet,
+                                lb=0, ub=0)
+        model.yi = pmo.variable(domain=pmo.Integers, lb=-1)
+        model.zi = pmo.variable(domain=pmo.Integers, ub=1)
+
+        model.obj = pmo.objective(model.w2 - model.x2 +\
+                                  model.yb - model.zb +\
+                                  model.yi - model.zi)
+
+        model.c3 = pmo.constraint(model.w2 >= 0)
+        model.c4 = pmo.constraint(model.x2 <= 1)

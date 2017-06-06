@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
@@ -41,5 +42,16 @@ class QP_constant_objective(_BaseTestModel):
     def warmstart_model(self):
         assert self.model is not None
         model = self.model
-        model.x = 1.0
+        model.x.value = 1.0
 
+@register_model
+class QP_constant_objective_kernel(QP_constant_objective):
+
+    def _generate_model(self):
+        self.model = ConcreteModel()
+        model = self.model
+        model._name = self.description
+
+        model.x = Var(within=NonNegativeReals)
+        model.obj = Objective(expr=model.x**2-model.x**2)
+        model.con = Constraint(expr=model.x == 1.0)

@@ -8,9 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-__all__ = []
-
-from pyomo.core.base.numvalue import \
+from pyomo.core.kernel.numvalue import \
    RegisterNumericType, \
    RegisterIntegerType, \
    RegisterBooleanType
@@ -18,7 +16,7 @@ from pyomo.core.base.numvalue import \
 try:
     import numpy
     _has_numpy = True
-except:
+except:     #pragma:nocover
     _has_numpy = False
 
 #
@@ -38,7 +36,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_bool.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Integers
@@ -60,7 +58,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_int.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Reals
@@ -75,7 +73,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_float.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 # Complex
@@ -89,7 +87,7 @@ if _has_numpy:
         try:
             _type = getattr(numpy,_type_name)
             numpy_complex.append(_type)
-        except:
+        except:     #pragma:nocover
             pass
 
 

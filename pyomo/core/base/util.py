@@ -14,7 +14,6 @@
 
 __all__ = ['summation', 'dot_product', 'sequence', 'prod']
 
-import pyomo.core.base.var
 import inspect
 from six.moves import xrange
 from functools import reduce
@@ -48,6 +47,8 @@ def summation(*args, **kwds):
     summation(denom=(a,b))
     Sum the product of 1/(a_i*b_i)
     """
+    # breaks import loop between var.py and util.py
+    import pyomo.core.base.var
 
     denom = kwds.pop('denom', tuple() )
 

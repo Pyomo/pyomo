@@ -490,13 +490,12 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         jcols = comp._jcols
         varmap = comp._varmap
         if prows[self._index] == prows[self._index+1]:
-            return None
+            return()
         variables = tuple(varmap[jcols[p]]
                           for p in xrange(prows[self._index],
                                           prows[self._index+1])
                           if not varmap[jcols[p]].fixed)
-        if len(variables) == 0:
-            return None
+
         return variables
 
     @property
@@ -509,12 +508,11 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         vals = comp._vals
         varmap = comp._varmap
         if prows[self._index] == prows[self._index+1]:
-            return None
+            return ()
         coefs = tuple(vals[p] for p in xrange(prows[self._index],
                                               prows[self._index+1])
                       if not varmap[jcols[p]].fixed)
-        if len(coefs) == 0:
-            return None
+
         return coefs
 
     # for backwards compatibility
@@ -530,13 +528,12 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         vals = comp._vals
         varmap = comp._varmap
         if prows[self._index] == prows[self._index+1]:
-            return None
+            return 0
         terms = tuple(vals[p] * varmap[jcols[p]]()
                       for p in xrange(prows[self._index],
                                       prows[self._index+1])
                       if varmap[jcols[p]].fixed)
-        if len(terms) == 0:
-            return None
+
         return sum(terms)
 
     #

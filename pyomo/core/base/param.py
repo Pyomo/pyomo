@@ -937,4 +937,3 @@ class IndexedParam(Param):
                             % (self.name,) )
 
 register_component(Param, "Parameter data that is used to define a model instance.")
-

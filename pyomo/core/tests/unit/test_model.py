@@ -646,7 +646,7 @@ class Test(unittest.TestCase):
         tmodel.solutions.load_from(results, ignore_invalid_labels=True)
         self.assertEqual(len(tmodel.solutions), 1)
 
-    @unittest.skipIf(not 'glkp' in solvers, "glpk solver is not available")
+    @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     @unittest.skipIf(not yaml_available, "YAML not available available")
     def test_solve_with_store3(self):
         model = ConcreteModel()

@@ -70,6 +70,20 @@ class _VarData(ComponentData, NumericValue):
     # Interface
     #
 
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        lb = self.lb
+        return (lb is not None) and \
+            (value(lb) != float('-inf'))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        ub = self.ub
+        return (ub is not None) and \
+            (value(ub) != float('inf'))
+
     @property
     def bounds(self):
         """Returns the tuple (lower bound, upper bound)."""
@@ -922,4 +936,3 @@ class VarList(IndexedVar):
 
 register_component(Var, "Decision variables.")
 register_component(VarList, "List of decision variables.")
-

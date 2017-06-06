@@ -29,12 +29,12 @@ except ImportError:
     pass
 try:
     import pyodbc
+    pyodbc_available = True
     #
     # Temporarily deprecating pyodbc tests.
     # These tests are not reliably executing with Python 2.6 and 2.7, 
     # due to apparent issues with unicode representation.
     #
-    #pyodbc_available = True
     pyodbc_available = False
 except ImportError:
     pass
