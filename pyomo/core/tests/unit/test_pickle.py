@@ -21,6 +21,8 @@ import pyutilib.th as unittest
 
 from pyomo.environ import *
 
+import six
+
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)
 def constr_rule(model,a):
@@ -39,7 +41,7 @@ class Test(unittest.TestCase):
                 self.assertNotEqual(id(ref._data[idx]),  id(new._data[idx]))
         self.assertEqual( id(ref.solutions._instance()), id(ref) )
         self.assertEqual( id(new.solutions._instance()), id(new) )
-            
+
         # Verify the block attributes
         for idx in ref._data.keys():
             ref_c = ref[idx].component_map()
@@ -48,7 +50,6 @@ class Test(unittest.TestCase):
             for a in ref_c.keys():
                 self.assertEqual(type(ref_c[a]),  type(new_c[a]))
                 self.assertNotEqual(id(ref_c[a]),  id(new_c[a]))
-                
 
     def test_pickle_empty_abstract_model(self):
         model = AbstractModel()
@@ -259,11 +260,11 @@ class Test(unittest.TestCase):
         tmodel = pickle.loads(pickle_str)
         instance=tmodel.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals( 
-            str(expr), 
+        self.assertEquals(
+            str(expr),
             "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
 
-    # same as above, but pickles the constructed AbstractModel and 
+    # same as above, but pickles the constructed AbstractModel and
     # then operates on the unpickled instance.
     def test_pickle2(self):
         model = AbstractModel()
@@ -277,8 +278,8 @@ class Test(unittest.TestCase):
         pickle_str = pickle.dumps(tmp)
         instance = pickle.loads(pickle_str)
         expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals( 
-            str(expr), 
+        self.assertEquals(
+            str(expr),
             "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
 
     # verifies that the use of lambda expressions as rules yields model instances
@@ -301,21 +302,22 @@ class Test(unittest.TestCase):
         model.con = Constraint(rule=rule1)
         model.con2 = Constraint(model.a, rule=rule2)
         instance = model.create_instance()
-        try:
-            str = pickle.dumps(instance)
-            self.fail("Expected pickling error due to the use of lambda expressions - did not generate one!")
-        except pickle.PicklingError:
-            pass
-        except TypeError:
-            pass
-        except AttributeError:
-            pass
+        if (not six.PY3) and ('dill' in sys.modules):
+            pickle.dumps(instance)
+        else:
+            with self.assertRaises((pickle.PicklingError,
+                                    TypeError,
+                                    AttributeError)):
+                pickle.dumps(instance)
 
-    # verifies that we can print a constructed model and obtain identical results before and after 
-    # pickling. introduced due to a test case by Gabe that illustrated __getstate__ of various 
-    # modeling components was incorrectly and unexpectedly modifying object state.
+    # verifies that we can print a constructed model and
+    # obtain identical results before and after
+    # pickling. introduced due to a test case by Gabe that
+    # illustrated __getstate__ of various modeling
+    # components was incorrectly and unexpectedly modifying
+    # object state.
     def test_pickle4(self):
-    
+
         model = ConcreteModel()
         model.s = Set(initialize=[1,2])
         model.x = Var(within=NonNegativeReals)
@@ -335,8 +337,6 @@ class Test(unittest.TestCase):
         model.pprint(ostream=OUTPUT)
         OUTPUT.close()
         self.assertFileEqualsBaseline(currdir+"test_pickle4_after.out",currdir+"test_pickle4_baseline.txt")
-        
-
 
 if __name__ == "__main__":
     unittest.main()

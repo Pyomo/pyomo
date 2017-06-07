@@ -216,3 +216,6 @@ class SymbolicDerivatives(unittest.TestCase):
             DeveloperError,
             "sympy expression .* not found in the operator map",
             _map_sympy2pyomo, bogus(), {x:m.x})
+
+if __name__ == "__main__":
+    unittest.main()

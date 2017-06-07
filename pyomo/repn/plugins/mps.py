@@ -19,7 +19,6 @@ import operator
 from six import iteritems, iterkeys, StringIO
 from six.moves import xrange
 
-from pyutilib.math import infinity
 from pyutilib.misc import PauseGC
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -41,6 +40,13 @@ def _no_negative_zero(val):
     if val == 0:
         return 0
     return val
+
+def _get_bound(exp):
+    if exp is None:
+        return None
+    if is_fixed(exp):
+        return value(exp)
+    raise ValueError("non-fixed bound or weight: " + str(exp))
 
 class ProblemWriter_mps(AbstractProblemWriter):
 
@@ -173,13 +179,6 @@ class ProblemWriter_mps(AbstractProblemWriter):
 
         return output_filename, symbol_map
 
-    def _get_bound(self, exp):
-        if exp is None:
-            return None
-        if is_fixed(exp):
-            return value(exp)
-        raise ValueError("non-fixed bound: " + str(exp))
-
     def _extract_variable_coefficients(
             self,
             row_label,
@@ -201,7 +200,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
         if isinstance(canonical_repn, LinearCanonicalRepn):
             constant = canonical_repn.constant
             coefficients = canonical_repn.linear
-            if coefficients is not None:
+            if (coefficients is not None) and \
+               (len(coefficients) > 0):
                 variables = canonical_repn.variables
 
                 # the 99% case is when the input instance is a linear
@@ -246,11 +246,17 @@ class ProblemWriter_mps(AbstractProblemWriter):
                   variable_symbol_map,
                   soscondata,
                   output_file):
-        if soscondata.num_variables() == 0:
+
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
+
+        if len(sos_items) == 0:
             return
+
         output_file.write("SOS\n")
 
-        sos_items = list(soscondata.get_items())
         level = soscondata.level
 
         # I think there are many flavors to the SOS
@@ -262,6 +268,12 @@ class ProblemWriter_mps(AbstractProblemWriter):
 
         sos_template_string = "    %s %"+self._precision_string+"\n"
         for vardata, weight in sos_items:
+            weight = _get_bound(weight)
+            if weight < 0:
+                raise ValueError(
+                    "Cannot use negative weight %f "
+                    "for variable %s is special ordered "
+                    "set %s " % (weight, vardata.name, soscondata.name))
             if vardata.fixed:
                 raise RuntimeError(
                     "SOSConstraint '%s' includes a fixed variable '%s'. This is "
@@ -454,12 +466,18 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         sort=sortOrder,
                         descend_into=False):
 
-                    if isinstance(constraint_data, LinearCanonicalRepn):
+                    if (not constraint_data.has_lb()) and \
+                       (not constraint_data.has_ub()):
+                        assert not constraint_data.equality
+                        continue # non-binding, so skip
+
+                    if constraint_data._linear_canonical_form:
+                        canonical_repn = constraint_data.canonical_form()
+                    elif isinstance(constraint_data, LinearCanonicalRepn):
                         canonical_repn = constraint_data
                     else:
                         if gen_con_canonical_repn:
-                            canonical_repn = generate_canonical_repn(
-                                constraint_data.body)
+                            canonical_repn = generate_canonical_repn(constraint_data.body)
                             block_canonical_repn[constraint_data] = canonical_repn
                         else:
                             canonical_repn = block_canonical_repn[constraint_data]
@@ -495,6 +513,8 @@ class ProblemWriter_mps(AbstractProblemWriter):
                                             labeler)
 
             if constraint_data.equality:
+                assert value(constraint_data.lower) == \
+                    value(constraint_data.upper)
                 label = 'c_e_' + con_symbol + '_'
                 alias_symbol_func(symbol_map, constraint_data, label)
                 output_file.write(" E  %s\n" % (label))
@@ -505,11 +525,11 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     quadmatrix_data,
                     variable_to_column)
                 bound = constraint_data.lower
-                bound = self._get_bound(bound) - offset
+                bound = _get_bound(bound) - offset
                 rhs_data.append((label, _no_negative_zero(bound)))
             else:
-                if constraint_data.lower is not None:
-                    if constraint_data.upper is not None:
+                if constraint_data.has_lb():
+                    if constraint_data.has_ub():
                         label = 'r_l_' + con_symbol + '_'
                     else:
                         label = 'c_l_' + con_symbol + '_'
@@ -522,10 +542,13 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         quadmatrix_data,
                         variable_to_column)
                     bound = constraint_data.lower
-                    bound = self._get_bound(bound) - offset
+                    bound = _get_bound(bound) - offset
                     rhs_data.append((label, _no_negative_zero(bound)))
-                if constraint_data.upper is not None:
-                    if constraint_data.lower is not None:
+                else:
+                    assert constraint_data.has_ub()
+
+                if constraint_data.has_ub():
+                    if constraint_data.has_lb():
                         label = 'r_u_' + con_symbol + '_'
                     else:
                         label = 'c_u_' + con_symbol + '_'
@@ -538,8 +561,10 @@ class ProblemWriter_mps(AbstractProblemWriter):
                         quadmatrix_data,
                         variable_to_column)
                     bound = constraint_data.upper
-                    bound = self._get_bound(bound) - offset
+                    bound = _get_bound(bound) - offset
                     rhs_data.append((label, _no_negative_zero(bound)))
+                else:
+                    assert constraint_data.has_lb()
 
         if len(column_data[-1]) > 0:
             # ONE_VAR_CONSTANT = 1
@@ -653,10 +678,10 @@ class ProblemWriter_mps(AbstractProblemWriter):
                     continue
 
                 # convert any -0 to 0 to make baseline diffing easier
-                vardata_lb = _no_negative_zero(self._get_bound(vardata.lb))
-                vardata_ub = _no_negative_zero(self._get_bound(vardata.ub))
-                unbounded_lb = (vardata_lb is None) or (vardata_lb == -infinity)
-                unbounded_ub = (vardata_ub is None) or (vardata_ub == infinity)
+                vardata_lb = _no_negative_zero(_get_bound(vardata.lb))
+                vardata_ub = _no_negative_zero(_get_bound(vardata.ub))
+                unbounded_lb = not vardata.has_lb()
+                unbounded_ub = not vardata.has_ub()
                 treat_as_integer = False
                 if vardata.is_binary():
                     if (vardata_lb == 0) and (vardata_ub == 1):

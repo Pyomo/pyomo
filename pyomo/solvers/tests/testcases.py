@@ -248,8 +248,8 @@ def test_scenarios(arg=None):
             if not _solver_case.available:
                 status='skip'
                 msg="Skipping test because solver %s (%s) is unavailable" % (solver,io)
-            if (solver, io, model) in ExpectedFailures:
-                case = ExpectedFailures[solver, io, model]
+            if (solver,io,_model.description) in ExpectedFailures:
+                case = ExpectedFailures[solver,io,_model.description]
                 if _solver_case.version is not None and\
                    case[0](_solver_case.version):
                     status='expected failure'
