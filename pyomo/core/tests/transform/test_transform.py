@@ -22,6 +22,7 @@ import pyomo.opt
 from pyomo.util.plugin import Plugin
 from pyomo.environ import *
 
+
 solvers = pyomo.opt.check_available_solvers('glpk')
 
 
@@ -115,6 +116,51 @@ class Test(unittest.TestCase):
         self.assertTrue(isinstance(apply_transformation('core.relax_integrality'),Plugin))
         self.assertTrue(isinstance(apply_transformation('core.relax_integrality'),Plugin))
         self.assertEqual(apply_transformation('foo', self.model),None)
+
+    def test_add_slack_vars(self):
+        self.model.x = Var(within=NonNegativeReals)
+        self.model.y = Var(within=NonNegativeReals)
+        self.model.rule1 = Constraint(expr=self.model.x <= 5)
+        self.model.rule2 = Constraint(expr=1 <= self.model.y <= 3)
+        self.model.rule3 = Constraint(expr=self.model.x >= 0.1)
+        self.model.obj = Objective(expr=-self.model.x-self.model.y)
+        instance = self.model.create_instance()
+        xfrm = TransformationFactory('core.add_slack_variables')
+        xinst = xfrm.create_using(instance)
+        # should have new variables
+        self.assertTrue(hasattr(xinst, "_slack_minus_rule1"))
+        self.assertFalse(hasattr(xinst, "_slack_plus_rule1"))
+        self.assertTrue(hasattr(xinst, "_slack_minus_rule2"))
+        self.assertTrue(hasattr(xinst, "_slack_plus_rule2"))
+        self.assertFalse(hasattr(xinst, "_slack_minus_rule3"))
+        self.assertTrue(hasattr(xinst, "_slack_plus_rule3"))
+        # all new variables in non-negative reals
+        self.assertEqual(xinst._slack_minus_rule1.bounds, (0, None))
+        self.assertEqual(xinst._slack_minus_rule2.bounds, (0, None))
+        self.assertEqual(xinst._slack_plus_rule2.bounds, (0, None))
+        self.assertEqual(xinst._slack_plus_rule3.bounds, (0, None))
+        # should have modified constraints
+        # TODO: this seems terrible. this should have nothing to do with string equality...
+        # but how do a check if two sumexpressions are equal??
+        #bad: self.assertEqual(xinst.rule1._body, instance.rule1._body - xinst._slack_minus_rule1)
+        self.assertEqual(str(xinst.rule1.body), "x - _slack_minus_rule1")
+        self.assertEqual(str(xinst.rule2.body), "y + _slack_plus_rule2 - _slack_minus_rule2")
+        self.assertEqual(str(xinst.rule3.body), "x + _slack_plus_rule3")
+        # should have old objective deactivated.
+        self.assertFalse(xinst.obj.active)
+        # active objective should minimize sum of slacks
+        self.assertTrue(hasattr(xinst, "_slack_objective"))
+        self.assertTrue(xinst._slack_objective.active)
+        # TODO: check that the objective is actually right when I know how to check an expression.
+
+    def test_add_slack_vars_badModel(self):
+        self.model.x = Var(within=NonNegativeReals)
+        self.model.rule1 = Constraint(expr=6 <= self.model.x <= 5)
+        instance = self.model.create_instance()
+        xfrm = TransformationFactory('core.add_slack_variables')
+        with self.assertRaises(RuntimeError) as err:
+            xinst = xfrm.create_using(instance)
+        self.assertEqual(err.exception.message, "Lower bound exceeds upper bound in constraint rule1")
 
     def test_nonnegativity_transformation_1(self):
         self.model.a = Var()
