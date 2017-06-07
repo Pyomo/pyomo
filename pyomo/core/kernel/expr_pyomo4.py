@@ -42,10 +42,13 @@ from pyomo.core.kernel import expr_common as common
 
 UNREFERENCED_EXPR_COUNT = 11
 UNREFERENCED_INTRINSIC_EXPR_COUNT = -2
+UNREFERENCED_EXPR_IF_COUNT = -3
 if sys.version_info[:2] >= (3, 6):
     UNREFERENCED_EXPR_COUNT -= 1
     UNREFERENCED_INTRINSIC_EXPR_COUNT += 1
-
+    UNREFERENCED_EXPR_IF_COUNT += 2
+elif sys.version_info[:2] < (2, 7):
+    UNREFERENCED_EXPR_IF_COUNT = -4
 
 # Wrap the common chainedInequalityErrorMessage to pass the local context
 chainedInequalityErrorMessage \
@@ -1111,7 +1114,7 @@ class Expr_if(_ExpressionBase):
         # TODO: This used to unilaterally convert the args with
         # as_numeric().  Verify if not doing that is OK.
         self._args = _generate_expression__clone_if_needed(
-            -3, False, IF, THEN, ELSE )
+            UNREFERENCED_EXPR_IF_COUNT, False, IF, THEN, ELSE )
         if not _getrefcount_available:
             self._parent_expr = None
             for a in self._args:
