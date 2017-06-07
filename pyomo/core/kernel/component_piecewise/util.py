@@ -80,7 +80,7 @@ def log2floor(n):
         # brute-force calculation if bit_length is not available.
         s = bin(n)         # binary representation:  bin(37) --> '0b100101'
         s = s.lstrip('0b') # remove leading zeros and 'b'
-        return len(s)
+        return len(s) - 1
 
 def generate_gray_code(nbits):
     """Generates a Gray code of nbits as list of lists"""
