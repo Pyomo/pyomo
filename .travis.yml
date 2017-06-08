@@ -46,7 +46,7 @@ install:
 - bash miniconda.sh -b -p $HOME/miniconda
 - export PATH="$HOME/miniconda/bin:$PATH"
 - hash -r
-- conda create -f -y -n testenv python=${TRAVIS_PYTHON_VERSION}
+- conda create -f -q -y -n testenv python=${TRAVIS_PYTHON_VERSION}
 - source activate testenv
 #- if [ -n "${JYTHON}" ]; then source install_jython.sh; fi
 #
@@ -54,16 +54,16 @@ install:
 #
 - if [ -n "${YAML}" ]; then pip install pyyaml; fi
 - if [ -n "${PYRO}" ]; then pip install $PYRO; fi
-- if [ -n "${EXTRAS}" ]; then conda install -y --channel conda-forge pyomo.extras; fi
+- if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
 - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
      if [ -n "${EXTRAS}" ]; then
         pip install scipy;
      fi
   fi
 - if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
-- conda install -y --channel conda-forge glpk
-- conda install -y --channel cachemeorg ipopt_bin
-- conda install -y --channel conda-forge setuptools
+- conda install -q -y --channel conda-forge glpk
+- conda install -q -y --channel cachemeorg ipopt_bin
+- conda install -q -y --channel conda-forge setuptools
 - pip install xlrd
 - pip install openpyxl
 - pip install coverage
