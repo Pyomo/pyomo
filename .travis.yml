@@ -2,7 +2,7 @@ language: python
 matrix:
   include:
   - python: '2.6'
-    env:                             CATEGORY="nightly" EXRAS="yes"
+    env:                             CATEGORY="nightly" EXTRAS="yes"
   #
   - python: '2.7'
     env:                             CATEGORY="nightly"
