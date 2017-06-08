@@ -240,7 +240,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write("\n\t".join(binary))
         if ints:
             output_file.write(";\n\nINTEGER VARIABLES\n\t")
-            output_file.write("\n\t".join(inst))
+            output_file.write("\n\t".join(ints))
         if positive:
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
             output_file.write("\n\t".join(positive))
