@@ -541,6 +541,8 @@ class ComponentData(_ComponentBase):
     __pickle_slots__ = ('_component',)
     __slots__ = __pickle_slots__ + ('__weakref__',)
 
+    labeler = []
+
     def __init__(self, owner):
         #
         # ComponentData objects are typically *private* objects for
@@ -685,7 +687,10 @@ class ComponentData(_ComponentBase):
         """Write the component name and index to a buffer"""
         if ostream is None:
             ostream = sys.stdout
-        ostream.write(self.__str__())
+        if not ComponentData.labeler:
+            ostream.write(self.__str__())
+        else:
+            ostream.write(ComponentData.labeler[-1](self))
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """Return a string with the component name and index"""
