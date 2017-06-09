@@ -35,7 +35,7 @@ matrix:
   #- python: pypy3
   #  env: PYRO="Pyro4" YAML="pyyaml"
 install:
-- sudo apt-get update
+- sudo apt-get update --quiet
 #
 # Setup miniconda and activate the testenv environment
 #
@@ -53,29 +53,36 @@ install:
 #
 # Install supporting packages
 #
-- if [ -n "${YAML}" ]; then pip install pyyaml; fi
-- if [ -n "${PYRO}" ]; then pip install $PYRO; fi
+- conda install -q -y --channel conda-forge setuptools
+- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then
+     pip install --quiet ordereddict;
+  fi
+- pip install --quiet coverage
+- if [ -n "${YAML}" ]; then
+     pip install --quiet pyyaml;
+  fi
+- if [ -n "${PYRO}" ]; then
+     pip install --quiet $PYRO;
+  fi
+- pip install --quiet xlrd
+- pip install --quiet openpyxl
+#
 - if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
 - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
      if [ -n "${EXTRAS}" ]; then
         pip install scipy;
      fi
   fi
-- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install ordereddict; fi
 - conda install -q -y --channel conda-forge glpk
 - conda install -q -y --channel cachemeorg ipopt_bin
-- conda install -q -y --channel conda-forge setuptools
-- pip install xlrd
-- pip install openpyxl
-- pip install coverage
 #
 # Clone but don't install pyomo-model-libraries
 #
-- git clone https://github.com/Pyomo/pyomo-model-libraries.git
+- git clone --quiet https://github.com/Pyomo/pyomo-model-libraries.git
 #
 # Install PyUtilib (master branch)
 #
-- pip install git+https://github.com/PyUtilib/pyutilib
+- pip install --quiet git+https://github.com/PyUtilib/pyutilib
 #
 # Install this package
 #
@@ -93,7 +100,7 @@ after_success:
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
 - coverage combine
-- pip install codecov
+- pip install --quiet codecov
 - cp ../.coverage .
 - codecov
 #- pip install python-coveralls
