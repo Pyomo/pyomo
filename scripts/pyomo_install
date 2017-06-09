@@ -779,8 +779,10 @@ virtual python environment is created in the 'pyomo' directory.
             install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose, src=pip_src)
             pip = find_pip(pyomo_install_tempdir)
         else:
-            #call_subprocess([sys.executable, '-m', 'pip', 'install'], options)
             pip = os.path.join(os.path.split(sys.executable)[0],'pip-%d.%d' % (sys.version_info[0], sys.version_info[1]))
+            if not os.path.exists(pip):
+                install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose, src=pip_src)
+                pip = find_pip(pyomo_install_tempdir)
     else:
         pip = os.path.join(os.path.split(sys.executable)[0],'pip')
     if not os.path.exists(pip):
