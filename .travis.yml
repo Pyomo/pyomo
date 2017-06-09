@@ -53,8 +53,19 @@ install:
 #
 # Install supporting packages
 #
-- if [ -n "${YAML}" ]; then pip install --quiet pyyaml; fi
-- if [ -n "${PYRO}" ]; then pip install --quiet $PYRO; fi
+- conda install -q -y --channel conda-forge setuptools
+- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then
+     pip install --quiet ordereddict;
+  fi
+- pip install --quiet coverage
+- if [ -n "${YAML}" ]; then
+     pip install --quiet pyyaml;
+  fi
+- if [ -n "${PYRO}" ]; then
+     pip install --quiet $PYRO;
+  fi
+- pip install --quiet xlrd
+- pip install --quiet openpyxl
 #
 - if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
 - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -62,13 +73,8 @@ install:
         pip install scipy;
      fi
   fi
-- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then pip install --quiet ordereddict; fi
 - conda install -q -y --channel conda-forge glpk
 - conda install -q -y --channel cachemeorg ipopt_bin
-- conda install -q -y --channel conda-forge setuptools
-- pip install --quiet xlrd
-- pip install --quiet openpyxl
-- pip install --quiet coverage
 #
 # Clone but don't install pyomo-model-libraries
 #
