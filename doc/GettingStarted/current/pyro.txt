@@ -33,13 +33,13 @@ interact. You can think of the name server as a phone directory.
 To start the name server, type:
 [[shell]]
 ----
-pyomo-ns
+pyomo_ns
 ----
 In general, we suggest that the output be redirected to a file,
 with the entire process being placed in the background:
 [[shell]]
 ----
-pyomo-ns >& ns.out &
+pyomo_ns >& ns.out &
 ----
 
 === Step 2: Starting a Dispatch Server ===
@@ -84,7 +84,7 @@ For example, one can run pyomo as follows, considering the PySP
 example found in: `pyomo/examples/pysp/farmer`:
 [[shell]]
 ----
-pyomo solve --solver=cplex --solver-manager=pyro farmer_lp.py farmer_lp.dat 
+pyomo solve --solver=cplex --solver-manager=pyro farmer_lp.py farmer_lp.dat
 ----
 This will execute the LP solve using one of the two mip servers
 established in Step 3, which might be useful if they are on remote
@@ -94,7 +94,7 @@ To take advantage of parallelism, we can solve the farmer example
 using progressive hedging, as follows:
 [[shell]]
 ----
-runph --solver=cplex --solver-manager=pyro --model-directory=models --instance-directory=scenariodata 
+runph --solver=cplex --solver-manager=pyro --model-directory=models --instance-directory=scenariodata
 ----
 
 === Moving from Multi-Core to Distributed Computation ===
@@ -133,4 +133,3 @@ running their own servers, each user may want to their +PYRO_NS_PORT+
 system environment variable to a unique value.
 
 // vim: set syntax=asciidoc:
-
