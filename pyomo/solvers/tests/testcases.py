@@ -330,7 +330,7 @@ def run_test_scenarios(options):
         print("---------------")
         print(" Test Failures")
         print("---------------")
-        nfail = 0
+    nfail = 0
     #
     # Summarize the runtime statistics, by solver
     #
