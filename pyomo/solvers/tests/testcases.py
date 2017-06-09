@@ -286,8 +286,10 @@ def run_test_scenarios(options):
             solver,
             io,
             test_case.testcase.io_options,
+            {},
             symbolic_labels,
             load_solutions)
+
         termination_condition = results['Solver'][0]['termination condition']
         # Validate solution status
         try:
