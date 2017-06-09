@@ -14,7 +14,8 @@ from pyutilib.misc import Options
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases
-
+import pyomo.kernel
+from pyomo.core.kernel.component_block import IBlockStorage
 
 # For expected failures that appear in all known version
 _trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))
@@ -306,7 +307,12 @@ def run_test_scenarios(options):
             stat[key] = (True, "")
         else:
             # Validate the solution returned by the solver
-            model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
+            if isinstance(model_class.model, IBlockStorage):
+                model_class.model.load_solution(results.solution)
+            else:
+                model_class.model.solutions.load_from(
+                    results,
+                    default_variable_value=opt.default_variable_value())
             rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
 
             if test_case.status == 'expected failure':
