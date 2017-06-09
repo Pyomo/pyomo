@@ -4,8 +4,9 @@ from pyomo.environ import (ConcreteModel, Constraint, Objective, Var, log10,
                            minimize)
 from pyomo.opt import SolverFactory, TerminationCondition
 
-# I don't know how you figure out if BARON is available
-baron_available = True
+# check if BARON is available
+from pyomo.solvers.tests.solvers import test_solver_cases
+baron_available = test_solver_cases('baron', 'bar').available
 
 
 class BaronTest(unittest.TestCase):
