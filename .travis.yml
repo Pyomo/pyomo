@@ -34,6 +34,9 @@ matrix:
   #  env: PYRO="Pyro"  YAML="pyyaml"
   #- python: pypy3
   #  env: PYRO="Pyro4" YAML="pyyaml"
+#
+#
+#
 install:
 - sudo apt-get update --quiet
 #
@@ -89,6 +92,9 @@ install:
 - which python
 - python --version
 - python setup.py develop
+#
+#
+#
 script:
 # The next three commands enable tracking of coverage
 # for any subprocesses launched by tests
@@ -96,6 +102,9 @@ script:
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 - test.pyomo -v --cat=$CATEGORY --cov
+#
+#
+#
 after_success:
 # Trigger PyomoGallery build
 - "if [ -n \"${KEY_JOB}\" ]; then curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests; fi"
@@ -108,6 +117,9 @@ after_success:
 #- pip install python-coveralls
 #- coveralls
 - cd $TRAVIS_BUILD_DIR
+#
+#
+#
 deploy:
 - provider: pypi
   server: https://testpypi.python.org/pypi # Updated
