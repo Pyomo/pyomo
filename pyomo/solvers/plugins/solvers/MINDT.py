@@ -23,7 +23,7 @@ from pyomo.core.base import expr as EXPR
 from pyomo.core.base.symbolic import differentiate
 from pyomo.environ import (Binary, Block, Constraint, ConstraintList,
                            NonNegativeReals, Objective, RangeSet, Reals, Set,
-                           Suffix, Var, minimize, value)
+                           Suffix, Var, minimize, value, Param, Expression)
 from pyomo.opt import SolverFactory, TerminationCondition
 from pyomo.opt.base import IOptSolver
 
@@ -97,6 +97,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         max_slack = kwds.pop('max_slack', 1000)
         lin.slack_vars = Var(lin.oa_iters, lin.nl_constraint_set,
                              domain=NonNegativeReals, bounds=(0, max_slack))
+        lin.OA_penalty_factor = Param(domain=NonNegativeReals, initialize=1000)
 
         self.nlp_iter = 0
         self.mip_iter = 0
@@ -154,18 +155,30 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             for c in self.nonlinear_constraints:
                 c.deactivate()
             m.MINDT_linear_cuts.activate()
+            self.obj.deactivate()
+            m.del_component('MINDT_penalty_expr')
+            sign_adjust = 1 if self.obj.sense == minimize else -1
+            m.MINDT_penalty_expr = Expression(
+                expr=sign_adjust * lin.OA_penalty_factor * sum(
+                    v for v in lin.slack_vars[:, :]))
+            m.del_component('MINDT_oa_obj')
+            m.MINDT_oa_obj = Objective(
+                expr=self.obj.expr + m.MINDT_penalty_expr,
+                sense=self.obj.sense)
             results = mip_solver.solve(m)
+            self.obj.activate()
             for c in self.nonlinear_constraints:
                 c.activate()
             m.MINDT_linear_cuts.deactivate()
+            m.MINDT_oa_obj.deactivate()
             master_terminate_cond = results.solver.termination_condition
             if master_terminate_cond is optimal:
                 # proceed. Just need integer values
-                print('Objective {}'.format(value(self.obj.expr)))
+                print('Objective {}'.format(value(m.MINDT_oa_obj.expr)))
                 if self.obj.sense == minimize:
-                    self.LB = max(value(self.obj.expr), self.LB)
+                    self.LB = max(value(m.MINDT_oa_obj.expr), self.LB)
                 else:
-                    self.UB = min(value(self.obj.expr), self.UB)
+                    self.UB = min(value(m.MINDT_oa_obj.expr), self.UB)
             elif master_terminate_cond is infeasible:
                 # set optimistic bound to infinity
                 if self.obj.sense == minimize:
