@@ -11,14 +11,17 @@ These approaches include:
 TODO: currently no support for integer variables. Need to raise exception.
 
 """
+from math import copysign
+
 import pyomo.util.plugin
-from pyomo.opt.base import IOptSolver
-from pyomo.environ import (Block, ConstraintList, Suffix, Binary, Var, value,
-                           NonNegativeReals, Constraint, minimize,
-                           Objective, Param, Reals)
-from pyomo.opt import SolverFactory, TerminationCondition
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base.symbolic import differentiate
+from pyomo.environ import (Binary, Block, Constraint, ConstraintList,
+                           NonNegativeReals, Objective, RangeSet, Reals, Set,
+                           Suffix, Var, minimize, value)
+from pyomo.opt import SolverFactory, TerminationCondition
+from pyomo.opt.base import IOptSolver
+
 optimal = TerminationCondition.optimal
 infeasible = TerminationCondition.infeasible
 
@@ -33,7 +36,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
     # def available(self, exception_flag=True):
     #     return True
 
-    def solve(self, m, tol=1E-6, iterlim=1000, **kwds):
+    def solve(self, m, tol=1E-6, iterlim=30, **kwds):
         """Solve everything.
 
         All the problems. World peace? Done. Cure for cancer? You bet.
@@ -44,9 +47,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         lin = m.MINDT_linear_cuts = Block()
         lin.deactivate()
         lin.integer_cuts = ConstraintList(doc='integer cuts')
-        # lin.
-        lin.oa_cuts = ConstraintList(doc='OA_cuts')
-        binary_vars = [v for v in m.component_data_objects(
+        self.binary_vars = [v for v in m.component_data_objects(
             ctype=Var, active=True, descend_into=True)
             if v.domain is Binary and not v.fixed]
 
@@ -65,35 +66,41 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             m.MINDT_nonlinear_objective = Constraint(
                 expr=m.MINDT_objective_value == main_obj.expr)
             main_obj.deactivate()
-            obj = Objective(expr=m.MINDT_objective_value, sense=main_obj.sense)
+            self.obj = m.MINDT_objective = Objective(
+                expr=m.MINDT_objective_value, sense=main_obj.sense)
         else:
-            obj = main_obj
+            self.obj = main_obj
 
         # TODO if any continuous variables are multipled with binary ones, need
         # to do some kind of transformation or throw an error message
 
-        nonlinear_constraints = [
+        self.nonlinear_constraints = [
             v for v in m.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True)
             if v.body.polynomial_degree() not in (0, 1)]
         # preload jacobians
-        jacs = self._get_jacobians(nonlinear_constraints)
+        self._calc_jacobians()
 
-        nlp_iter = 0
-        mip_iter = 0
+        lin.oa_iters = Set(dimen=1)
+        lin.oa_cuts = ConstraintList(doc='OA_cuts')
+        lin.nl_constraint_set = RangeSet(len(self.nonlinear_constraints))
+        self.nl_map = {}
+        self.nl_inverse_map = {}
+        for c, n in zip(self.nonlinear_constraints, lin.nl_constraint_set):
+            self.nl_map[c] = n
+            self.nl_inverse_map[n] = c
+        max_slack = kwds.pop('max_slack', 1000)
+        lin.slack_vars = Var(lin.oa_iters, lin.nl_constraint_set,
+                             domain=NonNegativeReals, bounds=(0, max_slack))
+
+        self.nlp_iter = 0
+        self.mip_iter = 0
         if not hasattr(m, 'dual'):
             m.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
 
         # set up bounds
-        lower_bound = m.MINDT_LB = Param(initialize=float('-inf'),
-                                         mutable=True)
-        upper_bound = m.MINDT_UB = Param(initialize=float('inf'), mutable=True)
-        if obj.sense == minimize:
-            optimistic_bound = lower_bound
-            feasible_bound = upper_bound
-        else:
-            optimistic_bound = upper_bound
-            feasible_bound = lower_bound
+        self.LB = float('-inf')
+        self.UB = float('inf')
 
         # Set up solvers
         nlp_solver = SolverFactory('ipopt')
@@ -102,20 +109,24 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         # Initialization
 
         # solve rNLP (relaxation of binary variables)
-        nlp_iter += 1
-        print("Solve relaxed NLP")
-        for v in binary_vars:
+        self.nlp_iter += 1
+        print("NLP {}: Solve relaxed integrality.".format(self.nlp_iter))
+        for v in self.binary_vars:
             v.domain = NonNegativeReals
             v.setlb(0)
             v.setub(1)
         results = nlp_solver.solve(m)
-        for v in binary_vars:
+        for v in self.binary_vars:
             v.domain = Binary
         subprob_terminate_cond = results.solver.termination_condition
         if subprob_terminate_cond is optimal:
             # Add OA cut
-            optimistic_bound = value(obj.expr)
-            self._add_oa_cut(m, nlp_iter, jacs, obj.sense == minimize)
+            if self.obj.sense == minimize:
+                self.LB = value(self.obj.expr)
+            else:
+                self.UB = value(self.obj.expr)
+            print('Objective {}'.format(value(self.obj.expr)))
+            self._add_oa_cut(m)
         elif subprob_terminate_cond is infeasible:
             # TODO fail? try something else?
             raise ValueError('Initial relaxed NLP infeasible. '
@@ -126,77 +137,96 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 'of {}'.format(subprob_terminate_cond))
 
         # Algorithm main loop
-        while value(lower_bound) + tol < value(upper_bound) \
-                and mip_iter < iterlim:
+        while self.LB + tol < self.UB:
+            if self.mip_iter >= iterlim:
+                print('MINDT unable to solve problem '
+                      'after {} master iterations'.format(self.mip_iter))
+                break
             # solve MILP master problem
-            mip_iter += 1
-            print('Solve MILP master problem. Iter {}'.format(mip_iter))
+            self.mip_iter += 1
+            print('MILP {}: Solve master problem.'.format(self.mip_iter))
             # Set up MILP
-            for c in nonlinear_constraints:
+            for c in self.nonlinear_constraints:
                 c.deactivate()
+            m.MINDT_linear_cuts.activate()
             results = mip_solver.solve(m)
-            for c in nonlinear_constraints:
+            for c in self.nonlinear_constraints:
                 c.activate()
+            m.MINDT_linear_cuts.deactivate()
             master_terminate_cond = results.solver.termination_condition
             if master_terminate_cond is optimal:
                 # proceed. Just need integer values
-                pass
+                print('Objective {}'.format(value(self.obj.expr)))
+                if self.obj.sense == minimize:
+                    self.LB = max(value(self.obj.expr), self.LB)
+                else:
+                    self.UB = min(value(self.obj.expr), self.UB)
             elif master_terminate_cond is infeasible:
                 # set optimistic bound to infinity
-                if optimistic_bound is lower_bound:
-                    lower_bound = float('inf')
+                if self.obj.sense == minimize:
+                    self.LB = float('inf')
                 else:
-                    upper_bound = float('-inf')
+                    self.UB = float('-inf')
             else:
                 raise ValueError(
                     'MINDT unable to handle MILP master termination condition '
                     'of {}'.format(master_terminate_cond))
 
             # Solve NLP subproblem
-            nlp_iter += 1
-            print('Solve NLP subproblem. Iter {}'.format(nlp_iter))
+            self.nlp_iter += 1
+            print('NLP {}: Solve subproblem.'.format(self.nlp_iter))
             # Set up NLP
-            for v in binary_vars:
+            for v in self.binary_vars:
                 v.fix()
             results = nlp_solver.solve(m)
+            for v in self.binary_vars:
+                v.unfix()
             subprob_terminate_cond = results.solver.termination_condition
             if subprob_terminate_cond is optimal:
-                if feasible_bound is upper_bound:
-                    upper_bound = min(value(obj.expr), value(upper_bound))
+                if self.obj.sense == minimize:
+                    self.UB = min(value(self.obj.expr), self.UB)
                 else:
-                    lower_bound = max(value(obj.expr), value(lower_bound))
-                self._add_oa_cut(m, nlp_iter, jacs, obj.sense == minimize)
+                    self.LB = max(value(self.obj.expr), self.LB)
+                print('Objective {}'.format(value(self.obj.expr)))
+                self._add_oa_cut(m)
             elif subprob_terminate_cond is infeasible:
                 # TODO try something else? Reinitialize?
-                self._add_int_cut(m, binary_vars)
+                self._add_int_cut(m)
             else:
                 raise ValueError(
                     'MINDT unable to handle NLP subproblem termination '
                     'condition of {}'.format(subprob_terminate_cond))
 
-    def _get_jacobians(nonlinear_constraints):
-        jacs = {}
-        for c in nonlinear_constraints:
+    def _calc_jacobians(self):
+        self.jacs = {}
+        for c in self.nonlinear_constraints:
             constraint_vars = list(EXPR.identify_variables(c.body))
-            jac_list = differentiate(c.body, wrt=constraint_vars)
-            jacs[c] = {id(var): jac
-                       for var, jac in zip(constraint_vars, jac_list)}
-        return jacs
+            jac_list = differentiate(c.body, wrt_list=constraint_vars)
+            self.jacs[c] = {id(var): jac
+                            for var, jac in zip(constraint_vars, jac_list)}
 
-    def _add_oa_cut(m, nlp_iter, jacs, obj_is_minimize):
-        if obj_is_minimize:
+    def _add_oa_cut(self, m):
+        m.MINDT_linear_cuts.oa_iters.add(self.nlp_iter)
+        if self.obj.sense == minimize:
             sign_adjust = -1
         else:
             sign_adjust = 1
 
         # generate new constraints and slack variables
-        for constr in jacs:
-            pass
+        # TODO some kind of special handling if the dual is phenomenally small?
+        for constr in self.jacs:
+            m.MINDT_linear_cuts.oa_cuts.add(
+                expr=copysign(1, sign_adjust * m.dual[constr]) * sum(
+                    value(self.jacs[constr][id(var)]) * (var - value(var))
+                    for var in list(EXPR.identify_variables(constr.body))) +
+                m.MINDT_linear_cuts.slack_vars[self.nlp_iter,
+                                               self.nl_map[constr]] <= 0
+            )
 
-    def _add_int_cut(m, binary_vars):
+    def _add_int_cut(self, m):
         int_tol = 1E-6
         # TODO raise an error if any of the binary variables are not 0 or 1
         m.MINDT_linear_cuts.integer_cuts.add(
-            expr=sum(1 - v for v in binary_vars
+            expr=sum(1 - v for v in self.binary_vars
                      if value(abs(v) - 1) <= int_tol) +
-            sum(v for v in binary_vars if value(abs(v)) <= int_tol) >= 1)
+            sum(v for v in self.binary_vars if value(abs(v)) <= int_tol) >= 1)
