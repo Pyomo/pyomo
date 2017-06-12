@@ -98,7 +98,7 @@ script:
 - test.pyomo -v --cat=$CATEGORY --cov
 after_success:
 # Trigger PyomoGallery build
-- curl -s -X POST -H "Content-Type: application/json" -H "Accept: application/json" -H "Travis-API-Version: 3" -H "Authorization: token 4DadIB521uUPyBXMtvQVOw" -d '{"request": {"branch": "master"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests
+- "curl -s -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Travis-API-Version: 3' -H 'Authorization: token 4DadIB521uUPyBXMtvQVOw' -d '{\"request\": {\"branch\": \"master\"}}' https://api.travis-ci.org/repo/Pyomo%2FPyomoGallery/requests"
 # Combine coverage reports over all subprocesses
 - cd $TRAVIS_BUILD_DIR
 - coverage combine
