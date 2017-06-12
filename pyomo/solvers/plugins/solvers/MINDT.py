@@ -1,4 +1,4 @@
-"""Interface to the MINDT solver.
+"""Implementation of the MINDT solver.
 
 The MINDT (MINLP Decomposition Tookit) solver applies a variety of
 decomposition-based approaches to solve nonlinear continuous-discrete problems.
@@ -9,6 +9,11 @@ These approaches include:
 - Partial surrogate cuts (unimplemented)
 
 TODO: currently no support for integer variables. Need to raise exception.
+
+This solver implementation was developed by Carnegie Mellon University in the
+research group of Ignacio Grossmann.
+
+Questions: Qi Chen <qichen at andrew.cmu.edu>
 
 """
 from math import copysign
