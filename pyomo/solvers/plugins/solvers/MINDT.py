@@ -100,41 +100,59 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             print("Unrecognized arguments passed to MINDT solver:")
             pprint(kwds)
 
+        # Modify in place decides whether to run the algorithm on a copy of the
+        # originally model passed to the solver, or whether to manipulate the
+        # original model directly.
         if self.modify_in_place:
             self.m = m = model
         else:
             self.m = m = model.clone()
-        self.best_solution_found = model.clone()
 
+        # Store the initial model state as the best solution found. If we find
+        # no better solution, then we will restore from this copy.
+        self.best_solution_found = model.clone()
+        # Save model initial values
+        self.initial_variable_values = {
+            id(v): v.value for v in m.component_data_objects(
+                ctype=Var, descend_into=True)}
+
+        # Validate the model to ensure that MINDT is able to solve it.
         self._validate_model()
 
         # Create a model block in which to store the generated linear
-        # constraints
+        # constraints. Do not leave the constraints on by default.
         lin = m.MINDT_linear_cuts = Block()
-        lin.deactivate()  # do not leave the constraints on by default
+        lin.deactivate()
+
         # Integer cuts exclude particular discrete decisions
         lin.integer_cuts = ConstraintList(doc='integer cuts')
+
         # Build a list of binary variables
         self.binary_vars = [v for v in m.component_data_objects(
             ctype=Var, descend_into=True)
             if v.is_binary() and not v.fixed]
+
         # Build list of nonlinear constraints
         self.nonlinear_constraints = [
             v for v in m.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True)
             if v.body.polynomial_degree() not in (0, 1)]
-        # Save model initial values
-        self.initial_variable_values = {
-            id(v): v.value for v in m.component_data_objects(
-                ctype=Var, descend_into=True)}
+
+        # Set up iteration counters
+        self.nlp_iter = 0
+        self.mip_iter = 0
 
         # Set of NLP iterations for which cuts were generated
         lin.nlp_iters = Set(dimen=1)
 
         # Create an integer index set over the nonlinear constraints
         lin.nl_constraint_set = RangeSet(len(self.nonlinear_constraints))
-        self.nl_map = {}  # dict to map constraint to integer index
-        self.nl_inverse_map = {}  # dict to map integer index to constraint
+        # Mapping Constraint -> integer index
+        self.nl_map = {}
+        # Mapping integer index -> Constraint
+        self.nl_inverse_map = {}
+        # Generate the two maps. These maps may be helpful for later
+        # interpreting indices on the slack variables or generated cuts.
         for c, n in zip(self.nonlinear_constraints, lin.nl_constraint_set):
             self.nl_map[c] = n
             self.nl_inverse_map[n] = c
@@ -143,10 +161,6 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         lin.slack_vars = Var(lin.nlp_iters, lin.nl_constraint_set,
                              domain=NonNegativeReals,
                              bounds=(0, self.max_slack), initialize=0)
-
-        # Set up iteration counters
-        self.nlp_iter = 0
-        self.mip_iter = 0
 
         # Set up dual value reporting
         if not hasattr(m, 'dual'):
@@ -171,8 +185,10 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
 
         # Initialize the master problem
         self._MINDT_initialize_master()
+
         # Algorithm main loop
         self._MINDT_iteration_loop()
+
         # Update values in original model
         if self.load_solutions:
             for v in self.best_solution_found.component_data_objects(
@@ -347,7 +363,6 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
-            print('Objective {}'.format(value(m.MINDT_oa_obj.expr)))
             if self.obj.sense == minimize:
                 self.LB = max(value(m.MINDT_oa_obj.expr), self.LB)
             else:
