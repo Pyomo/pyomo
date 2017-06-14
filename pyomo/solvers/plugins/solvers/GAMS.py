@@ -331,8 +331,6 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 if var.ub is not None:
                     output_file.write("%s.up = %s;\n" % (varName, var.ub))
             elif varName in reals:
-                if var.type() == Expression:
-                    continue
                 if var.lb is not None:
                     output_file.write("%s.lo = %s;\n" % (varName, var.lb))
                 if var.ub is not None:
