@@ -2634,6 +2634,24 @@ class TestCloneIfNeeded(unittest.TestCase):
                           count+1 )
 
 
+    def test_cloneCount_Expr_if(self):
+        # intrinsicFunction of a simple expression
+        count = EXPR.generate_expression.clone_counter
+        expr = EXPR.Expr_if(IF=self.model.c + self.model.a,
+                       THEN=self.model.c + self.model.a,
+                       ELSE=self.model.c + self.model.a,
+                       )
+        self.assertEqual( EXPR.generate_expression.clone_counter,
+                          count )
+
+        # intrinsicFunction of a referenced expression
+        count = EXPR.generate_expression.clone_counter
+        expr = self.model.c + self.model.a
+        expr1 = EXPR.Expr_if(IF=expr, THEN=expr, ELSE=expr)
+        self.assertEqual( EXPR.generate_expression.clone_counter,
+                          count+3 )
+
+
     def test_cloneCount_relationalExpression_simple(self):
         # relational expression of simple vars
         count = EXPR.generate_expression.clone_counter

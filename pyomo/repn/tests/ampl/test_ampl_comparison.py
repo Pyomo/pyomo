@@ -54,7 +54,9 @@ def nlwriter_baseline_test(self, name):
                     currdir+name+'_testCase.py'])
 
     # Check that the pyomo nl file matches its own baseline
-    self.assertFileEqualsBaseline(currdir+name+'.test.nl', currdir+name+'.pyomo.nl', tolerance=1e-7)
+    self.assertFileEqualsBaseline(
+        currdir+name+'.test.nl', currdir+name+'.pyomo.nl',
+        tolerance=(1e-7, False))
 
 
 class ASLTests(Tests):
