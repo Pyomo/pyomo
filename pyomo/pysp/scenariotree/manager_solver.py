@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ("ScenarioTreeManagerSolverClientSerial",
            "ScenarioTreeManagerSolverClientPyro",
@@ -1444,6 +1445,7 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
 
         assert not self._transmission_paused
         self.pause_transmit()
+        action_handles = []
         if self._scenario_tree.contains_bundles():
 
             for bundle in self._scenario_tree._scenario_bundles:
@@ -1459,11 +1461,11 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                         ids_to_transmit[primary_tree_node.name] = \
                             primary_tree_node._variable_ids
 
-                    self.invoke_method_on_worker(
+                    action_handles.append(self._invoke_method_on_worker_pyro(
                         self.get_worker_for_bundle(bundle.name),
                         "_update_master_scenario_tree_ids_for_client",
                         method_args=(bundle.name, ids_to_transmit),
-                        oneway=True)
+                        oneway=False))
 
         else:
 
@@ -1473,14 +1475,14 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
                 for tree_node in scenario.node_list:
                     ids_to_transmit[tree_node.name] = tree_node._variable_ids
 
-                self.invoke_method_on_worker(
+                action_handles.append(self._invoke_method_on_worker_pyro(
                     self.get_worker_for_scenario(scenario.name),
                     "_update_master_scenario_tree_ids_for_client",
                     method_args=(scenario.name, ids_to_transmit),
-                    oneway=True)
+                    oneway=False))
 
         self.unpause_transmit()
-
+        self._action_manager.wait_all(action_handles)
         end_time = time.time()
 
         if self.get_option("output_times") or \
@@ -1683,16 +1685,17 @@ class ScenarioTreeManagerSolverClientPyro(ScenarioTreeManagerClientPyro,
 
         if node_count > 0:
 
-            was_paused = self.pause_transmit()
+            assert not self._transmission_paused
+            self.pause_transmit()
+            action_handles = []
             for worker_name in worker_map:
-                self._invoke_method_on_worker_pyro(
+                action_handles.append(self._invoke_method_on_worker_pyro(
                     worker_name,
                     "_update_fixed_variables_for_client",
                     method_args=(worker_map[worker_name],),
-                    oneway=True)
-
-            if not was_paused:
-                self.unpause_transmit()
+                    oneway=False))
+            self.unpause_transmit()
+            self._action_manager.wait_all(action_handles)
 
         return node_count
 

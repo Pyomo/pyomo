@@ -1,14 +1,15 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 from __future__ import division
 
-__all__ = [ 'AmplRepn', 'generate_ampl_repn']
+__all__ = ['AmplRepn', 'generate_ampl_repn']
 
 try:
     basestring
@@ -27,6 +28,9 @@ from pyomo.core.base.numvalue import (NumericConstant,
 from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
                                        generate_canonical_repn)
 from pyomo.core.base import expr_common
+
+from pyomo.core.kernel.component_expression import IIdentityExpression
+from pyomo.core.kernel.component_variable import IVariable
 
 import six
 from six import itervalues, iteritems, StringIO
@@ -430,7 +434,10 @@ def _generate_ampl_repn(exp):
                 return ampl_repn
 
             else: # is linear or constant
-                ampl_repn = current_repn = arg_repns[0]
+                if arg_repns:
+                    ampl_repn = current_repn = arg_repns[0]
+                else:
+                    ampl_repn = _generate_ampl_repn(1)
                 for i in xrange(1,len(arg_repns)):
                     e_repn = arg_repns[i]
                     ampl_repn = AmplRepn()
@@ -740,7 +747,7 @@ def _generate_ampl_repn(exp):
         #
         # Expression (the component)
         #
-        elif isinstance(exp, _ExpressionData):
+        elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
             ampl_repn = _generate_ampl_repn(exp.expr)
             return ampl_repn
 
@@ -766,7 +773,7 @@ def _generate_ampl_repn(exp):
     #
     # Variable
     #
-    elif isinstance(exp, _VarData):
+    elif isinstance(exp, (_VarData, IVariable)):
         if exp.fixed:
             ampl_repn._constant = exp.value
 #            print("fixed variable")

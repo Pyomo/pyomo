@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import os
 from nose.tools import nottest
@@ -28,12 +29,12 @@ except ImportError:
     pass
 try:
     import pyodbc
+    pyodbc_available = True
     #
     # Temporarily deprecating pyodbc tests.
     # These tests are not reliably executing with Python 2.6 and 2.7, 
     # due to apparent issues with unicode representation.
     #
-    #pyodbc_available = True
     pyodbc_available = False
 except ImportError:
     pass

@@ -20,13 +20,14 @@ testdirs = [currdir, ]
 solver_dependencies =   {
                         'Test_nonlinear_ch': 
                             {'test_rosen_pyomo_rosen': 'ipopt',
-                            'test_react_design_run_pyomo_reactor_table': 'ipopt',
-                            'test_react_design_run_pyomo_reactor': 'ipopt',
-                            'test_multimodal_pyomo_multimodal_init1': 'ipopt',
-                            'test_multimodal_pyomo_multimodal_init2': 'ipopt',
-                            'test_disease_est_run_disease_summary': 'ipopt',
-                            'test_disease_est_run_disease_callback': 'ipopt',
-                            'test_deer_run_deer': 'ipopt'}
+                             'test_react_design_run_pyomo_reactor_table': 'ipopt',
+                             'test_react_design_run_pyomo_reactor': 'ipopt',
+                             'test_multimodal_pyomo_multimodal_init1': 'ipopt',
+                             'test_multimodal_pyomo_multimodal_init2': 'ipopt',
+                             'test_disease_est_run_disease_summary': 'ipopt',
+                             'test_disease_est_run_disease_callback': 'ipopt',
+                             'test_deer_run_deer': 'ipopt'},
+                        'Test_mpec_ch': {'test_mpec_ch_path1': 'path'}
                         }
 package_dependencies =  {
                         'Test_data_abstract_ch':
@@ -43,6 +44,24 @@ package_available = {}
 
 only_book_tests = set(['Test_nonlinear_ch', 'Test_scripts_ch'])
 
+def _check_available(name):
+    from pyomo.opt.base import (UnknownSolver, SolverFactory)
+    try:
+        opt = SolverFactory(name)
+    except:
+        return False
+    if opt is None or isinstance(opt, UnknownSolver):
+        return False
+    elif (name == "gurobi") and \
+       (not GUROBISHELL.license_is_valid()):
+        return False
+    elif (name == "baron") and \
+       (not BARONSHELL.license_is_valid()):
+        return False
+    else:
+        return (opt.available(exception_flag=False)) and \
+            ((not hasattr(opt,'executable')) or \
+             (opt.executable() is not None))
 
 def check_skip(tfname_, name):
     #
@@ -58,8 +77,7 @@ def check_skip(tfname_, name):
             for n_ in solver_dependencies[tf_]:
                 solver_ = solver_dependencies[tf_][n_]
                 if not solver_ in solver_available:
-                    opt = pyomo.environ.SolverFactory(solver_)
-                    solver_available[solver_] = opt.available()
+                    solver_available[solver_] = _check_available(solver_)
         for tf_ in package_dependencies:
             for n_ in package_dependencies[tf_]:
                 packages_ = package_dependencies[tf_][n_]
