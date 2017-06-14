@@ -23,6 +23,9 @@ import weakref
 import logging
 logger = logging.getLogger('pyomo.core')
 
+#DEBUG
+import pdb
+
 
 class BigM_Transformation(Transformation):
 
@@ -112,33 +115,47 @@ class BigM_Transformation(Transformation):
             return
 
         # HINT: disjuncts is now an attribute on the Disjunction
-        for disjunct in obj.parent_component()._disjuncts[idx]:
+        # for disjunct in obj.parent_component()._disjuncts[idx]:
+        or_expr = 0
+        for disjunct in obj.disjuncts:
             self._bigM_relax_disjunct(disjunct)
+            # TODO: is this OK? The disjunct is not necessarily active,
+            # but the indicator var got fixed to 0 if it wasn't.
+            # The old version does this as an indexed constraint... I'm 
+            # making a bajillion of them by doing it this way.
+            or_expr += disjunct.indicator_var
 
         _tmp = obj.parent_block().component('_gdp_relax')
         if _tmp is None:
             _tmp = Block()
             obj.parent_block().add_component('_gdp_relax', _tmp)
 
-        if obj.parent_component().dim() == 0:
-            # Since there can't be more than one Disjunction in a
-            # SimpleDisjunction, then we can just reclassify the entire
-            # component in place
-            obj.parent_block().del_component(obj)
-            _tmp.add_component(name, obj)
-            _tmp.reclassify_component_type(obj, Constraint)
+        # add the XOR (or OR) constraints
+        if obj.parent_component().xor:
+            orC = Constraint(expr=or_expr == 1)
         else:
-            # Look for a constraint in our transformation workspace
-            # where we can "move" this disjunction so that the writers
-            # will see it.
-            _constr = _tmp.component(name)
-            if _constr is None:
-                _constr = Constraint(
-                    obj.parent_component().index_set())
-                _tmp.add_component(name, _constr)
-            # Move this disjunction over to the Constraint
-            _constr._data[idx] = obj.parent_component()._data.pop(idx)
-            _constr._data[idx]._component = weakref.ref(_constr)
+            orC = Constraint(expr=or_expr >= 1)
+        obj.parent_block().component('_gdp_relax').add_component('_or_cons_' + obj.name, orC)
+
+        # if obj.parent_component().dim() == 0:
+        #     # Since there can't be more than one Disjunction in a
+        #     # SimpleDisjunction, then we can just reclassify the entire
+        #     # component in place
+        #     obj.parent_block().del_component(obj)
+        #     _tmp.add_component(name, obj)
+        #     _tmp.reclassify_component_type(obj, Constraint)
+        # else:
+        #     # Look for a constraint in our transformation workspace
+        #     # where we can "move" this disjunction so that the writers
+        #     # will see it.
+        #     _constr = _tmp.component(name)
+        #     if _constr is None:
+        #         _constr = Constraint(
+        #             obj.parent_component().index_set())
+        #         _tmp.add_component(name, _constr)
+        #     # Move this disjunction over to the Constraint
+        #     _constr._data[idx] = obj.parent_component()._data.pop(idx)
+        #     _constr._data[idx]._component = weakref.ref(_constr)
 
 
     def _bigM_relax_disjunct(self, disjunct):
@@ -190,6 +207,11 @@ class BigM_Transformation(Transformation):
         # (Disjunction), we need to create a NEW constraint that
         # captured the OR/XOR relationship among the Disjunct
         # indicator_vars.
+        # ESJ: TODO: I'm confused. Because all we have is disjunct which is a 
+        # _DisjunctData which has *one* indicator variable. And we need to
+        # add a constraint with the sum of all in the indicator variables in the 
+        # disjunction. And what we do with them depends on the value of xor in
+        # the Disjunction.
         if 'BigM' in disjunct.component_map(Suffix):
             M = disjunct.component('BigM').get(constraint)
         else:
