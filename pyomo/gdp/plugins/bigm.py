@@ -111,6 +111,7 @@ class BigM_Transformation(Transformation):
             # Do not transform a block more than once
             return
 
+        # HINT: disjuncts is now an attribute on the Disjunction
         for disjunct in obj.parent_component()._disjuncts[idx]:
             self._bigM_relax_disjunct(disjunct)
 
@@ -185,6 +186,10 @@ class BigM_Transformation(Transformation):
             handler(name, obj, disjunct)
 
     def _xform_constraint(self, _name, constraint, disjunct):
+        # HINT: Instead of updating / splitting the Constraint
+        # (Disjunction), we need to create a NEW constraint that
+        # captured the OR/XOR relationship among the Disjunct
+        # indicator_vars.
         if 'BigM' in disjunct.component_map(Suffix):
             M = disjunct.component('BigM').get(constraint)
         else:
