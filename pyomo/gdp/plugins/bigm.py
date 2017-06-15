@@ -135,7 +135,8 @@ class BigM_Transformation(Transformation):
             orC = Constraint(expr=or_expr == 1)
         else:
             orC = Constraint(expr=or_expr >= 1)
-        obj.parent_block().component('_gdp_relax').add_component('_or_cons_' + obj.name, orC)
+        # TODO: this is really crummy naming.
+        obj.parent_block().component('_gdp_relax').add_component(obj.name, orC)
 
         # if obj.parent_component().dim() == 0:
         #     # Since there can't be more than one Disjunction in a
