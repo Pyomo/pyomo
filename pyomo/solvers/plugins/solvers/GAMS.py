@@ -58,7 +58,9 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             solve=True:
                 If False, GAMSSolver will only create and keep GAMS model file.
             solver=None:
-                If None, will chose from lp, nlp, mip, and minlp.
+                If None, GAMS will use default solver for model type.
+            mtype=None:
+                Model type. If None, will chose from lp, nlp, mip, and minlp.
             load_model=True:
                 Load results back into pyomo model.
             print_result=False:
@@ -88,8 +90,11 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         # If False, GAMSSolver will only create and keep GAMS model file.
         solve = opts.pop("solve", True)
 
-        # If None, will chose from lp, nlp, mip, and minlp.
+        # If None, GAMS will use default solver for model type.
         solver = opts.pop("solver", None)
+
+        # If None, will chose from lp, nlp, mip, and minlp.
+        mtype = opts.pop("mtype", None)
 
         # After solving, store level and marginal
         # values in original model's variables
@@ -109,12 +114,22 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 "GAMSSolver passed unrecognized solve options:\n\t" +
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(opts)))
 
-        valid_solvers = set([
-            'lp', 'qcp', 'nlp', 'dnlp', 'rmip', 'mip', 'rmiqcp', 'rminlp',
-            'miqcp', 'minlp', 'rmpec', 'mpec', 'mcp', 'cns', 'emp', None])
-        if solver not in valid_solvers:
-            raise ValueError(
-                "GAMSSolver passed unrecognized solver type: %s" % solver)
+        if solver is not None:
+            if solver.upper() not in valid_solvers:
+                raise ValueError(
+                    "GAMSSolver passed unrecognized solver: %s" % solver)
+
+        if mtype is not None:
+            valid_mtypes = set([
+                'lp', 'qcp', 'nlp', 'dnlp', 'rmip', 'mip', 'rmiqcp', 'rminlp',
+                'miqcp', 'minlp', 'rmpec', 'mpec', 'mcp', 'cns', 'emp'])
+            if mtype.lower() not in valid_mtypes:
+                raise ValueError(
+                    "GAMSSolver passed unrecognized model type: %s" % mtype)
+            if (solver is not None and
+                mtype.upper() not in valid_solvers[solver.upper()]):
+                raise ValueError("GAMSSolver passed solver (%s) unsuitable for"
+                                 " given model type (%s)" % (solver, mtype))
 
         # Flag to keep GAMS model file, implied to keep if output_filename given
         keep_output = True
@@ -156,7 +171,8 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                         var_list=var_list,
                         symbolMap=symbolMap,
                         con_labeler=con_labeler,
-                        solver=solver
+                        solver=solver,
+                        mtype=mtype
                     )
                 finally:
                     ComponentData.labeler.pop()
@@ -181,7 +197,8 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                     var_list,
                     symbolMap,
                     con_labeler,
-                    solver):
+                    solver,
+                    mtype):
         constraint_names = []
         ConstraintIO = StringIO()
         linear = True
@@ -379,15 +396,21 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         model_name = symbolMap.getSymbol(model, con_labeler)
         output_file.write("\nMODEL %s /all/ ;\n" % model_name)
 
-        if solver is None:
-            solver =  ('lp','nlp','mip','minlp')[
+        if mtype is None:
+            mtype =  ('lp','nlp','mip','minlp')[
                 (0 if linear else 1) +
                 (2 if (binary or posInts or otherInts) else 0)]
+
+        if solver is not None:
+            if mtype.upper() not in valid_solvers[solver.upper()]:
+                raise ValueError("GAMSSolver passed solver (%s) unsuitable for"
+                                 " model type (%s)" % (solver, mtype))
+            output_file.write("option %s=%s;\n" % (mtype, solver))
 
         output_file.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n"
             % ( model_name, 
-                solver,
+                mtype,
                 'min' if obj.sense == minimize else 'max'))
 
     def _solve_model(self,
@@ -504,3 +527,90 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                                 % c.name)
             if print_result:
                 print("\n===================================================\n")
+
+
+solver_chart = """\
+ALPHAECP    MINLP MIQCP
+AMPL        LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
+ANTIGONE    NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+BARON       LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+BDMLP       LP MIP RMIP
+BDMLPD      LP RMIP
+BENCH       LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+BONMIN      MINLP MIQCP
+BONMINH     MINLP MIQCP
+CBC         LP MIP RMIP
+COINBONMIN  MINLP MIQCP
+COINCBC     LP MIP RMIP
+COINCOUENNE NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+COINIPOPT   LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+COINOS      LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+COINSCIP    MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+CONOPT      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+CONOPT3     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+CONOPT4     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+CONOPTD     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+CONVERT     LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+CONVERTD    LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
+COUENNE     NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+CPLEX       LP MIP RMIP QCP MIQCP RMIQCP
+CPLEXD      LP MIP RMIP QCP MIQCP RMIQCP
+CPOPTIMIZER MIP MINLP MIQCP
+DE          EMP
+DECIS       EMP
+DECISC      LP
+DECISM      LP
+DICOPT      MINLP MIQCP
+DICOPTD     MINLP MIQCP
+EXAMINER    LP MIP RMIP NLP MCP MPEC RMPEC DNLP RMINLP MINLP QCP MIQCP RMIQCP
+EXAMINER2   LP MIP RMIP NLP MCP DNLP RMINLP MINLP QCP MIQCP RMIQCP
+GAMSCHK     LP MIP RMIP NLP MCP DNLP RMINLP MINLP QCP MIQCP RMIQCP
+GLOMIQO     QCP MIQCP RMIQCP
+GUROBI      LP MIP RMIP QCP MIQCP RMIQCP
+IPOPT       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+IPOPTH      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+JAMS        EMP
+KESTREL     LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
+KNITRO      LP RMIP NLP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+LGO         LP RMIP NLP DNLP RMINLP QCP RMIQCP
+LGOD        LP RMIP NLP DNLP RMINLP QCP RMIQCP
+LINDO       LP MIP RMIP NLP DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
+LINDOGLOBAL LP MIP RMIP NLP DNLP RMINLP MINLP QCP MIQCP RMIQCP
+LINGO       LP MIP RMIP NLP DNLP RMINLP MINLP
+LOCALSOLVER MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+LOGMIP      EMP
+LS          LP RMIP
+MILES       MCP
+MILESE      MCP
+MINOS       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+MINOS5      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+MINOS55     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+MOSEK       LP MIP RMIP NLP DNLP RMINLP QCP MIQCP RMIQCP
+MPECDUMP    LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
+MPSGE      
+MSNLP       NLP DNLP RMINLP QCP RMIQCP
+NLPEC       MCP MPEC RMPEC
+OS          LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+OSICPLEX    LP MIP RMIP
+OSIGUROBI   LP MIP RMIP
+OSIMOSEK    LP MIP RMIP
+OSISOPLEX   LP RMIP
+OSIXPRESS   LP MIP RMIP
+PATH        MCP CNS
+PATHC       MCP CNS
+PATHNLP     LP RMIP NLP DNLP RMINLP QCP RMIQCP
+PYOMO       LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
+QUADMINOS   LP
+SBB         MINLP MIQCP
+SCENSOLVER  LP MIP RMIP NLP MCP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+SCIP        MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+SNOPT       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+SOPLEX      LP RMIP
+XA          LP MIP RMIP
+XPRESS      LP MIP RMIP QCP MIQCP RMIQCP\
+"""
+
+valid_solvers = dict()
+for line in solver_chart.splitlines():
+    items = line.split()
+    valid_solvers[items[0]] = items[1:]
