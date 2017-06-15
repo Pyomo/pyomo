@@ -36,6 +36,7 @@ from pyomo.core.base.var import (SimpleVar,
                                  _GeneralVarData,
                                  _VarData)
 from pyomo.core.kernel.component_objective import IObjective
+from pyomo.core.base.numvalue import NumericConstant
 
 from pyomo.core.base import expr_pyomo4
 from pyomo.core.base import expr_coopr3
@@ -753,6 +754,7 @@ _linear_collectors = {
     param.SimpleParam       : _collect_linear_const,
     param.Param             : _collect_linear_const,
     parameter               : _collect_linear_const,
+    NumericConstant         : _collect_linear_const,
     _GeneralVarData         : _collect_linear_var,
     SimpleVar               : _collect_linear_var,
     Var                     : _collect_linear_var,
@@ -775,7 +777,7 @@ def _get_linear_collector(exp, idMap, multiplier,
         if isinstance(exp, (_VarData, IVariable)):
             _collect_linear_var(exp, idMap, multiplier,
                                 coef, varmap, compute_values)
-        elif isinstance(exp, (param._ParamData, IParameter)):
+        elif isinstance(exp, (param._ParamData, IParameter, NumericConstant)):
             _collect_linear_const(exp, idMap, multiplier,
                                   coef, varmap, compute_values)
         elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
