@@ -198,6 +198,14 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                     "Unallowable component %s.\nThe GAMS writer cannot export"
                     " models with this component type" % ( c.type().__name__, ))
 
+        # Temporarily initialize uninitialized variables in order to call
+        # value() on each constraint to check domain violations
+        uninit_vars = list()
+        for var in model.component_data_objects(Var, active=True):
+            if var.value is None:
+                uninit_vars.append(var)
+                var.value = 0
+
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
         # encountered will be added to the var_list due to the labeler
@@ -205,6 +213,23 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         for con in model.component_data_objects(Constraint, active=True):
             if con.body.is_fixed():
                 continue
+
+            # Ensure GAMS will not encounter domain violations in presolver
+            # operations at current values, which are None (0) by default
+            # Used to handle log and log10 violations, for example
+            try:
+                value(con.body)
+            except:
+                # Suppress traceback since it can be very long and redundant
+                # depending on depth of the expression
+                sys.tracebacklimit = 0
+                raise ValueError("GAMSSolver encountered an error while"
+                                 " attemtping to evaluate\n            %s"
+                                 " at initial variable values.\n            "
+                                 "Ensure set variable values do not violate any"
+                                 " domains (are you using log or log10?)"
+                                 % con.name)
+
             if linear:
                 if con.body.polynomial_degree() not in linear_degree:
                     linear = False
@@ -239,6 +264,21 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 "GAMS writer requires exactly one active objective (found %s)"
                 % (len(obj)))
         obj = obj[0]
+
+        # Same domain violation check as above
+        try:
+            value(con.body)
+        except:
+            # Suppress traceback since it can be very long and redundant
+            # depending on depth of the expression
+            sys.tracebacklimit = 0
+            raise ValueError("GAMSSolver encountered an error while"
+                             " attemtping to evaluate\n            %s"
+                             " at initial variable values.\n            "
+                             "Ensure set variable values do not violate any"
+                             " domains (are you using log or log10?)"
+                             % con.name)
+
         if linear:
             if obj.expr.polynomial_degree() not in linear_degree:
                 linear = False
@@ -249,6 +289,10 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             oName,
             body
         ))
+
+        # Return uninitialized variables to None
+        for var in uninit_vars:
+            var.value = None
 
         # Categorize the variables that we found
         binary = []
@@ -276,7 +320,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                     positive.append(var)
                 else:
                     reals.append(var)
-            else:
+            else: # ADD LOG EXCEPTION HANDLING!!!!!!!!!!!!!!!!!!!
                 body = str(v.expr)
                 if linear:
                     if v.expr.polynomial_degree() not in linear_degree:
