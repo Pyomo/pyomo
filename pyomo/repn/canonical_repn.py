@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -26,7 +26,8 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         SimpleExpression,
                                         Expression)
 from pyomo.core.base.objective import (_GeneralObjectiveData,
-                                       SimpleObjective)
+                                       SimpleObjective,
+                                       _ObjectiveData)
 from pyomo.core.base.connector import (_ConnectorData,
                                        SimpleConnector,
                                        Connector)
@@ -34,6 +35,7 @@ from pyomo.core.base.var import (SimpleVar,
                                  Var,
                                  _GeneralVarData,
                                  _VarData)
+from pyomo.core.kernel.component_objective import IObjective
 
 from pyomo.core.base import expr_pyomo4
 from pyomo.core.base import expr_coopr3
