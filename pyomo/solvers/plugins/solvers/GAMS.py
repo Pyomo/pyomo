@@ -220,9 +220,6 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             try:
                 value(con.body)
             except:
-                # Suppress traceback since it can be very long and redundant
-                # depending on depth of the expression
-                sys.tracebacklimit = 0
                 raise ValueError("GAMSSolver encountered an error while"
                                  " attemtping to evaluate\n            %s"
                                  " at initial variable values.\n            "
@@ -269,9 +266,6 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         try:
             value(con.body)
         except:
-            # Suppress traceback since it can be very long and redundant
-            # depending on depth of the expression
-            sys.tracebacklimit = 0
             raise ValueError("GAMSSolver encountered an error while"
                              " attemtping to evaluate\n            %s"
                              " at initial variable values.\n            "
