@@ -29,8 +29,8 @@ from pyomo.solvers.tests.testcases import test_scenarios
 # added to a test class.
 #
 def create_test_method(model, solver, io,
-                     test_case,
-                     symbolic_labels):
+                       test_case,
+                       symbolic_labels):
 
     # Ignore expected failures?
     is_expected_failure = False
@@ -52,6 +52,7 @@ def create_test_method(model, solver, io,
                                         test_case.testcase.options,
                                         symbolic_labels,
                                         load_solutions)
+
         m = pickle.loads(pickle.dumps(model_class.model))
 
         #

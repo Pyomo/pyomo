@@ -14,7 +14,8 @@ from pyutilib.misc import Options
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases
-
+import pyomo.kernel
+from pyomo.core.kernel.component_block import IBlockStorage
 
 # For expected failures that appear in all known version
 _trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))
@@ -248,8 +249,8 @@ def test_scenarios(arg=None):
             if not _solver_case.available:
                 status='skip'
                 msg="Skipping test because solver %s (%s) is unavailable" % (solver,io)
-            if (solver, io, model) in ExpectedFailures:
-                case = ExpectedFailures[solver, io, model]
+            if (solver,io,_model.description) in ExpectedFailures:
+                case = ExpectedFailures[solver,io,_model.description]
                 if _solver_case.version is not None and\
                    case[0](_solver_case.version):
                     status='expected failure'
@@ -286,8 +287,10 @@ def run_test_scenarios(options):
             solver,
             io,
             test_case.testcase.io_options,
+            {},
             symbolic_labels,
             load_solutions)
+
         termination_condition = results['Solver'][0]['termination condition']
         # Validate solution status
         try:
@@ -304,7 +307,12 @@ def run_test_scenarios(options):
             stat[key] = (True, "")
         else:
             # Validate the solution returned by the solver
-            model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
+            if isinstance(model_class.model, IBlockStorage):
+                model_class.model.load_solution(results.solution)
+            else:
+                model_class.model.solutions.load_from(
+                    results,
+                    default_variable_value=opt.default_variable_value())
             rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
 
             if test_case.status == 'expected failure':
@@ -322,7 +330,7 @@ def run_test_scenarios(options):
         print("---------------")
         print(" Test Failures")
         print("---------------")
-        nfail = 0
+    nfail = 0
     #
     # Summarize the runtime statistics, by solver
     #

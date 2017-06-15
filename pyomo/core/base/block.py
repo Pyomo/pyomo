@@ -694,7 +694,8 @@ class _BlockData(ActiveComponentData):
         if isinstance(getattr(val,'initialize',None), _SetDataBase) and \
                 val.initialize.parent_component().local_name == "_unknown_":
             self._construct_temporary_set(val.initialize, val.local_name+"_index_init")
-        if getattr(val,'domain',None) is not None and val.domain.local_name == "_unknown_":
+        if getattr(val,'domain',None) is not None and \
+           getattr(val.domain, 'local_name', None) == "_unknown_":
             self._construct_temporary_set(val.domain,val.local_name+"_domain")
 
     def _construct_temporary_set(self, obj, name):

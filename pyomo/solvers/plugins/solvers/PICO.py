@@ -11,7 +11,6 @@
 
 import re
 import os
-import copy
 
 from six import iteritems
 
@@ -211,7 +210,7 @@ class PICOSHELL(SystemCallSolver):
         if (self.options.mipgap is not None):
             raise ValueError("The mipgap parameter is currently not being "
                              "processed by PICO solver plugin")
-        env=copy.copy(os.environ)
+        env=os.environ.copy()
         if self._problem_format is None \
                 or self._problem_format == ProblemFormat.nl:
             cmd.append(problem_files[0])
