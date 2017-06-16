@@ -13,8 +13,6 @@ research group of Ignacio Grossmann.
 
 For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
 
-TODO: handle nonlinear constraint objects of form a <= f(x) <= b.
-
 Questions: Qi Chen <qichen at andrew.cmu.edu>
 
 """
@@ -23,6 +21,8 @@ from pprint import pprint
 
 import pyomo.util.plugin
 from pyomo.core.base import expr as EXPR
+from pyomo.core.base.expr_common import clone_expression
+from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
 from pyomo.environ import (Binary, Block, ComponentUID, Constraint,
                            ConstraintList, Expression, NonNegativeReals,
@@ -31,9 +31,7 @@ from pyomo.environ import (Binary, Block, ComponentUID, Constraint,
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
-from pyomo.core.base.expr_common import clone_expression
 from pyomo.repn.canonical_repn import generate_canonical_repn
-from pyomo.core.base.numvalue import NumericConstant
 
 
 class _DoNothing(object):
