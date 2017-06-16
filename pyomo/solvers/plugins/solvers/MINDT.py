@@ -45,6 +45,11 @@ class _DoNothing(object):
     def __call__(self, *args, **kwargs):
         pass
 
+    def __getattr__(self, attr):
+        def _do_nothing(*args, **kwargs):
+            pass
+        return _do_nothing
+
 
 class MINDTSolver(pyomo.util.plugin.Plugin):
     """A decomposition-based MINLP solver."""
@@ -102,10 +107,10 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         self.mip_solver_name = kwds.pop('mip', 'gurobi')
         self.mip_solver_kwargs = kwds.pop('mip_kwargs', {})
         self.modify_in_place = kwds.pop('solve_in_place', True)
-        self.master_postsolve = kwds.pop('master_postsolve', _DoNothing)
-        self.subproblem_postsolve = kwds.pop('subprob_postsolve', _DoNothing)
+        self.master_postsolve = kwds.pop('master_postsolve', _DoNothing())
+        self.subproblem_postsolve = kwds.pop('subprob_postsolve', _DoNothing())
         self.subproblem_postfeasible = kwds.pop('subprob_postfeas',
-                                                _DoNothing)
+                                                _DoNothing())
         self.load_solutions = kwds.pop('load_solutions', True)
         if kwds:
             print("Unrecognized arguments passed to MINDT solver:")
@@ -114,8 +119,8 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         # When generating cuts, small duals multiplied by expressions can cause
         # problems. Exclude all duals smaller in absolue value than the
         # following.
-        self.small_dual_tolerance = 1E-12
-        self.integer_tolerance = 1E-6
+        self.small_dual_tolerance = 1E-8
+        self.integer_tolerance = 1E-5
 
         # Modify in place decides whether to run the algorithm on a copy of the
         # originally model passed to the solver, or whether to manipulate the
@@ -328,11 +333,11 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         self.obj.deactivate()
         m.MINDT_max_binary_obj = Objective(
             expr=sum(v for v in self.binary_vars), sense=maximize)
-        getattr(m, 'ipopt_zL_out', _DoNothing).deactivate()
-        getattr(m, 'ipopt_zU_out', _DoNothing).deactivate()
+        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         results = self.mip_solver.solve(m, **self.mip_solver_kwargs)
-        getattr(m, 'ipopt_zL_out', _DoNothing).activate()
-        getattr(m, 'ipopt_zU_out', _DoNothing).activate()
+        getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
         m.del_component(m.MINDT_max_binary_obj)
         self.obj.activate()
         for c in self.nonlinear_constraints:
@@ -448,15 +453,15 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         for c in self.nonlinear_constraints:
             c.deactivate()
         m.MINDT_linear_cuts.activate()
-        getattr(m, 'ipopt_zL_out', _DoNothing).deactivate()
-        getattr(m, 'ipopt_zU_out', _DoNothing).deactivate()
+        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
         for c in self.nonlinear_constraints:
             c.activate()
         m.MINDT_linear_cuts.deactivate()
-        getattr(m, 'ipopt_zL_out', _DoNothing).activate()
-        getattr(m, 'ipopt_zU_out', _DoNothing).activate()
+        getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
 
         # Process master problem result
         master_terminate_cond = results.solver.termination_condition
@@ -481,6 +486,14 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 self.LB = float('inf')
             else:
                 self.UB = float('-inf')
+        elif master_terminate_cond is tc.unbounded:
+            print('MILP master problem is unbounded. ')
+            m.solutions.load_from(results)
+            print(results)
+            self.obj.pprint()
+            for v in self.binary_vars:
+                print(v.name, v.value)
+            # m.solutions.load_from(results)
         else:
             raise ValueError(
                 'MINDT unable to handle MILP master termination condition '
@@ -531,6 +544,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 self._add_oa_cut()
             elif self.decomposition_strategy == 'PSC':
                 self._add_psc_cut()
+            # TODO decide whether I want to add an integer cut here too.
 
             self.subproblem_postfeasible(m, self)
         elif subprob_terminate_cond is tc.infeasible:
@@ -590,9 +604,15 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                       for var in self.nonlinear_variables}
         sum_nonlinear = sum(
             value(m.dual[c]) * -1 *
-            clone_expression(c.body, substitute=var_to_val)
+            (clone_expression(c.body, substitute=var_to_val) - c.upper)
             for c in self.nonlinear_constraints
             if value(abs(m.dual[c])) > self.small_dual_tolerance)
+        for c in self.nonlinear_constraints:
+            if value(c.upper) is None:
+                raise ValueError(
+                    'Oh no, Pyomo did something MINDT does not expect. '
+                    'The value of c.upper for {} is None: {} <= {} <= {}'
+                    .format(c.name, c.lower, c.body, c.upper))
         # TODO handle the case where constraint lower or upper is not 0 or None
 
         # Generate the sum of all multipliers with linear constraints
@@ -602,26 +622,37 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         # the coefficients on the linear terms.
         lin_cons = [c for c in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True)
-            if c.body.polynomial_degree in (0, 1)]
+            if c.body.polynomial_degree() in (0, 1)]
+        # Create a coefficient dictionary mapping variables to their
+        # coefficient in the expression. Constraint -> (id(Var) -> coefficient)
+        coef_dict = {}
+        constr_vars = {}
         for constr in lin_cons:
-            repn = generate_canonical_repn(constr)
-            # create a coefficient dictionary mapping variables to their
-            # coefficient in the expression
-            coef_dict = {id(var): coef for var, coef in
-                         zip(repn.variables, repn.linear)}
+            repn = generate_canonical_repn(constr.body)
+            if repn.variables is None or repn.linear is None:
+                repn.variables = []
+                repn.linear = []
+            coef_dict[constr] = {id(var): coef for var, coef in
+                                 zip(repn.variables, repn.linear)}
+            constr_vars[constr] = repn.variables
         sum_linear = sum(
-            m.dual[c] * -1 *
-            sum(coef_dict[id(var)] * (var - value(var))
-                for var in repn.variables
+            m.dual[c] *
+            sum(coef_dict[c][id(var)] * (var - value(var))
+                for var in constr_vars[c]
                 if id(var) in self.nonlinear_variable_IDs)
             for c in lin_cons
             if value(abs(m.dual[c])) > self.small_dual_tolerance)
 
         # Generate the sum of all bound multipliers with nonlinear variables
-        sum_var_bounds = -1 * sum(
-            m.ipopt_zL_out.get(var, 0) * -1 * (var - value(var)) +
-            m.ipopt_zU_out.get(var, 0) * (var - value(var))
-            for var in self.nonlinear_variables)
+        sum_var_bounds = (
+            sum(m.ipopt_zL_out.get(var, 0) * (var - value(var))
+                for var in self.nonlinear_variables
+                if value(abs(m.ipopt_zL_out.get(var, 0))) >
+                self.small_dual_tolerance) +
+            sum(m.ipopt_zU_out.get(var, 0) * (var - value(var))
+                for var in self.nonlinear_variables
+                if value(abs(m.ipopt_zU_out.get(var, 0))) >
+                self.small_dual_tolerance))
 
         if nlp_feasible:
             # Optimality cut (for feasible NLP)
@@ -637,12 +668,15 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
 
     def _add_int_cut(self):
         m = self.m
-        int_tol = 1E-6
+        int_tol = self.integer_tolerance
         # check to make sure that binary variables are all 0 or 1
         for v in self.binary_vars:
             if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
                 raise ValueError('Binary {} = {} is not 0 or 1'.format(
                     v.name, value(v)))
+
+        if not self.binary_vars:
+            return
 
         # Add the integer cut
         m.MINDT_linear_cuts.integer_cuts.add(
