@@ -1,19 +1,20 @@
-"""
-produce a report of variables sorted by "bad W behavior"
-Major change Sept 2016: only the root node is processed if flag set
-"""
-OnlyRootNode = True
-#  _________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 #
 # sorg W: a plugin that cares about the W vectors
 #
+#
+# produce a report of variables sorted by "bad W behavior"
+# Major change Sept 2016: only the root node is processed if
+#                        flag set
+OnlyRootNode = True
 
 import sys
 
@@ -28,7 +29,7 @@ from pyomo.pysp.generators import \
 class sorgwextension(pyomo.util.plugin.SingletonPlugin):
 
     pyomo.util.plugin.implements(phextension.IPHExtension)
-    
+
     # the below is a hack to get this extension into the
     # set of IPHExtension objects, so it can be queried
     # automagically by PH.
@@ -40,7 +41,7 @@ class sorgwextension(pyomo.util.plugin.SingletonPlugin):
         self.wtrace_filename = 'sorgw.ssv'
         self.wsummary_filename = 'wsummary.ssv'
         self.winterest_filename = 'winterest.ssv' # only vars of interest
-        ####### Thresholds for interestingness  
+        ####### Thresholds for interestingness
         ####### (ored, so any zero causes all to be interesting)
         self.threshWZeroCrossings = 2
         self.threshDiffsRatio = 0.2
@@ -70,7 +71,7 @@ class sorgwextension(pyomo.util.plugin.SingletonPlugin):
 
 #==================================================
     def post_iteration_0(self, ph):
-        
+
         print("sorgw.py is writing the semi-colon separated values file "+self.wtrace_filename)
         ofile = open(self.wtrace_filename, "w")
         self._w_printing(ofile) # write the header

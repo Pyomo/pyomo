@@ -19,18 +19,18 @@ model:
     ModelCreate:
         nocall:
             problems: 1
-            lines: [12]
+            lines: [13]
     DeprecatedModel:
         wrong:
             problems: 1
-            lines: [10]
+            lines: [11]
     ModelAccess:
         global:
             problems: 1
-            lines: [16]
+            lines: [17]
         global2:
             problems: 2
-            lines: [17, 19]
+            lines: [18, 20]
     ModelArgument:
         norule:
             problems: 0
@@ -38,30 +38,30 @@ model:
             problems: 0
         lastarg:
             problems: 1
-            lines: [16]
+            lines: [17]
     ModelValue:
         globalif:
             problems: 1
-            lines: [15]
+            lines: [16]
         multiif:
             problems: 2
-            lines: [15, 21]
+            lines: [16, 22]
         repeatif:
             problems: 4
-            lines: [15, 19, 22, 23]
+            lines: [16, 20, 23, 24]
         ruleif:
             problems: 1
-            lines: [16]
+            lines: [17]
         globallistcomp:
             problems: 1
-            lines: [16]
+            lines: [17]
         rulelistcomp:
             problems: 1
-            lines: [17]
+            lines: [18]
     NoneReturn:
         wrong:
             problems: 1
-            lines: [15]
+            lines: [16]
     ArrayValue:
         nomodel:
             problems: 0
@@ -69,4 +69,4 @@ model:
             problems: 0
         wrong:
             problems: 2
-            lines: [17, 18]
+            lines: [18, 19]

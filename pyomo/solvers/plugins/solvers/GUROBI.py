@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import os
 import sys
@@ -22,6 +23,7 @@ from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *
 from pyomo.opt.solver import *
+from pyomo.core.kernel.component_block import IBlockStorage
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -148,8 +150,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
 
         from pyomo.core.base import Var
 
-        mst_file = open(self._warm_start_file_name, 'w')
-
         # for each variable in the symbol_map, add a child to the
         # variables element.  Both continuous and discrete are accepted
         # (and required, depending on other options), according to the
@@ -157,14 +157,19 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         # **Note**: This assumes that the symbol_map is "clean", i.e.,
         # contains only references to the variables encountered in constraints
         output_index = 0
-        smap = instance.solutions.symbol_map[self._smap_id]
+        if isinstance(instance, IBlockStorage):
+            smap = getattr(instance,"._symbol_maps")\
+                   [self._smap_id]
+        else:
+            smap = instance.solutions.symbol_map[self._smap_id]
         byObject = smap.byObject
-        for vdata in instance.component_data_objects(Var, active=True):
-            if (vdata.value is not None) and (id(vdata) in byObject):
-                name = byObject[id(vdata)]
-                mst_file.write("%s %s\n" % (name, str(vdata.value)))
-
-        mst_file.close()
+        with open(self._warm_start_file_name, 'w') as mst_file:
+            for vdata in instance.component_data_objects(Var, active=True):
+                if (vdata.value is not None) and \
+                   (id(vdata) in byObject):
+                    name = byObject[id(vdata)]
+                    mst_file.write("%s %s\n"
+                                   % (name, vdata.value))
 
     # over-ride presolve to extract the warm-start keyword, if specified.
     def _presolve(self, *args, **kwds):
@@ -419,11 +424,13 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                     elif (tokens[0] == 'gap'):
                         soln.gap = float(tokens[1])
                     elif (tokens[0] == 'objective'):
-                        soln.objective['__default_objective__'] = {'Value': float(tokens[1])}
-                        if results.problem.sense == ProblemSense.minimize:
-                            results.problem.upper_bound = float(tokens[1])
-                        else:
-                            results.problem.lower_bound = float(tokens[1])
+                        if tokens[1].strip() != 'None':
+                            soln.objective['__default_objective__'] = \
+                                {'Value': float(tokens[1])}
+                            if results.problem.sense == ProblemSense.minimize:
+                                results.problem.upper_bound = float(tokens[1])
+                            else:
+                                results.problem.lower_bound = float(tokens[1])
                     elif (tokens[0] == 'constraintdual'):
                         name = tokens[1]
                         if name != "c_e_ONE_VAR_CONSTANT":

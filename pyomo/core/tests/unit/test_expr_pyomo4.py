@@ -1,18 +1,22 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 #
 # Unit Tests for expression generation
 #
 #
 
+from __future__ import print_function
+
 import os
 import re
+import six
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
@@ -31,7 +35,7 @@ from pyomo.core.base.expr_pyomo4 import (
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         # Do we expect arithmetic operations to return expressions?
         self.expectExpression = False
@@ -244,7 +248,7 @@ class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant
 
 class TestNumericValue(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
@@ -295,7 +299,7 @@ class TestNumericValue(unittest.TestCase):
 
 class TestGenerate_SumExpression(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
@@ -731,7 +735,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
 
 class TestGenerate_ProductExpression(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
@@ -949,7 +953,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
 
 class TestGenerate_RelationalExpression(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         m = AbstractModel()
@@ -1316,7 +1320,7 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = True
@@ -1433,7 +1437,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
     _save = None
 
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         TestPrettyPrinter_oldStyle._save = pyomo.core.base.expr_common.TO_STRING_VERBOSE
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = False
@@ -1682,7 +1686,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
 
 class TestInplaceExpressionGeneration(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         m = AbstractModel()
@@ -1842,7 +1846,7 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
 
 class TestGeneralExpressionGeneration(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
@@ -1935,7 +1939,7 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
 
 class TestExprConditionalContext(unittest.TestCase):
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
     def tearDown(self):
@@ -2226,7 +2230,7 @@ class TestExprConditionalContext(unittest.TestCase):
 class TestPolynomialDegree(unittest.TestCase):
 
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         def d_fn(model):
             return model.c+model.c
@@ -2630,6 +2634,24 @@ class TestCloneIfNeeded(unittest.TestCase):
                           count+1 )
 
 
+    def test_cloneCount_Expr_if(self):
+        # intrinsicFunction of a simple expression
+        count = EXPR.generate_expression.clone_counter
+        expr = EXPR.Expr_if(IF=self.model.c + self.model.a,
+                       THEN=self.model.c + self.model.a,
+                       ELSE=self.model.c + self.model.a,
+                       )
+        self.assertEqual( EXPR.generate_expression.clone_counter,
+                          count )
+
+        # intrinsicFunction of a referenced expression
+        count = EXPR.generate_expression.clone_counter
+        expr = self.model.c + self.model.a
+        expr1 = EXPR.Expr_if(IF=expr, THEN=expr, ELSE=expr)
+        self.assertEqual( EXPR.generate_expression.clone_counter,
+                          count+3 )
+
+
     def test_cloneCount_relationalExpression_simple(self):
         # relational expression of simple vars
         count = EXPR.generate_expression.clone_counter
@@ -2747,7 +2769,7 @@ class TestCloneIfNeeded(unittest.TestCase):
 class TestCloneExpression(unittest.TestCase):
 
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         self.m = ConcreteModel()
@@ -2975,7 +2997,7 @@ class TestCloneExpression(unittest.TestCase):
 class TestIsFixedIsConstant(unittest.TestCase):
 
     def setUp(self):
-        # This class tests the Coopr 3.x expression trees
+        # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
 
         def d_fn(model):
@@ -3356,6 +3378,48 @@ class TestExpressionUtilities(unittest.TestCase):
                           [ m.a ] )
         self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
                           [ m.a, m.a, m.a,  ] )
+
+class TestMultiArgumentExpressions(unittest.TestCase):
+    def setUp(self):
+        # This class tests the Pyomo 4 expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def test_double_sided_ineq(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=[1.0,2.0,3.0,4.0,5.0])
+
+        m.vmin = Param(m.s, initialize=lambda m,i: i)
+        m.vmax = Param(m.s, initialize=lambda m,i: i**2)
+
+        m.v = Var(m.s)
+
+        def _con(m, i):
+            return m.vmin[i]**2 <= m.v[i] <= m.vmax[i]**2
+        m.con = Constraint(m.s, rule=_con)
+
+        OUT = six.StringIO()
+        for i in m.s:
+            OUT.write(str(_con(m,i)))
+            OUT.write("\n")
+        display(m.con, ostream=OUT)
+
+        reference="""v[1.0]  ==  1.0
+4.0  <=  v[2.0]  <=  16.0
+9.0  <=  v[3.0]  <=  81.0
+16.0  <=  v[4.0]  <=  256.0
+25.0  <=  v[5.0]  <=  625.0
+con : Size=5
+    Key : Lower : Body : Upper
+    1.0 :   1.0 : None :   1.0
+    2.0 :   4.0 : None :  16.0
+    3.0 :   9.0 : None :  81.0
+    4.0 :  16.0 : None : 256.0
+    5.0 :  25.0 : None : 625.0
+"""
+        self.assertEqual(OUT.getvalue(), reference)
 
 if __name__ == "__main__":
     unittest.main()

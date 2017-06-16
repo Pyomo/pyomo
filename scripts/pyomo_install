@@ -669,9 +669,10 @@ virtual python environment is created in the 'pyomo' directory.
         sys.stdout.write(
             "pyomo_install %s\n"
             "\n"
-            "Copyright (2008) Sandia Corporation. Under the terms of Contract\n"
-            "DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government\n"
-            "retains certain rights in this software.\n"
+            "Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC\n"
+            "Under the terms of Contract DE-NA0003525 with National Technology and\n"
+            "Engineering Solutions of Sandia, LLC, the U.S. Government retains certain\n"
+            "rights in this software.\n"
             % (version_str(),) )
         return 0
     #
@@ -774,8 +775,14 @@ virtual python environment is created in the 'pyomo' directory.
     if not sys.platform.startswith('java'):
         if options.verbose:
             print("\n************* Installing pip *******************")
-        install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose, src=pip_src)
-        pip = find_pip(pyomo_install_tempdir)
+        if sys.version_info < (2, 6):
+            install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose, src=pip_src)
+            pip = find_pip(pyomo_install_tempdir)
+        else:
+            pip = os.path.join(os.path.split(sys.executable)[0],'pip-%d.%d' % (sys.version_info[0], sys.version_info[1]))
+            if not os.path.exists(pip):
+                install_pip(upgrade=options.zipfile is None, user=False, quiet=not options.verbose, src=pip_src)
+                pip = find_pip(pyomo_install_tempdir)
     else:
         pip = os.path.join(os.path.split(sys.executable)[0],'pip')
     if not os.path.exists(pip):

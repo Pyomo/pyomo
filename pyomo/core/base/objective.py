@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ('Objective',
            'simple_objective_rule',
@@ -29,14 +30,11 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
+from pyomo.core.kernel import minimize, maximize
 
 from six import iteritems
 
 logger = logging.getLogger('pyomo.core')
-
-# Constants used to define the optimization sense
-minimize=1
-maximize=-1
 
 def simple_objective_rule(fn):
     """

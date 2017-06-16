@@ -1,14 +1,14 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import os
-import copy
 
 import pyutilib.services
 import pyutilib.misc
@@ -111,7 +111,7 @@ class IPOPT(SystemCallSolver):
         #
         # Define command line
         #
-        env=copy.copy(os.environ)
+        env=os.environ.copy()
 
         cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:
@@ -181,5 +181,20 @@ class IPOPT(SystemCallSolver):
         env[envstr] = " ".join(env_opt)
 
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
+
+    def process_output(self, rc):
+        if os.path.exists(self._results_file):
+            return super(IPOPT, self).process_output(rc)
+        else:
+            res = SolverResults()
+            res.solver.status = SolverStatus.warning
+            res.solver.termination_condition = TerminationCondition.other
+            if os.path.exists(self._log_file):
+                with open(self._log_file) as f:
+                    for line in f:
+                        if "TOO_FEW_DEGREES_OF_FREEDOM" in line:
+                            res.solver.message = line.split(':')[2].strip()
+                            assert "degrees of freedom" in res.solver.message
+            return res
 
 pyutilib.services.register_executable(name="ipopt")

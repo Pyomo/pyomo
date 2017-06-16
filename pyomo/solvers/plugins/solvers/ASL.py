@@ -1,15 +1,15 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 
 import os
-import copy
 import six
 
 import pyutilib.services
@@ -125,7 +125,7 @@ class ASL(SystemCallSolver):
         #
         # Define command line
         #
-        env=copy.copy(os.environ)
+        env=os.environ.copy()
         #
         # Merge the PYOMO_AMPLFUNC (externals defined within
         # Pyomo/Pyomo) with any user-specified external function
@@ -137,7 +137,7 @@ class ASL(SystemCallSolver):
             else:
                 env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
 
-        cmd = [executable, '-s', problem_files[0]]
+        cmd = [executable, problem_files[0], '-AMPL']
         if self._timer:
             cmd.insert(0, self._timer)
         #

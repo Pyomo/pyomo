@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 """
 Script to generate the installer for pyomo.
@@ -38,7 +39,7 @@ def read(*rnames):
     return open(os.path.join(os.path.dirname(__file__), *rnames)).read()
 
 requires = [
-    'PyUtilib>=5.4.1',
+    'PyUtilib>=5.5',
     'appdirs',
     'ply',
     'six>=1.4',
@@ -61,7 +62,7 @@ setup(name='Pyomo',
       #     pyomo/pyomo/version/__init__.py
       #     pyomo/RELEASE.txt
       #
-      version='5.1.1',
+      version='5.2',
       maintainer='William E. Hart',
       maintainer_email='wehart@sandia.gov',
       url='http://pyomo.org',
@@ -70,18 +71,27 @@ setup(name='Pyomo',
       description='Pyomo: Python Optimization Modeling Objects',
       long_description=read('README.txt'),
       classifiers=[
-          'Development Status :: 4 - Beta',
-          'Intended Audience :: End Users/Desktop',
-          'Intended Audience :: Science/Research',
-          'License :: OSI Approved :: BSD License',
-          'Natural Language :: English',
-          'Operating System :: Microsoft :: Windows',
-          'Operating System :: Unix',
-          'Programming Language :: Python',
-          'Programming Language :: Unix Shell',
-          'Topic :: Scientific/Engineering :: Mathematics',
-          'Topic :: Software Development :: Libraries :: Python Modules'
-          ],
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: End Users/Desktop',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: BSD License',
+        'Natural Language :: English',
+        'Operating System :: MacOS',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: Unix',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: Implementation :: CPython',
+        'Programming Language :: Python :: Implementation :: Jython',
+        'Programming Language :: Python :: Implementation :: PyPy',
+        'Topic :: Scientific/Engineering :: Mathematics',
+        'Topic :: Software Development :: Libraries :: Python Modules' ],
       packages=packages,
       keywords=['optimization'],
       namespace_packages=['pyomo'],
