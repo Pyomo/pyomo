@@ -237,11 +237,10 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             try:
                 value(con.body)
             except:
-                raise ValueError("GAMSSolver encountered an error while"
-                                 " attemtping to evaluate\n            %s"
-                                 " at initial variable values.\n            "
-                                 "Ensure set variable values do not violate any"
-                                 " domains (are you using log or log10?)"
+                raise ValueError("While evaluating: %s\n\t    GAMSSolver"
+                                 " encountered an error. Ensure initial"
+                                 " variable values\n\t    do not violate"
+                                 " any domains (are you using log/log10?)"
                                  % con.name)
 
             if linear:
@@ -283,11 +282,10 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         try:
             value(obj.expr)
         except:
-            raise ValueError("GAMSSolver encountered an error while"
-                             " attemtping to evaluate\n            %s"
-                             " at initial variable values.\n            "
-                             "Ensure set variable values do not violate any"
-                             " domains (are you using log or log10?)"
+            raise ValueError("While evaluating: %s\n\t    GAMSSolver"
+                             " encountered an error. Ensure initial"
+                             " variable values\n\t    do not violate"
+                             " any domains (are you using log/log10?)"
                              % obj.name)
 
         if linear:
@@ -300,10 +298,6 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             oName,
             body
         ))
-
-        # Return uninitialized variables to None
-        for var in uninit_vars:
-            var.value = None
 
         # Categorize the variables that we found
         binary = []
@@ -331,7 +325,17 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                     positive.append(var)
                 else:
                     reals.append(var)
-            else: # ADD LOG EXCEPTION HANDLING!!!!!!!!!!!!!!!!!!!
+            else:
+                # Same domain violation check as above
+                try:
+                    value(v.expr)
+                except:
+                    raise ValueError("While evaluating: %s\n\t    GAMSSolver"
+                                     " encountered an error. Ensure initial"
+                                     " variable values\n\t    do not violate"
+                                     " any domains (are you using log/log10?)"
+                                     % v.name)
+
                 body = str(v.expr)
                 if linear:
                     if v.expr.polynomial_degree() not in linear_degree:
@@ -347,6 +351,10 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 # expressions) -- so update the length of the var_list
                 # so that we process / categorize these new symbols
                 numVar = len(var_list)
+
+        # Return uninitialized variables to None
+        for var in uninit_vars:
+            var.value = None
 
         # Write the GAMS model
         output_file.write("EQUATIONS\n\t")
