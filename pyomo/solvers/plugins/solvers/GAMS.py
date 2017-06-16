@@ -281,14 +281,14 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
 
         # Same domain violation check as above
         try:
-            value(con.body)
+            value(obj.expr)
         except:
             raise ValueError("GAMSSolver encountered an error while"
                              " attemtping to evaluate\n            %s"
                              " at initial variable values.\n            "
                              "Ensure set variable values do not violate any"
                              " domains (are you using log or log10?)"
-                             % con.name)
+                             % obj.name)
 
         if linear:
             if obj.expr.polynomial_degree() not in linear_degree:
@@ -474,15 +474,11 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                     print(v.name + ": level=" + str(rec.level)
                           + " marginal=" + str(rec.marginal))
 
-            obj = list(model.component_data_objects(Objective, active=True))
-            obj = obj[0]
-            oName = "GAMS_OBJECTIVE"
-            rec = t1.out_db[oName].first_record()
-            if load_model:
-                obj.set_value(rec.level)
-                if has_rc:
-                    model.rc.set_value(obj, rec.marginal)
             if print_result:
+                obj = list(model.component_data_objects(Objective, active=True))
+                obj = obj[0]
+                oName = "GAMS_OBJECTIVE"
+                rec = t1.out_db[oName].first_record()
                 print(obj.name + ": level=" + str(rec.level)
                       + " marginal=" + str(rec.marginal))
 
