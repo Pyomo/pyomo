@@ -23,9 +23,8 @@ import weakref
 import logging
 logger = logging.getLogger('pyomo.core')
 
-#DEBUG
-import pdb
-
+# DEBUG
+from nose.tools import set_trace
 
 class BigM_Transformation(Transformation):
 
@@ -103,6 +102,7 @@ class BigM_Transformation(Transformation):
                 active=True,
                 sort=SortComponents.deterministic ):
             self._transformDisjunction(name, idx, obj)
+            #set_trace()
 
     def _transformDisjunction(self, name, idx, obj):
         # For the time being, we need to relax the disjuncts *before* we
@@ -119,10 +119,13 @@ class BigM_Transformation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             self._bigM_relax_disjunct(disjunct)
+            # TODO: Eh?
+            disjunct.deactivate()
             # TODO: is this OK? The disjunct is not necessarily active,
             # but the indicator var got fixed to 0 if it wasn't.
             # The old version does this as an indexed constraint... I'm 
             # making a bajillion of them by doing it this way.
+            # ANS: So not really. Better indexed...
             or_expr += disjunct.indicator_var
 
         _tmp = obj.parent_block().component('_gdp_relax')
@@ -135,8 +138,11 @@ class BigM_Transformation(Transformation):
             orC = Constraint(expr=or_expr == 1)
         else:
             orC = Constraint(expr=or_expr >= 1)
-        # TODO: this is really crummy naming.
+        # TODO: this is really crummy naming (but it matches the old version for now)
         obj.parent_block().component('_gdp_relax').add_component(obj.name, orC)
+
+        # deactivate the disjunction
+        obj.deactivate()
 
         # if obj.parent_component().dim() == 0:
         #     # Since there can't be more than one Disjunction in a
@@ -160,7 +166,6 @@ class BigM_Transformation(Transformation):
 
 
     def _bigM_relax_disjunct(self, disjunct):
-        #
         if not disjunct.active:
             disjunct.indicator_var.fix(0)
             return
@@ -203,6 +208,7 @@ class BigM_Transformation(Transformation):
                 continue
             handler(name, obj, disjunct)
 
+
     def _xform_constraint(self, _name, constraint, disjunct):
         # HINT: Instead of updating / splitting the Constraint
         # (Disjunction), we need to create a NEW constraint that
@@ -241,7 +247,7 @@ class BigM_Transformation(Transformation):
                     m = (None, None)
                 else:
                     m = (-1*m,m)
-
+            
             # If we need an M (either for upper and/or lower bounding of
             # the expression, then try and estimate it
             if ( c.lower is not None and m[0] is None ) or \
@@ -275,6 +281,8 @@ class BigM_Transformation(Transformation):
 
 
     def _estimate_M(self, expr, name, m, disjunct):
+        print("DEBUG: estimating M:")
+        print(m)
         # Calculate a best guess at M
         repn = generate_canonical_repn(expr)
         M = [0,0]
