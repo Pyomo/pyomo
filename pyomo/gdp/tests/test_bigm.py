@@ -33,12 +33,13 @@ class TestBigM_2TermDisj_coopr3(unittest.TestCase):
         m.d = Disjunct([0,1], rule=d_rule)
         def disj_rule(m):
             return [m.d[0], m.d[1]]
-        m.disj = Disjunction(rule=disj_rule)
+        m.disjunction = Disjunction(rule=disj_rule)
         return m
     
     def test_new_transformation_block(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
+
         # we have a transformation block
         gdpblock = m.component("_pyomo_gdp_relaxation")
         self.assertIsInstance(gdpblock, Block)
@@ -58,6 +59,7 @@ class TestBigM_2TermDisj_coopr3(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
         dblock = m._gdp_relax.component("d")
+        # have indicator variables
         self.assertIsInstance(dblock[0].indicator_var, Var)
         self.assertTrue(dblock[0].indicator_var.is_binary())
         self.assertIsInstance(dblock[1].indicator_var, Var)
@@ -90,3 +92,21 @@ class TestBigM_2TermDisj_coopr3(unittest.TestCase):
         self.assertIs(dblock[0].indicator_var, newc.body._args[1]._args[0])
         set_trace()
         
+    def test_indexedDisjunction(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=[1, 2, 3])
+        m.a = Var(m.s, bounds=(2,7))
+        def d_rule(disjunct, flag, s):
+            m = disjunct.model()
+            if flag:
+                disjunct.c = Constraint(expr=m.a[s] == 0)
+            else:
+                disjunct.c = Constraint(expr=m.a[s] >= 5)
+        m.disjunct = Disjunct([0,1], m.s, rule=d_rule)
+        def disj_rule(m, s):
+            return [m.disjunct[0, s], m.disjunct[1, s]]
+        m.disjunction = Disjunction(m.s, rule=disj_rule)
+        
+        #set_trace()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        #set_trace()

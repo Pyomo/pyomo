@@ -97,11 +97,14 @@ class BigM_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
+        # ESJ: TODO: don't need name here, I don't think,  because obj knows 
+        # its name
         for (name, idx), obj in block.component_data_iterindex(
                 Disjunction,
                 active=True,
                 sort=SortComponents.deterministic ):
             self._transformDisjunction(name, idx, obj)
+            # TODO: is this the place to do the xor constraint??
             #set_trace()
 
     def _transformDisjunction(self, name, idx, obj):
