@@ -351,11 +351,11 @@ def run_test_scenarios(options):
             if _str == "Unexpected failure":
                 summary[solver].NumUFail += 1
                 if options.verbose:
-                    print("- Unexpected Test Failure: "+", ".join(model, solver, io))
+                    print("- Unexpected Test Failure: "+", ".join((model, solver, io)))
             else:
                 summary[solver].NumUPass += 1
                 if options.verbose:
-                    print("- Unexpected Test Success: "+", ".join(model, solver, io))
+                    print("- Unexpected Test Success: "+", ".join((model, solver, io)))
     if options.verbose:
         if nfail == 0:
             print("- NONE")
@@ -377,10 +377,10 @@ def run_test_scenarios(options):
         total.NumEFail += ans.NumEFail
         total.NumUPass += ans.NumUPass
         total.NumUFail += ans.NumUFail
-        stream.write(fmtStr.format(_solver, str(ans.NumEPass), str(ans.NumUFail), str(ans.NumEFail), str(ans.NumUPass), str(100.0*(ans.NumEPass+ans.NumEFail)/(ans.NumEPass+ans.NumEFail+ans.NumUFail+ans.NumUPass))))
+        stream.write(fmtStr.format(_solver, str(ans.NumEPass), str(ans.NumUFail), str(ans.NumEFail), str(ans.NumUPass), str(int(100.0*(ans.NumEPass+ans.NumEFail)/(ans.NumEPass+ans.NumEFail+ans.NumUFail+ans.NumUPass)))))
     #
     stream.write("=" * (maxSolverNameLen + 66) + "\n")
-    stream.write(fmtStr.format("TOTALS", str(total.NumEPass), str(total.NumUFail), str(total.NumEFail), str(total.NumUPass), str(100.0*(total.NumEPass+total.NumEFail)/(total.NumEPass+total.NumEFail+total.NumUFail+total.NumUPass))))
+    stream.write(fmtStr.format("TOTALS", str(total.NumEPass), str(total.NumUFail), str(total.NumEFail), str(total.NumUPass), str(int(100.0*(total.NumEPass+total.NumEFail)/(total.NumEPass+total.NumEFail+total.NumUFail+total.NumUPass)))))
     stream.write("=" * (maxSolverNameLen + 66) + "\n")
 
     logger.setLevel( _level )
