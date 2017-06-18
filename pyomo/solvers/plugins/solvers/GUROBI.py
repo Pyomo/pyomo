@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -469,16 +469,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
                     elif (tokens[0] == 'termination_condition'):
                         try:
                             results.solver.termination_condition = getattr(TerminationCondition, tokens[1])
-                            if results.solver.termination_condition == TerminationCondition.unbounded:
-                                # If unbounded, need to check to make sure the
-                                # problem is not actually infeasible.
-                                if (results.problem.sense == ProblemSense.minimize and
-                                    results.problem.lower_bound == float('1e+100')) or \
-                                        (results.problem.sense == ProblemSense.maximize and
-                                         results.problem.upper_bound == float('-1e+100')):
-                                    # Problem is actually infeasible. Update accordingly.
-                                    results.solver.termination_condition = TerminationCondition.infeasible
-
                         except AttributeError:
                             results.solver.termination_condition = TerminationCondition.unknown
                     else:
