@@ -293,6 +293,17 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 doc='Partial surrogate cuts')
             if self.initialization_strategy in ('max_binary', None):
                 self._init_OA_max_binaries()
+        elif self.decomposition_strategy == 'GBD':
+            if not hasattr(m, 'dual'):
+                m.dual = Suffix(direction=Suffix.IMPORT)
+            if not hasattr(m, 'ipopt_zL_out'):
+                m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
+            if not hasattr(m, 'ipopt_zU_out'):
+                m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
+            self.m.MINDT_linear_cuts.gbd_cuts = ConstraintList(
+                doc='Generalized Benders cuts')
+            if self.initialization_strategy in ('max_binary', None):
+                self._init_OA_max_binaries()
 
     def _init_OA_rNLP(self):
         """Initialize OA by solving the rNLP (relaxed binary variables)."""
@@ -376,6 +387,8 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 self._solve_OA_master()
             elif self.decomposition_strategy == 'PSC':
                 self._solve_PSC_master()
+            elif self.decomposition_strategy == 'GBD':
+                self._solve_GBD_master()
             # Check bound convergence
             if self.LB + self.bound_tolerance >= self.UB:
                 print('MINDT exiting on bound convergence. '
@@ -487,11 +500,67 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         elif master_terminate_cond is tc.unbounded:
             print('MILP master problem is unbounded. ')
             m.solutions.load_from(results)
-            print(results)
-            self.obj.pprint()
-            for v in self.binary_vars:
-                print(v.name, v.value)
-            # m.solutions.load_from(results)
+        else:
+            raise ValueError(
+                'MINDT unable to handle MILP master termination condition '
+                'of {}. Solver message: {}'.format(
+                    master_terminate_cond, results.solver.message))
+
+        # Call the MILP post-solve callback
+        self.master_postsolve(m, self)
+
+    def _solve_GBD_master(self):
+        m = self.m
+        self.mip_iter += 1
+        print('MILP {}: Solve master problem.'.format(self.mip_iter))
+        # Deactivate all constraints except those in MINDT_linear_cuts
+        MINDT_linear_cuts = set(
+            c for c in m.MINDT_linear_cuts.component_data_objects(
+                ctype=Constraint, descend_into=True))
+        to_deactivate = set(c for c in m.component_data_objects(
+            ctype=Constraint, active=True, descend_into=True)
+            if c not in MINDT_linear_cuts)
+        # Set up MILP
+        for c in to_deactivate:
+            c.deactivate()
+        m.MINDT_linear_cuts.activate()
+        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
+        results = self.mip_solver.solve(m, load_solutions=False,
+                                        **self.mip_solver_kwargs)
+        print(results)
+        for c in to_deactivate:
+            c.activate()
+        m.MINDT_linear_cuts.deactivate()
+        getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
+
+        # Process master problem result
+        master_terminate_cond = results.solver.termination_condition
+        if master_terminate_cond is tc.optimal:
+            # proceed. Just need integer values
+            m.solutions.load_from(results)
+            if self.obj.sense == minimize:
+                self.LB = max(value(self.obj.expr), self.LB)
+            else:
+                self.UB = min(value(self.obj.expr), self.UB)
+            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                  .format(self.mip_iter, value(self.obj.expr), self.LB,
+                          self.UB))
+        elif master_terminate_cond is tc.infeasible:
+            print('MILP master problem is infeasible. '
+                  'Problem may have no more feasible binary configurations.')
+            if self.mip_iter == 1:
+                print('MINDT initialization may have generated poor '
+                      'quality cuts.')
+            # set optimistic bound to infinity
+            if self.obj.sense == minimize:
+                self.LB = float('inf')
+            else:
+                self.UB = float('-inf')
+        elif master_terminate_cond is tc.unbounded:
+            print('MILP master problem is unbounded. ')
+            m.solutions.load_from(results)
         else:
             raise ValueError(
                 'MINDT unable to handle MILP master termination condition '
@@ -542,7 +611,9 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 self._add_oa_cut()
             elif self.decomposition_strategy == 'PSC':
                 self._add_psc_cut()
-            # TODO decide whether I want to add an integer cut here too.
+                # TODO decide whether I want to add an integer cut here too.
+            elif self.decomposition_strategy == 'GBD':
+                self._add_gbd_cut()
 
             self.subproblem_postfeasible(m, self)
         elif subprob_terminate_cond is tc.infeasible:
@@ -663,6 +734,60 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             m.MINDT_linear_cuts.psc_cuts.add(
                 expr=sign_adjust * (
                     sum_nonlinear + sum_linear + sum_var_bounds) <= 0)
+
+    def _add_gbd_cut(self, nlp_feasible=True):
+        m = self.m
+
+        sign_adjust = 1 if self.obj.sense == minimize else -1
+
+        for c in m.component_data_objects(ctype=Constraint, active=True,
+                                          descend_into=True):
+            if value(c.upper) is None:
+                raise ValueError(
+                    'Oh no, Pyomo did something MINDT does not expect. '
+                    'The value of c.upper for {} is None: {} <= {} <= {}'
+                    .format(c.name, c.lower, c.body, c.upper))
+        # TODO handle the case where constraint lower or upper is not 0 or None
+
+        # only substitute non-binary variables to their values
+        binary_var_ids = set(id(var) for var in self.binary_vars)
+        var_to_val = {id(var): NumericConstant(value(var))
+                      for var in m.component_data_objects(ctype=Var,
+                                                          descend_into=True)
+                      if id(var) not in binary_var_ids}
+        # generate the sum of all multipliers with the active (from a duality
+        # sense) constraints
+        sum_constraints = sum(
+            value(m.dual[c]) * -1 *
+            (clone_expression(c.body, substitute=var_to_val) - c.upper)
+            for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=True)
+            if value(abs(m.dual[c])) > self.small_dual_tolerance)
+
+        # add in variable bound dual contributions
+
+        # Generate the sum of all bound multipliers with nonlinear variables
+        sum_var_bounds = (
+            sum(m.ipopt_zL_out.get(var, 0) * (var - value(var))
+                for var in m.component_data_objects(ctype=Var,
+                                                    descend_into=True)
+                if (id(var) not in binary_var_ids and
+                    value(abs(m.ipopt_zL_out.get(var, 0))) >
+                    self.small_dual_tolerance)) +
+            sum(m.ipopt_zU_out.get(var, 0) * (var - value(var))
+                for var in m.component_data_objects(ctype=Var,
+                                                    descend_into=True)
+                if (id(var) not in binary_var_ids and
+                    value(abs(m.ipopt_zU_out.get(var, 0))) >
+                    self.small_dual_tolerance)))
+
+        if nlp_feasible:
+            m.MINDT_linear_cuts.gbd_cuts.add(
+                expr=self.obj.expr * sign_adjust >= sign_adjust * (
+                    self.obj.expr + sum_constraints + sum_var_bounds))
+        else:
+            m.MINDT_linear_cuts.gbd_cuts.add(
+                expr=sign_adjust * (sum_constraints + sum_var_bounds) <= 0)
 
     def _add_int_cut(self):
         m = self.m
