@@ -132,11 +132,61 @@ class TestBigM_2TermDisj_coopr3(unittest.TestCase):
         self.assertTrue(newc.active)
 
         # new constraint is right
+        # bounds
         self.assertIs(oldc.lower, newc.lower)
         self.assertIs(oldc.upper, newc.upper)
+        # body
         self.assertIs(oldc.body, newc.body._args[0])
+        self.assertEqual(newc.body._coef[0], 1)
+        self.assertEqual(newc.body._coef[1], 3)
         self.assertIs(m.d[0].indicator_var, newc.body._args[1]._args[0])
-        # TODO: finish checking everything
+        self.assertEqual(newc.body._args[1]._coef[0], -1)
+        self.assertEqual(newc.body._args[1]._const, 1)
+        # and there isn't any more...
+        self.assertEqual(len(newc.body._args), 2)
+        self.assertEqual(len(newc.body._coef), 2)
+        self.assertEqual(len(newc.body._args[1]._args), 1)
+        self.assertEqual(len(newc.body._args[1]._coef), 1)
+        
+        oldc = m.d[1].component("c")
+        newc_lo = gdpblock[1].component("c_lo")
+        newc_hi = gdpblock[1].component("c_hi")
+
+        self.assertIsInstance(newc_lo, Constraint)
+        self.assertIsInstance(newc_hi, Constraint)
+        self.assertTrue(newc_lo.active)
+        self.assertTrue(newc_hi.active)
+
+        # new constraint is right
+        # bounds
+        self.assertIs(oldc.lower, newc_lo.lower)
+        self.assertIsNone(newc_lo.upper)
+        self.assertIsNone(newc_hi.lower)
+        self.assertIs(oldc.upper, newc_hi.upper)
+        # body
+        self.assertIs(oldc.body, newc_lo.body._args[0])
+        self.assertEqual(newc_lo.body._coef[0], 1)
+        self.assertEqual(newc_lo.body._coef[1], -2)
+        self.assertIs(newc_lo.body._args[1]._args[0], m.d[1].indicator_var)
+        self.assertEqual(newc_lo.body._args[1]._coef[0], -1)
+        self.assertEqual(newc_lo.body._args[1]._const, 1)
+        
+        self.assertEqual(len(newc_lo.body._args), 2)
+        self.assertEqual(len(newc_lo.body._coef), 2)
+        self.assertEqual(len(newc_lo.body._args[1]._args), 1)
+        self.assertEqual(len(newc_lo.body._args[1]._coef), 1)
+        
+        self.assertIs(oldc.body, newc_hi.body._args[0])
+        self.assertEqual(newc_hi.body._coef[0], 1)
+        self.assertEqual(newc_hi.body._coef[1], -7)
+        self.assertIs(m.d[1].indicator_var, newc_hi.body._args[1]._args[0])
+        self.assertEqual(newc_hi.body._args[1]._coef[0], -1)
+        self.assertEqual(newc_hi.body._args[1]._const, 1)
+
+        self.assertEqual(len(newc_hi.body._args), 2)
+        self.assertEqual(len(newc_hi.body._coef), 2)
+        self.assertEqual(len(newc_hi.body._args[1]._args), 1)
+        self.assertEqual(len(newc_hi.body._args[1]._coef), 1)
         
     def test_indexedDisjunction(self):
         # TODO: I think this is going to belong in another class...
