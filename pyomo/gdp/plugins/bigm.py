@@ -19,6 +19,8 @@ from pyomo.core.base.block import SortComponents
 from pyomo.repn import LinearCanonicalRepn
 from pyomo.gdp import *
 
+from random import randint
+
 import weakref
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -32,6 +34,13 @@ class BigM_Transformation(Transformation):
 
     def __init__(self):
         super(BigM_Transformation, self).__init__()
+        # QUESTION: The intent was just to make one relaxation block and put
+        # all the disjuncts on it like they were on the model, right? So if
+        # the name of that block is something I get out of my unique naming
+        # function, is this an OK way to keep it for later so that other 
+        # disjunctions get put on the same block?
+        # Or might this be better if I just store the block? I don't know...
+        self.transBlockName = None
         self.handlers = {
             Constraint: self._xform_constraint,
             Var:       False,
@@ -41,11 +50,28 @@ class BigM_Transformation(Transformation):
             Set:       False,
             }
 
+
+    # QUESTION: I copied and pasted this from add slacks for now, but is there somehwere it can live
+    # so that code isn't duplicated?
+    def _get_unique_name(self, instance, name):
+        # test if this name already exists in model. If not, we're good. 
+        # Else, we add random numbers until it doesn't
+        while True:
+            if not instance.component(name):
+                return name
+            else:
+                name += str(randint(0,9))
+
+
     def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
 
+        # ESJ: QUESTION: can we call the option something other than default
+        # now since it isn't really functioning as a default anymore?
         bigM = options.pop('default_bigM', None)
         bigM = kwds.pop('default_bigM', bigM)
+        # TODO: this is all changing so that we first use M's from args, then
+        # suffixes, then estimate if we still don't have anything.
         if bigM is not None:
             #
             # Test for the suffix - this test will (correctly) generate
@@ -74,6 +100,7 @@ class BigM_Transformation(Transformation):
             for block in instance.block_data_objects(
                     active=True, sort=SortComponents.deterministic ):
                 self._transformBlock(block)
+        # ESJ: I've yet to touch this, and I don't get it yet...
         else:
             if isinstance(targets, Component):
                 targets = (targets, )
@@ -89,6 +116,7 @@ class BigM_Transformation(Transformation):
                     self._transformDisjunction(
                         _t.parent_component().local_name, _t.index(), _t)
 
+
     def _transformBlock(self, block):
         # For every (active) disjunction in the block, convert it to a
         # simple constraint and then relax the individual (active)
@@ -97,54 +125,124 @@ class BigM_Transformation(Transformation):
         # Note: we need to make a copy of the list because singletons
         # are going to be reclassified, which could foul up the
         # iteration
-        # ESJ: TODO: don't need name here, I don't think,  because obj knows 
-        # its name
-        for (name, idx), obj in block.component_data_iterindex(
+
+        # ESJ: I kind of hate this idea:
+        for disjunction in block.component_objects(
                 Disjunction,
                 active=True,
-                sort=SortComponents.deterministic ):
-            self._transformDisjunction(name, idx, obj)
-            # TODO: is this the place to do the xor constraint??
-            #set_trace()
+                sort=SortComponents.deterministic):
+            self._transformDisjunction(disjunction)
 
-    def _transformDisjunction(self, name, idx, obj):
+        # ESJ: TODO: don't need name here, I don't think,  because obj knows 
+        # its name
+        # for (name, idx), obj in block.component_data_iterindex(
+        #         Disjunction,
+        #         active=True,
+        #         sort=SortComponents.deterministic ):
+        #     self._transformDisjunction(name, idx, obj)
+
+
+    #def _transformDisjunction(self, name, idx, obj):
+    def _transformDisjunction(self, obj):    
         # For the time being, we need to relax the disjuncts *before* we
         # move the disjunction constraint over (otherwise we wouldn't be
         # able to get to the _disjuncts map from the other component).
         #
         # FIXME: the disjuncts list should just be on the _DisjunctData
-        if obj.parent_block().local_name.startswith('_gdp_relax'):
+        #if obj.parent_block().local_name.startswith('_gdp_relax'):
+        # TODO: maybe??
+        if not obj.active:
             # Do not transform a block more than once
             return
+        
+        parent = obj.parent_block()
+
+        # HINT: Instead of updating / splitting the Constraint
+        # (Disjunction), we need to create a NEW constraint that
+        # captured the OR/XOR relationship among the Disjunct
+        # indicator_vars.
+        # add the XOR (or OR) constraints to parent block (with unique name)
+        # TODO: um... ick. Is this really a good way to do this?
+        if type(obj) is pyomo.gdp.disjunct.IndexedDisjunction:
+            def xor_cons_rule(m, i):
+                or_expr = 0
+                for disjunct in obj[i].disjuncts:
+                    or_expr += disjunct.indicator_var
+                return or_expr == 1
+
+            def or_cons_rule(m, i):
+                or_expr = 0
+                for disjunct in obj[i].disjuncts:
+                    or_expr += disjunct.indicator_var
+                return or_expr >= 1
+
+            if obj.xor:
+                orC = Constraint(obj.index_set(), rule=xor_cons_rule)
+                nm = '_xor'
+            else:
+                orC = Constraint(obj.index_set(), rule=or_cons_rule)
+                nm = '_or'
+            orCname = self._get_unique_name(parent, '_pyomo_gdp_relaxation_' + \
+                                            obj.name + nm)
+            parent.add_component(orCname, orC)
+
+            # relax each of the disjunctions
+            for i in obj:
+                self._transformDisjunctionData(obj[i])
+            obj.deactivate()
+        else:
+            or_expr = 0
+            for disjunct in obj.disjuncts:
+                or_expr += disjunct.indicator_var
+            if obj.xor:
+                orC = Constraint(expr=or_expr == 1)
+                nm = '_xor'
+            else:
+                orC = Constraint(expr=or_expr >= 1)
+                nm = '_or'
+            orCname = self._get_unique_name(parent, '_pyomo_gdp_relaxation_' + obj.name + nm)
+            parent.add_component(orCname, orC)
+            # relax the disjunction
+            self._transformDisjunctionData(obj)
+
+
+    def _transformDisjunctionData(self, obj):
+        # clone the disjuncts into our new relaxation block (which we'll
+        # create if it doesn't exist yet.) We'll relax the disjuncts there.
+
+        parent = obj.parent_block()
+        # make sure that we have a relaxation block.
+        if self.transBlockName is None:
+            self.transBlockName = self._get_unique_name(parent, '_pyomo_gdp_relaxation')
+            parent.add_component(self.transBlockName, Block())
+        transBlock = parent.component(self.transBlockName)
 
         # HINT: disjuncts is now an attribute on the Disjunction
         # for disjunct in obj.parent_component()._disjuncts[idx]:
-        or_expr = 0
+        # build block structure on transformation block to mirror disjunct hierarchy
         for disjunct in obj.disjuncts:
-            self._bigM_relax_disjunct(disjunct)
-            # TODO: Eh?
-            disjunct.deactivate()
-            # TODO: is this OK? The disjunct is not necessarily active,
-            # but the indicator var got fixed to 0 if it wasn't.
-            # The old version does this as an indexed constraint... I'm 
-            # making a bajillion of them by doing it this way.
-            # ANS: So not really. Better indexed...
-            or_expr += disjunct.indicator_var
+            disj_parent = disjunct.parent_component()
+            clonedDisj = transBlock.component(disj_parent.name)
+            if clonedDisj is None:
+                clonedDisj = Block(disj_parent.index_set())
+                transBlock.add_component(disj_parent.name, clonedDisj)
+            # whoops, I think this was overkill:
+            # transBlock.component(disj_parent.name)[disjunct.index()].add_component(
+              #   disjunct.name, Block())
+            # ESJ: TODO: Right now I am just going to pass the transformation block
+            # through so that I have it. It occurs to me that I don't think I have
+            # a guaruntee that it is actually on the instance right now. I think I
+            # made an assumption putting it on the parent of the disjunction. It should
+            # be on the instance so there is only one of it.
+            self._bigM_relax_disjunct(disjunct, transBlock)
 
-        _tmp = obj.parent_block().component('_gdp_relax')
-        if _tmp is None:
-            _tmp = Block()
-            obj.parent_block().add_component('_gdp_relax', _tmp)
 
-        # add the XOR (or OR) constraints
-        if obj.parent_component().xor:
-            orC = Constraint(expr=or_expr == 1)
-        else:
-            orC = Constraint(expr=or_expr >= 1)
-        # TODO: this is really crummy naming (but it matches the old version for now)
-        obj.parent_block().component('_gdp_relax').add_component(obj.name, orC)
+        # _tmp = obj.parent_block().component('_gdp_relax')
+        # if _tmp is None:
+        #     _tmp = Block()
+        #     obj.parent_block().add_component('_gdp_relax', _tmp)
 
-        # deactivate the disjunction
+        # deactivate the disjunction so we know we've relaxed it
         obj.deactivate()
 
         # if obj.parent_component().dim() == 0:
@@ -168,37 +266,41 @@ class BigM_Transformation(Transformation):
         #     _constr._data[idx]._component = weakref.ref(_constr)
 
 
-    def _bigM_relax_disjunct(self, disjunct):
+    def _bigM_relax_disjunct(self, disjunct, transBlock):
         if not disjunct.active:
             disjunct.indicator_var.fix(0)
             return
+        # ESJ: TODO: this is going to be something else... Maybe whether or not the 
+        # constraint is copied over? But no... Because of the belonging to multiple
+        # disjunctions issue. It still should only ge relaxed once. Oh, so it is whether
+        # or not the constraints on the original disjunction is deactivated yet or no?
         if disjunct.parent_block().local_name.startswith('_gdp_relax'):
             # Do not transform a block more than once
             return
 
-        _tmp = disjunct.parent_block().component('_gdp_relax')
-        if _tmp is None:
-            _tmp = Block()
-            disjunct.parent_block().add_component('_gdp_relax', _tmp)
+        # _tmp = disjunct.parent_block().component('_gdp_relax')
+        # if _tmp is None:
+        #     _tmp = Block()
+        #     disjunct.parent_block().add_component('_gdp_relax', _tmp)
 
         # Move this disjunct over to a Block component (so the writers
         # will pick it up)
-        if disjunct.parent_component().dim() == 0:
-            # Since there can't be more than one Disjunct in a
-            # SimpleDisjunct, then we can just reclassify the entire
-            # component into our scratch space
-            disjunct.parent_block().del_component(disjunct)
-            _tmp.add_component(disjunct.local_name, disjunct)
-            _tmp.reclassify_component_type(disjunct, Block)
-        else:
-            _block = _tmp.component(disjunct.parent_component().local_name)
-            if _block is None:
-                _block = Block(disjunct.parent_component().index_set())
-                _tmp.add_component(disjunct.parent_component().local_name, _block)
-            # Move this disjunction over to the Constraint
-            idx = disjunct.index()
-            _block._data[idx] = disjunct.parent_component()._data.pop(idx)
-            _block._data[idx]._component = weakref.ref(_block)
+        # if disjunct.parent_component().dim() == 0:
+        #     # Since there can't be more than one Disjunct in a
+        #     # SimpleDisjunct, then we can just reclassify the entire
+        #     # component into our scratch space
+        #     disjunct.parent_block().del_component(disjunct)
+        #     _tmp.add_component(disjunct.local_name, disjunct)
+        #     _tmp.reclassify_component_type(disjunct, Block)
+        # else:
+        #     _block = _tmp.component(disjunct.parent_component().local_name)
+        #     if _block is None:
+        #         _block = Block(disjunct.parent_component().index_set())
+        #         _tmp.add_component(disjunct.parent_component().local_name, _block)
+        #     # Move this disjunction over to the Constraint
+        #     idx = disjunct.index()
+        #     _block._data[idx] = disjunct.parent_component()._data.pop(idx)
+        #     _block._data[idx]._component = weakref.ref(_block)
 
         # Transform each component within this disjunct
         for name, obj in list(disjunct.component_map().iteritems()):
@@ -209,19 +311,15 @@ class BigM_Transformation(Transformation):
                         "No BigM transformation handler registered "
                         "for modeling components of type %s" % obj.type() )
                 continue
-            handler(name, obj, disjunct)
+            handler(name, obj, disjunct, transBlock)
 
 
-    def _xform_constraint(self, _name, constraint, disjunct):
-        # HINT: Instead of updating / splitting the Constraint
-        # (Disjunction), we need to create a NEW constraint that
-        # captured the OR/XOR relationship among the Disjunct
-        # indicator_vars.
-        # ESJ: TODO: I'm confused. Because all we have is disjunct which is a 
-        # _DisjunctData which has *one* indicator variable. And we need to
-        # add a constraint with the sum of all in the indicator variables in the 
-        # disjunction. And what we do with them depends on the value of xor in
-        # the Disjunction.
+    def _xform_constraint(self, _name, constraint, disjunct, transBlock):
+        # add constraint to the transformation block, we'll transform it there.
+        mirrorDisj = transBlock.component(disjunct.parent_component().name)[disjunct.index()]
+        #mirrorDisj.add_component(constraint.name, Constraint(expr=constraint.expr.clone()))
+        #constraint.deactivate()
+
         if 'BigM' in disjunct.component_map(Suffix):
             M = disjunct.component('BigM').get(constraint)
         else:
@@ -278,14 +376,12 @@ class BigM_Transformation(Transformation):
                     newC = Constraint(expr=c.lower <= c.body - M_expr)
                 else:
                     newC = Constraint(expr=c.body - M_expr <= c.upper)
-                disjunct.add_component(n, newC)
+                mirrorDisj.add_component(n, newC)
+                #disjunct.add_component(n, newC)
                 newC.construct()
 
 
-
     def _estimate_M(self, expr, name, m, disjunct):
-        print("DEBUG: estimating M:")
-        print(m)
         # Calculate a best guess at M
         repn = generate_canonical_repn(expr)
         M = [0,0]
