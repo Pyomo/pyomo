@@ -25,6 +25,7 @@ import weakref
 import logging
 logger = logging.getLogger('pyomo.core')
 
+import pdb
 # DEBUG
 from nose.tools import set_trace
 
@@ -141,7 +142,7 @@ class BigM_Transformation(Transformation):
         #         sort=SortComponents.deterministic ):
         #     self._transformDisjunction(name, idx, obj)
 
-
+    
     #def _transformDisjunction(self, name, idx, obj):
     def _transformDisjunction(self, obj):    
         # For the time being, we need to relax the disjuncts *before* we
@@ -157,54 +158,25 @@ class BigM_Transformation(Transformation):
         
         parent = obj.parent_block()
 
-        # HINT: Instead of updating / splitting the Constraint
-        # (Disjunction), we need to create a NEW constraint that
-        # captured the OR/XOR relationship among the Disjunct
-        # indicator_vars.
         # add the XOR (or OR) constraints to parent block (with unique name)
-        # TODO: um... ick. Is this really a good way to do this?
-        if type(obj) is pyomo.gdp.disjunct.IndexedDisjunction:
-            def xor_cons_rule(m, i):
-                or_expr = 0
-                for disjunct in obj[i].disjuncts:
-                    or_expr += disjunct.indicator_var
-                return or_expr == 1
-
-            def or_cons_rule(m, i):
-                or_expr = 0
-                for disjunct in obj[i].disjuncts:
-                    or_expr += disjunct.indicator_var
-                return or_expr >= 1
-
-            if obj.xor:
-                orC = Constraint(obj.index_set(), rule=xor_cons_rule)
-                nm = '_xor'
-            else:
-                orC = Constraint(obj.index_set(), rule=or_cons_rule)
-                nm = '_or'
-            orCname = self._get_unique_name(parent, '_pyomo_gdp_relaxation_' + \
-                                            obj.name + nm)
-            parent.add_component(orCname, orC)
-
-            # relax each of the disjunctions
-            for i in obj:
-                self._transformDisjunctionData(obj[i])
-            obj.deactivate()
-        else:
+        orC = Constraint(obj.index_set())
+        orC.construct()
+        for i in obj.index_set():
             or_expr = 0
-            for disjunct in obj.disjuncts:
+            for disjunct in obj[i].disjuncts:
                 or_expr += disjunct.indicator_var
-            if obj.xor:
-                orC = Constraint(expr=or_expr == 1)
-                nm = '_xor'
-            else:
-                orC = Constraint(expr=or_expr >= 1)
-                nm = '_or'
-            orCname = self._get_unique_name(parent, '_pyomo_gdp_relaxation_' + obj.name + nm)
-            parent.add_component(orCname, orC)
-            # relax the disjunction
-            self._transformDisjunctionData(obj)
+            c_expr = or_expr==1 if obj.xor else or_expr >= 1
+            orC.add(i, c_expr)
+        
+        nm = '_xor' if obj.xor else '_or'
+        orCname = self._get_unique_name(parent, '_pyomo_gdp_relaxation_' + \
+                                            obj.name + nm)
+        parent.add_component(orCname, orC)
 
+        # relax each of the disjunctions (or the SimpleDisjunction if it wasn't indexed)
+        for i in obj:
+            self._transformDisjunctionData(obj[i])
+        obj.deactivate()
 
     def _transformDisjunctionData(self, obj):
         # clone the disjuncts into our new relaxation block (which we'll
@@ -312,6 +284,8 @@ class BigM_Transformation(Transformation):
                         "for modeling components of type %s" % obj.type() )
                 continue
             handler(name, obj, disjunct, transBlock)
+        # deactivate disjunct so we know we've relaxed it
+        disjunct.deactivate()
 
 
     def _xform_constraint(self, _name, constraint, disjunct, transBlock):

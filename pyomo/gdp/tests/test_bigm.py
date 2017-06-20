@@ -9,7 +9,7 @@ import random
 # DEBUG
 from nose.tools import set_trace
 
-class TestBigM_2TermDisj_coopr3(unittest.TestCase):
+class TwoTermDisj_coopr3(unittest.TestCase):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed so we can test name collisions predictably
@@ -46,13 +46,29 @@ class TestBigM_2TermDisj_coopr3(unittest.TestCase):
         # it has the disjunct on it
         self.assertIsInstance(m._pyomo_gdp_relaxation.component("d"), Block)
 
-    def test_old_block_deactivated(self):
+    def test_disjunction_deactivated(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
 
         oldblock = m.component("disjunction")
         self.assertIsInstance(oldblock, Disjunction)
         self.assertFalse(oldblock.active)
+
+    def test_disjunctdatas_deactivated(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        oldblock = m.component("disjunction")
+        self.assertFalse(oldblock.disjuncts[0].active)
+        self.assertFalse(oldblock.disjuncts[1].active)
+
+    # TODO: do I need this to be true?? It's not at the moment,but I'm
+    # confused.
+    def test_disjunct_deactivated(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        #set_trace()
+        self.assertFalse(m.d.active)
 
     def test_new_block_nameCollision(self):
         m = self.makeModel()
@@ -187,22 +203,63 @@ class TestBigM_2TermDisj_coopr3(unittest.TestCase):
         self.assertEqual(len(newc_hi.body._coef), 2)
         self.assertEqual(len(newc_hi.body._args[1]._args), 1)
         self.assertEqual(len(newc_hi.body._args[1]._coef), 1)
-        
-    def test_indexedDisjunction(self):
-        # TODO: I think this is going to belong in another class...
-        # since its a new model...
+
+
+class TwoTermIndexedDisj_coopr3(unittest.TestCase):
+    def setUp(self):
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+    
+    @staticmethod
+    def makeModel():
         m = ConcreteModel()
         m.s = Set(initialize=[1, 2, 3])
-        m.a = Var(m.s, bounds=(2,7))
-        def d_rule(disjunct, flag, s):
+        m.t = Set(initialize=['A','B'])
+        m.a = Var(m.s, m.t, bounds=(2,7))
+        def d_rule(disjunct, flag, s, t):
             m = disjunct.model()
             if flag:
-                disjunct.c = Constraint(expr=m.a[s] == 0)
+                disjunct.c = Constraint(expr=m.a[s, t] == 0)
             else:
-                disjunct.c = Constraint(expr=m.a[s] >= 5)
-        m.disjunct = Disjunct([0,1], m.s, rule=d_rule)
-        def disj_rule(m, s):
-            return [m.disjunct[0, s], m.disjunct[1, s]]
-        m.disjunction = Disjunction(m.s, rule=disj_rule)
-        
+                disjunct.c = Constraint(expr=m.a[s, t] >= 5)
+        m.disjunct = Disjunct([0,1], m.s, m.t, rule=d_rule)
+        def disj_rule(m, s, t):
+            return [m.disjunct[0, s, t], m.disjunct[1, s, t]]
+        m.disjunction = Disjunction(m.s, m.t, rule=disj_rule)
+        return m
+
+    def test_xor_constraints(self):
+        m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
+
+        xor = m.component("_pyomo_gdp_relaxation_disjunction_xor")
+        self.assertIsInstance(xor, Constraint)
+        for i in m.disjunction.index_set():
+            self.assertEqual(xor[i].body._coef[0], 1)
+            self.assertEqual(xor[i].body._coef[1], 1)
+            self.assertIs(xor[i].body._args[0], 
+                          m.disjunction[i].disjuncts[0].indicator_var)
+            self.assertIs(xor[i].body._args[1], 
+                          m.disjunction[i].disjuncts[1].indicator_var)
+            self.assertEqual(xor[i].body._const, 0)
+            self.assertEqual(xor[i].lower, 1)
+            self.assertEqual(xor[i].upper, 1)
+            self.assertEqual(len(xor[i].body._coef), 2)
+            self.assertEqual(len(xor[i].body._args), 2)
+    
+    def test_deactivated_constraints(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        
+        for i in m.disjunct.index_set():
+            self.assertFalse(m.disjunct[i].c.active)
+
+    def test_transformed_constraints(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        # TODO
+        #set_trace()
