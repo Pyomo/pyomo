@@ -5,7 +5,7 @@ decomposition-based approaches to solve nonlinear continuous-discrete problems.
 These approaches include:
 
 - Outer approximation
-- Benders decomposition (unimplemented)
+- Benders decomposition (questionable)
 - Partial surrogate cuts
 
 This solver implementation was developed by Carnegie Mellon University in the
@@ -32,10 +32,14 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.repn.canonical_repn import generate_canonical_repn
+from copy import deepcopy
 
 
 class _DoNothing(object):
-    """Do nothing, literally."""
+    """Do nothing, literally.
+
+    This class is used in situations of "do something if attribute exists."
+    """
 
     def __init__(self, *args, **kwargs):
         pass
@@ -66,15 +70,15 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         return True
 
     def solve(self, model, **kwds):
-        """Solve everything.
-
-        All the problems. World peace? Done. Cure for cancer? You bet.
+        """Solve the model.
 
         Warning: this solver is still in beta. Keyword arguments subject to
         change. Undocumented keyword arguments definitely subject to change.
 
-        Warning: at this point in time, if you try to use PSC with anything
-        other than IPOPT as the NLP solver, bad things will happen.
+        Warning: at this point in time, if you try to use PSC or GBD with
+        anything other than IPOPT as the NLP solver, bad things will happen.
+
+        TODO: something is wrong with the GBD implementation, I think...
 
         Args:
             model (Block): a Pyomo model or block to be solved
@@ -90,8 +94,20 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             OA_penalty (float): multiplier on objective penalization for slack
                 variables.
             nlp (str): Solver to use for nonlinear subproblems
+            nlp_kwargs (dict): Keyword arguments to pass to NLP solver
             mip (str): Solver to use for linear discrete problems
             mip_kwargs (dict): Keyword arguments to pass to MIP solver
+            solve_in_place (bool): If true, MINDT manipulations are performed
+                directly upon the model. Otherwise, the model is first copied
+                and solution values are copied over afterwards.
+            master_postsolve (func): callback hook after a solution of the
+                master problem
+            subprob_postsolve (func): callback hook after a solution of the
+                nonlinear subproblem
+            subprob_postfeas (func): callback hook after feasible solution of
+                the nonlinear subproblem
+            load_solutions (bool): if True, load solutions back into the model.
+                This is only relevant if solve_in_place is not True.
 
         """
         self.bound_tolerance = kwds.pop('tol', 1E-6)
@@ -131,7 +147,9 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         # Store the initial model state as the best solution found. If we find
         # no better solution, then we will restore from this copy.
         self.best_solution_found = model.clone()
-        # Save model initial values
+
+        # Save model initial values. These are used later to initialize NLP
+        # subproblems.
         self.initial_variable_values = {
             id(v): v.value for v in m.component_data_objects(
                 ctype=Var, descend_into=True)}
@@ -151,6 +169,16 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
 
         # Integer cuts exclude particular discrete decisions
         lin.integer_cuts = ConstraintList(doc='integer cuts')
+        # Feasible integer cuts exclude discrete realizations that have been
+        # explored via an NLP subproblem. Depending on model characteristics,
+        # the user may wish to revisit NLP subproblems (with a different
+        # initialization, for example). Therefore, these cuts are not enabled
+        # by default.
+        #
+        # Note: these cuts will only exclude integer realizations that are not
+        # already in the primary integer_cuts ConstraintList.
+        lin.feasible_integer_cuts = ConstraintList(doc='explored integer cuts')
+        lin.feasible_integer_cuts.deactivate()
 
         # Build a list of binary variables
         self.binary_vars = [v for v in m.component_data_objects(
@@ -166,6 +194,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         # Set up iteration counters
         self.nlp_iter = 0
         self.mip_iter = 0
+        self.mip_subiter = 0
 
         # Set of NLP iterations for which cuts were generated
         lin.nlp_iters = Set(dimen=1)
@@ -192,7 +221,9 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         self.LB_old = float('-inf')
         self.UB = float('inf')
         self.UB_old = float('inf')
-        # whether the solution improved in the past iteration or not
+
+        # Flag indicating whether the solution improved in the past iteration
+        # or not
         self.solution_improved = False
 
         # Set up solvers
@@ -233,7 +264,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             raise ValueError('Model contains unfixed integer variables. '
                              'MINDT does not currently support solution of '
                              'such problems.')
-            # TODO add in a reformulation?
+            # TODO add in the reformulation using base 2
 
         # Handle missing or multiple objectives
         objs = m.component_data_objects(
@@ -259,7 +290,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             expr=m.MINDT_objective_value, sense=main_obj.sense)
 
         # TODO if any continuous variables are multipled with binary ones, need
-        # to do some kind of transformation or throw an error message
+        # to do some kind of transformation (Glover?) or throw an error message
 
     def _MINDT_initialize_master(self):
         """Initialize the decomposition algorithm.
@@ -278,9 +309,10 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             self.m.MINDT_linear_cuts.oa_cuts = ConstraintList(
                 doc='Outer approximation cuts')
             if self.initialization_strategy in ('rNLP', None):
-                self._init_OA_rNLP()
+                self._init_rNLP()
             elif self.initialization_strategy in ('max_binary',):
-                self._init_OA_max_binaries()
+                self._init_max_binaries()
+                self._solve_NLP_subproblem()
         elif self.decomposition_strategy == 'PSC':
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
@@ -292,7 +324,8 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             self.m.MINDT_linear_cuts.psc_cuts = ConstraintList(
                 doc='Partial surrogate cuts')
             if self.initialization_strategy in ('max_binary', None):
-                self._init_OA_max_binaries()
+                self._init_max_binaries()
+                self._solve_NLP_subproblem()
         elif self.decomposition_strategy == 'GBD':
             if not hasattr(m, 'dual'):
                 m.dual = Suffix(direction=Suffix.IMPORT)
@@ -303,10 +336,11 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             self.m.MINDT_linear_cuts.gbd_cuts = ConstraintList(
                 doc='Generalized Benders cuts')
             if self.initialization_strategy in ('max_binary', None):
-                self._init_OA_max_binaries()
+                self._init_max_binaries()
+                self._solve_NLP_subproblem()
 
-    def _init_OA_rNLP(self):
-        """Initialize OA by solving the rNLP (relaxed binary variables)."""
+    def _init_rNLP(self):
+        """Initialize by solving the rNLP (relaxed binary variables)."""
         self.nlp_iter += 1
         print("NLP {}: Solve relaxed integrality.".format(self.nlp_iter))
         for v in self.binary_vars:
@@ -334,9 +368,17 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 'MINDT unable to handle relaxed NLP termination condition '
                 'of {}'.format(subprob_terminate_cond))
 
-    def _init_OA_max_binaries(self):
+    def _init_max_binaries(self):
+        """Initialize by turning on as many binary variables as possible.
+
+        The user would usually want to call _solve_NLP_subproblem after an
+        invocation of this function.
+
+        """
+        self.mip_subiter += 1
         m = self.m
-        print("MILP 0: maximize value of binaries")
+        print("MILP {}.{}: maximize value of binaries".format(
+            self.mip_iter, self.mip_subiter))
         for c in self.nonlinear_constraints:
             c.deactivate()
         self.obj.deactivate()
@@ -360,8 +402,6 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         else:
             raise ValueError('Cannot handle termination condition {}'.format(
                 solve_terminate_cond))
-        # Solve the NLP subproblem at this binary realization
-        self._solve_NLP_subproblem()
 
     def _MINDT_iteration_loop(self):
         # Backup counter to prevent infinite loop
@@ -382,6 +422,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 print('Final bound values: LB: {}  UB: {}'.
                       format(self.LB, self.UB))
                 break
+            self.mip_subiter = 0
             # solve MILP master problem
             if self.decomposition_strategy == 'OA':
                 self._solve_OA_master()
@@ -418,6 +459,19 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             sense=self.obj.sense)
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
+        master_terminate_cond = results.solver.termination_condition
+        if master_terminate_cond is tc.infeasibleOrUnbounded:
+            # Linear solvers will sometimes tell me that it's infeasible or
+            # unbounded during presolve, but fails to distinguish. We need to
+            # resolve with a solver option flag on.
+            from copy import deepcopy
+            old_options = deepcopy(self.mip_solver.options)
+            # This solver option is specific to Gurobi.
+            self.mip_solver.options['DualReductions'] = 0
+            results = self.mip_solver.solve(m, load_solutions=False,
+                                            **self.mip_solver_kwargs)
+            master_terminate_cond = results.solver.termination_condition
+            self.mip_solver.options.update(old_options)
         self.obj.activate()
         for c in self.nonlinear_constraints:
             c.activate()
@@ -425,7 +479,6 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         m.MINDT_oa_obj.deactivate()
 
         # Process master problem result
-        master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
@@ -509,34 +562,52 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         # Call the MILP post-solve callback
         self.master_postsolve(m, self)
 
-    def _solve_GBD_master(self):
+    def _solve_GBD_master(self, leave_linear_active=False):
         m = self.m
         self.mip_iter += 1
         print('MILP {}: Solve master problem.'.format(self.mip_iter))
-        # Deactivate all constraints except those in MINDT_linear_cuts
-        MINDT_linear_cuts = set(
-            c for c in m.MINDT_linear_cuts.component_data_objects(
-                ctype=Constraint, descend_into=True))
-        to_deactivate = set(c for c in m.component_data_objects(
-            ctype=Constraint, active=True, descend_into=True)
-            if c not in MINDT_linear_cuts)
-        # Set up MILP
-        for c in to_deactivate:
-            c.deactivate()
+        if not leave_linear_active:
+            # Deactivate all constraints except those in MINDT_linear_cuts
+            _MINDT_linear_cuts = set(
+                c for c in m.MINDT_linear_cuts.component_data_objects(
+                    ctype=Constraint, descend_into=True))
+            to_deactivate = set(c for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=True)
+                if c not in _MINDT_linear_cuts)
+            for c in to_deactivate:
+                c.deactivate()
+        else:
+            for c in self.nonlinear_constraints:
+                c.deactivate()
         m.MINDT_linear_cuts.activate()
+        m.MINDT_objective_expr.activate()
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
-        print(results)
-        for c in to_deactivate:
-            c.activate()
+        master_terminate_cond = results.solver.termination_condition
+        if master_terminate_cond is tc.infeasibleOrUnbounded:
+            # Linear solvers will sometimes tell me that it is infeasible or
+            # unbounded during presolve, but fails to distinguish. We need to
+            # resolve with a solver option flag on.
+            old_options = deepcopy(self.mip_solver.options)
+            # This solver option is specific to Gurobi.
+            self.mip_solver.options['DualReductions'] = 0
+            results = self.mip_solver.solve(m, load_solutions=False,
+                                            **self.mip_solver_kwargs)
+            master_terminate_cond = results.solver.termination_condition
+            self.mip_solver.options.update(old_options)
+        if not leave_linear_active:
+            for c in to_deactivate:
+                c.activate()
+        else:
+            for c in self.nonlinear_constraints:
+                c.activate()
         m.MINDT_linear_cuts.deactivate()
         getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
 
         # Process master problem result
-        master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
@@ -560,7 +631,12 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 self.UB = float('-inf')
         elif master_terminate_cond is tc.unbounded:
             print('MILP master problem is unbounded. ')
-            m.solutions.load_from(results)
+            # Change the integer values to something new, re-solve.
+            m.MINDT_linear_cuts.activate()
+            m.MINDT_linear_cuts.feasible_integer_cuts.activate()
+            self._init_max_binaries()
+            m.MINDT_linear_cuts.deactivate()
+            m.MINDT_linear_cuts.feasible_integer_cuts.deactivate()
         else:
             raise ValueError(
                 'MINDT unable to handle MILP master termination condition '
@@ -611,25 +687,37 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 self._add_oa_cut()
             elif self.decomposition_strategy == 'PSC':
                 self._add_psc_cut()
-                # TODO decide whether I want to add an integer cut here too.
             elif self.decomposition_strategy == 'GBD':
                 self._add_gbd_cut()
 
+            # This adds an integer cut to the feasible_integer_cuts
+            # ConstraintList, which is not activated by default. However, it
+            # may be activated as needed in certain situations or for certain
+            # values of option flags.
+            self._add_int_cut(feasible=True)
+
             self.subproblem_postfeasible(m, self)
         elif subprob_terminate_cond is tc.infeasible:
-            # load the solution, but suppress the warning message by setting
-            # solver status to ok
+            # TODO try something else? Reinitialize with different initial
+            # value?
             print('NLP subproblem was locally infeasible.')
+            # load the solution and suppress the warning message by setting
+            # solver status to ok.
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             if self.decomposition_strategy == 'PSC':
                 print('Adding PSC feasibility cut.')
                 self._add_psc_cut(nlp_feasible=False)
-
-            # TODO try something else? Reinitialize?
+            elif self.decomposition_strategy == 'GBD':
+                print('Adding GBD feasibility cut.')
+                self._add_gbd_cut(nlp_feasible=False)
+            # Add an integer cut to exclude this discrete option
             self._add_int_cut()
         elif subprob_terminate_cond is tc.maxIterations:
+            # TODO try something else? Reinitialize with different initial
+            # value?
             print('NLP subproblem failed to converge within iteration limit.')
+            # Add an integer cut to exclude this discrete option
             self._add_int_cut()
         else:
             raise ValueError(
@@ -671,18 +759,19 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         # generate the sum of all multipliers with the nonlinear constraints
         var_to_val = {id(var): NumericConstant(value(var))
                       for var in self.nonlinear_variables}
-        sum_nonlinear = sum(
-            value(m.dual[c]) * -1 *
-            (clone_expression(c.body, substitute=var_to_val) - c.upper)
-            for c in self.nonlinear_constraints
-            if value(abs(m.dual[c])) > self.small_dual_tolerance)
-        for c in self.nonlinear_constraints:
-            if value(c.upper) is None:
-                raise ValueError(
-                    'Oh no, Pyomo did something MINDT does not expect. '
-                    'The value of c.upper for {} is None: {} <= {} <= {}'
-                    .format(c.name, c.lower, c.body, c.upper))
-        # TODO handle the case where constraint lower or upper is not 0 or None
+        sum_nonlinear = (
+            # Address constraints of form f(x) <= upper
+            sum(value(m.dual[c]) * -1 *
+                (clone_expression(c.body, substitute=var_to_val) - c.upper)
+                for c in self.nonlinear_constraints
+                if value(abs(m.dual[c])) > self.small_dual_tolerance
+                and c.upper is not None) +
+            # Address constraints of form f(x) >= lower
+            sum(value(m.dual[c]) *
+                (c.lower - clone_expression(c.body, substitute=var_to_val))
+                for c in self.nonlinear_constraints
+                if value(abs(m.dual[c])) > self.small_dual_tolerance
+                and c.lower is not None and not c.upper == c.lower))
 
         # Generate the sum of all multipliers with linear constraints
         # containing nonlinear variables
@@ -747,7 +836,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                     'Oh no, Pyomo did something MINDT does not expect. '
                     'The value of c.upper for {} is None: {} <= {} <= {}'
                     .format(c.name, c.lower, c.body, c.upper))
-        # TODO handle the case where constraint lower or upper is not 0 or None
+        # TODO handle the case where constraint upper is None
 
         # only substitute non-binary variables to their values
         binary_var_ids = set(id(var) for var in self.binary_vars)
@@ -757,15 +846,22 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                       if id(var) not in binary_var_ids}
         # generate the sum of all multipliers with the active (from a duality
         # sense) constraints
-        sum_constraints = sum(
-            value(m.dual[c]) * -1 *
-            (clone_expression(c.body, substitute=var_to_val) - c.upper)
-            for c in m.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True)
-            if value(abs(m.dual[c])) > self.small_dual_tolerance)
+        sum_constraints = (
+            sum(value(m.dual[c]) * -1 *
+                (clone_expression(c.body, substitute=var_to_val) - c.upper)
+                for c in m.component_data_objects(
+                    ctype=Constraint, active=True, descend_into=True)
+                if value(abs(m.dual[c])) > self.small_dual_tolerance
+                and c.upper is not None) +
+            sum(value(m.dual[c]) *
+                (c.lower - clone_expression(c.body, substitute=var_to_val))
+                for c in m.component_data_objects(
+                    ctype=Constraint, active=True, descend_into=True)
+                if value(abs(m.dual[c])) > self.small_dual_tolerance
+                and c.lower is not None and not c.upper == c.lower))
 
         # add in variable bound dual contributions
-
+        #
         # Generate the sum of all bound multipliers with nonlinear variables
         sum_var_bounds = (
             sum(m.ipopt_zL_out.get(var, 0) * (var - value(var))
@@ -789,7 +885,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             m.MINDT_linear_cuts.gbd_cuts.add(
                 expr=sign_adjust * (sum_constraints + sum_var_bounds) <= 0)
 
-    def _add_int_cut(self):
+    def _add_int_cut(self, feasible=False):
         m = self.m
         int_tol = self.integer_tolerance
         # check to make sure that binary variables are all 0 or 1
@@ -798,14 +894,19 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 raise ValueError('Binary {} = {} is not 0 or 1'.format(
                     v.name, value(v)))
 
-        if not self.binary_vars:
+        if not self.binary_vars:  # if no binary variables, skip.
             return
 
-        # Add the integer cut
-        m.MINDT_linear_cuts.integer_cuts.add(
-            expr=sum(1 - v for v in self.binary_vars
-                     if value(abs(v - 1)) <= int_tol) +
-            sum(v for v in self.binary_vars if value(abs(v)) <= int_tol) >= 1)
+        int_cut = (sum(1 - v for v in self.binary_vars
+                       if value(abs(v - 1)) <= int_tol) +
+                   sum(v for v in self.binary_vars
+                       if value(abs(v)) <= int_tol) >= 1)
+
+        if not feasible:
+            # Add the integer cut
+            m.MINDT_linear_cuts.integer_cuts.add(expr=int_cut)
+        else:
+            m.MINDT_linear_cuts.feasible_integer_cuts.add(expr=int_cut)
 
     def _detect_nonlinear_vars(self):
         """Identify the variables that participate in nonlinear terms."""
