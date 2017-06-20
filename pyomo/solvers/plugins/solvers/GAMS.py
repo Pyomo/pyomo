@@ -72,6 +72,9 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 Equivalent of DebugLevel.KeepFiles.
                 If False, GAMS model file will be deleted as well.
                 Summary of temp files can be found in _gams_py_gjo0.pf
+            holdfixed=False:
+                Turn on the GAMS "holdfixed" model attribute, which tells
+                the solver to treat fixed variables as constants.
         """
 
         # Make sure not to modify options dictionary
@@ -108,6 +111,9 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
 
         # Keep tmp files: gms, lst, gdx, pf
         keep_files = opts.pop("keep_files", False)
+
+        # Turn on the GAMS "holdfixed" model attribute
+        holdfixed = opts.pop("holdfixed", False)
 
         if len(opts):
             raise ValueError(
@@ -172,7 +178,8 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                         symbolMap=symbolMap,
                         con_labeler=con_labeler,
                         solver=solver,
-                        mtype=mtype
+                        mtype=mtype,
+                        holdfixed=holdfixed
                     )
                 finally:
                     ComponentData.labeler.pop()
@@ -198,7 +205,8 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                     symbolMap,
                     con_labeler,
                     solver,
-                    mtype):
+                    mtype,
+                    holdfixed):
         constraint_names = []
         ConstraintIO = StringIO()
         linear = True
@@ -400,9 +408,15 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                     output_file.write("%s.up = %s;\n" % (varName, var.ub))
             if var.value is not None:
                 output_file.write("%s.l = %s;\n" % (varName, var.value))
+            if var.is_fixed():
+                assert var.value is not None
+                output_file.write("%s.fx = %s;\n" % (varName, var.value))
 
         model_name = symbolMap.getSymbol(model, con_labeler)
         output_file.write("\nMODEL %s /all/ ;\n" % model_name)
+
+        if holdfixed:
+            output_file.write("%s.holdfixed = 1;\n" % model_name)
 
         if mtype is None:
             mtype =  ('lp','nlp','mip','minlp')[
