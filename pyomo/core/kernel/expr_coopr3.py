@@ -638,7 +638,11 @@ class _ProductExpression(_ExpressionBase):
             ostream.write("( ")
         first = True
         if self._coef != 1:
+            if self._coef < 0:
+                ostream.write("(")
             ostream.write(str(self._coef))
+            if self._coef < 0:
+                ostream.write(")")
             first = False
         for arg in self._numerator:
             if first:
