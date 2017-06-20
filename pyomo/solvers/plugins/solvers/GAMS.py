@@ -38,7 +38,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
     def available(self, exception_flag=True):
         return pyutilib.services.registered_executable("gams") is not None
  
-    def solve(self, model):
+    def solve(self, model, tee=False):
         """
         Solver for pyomo models using GAMS. Converts pyomo model
         to GAMS input file, solves in GAMS, then returns solution
@@ -65,8 +65,6 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 Load results back into pyomo model.
             print_result=False:
                 Print summary of solution to stdout.
-            show_log=False:
-                Print GAMS log to stdout
             keep_files=False:
                 Keep temporary files in current directory.
                 Equivalent of DebugLevel.KeepFiles.
@@ -105,9 +103,6 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
 
         # Print the results to sys.stdout
         print_result = opts.pop("print_result", False)
-
-        # Print the GAMS log to sys.stdout
-        show_log = opts.pop("show_log", False)
 
         # Keep tmp files: gms, lst, gdx, pf
         keep_files = opts.pop("keep_files", False)
@@ -186,12 +181,12 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         if solve:
             self._solve_model(
                 model=model,
+                tee=tee,
                 output_filename=output_filename,
                 var_list=var_list,
                 symbolMap=symbolMap,
                 load_model=load_model,
                 print_result=print_result,
-                show_log=show_log,
                 keep_files=keep_files,
                 keep_output=keep_output
             )
@@ -199,14 +194,14 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         return None # should this return a results object?
 
     def _write_model(self,
-                    model,
-                    output_file,
-                    var_list,
-                    symbolMap,
-                    con_labeler,
-                    solver,
-                    mtype,
-                    holdfixed):
+                     model,
+                     output_file,
+                     var_list,
+                     symbolMap,
+                     con_labeler,
+                     solver,
+                     mtype,
+                     holdfixed):
         constraint_names = []
         ConstraintIO = StringIO()
         linear = True
@@ -436,15 +431,15 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 'min' if obj.sense == minimize else 'max'))
 
     def _solve_model(self,
-                    model,
-                    output_filename,
-                    var_list,
-                    symbolMap,
-                    load_model,
-                    print_result,
-                    show_log,
-                    keep_files,
-                    keep_output):
+                     model,
+                     tee,
+                     output_filename,
+                     var_list,
+                     symbolMap,
+                     load_model,
+                     print_result,
+                     keep_files,
+                     keep_output):
 
         def abt_eq(x, y, eps=1E-8):
             """Return if x and y within epsilon, used for values close to 0"""
@@ -461,7 +456,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
 
         t1 = ws.add_job_from_file(os.path.join(os.getcwd(), output_filename))
 
-        if show_log:
+        if tee:
             t1.run(output=sys.stdout)
         else:
             t1.run()
