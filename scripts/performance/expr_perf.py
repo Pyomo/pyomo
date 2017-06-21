@@ -22,7 +22,33 @@ sys.setrecursionlimit(1000000)
 #NTerms = 100000
 #N = 50
 NTerms = 1000
-N = 2
+N = 25
+
+
+try:
+    opts, args = getopt.gnu_getopt(sys.argv[1:], "h:", ["help", "output=", 'num=', 'terms='])
+except getopt.GetoptError as err:
+    # print help information and exit:
+    print(str(err))  # will print something like "option -a not recognized"
+    print(sys.argv[0] + " -h --num=<ntrials> --terms=<nterms> --output=<filename>")
+    sys.exit(2)
+
+ofile = None
+for o, a in opts:
+    if o in ("-h", "--help"):
+        print(sys.argv[0] + " -h --num=<ntrials> --terms=<nterms> --output=<filename>")
+        sys.exit()
+    elif o == "--output":
+        ofile = a
+    elif o == "--num":
+        N = int(a)
+    elif o == "--terms":
+        NTerms = int(a)
+    else:
+        assert False, "unhandled option"
+
+print("NTerms %d   NTrials %d\n\n" % (NTerms, N))
+
 
 
 #
@@ -387,24 +413,11 @@ runall(["COOPR3"], res)
 expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
 runall(["PYOMO4"], res)
 
-try:
-    opts, args = getopt.getopt(sys.argv[1:], "ho:", ["help", "output="])
-except getopt.GetoptError as err:
-    # print help information and exit:
-    print(str(err))  # will print something like "option -a not recognized"
-    print(sys.argv[0] + " -h -o <filename>")
-    sys.exit(2)
 
-for o, a in opts:
-    if o in ("-h", "--help"):
-        print(sys.argv[0] + " -h -o <filename>")
-        sys.exit()
-    elif o in ("-o", "--output"):
-        import json
-        OUTPUT = open(a, 'w')
-        res_ = {'script': sys.argv[0], 'data': remap_keys(res)}
-        json.dump(res_, OUTPUT)
-        OUTPUT.close()
-    else:
-        assert False, "unhandled option"
+if ofile:
+    import json
+    OUTPUT = open(ofile, 'w')
+    res_ = {'script': sys.argv[0], 'NTerms':NTerms, 'NTrials':N, 'data': remap_keys(res)}
+    json.dump(res_, OUTPUT)
+    OUTPUT.close()
 
