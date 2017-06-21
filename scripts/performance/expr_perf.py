@@ -5,6 +5,7 @@
 import pprint as pp
 from pyomo.environ import *
 from pyomo.core.base.expr_common import _clear_expression_pool
+from pyomo.core.base import expr 
 from pyomo.repn import generate_canonical_repn
 import gc
 import time
@@ -20,9 +21,13 @@ sys.setrecursionlimit(1000000)
 #NTerms = 100000
 #N = 50
 NTerms = 1000
-N = 25
+N = 10
 
 
+#
+# Execute a function 'n' times, collecting performance statistics and
+# averaging them
+#
 def measure(f, n=25):
     """measure average execution time over n trials"""
     data = []
@@ -40,6 +45,9 @@ def measure(f, n=25):
 
 
 
+#
+# Evaluate standard operations on an expression
+#
 def evaluate(expr, seconds):
     gc.collect()
     _clear_expression_pool()
@@ -87,18 +95,24 @@ def evaluate(expr, seconds):
     stop = time.time()
     seconds['is_fixed'] = stop-start
 
-    gc.collect()
-    _clear_expression_pool()
-    start = time.time()
-    #
-    r_ = generate_canonical_repn(expr)
-    #
-    stop = time.time()
-    seconds['generate_canonical'] = stop-start
+    try:
+        gc.collect()
+        _clear_expression_pool()
+        start = time.time()
+        #
+        r_ = generate_canonical_repn(expr)
+        #
+        stop = time.time()
+        seconds['generate_canonical'] = stop-start
+    except:
+        seconds['generate_canonical'] = -1
 
     return seconds
 
 
+#
+# Create a linear expression
+#
 def linear(N, flag):
 
     def f():
@@ -136,6 +150,45 @@ def linear(N, flag):
     return f
 
 
+#
+# Create a constant expression from mutable parameters
+#
+def constant(N, flag):
+
+    def f():
+        seconds = {}
+
+        model = ConcreteModel()
+        model.A = RangeSet(N)
+        model.p = Param(model.A, default=2)
+        model.x = Param(model.A, initialize=2, mutable=True)
+
+        gc.collect()
+        _clear_expression_pool()
+        start = time.time()
+        #
+        if flag == 1:
+            expr = summation(model.p, model.x, index=model.A)
+        elif flag == 2:
+            expr=sum(model.p[i]*model.x[i] for i in model.A)
+        else:
+            expr=0
+            for i in model.A:
+                expr += model.p[i] * model.x[i]
+        #
+        stop = time.time()
+        seconds['construction'] = stop-start
+
+        seconds = evaluate(expr, seconds)
+
+        return seconds
+
+    return f
+
+
+#
+# Create a bilinear expression
+#
 def bilinear(N, flag):
 
     def f():
@@ -175,6 +228,9 @@ def bilinear(N, flag):
     return f
 
 
+#
+# Create a simple nonlinear expression
+#
 def nonlinear(N, flag):
 
     def f():
@@ -210,6 +266,9 @@ def nonlinear(N, flag):
     return f
 
 
+#
+# Create an expression that is a complex polynomial
+#
 def polynomial(N, flag):
 
     def f():
@@ -238,65 +297,90 @@ def polynomial(N, flag):
 
         seconds = evaluate(expr, seconds)
 
-        expr.to_string()
         return seconds
 
     return f
 
 
-if True:
+#
+# Utility function used by runall()
+#
+def print_results(factors_, ans_, output):
+    if output:
+        print(factors_)
+        pp.pprint(ans_)
+        print("")
 
-    print("Linear Tests: Loop 1")
-    sec1 = measure(linear(NTerms, 1), n=N)
-    pp.pprint(sec1)
 
-    print("")
+#
+# Run the experiments and populate the dictionary 'res' 
+# with the mapping: factors -> performance results
+#
+# Performance results are a mapping: name -> seconds
+#
+def runall(factors, res, output=True):
 
-    print("Linear Tests: Loop 2")
-    sec2 = measure(linear(NTerms, 2), n=N)
-    pp.pprint(sec2)
+    factors_ = tuple(factors+['Constant','Loop 1'])
+    ans_ = res[factors_] = measure(constant(NTerms, 1), n=N)
+    print_results(factors_, ans_, output)
 
-    print("")
+    factors_ = tuple(factors+['Constant','Loop 2'])
+    ans_ = res[factors_] = measure(constant(NTerms, 2), n=N)
+    print_results(factors_, ans_, output)
 
-    print("Linear Tests: Loop 3")
-    sec3 = measure(linear(NTerms, 3), n=N)
-    pp.pprint(sec3)
+    factors_ = tuple(factors+['Constant','Loop 3'])
+    ans_ = res[factors_] = measure(constant(NTerms, 3), n=N)
+    print_results(factors_, ans_, output)
 
-    print("")
 
-    print("Bilinear Tests: Loop 1")
-    sec1 = measure(bilinear(NTerms, 1), n=N)
-    pp.pprint(sec1)
+    factors_ = tuple(factors+['Linear','Loop 1'])
+    ans_ = res[factors_] = measure(linear(NTerms, 1), n=N)
+    print_results(factors_, ans_, output)
 
-    print("")
+    factors_ = tuple(factors+['Linear','Loop 2'])
+    ans_ = res[factors_] = measure(linear(NTerms, 2), n=N)
+    print_results(factors_, ans_, output)
 
-    print("Bilinear Tests: Loop 2")
-    sec2 = measure(bilinear(NTerms, 2), n=N)
-    pp.pprint(sec2)
+    factors_ = tuple(factors+['Linear','Loop 3'])
+    ans_ = res[factors_] = measure(linear(NTerms, 3), n=N)
+    print_results(factors_, ans_, output)
 
-    print("")
 
-    print("Bilinear Tests: Loop 3")
-    sec3 = measure(bilinear(NTerms, 3), n=N)
-    pp.pprint(sec3)
+    factors_ = tuple(factors+['Bilinear','Loop 1'])
+    ans_ = res[factors_] = measure(bilinear(NTerms, 1), n=N)
+    print_results(factors_, ans_, output)
 
-    print("")
+    factors_ = tuple(factors+['Bilinear','Loop 2'])
+    ans_ = res[factors_] = measure(bilinear(NTerms, 2), n=N)
+    print_results(factors_, ans_, output)
 
-    print("Nonlinear Tests: Loop 2")
-    sec2 = measure(nonlinear(NTerms, 2), n=N)
-    pp.pprint(sec2)
+    factors_ = tuple(factors+['Bilinear','Loop 3'])
+    ans_ = res[factors_] = measure(bilinear(NTerms, 3), n=N)
+    print_results(factors_, ans_, output)
 
-    print("")
 
-    print("Nonlinear Tests: Loop 3")
-    sec3 = measure(nonlinear(NTerms, 3), n=N)
-    pp.pprint(sec3)
+    factors_ = tuple(factors+['Nonlinear','Loop 2'])
+    ans_ = res[factors_] = measure(nonlinear(NTerms, 2), n=N)
+    print_results(factors_, ans_, output)
 
-    print("")
+    factors_ = tuple(factors+['Nonlinear','Loop 3'])
+    ans_ = res[factors_] = measure(nonlinear(NTerms, 3), n=N)
+    print_results(factors_, ans_, output)
 
-print("Polynomial Tests: Loop 3")
-sec3 = measure(polynomial(NTerms, 3), n=N)
-pp.pprint(sec3)
 
-print("")
+    factors_ = tuple(factors+['Polynomial','Loop 3'])
+    ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
+    print_results(factors_, ans_, output)
+
+
+
+#
+# MAIN
+#
+res = {}
+
+runall(["COOPR3"], res)
+
+expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
+runall(["PYOMO4"], res)
 
