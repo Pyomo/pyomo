@@ -16,12 +16,13 @@ try:
 except:
     pympler_available=False
 import sys
+import getopt
 
 sys.setrecursionlimit(1000000)
 #NTerms = 100000
 #N = 50
 NTerms = 1000
-N = 10
+N = 2
 
 
 #
@@ -373,6 +374,8 @@ def runall(factors, res, output=True):
     print_results(factors_, ans_, output)
 
 
+def remap_keys(mapping):
+    return [{'factors':k, 'performance': v} for k, v in mapping.items()]
 
 #
 # MAIN
@@ -383,4 +386,24 @@ runall(["COOPR3"], res)
 
 expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
 runall(["PYOMO4"], res)
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "ho:", ["help", "output="])
+except getopt.GetoptError as err:
+    # print help information and exit:
+    print(str(err))  # will print something like "option -a not recognized"
+    print(sys.argv[0] + " -h -o <filename>")
+    sys.exit(2)
+
+for o, a in opts:
+    if o in ("-h", "--help"):
+        print(sys.argv[0] + " -h -o <filename>")
+        sys.exit()
+    elif o in ("-o", "--output"):
+        import json
+        OUTPUT = open(a, 'w')
+        json.dump(remap_keys(res), OUTPUT)
+        OUTPUT.close()
+    else:
+        assert False, "unhandled option"
 
