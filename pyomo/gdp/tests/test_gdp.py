@@ -38,6 +38,7 @@ except ImportError:
     yaml_available=False
 
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
+nochull = True
 
 
 if False:
@@ -144,6 +145,7 @@ class CommonTests:
                     preprocess='bigm')
         self.check( 'jobshop_large', 'bigm' )
 
+    @unittest.skipIf(nochull, "chull not rewritten yet")
     def test_chull_jobshop_small(self):
         self.problem='test_chull_jobshop_small'
         # Run the small jobshop example using the CHull transformation
@@ -151,6 +153,7 @@ class CommonTests:
                     preprocess='chull')
         self.check( 'jobshop_small', 'chull' )
 
+    @unittest.skipIf(nochull, "chull not rewritten yet")
     def test_chull_jobshop_large(self):
         self.problem='test_chull_jobshop_large'
         # Run the large jobshop example using the CHull transformation

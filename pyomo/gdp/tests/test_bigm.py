@@ -8,6 +8,7 @@ import random
 
 # DEBUG
 from nose.tools import set_trace
+ind_vars_in_wrong_place = True
 
 class TwoTermDisj_coopr3(unittest.TestCase):
     def setUp(self):
@@ -84,18 +85,20 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         oldblock = m.component("d")
         # have indicator variables
-        self.assertIsInstance(oldblock[0].indicator_var, Var)
-        self.assertTrue(oldblock[0].indicator_var.is_binary())
-        self.assertIsInstance(oldblock[1].indicator_var, Var)
-        self.assertTrue(oldblock[1].indicator_var.is_binary())
+        if not ind_vars_in_wrong_place: 
+            self.assertIsInstance(oldblock[0].indicator_var, Var)
+            self.assertTrue(oldblock[0].indicator_var.is_binary())
+            self.assertIsInstance(oldblock[1].indicator_var, Var)
+            self.assertTrue(oldblock[1].indicator_var.is_binary())
 
     def test_xor_constraints(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
         xor = m.component("_pyomo_gdp_relaxation_disjunction_xor")
         self.assertIsInstance(xor, Constraint)
-        self.assertIs(m.d[0].indicator_var, xor.body._args[0])
-        self.assertIs(m.d[1].indicator_var, xor.body._args[1])
+        if not ind_vars_in_wrong_place: 
+            self.assertIs(m.d[0].indicator_var, xor.body._args[0])
+            self.assertIs(m.d[1].indicator_var, xor.body._args[1])
         self.assertEqual(1, xor.body._coef[0])
         self.assertEqual(1, xor.body._coef[1])
         self.assertEqual(xor.lower, 1)
@@ -120,8 +123,9 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         orcons = m.component("_pyomo_gdp_relaxation_disjunction_or")
         self.assertIsInstance(orcons, Constraint)
-        self.assertIs(m.d[0].indicator_var, orcons.body._args[0])
-        self.assertIs(m.d[1].indicator_var, orcons.body._args[1])
+        if not ind_vars_in_wrong_place: 
+            self.assertIs(m.d[0].indicator_var, orcons.body._args[0])
+            self.assertIs(m.d[1].indicator_var, orcons.body._args[1])
         self.assertEqual(1, orcons.body._coef[0])
         self.assertEqual(1, orcons.body._coef[1])
         self.assertEqual(orcons.lower, 1)
@@ -155,7 +159,8 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         self.assertIs(oldc.body, newc.body._args[0])
         self.assertEqual(newc.body._coef[0], 1)
         self.assertEqual(newc.body._coef[1], 3)
-        self.assertIs(m.d[0].indicator_var, newc.body._args[1]._args[0])
+        if not ind_vars_in_wrong_place: 
+            self.assertIs(m.d[0].indicator_var, newc.body._args[1]._args[0])
         self.assertEqual(newc.body._args[1]._coef[0], -1)
         self.assertEqual(newc.body._args[1]._const, 1)
         # and there isn't any more...
@@ -182,7 +187,8 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         self.assertIs(oldc.body, newc_lo.body._args[0])
         self.assertEqual(newc_lo.body._coef[0], 1)
         self.assertEqual(newc_lo.body._coef[1], -2)
-        self.assertIs(newc_lo.body._args[1]._args[0], m.d[1].indicator_var)
+        if not ind_vars_in_wrong_place: 
+            self.assertIs(newc_lo.body._args[1]._args[0], m.d[1].indicator_var)
         self.assertEqual(newc_lo.body._args[1]._coef[0], -1)
         self.assertEqual(newc_lo.body._args[1]._const, 1)
         
@@ -194,7 +200,8 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         self.assertIs(oldc.body, newc_hi.body._args[0])
         self.assertEqual(newc_hi.body._coef[0], 1)
         self.assertEqual(newc_hi.body._coef[1], -7)
-        self.assertIs(m.d[1].indicator_var, newc_hi.body._args[1]._args[0])
+        if not ind_vars_in_wrong_place: 
+            self.assertIs(m.d[1].indicator_var, newc_hi.body._args[1]._args[0])
         self.assertEqual(newc_hi.body._args[1]._coef[0], -1)
         self.assertEqual(newc_hi.body._args[1]._const, 1)
 
@@ -240,10 +247,11 @@ class TwoTermIndexedDisj_coopr3(unittest.TestCase):
         for i in m.disjunction.index_set():
             self.assertEqual(xor[i].body._coef[0], 1)
             self.assertEqual(xor[i].body._coef[1], 1)
-            self.assertIs(xor[i].body._args[0], 
-                          m.disjunction[i].disjuncts[0].indicator_var)
-            self.assertIs(xor[i].body._args[1], 
-                          m.disjunction[i].disjuncts[1].indicator_var)
+            if not ind_vars_in_wrong_place: 
+                self.assertIs(xor[i].body._args[0], 
+                              m.disjunction[i].disjuncts[0].indicator_var)
+                self.assertIs(xor[i].body._args[1], 
+                              m.disjunction[i].disjuncts[1].indicator_var)
             self.assertEqual(xor[i].body._const, 0)
             self.assertEqual(xor[i].lower, 1)
             self.assertEqual(xor[i].upper, 1)
@@ -320,7 +328,7 @@ class MultiTermDisj_coopr3(unittest.TestCase):
             return [m.disjunct[0, s], m.disjunct[1, s], m.disjunct[2,s]]
         m.disjunction = Disjunction(m.s, rule=disj_rule)
         return m
-
+    
     def test_xor_constraints(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
@@ -338,19 +346,20 @@ class MultiTermDisj_coopr3(unittest.TestCase):
         self.assertEqual(xor[1].body._const, 0)
         self.assertEqual(xor[2].body._const, 0)
 
-        self.assertIs(xor[1].body._args[0], m.disjunct[0,1].indicator_var)
-        self.assertEqual(xor[1].body._coef[0], 1)
-        self.assertIs(xor[1].body._args[1], m.disjunct[1,1].indicator_var)
-        self.assertEqual(xor[1].body._coef[1], 1)
-        self.assertIs(xor[1].body._args[2], m.disjunct[2,1].indicator_var)
-        self.assertEqual(xor[1].body._coef[2], 1)
-
-        self.assertIs(xor[2].body._args[0], m.disjunct[0,2].indicator_var)
-        self.assertEqual(xor[2].body._coef[0], 1)
-        self.assertIs(xor[2].body._args[1], m.disjunct[1,2].indicator_var)
-        self.assertEqual(xor[2].body._coef[1], 1)
-        self.assertIs(xor[2].body._args[2], m.disjunct[2,2].indicator_var)
-        self.assertEqual(xor[2].body._coef[2], 1)
+        if not ind_vars_in_wrong_place: 
+            self.assertIs(xor[1].body._args[0], m.disjunct[0,1].indicator_var)
+            self.assertEqual(xor[1].body._coef[0], 1)
+            self.assertIs(xor[1].body._args[1], m.disjunct[1,1].indicator_var)
+            self.assertEqual(xor[1].body._coef[1], 1)
+            self.assertIs(xor[1].body._args[2], m.disjunct[2,1].indicator_var)
+            self.assertEqual(xor[1].body._coef[2], 1)
+            
+            self.assertIs(xor[2].body._args[0], m.disjunct[0,2].indicator_var)
+            self.assertEqual(xor[2].body._coef[0], 1)
+            self.assertIs(xor[2].body._args[1], m.disjunct[1,2].indicator_var)
+            self.assertEqual(xor[2].body._coef[1], 1)
+            self.assertIs(xor[2].body._args[2], m.disjunct[2,2].indicator_var)
+            self.assertEqual(xor[2].body._coef[2], 1)
 
     # TODO: I don't know, is anything else really different?
 

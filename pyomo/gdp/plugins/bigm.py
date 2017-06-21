@@ -67,10 +67,8 @@ class BigM_Transformation(Transformation):
     def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
 
-        # ESJ: QUESTION: can we call the option something other than default
-        # now since it isn't really functioning as a default anymore?
-        bigM = options.pop('default_bigM', None)
-        bigM = kwds.pop('default_bigM', bigM)
+        bigM = options.pop('bigM', None)
+        bigM = kwds.pop('bigM', bigM)
         # TODO: this is all changing so that we first use M's from args, then
         # suffixes, then estimate if we still don't have anything.
         if bigM is not None:
@@ -189,8 +187,6 @@ class BigM_Transformation(Transformation):
             parent.add_component(self.transBlockName, Block())
         transBlock = parent.component(self.transBlockName)
 
-        # HINT: disjuncts is now an attribute on the Disjunction
-        # for disjunct in obj.parent_component()._disjuncts[idx]:
         # build block structure on transformation block to mirror disjunct hierarchy
         for disjunct in obj.disjuncts:
             disj_parent = disjunct.parent_component()
@@ -201,6 +197,13 @@ class BigM_Transformation(Transformation):
             # whoops, I think this was overkill:
             # transBlock.component(disj_parent.name)[disjunct.index()].add_component(
               #   disjunct.name, Block())
+            # TODO: This is not the longterm solution... But I'm moving the indicator variables
+            # onto the transformation block for now so that the writers will pick them up.
+            disjBlock = transBlock.component(disj_parent.name)
+            indvar = disjunct.indicator_var
+            disjunct.del_component('indicator_var')
+            disjBlock[disjunct.index()].add_component('indicator_var', indvar)
+
             # ESJ: TODO: Right now I am just going to pass the transformation block
             # through so that I have it. It occurs to me that I don't think I have
             # a guaruntee that it is actually on the instance right now. I think I
@@ -345,7 +348,11 @@ class BigM_Transformation(Transformation):
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
                     logger.debug("GDP(BigM): Promoting local constraint "
                                  "'%s' as '%s'", constraint.local_name, n)
-                M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
+                # TODO: this will be true when we can leave the indicator
+                # vars in the disjunct:
+                #M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
+                # But for now:
+                M_expr = (m[i] - bounds[i])*(1-mirrorDisj.indicator_var)
                 if i == 0:
                     newC = Constraint(expr=c.lower <= c.body - M_expr)
                 else:
