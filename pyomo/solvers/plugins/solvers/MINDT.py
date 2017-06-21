@@ -87,7 +87,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             tol (float): bound tolerance
             iterlim (int): maximum number of master iterations
             strategy (str): decomposition strategy to use. Possible values:
-                OA, PSC, GBD
+                OA, PSC, GBD, hPSC
             init_strategy (str): initialization strategy to use when generating
                 the initial cuts to construct the master problem.
             max_slack (float): upper bound on slack variable values
@@ -129,6 +129,12 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         if kwds:
             print("Unrecognized arguments passed to MINDT solver:")
             pprint(kwds)
+
+        # If decomposition strategy is a hybrid, set the initial strategy
+        if self.decomposition_strategy == 'hPSC':
+            self._decomposition_strategy = 'PSC'
+        else:
+            self._decomposition_strategy = self.decomposition_strategy
 
         # When generating cuts, small duals multiplied by expressions can cause
         # problems. Exclude all duals smaller in absolue value than the
@@ -218,9 +224,9 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
 
         # set up bounds
         self.LB = float('-inf')
-        self.LB_old = float('-inf')
         self.UB = float('inf')
-        self.UB_old = float('inf')
+        self.LB_progress = [self.LB]
+        self.UB_progress = [self.UB]
 
         # Flag indicating whether the solution improved in the past iteration
         # or not
@@ -300,7 +306,8 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
 
         """
         m = self.m
-        if self.decomposition_strategy == 'OA':
+        if (self._decomposition_strategy == 'OA' or
+                self.decomposition_strategy == 'hPSC'):
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
             # Map Constraint, nlp_iter -> generated OA Constraint
@@ -308,12 +315,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             self._calc_jacobians()  # preload jacobians
             self.m.MINDT_linear_cuts.oa_cuts = ConstraintList(
                 doc='Outer approximation cuts')
-            if self.initialization_strategy in ('rNLP', None):
-                self._init_rNLP()
-            elif self.initialization_strategy in ('max_binary',):
-                self._init_max_binaries()
-                self._solve_NLP_subproblem()
-        elif self.decomposition_strategy == 'PSC':
+        if self._decomposition_strategy == 'PSC':
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
             if not hasattr(m, 'ipopt_zL_out'):
@@ -323,10 +325,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             self._detect_nonlinear_vars()
             self.m.MINDT_linear_cuts.psc_cuts = ConstraintList(
                 doc='Partial surrogate cuts')
-            if self.initialization_strategy in ('max_binary', None):
-                self._init_max_binaries()
-                self._solve_NLP_subproblem()
-        elif self.decomposition_strategy == 'GBD':
+        if self._decomposition_strategy == 'GBD':
             if not hasattr(m, 'dual'):
                 m.dual = Suffix(direction=Suffix.IMPORT)
             if not hasattr(m, 'ipopt_zL_out'):
@@ -335,9 +334,20 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
             self.m.MINDT_linear_cuts.gbd_cuts = ConstraintList(
                 doc='Generalized Benders cuts')
-            if self.initialization_strategy in ('max_binary', None):
-                self._init_max_binaries()
-                self._solve_NLP_subproblem()
+
+        # Set default initialization_strategy
+        if self.initialization_strategy is None:
+            if self.decomposition_strategy == 'OA':
+                self.initialization_strategy = 'rNLP'
+            else:
+                self.initialization_strategy = 'max_binary'
+
+        # Do the initialization
+        if self.initialization_strategy == 'rNLP':
+            self._init_rNLP()
+        elif self.initialization_strategy == 'max_binary':
+            self._init_max_binaries()
+            self._solve_NLP_subproblem()
 
     def _init_rNLP(self):
         """Initialize by solving the rNLP (relaxed binary variables)."""
@@ -408,6 +418,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         backup_max_iter = max(1000, self.iteration_limit)
         backup_iter = 0
         while backup_iter < backup_max_iter:
+            print('\n')
             backup_iter += 1
             # Check bound convergence
             if self.LB + self.bound_tolerance >= self.UB:
@@ -424,11 +435,11 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 break
             self.mip_subiter = 0
             # solve MILP master problem
-            if self.decomposition_strategy == 'OA':
+            if self._decomposition_strategy == 'OA':
                 self._solve_OA_master()
-            elif self.decomposition_strategy == 'PSC':
+            elif self._decomposition_strategy == 'PSC':
                 self._solve_PSC_master()
-            elif self.decomposition_strategy == 'GBD':
+            elif self._decomposition_strategy == 'GBD':
                 self._solve_GBD_master()
             # Check bound convergence
             if self.LB + self.bound_tolerance >= self.UB:
@@ -438,6 +449,28 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                 break
             # Solve NLP subproblem
             self._solve_NLP_subproblem()
+
+            # If the hybrid algorithm is not making progress, switch to OA
+            progress_required = 1E-3
+            if self.obj.sense == minimize:
+                log = self.LB_progress
+                sign_adjust = 1
+            else:
+                log = self.UB_progress
+                sign_adjust = -1
+            try:
+                if (sign_adjust * log[-1]
+                        <= (log[-2] + progress_required) * sign_adjust):
+                    making_progress = False
+                else:
+                    making_progress = True
+            except IndexError:
+                making_progress = True  # Not enough history yet, keep going.
+            if not making_progress and (
+                    self.decomposition_strategy == 'hPSC' and
+                    self._decomposition_strategy == 'PSC'):
+                print('Not making enough progress. Switching to OA.')
+                self._decomposition_strategy = 'OA'
 
     def _solve_OA_master(self):
         m = self.m
@@ -457,6 +490,8 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         m.MINDT_oa_obj = Objective(
             expr=self.obj.expr + m.MINDT_penalty_expr,
             sense=self.obj.sense)
+        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
@@ -477,6 +512,8 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             c.activate()
         m.MINDT_linear_cuts.deactivate()
         m.MINDT_oa_obj.deactivate()
+        getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
 
         # Process master problem result
         if master_terminate_cond is tc.optimal:
@@ -484,8 +521,10 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             m.solutions.load_from(results)
             if self.obj.sense == minimize:
                 self.LB = max(value(m.MINDT_oa_obj.expr), self.LB)
+                self.LB_progress.append(self.LB)
             else:
                 self.UB = min(value(m.MINDT_oa_obj.expr), self.UB)
+                self.UB_progress.append(self.UB)
             print('MIP {}: OBJ: {}  LB: {}  UB: {}'
                   .format(self.mip_iter, value(m.MINDT_oa_obj.expr), self.LB,
                           self.UB))
@@ -534,8 +573,10 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             m.solutions.load_from(results)
             if self.obj.sense == minimize:
                 self.LB = max(value(self.obj.expr), self.LB)
+                self.LB_progress.append(self.LB)
             else:
                 self.UB = min(value(self.obj.expr), self.UB)
+                self.UB_progress.append(self.UB)
             print('MIP {}: OBJ: {}  LB: {}  UB: {}'
                   .format(self.mip_iter, value(self.obj.expr), self.LB,
                           self.UB))
@@ -613,8 +654,10 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             m.solutions.load_from(results)
             if self.obj.sense == minimize:
                 self.LB = max(value(self.obj.expr), self.LB)
+                self.LB_progress.append(self.LB)
             else:
                 self.UB = min(value(self.obj.expr), self.UB)
+                self.UB_progress.append(self.UB)
             print('MIP {}: OBJ: {}  LB: {}  UB: {}'
                   .format(self.mip_iter, value(self.obj.expr), self.LB,
                           self.UB))
@@ -670,24 +713,24 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         if subprob_terminate_cond is tc.optimal:
             m.solutions.load_from(results)
             if self.obj.sense == minimize:
-                self.UB_old = self.UB
                 self.UB = min(value(self.obj.expr), self.UB)
-                self.solution_improved = self.UB < self.UB_old
+                self.solution_improved = self.UB < self.UB_progress[-1]
+                self.UB_progress.append(self.UB)
             else:
-                self.LB_old = self.LB
                 self.LB = max(value(self.obj.expr), self.LB)
-                self.solution_improved = self.LB > self.LB_old
+                self.solution_improved = self.LB > self.LB_progress[-1]
+                self.LB_progress.append(self.LB)
             print('NLP {}: OBJ: {}  LB: {}  UB: {}'
                   .format(self.nlp_iter, value(self.obj.expr), self.LB,
                           self.UB))
             if self.solution_improved:
                 self.best_solution_found = m.clone()
             # Add the linear cut
-            if self.decomposition_strategy == 'OA':
+            if self._decomposition_strategy == 'OA':
                 self._add_oa_cut()
-            elif self.decomposition_strategy == 'PSC':
+            elif self._decomposition_strategy == 'PSC':
                 self._add_psc_cut()
-            elif self.decomposition_strategy == 'GBD':
+            elif self._decomposition_strategy == 'GBD':
                 self._add_gbd_cut()
 
             # This adds an integer cut to the feasible_integer_cuts
@@ -705,10 +748,10 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             # solver status to ok.
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
-            if self.decomposition_strategy == 'PSC':
+            if self._decomposition_strategy == 'PSC':
                 print('Adding PSC feasibility cut.')
                 self._add_psc_cut(nlp_feasible=False)
-            elif self.decomposition_strategy == 'GBD':
+            elif self._decomposition_strategy == 'GBD':
                 print('Adding GBD feasibility cut.')
                 self._add_gbd_cut(nlp_feasible=False)
             # Add an integer cut to exclude this discrete option
