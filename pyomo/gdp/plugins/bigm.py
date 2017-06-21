@@ -162,6 +162,7 @@ class BigM_Transformation(Transformation):
         for i in obj.index_set():
             or_expr = 0
             for disjunct in obj[i].disjuncts:
+                # TODO: YOU ARE HERE: this breaks with the indicator var move :(
                 or_expr += disjunct.indicator_var
             c_expr = or_expr==1 if obj.xor else or_expr >= 1
             orC.add(i, c_expr)

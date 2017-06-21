@@ -407,7 +407,40 @@ class IndexedConstraintsInDisj_coopr3(unittest.TestCase):
         disjBlock = transBlock.component("disjunct")
         self.assertIsInstance(disjBlock, Block)
         #set_trace()
-        # QUESTION: Do we want to keep being so cagegy about names?
+        # QUESTION: Do we want to keep being so cagey about names?
         # the periods are really annoying. And we don't have any
         # risk of name collisions here. So why not underscore?
         #self.assertIsInstance(disjBlock[0].c.1_eq, Constraint)
+
+class DisjunctInMultipleDisjunctions(unittest.TestCase):
+    @staticmethod
+    def makeModel():
+        m = ConcreteModel()
+        m.a = Var(bounds=(-10,50))
+
+        def d1_rule(disjunct, flag):
+            m = disjunct.model()
+            if flag:
+                disjunct.c = Constraint(expr=m.a==0)
+            else:
+                disjunct.c = Constraint(expr=m.a>=5)
+        m.disjunct1 = Disjunct([0,1], rule=d1_rule)
+
+        def d2_rule(disjunct, flag):
+            if not flag:
+                disjunct.c = Constraint(expr=m.a>=30)
+        m.disjunct2 = Disjunct([0,1], rule=d2_rule)
+
+        def disj1_rule(m):
+            return [m.disjunct1[0], m.disjunct1[1]]
+        m.disjunction1 = Disjunction(rule=disj1_rule)
+
+        def disj2_rule(m):
+            return [m.disjunct2[0], m.disjunct1[1]]
+        m.disjunction2 = Disjunction(rule=disj2_rule)
+        return m
+
+    def test_transformed_once(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        set_trace()    
