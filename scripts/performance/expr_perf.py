@@ -402,7 +402,8 @@ for o, a in opts:
     elif o in ("-o", "--output"):
         import json
         OUTPUT = open(a, 'w')
-        json.dump(remap_keys(res), OUTPUT)
+        res_ = {'script': sys.argv[0], 'data': remap_keys(res)}
+        json.dump(res_, OUTPUT)
         OUTPUT.close()
     else:
         assert False, "unhandled option"
