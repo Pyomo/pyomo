@@ -24,8 +24,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
         super(AddSlackVariables, self).__init__(**kwds)
 
     def _get_unique_name(self, instance, name):
-        # test if this name already exists in model. If not, we're good. Else, we add random numbers until it doesn't
-        # TODO: is this good enough?
+        # test if this name already exists in model. If not, we're good. 
+        # Else, we add random numbers until it doesn't
         while True:
             if not instance.component(name):
                 return name
@@ -37,6 +37,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
     #    - make sure that works for apply_to and crate_using
     #    - make sure that works for Constraint, IndexedConstraint, and _ConstraintData
     #  - make sure no bogus kwds are passed!
+    #  - shouldn't add slacks to deactivated constraints
 
     def _apply_to(self, instance, **kwds):
         # deactivate the objective
@@ -54,6 +55,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
                value(cons.lower) > value(cons.upper):
                 # this is a structural infeasibility so slacks aren't going to help:
                 raise RuntimeError("Lower bound exceeds upper bound in constraint %s" % cons.name)
+            if not cons.active: continue
             if cons.lower is not None:
                 # we add positive slack variable to body:
                 # declare positive slack

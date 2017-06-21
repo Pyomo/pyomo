@@ -12,6 +12,7 @@ from pyomo.environ import *
 # DEBUG
 import pdb
 
+# TODO: this should be an option probably, right?
 # do I have other options that won't be mad about the quadratic objective in the
 # separation problem?
 SOLVER = 'ipopt'
