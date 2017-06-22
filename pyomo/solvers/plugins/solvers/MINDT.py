@@ -34,23 +34,7 @@ from pyomo.opt.base import IOptSolver
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from copy import deepcopy
 
-
-class _DoNothing(object):
-    """Do nothing, literally.
-
-    This class is used in situations of "do something if attribute exists."
-    """
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def __call__(self, *args, **kwargs):
-        pass
-
-    def __getattr__(self, attr):
-        def _do_nothing(*args, **kwargs):
-            pass
-        return _do_nothing
+from six.moves import range
 
 
 class MINDTSolver(pyomo.util.plugin.Plugin):
@@ -418,7 +402,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
         backup_max_iter = max(1000, self.iteration_limit)
         backup_iter = 0
         while backup_iter < backup_max_iter:
-            print('\n')
+            print('\n')  # print blank lines for visual display
             backup_iter += 1
             # Check bound convergence
             if self.LB + self.bound_tolerance >= self.UB:
@@ -450,26 +434,36 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
             # Solve NLP subproblem
             self._solve_NLP_subproblem()
 
-            # If the hybrid algorithm is not making progress, switch to OA
-            progress_required = 1E-3
+            # If the hybrid algorithm is not making progress, switch to OA.
+            progress_required = 1E-6
             if self.obj.sense == minimize:
                 log = self.LB_progress
                 sign_adjust = 1
             else:
                 log = self.UB_progress
                 sign_adjust = -1
-            try:
-                if (sign_adjust * log[-1]
-                        <= (log[-2] + progress_required) * sign_adjust):
-                    making_progress = False
-                else:
+            # Maximum number of iterations in which the lower (optimistic)
+            # bound does not improve before switching to OA
+            max_nonimprove_iter = 5
+            making_progress = True
+            for i in range(1, max_nonimprove_iter + 1):
+                try:
+                    if (sign_adjust * log[-i]
+                            <= (log[-i - 1] + progress_required)
+                            * sign_adjust):
+                        making_progress = False
+                    else:
+                        making_progress = True
+                        break
+                except IndexError:
+                    # Not enough history yet, keep going.
                     making_progress = True
-            except IndexError:
-                making_progress = True  # Not enough history yet, keep going.
+                    break
             if not making_progress and (
                     self.decomposition_strategy == 'hPSC' and
                     self._decomposition_strategy == 'PSC'):
-                print('Not making enough progress. Switching to OA.')
+                print('Not making enough progress for {} iterations. '
+                      'Switching to OA.'.format(max_nonimprove_iter))
                 self._decomposition_strategy = 'OA'
 
     def _solve_OA_master(self):
@@ -982,3 +976,21 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
                         self.nonlinear_variables.append(var)
         self.nonlinear_variable_IDs = set(
             id(v) for v in self.nonlinear_variables)
+
+
+class _DoNothing(object):
+    """Do nothing, literally.
+
+    This class is used in situations of "do something if attribute exists."
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __call__(self, *args, **kwargs):
+        pass
+
+    def __getattr__(self, attr):
+        def _do_nothing(*args, **kwargs):
+            pass
+        return _do_nothing
