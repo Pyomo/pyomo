@@ -61,6 +61,8 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
 
         Warning: at this point in time, if you try to use PSC or GBD with
         anything other than IPOPT as the NLP solver, bad things will happen.
+        This is because the suffixes are not in place to extract dual values
+        from the variable bounds for any other solver.
 
         TODO: something is wrong with the GBD implementation, I think...
 
@@ -321,7 +323,7 @@ class MINDTSolver(pyomo.util.plugin.Plugin):
 
         # Set default initialization_strategy
         if self.initialization_strategy is None:
-            if self.decomposition_strategy == 'OA':
+            if self._decomposition_strategy == 'OA':
                 self.initialization_strategy = 'rNLP'
             else:
                 self.initialization_strategy = 'max_binary'
