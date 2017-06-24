@@ -2,11 +2,12 @@
 # This script runs performance tests on expressions
 #
 
-import pprint as pp
 from pyomo.environ import *
 from pyomo.core.base.expr_common import _clear_expression_pool
 from pyomo.core.base import expr 
 from pyomo.repn import generate_canonical_repn
+
+import pprint as pp
 import gc
 import time
 try:
@@ -26,17 +27,18 @@ N = 25
 
 
 try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:], "h:", ["help", "output=", 'num=', 'terms='])
+    opts, args = getopt.gnu_getopt(sys.argv[1:], "hc:", ["help", "output=", 'num=', 'terms='])
 except getopt.GetoptError as err:
     # print help information and exit:
     print(str(err))  # will print something like "option -a not recognized"
-    print(sys.argv[0] + " -h --num=<ntrials> --terms=<nterms> --output=<filename>")
+    print(sys.argv[0] + " -h -c --num=<ntrials> --terms=<nterms> --output=<filename>")
     sys.exit(2)
 
 ofile = None
+file_format = 'csv'
 for o, a in opts:
     if o in ("-h", "--help"):
-        print(sys.argv[0] + " -h --num=<ntrials> --terms=<nterms> --output=<filename>")
+        print(sys.argv[0] + " -c -h --num=<ntrials> --terms=<nterms> --output=<filename>")
         sys.exit()
     elif o == "--output":
         ofile = a
@@ -44,6 +46,9 @@ for o, a in opts:
         N = int(a)
     elif o == "--terms":
         NTerms = int(a)
+    elif o == "-c":
+        print(a)
+        file_format = 'csv'
     else:
         assert False, "unhandled option"
 
@@ -414,10 +419,26 @@ expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees)
 runall(["PYOMO4"], res)
 
 
-if ofile:
-    import json
-    OUTPUT = open(ofile, 'w')
-    res_ = {'script': sys.argv[0], 'NTerms':NTerms, 'NTrials':N, 'data': remap_keys(res)}
-    json.dump(res_, OUTPUT)
-    OUTPUT.close()
 
+if ofile:
+    if file_format == 'csv':
+        #
+        # Write csv file
+        #
+        perf_types = sorted(next(iter(res.values())).keys())
+        res_ = [ list(key) + [res[key][k] for k in perf_types] for key in res]
+        with open(ofile, 'w') as OUTPUT:
+            import csv
+            writer = csv.writer(OUTPUT)
+            writer.writerow(['Version', 'ExprType', 'ExprNum'] + perf_types)
+            for line in res_:
+                writer.writerow(line)
+
+    elif file_format == 'json':
+        res_ = {'script': sys.argv[0], 'NTerms':NTerms, 'NTrials':N, 'data': remap_keys(res)}
+        #
+        # Write json file
+        #
+        with open(ofile, 'w') as OUTPUT:
+            import json
+            json.dump(res_, OUTPUT)
