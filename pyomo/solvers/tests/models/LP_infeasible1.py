@@ -44,7 +44,12 @@ class LP_infeasible1(_BaseTestModel):
         model.y.value = None
 
     def post_solve_test_validation(self, tester, results):
-        assert results['Solver'][0]['termination condition'] == TerminationCondition.infeasible
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] == \
+                TerminationCondition.infeasible
+        else:
+            tester.assertEqual(results['Solver'][0]['termination condition'],
+                               TerminationCondition.infeasible)
 
 @register_model
 class LP_infeasible1_kernel(LP_infeasible1):
