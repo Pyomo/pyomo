@@ -26,7 +26,7 @@ from pyomo.core.kernel.component_interface import \
      IComponentContainer,
      _ActiveComponentContainerMixin)
 from pyomo.core.kernel.component_objective import IObjective
-from pyomo.core.kernel.component_variable import IVariable
+from pyomo.core.kernel.component_variable import IVariable, variable
 from pyomo.core.kernel.component_constraint import IConstraint
 from pyomo.core.kernel.component_dict import ComponentDict
 from pyomo.core.kernel.component_tuple import ComponentTuple
@@ -885,8 +885,11 @@ class _block_base(object):
         Load a solution.
 
         Args:
-            solution: A :class:`pyomo.opt.Solution` object
-                with a symbol map.
+            solution: A :class:`pyomo.opt.Solution` object with a
+                symbol map. Optionally, the solution can be tagged
+                with a default variable value (e.g., 0) that will be
+                applied to those variables in the symbol map that do
+                not have a value in the solution.
             allow_consistent_values_for_fixed_vars:
                 Indicates whether a solution can specify
                 consistent values for variables that are
@@ -897,6 +900,9 @@ class _block_base(object):
                 value of a fixed variable.
         """
         symbol_map = solution.symbol_map
+        default_variable_value = getattr(solution,
+                                         "default_variable_value",
+                                         None)
 
         # Generate the list of active import suffixes on
         # this top level model
@@ -921,32 +927,15 @@ class _block_base(object):
                 valid_import_suffixes[attr_key][self] = attr_value
 
         #
-        # Load objective data (should simply be suffixes if
-        # they exist)
-        #
-        objective_skip_attrs = ['id','canonical_label','value']
-        for label,entry in iteritems(solution.objective):
-            obj_value = symbol_map.getObject(label)
-            if (obj_value is None) or \
-               (obj_value is SymbolMap.UnknownSymbol):
-                raise KeyError("Objective associated with symbol '%s' "
-                                "is not found on this block"
-                                % (label))
-            for _attr_key, attr_value in iteritems(entry):
-                attr_key = _attr_key[0].lower() + _attr_key[1:]
-                if attr_key in valid_import_suffixes:
-                    valid_import_suffixes[attr_key][obj_value] = \
-                        attr_value
-
-        #
         # Load variable data
         #
         self._flag_vars_as_stale()
         var_skip_attrs = ['id','canonical_label']
+        seen_var_ids = set()
         for label, entry in iteritems(solution.variable):
-            var_value = symbol_map.getObject(label)
-            if (var_value is None) or \
-               (var_value is SymbolMap.UnknownSymbol):
+            var = symbol_map.getObject(label)
+            if (var is None) or \
+               (var is SymbolMap.UnknownSymbol):
                 # NOTE: the following is a hack, to handle
                 #    the ONE_VAR_CONSTANT variable that is
                 #    necessary for the objective
@@ -961,40 +950,65 @@ class _block_base(object):
                                    "is not found on this block"
                                    % (label))
 
+            seen_var_ids.add(id(var))
+
             if (not allow_consistent_values_for_fixed_vars) and \
-               var_value.fixed:
-                raise ValueError("Variable '%s' on this block is "
-                                "currently fixed - new value is "
-                                "not expected in solution"
-                                % (label))
+               var.fixed:
+                raise ValueError("Variable '%s' is currently fixed. "
+                                 "A new value is not expected "
+                                 "in solution" % (var.name))
 
             for _attr_key, attr_value in iteritems(entry):
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key == 'value':
                     if allow_consistent_values_for_fixed_vars and \
-                       var_value.fixed and \
-                       (math.fabs(attr_value - var_value.value) > \
+                       var.fixed and \
+                       (math.fabs(attr_value - var.value) > \
                         comparison_tolerance_for_fixed_vars):
                         raise ValueError(
-                            "Variable %s on this block is currently "
-                            "fixed - a value of '%s' in solution is "
+                            "Variable %s is currently fixed. "
+                            "A value of '%s' in solution is "
                             "not within tolerance=%s of the current "
                             "value of '%s'"
-                            % (label, str(attr_value),
-                               str(comparison_tolerance_for_fixed_vars),
-                               str(var_value.value)))
-                    var_value.value = attr_value
-                    var_value.stale = False
+                            % (var.name, attr_value,
+                               comparison_tolerance_for_fixed_vars,
+                               var.value))
+                    var.value = attr_value
+                    var.stale = False
                 elif attr_key in valid_import_suffixes:
-                    valid_import_suffixes[attr_key][var_value] = attr_value
+                    valid_import_suffixes[attr_key][var] = attr_value
+
+        # start to build up the set of unseen variable ids
+        unseen_var_ids = set(symbol_map.byObject.keys())
+        # at this point it contains ids for non-variable types
+        unseen_var_ids.difference_update(seen_var_ids)
 
         #
-        # Load constraint data
+        # Load objective solution (should simply be suffixes if
+        # they exist)
+        #
+        objective_skip_attrs = ['id','canonical_label','value']
+        for label,entry in iteritems(solution.objective):
+            obj = symbol_map.getObject(label)
+            if (obj is None) or \
+               (obj is SymbolMap.UnknownSymbol):
+                raise KeyError("Objective associated with symbol '%s' "
+                                "is not found on this block"
+                                % (label))
+            unseen_var_ids.remove(id(obj))
+            for _attr_key, attr_value in iteritems(entry):
+                attr_key = _attr_key[0].lower() + _attr_key[1:]
+                if attr_key in valid_import_suffixes:
+                    valid_import_suffixes[attr_key][obj] = \
+                        attr_value
+
+        #
+        # Load constraint solution
         #
         con_skip_attrs = ['id', 'canonical_label']
         for label, entry in iteritems(solution.constraint):
-            con_value = symbol_map.getObject(label)
-            if con_value is SymbolMap.UnknownSymbol:
+            con = symbol_map.getObject(label)
+            if con is SymbolMap.UnknownSymbol:
                 #
                 # This is a hack - see above.
                 #
@@ -1004,12 +1018,42 @@ class _block_base(object):
                     raise KeyError("Constraint associated with symbol '%s' "
                                    "is not found on this block"
                                    % (label))
-
+            unseen_var_ids.remove(id(con))
             for _attr_key, attr_value in iteritems(entry):
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:
-                    valid_import_suffixes[attr_key][con_value] = \
+                    valid_import_suffixes[attr_key][con] = \
                         attr_value
+
+
+        #
+        # Load sparse variable solution
+        #
+        if default_variable_value is not None:
+            for var_id in unseen_var_ids:
+                var = symbol_map.getObject(symbol_map.byObject[var_id])
+                if var.ctype is not variable.ctype:
+                    continue
+                if (not allow_consistent_values_for_fixed_vars) and \
+                   var.fixed:
+                    raise ValueError("Variable '%s' is currently fixed. "
+                                     "A new value is not expected "
+                                     "in solution" % (var.name))
+
+                if allow_consistent_values_for_fixed_vars and \
+                   var.fixed and \
+                   (math.fabs(default_variable_value - var.value) > \
+                    comparison_tolerance_for_fixed_vars):
+                    raise ValueError(
+                        "Variable %s is currently fixed. "
+                        "A value of '%s' in solution is "
+                        "not within tolerance=%s of the current "
+                        "value of '%s'"
+                        % (var.name, default_variable_value,
+                           comparison_tolerance_for_fixed_vars,
+                           var.value))
+                var.value = default_variable_value
+                var.stale = False
 
 class block(_block_base, IBlockStorage):
     """An implementation of the :class:`IBlockStorage` interface."""
