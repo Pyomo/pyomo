@@ -1369,26 +1369,32 @@ class TestPHExpensive(unittest.TestCase):
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"sizes3_quadratic_cplex.out")
+        log_output_file = this_test_file_directory+"sizes3_quadratic_cplex.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-            this_test_file_directory+"sizes3_quadratic_cplex.out",
+            log_output_file,
             baseline_dir+"sizes3_quadratic_cplex.baseline-a",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-            this_test_file_directory+"sizes3_quadratic_cplex.out",
+            log_output_file,
             baseline_dir+"sizes3_quadratic_cplex.baseline-b",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
-        if (flag_a) and (flag_b):
+        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+            log_output_file,
+            baseline_dir+"sizes3_quadratic_cplex.baseline-c",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
             print(diffs_b)
+            print(diffs_c)
             self.fail("Differences identified relative to all baseline output file alternatives")
+        os.remove(log_output_file)
 
     def test_quadratic_sizes3_cplex_direct(self):
         if (not solver['cplex','python']) or (not has_yaml):
@@ -1405,26 +1411,32 @@ class TestPHExpensive(unittest.TestCase):
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"sizes3_quadratic_cplex_direct.out")
+        log_output_file = this_test_file_directory+"sizes3_quadratic_cplex_direct.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-            this_test_file_directory+"sizes3_quadratic_cplex_direct.out",
+            log_output_file,
             baseline_dir+"sizes3_quadratic_cplex_direct.baseline-a",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-            this_test_file_directory+"sizes3_quadratic_cplex_direct.out",
+            log_output_file,
             baseline_dir+"sizes3_quadratic_cplex_direct.baseline-b",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
-        if (flag_a) and (flag_b):
+        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+            log_output_file,
+            baseline_dir+"sizes3_quadratic_cplex_direct.baseline-c",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
             print(diffs_b)
+            print(diffs_c)
             self.fail("Differences identified relative to all baseline output file alternatives")
+        os.remove(log_output_file)
 
     def test_quadratic_sizes3_gurobi(self):
         if (not solver['gurobi','lp']) or (not has_yaml):
@@ -1490,24 +1502,24 @@ class TestPHExpensive(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=cplex --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out")
+        log_output_file = this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",
+            log_output_file,
             baseline_dir+"sizes10_quadratic_twobundles_cplex.baseline-a",
             filter=filter_time_and_data_dirs)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-            this_test_file_directory+"sizes10_quadratic_twobundles_cplex.out",
+            log_output_file,
             baseline_dir+"sizes10_quadratic_twobundles_cplex.baseline-b",
             filter=filter_time_and_data_dirs)
         if (flag_a) and (flag_b):
             print(diffs_a)
             print(diffs_b)
             self.fail("Differences identified relative to all baseline output file alternatives")
+        os.remove(log_output_file)
 
     def test_sizes10_quadratic_twobundles_gurobi(self):
         if not solver['gurobi','lp']:
