@@ -143,6 +143,7 @@ class BARONSHELL(SystemCallSolver):
             if process.returncode:
                 rc = 1
             else:
+                stdout = stdout.decode()
                 for line in stdout.splitlines():
                     if ("License file" in line) and ("not valid" in line):
                         rc = 1
