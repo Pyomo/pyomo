@@ -185,6 +185,10 @@ def tearDownModule():
     _kill(_dispatch_srvr_process)
     _dispatch_srvr_port = None
     _dispatch_srvr_process = None
+    if os.path.exists("gurobi.log"):
+        os.remove("gurobi.log")
+    if os.path.exists("cplex.log"):
+        os.remove("cplex.log")
 
 #
 # Define a testing class, using the unittest.TestCase class.
@@ -440,7 +444,7 @@ class TestPH(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
-        os.remove(log_output_file)
+            os.remove(log_output_file)
 
     def test_farmer_quadratic_verbose_cplex(self):
         if not solver['cplex','lp']:
@@ -1065,9 +1069,9 @@ class TestPH(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
         self.assertTrue(os.path.exists(ef_output_file))
         os.remove(ef_output_file)
-        os.remove(log_output_file)
 
     def test_sizes3_ef_with_solve_gurobi(self):
         if not solver['gurobi','lp']:
@@ -1104,9 +1108,9 @@ class TestPH(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
         self.assertTrue(os.path.exists(ef_output_file))
         os.remove(ef_output_file)
-        os.remove(log_output_file)
 
     def test_forestry_ef(self):
         forestry_examples_dir = pysp_examples_dir + "forestry"
