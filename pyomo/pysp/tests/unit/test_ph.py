@@ -1332,27 +1332,44 @@ class TestPHExpensive(unittest.TestCase):
         args = argstring.split()
         pyomo.pysp.computeconf.main(args=args[1:])
         pyutilib.misc.reset_redirect()
-        [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-            log_output_file,
-            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-a",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-            log_output_file,
-            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-b",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
-            log_output_file,
-            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-c",
-            filter=filter_time_and_data_dirs,
-            tolerance=_diff_tolerance)
-        if (flag_a) and (flag_b) and (flag_c):
-            print(diffs_a)
-            print(diffs_b)
-            print(diffs_c)
-            self.fail("Differences identified relative to all baseline output file alternatives")
-        os.remove(log_output_file)
+        if os.sys.platform == "darwin":
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"computeconf_networkflow1ef10_cplex_darwin.baseline-a",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"computeconf_networkflow1ef10_cplex_darwin.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            if (flag_a) and (flag_b):
+                print(diffs_a)
+                print(diffs_b)
+                self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
+        else:
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-a",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-c",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            if (flag_a) and (flag_b) and (flag_c):
+                print(diffs_a)
+                print(diffs_b)
+                print(diffs_c)
+                self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_quadratic_sizes3_cplex(self):
         if (not solver['cplex','lp']) or (not has_yaml):
