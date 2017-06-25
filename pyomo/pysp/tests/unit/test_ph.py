@@ -1333,17 +1333,17 @@ class TestPHExpensive(unittest.TestCase):
         pyomo.pysp.computeconf.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
+            log_output_file,
             baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-a",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
+            log_output_file,
             baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-b",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
         [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
+            log_output_file,
             baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-c",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
@@ -2013,6 +2013,7 @@ class TestPHParallel(unittest.TestCase):
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
         self._setup_phsolverserver(3)
+        log_output_file = this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out"
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
@@ -2020,28 +2021,29 @@ class TestPHParallel(unittest.TestCase):
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"+ \
-                    " > "+this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out 2>&1"
+                    " > "+log_output_file+" 2>&1"
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_cplex_with_phpyro_darwin.baseline",
                 filter=filter_pyro)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_cplex_with_phpyro.baseline-a",
                 filter=filter_pyro)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_cplex_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_cplex_with_phpyro.baseline-b",
                 filter=filter_pyro)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_farmer_with_integers_quadratic_cplex_with_pyro_with_postef_solve(self):
         if not solver['cplex','lp']:
@@ -2070,6 +2072,7 @@ class TestPHParallel(unittest.TestCase):
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
         self._setup_phsolverserver(3)
+        log_output_file = this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out"
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=cplex --scenario-solver-options=\"threads=1\" --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
@@ -2078,28 +2081,29 @@ class TestPHParallel(unittest.TestCase):
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"+ \
                     " --linearize-nonbinary-penalty-terms=4" + \
-                    " > "+this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out 2>&1"
+                    " > "+log_output_file+" 2>&1"
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_linearized_cplex_with_phpyro_darwin.baseline",
                 filter=filter_pyro)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_linearized_cplex_with_phpyro.baseline-a",
                 filter=filter_pyro)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_linearized_cplex_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_linearized_cplex_with_phpyro.baseline-b",
                 filter=filter_pyro)
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_quadratic_sizes3_gurobi_with_phpyro(self):
         if (not solver['gurobi','lp']) or (not has_yaml):
@@ -2110,6 +2114,7 @@ class TestPHParallel(unittest.TestCase):
         model_dir = sizes_example_dir + os.sep + "models"
         instance_dir = sizes_example_dir + os.sep + "SIZES3"
         self._setup_phsolverserver(3)
+        log_output_file = this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out"
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=40"+ \
                     " --rho-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"rhosetter.py"+ \
@@ -2117,27 +2122,28 @@ class TestPHParallel(unittest.TestCase):
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"+ \
-                    " > "+this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out 2>&1"
+                    " > "+log_output_file+" 2>&1"
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_gurobi_with_phpyro_darwin.baseline-a",
                 filter=filter_pyro,
                 tolerance=_diff_tolerance)
             if (flag_a):
                 print(diffs_a)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_gurobi_with_phpyro.baseline-a",
                 filter=filter_pyro,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_gurobi_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_gurobi_with_phpyro.baseline-b",
                 filter=filter_pyro,
                 tolerance=_diff_tolerance)
@@ -2145,6 +2151,7 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_farmer_ef_with_solve_cplex_with_pyro(self):
         if not solver['cplex','lp']:
@@ -2317,6 +2324,7 @@ class TestPHParallel(unittest.TestCase):
         model_dir = networkflow_example_dir + os.sep + "models"
         instance_dir = networkflow_example_dir + os.sep + "1ef10"
         self._setup_phsolverserver(10)
+        log_output_file = this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out"
         argstring = "runph --pyro-port="+str(_pyomo_ns_port)+" --pyro-host="+str(_pyomo_ns_host)+" --traceback -r 1.0 --solver=gurobi --solver-manager=phpyro --shutdown-pyro-workers --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"+ \
                     " --enable-termdiff-convergence --termdiff-threshold=0.01" + \
@@ -2327,26 +2335,26 @@ class TestPHParallel(unittest.TestCase):
                     " --linearize-nonbinary-penalty-terms=8"+ \
                     " --bounds-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"xboundsetter.py" + \
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"+ \
-                    " > "+this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out 2>&1"
+                    " > "+log_output_file+" 2>&1"
         print("Testing command: " + argstring)
 
         _run_cmd(argstring, shell=True)
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_linearized_gurobi_with_phpyro_darwin.baseline",
                 filter=filter_pyro)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-a",
                 filter=filter_pyro)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-b",
                 filter=filter_pyro)
             [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi_with_phpyro.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_linearized_gurobi_with_phpyro.baseline-c",
                 filter=filter_pyro)
             if (flag_a) and (flag_b) and (flag_c):
@@ -2354,6 +2362,7 @@ class TestPHParallel(unittest.TestCase):
                 print(diffs_b)
                 print(diffs_c)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_simple_linearized_networkflow1ef3_cplex_with_phpyro(self):
         if not solver['cplex','lp']:
