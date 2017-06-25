@@ -118,23 +118,42 @@ class SCIPAMPL(SystemCallSolver):
         # to the command line. I'm not sure what solvers this method of passing options
         # through the envstr variable works for, but it does not seem to work for cplex
         # or gurobi
-        opt=[]
+        env_opt=[]
+        of_opt = []
         for key in self.options:
             if key == 'solver':
                 continue
             if isinstance(self.options[key], basestring) and ' ' in self.options[key]:
-                opt.append(key+"=\""+str(self.options[key])+"\"")
-                cmd.append(str(key)+"="+str(self.options[key]))
-            elif key == 'subsolver':
-                opt.append("solver="+str(self.options[key]))
-                cmd.append(str(key)+"="+str(self.options[key]))
+                env_opt.append(key+"=\""+str(self.options[key])+"\"")
             else:
-                opt.append(key+"="+str(self.options[key]))
-                cmd.append(str(key)+"="+str(self.options[key]))
+                env_opt.append(key+"="+str(self.options[key]))
+            of_opt.append(str(key)+" = "+str(self.options[key]))
 
         envstr = "%s_options" % self.options.solver
         # Merge with any options coming in through the environment
-        env[envstr] = " ".join(opt)
+        env[envstr] = " ".join(env_opt)
+
+        if len(of_opt) > 0:
+            # Now check if an 'scip.set' file exists in the
+            # current working directory. If so, we need to
+            # make it clear that this file will be ignored.
+            default_of_name = os.path.join(os.getcwd(), 'scip.set')
+            if os.path.exists(default_of_name):
+                logger.warning("A file named '%s' exists in "
+                               "the current working directory, but "
+                               "SCIP options are being set using a "
+                               "separate options file. The options "
+                               "file '%s' will be ignored."
+                               % (default_of_name, default_of_name))
+
+            # Now write the new options file
+            options_filename = pyutilib.services.TempfileManager.\
+                               create_tempfile(suffix="_scip.set")
+            with open(options_filename, "w") as f:
+                for line in of_opt:
+                    f.write(line+"\n")
+
+            cmd.append(options_filename)
 
         return pyutilib.misc.Bunch(cmd=cmd, log_file=self._log_file, env=env)
 
