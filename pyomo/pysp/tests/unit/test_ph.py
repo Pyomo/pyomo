@@ -1327,9 +1327,8 @@ class TestPHExpensive(unittest.TestCase):
                     " --number-samples-for-confidence-interval=4"+ \
                     " --random-seed=125"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out")
+        log_output_file = this_test_file_directory+"computeconf_networkflow1ef10_cplex.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.computeconf.main(args=args[1:])
         pyutilib.misc.reset_redirect()
@@ -1343,10 +1342,17 @@ class TestPHExpensive(unittest.TestCase):
             baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-b",
             filter=filter_time_and_data_dirs,
             tolerance=_diff_tolerance)
-        if (flag_a) and (flag_b):
+        [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+            this_test_file_directory+"computeconf_networkflow1ef10_cplex.out",
+            baseline_dir+"computeconf_networkflow1ef10_cplex.baseline-c",
+            filter=filter_time_and_data_dirs,
+            tolerance=_diff_tolerance)
+        if (flag_a) and (flag_b) and (flag_c):
             print(diffs_a)
             print(diffs_b)
+            print(diffs_c)
             self.fail("Differences identified relative to all baseline output file alternatives")
+        os.remove(log_output_file)
 
     def test_quadratic_sizes3_cplex(self):
         if (not solver['cplex','lp']) or (not has_yaml):
@@ -1436,20 +1442,19 @@ class TestPHExpensive(unittest.TestCase):
                     " --ww-extension-cfgfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.cfg"+ \
                     " --ww-extension-suffixfile="+sizes_example_dir+os.sep+"config"+os.sep+"wwph.suffixes"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"sizes3_quadratic_gurobi.out")
+        log_output_file = this_test_file_directory+"sizes3_quadratic_gurobi.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_gurobi.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_gurobi_darwin.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_gurobi.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_gurobi_darwin.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
@@ -1457,15 +1462,16 @@ class TestPHExpensive(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
         else:
 
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_gurobi.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_gurobi.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"sizes3_quadratic_gurobi.out",
+                log_output_file,
                 baseline_dir+"sizes3_quadratic_gurobi.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
@@ -1473,6 +1479,7 @@ class TestPHExpensive(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_sizes10_quadratic_twobundles_cplex(self):
         if not solver['cplex','lp']:
@@ -1511,24 +1518,23 @@ class TestPHExpensive(unittest.TestCase):
         argstring = "runph --traceback -r 1.0 --solver=gurobi --solver-manager=serial --model-directory="+model_dir+" --instance-directory="+instance_dir+ \
                     " --max-iterations=10"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out")
+        log_output_file = this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",
+                log_output_file,
                 baseline_dir+"sizes10_quadratic_twobundles_gurobi_darwin.baseline",
                 filter=filter_time_and_data_dirs,
-                tolerance=_diff_tolerance)
+                tolerance=_diff_tolerance_relaxed)
         else:
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"sizes10_quadratic_twobundles_gurobi.out",
+                log_output_file,
                 baseline_dir+"sizes10_quadratic_twobundles_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
-                tolerance=_diff_tolerance)
+                tolerance=_diff_tolerance_relaxed)
 
     def test_quadratic_networkflow1ef10_cplex(self):
         if not solver['cplex','lp']:
@@ -1542,26 +1548,25 @@ class TestPHExpensive(unittest.TestCase):
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"wwph-immediatefixing.cfg"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"networkflow1ef10_quadratic_cplex.out")
+        log_output_file = this_test_file_directory+"networkflow1ef10_quadratic_cplex.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_quadratic_cplex_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_quadratic_cplex.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"networkflow1ef10_quadratic_cplex.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_quadratic_cplex.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
@@ -1569,6 +1574,7 @@ class TestPHExpensive(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_quadratic_networkflow1ef10_gurobi(self):
         if not solver['gurobi','lp']:
@@ -1582,24 +1588,33 @@ class TestPHExpensive(unittest.TestCase):
                     " --enable-ww-extensions"+ \
                     " --ww-extension-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"wwph-immediatefixing.cfg"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out")
+        log_output_file = this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_quadratic_gurobi_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
-            self.assertFileEqualsBaseline(
-                this_test_file_directory+"networkflow1ef10_quadratic_gurobi.out",
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                log_output_file,
                 baseline_dir+"networkflow1ef10_quadratic_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"networkflow1ef10_quadratic_gurobi.baseline",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            if (flag_a) and (flag_b):
+                print(diffs_a)
+                print(diffs_b)
+                self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_linearized_networkflow1ef10_cplex(self):
         if not solver['cplex','lp']:
@@ -1614,24 +1629,33 @@ class TestPHExpensive(unittest.TestCase):
                     " --bounds-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"xboundsetter.py"+ \
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"networkflow1ef10_linearized_cplex.out")
+        log_output_file = this_test_file_directory+"networkflow1ef10_linearized_cplex.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"networkflow1ef10_linearized_cplex.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_linearized_cplex_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
-            self.assertFileEqualsBaseline(
-                this_test_file_directory+"networkflow1ef10_linearized_cplex.out",
-                baseline_dir+"networkflow1ef10_linearized_cplex.baseline",
+            [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"networkflow1ef10_linearized_cplex.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
+            [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"networkflow1ef10_linearized_cplex.baseline-b",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            if (flag_a) and (flag_b):
+                print(diffs_a)
+                print(diffs_b)
+                self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_linearized_networkflow1ef10_gurobi(self):
         if not solver['gurobi','lp']:
@@ -1646,35 +1670,33 @@ class TestPHExpensive(unittest.TestCase):
                     " --bounds-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"xboundsetter.py"+ \
                     " --aggregate-cfgfile="+networkflow_example_dir+os.sep+"config"+os.sep+"aggregategetter.py"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"networkflow1ef10_linearized_gurobi.out")
+        log_output_file = this_test_file_directory+"networkflow1ef10_linearized_gurobi.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_linearized_gurobi_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
-
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_linearized_gurobi.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"networkflow1ef10_linearized_gurobi.out",
+                log_output_file,
                 baseline_dir+"networkflow1ef10_linearized_gurobi.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
-
             if (flag_a) and (flag_b):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_linearized_forestry_cplex(self):
         if (not solver['cplex','lp']) or (not has_yaml):
@@ -1738,21 +1760,20 @@ class TestPHExpensive(unittest.TestCase):
                     " --ww-extension-suffixfile="+forestry_example_dir+os.sep+"config"+os.sep+"wwph-nb.suffixes" + \
                     " --solve-ef"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"forestry_linearized_gurobi.out")
+        log_output_file = this_test_file_directory+"forestry_linearized_gurobi.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"forestry_linearized_gurobi.out",
+                log_output_file,
                 baseline_dir+"forestry_linearized_gurobi_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"forestry_linearized_gurobi.out",
+                log_output_file,
                 baseline_dir+"forestry_linearized_gurobi.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
