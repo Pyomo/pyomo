@@ -1493,7 +1493,6 @@ class TestPHExpensive(unittest.TestCase):
                 self.fail("Differences identified relative to all baseline output file alternatives")
             os.remove(log_output_file)
         else:
-
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 log_output_file,
                 baseline_dir+"sizes3_quadratic_gurobi.baseline-a",
@@ -1504,9 +1503,15 @@ class TestPHExpensive(unittest.TestCase):
                 baseline_dir+"sizes3_quadratic_gurobi.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
-            if (flag_a) and (flag_b):
+            [flag_c,lineno_c,diffs_c] = pyutilib.misc.compare_file(
+                log_output_file,
+                baseline_dir+"sizes3_quadratic_gurobi.baseline-c",
+                filter=filter_time_and_data_dirs,
+                tolerance=_diff_tolerance)
+            if (flag_a) and (flag_b) and (flag_c):
                 print(diffs_a)
                 print(diffs_b)
+                print(diffs_c)
                 self.fail("Differences identified relative to all baseline output file alternatives")
             os.remove(log_output_file)
 
@@ -1631,12 +1636,12 @@ class TestPHExpensive(unittest.TestCase):
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
                 log_output_file,
-                baseline_dir+"networkflow1ef10_quadratic_gurobi.baseline",
+                baseline_dir+"networkflow1ef10_quadratic_gurobi.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
                 log_output_file,
-                baseline_dir+"networkflow1ef10_quadratic_gurobi.baseline",
+                baseline_dir+"networkflow1ef10_quadratic_gurobi.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             if (flag_a) and (flag_b):
@@ -1744,26 +1749,25 @@ class TestPHExpensive(unittest.TestCase):
                     " --ww-extension-suffixfile="+forestry_example_dir+os.sep+"config"+os.sep+"wwph-nb.suffixes" + \
                     " --solve-ef"
         print("Testing command: " + argstring)
-
-        pyutilib.misc.setup_redirect(
-            this_test_file_directory+"forestry_linearized_cplex.out")
+        log_output_file = this_test_file_directory+"forestry_linearized_cplex.out"
+        pyutilib.misc.setup_redirect(log_output_file)
         args = argstring.split()
         pyomo.pysp.phinit.main(args=args[1:])
         pyutilib.misc.reset_redirect()
         if os.sys.platform == "darwin":
             self.assertFileEqualsBaseline(
-                this_test_file_directory+"forestry_linearized_cplex.out",
+                log_output_file,
                 baseline_dir+"forestry_linearized_cplex_darwin.baseline",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
         else:
             [flag_a,lineno_a,diffs_a] = pyutilib.misc.compare_file(
-                this_test_file_directory+"forestry_linearized_cplex.out",
-                baseline_dir+"forestry_linearized_cplex.baseline-a",
+                log_output_file,
+                 baseline_dir+"forestry_linearized_cplex.baseline-a",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
             [flag_b,lineno_b,diffs_b] = pyutilib.misc.compare_file(
-                this_test_file_directory+"forestry_linearized_cplex.out",
+                log_output_file,
                 baseline_dir+"forestry_linearized_cplex.baseline-b",
                 filter=filter_time_and_data_dirs,
                 tolerance=_diff_tolerance)
@@ -1771,6 +1775,7 @@ class TestPHExpensive(unittest.TestCase):
                 print(diffs_a)
                 print(diffs_b)
                 self.fail("Differences identified relative to all baseline output file alternatives")
+            os.remove(log_output_file)
 
     def test_linearized_forestry_gurobi(self):
         if (not solver['gurobi','lp']) or (not has_yaml):
