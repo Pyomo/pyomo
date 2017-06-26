@@ -128,6 +128,39 @@ ExpectedFailures['pico', 'nl', 'LP_trivial_constraints'] = \
     (lambda v: v <= _trunk_version,
     "Pico just gets the wrong answer.")
 
+ExpectedFailures['pico', 'nl', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'lp', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'LP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'lp', 'LP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+
+ExpectedFailures['pico', 'lp', 'MILP_infeasible1'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'MILP_infeasible1'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'LP_infeasible1'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'LP_infeasible2'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
 #
 # XPRESS
 #

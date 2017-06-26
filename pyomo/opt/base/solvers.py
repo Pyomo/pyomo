@@ -631,10 +631,11 @@ class OptSolver(Plugin):
             result._smap = None
             if _model:
                 if isinstance(_model, IBlockStorage):
-                    assert self._default_variable_value is None
                     if len(result.solution) == 1:
                         result.solution(0).symbol_map = \
                             getattr(_model, "._symbol_maps")[result._smap_id]
+                        result.solution(0).default_variable_value = \
+                            self._default_variable_value
                         if self._load_solutions:
                             _model.load_solution(result.solution(0))
                             result.solution.clear()
