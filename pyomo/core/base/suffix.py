@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -122,7 +122,7 @@ def suffix_generator(a_block,datatype=False):
 # Note: The order of inheritance here is important so that
 #       __setstate__ works correctly on the ActiveComponent base class.
 class Suffix(ComponentMap, ActiveComponent):
-    """A model suffix, representing extranious model data"""
+    """A model suffix, representing extraneous model data"""
 
     """
     Constructor Arguments:

@@ -93,6 +93,9 @@ class ScenarioTreeServerPyro(TaskWorker):
         self._modules_imported = kwds.pop('modules_imported', {})
 
         TaskWorker.__init__(self, **kwds)
+        assert hasattr(self, "_bulk_task_collection")
+        self._bulk_task_collection = True
+        self._contiguous_task_processing = False
 
         self.type = self.WORKERNAME
         self.block = True

@@ -132,9 +132,6 @@ class IPOPT(SystemCallSolver):
                 if isinstance(self.options[key], basestring) and ' ' in self.options[key]:
                     env_opt.append(key+"=\""+str(self.options[key])+"\"")
                     cmd.append(str(key)+"="+str(self.options[key]))
-                elif key == 'subsolver':
-                    env_opt.append("solver="+str(self.options[key]))
-                    cmd.append(str(key)+"="+str(self.options[key]))
                 else:
                     env_opt.append(key+"="+str(self.options[key]))
                     cmd.append(str(key)+"="+str(self.options[key]))
@@ -157,12 +154,13 @@ class IPOPT(SystemCallSolver):
             # make it clear that this file will be ignored.
             default_of_name = os.path.join(os.getcwd(), 'ipopt.opt')
             if os.path.exists(default_of_name):
-                logger.warning("A file named 'ipopt.opt' exists in "
+                logger.warning("A file named '%s' exists in "
                                "the current working directory, but "
                                "Ipopt options file options (i.e., "
                                "options that start with 'OF_') were "
                                "provided. The options file '%s' will "
-                               "be ignored." % (default_of_name))
+                               "be ignored." % (default_of_name,
+                                                default_of_name))
 
             # Now write the new options file
             options_filename = pyutilib.services.TempfileManager.\
