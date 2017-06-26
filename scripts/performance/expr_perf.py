@@ -65,6 +65,8 @@ def measure(f, n=25):
     data = []
     for i in range(n):
         data.append(f())
+        sys.stdout.write('.')
+    sys.stdout.write('\n')
     #
     ans = {}
     for key in data[0]:
