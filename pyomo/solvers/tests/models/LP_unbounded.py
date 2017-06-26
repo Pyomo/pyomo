@@ -43,7 +43,12 @@ class LP_unbounded(_BaseTestModel):
         model.y.value = None
 
     def post_solve_test_validation(self, tester, results):
-        assert results['Solver'][0]['termination condition'] == TerminationCondition.unbounded
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] == \
+                TerminationCondition.unbounded
+        else:
+            tester.assertEqual(results['Solver'][0]['termination condition'],
+                               TerminationCondition.unbounded)
 
 @register_model
 class LP_unbounded_kernel(LP_unbounded):

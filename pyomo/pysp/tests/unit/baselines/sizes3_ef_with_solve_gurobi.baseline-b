@@ -1,7 +1,7 @@
 Importing model and scenario tree files
-Importing module=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/models/ReferenceModel.py
+Importing module=/home/gahacke/Project/Pyomo/jenkins/src/pyomo/examples/pysp/sizes/models/ReferenceModel.py
 Module successfully loaded
-Time to import model and scenario tree structure files=0.01 seconds
+Time to import model and scenario tree structure files=0.07 seconds
 Scenario Tree Detail
 ----------------------------------------------------
 Tree Nodes:
@@ -106,15 +106,15 @@ Initializing ScenarioTreeManagerClientSerial with options:
  -          solution_saver_extension: ()
  -         solution_loader_extension: ()
  -                   solution_writer: ()
- *                       output_file: /Users/ghackebeil/Projects/Pyomo/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
+ *                       output_file: /home/gahacke/Project/Pyomo/jenkins/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
  *                             solve: True
  -             output_scenario_costs: None
  - output_instance_construction_time: False
  -        compile_scenario_instances: False
  -                      output_times: False
- *                    model_location: /Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/models
+ *                    model_location: /home/gahacke/Project/Pyomo/jenkins/src/pyomo/examples/pysp/sizes/models
  -                   model_directory: None
- *            scenario_tree_location: /Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/SIZES3
+ *            scenario_tree_location: /home/gahacke/Project/Pyomo/jenkins/src/pyomo/examples/pysp/sizes/SIZES3
  -                instance_directory: None
  -       objective_sense_stage_based: None
  -        postinit_callback_location: ()
@@ -153,29 +153,29 @@ Initializing ScenarioTreeManagerClientSerial with options:
 Constructing scenario tree instances
 Scenario-based instance initialization enabled
 Creating instance for scenario=Scenario1
-Data for scenario=Scenario1 loads from file=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
+Data for scenario=Scenario1 loads from file=/home/gahacke/Project/Pyomo/jenkins/src/pyomo/examples/pysp/sizes/SIZES3/Scenario1.dat
 Creating instance for scenario=Scenario2
-Data for scenario=Scenario2 loads from file=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
+Data for scenario=Scenario2 loads from file=/home/gahacke/Project/Pyomo/jenkins/src/pyomo/examples/pysp/sizes/SIZES3/Scenario2.dat
 Creating instance for scenario=Scenario3
-Data for scenario=Scenario3 loads from file=/Users/ghackebeil/Projects/Pyomo/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
-Time to construct scenario instances=0.04 seconds
+Data for scenario=Scenario3 loads from file=/home/gahacke/Project/Pyomo/jenkins/src/pyomo/examples/pysp/sizes/SIZES3/Scenario3.dat
+Time to construct scenario instances=0.30 seconds
 Linking instances into scenario tree
-Time link scenario tree with instances=0.00 seconds
+Time link scenario tree with instances=0.03 seconds
 ScenarioTreeManagerClientSerial is successfully initialized
-Overall initialization time=0.05 seconds
+Overall initialization time=0.33 seconds
 
 Initializing extensive form algorithm for stochastic programming problems.
 Creating extensive form instance
 Creating variables for master binding instance
-Time to construct extensive form instance=0.00 seconds
+Time to construct extensive form instance=0.03 seconds
 Starting to write extensive form
-Extensive form written to file=/Users/ghackebeil/Projects/Pyomo/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
-Time to write output file=0.03 seconds
+Extensive form written to file=/home/gahacke/Project/Pyomo/jenkins/src/pyomo/pyomo/pysp/tests/unit/test_sizes3_ef.lp
+Time to write output file=0.18 seconds
 Queuing extensive form solve
 Waiting for extensive form solve
 Done with extensive form solve - loading results
 Storing solution in scenario tree
-Time to solve and load results for the extensive form=0.26 seconds
+Time to solve and load results for the extensive form=1.43 seconds
 EF solve completed and solution status is optimal
 EF solve termination condition is optimal
 EF objective: 224275.33337
@@ -213,8 +213,8 @@ Tree Nodes:
 		ProduceSizeFirstStage[5]=1.0
 		ProduceSizeFirstStage[6]=1.0
 		ProduceSizeFirstStage[7]=0.0
-		ProduceSizeFirstStage[8]=1.0
-		ProduceSizeFirstStage[9]=0.0
+		ProduceSizeFirstStage[8]=0.999999999998
+		ProduceSizeFirstStage[9]=1.77593656739e-12
 		ProduceSizeFirstStage[10]=1.0
 
 	Name=Scenario1Node
@@ -229,11 +229,11 @@ Tree Nodes:
 		NumUnitsCutSecondStage[5,5]=24500.0
 		NumUnitsCutSecondStage[6,4]=7000.0
 		NumUnitsCutSecondStage[6,6]=17500.0
-		NumUnitsCutSecondStage[8,7]=7000.0
-		NumUnitsCutSecondStage[8,8]=8750.0
-		NumUnitsCutSecondStage[9,7]=500.0
+		NumUnitsCutSecondStage[8,7]=7000.00000012
+		NumUnitsCutSecondStage[8,8]=8749.99999998
+		NumUnitsCutSecondStage[9,7]=499.999999914
 		NumUnitsCutSecondStage[9,9]=8750.0
-		NumUnitsCutSecondStage[10,7]=3000.0
+		NumUnitsCutSecondStage[10,7]=2999.99999998
 		NumUnitsCutSecondStage[10,10]=3500.0
 	Derived Variables: 
 		ProduceSizeSecondStage[1]=0.0
@@ -253,19 +253,19 @@ Tree Nodes:
 	Variables: 
 		NumProducedSecondStage[5]=51750.0
 		NumProducedSecondStage[9]=23250.0
-		NumUnitsCutSecondStage[3,2]=3250.0
+		NumUnitsCutSecondStage[3,1]=2500.0
+		NumUnitsCutSecondStage[3,2]=750.0
 		NumUnitsCutSecondStage[3,3]=12500.0
-		NumUnitsCutSecondStage[5,1]=2500.0
-		NumUnitsCutSecondStage[5,2]=4250.0
+		NumUnitsCutSecondStage[5,2]=6750.0
 		NumUnitsCutSecondStage[5,4]=10000.0
 		NumUnitsCutSecondStage[5,5]=35000.0
 		NumUnitsCutSecondStage[6,6]=24500.0
 		NumUnitsCutSecondStage[8,6]=500.0
-		NumUnitsCutSecondStage[8,7]=2750.0
+		NumUnitsCutSecondStage[8,7]=2750.0000001
 		NumUnitsCutSecondStage[8,8]=12500.0
-		NumUnitsCutSecondStage[9,7]=10750.0
+		NumUnitsCutSecondStage[9,7]=10749.9999999
 		NumUnitsCutSecondStage[9,9]=12500.0
-		NumUnitsCutSecondStage[10,7]=1500.0
+		NumUnitsCutSecondStage[10,7]=1500.00000002
 		NumUnitsCutSecondStage[10,10]=5000.0
 	Derived Variables: 
 		ProduceSizeSecondStage[1]=0.0
@@ -296,8 +296,8 @@ Tree Nodes:
 		NumUnitsCutSecondStage[6,6]=24500.0
 		NumUnitsCutSecondStage[7,6]=8000.0
 		NumUnitsCutSecondStage[7,7]=19500.0
-		NumUnitsCutSecondStage[8,8]=15750.0
-		NumUnitsCutSecondStage[9,8]=500.0
+		NumUnitsCutSecondStage[8,8]=15750.0000001
+		NumUnitsCutSecondStage[9,8]=499.999999914
 		NumUnitsCutSecondStage[9,9]=16250.0
 		NumUnitsCutSecondStage[10,10]=6500.0
 	Derived Variables: 
@@ -309,7 +309,7 @@ Tree Nodes:
 		ProduceSizeSecondStage[6]=0.0
 		ProduceSizeSecondStage[7]=1.0
 		ProduceSizeSecondStage[8]=0.0
-		ProduceSizeSecondStage[9]=0.999999999994
+		ProduceSizeSecondStage[9]=1.0
 		ProduceSizeSecondStage[10]=0.0
 
 
@@ -398,5 +398,5 @@ Scenarios:
 ----------------------------------------------------
 Closing ScenarioTreeManagerClientSerial
 
-Total EF execution time=0.35 seconds
+Total EF execution time=2.08 seconds
 
