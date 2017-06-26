@@ -109,6 +109,10 @@ class ScenarioTreeServerPyro(TaskWorker, PySPConfiguredObject):
         self._modules_imported = kwds.pop('modules_imported', {})
 
         TaskWorker.__init__(self, **kwds)
+        assert hasattr(self, "_bulk_task_collection")
+        self._bulk_task_collection = False
+        self._contiguous_task_processing = False
+
         # This classes options get updated during the "setup" phase
         options = self.register_options()
         PySPConfiguredObject.__init__(self, options)
