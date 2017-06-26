@@ -64,6 +64,7 @@ class GLPK(OptSolver):
     pyomo.util.plugin.alias('glpk', doc='The GLPK LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
+        configure_glpk()
         try:
             mode = kwds['solver_io']
             if mode is None:
