@@ -230,22 +230,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Update values in original model
         if self.load_solutions:
-            for v in self.best_solution_found.component_data_objects(
-                    ctype=Var, descend_into=True):
-                uid = ComponentUID(v)
-                orig_model_var = uid.find_component_on(model)
-                if orig_model_var is not None:
-                    try:
-                        orig_model_var.set_value(v.value)
-                    except ValueError as err:
-                        if 'is not in domain Binary' in err.message:
-                            # check to see whether this is just a tolerance
-                            # issue
-                            if (value(abs(v - 1)) <= self.integer_tolerance or
-                                    value(abs(v)) <= self.integer_tolerance):
-                                orig_model_var.set_value(round(v.value))
-                            else:
-                                raise
+            self._copy_values(self.best_solution_found, model)
 
     def _copy_values(self, source_model, destination_model):
         for v in source_model.component_data_objects(
@@ -254,16 +239,19 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             dest_model_var = uid.find_component_on(destination_model)
             if dest_model_var is not None:
                 try:
-                    dest_model_var.set_value(v.value)
+                    dest_model_var.set_value(value(v))
                 except ValueError as err:
                     if 'is not in domain Binary' in err.message:
                         # check to see whether this is just a tolerance
                         # issue
                         if (value(abs(v - 1)) <= self.integer_tolerance or
                                 value(abs(v)) <= self.integer_tolerance):
-                            dest_model_var.set_value(round(v.value))
+                            dest_model_var.set_value(round(value(v)))
                         else:
                             raise
+                    elif 'No value for uninitialized' in err.message:
+                        # Variable value was None
+                        dest_model_var.set_value(None)
 
     def _validate_model(self):
         m, GDPDT = self.working_model, self.working_model.GDPDT_utils
@@ -336,7 +324,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         #     GDPDT.gbd_cuts = ConstraintList(doc='Generalized Benders cuts')
 
         self._init_max_binaries()
-        m.tray_exists.display()
+        self._solve_NLP_subproblem()
 
         # # Set default initialization_strategy
         # if self.initialization_strategy is None:
@@ -409,9 +397,10 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             expr=sum(v for v in binary_vars), sense=maximize)
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
-        TransformationFactory('gdp.chull').apply_to(m)
+        TransformationFactory('gdp.bigm').apply_to(m)
         # TODO: chull too?
         results = self.mip_solver.solve(m, **self.mip_solver_kwargs)
+        # m.display()
         solve_terminate_cond = results.solver.termination_condition
         if solve_terminate_cond is tc.optimal:
             # Transfer variable values back to main working model
@@ -710,13 +699,31 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         self.master_postsolve(m, self)
 
     def _solve_NLP_subproblem(self):
-        m = self.working_model
+        m = self.working_model.clone()
         self.nlp_iter += 1
-        print('NLP {}: Solve subproblem for fixed binaries.'
+        print('NLP {}: Solve subproblem for fixed binaries and '
+              'logical realizations.'
               .format(self.nlp_iter))
-        # Set up NLP
-        for v in self.binary_vars:
+        # Fix binary variables
+        binary_vars = [
+            v for v in m.component_data_objects(
+                ctype=Var, descend_into=(Block, Disjunct))
+            if v.is_binary() and not v.fixed]
+        for v in binary_vars:
             v.fix()
+        # Activate or deactivate disjuncts according to the value of their
+        # indicator variable
+        for disj in m.component_data_objects(
+                ctype=Disjunct, descend_into=(Block, Disjunct)):
+            if value(abs(disj.indicator_var - 1)) <= self.integer_tolerance:
+                # Disjunct is active. Convert to Block.
+                m.reclassify_component_type(disj, Block)
+            elif value(abs(disj.indicator_var)) <= self.integer_tolerance:
+                disj.deactivate()
+            else:
+                raise ValueError(
+                    'Non-binary value of disjunct indicator variable '
+                    'for {}: {}'.format(disj.name, value(disj.indicator_var)))
         # restore original variable values
         for v in m.component_data_objects(ctype=Var, descend_into=True):
             if not v.fixed and not v.is_binary():
@@ -727,11 +734,10 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         # Solve the NLP
         results = self.nlp_solver.solve(m, load_solutions=False,
                                         **self.nlp_solver_kwargs)
-        for v in self.binary_vars:
-            v.unfix()
         subprob_terminate_cond = results.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
             m.solutions.load_from(results)
+            self._copy_values(m, self.working_model)
             if self.obj.sense == minimize:
                 self.UB = min(value(self.obj.expr), self.UB)
                 self.solution_improved = self.UB < self.UB_progress[-1]
@@ -745,6 +751,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                           self.UB))
             if self.solution_improved:
                 self.best_solution_found = m.clone()
+
             # Add the linear cut
             if self._decomposition_strategy == 'OA':
                 self._add_oa_cut()
@@ -768,6 +775,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             # solver status to ok.
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
+            self._copy_values(m, self.working_model)
             if self._decomposition_strategy == 'PSC':
                 print('Adding PSC feasibility cut.')
                 self._add_psc_cut(nlp_feasible=False)
