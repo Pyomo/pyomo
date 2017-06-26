@@ -40,6 +40,14 @@ class AddSlackVariables(NonIsomorphicTransformation):
     #  - shouldn't add slacks to deactivated constraints
 
     def _apply_to(self, instance, **kwds):
+        targets = kwds.pop('targets', None)
+
+        if kwds:
+            logger.warning("Unrecognized keyword arguments in add slack variable transformation:\n%s"
+                           % ( '\n'.join(iterkeys(kwds)), ))
+
+        
+
         # deactivate the objective
         for o in instance.component_data_objects(Objective):
             o.deactivate()

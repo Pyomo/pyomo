@@ -173,4 +173,19 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         self.assertEqual(len(cons.body._coef), 1)
         self.assertEqual(cons.body._const, 0)
 
-    
+    def test_Constraint_targets(self):
+        m = self.makeModel()
+        m.rule2.deactivate()
+        TransformationFactory('core.add_slack_variables').apply_to(m)
+
+        set_trace()
+        # TODO
+
+    def test_IndexedConstraint_targets(self):
+        pass
+
+    def test_ConstraintData_targets(self):
+        pass
+
+    def test_err_for_bogus_kwds(self):
+        pass
