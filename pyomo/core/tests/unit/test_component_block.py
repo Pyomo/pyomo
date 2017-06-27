@@ -226,6 +226,34 @@ class TestMisc(unittest.TestCase):
                             allow_consistent_values_for_fixed_vars=True,
                             comparison_tolerance_for_fixed_vars=0.05)
 
+        del soln.variable['v']
+
+        m.v.free()
+        m.v.value = None
+        m.load_solution(soln)
+        self.assertEqual(m.v.stale, True)
+        self.assertEqual(m.v.value, None)
+
+        soln.default_variable_value = 1.0
+        m.load_solution(soln)
+        self.assertEqual(m.v.stale, False)
+        self.assertEqual(m.v.value, 1.0)
+
+        m.v.fix(1.0)
+        with self.assertRaises(ValueError):
+            m.load_solution(soln,
+                            allow_consistent_values_for_fixed_vars=False)
+
+        m.v.fix(1.1)
+        m.load_solution(soln,
+                        allow_consistent_values_for_fixed_vars=True,
+                        comparison_tolerance_for_fixed_vars=0.5)
+        m.v.fix(1.1)
+        with self.assertRaises(ValueError):
+            m.load_solution(soln,
+                            allow_consistent_values_for_fixed_vars=True,
+                            comparison_tolerance_for_fixed_vars=0.05)
+
     # a temporary test to make sure solve and load
     # functionality work (will be moved elsewhere in the
     # future)
