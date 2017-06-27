@@ -104,17 +104,21 @@ def run_pyomo(solver, problem):
     def f():
         res = pyutilib.subprocess.run('pyomo solve --solver=%s --report-timing --results-format=json --save-results=solver.jsn %s' % (solver, problem), outfile='solver.out')
 
+        #print(res)
         seconds = {}
         return evaluate('solver.out', seconds)
 
     return f
 
 
+def solve_pmedian4(solver):
+    return run_pyomo(solver, "pmedian.py pmedian.test4.dat")
+
 def solve_pmedian6(solver):
-    return run_pyomo(solver, "../../examples/pyomo/p-median/pmedian.py ../../examples/pyomo/p-median/pmedian.test6.dat")
+    return run_pyomo(solver, "pmedian.py pmedian.test6.dat")
 
 def solve_pmedian7(solver):
-    return run_pyomo(solver, "../../examples/pyomo/p-median/pmedian.py ../../examples/pyomo/p-median/pmedian.test7.dat")
+    return run_pyomo(solver, "pmedian.py pmedian.test7.dat")
 
 #
 # Utility function used by runall()
@@ -134,13 +138,82 @@ def print_results(factors_, ans_, output):
 #
 def runall(factors, res, output=True):
 
-    factors_ = tuple(factors+['cbc','pmedian6'])
-    ans_ = res[factors_] = measure(solve_pmedian6('cbc'), n=N)
-    print_results(factors_, ans_, output)
+    if pyomo.opt.check_available_solvers('scip'):
+        factors_ = tuple(factors+['scip','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('scip'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing scip")
 
-    factors_ = tuple(factors+['ipopt','pmedian6'])
-    ans_ = res[factors_] = measure(solve_pmedian6('ipopt'), n=N)
-    print_results(factors_, ans_, output)
+    if pyomo.opt.check_available_solvers('xpress'):
+        factors_ = tuple(factors+['xpress','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('xpress'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing xpress")
+
+    if pyomo.opt.check_available_solvers('cplex'):
+        factors_ = tuple(factors+['cplex','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('cplex'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing cplex")
+
+    if pyomo.opt.check_available_solvers('_cplex_direct'):
+        factors_ = tuple(factors+['_cplex_direct','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('_cplex_direct'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing _cplex_direct")
+
+    if pyomo.opt.check_available_solvers('_cplex_persistent'):
+        factors_ = tuple(factors+['_cplex_persistent','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('_cplex_persistent'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing _cplex_persistent")
+
+    if pyomo.opt.check_available_solvers('glpk'):
+        factors_ = tuple(factors+['glpk','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('glpk'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing glpk")
+
+    if pyomo.opt.check_available_solvers('cbc'):
+        factors_ = tuple(factors+['cbc','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('cbc'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing cbc")
+
+    if pyomo.opt.check_available_solvers('ipopt'):
+        factors_ = tuple(factors+['ipopt','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('ipopt'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing ipopt")
+
+    if pyomo.opt.check_available_solvers('gurobi'):
+        factors_ = tuple(factors+['gurobi','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('gurobi'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing gurobi")
+
+    if pyomo.opt.check_available_solvers('_gurobi_direct'):
+        factors_ = tuple(factors+['_gurobi_direct','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('_gurobi_direct'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing _gurobi_direct")
+
+    if pyomo.opt.check_available_solvers('baron'):
+        factors_ = tuple(factors+['baron','pmedian4'])
+        ans_ = res[factors_] = measure(solve_pmedian4('baron'), n=N)
+        print_results(factors_, ans_, output)
+    else:
+        print("Missing baron")
 
     #factors_ = tuple(factors+['cbc','pmedian7'])
     #ans_ = res[factors_] = measure(solve_pmedian7('cbc'), n=N)
