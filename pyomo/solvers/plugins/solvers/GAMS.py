@@ -16,8 +16,7 @@ from pyomo.core.base import (
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
     value, minimize, Suffix)
 from pyomo.core.base.component import ComponentData
-from gams import GamsWorkspace, DebugLevel
-import os, sys
+import os, sys, subprocess, pipes, math, logging
 
 import pyomo.util.plugin
 from pyomo.opt.base import IOptSolver
@@ -25,6 +24,8 @@ import pyutilib.services
 
 from pyutilib.misc import Options
 
+
+logger = logging.getLogger('pyomo.solvers')
 
 pyutilib.services.register_executable(name="gams")
  
@@ -112,7 +113,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
 
         if len(opts):
             raise ValueError(
-                "GAMSSolver passed unrecognized solve options:\n\t" +
+                "GAMSSolver passed unrecognized solver options:\n\t" +
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(opts)))
 
         if solver is not None:
@@ -136,7 +137,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         keep_output = True
         if output_filename is None:
             output_filename = AlphaNumericTextLabeler()(model) + ".gms"
-            keep_output = False
+            keep_output = keep_files
 
         if symbolic_solver_labels and (labeler is not None):
             raise ValueError("GAMSSolver: Using both the "
@@ -179,17 +180,36 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 finally:
                     ComponentData.labeler.pop()
         if solve:
-            self._solve_model(
-                model=model,
-                tee=tee,
-                output_filename=output_filename,
-                var_list=var_list,
-                symbolMap=symbolMap,
-                load_model=load_model,
-                print_result=print_result,
-                keep_files=keep_files,
-                keep_output=keep_output
-            )
+            try:
+                self._solve_api(
+                    model=model,
+                    tee=tee,
+                    output_filename=output_filename,
+                    var_list=var_list,
+                    symbolMap=symbolMap,
+                    load_model=load_model,
+                    print_result=print_result,
+                    keep_files=keep_files,
+                    keep_output=keep_output
+                )
+            except ImportError:
+                url = ("https://www.gams.com/latest/docs/apis/"
+                       "examples_python/index.html")
+                e = sys.exc_info()[1]
+                logger.warning("GAMS Python API failed import: %s. Using "
+                               "command line to solve.\nFor installation "
+                               "help visit: %s", str(e), url)
+                self._solve_terminal(
+                    model=model,
+                    tee=tee,
+                    output_filename=output_filename,
+                    var_list=var_list,
+                    symbolMap=symbolMap,
+                    load_model=load_model,
+                    print_result=print_result,
+                    keep_files=keep_files,
+                    keep_output=keep_output
+                )
 
         return None # should this return a results object?
 
@@ -240,9 +260,9 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             try:
                 value(con.body)
             except:
-                raise ValueError("While evaluating: %s\n\t    GAMSSolver"
+                raise RuntimeError("While evaluating: %s\n\tGAMSSolver"
                                  " encountered an error. Ensure initial"
-                                 " variable values\n\t    do not violate"
+                                 " variable values\n\tdo not violate"
                                  " any domains (are you using log/log10?)"
                                  % con.name)
 
@@ -285,9 +305,9 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         try:
             value(obj.expr)
         except:
-            raise ValueError("While evaluating: %s\n\t    GAMSSolver"
+            raise RuntimeError("While evaluating: %s\n\tGAMSSolver"
                              " encountered an error. Ensure initial"
-                             " variable values\n\t    do not violate"
+                             " variable values\n\tdo not violate"
                              " any domains (are you using log/log10?)"
                              % obj.name)
 
@@ -333,9 +353,9 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 try:
                     value(v.expr)
                 except:
-                    raise ValueError("While evaluating: %s\n\t    GAMSSolver"
+                    raise RuntimeError("While evaluating: %s\n\tGAMSSolver"
                                      " encountered an error. Ensure initial"
-                                     " variable values\n\t    do not violate"
+                                     " variable values\n\tdo not violate"
                                      " any domains (are you using log/log10?)"
                                      % v.name)
 
@@ -404,7 +424,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             if var.value is not None:
                 output_file.write("%s.l = %s;\n" % (varName, var.value))
             if var.is_fixed():
-                assert var.value is not None
+                assert var.value is not None, "Cannot fix variable at None"
                 output_file.write("%s.fx = %s;\n" % (varName, var.value))
 
         model_name = symbolMap.getSymbol(model, con_labeler)
@@ -430,16 +450,33 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 mtype,
                 'min' if obj.sense == minimize else 'max'))
 
-    def _solve_model(self,
-                     model,
-                     tee,
-                     output_filename,
-                     var_list,
-                     symbolMap,
-                     load_model,
-                     print_result,
-                     keep_files,
-                     keep_output):
+        try:
+            from gams import GamsWorkspace, DebugLevel
+        except ImportError:
+            # If API not available, will use command line and put statements
+            output_file.write("\nfile results /GAMS_results.dat/;")
+            output_file.write("\nresults.nd=15;")
+            output_file.write("\nresults.nw=21;")
+            output_file.write("\nput results;")        
+            for var in var_list:
+                output_file.write("\nput %s %s.l %s.m /;" % (var, var, var))
+            for con in constraint_names:
+                output_file.write("\nput %s %s.l %s.m /;" % (con, con, con))
+            output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
+                              "GAMS_OBJECTIVE.m;\n")
+
+    def _solve_api(self,
+                   model,
+                   tee,
+                   output_filename,
+                   var_list,
+                   symbolMap,
+                   load_model,
+                   print_result,
+                   keep_files,
+                   keep_output):
+
+        from gams import GamsWorkspace, DebugLevel
 
         def abt_eq(x, y, eps=1E-8):
             """Return if x and y within epsilon, used for values close to 0"""
@@ -461,7 +498,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         else:
             t1.run()
 
-        if not (keep_files or keep_output):
+        if not keep_output:
             os.remove(output_filename)
 
         has_dual = has_rc = False
@@ -476,6 +513,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 print("\n==================================================="
                       "\n                 GAMSSolver Results                "
                       "\n===================================================\n")
+
             for var in var_list:
                 v = symbolMap.getObject(var)
                 rec = t1.out_db[var].first_record()
@@ -485,7 +523,8 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                             v.set_value(int(rec.level))
                         else:
                             v.set_value(rec.level)
-                    if has_rc:
+                    if has_rc and not math.isnan(rec.marginal):
+                        # Do not set marginals to nan
                         model.rc.set_value(v, rec.marginal)
                 if print_result:
                     print(v.name + ": level=" + str(rec.level)
@@ -494,8 +533,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             if print_result:
                 obj = list(model.component_data_objects(Objective, active=True))
                 obj = obj[0]
-                oName = "GAMS_OBJECTIVE"
-                rec = t1.out_db[oName].first_record()
+                rec = t1.out_db["GAMS_OBJECTIVE"].first_record()
                 print(obj.name + ": level=" + str(rec.level)
                       + " marginal=" + str(rec.marginal))
 
@@ -505,7 +543,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                 con = symbolMap.getSymbol(c)
                 if c.equality:
                     rec = t1.out_db[con].first_record()
-                    if load_model and has_dual:
+                    if load_model and has_dual and not math.isnan(rec.marginal):
                         model.dual.set_value(c, rec.marginal)
                     if print_result:
                         print(c.name + ": level=" + str(rec.level)
@@ -528,8 +566,9 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                         if print_result:
                             print(c.name + "(hi): level=" + str(rec_hi.level)
                                   + " marginal=" + str(rec_hi.marginal))
-                    if load_model and has_dual:
+                    if load_model and has_dual and not math.isnan(rec.marginal):
                         model.dual.set_value(c, marg)
+
                     # DEBUG only 1 side should be nonzero
                     if c.lower is not None and c.upper is not None:
                         rec_lo = t1.out_db[con + '_lo'].first_record()
@@ -538,6 +577,130 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
                             assert abt_eq(rec_hi.marginal, 0), (
                                 "2-sided constraint %s has 2 nonzero marginals"
                                 % c.name)
+
+            if print_result:
+                print("\n===================================================\n")
+
+    def _solve_terminal(self,
+                        model,
+                        tee,
+                        output_filename,
+                        var_list,
+                        symbolMap,
+                        load_model,
+                        print_result,
+                        keep_files,
+                        keep_output):
+
+        def abt_eq(x, y, eps=1E-8):
+            """Return if x and y within epsilon, used for values close to 0"""
+            return abs(x - y) < eps
+
+        command = "gams " + pipes.quote(output_filename)
+        if tee:
+            rc = subprocess.call(command, shell=True)
+        else:
+            rc = subprocess.call(command + " lo=0", shell=True)
+        if rc == 1 or rc == 127:
+            raise RuntimeError("Command 'gams' was not recognized")
+        elif rc != 0:
+            raise RuntimeError("GAMS encountered an error during solve. "
+                               "Check listing file for details.")
+
+        with open('GAMS_results.dat', 'r') as results_file:
+            results_text = results_file.read()
+        soln = dict()
+        for line in results_text.splitlines():
+            items = line.split()
+            soln[items[0]] = (items[1], items[2])
+        os.remove('GAMS_results.dat')
+
+        if not keep_output:
+            os.remove(output_filename)
+
+        if not keep_files:
+            os.remove(os.path.splitext(output_filename)[0] + '.lst')
+
+        has_dual = has_rc = False
+        for suf in model.component_data_objects(Suffix, active=True):
+            if (suf.name == 'dual' and suf.import_enabled()):
+                has_dual = True
+            elif (suf.name == 'rc' and suf.import_enabled()):
+                has_rc = True
+
+        if load_model or print_result:
+            if print_result:
+                print("\n==================================================="
+                      "\n                 GAMSSolver Results                "
+                      "\n===================================================\n")
+
+            for var in var_list:
+                rec = soln[var]
+                v = symbolMap.getObject(var)
+                if load_model and not v.is_expression():
+                    if v.is_binary() or v.is_integer():
+                        v.set_value(int(float(rec[0])))
+                    else:
+                        v.set_value(float(rec[0]))
+                    if has_rc:
+                        try:
+                            model.rc.set_value(v, float(rec[1]))
+                        except ValueError:
+                            # Solver gave no marginal values
+                            pass
+                if print_result:
+                    print(v.name + ": level=" + rec[0] + " marginal=" + rec[1])
+
+            if print_result:
+                obj = list(model.component_data_objects(Objective, active=True))
+                obj = obj[0]
+                rec = soln["GAMS_OBJECTIVE"]
+                print(obj.name + ": level=" + rec[0] + " marginal=" + rec[1])
+
+            for c in model.component_data_objects(Constraint, active=True):
+                if c.body.is_fixed():
+                    continue
+                con = symbolMap.getSymbol(c)
+                if c.equality:
+                    rec = soln[con]
+                    if load_model and has_dual:
+                        try:
+                            model.dual.set_value(c, float(rec[1]))
+                        except ValueError:
+                            # Solver gave no marginal values
+                            pass
+                    if print_result:
+                        print(c.name + ": level=" + rec[0]
+                              + " marginal=" + rec[1])
+                else:
+                    # Inequality, assume if 2-sided that only
+                    # one side's marginal is nonzero
+                    marg = 0
+                    if c.lower is not None:
+                        rec_lo = soln[con + '_lo']
+                        if load_model and has_dual:
+                            try:
+                                marg += float(rec_lo[1])
+                            except ValueError:
+                                # Solver gave no marginal values
+                                marg = float('nan')
+                        if print_result:
+                            print(c.name + "(lo): level=" + rec_lo[0]
+                                  + " marginal=" + rec_lo[1])
+                    if c.upper is not None:
+                        rec_hi = soln[con + '_hi']
+                        if load_model and has_dual:
+                            try:
+                                marg += float(rec_hi[1])
+                            except ValueError:
+                                # Solver gave no marginal values
+                                marg = float('nan')
+                        if print_result:
+                            print(c.name + "(hi): level=" + rec_hi[0]
+                                  + " marginal=" + rec_hi[1])
+                    if load_model and has_dual and not math.isnan(marg):
+                        model.dual.set_value(c, marg)
+
             if print_result:
                 print("\n===================================================\n")
 
