@@ -200,10 +200,10 @@ class BigM_Transformation(Transformation):
               #   disjunct.name, Block())
             # TODO: This is not the longterm solution... But I'm moving the indicator variables
             # onto the transformation block for now so that the writers will pick them up.
-            disjBlock = transBlock.component(disj_parent.name)
-            indvar = disjunct.indicator_var
-            disjunct.del_component('indicator_var')
-            disjBlock[disjunct.index()].add_component('indicator_var', indvar)
+            # disjBlock = transBlock.component(disj_parent.name)
+            # indvar = disjunct.indicator_var
+            # disjunct.del_component('indicator_var')
+            # disjBlock[disjunct.index()].add_component('indicator_var', indvar)
 
             # ESJ: TODO: Right now I am just going to pass the transformation block
             # through so that I have it. It occurs to me that I don't think I have
@@ -351,9 +351,9 @@ class BigM_Transformation(Transformation):
                                  "'%s' as '%s'", constraint.local_name, n)
                 # TODO: this will be true when we can leave the indicator
                 # vars in the disjunct:
-                #M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
+                M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
                 # But for now:
-                M_expr = (m[i] - bounds[i])*(1-mirrorDisj.indicator_var)
+                #M_expr = (m[i] - bounds[i])*(1-mirrorDisj.indicator_var)
                 if i == 0:
                     newC = Constraint(expr=c.lower <= c.body - M_expr)
                 else:

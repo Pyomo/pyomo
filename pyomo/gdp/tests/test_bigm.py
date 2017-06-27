@@ -8,7 +8,7 @@ import random
 
 # DEBUG
 from nose.tools import set_trace
-ind_vars_in_wrong_place = True
+ind_vars_in_wrong_place = False
 
 class TwoTermDisj_coopr3(unittest.TestCase):
     def setUp(self):
