@@ -1183,8 +1183,9 @@ class _ScenarioTreeManagerClientPyroTesterBase(_ScenarioTreeManagerTesterBase):
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('parallel')
-class TestScenarioTreeManagerClientPyro(unittest.TestCase,
-                                        _ScenarioTreeManagerClientPyroTesterBase):
+#class TestScenarioTreeManagerClientPyro(unittest.TestCase,
+class TestScenarioTreeManagerClientPyro(
+        _ScenarioTreeManagerClientPyroTesterBase):
 
     def setUp(self):
         _ScenarioTreeManagerClientPyroTesterBase.setUp(self)
@@ -1195,8 +1196,9 @@ class TestScenarioTreeManagerClientPyro(unittest.TestCase,
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('parallel')
+#class TestScenarioTreeManagerClientPyro_MultipleWorkers(
+#        unittest.TestCase,
 class TestScenarioTreeManagerClientPyro_MultipleWorkers(
-        unittest.TestCase,
         _ScenarioTreeManagerClientPyroTesterBase):
 
     def setUp(self):
@@ -1208,8 +1210,9 @@ class TestScenarioTreeManagerClientPyro_MultipleWorkers(
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('parallel')
+#class TestScenarioTreeManagerClientPyro_HandshakeAtStartup(
+#        unittest.TestCase,
 class TestScenarioTreeManagerClientPyro_HandshakeAtStartup(
-        unittest.TestCase,
         _ScenarioTreeManagerClientPyroTesterBase):
 
     def setUp(self):
@@ -1221,8 +1224,9 @@ class TestScenarioTreeManagerClientPyro_HandshakeAtStartup(
 
 @unittest.skipIf(not (using_pyro3 or using_pyro4), "Pyro or Pyro4 is not available")
 @unittest.category('parallel')
+#class TestScenarioTreeManagerClientPyro_HandshakeAtStartup_MultipleWorkers(
+#        unittest.TestCase,
 class TestScenarioTreeManagerClientPyro_HandshakeAtStartup_MultipleWorkers(
-        unittest.TestCase,
         _ScenarioTreeManagerClientPyroTesterBase):
 
     def setUp(self):
