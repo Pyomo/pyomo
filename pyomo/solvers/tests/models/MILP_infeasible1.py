@@ -50,8 +50,12 @@ class MILP_infeasible1(_BaseTestModel):
         model.z.value = None
 
     def post_solve_test_validation(self, tester, results):
-        tester.assertEqual(results['Solver'][0]['termination condition'],
-                           TerminationCondition.infeasible)
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] == \
+                TerminationCondition.infeasible
+        else:
+            tester.assertEqual(results['Solver'][0]['termination condition'],
+                               TerminationCondition.infeasible)
 
 @register_model
 class MILP_infeasible1_kernel(MILP_infeasible1):

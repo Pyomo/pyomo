@@ -597,6 +597,8 @@ class OptSolver(Plugin):
             self._presolve(*args, **kwds)
 
             presolve_completion_time = time.time()
+            if self._report_timing:
+                print("      %6.2f seconds required for presolve" % (presolve_completion_time - initial_time))
 
             if not _model is None:
                 self._initialize_callbacks(_model)
@@ -621,16 +623,19 @@ class OptSolver(Plugin):
                 raise pyutilib.common.ApplicationError(
                     "Solver (%s) did not exit normally" % self.name)
             solve_completion_time = time.time()
+            if self._report_timing:
+                print("      %6.2f seconds required for solver" % (solve_completion_time - presolve_completion_time))
 
             result = self._postsolve()
             result._smap_id = self._smap_id
             result._smap = None
             if _model:
                 if isinstance(_model, IBlockStorage):
-                    assert self._default_variable_value is None
                     if len(result.solution) == 1:
                         result.solution(0).symbol_map = \
                             getattr(_model, "._symbol_maps")[result._smap_id]
+                        result.solution(0).default_variable_value = \
+                            self._default_variable_value
                         if self._load_solutions:
                             _model.load_solution(result.solution(0))
                             result.solution.clear()
@@ -656,12 +661,7 @@ class OptSolver(Plugin):
             postsolve_completion_time = time.time()
 
             if self._report_timing:
-                print("Presolve time=%0.2f seconds"
-                      % (presolve_completion_time - initial_time))
-                print("Solve time=%0.2f seconds"
-                      % (solve_completion_time - presolve_completion_time))
-                print("Postsolve time=%0.2f seconds"
-                      % (postsolve_completion_time - solve_completion_time))
+                print("      %6.2f seconds required for postsolve" % (postsolve_completion_time - solve_completion_time))
 
         finally:
             #
@@ -686,11 +686,15 @@ class OptSolver(Plugin):
         self.available()
 
         if self._problem_format:
+            write_start_time = time.time()
             (self._problem_files, self._problem_format, self._smap_id) = \
                 self._convert_problem(args,
                                       self._problem_format,
                                       self._valid_problem_formats,
                                       **kwds)
+            total_time = time.time() - write_start_time
+            if self._report_timing:
+                print("      %6.2f seconds required to write file" % total_time)
         else:
             if len(kwds):
                 raise ValueError(
