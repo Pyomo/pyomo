@@ -3,10 +3,10 @@
 #
 
 from pyomo.environ import *
+import pyomo.version
 from pyomo.core.base.expr_common import _clear_expression_pool
 from pyomo.core.base import expr 
 from pyomo.repn import generate_canonical_repn
-import pyomo.version
 
 import pprint as pp
 import gc

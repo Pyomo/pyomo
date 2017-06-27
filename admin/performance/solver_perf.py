@@ -3,9 +3,9 @@
 #
 
 from pyomo.environ import *
+import pyomo.version
 import pyutilib.subprocess
 
-import re
 import pprint as pp
 import gc
 import time
@@ -16,46 +16,34 @@ try:
 except:
     pympler_available=False
 import sys
-import getopt
+import argparse
+import re
 
 #N = 50
 N = 5
 
 
-try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:], "hc:", ["help", "output=", 'num='])
-except getopt.GetoptError as err:
-    # print help information and exit:
-    print(str(err))  # will print something like "option -a not recognized"
-    print(sys.argv[0] + " -h -c --num=<ntrials> --output=<filename>")
-    sys.exit(2)
+parser = argparse.ArgumentParser()
+parser.add_argument("-o", "--output", help="Save results to the specified file", action="store", default=None)
+parser.add_argument("-s", "--solver", help="Specify the solver to test", action="store", default=None)
+parser.add_argument("-v", "--verbose", help="Run just a single trial in verbose mode", action="store_true", default=False)
+parser.add_argument("--ntrials", help="The number of test trials", action="store", default=None)
+args = parser.parse_args()
 
-ofile = None
-file_format = 'csv'
-for o, a in opts:
-    if o in ("-h", "--help"):
-        print(sys.argv[0] + " -c -h --num=<ntrials> --output=<filename>")
-        sys.exit()
-    elif o == "--output":
-        ofile = a
-    elif o == "--num":
-        N = int(a)
-    elif o == "-c":
-        print(a)
-        file_format = 'csv'
-    else:
-        assert False, "unhandled option"
-
+if args.ntrials:
+    N = args.ntrials
 print("NTrials %d\n\n" % N)
-
 
 
 #
 # Execute a function 'n' times, collecting performance statistics and
 # averaging them
 #
-def measure(f, n=25):
+def measure(f, n=25, verbose=False):
     """measure average execution time over n trials"""
+    if verbose:
+        f()
+        return None
     data = []
     for i in range(n):
         data.append(f())
@@ -64,10 +52,10 @@ def measure(f, n=25):
     #
     ans = {}
     for key in data[0]:
-        total = 0
+        d_ = []
         for i in range(n):
-            total += data[i][key]
-        ans[key] = total/float(n)
+            d_.append( data[i][key] )
+        ans[key] = {"mean": sum(d_)/float(n), "data": d_}
     #
     return ans
 
@@ -76,9 +64,14 @@ def measure(f, n=25):
 #
 # Evaluate Pyomo output
 #
-def evaluate(logfile, seconds):
+def evaluate(logfile, seconds, verbose):
     with open(logfile, 'r') as OUTPUT:
+        if verbose:
+            sys.stdout.write("*" * 50 + "\n")
+
         for line in OUTPUT:
+            if verbose:
+                sys.stdout.write(line)
             tokens = re.split('[ \t]+', line.strip())
             #print(tokens)
             if len(tokens) < 2:
@@ -98,27 +91,41 @@ def evaluate(logfile, seconds):
                     seconds['presolve'] = float(tokens[0])
                 elif tokens[3:5] == ['for', 'postsolve']:
                     seconds['postsolve'] = float(tokens[0])
+                elif tokens[3:6] == ['for', 'problem', 'transformations']:
+                    seconds['transformations'] = float(tokens[0])
 
+        if verbose:
+            sys.stdout.write("*" * 50 + "\n")
     return seconds
 
 
 #
 # Solve a test problem
 #
-def run_pyomo(solver, problem):
+def run_pyomo(solver, problem, verbose):
+
+    if verbose:
+        options = "--stream-solver"
+    else:
+        options = ""
 
     def f():
-        res = pyutilib.subprocess.run('pyomo solve --solver=%s --report-timing --results-format=json --save-results=solver.jsn %s' % (solver, problem), outfile='solver.out')
+        cmd = 'pyomo solve --solver=%s --report-timing --results-format=json --save-results=solver.jsn %s %s' % (solver, options, problem)
+        if verbose:
+            print("Command: %s" % cmd)
+        res = pyutilib.subprocess.run(cmd, outfile='solver.out')
+        if res[0] != 0:
+            print("Aborting performance testing!")
+            sys.exit(1)
 
-        #print(res)
         seconds = {}
-        return evaluate('solver.out', seconds)
+        return evaluate('solver.out', seconds, verbose)
 
     return f
 
 
-def solve_pmedian(solver, num):
-    return run_pyomo(solver, "pmedian.py pmedian.test%d.dat" % num)
+def solve_pmedian(solver, num, verbose):
+    return run_pyomo(solver, "../../examples/performance/pmedian.py ../../examples/performance/pmedian.test%d.dat" % num, verbose)
 
 #
 # Utility function used by runall()
@@ -136,88 +143,34 @@ def print_results(factors_, ans_, output):
 #
 # Performance results are a mapping: name -> seconds
 #
-def runall(factors, res, output=True, num=4):
+def runall(factors, res, output=True, num=4, solver=None, verbose=False):
 
-    if pyomo.opt.check_available_solvers('cplex'):
-        factors_ = tuple(factors+['cplex','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('cplex', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing cplex")
+    testname = 'pmedian%d' % num
+    def runone(name):
+        if not solver or solver == name:
+            if pyomo.opt.check_available_solvers(name):
+                factors_ = tuple(factors+[name,testname])
+                print("TESTING: %s" % " ".join(factors_))
+                ans_ = res[factors_] = measure(solve_pmedian(name, num, verbose=verbose), n=N, verbose=verbose)
+                if not verbose:
+                    print_results(factors_, ans_, output)
+            else:
+                print("Missing %s\n" % name)
 
-    if pyomo.opt.check_available_solvers('_cplex_direct'):
-        factors_ = tuple(factors+['_cplex_direct','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('_cplex_direct', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing _cplex_direct")
 
-    if pyomo.opt.check_available_solvers('_cplex_persistent'):
-        factors_ = tuple(factors+['_cplex_persistent','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('_cplex_persistent', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing _cplex_persistent")
+    runone('cplex')
+    runone('_cplex_direct')
+    runone('_cplex_persistent')
+    runone('gurobi')
+    runone('_gurobi_direct')
+    runone('scip')
+    runone('xpress')
+    runone('glpk')
+    runone('cbc')
+    runone('ipopt')
+    if False:
+        runone('baron')
 
-    if pyomo.opt.check_available_solvers('gurobi'):
-        factors_ = tuple(factors+['gurobi','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('gurobi', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing gurobi")
-
-    if pyomo.opt.check_available_solvers('_gurobi_direct'):
-        factors_ = tuple(factors+['_gurobi_direct','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('_gurobi_direct', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing _gurobi_direct")
-
-    if pyomo.opt.check_available_solvers('scip'):
-        factors_ = tuple(factors+['scip','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('scip', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing scip")
-
-    if pyomo.opt.check_available_solvers('xpress'):
-        factors_ = tuple(factors+['xpress','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('xpress', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing xpress")
-
-    if pyomo.opt.check_available_solvers('glpk'):
-        factors_ = tuple(factors+['glpk','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('glpk', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing glpk")
-
-    if pyomo.opt.check_available_solvers('cbc'):
-        factors_ = tuple(factors+['cbc','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('cbc', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing cbc")
-
-    if pyomo.opt.check_available_solvers('ipopt'):
-        factors_ = tuple(factors+['ipopt','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('ipopt', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing ipopt")
-
-    if False and pyomo.opt.check_available_solvers('baron'):
-        factors_ = tuple(factors+['baron','pmedian%d' % num])
-        ans_ = res[factors_] = measure(solve_pmedian('baron', num), n=N)
-        print_results(factors_, ans_, output)
-    else:
-        print("Missing baron")
-
-    #factors_ = tuple(factors+['cbc','pmedian7'])
-    #ans_ = res[factors_] = measure(solve_pmedian7('cbc'), n=N)
-    #print_results(factors_, ans_, output)
 
 
 def remap_keys(mapping):
@@ -228,30 +181,33 @@ def remap_keys(mapping):
 #
 res = {}
 
-runall([], res, num=6)
+runall([], res, num=4, solver=args.solver, verbose=args.verbose)
 
 
 
-if ofile:
-    if file_format == 'csv':
+if args.output:
+    if args.output.endswith(".csv"):
         #
         # Write csv file
         #
         perf_types = sorted(next(iter(res.values())).keys())
-        res_ = [ list(key) + [res[key][k] for k in perf_types] for key in res]
-        with open(ofile, 'w') as OUTPUT:
+        res_ = [ list(key) + [res[key][k]['mean'] for k in perf_types] for key in res]
+        with open(args.output, 'w') as OUTPUT:
             import csv
             writer = csv.writer(OUTPUT)
             writer.writerow(['Version', 'ExprType', 'ExprNum'] + perf_types)
             for line in res_:
                 writer.writerow(line)
 
-    elif file_format == 'json':
-        res_ = {'script': sys.argv[0], 'NTrials':N, 'data': remap_keys(res)}
+    elif args.output.endswith(".json"):
+        res_ = {'script': sys.argv[0], 'NTerms':NTerms, 'NTrials':N, 'data': remap_keys(res), 'pyomo_version':pyomo.version.version, 'pyomo_versioninfo':pyomo.version.version_info[:3]}
         #
         # Write json file
         #
-        with open(ofile, 'w') as OUTPUT:
+        with open(args.output, 'w') as OUTPUT:
             import json
             json.dump(res_, OUTPUT)
+
+    else:
+        print("Unknown output format for file '%s'" % args.output)
 
