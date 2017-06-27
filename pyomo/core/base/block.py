@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -1868,7 +1868,7 @@ def generate_cuid_names(block,
             any parent containers (such as blocks) that
             prefix the components requested even though the
             parent ctype may not match the input ctype.
-        descend_into (bool): Indicates whether or not the
+        descend_into (bool or iterable): Indicates whether or not the
             function should descend into subblocks. Default
             is True.
         cuid_names_: Used internally by the function.
@@ -1911,9 +1911,14 @@ def generate_cuid_names(block,
                 obj_cuid += ":**"
             cuid_names_[obj] = obj_cuid
 
+    if descend_into is True:
+        descend_ctype = Block
+    else:
+        descend_ctype = descend_into
+
     # Now recurse into subblocks
     if descend_into:
-        for key, block_ in block.component_map(ctype=Block).items():
+        for key, block_ in block.component_map(ctype=descend_ctype).items():
             if block_.is_indexed():
                 for block_data in block_.values():
                     generate_cuid_names(block_data,
