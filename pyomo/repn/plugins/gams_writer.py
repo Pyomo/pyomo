@@ -19,8 +19,8 @@ from pyutilib.misc import PauseGC
 from pyomo.core.base import (
     SymbolMap, AlphaNumericTextLabeler, NumericLabeler, 
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
-    value, minimize
-)
+    value, minimize, Suffix)
+
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
@@ -43,17 +43,26 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # they may be reusing it outside of this call
         io_options = dict(io_options)
 
+        # Use full Pyomo component names rather than
+        # shortened symbols (slower, but useful for debugging).
+        symbolic_solver_labels = io_options.pop("symbolic_solver_labels", False)
+
+        # Custom labeler option. Incompatible with symbolic_solver_labels.
+        labeler = io_options.pop("labeler", None)
+
+        # If None, GAMS will use default solver for model type.
+        solver = io_options.pop("solver", None)
+
+        # If None, will chose from lp, nlp, mip, and minlp.
+        mtype = io_options.pop("mtype", None)
+
+        # Turn on the GAMS "holdfixed" model attribute
+        holdfixed = io_options.pop("holdfixed", False)
+
         # Skip writing constraints whose body section is
         # fixed (i.e., no variables)
         skip_trivial_constraints = \
             io_options.pop("skip_trivial_constraints", True)
-
-        # Use full Pyomo component names in the LP file rather
-        # than shortened symbols (slower, but useful for debugging).
-        symbolic_solver_labels = \
-            io_options.pop("symbolic_solver_labels", False)
-
-        labeler = io_options.pop("labeler", None)
 
         # How much effort do we want to put into ensuring the
         # LP file is written deterministically for a Pyomo model:
@@ -62,13 +71,42 @@ class ProblemWriter_gams(AbstractProblemWriter):
         #    2 : sort keys AND sort names (over declaration order)
         file_determinism = io_options.pop("file_determinism", 1)
 
+        # Write results to GAMS_results.dat for solver parsing
+        put_results = io_options.pop("put_results", False)
+
+        # GAMS solver passes (empty) var_list so that it can
+        # access the list after the model is written
+        var_list = io_options.pop("var_list", None)
+
+        # Use StringIO object instead of file,
+        # if GAMS solver is using Python API
+        stringio = io_options.pop("stringio", False)
+
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_gams passed unrecognized io_options:\n\t" +
                 "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
 
+        if solver is not None:
+            if solver.upper() not in valid_solvers:
+                raise ValueError("ProblemWriter_gams passed unrecognized "
+                                 "solver: %s" % solver)
+
+        if mtype is not None:
+            valid_mtypes = set([
+                'lp', 'qcp', 'nlp', 'dnlp', 'rmip', 'mip', 'rmiqcp', 'rminlp',
+                'miqcp', 'minlp', 'rmpec', 'mpec', 'mcp', 'cns', 'emp'])
+            if mtype.lower() not in valid_mtypes:
+                raise ValueError("ProblemWriter_gams passed unrecognized "
+                                 "model type: %s" % mtype)
+            if (solver is not None and
+                mtype.upper() not in valid_solvers[solver.upper()]):
+                raise ValueError("ProblemWriter_gams passed solver (%s) "
+                                 "unsuitable for given model type (%s)"
+                                 % (solver, mtype))
+
         if output_filename is None:
-            output_filename = model.name + ".gms"
+            output_filename = AlphaNumericTextLabeler()(model) + ".gms"
 
         if symbolic_solver_labels and (labeler is not None):
             raise ValueError("ProblemWriter_gams: Using both the "
@@ -83,14 +121,42 @@ class ProblemWriter_gams(AbstractProblemWriter):
         else:
             var_labeler = con_labeler = labeler
 
-        var_list = []
+        if var_list is None:
+            var_list = []
         symbolMap = SymbolMap()
+
         def var_recorder(obj):
             ans = var_labeler(obj)
             var_list.append(ans)
             return ans
+
         def var_label(obj):
             return symbolMap.getSymbol(obj, var_recorder)
+
+        # If using StringIO, return the StringIO object instead of filename
+        # The GAMS solver will interpret it as such
+        if stringio:
+            with PauseGC() as pgc:
+                try:
+                    ComponentData.labeler.append(var_label)
+                    output_file = StringIO()
+                    self._write_model(
+                        model=model,
+                        output_file=output_file,
+                        solver_capability=solver_capability,
+                        var_list=var_list,
+                        symbolMap=symbolMap,
+                        con_labeler=con_labeler,
+                        file_determinism=file_determinism,
+                        skip_trivial_constraints=skip_trivial_constraints,
+                        solver=solver,
+                        mtype=mtype,
+                        put_results=put_results,
+                        holdfixed=holdfixed
+                    )
+                finally:
+                    ComponentData.labeler.pop()
+            return output_file, symbolMap
 
         # when sorting, there are a non-trivial number of
         # temporary objects created. these all yield
@@ -102,39 +168,61 @@ class ProblemWriter_gams(AbstractProblemWriter):
             with open(output_filename, "w") as output_file:
                 try:
                     ComponentData.labeler.append(var_label)
-                    self._print_model(
+                    self._write_model(
                         model=model,
                         output_file=output_file,
                         solver_capability=solver_capability,
                         var_list=var_list,
                         symbolMap=symbolMap,
-                        labeler=con_labeler,
+                        con_labeler=con_labeler,
                         file_determinism=file_determinism,
                         skip_trivial_constraints=skip_trivial_constraints,
+                        solver=solver,
+                        mtype=mtype,
+                        put_results=put_results,
+                        holdfixed=holdfixed
                     )
                 finally:
                     ComponentData.labeler.pop()
 
         return output_filename, symbolMap
 
-    def _print_model( self, model, output_file, solver_capability, var_list, 
-                      symbolMap, labeler, file_determinism, 
-                      skip_trivial_constraints ):
+    def _write_model(self,
+                     model,
+                     output_file,
+                     solver_capability,
+                     var_list,
+                     symbolMap,
+                     con_labeler,
+                     file_determinism,
+                     skip_trivial_constraints,
+                     solver,
+                     mtype,
+                     put_results,
+                     holdfixed):
         constraint_names = []
         ConstraintIO = StringIO()
         linear = True
         linear_degree = set([0,1])
 
         # Sanity check: all active components better be things we know
-        # how to deal with
+        # how to deal with, plus Suffix if solving
         valid_ctypes = set([
             Block, Constraint, Expression, Objective, Param, 
-            Set, RangeSet, Var, ])
+            Set, RangeSet, Var, Suffix ])
         for c in model.component_objects(active=True):
             if c.type() not in valid_ctypes:
                 raise RuntimeError(
                     "Unallowable component %s.\nThe GAMS writer cannot export"
-                    " models with this Component type" % ( c.type().__name__, ))
+                    " models with this component type" % ( c.type().__name__, ))
+
+        # Temporarily initialize uninitialized variables in order to call
+        # value() on each constraint to check domain violations
+        uninit_vars = list()
+        for var in model.component_data_objects(Var, active=True):
+            if var.value is None:
+                uninit_vars.append(var)
+                var.value = 0
 
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
@@ -143,56 +231,79 @@ class ProblemWriter_gams(AbstractProblemWriter):
         for con in model.component_data_objects(Constraint, active=True):
             if con.body.is_fixed():
                 continue
+
+            # Ensure GAMS will not encounter domain violations in presolver
+            # operations at current values, which are None (0) by default
+            # Used to handle log and log10 violations, for example
+            try:
+                value(con.body)
+            except:
+                raise RuntimeError("While evaluating: %s\n\tProblemWriter_gams"
+                                   " encountered an error. Ensure initial"
+                                   " variable values\n\tdo not violate"
+                                   " any domains (are you using log/log10?)"
+                                 % con.name)
+
             if linear:
                 if con.body.polynomial_degree() not in linear_degree:
                     linear = False
-            body = StringIO()
-            con.body.to_string(body)
-            cName=symbolMap.getSymbol(con, labeler)
+            body = str(con.body)
+            cName = symbolMap.getSymbol(con, con_labeler)
             if con.equality:
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write('%s.. %s =e= %s;\n' % (
-                    constraint_names[-1], 
-                    body.getvalue(),
-                    value(con.upper),
+                    constraint_names[-1],
+                    body,
+                    value(con.upper)
                 ))
             else:
                 if con.lower is not None:
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write('%s.. %s =l= %s;\n' % (
-                        constraint_names[-1], 
+                        constraint_names[-1],
                         value(con.lower),
-                        body.getvalue(),
+                        body
                     ))
                 if con.upper is not None:
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write('%s.. %s =l= %s;\n' % (
-                        constraint_names[-1], 
-                        body.getvalue(),
-                        value(con.upper),
+                        constraint_names[-1],
+                        body,
+                        value(con.upper)
                     ))
 
-        obj = list( model.component_data_objects(Objective, active=True) )
+        obj = list(model.component_data_objects(Objective, active=True))
         if len(obj) != 1:
             raise RuntimeError(
                 "GAMS writer requires exactly one active objective (found %s)"
-                % (len(obj),))
+                % (len(obj)))
         obj = obj[0]
+
+        # Same domain violation check as above
+        try:
+            value(obj.expr)
+        except:
+            raise RuntimeError("While evaluating: %s\n\tProblemWriter_gams"
+                               " encountered an error. Ensure initial"
+                               " variable values\n\tdo not violate"
+                               " any domains (are you using log/log10?)"
+                             % obj.name)
+
         if linear:
             if obj.expr.polynomial_degree() not in linear_degree:
                 linear = False
-        oName = symbolMap.getSymbol(obj, labeler)
-        body = StringIO()
-        obj.expr.to_string(body)
-        constraint_names.append('%s' % oName)
+        oName = symbolMap.getSymbol(obj, con_labeler)
+        body = str(obj.expr)
+        constraint_names.append(oName)
         ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s;\n' % (
             oName,
-            body.getvalue(),
+            body
         ))
 
         # Categorize the variables that we found
         binary = []
-        ints = []
+        posInts = []
+        otherInts = []
         positive = []
         reals = []
         i = 0
@@ -201,22 +312,33 @@ class ProblemWriter_gams(AbstractProblemWriter):
             var = var_list[i]
             i += 1
             v = symbolMap.getObject(var)
-            try:
+            if not v.is_expression():
                 if v.is_binary():
                     binary.append(var)
                 elif v.is_integer():
                     if v.bounds == (0,1):
                         binary.append(var)
+                    elif v.lb is not None and v.lb >= 0:
+                        posInts.append(var)
                     else:
-                        ints.append(var)
+                        otherInts.append(var)
                 elif v.lb == 0:
                     positive.append(var)
                 else:
                     reals.append(var)
-            except AttributeError:
-                # This is an Expression object
-                body = StringIO()
-                v.to_string(body)
+            else:
+                # Same domain violation check as above
+                try:
+                    value(v.expr)
+                except:
+                    raise RuntimeError(
+                        "While evaluating: %s\n\tProblemWriter_gams"
+                        " encountered an error. Ensure initial"
+                        " variable values\n\tdo not violate"
+                        " any domains (are you using log/log10?)"
+                        % v.name)
+
+                body = str(v.expr)
                 if linear:
                     if v.expr.polynomial_degree() not in linear_degree:
                         linear = False
@@ -224,7 +346,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 ConstraintIO.write('%s.. %s =e= %s;\n' % (
                     constraint_names[-1], 
                     var,
-                    body.getvalue(),
+                    body
                 ))
                 reals.append(var)
                 # The Expression could have hit new variables (or other
@@ -232,15 +354,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 # so that we process / categorize these new symbols
                 numVar = len(var_list)
 
+        # Return uninitialized variables to None
+        for var in uninit_vars:
+            var.value = None
+
         # Write the GAMS model
-        output_file.write('EQUATIONS\n\t')
+        output_file.write("EQUATIONS\n\t")
         output_file.write("\n\t".join(constraint_names))
         if binary:
             output_file.write(";\n\nBINARY VARIABLES\n\t")
             output_file.write("\n\t".join(binary))
-        if ints:
+        if posInts or otherInts:
             output_file.write(";\n\nINTEGER VARIABLES\n\t")
-            output_file.write("\n\t".join(ints))
+            output_file.write("\n\t".join(posInts))
+            output_file.write("\n\t".join(otherInts))
         if positive:
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
             output_file.write("\n\t".join(positive))
@@ -249,23 +376,155 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write(";\n\n")
         output_file.write(ConstraintIO.getvalue())
         output_file.write("\n")
-        for varName in positive:
+        for varName in var_list:
             var = symbolMap.getObject(varName)
-            if var.ub is not None:
-                output_file.write("%s.up = %s;\n" % (varName, var.ub))
-        for varName in ints + reals:
-            var = symbolMap.getObject(varName)
-            if var.lb is not None:
-                output_file.write("%s.lo = %s;\n" % (varName, var.lb))
-            if var.ub is not None:
-                output_file.write("%s.up = %s;\n" % (varName, var.ub))
+            if var.is_expression():
+                continue
+            if varName in positive:
+                if var.ub is not None:
+                    output_file.write("%s.up = %s;\n" % (varName, var.ub))
+            elif varName in posInts:
+                if var.lb != 0:
+                    output_file.write("%s.lo = %s;\n" % (varName, var.lb))
+                if var.ub is not None:
+                    output_file.write("%s.up = %s;\n" % (varName, var.ub))
+            elif varName in otherInts:
+                if var.lb is None:
+                    # GAMS doesn't allow -INF lower bound for ints
+                    # Set bound to lowest possible bound in Gams
+                    output_file.write("%s.lo = -1.0E+10;\n" % (varName))
+                if var.ub is not None:
+                    output_file.write("%s.up = %s;\n" % (varName, var.ub))
+            elif varName in reals:
+                if var.lb is not None:
+                    output_file.write("%s.lo = %s;\n" % (varName, var.lb))
+                if var.ub is not None:
+                    output_file.write("%s.up = %s;\n" % (varName, var.ub))
+            if var.value is not None:
+                output_file.write("%s.l = %s;\n" % (varName, var.value))
+            if var.is_fixed():
+                assert var.value is not None, "Cannot fix variable at None"
+                output_file.write("%s.fx = %s;\n" % (varName, var.value))
 
-        model_name = symbolMap.getSymbol(model, labeler)
-        output_file.write("\nMODEL %s /all/ ;\n"
-                          % model_name )
+        model_name = symbolMap.getSymbol(model, con_labeler)
+        output_file.write("\nMODEL %s /all/ ;\n" % model_name)
+
+        if holdfixed:
+            output_file.write("%s.holdfixed = 1;\n" % model_name)
+
+        if mtype is None:
+            mtype =  ('lp','nlp','mip','minlp')[
+                (0 if linear else 1) +
+                (2 if (binary or posInts or otherInts) else 0)]
+
+        if solver is not None:
+            if mtype.upper() not in valid_solvers[solver.upper()]:
+                raise ValueError("ProblemWriter_gams passed solver (%s) "
+                                 "unsuitable for model type (%s)"
+                                 % (solver, mtype))
+            output_file.write("option %s=%s;\n" % (mtype, solver))
+
         output_file.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n"
             % ( model_name, 
-                ('lp','nlp','mip','minlp')[
-                    (0 if linear else 1) + (2 if (binary or ints) else 0)],
+                mtype,
                 'min' if obj.sense == minimize else 'max'))
+
+        if put_results:
+            output_file.write("\nfile results /GAMS_results.dat/;")
+            output_file.write("\nresults.nd=15;")
+            output_file.write("\nresults.nw=21;")
+            output_file.write("\nput results;")        
+            for var in var_list:
+                output_file.write("\nput %s %s.l %s.m /;" % (var, var, var))
+            for con in constraint_names:
+                output_file.write("\nput %s %s.l %s.m /;" % (con, con, con))
+            output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
+                              "GAMS_OBJECTIVE.m;\n")
+
+
+solver_chart = """\
+ALPHAECP    MINLP MIQCP
+AMPL        LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
+ANTIGONE    NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+BARON       LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+BDMLP       LP MIP RMIP
+BDMLPD      LP RMIP
+BENCH       LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+BONMIN      MINLP MIQCP
+BONMINH     MINLP MIQCP
+CBC         LP MIP RMIP
+COINBONMIN  MINLP MIQCP
+COINCBC     LP MIP RMIP
+COINCOUENNE NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+COINIPOPT   LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+COINOS      LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+COINSCIP    MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+CONOPT      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+CONOPT3     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+CONOPT4     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+CONOPTD     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+CONVERT     LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+CONVERTD    LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
+COUENNE     NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+CPLEX       LP MIP RMIP QCP MIQCP RMIQCP
+CPLEXD      LP MIP RMIP QCP MIQCP RMIQCP
+CPOPTIMIZER MIP MINLP MIQCP
+DE          EMP
+DECIS       EMP
+DECISC      LP
+DECISM      LP
+DICOPT      MINLP MIQCP
+DICOPTD     MINLP MIQCP
+EXAMINER    LP MIP RMIP NLP MCP MPEC RMPEC DNLP RMINLP MINLP QCP MIQCP RMIQCP
+EXAMINER2   LP MIP RMIP NLP MCP DNLP RMINLP MINLP QCP MIQCP RMIQCP
+GAMSCHK     LP MIP RMIP NLP MCP DNLP RMINLP MINLP QCP MIQCP RMIQCP
+GLOMIQO     QCP MIQCP RMIQCP
+GUROBI      LP MIP RMIP QCP MIQCP RMIQCP
+IPOPT       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+IPOPTH      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+JAMS        EMP
+KESTREL     LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
+KNITRO      LP RMIP NLP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+LGO         LP RMIP NLP DNLP RMINLP QCP RMIQCP
+LGOD        LP RMIP NLP DNLP RMINLP QCP RMIQCP
+LINDO       LP MIP RMIP NLP DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
+LINDOGLOBAL LP MIP RMIP NLP DNLP RMINLP MINLP QCP MIQCP RMIQCP
+LINGO       LP MIP RMIP NLP DNLP RMINLP MINLP
+LOCALSOLVER MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+LOGMIP      EMP
+LS          LP RMIP
+MILES       MCP
+MILESE      MCP
+MINOS       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+MINOS5      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+MINOS55     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+MOSEK       LP MIP RMIP NLP DNLP RMINLP QCP MIQCP RMIQCP
+MPECDUMP    LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
+MPSGE      
+MSNLP       NLP DNLP RMINLP QCP RMIQCP
+NLPEC       MCP MPEC RMPEC
+OS          LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+OSICPLEX    LP MIP RMIP
+OSIGUROBI   LP MIP RMIP
+OSIMOSEK    LP MIP RMIP
+OSISOPLEX   LP RMIP
+OSIXPRESS   LP MIP RMIP
+PATH        MCP CNS
+PATHC       MCP CNS
+PATHNLP     LP RMIP NLP DNLP RMINLP QCP RMIQCP
+PYOMO       LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
+QUADMINOS   LP
+SBB         MINLP MIQCP
+SCENSOLVER  LP MIP RMIP NLP MCP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+SCIP        MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
+SNOPT       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
+SOPLEX      LP RMIP
+XA          LP MIP RMIP
+XPRESS      LP MIP RMIP QCP MIQCP RMIQCP\
+"""
+
+valid_solvers = dict()
+for line in solver_chart.splitlines():
+    items = line.split()
+    valid_solvers[items[0]] = items[1:]
