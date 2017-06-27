@@ -254,4 +254,3 @@ if ofile:
         with open(ofile, 'w') as OUTPUT:
             import json
             json.dump(res_, OUTPUT)
-
