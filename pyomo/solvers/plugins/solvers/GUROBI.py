@@ -127,9 +127,18 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         except OSError:
             rc = 1
         if rc:
-            return False
-        else:
-            return True
+            #
+            # Try the --status flag if --license is not available
+            #
+            try:
+                rc = subprocess.call([executable, "--status"],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT)
+            except OSError:
+                rc = 1
+            if rc:
+                return False
+        return True
 
     def _default_results_format(self, prob_format):
         return ResultsFormat.soln
