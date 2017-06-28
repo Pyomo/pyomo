@@ -239,14 +239,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             # Ensure GAMS will not encounter domain violations in presolver
             # operations at current values, which are None (0) by default
             # Used to handle log and log10 violations, for example
-            try:
-                value(con.body)
-            except:
-                raise RuntimeError("While evaluating: %s\n\tProblemWriter_gams"
-                                   " encountered an error. Ensure initial"
-                                   " variable values\n\tdo not violate"
-                                   " any domains (are you using log/log10?)"
-                                 % con.name)
+            check_expr_evaluation(con.body, con.name)
 
             if linear:
                 if con.body.polynomial_degree() not in linear_degree:
@@ -283,15 +276,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 % (len(obj)))
         obj = obj[0]
 
-        # Same domain violation check as above
-        try:
-            value(obj.expr)
-        except:
-            raise RuntimeError("While evaluating: %s\n\tProblemWriter_gams"
-                               " encountered an error. Ensure initial"
-                               " variable values\n\tdo not violate"
-                               " any domains (are you using log/log10?)"
-                             % obj.name)
+        check_expr_evaluation(obj.expr, obj.name)
 
         if linear:
             if obj.expr.polynomial_degree() not in linear_degree:
@@ -331,17 +316,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 else:
                     reals.append(var)
             else:
-                # Same domain violation check as above
-                try:
-                    value(v.expr)
-                except:
-                    raise RuntimeError(
-                        "While evaluating: %s\n\tProblemWriter_gams"
-                        " encountered an error. Ensure initial"
-                        " variable values\n\tdo not violate"
-                        " any domains (are you using log/log10?)"
-                        % v.name)
-
+                check_expr_evaluation(v.expr, v.name)
                 body = str(v.expr)
                 if linear:
                     if v.expr.polynomial_degree() not in linear_degree:
@@ -452,6 +427,21 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput %s %s.l %s.m /;" % (con, con, con))
             output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
                               "GAMS_OBJECTIVE.m;\n")
+
+
+def check_expr_evaluation(expr, name):
+    # Ensure GAMS will not encounter domain violations in presolver
+    # operations at current values, which are None (0) by default
+    # Used to handle log and log10 violations, for example
+    try:
+        value(expr)
+    except ValueError:
+        logger.error("While evaluating %s, ProblemWriter_gams "
+                     "encountered an error.\nGAMS requires that all "
+                     "equations and expressions evaluate at initial values.\n"
+                     "Ensure variable values do not violate any domains "
+                     "(are you using log or log10?)" % name)
+        raise
 
 
 solver_chart = """\
