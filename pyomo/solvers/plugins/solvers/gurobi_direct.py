@@ -1116,16 +1116,18 @@ class GurobiDirect(DirectSolver):
             self._add_var(var)
         self._solver_model.update()
 
-    def gurobi_vtype_from_domain(self, domain):
+    def _gurobi_vtype_from_var(self, var):
         """
-        This function takes a pyomo variable domain and returns the appropriate gurobi variable type
-        :param domain: pyomo.core.base.set_types.RealSet or pyomo.core.base.set_types.Binary
-        :return: gurobipy.GRB.CONTINUOUS or gurobipy.GRB.BINARY
+        This function takes a pyomo variable and returns the appropriate gurobi variable type
+        :param var: pyomo.core.base.var.Var
+        :return: gurobipy.GRB.CONTINUOUS or gurobipy.GRB.BINARY or gurobipy.GRB.INTEGER
         """
-        if type(domain) is pyomo.core.base.set_types.RealSet:
-            vtype = self._gurobipy.GRB.CONTINUOUS
-        elif domain == pyomo.core.base.set_types.Binary:
+        if var.is_binary():
             vtype = self._gurobipy.GRB.BINARY
+        elif var.is_integer():
+            vtype = self._gurobipy.GRB.INTEGER
+        elif var.is_continuous():
+            vtype = self._gurobipy.GRB.CONTINUOUS
         else:
-            raise ValueError('Variable domain type is not recognized for {0}'.format(domain))
+            raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
         return vtype
