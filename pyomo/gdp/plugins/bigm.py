@@ -25,7 +25,6 @@ import weakref
 import logging
 logger = logging.getLogger('pyomo.core')
 
-import pdb
 # DEBUG
 from nose.tools import set_trace
 
@@ -93,11 +92,12 @@ class BigM_Transformation(Transformation):
                            % ( '\n'.join(iterkeys(kwds)), ))
         if options:
             logger.warning("GDP(BigM): unrecognized options:\n%s"
-                           % ( '\n'.join(iterkeys(options)), ))
+                        % ( '\n'.join(iterkeys(options)), ))
 
         if targets is None:
             for block in instance.block_data_objects(
-                    active=True, sort=SortComponents.deterministic ):
+                    active=True, 
+                    sort=SortComponents.deterministic ):
                 self._transformBlock(block)
         # ESJ: I've yet to touch this, and I don't get it yet...
         else:
@@ -117,39 +117,21 @@ class BigM_Transformation(Transformation):
 
 
     def _transformBlock(self, block):
-        # For every (active) disjunction in the block, convert it to a
-        # simple constraint and then relax the individual (active)
-        # disjuncts
-        #
-        # Note: we need to make a copy of the list because singletons
-        # are going to be reclassified, which could foul up the
-        # iteration
-
-        # ESJ: I kind of hate this idea:
+        # Transform every (active) disjunction in the block
         for disjunction in block.component_objects(
                 Disjunction,
                 active=True,
                 sort=SortComponents.deterministic):
             self._transformDisjunction(disjunction)
 
-        # ESJ: TODO: don't need name here, I don't think,  because obj knows 
-        # its name
-        # for (name, idx), obj in block.component_data_iterindex(
-        #         Disjunction,
-        #         active=True,
-        #         sort=SortComponents.deterministic ):
-        #     self._transformDisjunction(name, idx, obj)
-
     
-    #def _transformDisjunction(self, name, idx, obj):
-    def _transformDisjunction(self, obj):    
-        # For the time being, we need to relax the disjuncts *before* we
-        # move the disjunction constraint over (otherwise we wouldn't be
-        # able to get to the _disjuncts map from the other component).
-        #
-        # FIXME: the disjuncts list should just be on the _DisjunctData
-        #if obj.parent_block().local_name.startswith('_gdp_relax'):
-        # TODO: maybe??
+    def _transformDisjunction(self, obj): 
+        # Put the disjunction constraint on its parent block, then relax
+        # each of the disjuncts
+        
+        # TODO: I think this is redundant? Because this only every gets called
+        # from _transformBlock. But if that changed, this is probably still
+        # a good idea?
         if not obj.active:
             # Do not transform a block more than once
             return
@@ -157,12 +139,12 @@ class BigM_Transformation(Transformation):
         parent = obj.parent_block()
 
         # add the XOR (or OR) constraints to parent block (with unique name)
+        # It's indexed if this is an IndexedDisjunction.
         orC = Constraint(obj.index_set())
         orC.construct()
         for i in obj.index_set():
             or_expr = 0
             for disjunct in obj[i].disjuncts:
-                # TODO: YOU ARE HERE: this breaks with the indicator var move :(
                 or_expr += disjunct.indicator_var
             c_expr = or_expr==1 if obj.xor else or_expr >= 1
             orC.add(i, c_expr)
@@ -175,12 +157,18 @@ class BigM_Transformation(Transformation):
         # relax each of the disjunctions (or the SimpleDisjunction if it wasn't indexed)
         for i in obj:
             self._transformDisjunctionData(obj[i])
+
+        # deactivate so we know we relaxed
         obj.deactivate()
+
 
     def _transformDisjunctionData(self, obj):
         # clone the disjuncts into our new relaxation block (which we'll
         # create if it doesn't exist yet.) We'll relax the disjuncts there.
 
+        # TODO: Emma, this is bad... relaxation block isn't necessarily on this guy's
+        # parent component. Need to look for it on the model and create it there if it
+        # isn't there already.
         parent = obj.parent_block()
         # make sure that we have a relaxation block.
         if self.transBlockName is None:
@@ -195,51 +183,13 @@ class BigM_Transformation(Transformation):
             if clonedDisj is None:
                 clonedDisj = Block(disj_parent.index_set())
                 transBlock.add_component(disj_parent.name, clonedDisj)
-            # whoops, I think this was overkill:
-            # transBlock.component(disj_parent.name)[disjunct.index()].add_component(
-              #   disjunct.name, Block())
-            # TODO: This is not the longterm solution... But I'm moving the indicator variables
-            # onto the transformation block for now so that the writers will pick them up.
-            # disjBlock = transBlock.component(disj_parent.name)
-            # indvar = disjunct.indicator_var
-            # disjunct.del_component('indicator_var')
-            # disjBlock[disjunct.index()].add_component('indicator_var', indvar)
 
             # ESJ: TODO: Right now I am just going to pass the transformation block
-            # through so that I have it. It occurs to me that I don't think I have
-            # a guaruntee that it is actually on the instance right now. I think I
-            # made an assumption putting it on the parent of the disjunction. It should
-            # be on the instance so there is only one of it.
+            # through so that I have it.
             self._bigM_relax_disjunct(disjunct, transBlock)
-
-
-        # _tmp = obj.parent_block().component('_gdp_relax')
-        # if _tmp is None:
-        #     _tmp = Block()
-        #     obj.parent_block().add_component('_gdp_relax', _tmp)
 
         # deactivate the disjunction so we know we've relaxed it
         obj.deactivate()
-
-        # if obj.parent_component().dim() == 0:
-        #     # Since there can't be more than one Disjunction in a
-        #     # SimpleDisjunction, then we can just reclassify the entire
-        #     # component in place
-        #     obj.parent_block().del_component(obj)
-        #     _tmp.add_component(name, obj)
-        #     _tmp.reclassify_component_type(obj, Constraint)
-        # else:
-        #     # Look for a constraint in our transformation workspace
-        #     # where we can "move" this disjunction so that the writers
-        #     # will see it.
-        #     _constr = _tmp.component(name)
-        #     if _constr is None:
-        #         _constr = Constraint(
-        #             obj.parent_component().index_set())
-        #         _tmp.add_component(name, _constr)
-        #     # Move this disjunction over to the Constraint
-        #     _constr._data[idx] = obj.parent_component()._data.pop(idx)
-        #     _constr._data[idx]._component = weakref.ref(_constr)
 
 
     def _bigM_relax_disjunct(self, disjunct, transBlock):

@@ -8,7 +8,6 @@ import random
 
 # DEBUG
 from nose.tools import set_trace
-ind_vars_in_wrong_place = False
 
 class TwoTermDisj_coopr3(unittest.TestCase):
     def setUp(self):
@@ -63,14 +62,6 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         self.assertFalse(oldblock.disjuncts[0].active)
         self.assertFalse(oldblock.disjuncts[1].active)
 
-    # TODO: do I need this to be true?? It's not at the moment, but I'm
-    # confused.
-    # def test_disjunct_deactivated(self):
-    #     m = self.makeModel()
-    #     TransformationFactory('gdp.bigm').apply_to(m)
-    #     #set_trace()
-    #     self.assertFalse(m.d.active)
-
     def test_new_block_nameCollision(self):
         m = self.makeModel()
         m._pyomo_gdp_relaxation = Block()
@@ -84,21 +75,19 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
         oldblock = m.component("d")
-        # have indicator variables
-        if not ind_vars_in_wrong_place: 
-            self.assertIsInstance(oldblock[0].indicator_var, Var)
-            self.assertTrue(oldblock[0].indicator_var.is_binary())
-            self.assertIsInstance(oldblock[1].indicator_var, Var)
-            self.assertTrue(oldblock[1].indicator_var.is_binary())
+        # have indicator variables 
+        self.assertIsInstance(oldblock[0].indicator_var, Var)
+        self.assertTrue(oldblock[0].indicator_var.is_binary())
+        self.assertIsInstance(oldblock[1].indicator_var, Var)
+        self.assertTrue(oldblock[1].indicator_var.is_binary())
 
     def test_xor_constraints(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
         xor = m.component("_pyomo_gdp_relaxation_disjunction_xor")
         self.assertIsInstance(xor, Constraint)
-        if not ind_vars_in_wrong_place: 
-            self.assertIs(m.d[0].indicator_var, xor.body._args[0])
-            self.assertIs(m.d[1].indicator_var, xor.body._args[1])
+        self.assertIs(m.d[0].indicator_var, xor.body._args[0])
+        self.assertIs(m.d[1].indicator_var, xor.body._args[1])
         self.assertEqual(1, xor.body._coef[0])
         self.assertEqual(1, xor.body._coef[1])
         self.assertEqual(xor.lower, 1)
@@ -122,10 +111,9 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         m.disjunction = Disjunction(rule=disj_rule, xor=False)
         TransformationFactory('gdp.bigm').apply_to(m)
         orcons = m.component("_pyomo_gdp_relaxation_disjunction_or")
-        self.assertIsInstance(orcons, Constraint)
-        if not ind_vars_in_wrong_place: 
-            self.assertIs(m.d[0].indicator_var, orcons.body._args[0])
-            self.assertIs(m.d[1].indicator_var, orcons.body._args[1])
+        self.assertIsInstance(orcons, Constraint) 
+        self.assertIs(m.d[0].indicator_var, orcons.body._args[0])
+        self.assertIs(m.d[1].indicator_var, orcons.body._args[1])
         self.assertEqual(1, orcons.body._coef[0])
         self.assertEqual(1, orcons.body._coef[1])
         self.assertEqual(orcons.lower, 1)
@@ -158,9 +146,8 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         # body
         self.assertIs(oldc.body, newc.body._args[0])
         self.assertEqual(newc.body._coef[0], 1)
-        self.assertEqual(newc.body._coef[1], 3)
-        if not ind_vars_in_wrong_place: 
-            self.assertIs(m.d[0].indicator_var, newc.body._args[1]._args[0])
+        self.assertEqual(newc.body._coef[1], 3) 
+        self.assertIs(m.d[0].indicator_var, newc.body._args[1]._args[0])
         self.assertEqual(newc.body._args[1]._coef[0], -1)
         self.assertEqual(newc.body._args[1]._const, 1)
         # and there isn't any more...
@@ -186,9 +173,8 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         # body
         self.assertIs(oldc.body, newc_lo.body._args[0])
         self.assertEqual(newc_lo.body._coef[0], 1)
-        self.assertEqual(newc_lo.body._coef[1], -2)
-        if not ind_vars_in_wrong_place: 
-            self.assertIs(newc_lo.body._args[1]._args[0], m.d[1].indicator_var)
+        self.assertEqual(newc_lo.body._coef[1], -2) 
+        self.assertIs(newc_lo.body._args[1]._args[0], m.d[1].indicator_var)
         self.assertEqual(newc_lo.body._args[1]._coef[0], -1)
         self.assertEqual(newc_lo.body._args[1]._const, 1)
         
@@ -199,9 +185,8 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         
         self.assertIs(oldc.body, newc_hi.body._args[0])
         self.assertEqual(newc_hi.body._coef[0], 1)
-        self.assertEqual(newc_hi.body._coef[1], -7)
-        if not ind_vars_in_wrong_place: 
-            self.assertIs(m.d[1].indicator_var, newc_hi.body._args[1]._args[0])
+        self.assertEqual(newc_hi.body._coef[1], -7) 
+        self.assertIs(m.d[1].indicator_var, newc_hi.body._args[1]._args[0])
         self.assertEqual(newc_hi.body._args[1]._coef[0], -1)
         self.assertEqual(newc_hi.body._args[1]._const, 1)
 
@@ -242,16 +227,17 @@ class TwoTermIndexedDisj_coopr3(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
 
+        set_trace()
+
         xor = m.component("_pyomo_gdp_relaxation_disjunction_xor")
         self.assertIsInstance(xor, Constraint)
         for i in m.disjunction.index_set():
             self.assertEqual(xor[i].body._coef[0], 1)
-            self.assertEqual(xor[i].body._coef[1], 1)
-            if not ind_vars_in_wrong_place: 
-                self.assertIs(xor[i].body._args[0], 
-                              m.disjunction[i].disjuncts[0].indicator_var)
-                self.assertIs(xor[i].body._args[1], 
-                              m.disjunction[i].disjuncts[1].indicator_var)
+            self.assertEqual(xor[i].body._coef[1], 1) 
+            self.assertIs(xor[i].body._args[0], 
+                          m.disjunction[i].disjuncts[0].indicator_var)
+            self.assertIs(xor[i].body._args[1], 
+                          m.disjunction[i].disjuncts[1].indicator_var)
             self.assertEqual(xor[i].body._const, 0)
             self.assertEqual(xor[i].lower, 1)
             self.assertEqual(xor[i].upper, 1)
@@ -301,6 +287,45 @@ class TwoTermIndexedDisj_coopr3(unittest.TestCase):
             self.assertFalse(m.disjunction[i].active)
 
 
+class DisjOnBlock(unittest.TestCase):
+    # when the disjunction is on a block, we want the xor constraint
+    # on its parent block, but the transformation block still on the
+    # model.
+    @staticmethod
+    def makeModel():
+        m = ConcreteModel()
+        m.b = Block()
+        m.a = Var(bounds=(0,5))
+        def d_rule(disjunct, flag):
+            m = disjunct.model()
+            if flag:
+                disjunct.c = Constraint(expr=m.a<=3)
+            else:
+                disjunct.c = Constraint(expr=m.a==0)
+        m.b.disjunct = Disjunct([0,1], rule=d_rule)
+        def disj_rule(m):
+            return [m.disjunct[0], m.disjunct[1]]
+        m.b.disjunction = Disjunction(rule=disj_rule)
+        return m
+
+    def test_xor_constraint_added(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+       
+        # TODO: this is an interestingly evil result of doing names
+        # the way I am... That I get a period in there. Is that OK?
+        self.assertIsInstance(
+            m.b.component('_pyomo_gdp_relaxation_b.disjunction_xor'), 
+            Constraint)
+
+    def test_trans_block_created(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        
+        self.assertIsInstance(m.component('_pyomo_gdp_relaxation'), Block)
+        self.assertFalse(m.b.hasattr(m.b, '_pyomo_gdp_relaxation'))
+
+
 class MultiTermDisj_coopr3(unittest.TestCase):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -345,21 +370,20 @@ class MultiTermDisj_coopr3(unittest.TestCase):
         self.assertEqual(len(xor[1].body._coef), 3)
         self.assertEqual(xor[1].body._const, 0)
         self.assertEqual(xor[2].body._const, 0)
-
-        if not ind_vars_in_wrong_place: 
-            self.assertIs(xor[1].body._args[0], m.disjunct[0,1].indicator_var)
-            self.assertEqual(xor[1].body._coef[0], 1)
-            self.assertIs(xor[1].body._args[1], m.disjunct[1,1].indicator_var)
-            self.assertEqual(xor[1].body._coef[1], 1)
-            self.assertIs(xor[1].body._args[2], m.disjunct[2,1].indicator_var)
-            self.assertEqual(xor[1].body._coef[2], 1)
-            
-            self.assertIs(xor[2].body._args[0], m.disjunct[0,2].indicator_var)
-            self.assertEqual(xor[2].body._coef[0], 1)
-            self.assertIs(xor[2].body._args[1], m.disjunct[1,2].indicator_var)
-            self.assertEqual(xor[2].body._coef[1], 1)
-            self.assertIs(xor[2].body._args[2], m.disjunct[2,2].indicator_var)
-            self.assertEqual(xor[2].body._coef[2], 1)
+ 
+        self.assertIs(xor[1].body._args[0], m.disjunct[0,1].indicator_var)
+        self.assertEqual(xor[1].body._coef[0], 1)
+        self.assertIs(xor[1].body._args[1], m.disjunct[1,1].indicator_var)
+        self.assertEqual(xor[1].body._coef[1], 1)
+        self.assertIs(xor[1].body._args[2], m.disjunct[2,1].indicator_var)
+        self.assertEqual(xor[1].body._coef[2], 1)
+        
+        self.assertIs(xor[2].body._args[0], m.disjunct[0,2].indicator_var)
+        self.assertEqual(xor[2].body._coef[0], 1)
+        self.assertIs(xor[2].body._args[1], m.disjunct[1,2].indicator_var)
+        self.assertEqual(xor[2].body._coef[1], 1)
+        self.assertIs(xor[2].body._args[2], m.disjunct[2,2].indicator_var)
+        self.assertEqual(xor[2].body._coef[2], 1)
 
     # TODO: I don't know, is anything else really different?
 
@@ -443,4 +467,4 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase):
     def test_transformed_once(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
-        set_trace()    
+        # TODO
