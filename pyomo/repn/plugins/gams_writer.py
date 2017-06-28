@@ -26,6 +26,10 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 import pyomo.util.plugin
 
+import logging
+
+logger = logging.getLogger('pyomo.core')
+
 
 class ProblemWriter_gams(AbstractProblemWriter):
     pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
@@ -365,9 +369,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write(";\n\nBINARY VARIABLES\n\t")
             output_file.write("\n\t".join(binary))
         if posInts or otherInts:
-            output_file.write(";\n\nINTEGER VARIABLES\n\t")
-            output_file.write("\n\t".join(posInts))
-            output_file.write("\n\t".join(otherInts))
+            output_file.write(";\n\nINTEGER VARIABLES")
+            if posInts:
+                output_file.write("\n\t")
+                output_file.write("\n\t".join(posInts))
+            if otherInts:
+                output_file.write("\n\t")
+                output_file.write("\n\t".join(otherInts))
         if positive:
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
             output_file.write("\n\t".join(positive))
@@ -392,6 +400,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 if var.lb is None:
                     # GAMS doesn't allow -INF lower bound for ints
                     # Set bound to lowest possible bound in Gams
+                    logger.warning("Lower bound for integer variable %s "
+                                   "set to lowest possible in GAMS: -1.0E+10"
+                                   % var.name)
                     output_file.write("%s.lo = -1.0E+10;\n" % (varName))
                 if var.ub is not None:
                     output_file.write("%s.up = %s;\n" % (varName, var.ub))
