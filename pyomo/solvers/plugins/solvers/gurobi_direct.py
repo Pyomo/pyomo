@@ -66,12 +66,15 @@ from pyomo.core.base import (SymbolMap,
                              value,
                              TextLabeler)
 from pyomo.core.base.numvalue import value
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn, canonical_degree
 
 from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
+from pyomo.core.kernel.numvalue import value
 
 GRB_MAX = -1
 GRB_MIN = 1
+
 
 class ModelSOS(object):
 
@@ -1036,3 +1039,93 @@ class gurobi_direct ( OptSolver ):
 
         # let the base class deal with returning results.
         return OptSolver._postsolve(self)
+
+
+class GurobiDirect(DirectSolver):
+    alias('gurobi_direct', doc='Direct python interface to gurobi')
+
+    def __init__(self, **kwds):
+        import gurobipy
+        self._gurobipy = gurobipy
+        kwds['type'] = 'gurobi_direct'
+        super(GurobiDirect, self).__init__(**kwds)
+
+    def _presolve(self, *args, **kwds):
+        self._solver_model = self._gurobipy.Model()
+
+        super(GurobiDirect, self)._presolve(*args, **kwds)
+
+    def _apply_solver(self):
+        self._solver_model.optimize()
+
+    def _get_expr_from_pyomo_expr(self, expr):
+        repn = generate_canonical_repn(expr)
+
+        degree = canonical_degree(repn)
+        if degree not in [0,1,2]:
+            raise ValueError('GurobiDirect only supports linear and quadratic constraints\n{0}'.format(expr))
+
+        if isinstance(repn, LinearCanonicalRepn):
+            return repn.constant + sum(coeff*self._pyomo_var_to_solver_var_map[id(repn.variables[i])] for i, coeff in
+                                       enumerate(repn.linear))
+
+        else:
+            assert degree == 2
+            new_expr = 0
+            if 0 in repn:
+                new_expr += repn[0][None]
+
+            if 1 in repn:
+                for ndx, coeff in repn[1].items():
+                    new_expr += coeff * self._pyomo_var_to_solver_var_map[id(repn[-1][ndx])]
+
+            if 2 in repn:
+                for key, coeff in repn[2].items():
+                    tmp_expr = coeff
+                    for ndx, power in key.items():
+                        for i in range(power):
+                            tmp_expr *= self._pyomo_var_to_solver_var_map[id(repn[-1][ndx])]
+                    new_expr += tmp_expr
+
+            return new_expr
+
+    def _add_var(self, var):
+        varname = self._symbol_map.getSymbol(var, self._labeler)
+        domain = var.domain
+        vtype = self.gurobi_vtype_from_domain(domain)
+        lb = value(var.lb)
+        ub = value(var.ub)
+        if lb is None:
+            lb = -self._gurobipy.GRB.INFINITY
+        if ub is None:
+            ub = self._gurobipy.GRB.INFINITY
+
+        gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
+
+        self._pyomo_var_to_solver_var_map[id(var)] = gurobipy_var
+
+        if var.is_fixed():
+            gurobipy_var.setAttr('lb', var.value)
+            gurobipy_var.setAttr('ub', var.value)
+
+    def _compile_instance(self, model):
+        self._add_block(model)
+
+    def _add_block(self, block):
+        for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True, active=True):
+            self._add_var(var)
+        self._solver_model.update()
+
+    def gurobi_vtype_from_domain(self, domain):
+        """
+        This function takes a pyomo variable domain and returns the appropriate gurobi variable type
+        :param domain: pyomo.core.base.set_types.RealSet or pyomo.core.base.set_types.Binary
+        :return: gurobipy.GRB.CONTINUOUS or gurobipy.GRB.BINARY
+        """
+        if type(domain) is pyomo.core.base.set_types.RealSet:
+            vtype = self._gurobipy.GRB.CONTINUOUS
+        elif domain == pyomo.core.base.set_types.Binary:
+            vtype = self._gurobipy.GRB.BINARY
+        else:
+            raise ValueError('Variable domain type is not recognized for {0}'.format(domain))
+        return vtype
