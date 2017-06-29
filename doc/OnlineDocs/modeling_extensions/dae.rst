@@ -34,8 +34,8 @@ Pyomo.DAE introduces three new modeling components to Pyomo:
 
 As will be shown later, differential equations can be declared using
 using these new modeling components along with the standard Pyomo
-:py:class:`Var <pyomo.environ.Var>` and :py:class:`Constraint <pyomo.environ
-    .Constraint>` components.
+:py:class:`Var <pyomo.environ.Var>` and
+:py:class:`Constraint <pyomo.environ.Constraint>` components.
 
 ContinuousSet
 *************
@@ -45,9 +45,9 @@ This component is used to define continuous bounded domains (for example
 :py:class:`Set <pyomo.environ.Set>`  component and can be used to index things
 like variables and constraints. Any number of
 :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>`can be used to
- index a component and components can be indexed by both
- :py :class:`Sets <pyomo.environ.Set>` and
- :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` in arbitrary order.
+index a component and components can be indexed by both
+:py:class:`Sets <pyomo.environ.Set>` and
+:py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` in arbitrary order.
 
 In the current implementation, models with
 :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`components may not be solved
@@ -134,14 +134,6 @@ abstract Pyomo model using the example data file.
 DerivativeVar
 *************
 
-The :py:class:`DerivativeVar <pyomo.dae.DerivativeVar>` component is
-used to declare a derivative of a :py:class:`Var <pyomo.environ.Var>`. A
-:py:class:`Var <pyomo.environ.Var>` may only be differentiated with respect to
-a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that it is indexed by. The
-indexing sets of a :py:class:`DerivativeVar <pyomo.dae.DerivativeVar>` are
-identical to those of the :py:class:`Var <pyomo.environ.Var>` it is
-differentiating.
-
 .. autoclass:: pyomo.dae.DerivativeVar
     :members:
 
@@ -187,16 +179,18 @@ argument. Any keyword argument that is valid for a Pyomo
    The 'initialize' keyword argument will initialize the value of a
    derivative and is **not** the same as specifying an initial
    condition. Initial or boundary conditions should be specified using a
-   ``Constraint`` or ``ConstraintList`` or by fixing the value of a
-   ``Var`` at a boundary point.
+   :py:class:`Constraint<pyomo.environ.Constraint>` or
+   :py:class:`ConstraintList<pyomo.environ.ConstraintList>` or
+   by fixing the value of a :py:class:`Var<pyomo.environ.Var>` at a boundary
+   point.
 
 Declaring Differential Equations
 --------------------------------
 
-A differential equations is declared as a standard Pyomo ``Constraint`` and
-is not required to have any particular form. The following code
-snippet shows how one might declare an ordinary or partial
-differential equation. 
+A differential equations is declared as a standard Pyomo
+:py:class:`Constraint<pyomo.environ.Constraint>` and is not required to have
+any particular form. The following code snippet shows how one might declare
+an ordinary or partial differential equation.
 
 .. code-block:: python
 
