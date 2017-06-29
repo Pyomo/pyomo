@@ -1,53 +1,68 @@
-Dynamic Optimization
-====================
+Dynamic Optimization with pyomo.DAE
+===================================
 
 .. image:: Pyomo_DAE_Logo_150.png
    :scale: 35 %
    :align: right
 
-The DAE toolbox allows users to incorporate differential equations in
-a Pyomo model. The modeling components in this toolbox are able to
-represent ordinary or partial differential equations. The differential
-equations do not have to be written in a particular format and the
-components are flexible enough to represent higher-order derivatives
-or mixed partial derivatives. The toolbox also includes model
-transformations which use a simultaneous discretization approach for
-transforming a DAE model into an algebraic model.
+The pyomo.DAE modeling extension allows users to incorporate systems of
+differential algebraic equations (DAE)s in a Pyomo model. The modeling
+components in this extension are able to represent ordinary or partial
+differential equations. The differential equations do not have to be
+written in a particular format and the components are flexible enough to
+represent higher-order derivatives or mixed partial
+derivatives. Pyomo.DAE also includes model transformations which use
+simultaneous discretization approaches to transform a DAE model into an
+algebraic model. Finally, pyomo.DAE includes utilities for simulating
+DAE models and initializing dynamic optimization problems.
 
-pyomo.DAE Modeling Components
------------------------------
+
+
+Modeling Components
+-------------------
 
 .. (Replace these definitions with in-code documentation)
 
-The DAE toolbox introduces three new modeling components to Pyomo:
+Pyomo.DAE introduces three new modeling components to Pyomo:
 
-``ContinuousSet``: Used to represent bounded continuous domains
+.. autosummary::
+   :nosignatures:
 
-``DerivativeVar``: Defines how a ``Var`` will be differentiated or the
-derivatives to be included in the model
-
-``Integral``: Defines an integral over a continous domain
+   pyomo.dae.ContinuousSet
+   pyomo.dae.DerivativeVar
+   pyomo.dae.Integral
 
 As will be shown later, differential equations can be declared using
-using these new DAE modeling components along with the standard Pyomo
-``Var`` and ``Constraint`` components.
+using these new modeling components along with the standard Pyomo
+:py:class:`Var <pyomo.environ.Var>` and :py:class:`Constraint <pyomo.environ
+    .Constraint>` components.
 
 ContinuousSet
 *************
 
-This component is used to define continuous bounded domains (for
-example 'spatial' or 'time' domains). It is similar to a Pyomo ``Set``
-component and can be used to index things like variables and
-constraints. In the current implementation, models with
-``ContinuousSet`` components may not be solved until every
-``ContinuousSet`` has been discretized. Minimally, a ``ContinuousSet``
-must be initialized with two numeric values representing the upper and
-lower bounds of the continuous domain. A user may also specify
-additional points in the domain to be used as finite element
-points in the discretization.
+This component is used to define continuous bounded domains (for example
+'spatial' or 'time' domains). It is similar to a Pyomo
+:py:class:`Set <pyomo.environ.Set>`  component and can be used to index things
+like variables and constraints. Any number of
+:py:class:`ContinuousSets <pyomo.dae.ContinuousSet>`can be used to
+ index a component and components can be indexed by both
+ :py :class:`Sets <pyomo.environ.Set>` and
+ :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` in arbitrary order.
+
+In the current implementation, models with
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`components may not be solved
+until every :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`has been
+discretized. Minimally, a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`
+must be initialized with two numeric values representing the upper and lower
+bounds of the continuous domain. A user may also specify additional points in
+the domain to be used as finite element points in the discretization.
+
+.. autoclass:: pyomo.dae.ContinuousSet
+    :members:
 
 The following code snippet shows examples of declaring a
-``ContinuousSet`` component on a concrete Pyomo model:
+:py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` component on a
+concrete Pyomo model:
 
 .. code-block:: python
 
@@ -63,9 +78,14 @@ The following code snippet shows examples of declaring a
    # declare by initializing with desired discretization points
    model.x = ContinuousSet(initialize=[0,1,2,5])
 
+.. note::
+   A :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` may not be
+   constructed unless at least two numeric points are provided to bound the
+   continuous domain.
+
 The following code snippet shows an example of declaring a
-``ContinuousSet`` component on an abstract Pyomo model using the
-example data file.
+:py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` component on an
+abstract Pyomo model using the example data file.
 
 .. code-block:: ampl
 
@@ -84,67 +104,54 @@ example data file.
    model.t = ContinuousSet()
 
 .. note:: 
-   A ``ContinuousSet`` may not be constructed unless two numeric
-   bounding points are provided.
+   If a separate data file is used to initialize a
+   :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>`, it is done using
+   the 'set' command and not 'continuousset'
 
-.. note:: 
-   If a separate data file is used to initialize a ``ContinuousSet``,
-   it is done using the 'set' command and not 'continuousset'
-
-Most valid ways to declare and initialize a ``Set`` can be used to
-declare and initialize a ``ContinuousSet``. See the documentation for
-``Set`` for additional options. 
+.. note::
+   Most valid ways to declare and initialize a
+   :py:class:`Set <pyomo.environ.Set>` can be used to
+   declare and initialize a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`.
+   See the documentation for :py:class:`Set <pyomo.environ.Set>` for additional
+   options.
 
 .. warning:: 
-   Be careful using a ``ContinuousSet`` as an implicit index in
-   an expression, i.e. ``sum(m.v[i] for i in m.myContinuousSet)``. The
-   expression will be generated using the discretization points
-   contained in the ``ContinuousSet`` at the time the expression was
-   constructed and will not be updated if additional points are added to
-   the set.
+   Be careful using a :py:class:`ContinuousSet
+   <pyomo.dae.ContinuousSet>` as an implicit index in an expression,
+   i.e. ``sum(m.v[i] for i in m.myContinuousSet)``. The expression will
+   be generated using the discretization points contained in the
+   :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` at the time the
+   expression was constructed and will not be updated if additional
+   points are added to the set during discretization.
 
-.. (Change this to use in-code documentation of these methods)
-
-Summary of ``ContinuousSet`` methods:
-
-get_finite_elements()
-	If the ``ContinuousSet`` has been discretizaed using a collocation
-      	scheme, this method will return a list of the finite element 
-	discretization points but not the collocation points over each
-	finite element. Otherwise this method returns a list of all the 
-	discretization points in the ``ContinuousSet``.
-  
-get_discretization_info()
-      Returns a dictionary containing information on the discretization
-      scheme that has been applied to the ContinuousSet.
-  
-get_changed()
-      Returns "True" if additional points were added to 
-      the ``ContinousSet`` while applying a discretization scheme
-  
-get_upper_element_boundary(value)
-      Returns the first finite element point that is greater than or 
-      equal to the value sent to the function.
-
-get_lower_element_boundary(value)
-      Returns the first finite element point that is less than or 
-      equal to the value sent to the function.
+.. note::
+   :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` components are
+   always ordered (sorted) therefore the ``first()`` and ``last()``
+   :py:class:`Set <pyomo.environ.Set>` methods can be used to access the lower
+   and upper boundaries of the
+   :py:class:`ContinuousSet <pyomo.dae.ContinuousSet>` respectively
  
 DerivativeVar
 *************
 
-The ``DerivativeVar`` component is used to declare a derivative of a
-``Var``. A ``Var`` may only be differentiated with respect to a
-``ContinuousSet`` that it is indexed by. The indexing sets of a
-``DerivativeVar`` are identical to those of the ``Var`` it is
+The :py:class:`DerivativeVar <pyomo.dae.DerivativeVar>` component is
+used to declare a derivative of a :py:class:`Var <pyomo.environ.Var>`. A
+:py:class:`Var <pyomo.environ.Var>` may only be differentiated with respect to
+a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that it is indexed by. The
+indexing sets of a :py:class:`DerivativeVar <pyomo.dae.DerivativeVar>` are
+identical to those of the :py:class:`Var <pyomo.environ.Var>` it is
 differentiating.
 
-The code snippet below shows examples of declaring ``DerivativeVar``
-components on a Pyomo model. In each case, the variable being
-differentiated is supplied as the only positional argument and the
-type of derivative is specified using the 'wrt' (or the more verbose
-'withrespectto') keyword argument. Any keyword argument that is valid
-for a Pyomo ``Var`` component may also be specified.
+.. autoclass:: pyomo.dae.DerivativeVar
+    :members:
+
+The code snippet below shows examples of declaring
+:py:class:`DerivativeVar <pyomo.dae.DerivativeVar>` components on a
+Pyomo model. In each case, the variable being differentiated is supplied
+as the only positional argument and the type of derivative is specified
+using the 'wrt' (or the more verbose 'withrespectto') keyword
+argument. Any keyword argument that is valid for a Pyomo
+:py:class:`Var <pyomo.environ.Var>` component may also be specified.
 
 .. code-block:: python
 
@@ -178,41 +185,10 @@ for a Pyomo ``Var`` component may also be specified.
 
 .. note:: 
    The 'initialize' keyword argument will initialize the value of a
-   derivative and is not the same as specifying an initial
+   derivative and is **not** the same as specifying an initial
    condition. Initial or boundary conditions should be specified using a
-   ``Constraint`` or ``ConstraintList``.
-
-Another way to use derivatives without explicitly declaring
-``DerivativeVar`` components is to use the ``derivative()`` method on a
-variable within an expression or constraint. For example:
-
-.. code-block:: python
-
-   # Required imports
-   from pyomo.environ import *
-   from pyomo.dae import *
-
-   model = ConcreteModel()
-   model.t = ContinuousSet(bounds=(0,5))
-   model.x = Var(model.t)
-
-   # Create the first derivative of model.x with respect to model.t
-   # within a constraint rule.
-   def _diffeq_rule(m,i):
-      return m.x[i].derivative(m.t) == m.x[i]**2
-   model.diffeq = Constraint(model.t,rule=_diffeq_rule)
-
-In the above example a ``DerivatveVar`` component representing the
-desired derivative will automatically be added to the Pyomo model when
-the constraint is constructed. The ``derivative()`` method accepts
-positional arguments representing what the derivative is being taken
-with respect to. 
-
-.. note:: 
-   If a variable is indexed by a single ``ContinuousSet`` then the
-   ``derivative()`` method with no positional arguments may be used to
-   specify the first derivative of that variable with respect to the
-   ``ContinuousSet``.
+   ``Constraint`` or ``ConstraintList`` or by fixing the value of a
+   ``Var`` at a boundary point.
 
 Declaring Differential Equations
 --------------------------------
@@ -235,49 +211,99 @@ differential equation.
 
    model.x = Var(model.s,model.t)
    model.y = Var(model.t,model.l)
+   model.dxdt = DerivativeVar(model.x, wrt=model.t)
    model.dydt = DerivativeVar(model.y, wrt=model.t)
    model.dydl2 = DerivativeVar(model.y, wrt=(model.l,model.l))
 
    # An ordinary differential equation
-   def _ode_rule(m,i,j):
-      if j == 0:
+   def _ode_rule(m,s,t):
+      if t == 0:
          return Constraint.Skip
-      return m.x[i].derivative(m.t) == m.x[i]**2
-   model.ode = Constraint(model.s,model.t,rule=_ode_rule)
+      return m.dxdt[s,t] == m.x[s,t]**2
+   model.ode = Constraint(model.s, model.t, rule=_ode_rule)
 
    # A partial differential equation
-   def _pde_rule(m,i,j):
-      if i == 0 or j == -10 or j == 10:
+   def _pde_rule(m,t,l):
+      if t == 0 or l == m.l.first() or l == m.l.last():
          return Constraint.Skip
-      return m.dydt[i,j] == m.dydl2[i,j]
+      return m.dydt[t,l] == m.dydl2[t,l]
    model.pde = Constraint(model.t,model.l,rule=_pde_rule)
 
-.. note:: 
-   Often a modeler does not want to apply a differential equation
-   at one or both boundaries of a continuous domain. This must be
-   addressed explicitly in the ``Constraint`` declaration using
-   ``Constraint.Skip`` as shown above. By default, a ``Constraint`` declared
-   over a ``ContinuousSet`` will be applied at every discretization point
-   contained in the set.
+By default, a ``Constraint`` declared over a ``ContinuousSet`` will be
+applied at every discretization point contained in the set. Often a
+modeler does not want to enforce a differential equation at one or both
+boundaries of a continuous domain. This may be addressed explicitly in
+the ``Constraint`` declaration using ``Constraint.Skip`` as shown
+above. Alternatively, the desired constraints can be deactivated just
+before the model is sent to a solver as shown below.
+
+.. code-block:: python
+
+   def _ode_rule(m,s,t):
+      return m.dxdt[s,t] == m.x[s,t]**2
+   model.ode = Constraint(model.s,model.t,rule=_ode_rule)
+
+   def _pde_rule(m,t,l):
+      return m.dydt[t,l] == m.dydl2[t,l]
+   model.pde = Constraint(model.t,model.l,rule=_pde_rule)
+
+   # Declare other model components and apply a discretization transformation
+   ...
+
+   # Deactivate the differential equations at certain boundary points
+   for con in model.ode[:,model.t.first()]:
+      con.deactivate()
+
+   for con in model.pde[0,:]:
+      con.deactivate()
+
+   for con in model.pde[:,model.l.first()]:
+      con.deactivate()
+
+   for con in model.pde[:,model.l.last()]:
+      con.deactivate()
+
+   # Solve the model
+   ...
+
+.. note::
+   If you intend to use the pyomo.DAE simulator on your model then you
+   **must** use **constraint deactivation** instead of **constraint
+   skipping** in the differential equation rule.
 
 Declaring Integrals
 -------------------
 
-The ``Integral`` component is still under development but some basic
-functionality is available in the current Pyomo release. Integrals
-must be taken over the entire domain of a ``ContinuousSet``. Once every
-``ContinuousSet`` in a model has been discretized, any integrals in
-the model will be converted to algebraic equations using the trapezoid
-rule. Future releases of this tool will include more sophisticated
-numerical integration methods.
+.. warning:: 
+   
+   The ``Integral`` component is still under development and considered
+   a prototype. It currently includes only basic functionality for
+   simple integrals. We welcome feedback on the interface and
+   functionality but **we do not recommend using it** on general
+   models. Instead, integrals should be reformulated as differential
+   equations.
+
+.. autoclass:: pyomo.dae.Integral
+
+The ``Integral`` component can be used to represent an integral taken
+over the entire domain of a ``ContinuousSet``. Once every
+``ContinuousSet`` in a model has been discretized, any integrals in the
+model will be converted to algebraic equations using the trapezoid
+rule. Future development will include more sophisticated numerical
+integration methods.
 
 Declaring an ``Integral`` component is similar to declaring an
 ``Expression`` component. A simple example is shown below:
 
 .. code-block:: python
 
-   def _intX(m,i):
-      return (m.X[i]-m.X_desired)**2
+   model = ConcreteModel()
+   model.time = ContinuousSet(bounds=(0,10))
+   model.X = Var(model.time)
+   model.scale = Param(initialize=1E-3)
+
+   def _intX(m,t):
+      return X[t]
    model.intX = Integral(model.time,wrt=model.time,rule=_intX)
 
    def _obj(m):
@@ -292,34 +318,46 @@ a ``ContinuousSet`` that the integral is being evaluated over. This is
 done using the 'wrt' keyword argument.
 
 .. note:: 
-   The ``ContinousSet`` specified using the 'wrt' keyword argument
-   must be explicitly specified as one of the indexing sets (meaning it
-   must be supplied as a positional argument)
+   The ``ContinousSet`` specified using the 'wrt' keyword argument must
+   be explicitly specified as one of the indexing sets (meaning it must
+   be supplied as a positional argument). This is to ensure consistency
+   in the ordering and dimension of the indexing sets
 
 After an ``Integral`` has been declared, it can be used just like a
 Pyomo ``Expression`` component and can be included in constraints or the
 objective function as shown above.
 
 If an ``Integral`` is specified with multiple positional arguments,
-i.e. multiple indexing sets, the final component will be indexed by
-all of those sets except for the ``ContinuousSet`` that the integral was
+i.e. multiple indexing sets, the final component will be indexed by all
+of those sets except for the ``ContinuousSet`` that the integral was
 taken over. In other words, the ``ContinuousSet`` specified with the
 'wrt' keyword argument is removed from the indexing sets of the
 ``Integral`` even though it must be specified as a positional
-argument. The reason for this is to keep track of the order of the
-indexing sets. This logic should become more clear with the following
-example showing a double integral over the ``ContinuousSet`` components
-'t1' and 't2'. In addition, the expression is also indexed by the
-``Set`` 's'.
+argument. This should become more clear with the following example
+showing a double integral over the ``ContinuousSet`` components 't1' and
+'t2'. In addition, the expression is also indexed by the ``Set``
+'s'. The mathematical representation and implementation in Pyomo are
+shown below:
+
+.. math::
+   \sum_{s} \int_{t_2} \int_{t_1} \! X(t_1, t_2, s) \, dt_1 \, dt_2
+
 
 .. code-block:: python
 
-   def _intX1(m,i,j,s):
-      return (m.X[i,j,s]-m.X_desired[j,s])**2
+   model = ConcreteModel()
+   model.t1 = ContinuousSet(bounds=(0,10))
+   model.t2 = ContinuousSet(bounds=(-1,1))
+   model.s = Set(initialize=['A','B','C'])
+
+   model.X = Var(model.t1, model.t2, model.s)
+
+   def _intX1(m,t1,t2,s):
+      return m.X[t1,t2,s]
    model.intX1 = Integral(model.t1,model.t2,model.s,wrt=model.t1,rule=_intX1)
 
-   def _intX2(m,j,s):
-      return (m.intX1[j,s]-m.X_desired[s])**2
+   def _intX2(m,t2,s):
+      return m.intX1[t2,s]
    model.intX2 = Integral(model.t2,model.s,wrt=model.t2,rule=_intX2)
 
    def _obj(m):
@@ -602,3 +640,6 @@ Dynamic Model Initialization
 
 From Simulation
 ***************
+
+Examples
+--------
