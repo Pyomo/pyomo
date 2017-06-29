@@ -154,6 +154,10 @@ class ContinuousSet(OrderedSimpleSet):
         Parameters
         ----------
         point : `boolean`
+
+        Returns
+        -------
+        float
         """
         if point in self._fe:
             return point
@@ -175,6 +179,10 @@ class ContinuousSet(OrderedSimpleSet):
         Parameters
         ----------
         point : `boolean`
+
+        Returns
+        -------
+        float
         """
         if point in self._fe:
             if 'scheme' in self._discretization_info:
