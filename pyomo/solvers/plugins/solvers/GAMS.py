@@ -84,9 +84,10 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 If None, GAMS will use default solver for model type.
             mtype=None:
                 Model type. If None, will chose from lp, nlp, mip, and minlp.
-            holdfixed=False:
-                Turn on the GAMS "holdfixed" model attribute, which tells
-                the solver to treat fixed variables as constants.
+            add_options:
+                List of additional lines to write directly
+                into model file before the solve statement.
+                For model attributes, <model name> = GAMS_MODEL
         """
 
         from gams import GamsWorkspace, DebugLevel
@@ -202,9 +203,10 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 If None, GAMS will use default solver for model type.
             mtype=None:
                 Model type. If None, will chose from lp, nlp, mip, and minlp.
-            holdfixed=False:
-                Turn on the GAMS "holdfixed" model attribute, which tells
-                the solver to treat fixed variables as constants.
+            add_options:
+                List of additional lines to write directly
+                into model file before the solve statement.
+                For model attributes, <model name> = GAMS_MODEL
         """
 
         var_list = []

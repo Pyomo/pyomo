@@ -42,6 +42,22 @@ class ProblemWriter_gams(AbstractProblemWriter):
                  output_filename,
                  solver_capability,
                  io_options):
+        """
+        io_options:
+            symbolic_solver_labels=False:
+                Use full Pyomo component names rather than
+                shortened symbols (slower, but useful for debugging).
+            labeler=None:
+                Custom labeler option. Incompatible with symbolic_solver_labels.
+            solver=None:
+                If None, GAMS will use default solver for model type.
+            mtype=None:
+                Model type. If None, will chose from lp, nlp, mip, and minlp.
+            add_options:
+                List of additional lines to write directly
+                into model file before the solve statement.
+                For model attributes, <model name> = GAMS_MODEL
+        """
 
         # Make sure not to modify the user's dictionary,
         # they may be reusing it outside of this call
@@ -60,8 +76,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # If None, will chose from lp, nlp, mip, and minlp.
         mtype = io_options.pop("mtype", None)
 
-        # Turn on the GAMS "holdfixed" model attribute
-        holdfixed = io_options.pop("holdfixed", False)
+        # Lines to add before solve statement.
+        add_options = io_options.pop("add_options", None)
 
         # Skip writing constraints whose body section is
         # fixed (i.e., no variables)
@@ -155,8 +171,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                         skip_trivial_constraints=skip_trivial_constraints,
                         solver=solver,
                         mtype=mtype,
-                        put_results=put_results,
-                        holdfixed=holdfixed
+                        add_options=add_options,
+                        put_results=put_results
                     )
                 finally:
                     ComponentData.labeler.pop()
@@ -183,8 +199,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                         skip_trivial_constraints=skip_trivial_constraints,
                         solver=solver,
                         mtype=mtype,
-                        put_results=put_results,
-                        holdfixed=holdfixed
+                        add_options=add_options,
+                        put_results=put_results
                     )
                 finally:
                     ComponentData.labeler.pop()
@@ -202,8 +218,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                      skip_trivial_constraints,
                      solver,
                      mtype,
-                     put_results,
-                     holdfixed):
+                     add_options,
+                     put_results):
         constraint_names = []
         ConstraintIO = StringIO()
         linear = True
@@ -392,11 +408,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 assert var.value is not None, "Cannot fix variable at None"
                 output_file.write("%s.fx = %s;\n" % (varName, var.value))
 
-        model_name = symbolMap.getSymbol(model, con_labeler)
+        model_name = "GAMS_MODEL"
         output_file.write("\nMODEL %s /all/ ;\n" % model_name)
-
-        if holdfixed:
-            output_file.write("%s.holdfixed = 1;\n" % model_name)
 
         if mtype is None:
             mtype =  ('lp','nlp','mip','minlp')[
@@ -409,6 +422,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                  "unsuitable for model type (%s)"
                                  % (solver, mtype))
             output_file.write("option %s=%s;\n" % (mtype, solver))
+
+        if add_options is not None:
+            output_file.write("\n* START USER ADDITIONAL OPTIONS\n")
+            for line in add_options:
+                output_file.write('\n' + line)
+            output_file.write("\n\n* END USER ADDITIONAL OPTIONS\n\n")
 
         output_file.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n"
