@@ -63,9 +63,7 @@ from pyomo.core.base import (SymbolMap,
                              ComponentMap,
                              NumericLabeler,
                              is_fixed,
-                             value,
                              TextLabeler)
-from pyomo.core.base.numvalue import value
 from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn, canonical_degree
 
 from pyomo.core.kernel.component_block import IBlockStorage
@@ -1115,6 +1113,36 @@ class GurobiDirect(DirectSolver):
         for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True, active=True):
             self._add_var(var)
         self._solver_model.update()
+
+        for con in block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint, descend_into=True, active=True):
+            self._add_constraint(con)
+
+    def _add_constraint(self, con):
+        if not con.active:
+            return None
+
+        conname = self._symbol_map.getSymbol(con, self._labeler)
+        gurobi_expr = self._get_expr_from_pyomo_expr(con.body)
+
+        if con.has_lb():
+            if not is_fixed(con.lower):
+                raise ValueError('Lower bound of constraint {0} is not constant.'.format(con))
+        if con.has_ub():
+            if not is_fixed(con.upper):
+                raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
+
+        if con.equality:
+            gurobipy_con = self._solver_model.addConstr(gurobi_expr==value(con.lower), name=conname)
+        elif con.has_lb() and con.has_ub():
+            gurobipy_con = self._solver_model.addRange(gurobi_expr, value(con.lower), value(con.upper), name=conname)
+        elif con.has_lb():
+            gurobipy_con = self._solver_model.addConstr(gurobi_expr>=value(con.lower), name=conname)
+        elif con.has_ub():
+            gurobipy_con = self._solver_model.addConstr(gurobi_expr<=value(con.upper), name=conname)
+        else:
+            return None
+
+        self._pyomo_con_to_solver_con_map[id(con)] = gurobipy_con
 
     def _gurobi_vtype_from_var(self, var):
         """
