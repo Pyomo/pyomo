@@ -199,95 +199,91 @@ an ordinary or partial differential equation.
    from pyomo.dae import *
 
    model = ConcreteModel()
-   model.s = Set(initialize=['a','b'])
-   model.t = ContinuousSet(bounds=(0,5))
-   model.l = ContinuousSet(bounds=(-10,10))
+   model.s = Set(initialize=['a', 'b'])
+   model.t = ContinuousSet(bounds=(0, 5))
+   model.l = ContinuousSet(bounds=(-10, 10))
 
-   model.x = Var(model.s,model.t)
-   model.y = Var(model.t,model.l)
+   model.x = Var(model.s, model.t)
+   model.y = Var(model.t, model.l)
    model.dxdt = DerivativeVar(model.x, wrt=model.t)
    model.dydt = DerivativeVar(model.y, wrt=model.t)
-   model.dydl2 = DerivativeVar(model.y, wrt=(model.l,model.l))
+   model.dydl2 = DerivativeVar(model.y, wrt=(model.l, model.l))
 
    # An ordinary differential equation
-   def _ode_rule(m,s,t):
+   def _ode_rule(m, s, t):
       if t == 0:
          return Constraint.Skip
-      return m.dxdt[s,t] == m.x[s,t]**2
+      return m.dxdt[s, t] == m.x[s, t]**2
    model.ode = Constraint(model.s, model.t, rule=_ode_rule)
 
    # A partial differential equation
-   def _pde_rule(m,t,l):
+   def _pde_rule(m, t, l):
       if t == 0 or l == m.l.first() or l == m.l.last():
          return Constraint.Skip
-      return m.dydt[t,l] == m.dydl2[t,l]
-   model.pde = Constraint(model.t,model.l,rule=_pde_rule)
+      return m.dydt[t, l] == m.dydl2[t, l]
+   model.pde = Constraint(model.t, model.l, rule=_pde_rule)
 
-By default, a ``Constraint`` declared over a ``ContinuousSet`` will be
-applied at every discretization point contained in the set. Often a
-modeler does not want to enforce a differential equation at one or both
-boundaries of a continuous domain. This may be addressed explicitly in
-the ``Constraint`` declaration using ``Constraint.Skip`` as shown
-above. Alternatively, the desired constraints can be deactivated just
-before the model is sent to a solver as shown below.
+By default, a :py:class:`Constraint<pyomo.environ.Constraint>` declared over a
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` will be applied at every
+discretization point contained in the set. Often a modeler does not want to
+enforce a differential equation at one or both boundaries of a continuous
+domain. This may be addressed explicitly in the
+:py:class:`Constraint<pyomo.environ.Constraint>` declaration using
+``Constraint.Skip`` as shown above. Alternatively, the desired constraints can
+be deactivated just before the model is sent to a solver as shown below.
 
 .. code-block:: python
 
-   def _ode_rule(m,s,t):
-      return m.dxdt[s,t] == m.x[s,t]**2
-   model.ode = Constraint(model.s,model.t,rule=_ode_rule)
+   def _ode_rule(m, s, t):
+      return m.dxdt[s, t] == m.x[s, t]**2
+   model.ode = Constraint(model.s, model.t, rule=_ode_rule)
 
-   def _pde_rule(m,t,l):
-      return m.dydt[t,l] == m.dydl2[t,l]
-   model.pde = Constraint(model.t,model.l,rule=_pde_rule)
+   def _pde_rule(m, t, l):
+      return m.dydt[t, l] == m.dydl2[t, l]
+   model.pde = Constraint(model.t, model.l, rule=_pde_rule)
 
    # Declare other model components and apply a discretization transformation
    ...
 
    # Deactivate the differential equations at certain boundary points
-   for con in model.ode[:,model.t.first()]:
+   for con in model.ode[:, model.t.first()]:
       con.deactivate()
 
-   for con in model.pde[0,:]:
+   for con in model.pde[0, :]:
       con.deactivate()
 
-   for con in model.pde[:,model.l.first()]:
+   for con in model.pde[:, model.l.first()]:
       con.deactivate()
 
-   for con in model.pde[:,model.l.last()]:
+   for con in model.pde[:, model.l.last()]:
       con.deactivate()
 
    # Solve the model
    ...
 
 .. note::
-   If you intend to use the pyomo.DAE simulator on your model then you
+   If you intend to use the pyomo.DAE
+   :py:class:`Simulator<pyomo.dae.simulator>` on your model then you
    **must** use **constraint deactivation** instead of **constraint
    skipping** in the differential equation rule.
 
 Declaring Integrals
 -------------------
 
-.. warning:: 
-   
-   The ``Integral`` component is still under development and considered
-   a prototype. It currently includes only basic functionality for
-   simple integrals. We welcome feedback on the interface and
-   functionality but **we do not recommend using it** on general
+.. warning::
+   The :py:class:`Integral<pyomo.dae.Integral>` component is still under
+   development and considered a prototype. It currently includes only basic
+   functionality for simple integrals. We welcome feedback on the interface
+   and functionality but **we do not recommend using it** on general
    models. Instead, integrals should be reformulated as differential
    equations.
 
 .. autoclass:: pyomo.dae.Integral
+   :members:
 
-The ``Integral`` component can be used to represent an integral taken
-over the entire domain of a ``ContinuousSet``. Once every
-``ContinuousSet`` in a model has been discretized, any integrals in the
-model will be converted to algebraic equations using the trapezoid
-rule. Future development will include more sophisticated numerical
-integration methods.
-
-Declaring an ``Integral`` component is similar to declaring an
-``Expression`` component. A simple example is shown below:
+Declaring an :py:class:`Integral<pyomo.dae.Integral>` component is similar to
+declaring an :py:class:`Expression<pyomo.environ.Expression>` component. A
+simple example is shown below:
 
 .. code-block:: python
 
@@ -304,55 +300,59 @@ Declaring an ``Integral`` component is similar to declaring an
       return m.scale*m.intX
    model.obj = Objective(rule=_obj)
 
-Notice that the positional arguments supplied to the ``Integral``
-declaration must include all indices needed to evaluate the integral
-expression. The integral expression is defined in a function and
-supplied to the 'rule' keyword argument. Finally, a user must specify
-a ``ContinuousSet`` that the integral is being evaluated over. This is
-done using the 'wrt' keyword argument.
+Notice that the positional arguments supplied to the
+:py:class:`Integral<pyomo.dae.Integral>` declaration must include all indices
+needed to evaluate the integral expression. The integral expression is defined
+in a function and supplied to the 'rule' keyword argument. Finally, a user must
+specify a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that the integral
+is being evaluated over. This is done using the 'wrt' keyword argument.
 
 .. note:: 
-   The ``ContinousSet`` specified using the 'wrt' keyword argument must
-   be explicitly specified as one of the indexing sets (meaning it must
-   be supplied as a positional argument). This is to ensure consistency
-   in the ordering and dimension of the indexing sets
+   The :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` specified using the
+   'wrt' keyword argument must be explicitly specified as one of the indexing
+   sets (meaning it must be supplied as a positional argument). This is to
+   ensure consistency in the ordering and dimension of the indexing sets
 
-After an ``Integral`` has been declared, it can be used just like a
-Pyomo ``Expression`` component and can be included in constraints or the
-objective function as shown above.
+After an :py:class:`Integral<pyomo.dae.Integral>` has been declared, it can be
+used just like a Pyomo :py:class:`Expression<pyomo.environ.Expression>`
+component and can be included in constraints or the objective function as shown
+above.
 
-If an ``Integral`` is specified with multiple positional arguments,
-i.e. multiple indexing sets, the final component will be indexed by all
-of those sets except for the ``ContinuousSet`` that the integral was
-taken over. In other words, the ``ContinuousSet`` specified with the
+If an :py:class:`Integral<pyomo.dae.Integral>` is specified with multiple
+positional arguments, i.e. multiple indexing sets, the final component will be
+indexed by all of those sets except for the
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that the integral was
+taken over. In other words, the
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` specified with the
 'wrt' keyword argument is removed from the indexing sets of the
-``Integral`` even though it must be specified as a positional
-argument. This should become more clear with the following example
-showing a double integral over the ``ContinuousSet`` components 't1' and
-'t2'. In addition, the expression is also indexed by the ``Set``
-'s'. The mathematical representation and implementation in Pyomo are
-shown below:
+:py:class:`Integral<pyomo.dae.Integral>` even though it must be specified as a
+positional argument. This should become more clear with the following example
+showing a double integral over the
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` components ``model.t1`` and
+``model.t2``. In addition, the expression is also indexed by the
+:py:class:`Set<pyomo.environ.Set>` ``model.s``. The mathematical representation
+and implementation in Pyomo are shown below:
 
 .. math::
    \sum_{s} \int_{t_2} \int_{t_1} \! X(t_1, t_2, s) \, dt_1 \, dt_2
 
-
 .. code-block:: python
 
    model = ConcreteModel()
-   model.t1 = ContinuousSet(bounds=(0,10))
-   model.t2 = ContinuousSet(bounds=(-1,1))
-   model.s = Set(initialize=['A','B','C'])
+   model.t1 = ContinuousSet(bounds=(0, 10))
+   model.t2 = ContinuousSet(bounds=(-1, 1))
+   model.s = Set(initialize=['A', 'B', 'C'])
 
    model.X = Var(model.t1, model.t2, model.s)
 
-   def _intX1(m,t1,t2,s):
-      return m.X[t1,t2,s]
-   model.intX1 = Integral(model.t1,model.t2,model.s,wrt=model.t1,rule=_intX1)
+   def _intX1(m, t1, t2, s):
+      return m.X[t1, t2, s]
+   model.intX1 = Integral(model.t1, model.t2, model.s, wrt=model.t1,
+                          rule=_intX1)
 
-   def _intX2(m,t2,s):
-      return m.intX1[t2,s]
-   model.intX2 = Integral(model.t2,model.s,wrt=model.t2,rule=_intX2)
+   def _intX2(m, t2, s):
+      return m.intX1[t2, s]
+   model.intX2 = Integral(model.t2, model.s, wrt=model.t2, rule=_intX2)
 
    def _obj(m):
       return sum(model.intX2[k] for k in m.s)
