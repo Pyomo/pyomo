@@ -244,29 +244,33 @@ class SCIPAMPL(SystemCallSolver):
                 SolverStatus.ok
             results.solver.termination_condition = \
                 TerminationCondition.optimal
-            results.solution(0).status = \
-                SolutionStatus.optimal
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.optimal
         elif results.solver.message == "infeasible":
             results.solver.status = \
                 SolverStatus.warning
             results.solver.termination_condition = \
                 TerminationCondition.infeasible
-            results.solution(0).status = \
-                SolutionStatus.infeasible
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.infeasible
         elif results.solver.message == "unbounded":
             results.solver.status = \
                 SolverStatus.warning
             results.solver.termination_condition = \
                 TerminationCondition.unbounded
-            results.solution(0).status = \
-                SolutionStatus.unbounded
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unbounded
         elif results.solver.message == "infeasible or unbounded":
             results.solver.status = \
                 SolverStatus.warning
             results.solver.termination_condition = \
                 TerminationCondition.unbounded
-            results.solution(0).status = \
-                SolutionStatus.unbounded
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unbounded
         else:
             logger.warning("Unexpected SCIP solver message: %s"
                            % (results.solver.message))
