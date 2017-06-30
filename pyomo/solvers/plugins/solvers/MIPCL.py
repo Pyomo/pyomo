@@ -10,8 +10,10 @@
 
 import logging
 
-from pyutilib.misc import Bunch, Options
 import pyutilib.services as services
+
+from pyutilib.common import ApplicationError
+from pyutilib.misc import Bunch, Options
 from pyutilib.services.TempfileManager import create_tempfile
 
 from pyomo.util.plugin import alias
@@ -19,6 +21,7 @@ from pyomo.opt import SolverResults
 from pyomo.opt.base import OptSolver, SolverFactory, ProblemFormat, ResultsFormat
 from pyomo.opt.solver import SystemCallSolver
 from pyomo.opt.base.solvers import _extract_version
+from pyomo.solvers.mockmip import MockMIP
 
 from six import iteritems, string_types
 
@@ -30,7 +33,7 @@ def configure_mipcl():
     global _mipcl_version
     if _mipcl_version is not None:
         return
-    _mipcl_version = _extract_version() #TODO
+    _mipcl_version = _extract_version('') #TODO
     if services.registered_executable('mps_mipcl') is None:
         return
     
@@ -44,17 +47,17 @@ class MIPCL(OptSolver):
         try:
             mode = kwds['solver_io']
             if mode is None:
-                mode = 'lp'
+                mode = 'mps'
             del kwds['solver_io']
         except KeyError:
-            mode = 'lp'
-        if mode  == 'lp':
-            opt = SolverFactory('_mipcl_shell', **kwds)
-            opt.set_problem_format(ProblemFormat.cpxlp)
-            return opt
+            mode = 'mps'
         if mode  == 'mps':
             opt = SolverFactory('_mipcl_shell', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
+            return opt
+        if mode  == 'mod':
+            opt = SolverFactory('_mipcl_shell', **kwds)
+            opt.set_problem_format(ProblemFormat.cpxlp)
             return opt
         if mode == 'os':
             opt = SolverFactory('_ossolver', **kwds)
@@ -97,30 +100,23 @@ class MIPCLSHELL(SystemCallSolver):
     def _get_version(self):
         """Returns a tuple describing the solver executable version."""
         if _mipcl_version is None:
-            return _extract_version('') #TODO
+            return _extract_version('')
         return _mipcl_version
 
     def create_command_line(self, executable, problem_files):
         if self._log_file is None:
             self._log_file = create_tempfile(suffix='.mipcl.log')
         
-        self._soln_file = problem_filename_prefix+".sol"
+        self._soln_file = None
         
         cmd = [executable]
         if self._timer:
             cmd.insert(0, self._timer)
-        for key in self.options:
-            opt = self.options[key]
-            if opt is None or (isinstance(opt, string_types) and opt.strip() == ''):
-                # Handle the case for options that must be
-                # specified without a value
-                cmd.append("--%s" % key)
+        for k,v in iteritems(self.options):
+            if v is None or (isinstance(v, string_types) and v.strip() == ''):
+                cmd.append("--%s" % k)
             else:
-                cmd.extend(["--%s" % key, str(opt)])
-            #if isinstance(opt, basestring) and ' ' in opt:
-            #    cmd.append('--%s "%s"' % (key, str(opt)))
-            #else:
-            #    cmd.append('--%s %s' % (key, str(opt)))
+                cmd.extend(["--%s" % k, str(v)])
 
         if self._timelimit is not None and self._timelimit > 0.0:
             cmd.extend(['-time', str(self._timelimit)])
@@ -135,3 +131,37 @@ class MIPCLSHELL(SystemCallSolver):
     
     def process_soln_file(self, results):
         pass
+
+class MockMIPCL(MIPCLSHELL, MockMIP):
+    """A Mock MIPCL solver used for testing"""
+    
+    alias('_mock_mipcl')
+    
+    def __init__(self, **kwds):
+        try:
+            MIPCLSHELL.__init__(self, **kwds)
+        except ApplicationError:
+            pass
+        MockMIP.__init__(self, "mipcl")
+
+    def available(self, exception_flag=True):
+        return MIPCLSHELL.available(self, exception_flag)
+
+    def create_command_line(self, executable, problem_files):
+        command = MIPCLSHELL.create_command_line(self, executable, problem_files)
+        MockMIP.create_command_line(self, executable, problem_files)
+        return command
+
+    def executable(self):
+        return MockMIP.executable(self)
+
+    def _execute_command(self, cmd):
+        return MockMIP._execute_command(self, cmd)
+
+    def _convert_problem(self, args, pformat, valid_pformats):
+        if pformat in [ProblemFormat.mps, ProblemFormat.mod]:
+            return (args, pformat, None)
+        else:
+            return (args, ProblemFormat.mps, None)
+
+services.register_executable(name="mps_mipcl")
