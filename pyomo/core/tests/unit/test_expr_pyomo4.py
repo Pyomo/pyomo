@@ -10,9 +10,6 @@
 #
 # Unit Tests for expression generation
 #
-#
-
-from __future__ import print_function
 
 import os
 import re
@@ -28,14 +25,16 @@ from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.var import SimpleVar
 from pyomo.core.base.numvalue import potentially_variable, native_types
+
 from pyomo.core.base.expr_pyomo4 import (
     EntangledExpressionError, _getrefcount_available, UNREFERENCED_EXPR_COUNT
 )
 
+
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
     def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
+        # Set the type of expression trees used in Pyomo to be Pyomo4 
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
         # Do we expect arithmetic operations to return expressions?
         self.expectExpression = False
@@ -43,109 +42,158 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         self.expectConstExpression = True
 
     def tearDown(self):
+        # Reset the type of expression trees used in Pyomo
         EXPR.set_expression_tree_format(expr_common._default_mode)
 
-    def create(self,val,domain):
+    def create(self, val, domain):
+        # Create the type of expression term that we are testing
         return NumericConstant(val)
 
     @nottest
     def value_test(self, exp, val, expectExpression=None):
+        """ Test the value of the expression. """
+        #
+        # Override the class value of 'expectExpression'
+        #
         if expectExpression is None:
             expectExpression = self.expectExpression
+        #
+        # Confirm whether 'exp' is an expression
+        #
         self.assertEqual(isinstance(exp,EXPR._ExpressionBase), expectExpression)
+        #
+        # Confirm that 'exp' has the expected value
+        #
         self.assertEqual(value(exp), val)
 
     @nottest
     def relation_test(self, exp, val, expectConstExpression=None):
+        """ Test a relationship expression. """
+        #
+        # Override the class value of 'expectConstExpression'
+        #
         if expectConstExpression is None:
             expectConstExpression = self.expectConstExpression
-        # This had better be a expression
+        #
+        # Confirm that this is a relational expression
+        #
         self.assertTrue(isinstance(exp, EXPR._ExpressionBase))
-        self.assertEqual(exp.is_relational(), True)
+        self.assertTrue(exp.is_relational())
+        #
         # Check that the expression evaluates correctly
+        #
         self.assertEqual(exp(), val)
+        #
         # Check that the expression evaluates correctly in a Boolean context
+        #
         try:
             if expectConstExpression:
+                #
+                # The relational expression should be a constant.
+                #
+                # Check that 'val' equals the boolean value of the expression.
+                #
                 self.assertEqual(bool(exp), val)
+                #
+                # The 'chainedInequality' value is None
+                #
                 self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
             else:
+                #
+                # The relational expression may not be constant
+                #
+                # Check that the expression evaluates to True
+                #
                 self.assertEqual(bool(exp), True)
+                #
+                # Check that the 'chainedInequality' value is the current expression
+                #
                 self.assertIs(exp,EXPR.generate_relational_expression.chainedInequality)
         finally:
+            #
+            # TODO: Why would we get here?  Because the expression isn't constant?
+            #
+            # Check that the 'chainedInequality' value is None
+            #
             EXPR.generate_relational_expression.chainedInequality = None
 
     def test_lt(self):
-        a=self.create(1.3,Reals)
-        b=self.create(2.0,Reals)
-        self.relation_test(a<b,True)
-        self.relation_test(a<a,False)
-        self.relation_test(b<a,False)
-        self.relation_test(a<2.0,True)
-        self.relation_test(a<1.3,False)
-        self.relation_test(b<1.3,False)
-        self.relation_test(1.3<b,True)
-        self.relation_test(1.3<a,False)
-        self.relation_test(2.0<a,False)
+        #
+        # Test the 'less than' operator
+        #
+        a=self.create(1.3, Reals)
+        b=self.create(2.0, Reals)
+        self.relation_test(a<b, True)
+        self.relation_test(a<a, False) 
+        self.relation_test(b<a, False)
+        self.relation_test(a<2.0, True)
+        self.relation_test(a<1.3, False)
+        self.relation_test(b<1.3, False)
+        self.relation_test(1.3<b, True)
+        self.relation_test(1.3<a, False)
+        self.relation_test(2.0<a, False)
 
     def test_gt(self):
-        a=self.create(1.3,Reals)
-        b=self.create(2.0,Reals)
-        self.relation_test(a>b,False)
-        self.relation_test(a>a,False)
-        self.relation_test(b>a,True)
-        self.relation_test(a>2.0,False)
-        self.relation_test(a>1.3,False)
-        self.relation_test(b>1.3,True)
-        self.relation_test(1.3>b,False)
-        self.relation_test(1.3>a,False)
-        self.relation_test(2.0>a,True)
+        #
+        # Test the 'greater than' operator
+        #
+        a=self.create(1.3, Reals)
+        b=self.create(2.0, Reals)
+        self.relation_test(a>b, False)
+        self.relation_test(a>a, False)
+        self.relation_test(b>a, True)
+        self.relation_test(a>2.0, False)
+        self.relation_test(a>1.3, False)
+        self.relation_test(b>1.3, True)
+        self.relation_test(1.3>b, False)
+        self.relation_test(1.3>a, False)
+        self.relation_test(2.0>a, True)
 
     def test_eq(self):
-        a=self.create(1.3,Reals)
-        b=self.create(2.0,Reals)
-        self.relation_test(a==b,False,True)
-        self.relation_test(a==a,True,True)
-        self.relation_test(b==a,False,True)
-        self.relation_test(a==2.0,False,True)
-        self.relation_test(a==1.3,True,True)
-        self.relation_test(b==1.3,False,True)
-        self.relation_test(1.3==b,False,True)
-        self.relation_test(1.3==a,True,True)
-        self.relation_test(2.0==a,False,True)
+        #
+        # Test the 'equals' operator
+        #
+        a=self.create(1.3, Reals)
+        b=self.create(2.0, Reals)
+        self.relation_test(a==b, False, True)
+        self.relation_test(a==a, True, True)
+        self.relation_test(b==a, False, True)
+        self.relation_test(a==2.0, False, True)
+        self.relation_test(a==1.3, True, True)
+        self.relation_test(b==1.3, False, True)
+        self.relation_test(1.3==b, False, True)
+        self.relation_test(1.3==a, True, True)
+        self.relation_test(2.0==a, False, True)
 
     def test_arithmetic(self):
-        a=self.create(-0.5,Reals)
-        b=self.create(2.0,Reals)
-        self.value_test(a-b,-2.5)
-        self.value_test(a+b,1.5)
-        self.value_test(a*b,-1.0)
-        self.value_test(b/a,-4.0)
-        self.value_test(a**b,0.25)
+        #
+        #
+        # Test binary arithmetic operators
+        #
+        a=self.create(-0.5, Reals)
+        b=self.create(2.0, Reals)
+        self.value_test(a-b, -2.5)
+        self.value_test(a+b, 1.5)
+        self.value_test(a*b, -1.0)
+        self.value_test(b/a, -4.0)
+        self.value_test(a**b, 0.25)
 
-        self.value_test(a-2.0,-2.5)
-        self.value_test(a+2.0,1.5)
-        self.value_test(a*2.0,-1.0)
-        self.value_test(b/(0.5),4.0)
-        self.value_test(a**2.0,0.25)
+        self.value_test(a-2.0, -2.5)
+        self.value_test(a+2.0, 1.5)
+        self.value_test(a*2.0, -1.0)
+        self.value_test(b/(0.5), 4.0)
+        self.value_test(a**2.0, 0.25)
 
-        self.value_test(0.5-b,-1.5)
-        self.value_test(0.5+b,2.5)
-        self.value_test(0.5*b,1.0)
-        self.value_test(2.0/a,-4.0)
-        self.value_test((0.5)**b,0.25)
+        self.value_test(0.5-b, -1.5)
+        self.value_test(0.5+b, 2.5)
+        self.value_test(0.5*b, 1.0)
+        self.value_test(2.0/a, -4.0)
+        self.value_test((0.5)**b, 0.25)
 
-        self.value_test(-a,0.5)
-        self.value_test(+a,-0.5,False)
-        self.value_test(abs(-a),0.5)
+        self.value_test(-a, 0.5)
+        self.value_test(+a, -0.5, False)        # This doesn't generate an expression
+        self.value_test(abs(-a), 0.5)
 
-    # FIXME: This doesn't belong here: we need to create a test_numvalue.py
-    def test_asnum(self):
-        try:
-            as_numeric(None)
-            self.fail("test_asnum - expected TypeError")
-        except TypeError:
-            pass
 
 class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
 
@@ -161,11 +209,12 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
         self.expectExpression = True
         self.expectConstExpression = False
 
-    def create(self,val,domain):
+    def create(self, val, domain):
         tmp=pyomo.core.base.var._GeneralVarData()
         tmp.domain = domain
         tmp.value=val
         return tmp
+
 
 class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
 
@@ -181,11 +230,12 @@ class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
         self.expectExpression = True
         self.expectConstExpression = False
 
-    def create(self,val,domain):
+    def create(self, val, domain):
         tmp=Var(name="unknown",domain=domain)
         tmp.construct()
         tmp.value=val
         return tmp
+
 
 class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 
@@ -201,12 +251,13 @@ class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
         self.expectExpression = True
         self.expectConstExpression = False
 
-    def create(self,val,domain):
-        tmp=Var(name="unknown",domain=domain)
+    def create(self, val, domain):
+        tmp=Var(name="unknown", domain=domain)
         tmp.construct()
         tmp.fixed=True
         tmp.value=val
         return tmp
+
 
 class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConstant):
 
@@ -222,10 +273,11 @@ class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConsta
         self.expectExpression = False
         self.expectConstExpression = True
 
-    def create(self,val,domain):
-        tmp=Param(default=val,mutable=False,within=domain)
+    def create(self, val, domain):
+        tmp=Param(default=val, mutable=False, within=domain)
         tmp.construct()
         return tmp
+
 
 class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant):
 
@@ -241,12 +293,14 @@ class TestExpression_EvaluateMutableParam(TestExpression_EvaluateNumericConstant
         self.expectExpression = True
         self.expectConstExpression = False
 
-    def create(self,val,domain):
-        tmp=Param(default=val,mutable=True,within=domain)
+    def create(self, val, domain):
+        tmp=Param(default=val, mutable=True, within=domain)
         tmp.construct()
         return tmp
 
+
 class TestNumericValue(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -254,38 +308,41 @@ class TestNumericValue(unittest.TestCase):
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
 
+    def test_asnum(self):
+        try:
+            as_numeric(None)
+            self.fail("test_asnum - expected TypeError")
+        except TypeError:
+            pass
+
     def test_vals(self):
-        # the following aspect of this test is being removed due to the
-        # check seminatics of a numeric constant requiring far too much
-        # run-time, especially when involved in expression tree
-        # construction. if the user specifies a constant, we're assuming
-        # it is correct.
+        #
+        # If the user specifies a constant, we're assuming it is correct.  Thus,
+        # we do not apply the following test.
+        #
+        ##try:
+        ##    NumericConstant(None,None,value='a')
+        ##    self.fail("Cannot initialize a constant with a non-numeric value")
+        ##except ValueError:
+        ##    pass
 
-        #try:
-        #    NumericConstant(None,None,value='a')
-        #    self.fail("Cannot initialize a constant with a non-numeric value")
-        #except ValueError:
-        #    pass
-
+        #
+        # Check that we can get the value from a numeric constant
+        #
         a = NumericConstant(1.1)
         b = float(value(a))
         self.assertEqual(b,1.1)
         b = int(value(a))
         self.assertEqual(b,1)
 
-    def Xtest_getattr1(self):
-        a = NumericConstant(1.1)
-        try:
-            a.model
-            self.fail("Expected error")
-        except AttributeError:
-            pass
-
     def test_ops(self):
+        #
+        # Verify that we can compare the value of numeric constants
+        #
         a = NumericConstant(1.1)
         b = NumericConstant(2.2)
         c = NumericConstant(-2.2)
-        a <= b
+        #a <= b
         self.assertEqual(a() <= b(), True)
         self.assertEqual(a() >= b(), False)
         self.assertEqual(a() == b(), False)
@@ -295,9 +352,15 @@ class TestNumericValue(unittest.TestCase):
         self.assertEqual(abs(b() / 2-1.1) <= 1e-7, True)
         self.assertEqual(abs(abs(-b())-2.2) <= 1e-7, True)
         self.assertEqual(abs(c()), 2.2)
+        #
+        # Check that we can get the string representation for a numeric
+        # constant.
+        #
         self.assertEqual(str(c), "-2.2")
 
+
 class TestGenerate_SumExpression(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -306,6 +369,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_simpleSum(self):
+        # a + b
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
@@ -320,6 +384,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.a)], 1)
 
     def test_constSum(self):
+        # a + 5
         m = AbstractModel()
         m.a = Var()
         e = m.a + 5
@@ -339,6 +404,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.a)], 1)
 
     def test_nestedSum(self):
+        #
+        # Check the structure of nested sums
+        #
         expectedType = EXPR._LinearExpression if _getrefcount_available \
                        else EXPR._SumExpression
 
@@ -347,6 +415,12 @@ class TestGenerate_SumExpression(unittest.TestCase):
         m.b = Var()
         m.c = Var()
         m.d = Var()
+
+        #           +
+        #          / \
+        #         +   5
+        #        / \
+        #       a   b
         e1 = m.a + m.b
         e = e1 + 5
         self.assertIs(type(e), expectedType)
@@ -363,6 +437,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(e._args[0], e1)
             self.assertIs(e._args[1], 5)
 
+        #       + 
+        #      / \ 
+        #     5   +
+        #        / \
+        #       a   b
         e1 = m.a + m.b
         e = 5 + e1
         self.assertIs(type(e), expectedType)
@@ -379,6 +458,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(e._args[0], 5)
             self.assertIs(e._args[1], e1)
 
+        #           +
+        #          / \
+        #         +   c
+        #        / \
+        #       a   b
         e1 = m.a + m.b
         e = e1 + m.c
         self.assertIs(type(e), expectedType)
@@ -397,6 +481,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(e._args[0], e1)
             self.assertIs(e._args[1], m.c)
 
+        #       + 
+        #      / \ 
+        #     c   +
+        #        / \
+        #       a   b
         e1 = m.a + m.b
         e = m.c + e1
         self.assertIs(type(e), EXPR._LinearExpression)
@@ -410,6 +499,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.b)], 1)
         self.assertEqual(e._coef[id(m.c)], 1)
 
+        #            +
+        #          /   \
+        #         +     +
+        #        / \   / \
+        #       a   b c   d
         e1 = m.a + m.b
         e2 = m.c + m.d
         e = e1 + e2
@@ -431,8 +525,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(e._args[0], e1)
             self.assertIs(e._args[1], e2)
 
-
     def test_trivialSum(self):
+        #
+        # Check that adding zero doesn't change the expression
+        #
         m = AbstractModel()
         m.a = Var()
         e = m.a + 0
@@ -444,10 +540,19 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e, m.a)
 
     def test_sumOf_nestedTrivialProduct(self):
+        #
+        # Check sums with nested products
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
+
+        #       +
+        #      / \
+        #     *   b
+        #    / \
+        #   a   5
         e1 = m.a * 5
         e = e1 + m.b
         self.assertIs(type(e), EXPR._SumExpression)
@@ -459,6 +564,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[0], 5)
         self.assertEqual(e._coef[1], 1)
 
+        #       +
+        #      / \
+        #     b   *
+        #        / \
+        #       a   5
         e = m.b + e1
         self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(e._const, 0)
@@ -469,6 +579,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[0], 1)
         self.assertEqual(e._coef[1], 5)
 
+        #            +
+        #          /   \
+        #         *     +
+        #        / \   / \
+        #       a   5 b   c
         e2 = m.b + m.c
         e = e1 + e2
         self.assertIs(type(e), EXPR._SumExpression)
@@ -482,6 +597,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], 1)
         self.assertEqual(e._coef[2], 1)
 
+        #            +
+        #          /   \
+        #         +     *
+        #        / \   / \
+        #       b   c a   5
         e2 = m.b + m.c
         e = e2 + e1
         self.assertIs(type(e), EXPR._SumExpression)
@@ -495,11 +615,17 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[1], 1)
         self.assertEqual(e._coef[2], 5)
 
-
     def test_simpleDiff(self):
+        #
+        # Check the structure of a simple difference with two variables
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
+
+        #    -
+        #   / \
+        #  a   b
         e = m.a - m.b
         self.assertIs(type(e), EXPR._LinearExpression)
         self.assertEqual(e._const, 0)
@@ -511,8 +637,15 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.b)], -1)
 
     def test_constDiff(self):
+        #
+        # Check the structure of a simple difference with a constant
+        #
         m = AbstractModel()
         m.a = Var()
+
+        #    -
+        #   / \
+        #  a   5
         e = m.a - 5
         self.assertIs(type(e), EXPR._LinearExpression)
         self.assertEqual(e._const, -5)
@@ -521,6 +654,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._coef), 1)
         self.assertEqual(e._coef[id(m.a)], 1)
 
+        #    -
+        #   / \
+        #  5   a
         e = 5 - m.a
         self.assertIs(type(e), EXPR._LinearExpression)
         self.assertEqual(e._const, 5)
@@ -530,11 +666,20 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.a)], -1)
 
     def test_nestedDiff(self):
+        #
+        # Check the structure of nested differences
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
         m.d = Var()
+
+        #       -
+        #      / \
+        #     -   5
+        #    / \
+        #   a   b
         e1 = m.a - m.b
         e = e1 - 5
         if _getrefcount_available:
@@ -551,6 +696,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(e._args[0], e1)
             self.assertIs(e._args[1], -5)
 
+        #       -
+        #      / \
+        #     5   -
+        #        / \
+        #       a   b
         e1 = m.a - m.b
         e = 5 - e1
         if _getrefcount_available:
@@ -568,6 +718,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(type(e._args[1]), EXPR._NegationExpression)
             self.assertIs(e._args[1]._args[0], e1)
 
+        #       -
+        #      / \
+        #     -   c
+        #    / \
+        #   a   b
         e1 = m.a - m.b
         e = e1 - m.c
         if _getrefcount_available:
@@ -587,6 +742,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(type(e._args[1]), EXPR._LinearExpression)
             self.assertIs(e._args[1]._args[0], m.c)
 
+        #       -
+        #      / \
+        #     c   -
+        #        / \
+        #       a   b
         e1 = m.a - m.b
         e = m.c - e1
         self.assertIs(type(e), EXPR._LinearExpression)
@@ -600,6 +760,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.b)], 1)
         self.assertEqual(e._coef[id(m.c)], 1)
 
+        #            -
+        #          /   \
+        #         -     -
+        #        / \   / \
+        #       a   b c   d
         e1 = m.a - m.b
         e2 = m.c - m.d
         e = e1 - e2
@@ -622,6 +787,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(type(e._args[1]), EXPR._NegationExpression)
             self.assertIs(e._args[1]._args[0], e2)
 
+        #            -
+        #          /   \
+        #         -     -
+        #        / \   / \
+        #       c   d a   b
         e1 = m.a - m.b
         e2 = m.c - m.d
         e = e2 - e1
@@ -644,14 +814,17 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(type(e._args[1]), EXPR._NegationExpression)
             self.assertIs(e._args[1]._args[0], e1)
 
-
     def test_trivialDiff(self):
+        #
+        # Check that subtracting zero doesn't change the expression
+        #
         m = AbstractModel()
         m.a = Var()
         e = m.a - 0
         self.assertIs(type(e), type(m.a))
         self.assertIs(e, m.a)
 
+        # 0 - a
         e = 0 - m.a
         self.assertIs(type(e), EXPR._LinearExpression)
         self.assertEqual(e._const, 0)
@@ -661,10 +834,19 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.a)], -1)
 
     def test_sumOf_nestedTrivialProduct(self):
+        #
+        # Check the structure of sum of products
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
+
+        #       -
+        #      / \
+        #     *   b
+        #    / \
+        #   a   5
         e1 = m.a * 5
         e = e1 - m.b
         if _getrefcount_available:
@@ -682,6 +864,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(type(e._args[1]), EXPR._LinearExpression)
             self.assertIs(e._args[1]._args[0], m.b)
 
+        #       -
+        #      / \
+        #     b   *
+        #        / \
+        #       a   5
         e1 = m.a * 5
         e = m.b - e1
         self.assertIs(type(e), EXPR._LinearExpression)
@@ -693,6 +880,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.a)], -5)
         self.assertEqual(e._coef[id(m.b)], 1)
 
+        #            -
+        #          /   \
+        #         *     -
+        #        / \   / \
+        #       a   5 b   c
         e1 = m.a * 5
         e2 = m.b - m.c
         e = e1 - e2
@@ -713,6 +905,11 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(type(e._args[1]), EXPR._NegationExpression)
             self.assertIs(e._args[1]._args[0], e2)
 
+        #            -
+        #          /   \
+        #         -     *
+        #        / \   / \
+        #       b   c a   5
         e1 = m.a * 5
         e2 = m.b - m.c
         e = e2 - e1
@@ -733,7 +930,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
             self.assertIs(type(e._args[1]), EXPR._NegationExpression)
             self.assertIs(e._args[1]._args[0], e1)
 
+
 class TestGenerate_ProductExpression(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -742,6 +941,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_simpleProduct(self):
+        #
+        # Check the structure of a simple product
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
@@ -951,7 +1153,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e), float)
         self.assertEqual(e, 1.5)
 
+
 class TestGenerate_RelationalExpression(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1055,7 +1259,6 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertIs(e._args[1], m.a)
         self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict[0], False)
-
 
     def test_compoundInequality(self):
         m = self.m
@@ -1168,7 +1371,6 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
         self.assertTrue( -1 <= m.x <= 0 )
         self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
-
 
     def test_compoundInequality_errors(self):
         m = ConcreteModel()
@@ -1316,7 +1518,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         except TypeError:
             pass
 
+
 class TestPrettyPrinter_oldStyle(unittest.TestCase):
+
     _save = None
 
     def setUp(self):
@@ -1328,7 +1532,6 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
-
 
     def test_sum(self):
         model = ConcreteModel()
@@ -1433,7 +1636,9 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
             " ) ) ) ) ) )",
             str(expr) )
 
+
 class TestPrettyPrinter_newStyle(unittest.TestCase):
+
     _save = None
 
     def setUp(self):
@@ -1445,7 +1650,6 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
-
 
     def test_sum(self):
         model = ConcreteModel()
@@ -1684,7 +1888,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertFileEqualsBaseline( currdir+"varpprint.out",
                                        currdir+"varpprint.txt" )
 
+
 class TestInplaceExpressionGeneration(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1794,7 +2000,6 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
         self.assertIs(x._args[1], m.a)
         self.assertEqual(EXPR.generate_expression.clone_counter, count)
 
-
     def test_ipow(self):
         m = self.m
         x = 1
@@ -1844,7 +2049,9 @@ class TestInplaceExpressionGeneration(unittest.TestCase):
             # anything with y (and the parent pointer is still None),
             # then we can plow ahead.
 
+
 class TestGeneralExpressionGeneration(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -1937,7 +2144,9 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         self.assertIs(type(e), EXPR._NegationExpression)
         self.assertIs(type(e._args[0]), EXPR._IntrinsicFunctionExpression)
 
+
 class TestExprConditionalContext(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -2227,6 +2436,7 @@ class TestExprConditionalContext(unittest.TestCase):
         self.checkCondition(value(1 == instance.v), True)
         self.checkCondition(value(2 == instance.v), False)
 
+
 class TestPolynomialDegree(unittest.TestCase):
 
     def setUp(self):
@@ -2462,7 +2672,9 @@ class EntangledExpressionErrors(unittest.TestCase):
 
 
 class TrapRefCount(object):
+
     inst = None
+
     def __init__(self, ref):
         self.saved_fcn = None
         self.refCount = []
@@ -2488,6 +2700,7 @@ def TrapRefCount_fcn(target, inplace, *objs):
             continue
         TrapRefCount.inst.fcn(sys.getrefcount(obj),target,_inplace,obj)
     return TrapRefCount.inst.saved_fcn(target, inplace, *objs)
+
 
 @unittest.skipIf(
     not _getrefcount_available, "clone_if_needed is not "
@@ -2618,7 +2831,6 @@ class TestCloneIfNeeded(unittest.TestCase):
         expr = sum(l)
         self.assertEqual(EXPR.generate_expression.clone_counter, count+4)
 
-
     def test_cloneCount_intrinsicFunction(self):
         # intrinsicFunction of a simple expression
         count = EXPR.generate_expression.clone_counter
@@ -2632,7 +2844,6 @@ class TestCloneIfNeeded(unittest.TestCase):
         expr1 = log(expr)
         self.assertEqual( EXPR.generate_expression.clone_counter,
                           count+1 )
-
 
     def test_cloneCount_Expr_if(self):
         # intrinsicFunction of a simple expression
@@ -2650,7 +2861,6 @@ class TestCloneIfNeeded(unittest.TestCase):
         expr1 = EXPR.Expr_if(IF=expr, THEN=expr, ELSE=expr)
         self.assertEqual( EXPR.generate_expression.clone_counter,
                           count+3 )
-
 
     def test_cloneCount_relationalExpression_simple(self):
         # relational expression of simple vars
@@ -2994,6 +3204,7 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual(expr1._then(), expr2._then())
         self.assertEqual(expr1._else(), expr2._else())
 
+
 class TestIsFixedIsConstant(unittest.TestCase):
 
     def setUp(self):
@@ -3253,6 +3464,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
 
 class TestPotentiallyVariable(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -3323,7 +3535,9 @@ class TestPotentiallyVariable(unittest.TestCase):
         self.assertEqual(potentially_variable('a'), False)
         self.assertEqual(potentially_variable(None), False)
 
+
 class TestExpressionUtilities(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4.x expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -3379,7 +3593,9 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
                           [ m.a, m.a, m.a,  ] )
 
+
 class TestMultiArgumentExpressions(unittest.TestCase):
+
     def setUp(self):
         # This class tests the Pyomo 4 expression trees
         EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
@@ -3420,6 +3636,7 @@ con : Size=5
     5.0 :  25.0 : None : 625.0
 """
         self.assertEqual(OUT.getvalue(), reference)
+
 
 if __name__ == "__main__":
     unittest.main()
