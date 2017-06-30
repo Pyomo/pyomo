@@ -624,6 +624,8 @@ desired collocation points are added to the ContinuousSet being discretized.
 
 Dynamic Model Simulation
 ------------------------
+.. autoclass:: pyomo.dae.Simulator
+   :members:
 
 Available Simulators
 ********************

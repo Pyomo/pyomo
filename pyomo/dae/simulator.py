@@ -7,8 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-__all__ = ('Simulator', )
-
 import numpy as np
 
 from pyomo.environ import Constraint, Param, value, Suffix
@@ -30,6 +28,8 @@ from pyomo.core.base.template_expr import (
 from six import iterkeys, itervalues
 
 import logging
+
+__all__ = ('Simulator', )
 logger = logging.getLogger('pyomo.core')
 
 # Check integrator availability
@@ -45,24 +45,29 @@ try:
 except ImportError:
     casadi_available = False
 
-def _check_getitemexpression(expr,i):
+
+def _check_getitemexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
     GetItemExpression at expr._args[i] to see if it is a
-    DerivativeVar. If so, return the GetItemExpression for the
-    DerivativeVar and the RHS. If not, return None.
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
+    GetItemExpression for the :py:class:`DerivativeVar<DerivativeVar>` and
+    the RHS. If not, return None.
     """
     if type(expr._args[i]._base) is DerivativeVar:
-        return [expr._args[i],expr._args[i-1]]
+        return [expr._args[i], expr._args[i - 1]]
     else:
         return None
 
-def _check_productexpression(expr,i):
+
+def _check_productexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
     ProductExpression at expr._args[i] to see if it contains a
-    DerivativeVar. If so, return the GetItemExpression for the
-    DerivativeVar and the RHS. If not, return None.
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
+    GetItemExpression for the
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
+    return None.
     """
     if common.mode is common.Mode.coopr3_trees:
         num = expr._args[i]._numerator
@@ -75,14 +80,14 @@ def _check_productexpression(expr,i):
             if type(obj) is EXPR._GetItemExpression and \
                type(obj._base) is DerivativeVar:
                 dv = obj
-                num = num[0:idx]+num[idx+1:]
+                num = num[0:idx] + num[idx + 1:]
                 break
         if dv is not None:
-            RHS = expr._args[i-1]/coef
+            RHS = expr._args[i - 1] / coef
             for obj in num:
-                RHS = RHS*(1/obj)
+                RHS *= (1 / obj)
             for obj in denom:
-                RHS = RHS*obj
+                RHS = RHS * obj
             return [dv, RHS]
         else:
             # Check if there is a DerivativeVar in the denominator
@@ -90,30 +95,33 @@ def _check_productexpression(expr,i):
                 if type(obj) is EXPR._GetItemExpression and \
                    type(obj._base) is DerivativeVar:
                     dv = obj
-                    denom = denom[0:idx]+denom[idx+1:]
+                    denom = denom[0:idx] + denom[idx + 1:]
                     break
             if dv is not None:
                 tempnum = coef
                 for obj in num:
                     tempnum *= obj
 
-                tempdenom = expr._args[i-1]
+                tempdenom = expr._args[i - 1]
                 for obj in denom:
                     tempdenom *= obj
 
-                RHS = tempnum/tempdenom
+                RHS = tempnum / tempdenom
                 return [dv, RHS]                
     else:
         raise TypeError(
             "Simulator is unable to handle pyomo4 expression trees.")
     return None
 
-def _check_sumexpression(expr,i):
+
+def _check_sumexpression(expr, i):
     """
     Accepts an equality expression and an index value. Checks the
     SumExpression at expr._args[i] to see if it contains a
-    DerivativeVar. If so, return the GetItemExpression for the
-    DerivativeVar and the RHS. If not, return None.
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`. If so, return the
+    GetItemExpression for the
+    :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>` and the RHS. If not,
+    return None.
     """
     sumexp = expr._args[i]
     items = sumexp._args
@@ -121,74 +129,77 @@ def _check_sumexpression(expr,i):
     dv = None
     dvcoef = 1
 
-    for idx,item in enumerate(items):
+    for idx, item in enumerate(items):
         if type(item) is EXPR._GetItemExpression and \
            type(item._base) is DerivativeVar:
             dv = item
             dvcoef = coefs[idx]
-            items = items[0:idx]+items[idx+1:]
-            coefs = coefs[0:idx]+coefs[idx+1:]
+            items = items[0:idx] + items[idx + 1:]
+            coefs = coefs[0:idx] + coefs[idx + 1:]
             break
 
     if dv is not None:
-        RHS = expr._args[i-1]
-        for idx,item in enumerate(items):
-            RHS -= coefs[idx]*item
-        RHS = RHS/dvcoef
+        RHS = expr._args[i - 1]
+        for idx, item in enumerate(items):
+            RHS -= coefs[idx] * item
+        RHS = RHS / dvcoef
         return [dv, RHS]
 
     return None
 
-def substitute_getitem_with_casadi_sym(expr, _map):
 
+def substitute_getitem_with_casadi_sym(expr, _map):
+    """
+    Replaces _GetItemExpression objects with casadi sym objects
+    """
     if type(expr) is IndexTemplate:
         return expr
 
     _id = _GetItemIndexer(expr)
     if _id not in _map:
         name = "%s[%s]" % (
-            expr._base.name, ','.join(str(x) for x in _id._args) )
+            expr._base.name, ','.join(str(x) for x in _id._args))
         _map[_id] = casadi.SX.sym(name)
     return _map[_id]
+
 
 def substitute_intrinsic_function_with_casadi(expr):
     """
     Replaces intrinsic functions in Pyomo expressions with casadi
     versions of those functions.
-
     """
-    functionmap = {'log':casadi.log,
-                   'log10':casadi.log10,
-                   'sin':casadi.sin,
-                   'cos':casadi.cos,
-                   'tan':casadi.tan,
-                   'cosh':casadi.cosh, 
-                   'sinh':casadi.sinh, 
-                   'tanh':casadi.tanh,
-                   'asin':casadi.asin, 
-                   'acos':casadi.acos, 
-                   'atan':casadi.atan,
-                   'exp':casadi.exp,
-                   'sqrt':casadi.sqrt, 
-                   'asinh':casadi.asinh,
-                   'acosh':casadi.acosh, 
-                   'atanh':casadi.atanh,
-                   'ceil':casadi.ceil, 
-                   'floor':casadi.floor} 
+    functionmap = {'log': casadi.log,
+                   'log10': casadi.log10,
+                   'sin': casadi.sin,
+                   'cos': casadi.cos,
+                   'tan': casadi.tan,
+                   'cosh': casadi.cosh,
+                   'sinh': casadi.sinh,
+                   'tanh': casadi.tanh,
+                   'asin': casadi.asin,
+                   'acos': casadi.acos,
+                   'atan': casadi.atan,
+                   'exp': casadi.exp,
+                   'sqrt': casadi.sqrt,
+                   'asinh': casadi.asinh,
+                   'acosh': casadi.acosh,
+                   'atanh': casadi.atanh,
+                   'ceil': casadi.ceil,
+                   'floor': casadi.floor}
     expr._operator = functionmap[expr.name]
     return expr
 
+
 def substitute_intrinsic_function(expr, substituter, *args):
     """
-    This substituter is copied from template_expr.py with some minor
-    modifications to make it compatible with CasADi expressions. 
-    TODO: We need a generalized expression tree walker to avoid
-    copying code like this
-
     This substition function is used to replace Pyomo intrinsic
     functions with CasADi functions before sending expressions to a
     CasADi integrator
 
+    This substituter is copied from template_expr.py with some minor
+    modifications to make it compatible with CasADi expressions. 
+    TODO: We need a generalized expression tree walker to avoid
+    copying code like this
     """
 
     # Again, due to circular imports, we cannot import expr at the
@@ -201,7 +212,7 @@ def substitute_intrinsic_function(expr, substituter, *args):
     if type(expr) is casadi.SX:
         return expr
 
-    _stack = [ [[expr.clone()], 0, 1, None] ]
+    _stack = [[[expr.clone()], 0, 1, None]]
     _stack_idx = 0
     while _stack_idx >= 0:
         _ptr = _stack[_stack_idx]
@@ -218,7 +229,7 @@ def substitute_intrinsic_function(expr, substituter, *args):
                 else:
                     _ptr[0][_ptr[1]-1] = substituter(_obj, *args)
             elif _subType in native_numeric_types or \
-                 type(_obj) is casadi.SX or not _obj.is_expression():
+                    type(_obj) is casadi.SX or not _obj.is_expression():
                 continue
             elif _subType is EXPR._ProductExpression:
                 # _ProductExpression is fundamentally different in
@@ -236,7 +247,7 @@ def substitute_intrinsic_function(expr, substituter, *args):
                     if _stack_idx < len(_stack):
                         _stack[_stack_idx] = _ptr
                     else:
-                        _stack.append( _ptr )
+                        _stack.append(_ptr)
             else:
                 if not _obj._args:
                     continue
@@ -245,27 +256,30 @@ def substitute_intrinsic_function(expr, substituter, *args):
                 if _stack_idx < len(_stack):
                     _stack[_stack_idx] = _ptr
                 else:
-                    _stack.append( _ptr )
+                    _stack.append(_ptr)
         _stack_idx -= 1
     return _stack[0][0][0]
 
+
 class Simulator:
     """
-    Simulator objects allow a user to simulate a dynamic model
-    formulated using pyomo.dae.
+    Simulator objects allow a user to simulate a dynamic model formulated
+    using pyomo.dae.
 
-    Constructor Arguments:
-        package         The simulator Python package to use. Currently
-                        scipy and casadi are the only supported packages 
+    Parameters
+    ----------
+    package : `string`
+        The Python simulator package to use. Currently 'scipy' and 'casadi' are
+        the only supported packages
     """
 
     def __init__(self, m, **kwds):
         
-        self._intpackage = kwds.pop('package','scipy')
-        if self._intpackage not in ['scipy','casadi']:
+        self._intpackage = kwds.pop('package', 'scipy')
+        if self._intpackage not in ['scipy', 'casadi']:
             raise DAE_Error(
                 "Unrecognized simulator package %s. Please select from "
-                "%s" %(self._intpackage,['scipy','casadi']))
+                "%s" % (self._intpackage, ['scipy', 'casadi']))
 
         if self._intpackage == 'scipy':
             if not scipy_available:
@@ -301,16 +315,16 @@ class Simulator:
         if len(derivs) == 0:
             raise DAE_Error("Cannot simulate a model with no derivatives")
 
-        templatemap = {} # Map for template substituter 
-        rhsdict = {} # Map of derivative to its RHS templated expr
+        templatemap = {}  # Map for template substituter
+        rhsdict = {}  # Map of derivative to its RHS templated expr
         derivlist = []  # Ordered list of derivatives
-        alglist = [] # list of templated algebraic equations
+        alglist = []  # list of templated algebraic equations
 
         # Loop over constraints to find differential equations with separable
         # RHS. Must find a RHS for every derivative var otherwise ERROR. Build
         # dictionary of DerivativeVar:RHS equation. 
 
-        for con in m.component_objects(Constraint,active=True):
+        for con in m.component_objects(Constraint, active=True):
             
             # Skip the discretization equations if model is discretized
             if '_disc_eq' in con.name:
@@ -324,11 +338,11 @@ class Simulator:
                 continue
             elif con._implicit_subsets is None:
                 # Check if the continuous set is the indexing set
-                if not con._index is contset :
+                if con._index is not contset:
                     continue
                 else:
-                   csidx = 0 
-                   noncsidx = (None,)
+                    csidx = 0
+                    noncsidx = (None,)
             else:
                 temp = con._implicit_subsets
                 dimsum = 0
@@ -338,9 +352,9 @@ class Simulator:
                     if s is contset:
                         if csidx != -1:
                             raise DAE_Error(
-                                "Cannot simulate the constraint %s because "\
-                                "it is indexed by duplicate ContinuousSets" \
-                                %(con.name)) 
+                                "Cannot simulate the constraint %s because "
+                                "it is indexed by duplicate ContinuousSets"
+                                % con.name)
                         csidx = dimsum
                     elif noncsidx is None:
                         noncsidx = s
@@ -349,7 +363,6 @@ class Simulator:
                     dimsum += s.dimen
                 if csidx == -1:
                     continue
-                
 
             # Get the rule used to construct the constraint
             conrule = con.rule
@@ -358,12 +371,12 @@ class Simulator:
                 # Insert the index template and call the rule to
                 # create a templated expression              
                 if i is None:
-                    tempexp = conrule(m,cstemplate)
+                    tempexp = conrule(m, cstemplate)
                 else:
-                    if not isinstance(i,tuple):
+                    if not isinstance(i, tuple):
                         i = (i,)
-                    tempidx = i[0:csidx]+(cstemplate,)+i[csidx:]
-                    tempexp = conrule(m,*tempidx)
+                    tempidx = i[0:csidx] + (cstemplate,) + i[csidx:]
+                    tempexp = conrule(m, *tempidx)
 
                 # Check to make sure it's an _EqualityExpression
                 if not type(tempexp) is EXPR._EqualityExpression:
@@ -374,35 +387,34 @@ class Simulator:
                 args = None
                 # Case 1: m.dxdt[t] = RHS 
                 if type(tempexp._args[0]) is EXPR._GetItemExpression:
-                    args = _check_getitemexpression(tempexp,0)
+                    args = _check_getitemexpression(tempexp, 0)
             
                 # Case 2: RHS = m.dxdt[t]
                 if args is None:
                     if type(tempexp._args[1]) is EXPR._GetItemExpression:
-                        args = _check_getitemexpression(tempexp,1)
+                        args = _check_getitemexpression(tempexp, 1)
 
                 # Case 3: m.p*m.dxdt[t] = RHS
                 if args is None:
                     if type(tempexp._args[0]) is EXPR._ProductExpression:
-                        args = _check_productexpression(tempexp,0)
+                        args = _check_productexpression(tempexp, 0)
 
                 # Case 4: RHS =  m.p*m.dxdt[t]
                 if args is None:
                     if type(tempexp._args[1]) is EXPR._ProductExpression:
-                        args = _check_productexpression(tempexp,1)
+                        args = _check_productexpression(tempexp, 1)
 
                 # Case 5: m.dxdt[t] + CONSTANT = RHS 
                 # or CONSTANT + m.dxdt[t] = RHS
                 if args is None:
                     if type(tempexp._args[0]) is EXPR._SumExpression:
-                        args = _check_sumexpression(tempexp,0)
+                        args = _check_sumexpression(tempexp, 0)
 
                 # Case 6: RHS = m.dxdt[t] + CONSTANT
                 if args is None:
                     if type(tempexp._args[1]) is EXPR._SumExpression:
-                        args = _check_sumexpression(tempexp,1)
+                        args = _check_sumexpression(tempexp, 1)
 
-            
                 # Case 7: RHS = m.p*m.dxdt[t] + CONSTANT
                 # This case will be caught by Case 6 if p is immutable. If
                 # p is mutable then this case will not be detected as a
@@ -416,15 +428,17 @@ class Simulator:
                     # Constraint is an algebraic equation or unsupported
                     # differential equation
                     if self._intpackage == 'scipy':
-                        raise DAE_Error("Model contains an algebraic equation "
-                                        "or unrecognized differential equation. "
-                                        "Constraint '%s' cannot be simulated "
-                                        "using Scipy. If you are trying to "
-                                        "simulate a DAE model you must use CasADi "
-                                        "as the integration package." 
-                                        %(str(con.name)))
+                        raise DAE_Error(
+                            "Model contains an algebraic equation or "
+                            "unrecognized differential equation. Constraint "
+                            "'%s' cannot be simulated using Scipy. If you are "
+                            "trying to simulate a DAE model you must use "
+                            "CasADi as the integration package."
+                            % str(con.name))
                     tempexp = tempexp._args[0] - tempexp._args[1]
-                    algexp = substitute_template_expression(tempexp, substituter, templatemap)
+                    algexp = substitute_template_expression(tempexp,
+                                                            substituter,
+                                                            templatemap)
                     algexp = substitute_intrinsic_function(
                         algexp, substitute_intrinsic_function_with_casadi)
                     alglist.append(algexp)
@@ -437,7 +451,7 @@ class Simulator:
                 if dvkey in rhsdict.keys():
                     raise DAE_Error(
                         "Found multiple RHS expressions for the "
-                        "DerivativeVar %s" %(str(dvkey)))
+                        "DerivativeVar %s" % str(dvkey))
             
                 derivlist.append(dvkey)
                 tempexp = substitute_template_expression(
@@ -460,7 +474,7 @@ class Simulator:
 
         # Create ordered list of differential variables corresponding
         # to the list of derivatives.
-        diffvars=[]
+        diffvars = []
 
         for deriv in derivlist:
             sv = deriv._base.get_state_var()
@@ -468,7 +482,7 @@ class Simulator:
 
         # Create ordered list of algebraic variables and time-varying
         # parameters
-        algvars=[]
+        algvars = []
 
         for item in iterkeys(templatemap):
             if item._base.name in derivs.keys():
@@ -483,10 +497,10 @@ class Simulator:
                 
         if self._intpackage == 'scipy':
             # Function sent to scipy integrator
-            def _rhsfun(t,x):
+            def _rhsfun(t, x):
                 residual = []
                 cstemplate.set_value(t)
-                for idx,v in enumerate(diffvars):
+                for idx, v in enumerate(diffvars):
                     if v in templatemap:
                         templatemap[v].set_value(x[idx])
 
@@ -507,8 +521,10 @@ class Simulator:
         self._model = m
         self._tsim = None
         self._simsolution = None
-        self._simalgvars = None # The algebraic vars in the most recent simulation
-        self._siminputvars = None # The time-varying inputs in the most recent simulation
+        # The algebraic vars in the most recent simulation
+        self._simalgvars = None
+        # The time-varying inputs in the most recent simulation
+        self._siminputvars = None
 
     def get_variable_order(self, vartype=None):
         """
@@ -529,7 +545,7 @@ class Simulator:
         else:
             return self._diffvars
         
-    def simulate(self,**kwds):
+    def simulate(self, **kwds):
         """
         Simulate the model. The user may specify initial conditions using
         a list. If no list is provided then the simulator will take
@@ -543,7 +559,7 @@ class Simulator:
         
         if self._intpackage == 'scipy':
             # Specify the scipy integrator to use for simulation
-            valid_integrators = ['vode','zvode','lsoda','dopri5','dop853']
+            valid_integrators = ['vode', 'zvode', 'lsoda', 'dopri5', 'dop853']
             integrator = kwds.pop('integrator', 'lsoda')
             if integrator is 'odeint':
                 integrator = 'lsoda'
@@ -551,24 +567,25 @@ class Simulator:
             # Specify the casadi integrator to use for simulation.
             # Only a subset of these integrators may be used for 
             # DAE simulation. We defer this check to CasADi.
-            valid_integrators = ['cvodes','idas','collocation','rk']
+            valid_integrators = ['cvodes', 'idas', 'collocation', 'rk']
             integrator = kwds.pop('integrator', 'idas')
 
         if integrator not in valid_integrators:
-            raise DAE_Error( "Unrecognized %s integrator "
-            "\'%s\'. Please select " "an integrator from "
-            "%s" %(self._intpackage,integrator,valid_integrators))
+            raise DAE_Error("Unrecognized %s integrator \'%s\'. Please select"
+                            " an integrator from %s" % (self._intpackage,
+                                                        integrator,
+                                                        valid_integrators))
 
         # Set the time step or the number of points for the lists
         # returned by the integrator
         tstep = kwds.pop('step', None)
         if tstep is not None and \
-           tstep > (self._contset.last()-self._contset.first()):
+           tstep > (self._contset.last() - self._contset.first()):
             raise ValueError(
                 "The step size %6.2f is larger than the span of the "
-                "ContinuousSet %s" %(tstep,self._contset.name()))
+                "ContinuousSet %s" % (tstep, self._contset.name()))
             
-        numpoints = kwds.pop('numpoints',None)
+        numpoints = kwds.pop('numpoints', None)
         
         if tstep is not None and numpoints is not None:
             raise ValueError(
@@ -581,19 +598,19 @@ class Simulator:
         tsim = []
         if tstep is None:
             tsim = np.linspace(
-                self._contset.first(),self._contset.last(),num=numpoints)
+                self._contset.first(), self._contset.last(), num=numpoints)
 
-            # Consider adding an option for log spaced time points. Can
-            # be important for simulating stiff systems.  tsim =
-            # np.logspace(-4,6,num=100)
-            # np.log10(self._contset.first()),np.log10(self._contset.last()),num=1000,
-            # endpoint=True)
+            # Consider adding an option for log spaced time points. Can be
+            # important for simulating stiff systems.
+            # tsim = np.logspace(-4,6, num=100)
+            # np.log10(self._contset.first()),np.log10(
+            # self._contset.last()),num=1000, endpoint=True)
 
         else:
             tsim = np.arange(
-                self._contset.first(),self._contset.last(),tstep)
+                self._contset.first(), self._contset.last(), tstep)
 
-        varying_inputs = kwds.pop('varying_inputs',None)
+        varying_inputs = kwds.pop('varying_inputs', None)
         switchpts = []
         self._siminputvars = {}
         self._simalgvars = []
@@ -627,39 +644,41 @@ class Simulator:
 
             # Make sure all the switchpts are within the bounds of 
             # the ContinuousSet
-            if switchpts[0] < self._contset.first() or switchpts[-1] > self._contset.last():
+            if switchpts[0] < self._contset.first() or \
+                            switchpts[-1] > self._contset.last():
                 raise ValueError("Found a switching point for one or more of "
                                  "the time-varying inputs that is not within "
                                  "the bounds of the ContinuousSet.")
 
             # Update tsim to include input switching points
             # This numpy function returns the unique, sorted points
-            tsim = np.union1d(tsim,switchpts)
+            tsim = np.union1d(tsim, switchpts)
         else:
             self._simalgvars = self._algvars
 
         # Check if initial conditions were provided, otherwise obtain
         # them from the current variable values
-        initcon = kwds.pop('initcon',None)
+        initcon = kwds.pop('initcon', None)
         if initcon is not None:
-            if len(initcon)>len(self._diffvars):
+            if len(initcon) > len(self._diffvars):
                 raise ValueError(
                     "Too many initial conditions were specified. The "
                     "simulator was expecting a list with %i values."
-                    %(len(self._diffvars)))
-            if len(initcon)<len(self._diffvars):
+                    % len(self._diffvars))
+            if len(initcon) < len(self._diffvars):
                 raise ValueError(
                     "Too few initial conditions were specified. The "
                     "simulator was expecting a list with %i values."
-                    %(len(self._diffvars)))
+                    % len(self._diffvars))
         else:
             initcon = []
             for v in self._diffvars:
-                for idx,i in enumerate(v._args):
+                for idx, i in enumerate(v._args):
                     if type(i) is IndexTemplate:
                         break
                 initpoint = self._contset.first()
-                vidx = tuple(v._args[0:idx])+(initpoint,)+tuple(v._args[idx+1:])
+                vidx = tuple(v._args[0:idx]) + (initpoint,) + \
+                       tuple(v._args[idx + 1:])
                 # This line will raise an error if no value was set
                 initcon.append(value(v._base[vidx]))
         
@@ -668,27 +687,28 @@ class Simulator:
                 raise ImportError("The scipy module is not available. "
                                   "Cannot simulate the model.")
 
-            scipyint = scipy.ode(self._rhsfun).set_integrator(integrator,**kwds)
-            scipyint.set_initial_value(initcon,tsim[0])
+            scipyint = scipy.ode(self._rhsfun).set_integrator(integrator,
+                                                              **kwds)
+            scipyint.set_initial_value(initcon, tsim[0])
 
             profile = np.array(initcon)
             i = 1
             while scipyint.successful() and scipyint.t < tsim[-1]:
                 
                 # check if tsim[i-1] is a switching time and update value
-                if tsim[i-1] in switchpts:
+                if tsim[i - 1] in switchpts:
                     for v in self._siminputvars.keys():
-                        if tsim[i-1] in varying_inputs[v]:
+                        if tsim[i - 1] in varying_inputs[v]:
                             p = self._templatemap[self._siminputvars[v]]
-                            p.set_value(varying_inputs[v][tsim[i-1]])
+                            p.set_value(varying_inputs[v][tsim[i - 1]])
 
                 profilestep = scipyint.integrate(tsim[i])
-                profile = np.vstack([profile,profilestep])
+                profile = np.vstack([profile, profilestep])
                 i += 1
                    
             if not scipyint.successful():
                 raise DAE_Error("The Scipy integrator %s did not terminate "
-                            "successfully."%(integrator))
+                                "successfully." % integrator)
         else:
 
             if len(switchpts) != 0:
@@ -698,14 +718,16 @@ class Simulator:
                 
                 time = casadi.SX.sym('time')
               
-                odealltemp = [time*value(self._rhsdict[i]) for i in self._derivlist]
+                odealltemp = [time * value(self._rhsdict[i])
+                              for i in self._derivlist]
                 odeall = casadi.vertcat(*odealltemp)
 
                 # Time-varying inputs
-                ptemp = [self._templatemap[i] for i in self._siminputvars.values()]
-                pall = casadi.vertcat(time,*ptemp)
+                ptemp = [self._templatemap[i]
+                         for i in self._siminputvars.values()]
+                pall = casadi.vertcat(time, *ptemp)
 
-                dae = {'x':xall, 'p':pall, 'ode':odeall}
+                dae = {'x': xall, 'p': pall, 'ode': odeall}
 
                 if len(self._algvars) != 0:
                     zalltemp = [self._templatemap[i] for i in self._simalgvars]
@@ -716,21 +738,26 @@ class Simulator:
                     dae['z'] = zall
                     dae['alg'] = algall
 
-                opts = {'tf':1.0}
-                F = casadi.integrator('F',integrator,dae,opts)
+                opts = {'tf': 1.0}
+                F = casadi.integrator('F', integrator, dae, opts)
                 N = len(tsim)
 
-                # This approach removes the time scaling from tsim so must create an array
-                # with the time step between consecutive time points
-                tsimtemp = np.hstack([0,tsim[1:]-tsim[0:-1]])
-                tsimtemp.shape = (1,len(tsimtemp))
+                # This approach removes the time scaling from tsim so must
+                # create an array with the time step between consecutive
+                # time points
+                tsimtemp = np.hstack([0, tsim[1:] - tsim[0:-1]])
+                tsimtemp.shape = (1, len(tsimtemp))
                 
                 # Need a similar np array for each time-varying input
                 def _build_step_input(profile):
                     tswitch = list(profile.keys())
                     tswitch.sort()
-                    tidx = [tsim.searchsorted(i) for i in tswitch]+[len(tsim)-1]
-                    ptemp = [profile[0]]+[casadi.repmat(profile[tswitch[i]],1,tidx[i+1]-tidx[i]) for i in range(len(tswitch))]
+                    tidx = [tsim.searchsorted(i) for i in tswitch] + \
+                           [len(tsim) - 1]
+                    ptemp = [profile[0]] + \
+                            [casadi.repmat(profile[tswitch[i]], 1,
+                                           tidx[i + 1] - tidx[i])
+                             for i in range(len(tswitch))]
                     return casadi.horzcat(*ptemp)
 
                 palltemp = [casadi.DM(tsimtemp)]
@@ -739,28 +766,32 @@ class Simulator:
                     profile = varying_inputs[p]
                     tswitch = list(profile.keys())
                     tswitch.sort()
-                    tidx = [tsim.searchsorted(i) for i in tswitch]+[len(tsim)-1]
-                    ptemp = [profile[0]]+[casadi.repmat(profile[tswitch[i]],1,tidx[i+1]-tidx[i]) for i in range(len(tswitch))]
+                    tidx = [tsim.searchsorted(i) for i in tswitch] + \
+                           [len(tsim) - 1]
+                    ptemp = [profile[0]] + \
+                            [casadi.repmat(profile[tswitch[i]], 1,
+                                           tidx[i + 1] - tidx[i])
+                             for i in range(len(tswitch))]
                     temp = casadi.horzcat(*ptemp)
                     palltemp.append(temp)
                 # self._palltemp = palltemp
-                I = F.mapaccum('simulator',N)
-                sol = I(x0=initcon,p=casadi.vertcat(*palltemp))
-                profile=sol['xf'].full().T
+                I = F.mapaccum('simulator', N)
+                sol = I(x0=initcon, p=casadi.vertcat(*palltemp))
+                profile = sol['xf'].full().T
 
                 if len(self._algvars) != 0:
-                    algprofile=sol['zf'].full().T
-                    profile = np.concatenate((profile,algprofile),axis=1)
-
+                    algprofile = sol['zf'].full().T
+                    profile = np.concatenate((profile, algprofile), axis=1)
 
             else:
-                # Old way (10 times faster, but can't incorporate time varying parameters/controls)
+                # Old way (10 times faster, but can't incorporate time
+                # varying parameters/controls)
                 xalltemp = [self._templatemap[i] for i in self._diffvars]
                 xall = casadi.vertcat(*xalltemp)
 
                 odealltemp = [value(self._rhsdict[i]) for i in self._derivlist]
                 odeall = casadi.vertcat(*odealltemp)
-                dae = {'x':xall, 'ode':odeall}
+                dae = {'x': xall, 'ode': odeall}
 
                 if len(self._algvars) != 0:
                     zalltemp = [self._templatemap[i] for i in self._simalgvars]
@@ -771,29 +802,28 @@ class Simulator:
                     dae['z'] = zall
                     dae['alg'] = algall
 
-                opts = {'grid':tsim,'output_t0':True}
-                F = casadi.integrator('F',integrator,dae,opts)
+                opts = {'grid': tsim, 'output_t0': True}
+                F = casadi.integrator('F', integrator, dae, opts)
                 sol = F(x0=initcon)
-                profile=sol['xf'].full().T
+                profile = sol['xf'].full().T
 
                 if len(self._algvars) != 0:
-                    algprofile=sol['zf'].full().T
-                    profile = np.concatenate((profile,algprofile),axis=1)
+                    algprofile = sol['zf'].full().T
+                    profile = np.concatenate((profile, algprofile), axis=1)
 
         self._tsim = tsim
         self._simsolution = profile
             
-        return [tsim,profile]
+        return [tsim, profile]
 
     def initialize_model(self):
         """
-        This function will initialize the model using the profile
-        obtained from the simulating the ODE system.
+        This function will initialize the model using the profile obtained
+        from the simulating the ODE system.
         """
         if self._tsim is None:
             raise DAE_Error(
-                "Tried to initialize the model without simulating it "
-                "first")
+                "Tried to initialize the model without simulating it first")
 
         tvals = list(self._contset)
  
@@ -801,14 +831,15 @@ class Simulator:
         # that can be initialized
         initvars = self._diffvars + self._simalgvars
                
-        for idx,v in enumerate(initvars):
-            for idx2,i in enumerate(v._args):
+        for idx, v in enumerate(initvars):
+            for idx2, i in enumerate(v._args):
                     if type(i) is IndexTemplate:
                         break
             valinit = np.interp(tvals, self._tsim,
-                                self._simsolution[:,idx])
-            for i,t in enumerate(tvals):
-                vidx = tuple(v._args[0:idx2])+(t,)+tuple(v._args[idx2+1:])
+                                self._simsolution[:, idx])
+            for i, t in enumerate(tvals):
+                vidx = tuple(v._args[0:idx2]) + (t,) + \
+                       tuple(v._args[idx2 + 1:])
                 v._base[vidx] = valinit[i]
 
 register_component(Simulator, "Used to simulate a system of ODEs")
