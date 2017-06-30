@@ -5,6 +5,7 @@ from pyomo.gdp import *
 from pyomo.core.base import expr_common, expr as EXPR
 
 import random
+import weakref
 
 # DEBUG
 from nose.tools import set_trace
@@ -44,7 +45,9 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         gdpblock = m.component("_pyomo_gdp_relaxation")
         self.assertIsInstance(gdpblock, Block)
         # it has the disjunct on it
-        self.assertIsInstance(m._pyomo_gdp_relaxation.component("d"), Block)
+        self.assertIsInstance(
+            m._pyomo_gdp_relaxation[0].component("c"),
+            Constraint)
 
     def test_disjunction_deactivated(self):
         m = self.makeModel()
@@ -62,6 +65,24 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         self.assertFalse(oldblock.disjuncts[0].active)
         self.assertFalse(oldblock.disjuncts[1].active)
 
+    def test_disjunct_weakrefs(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)        
+        transblock = m.component("_pyomo_gdp_relaxation")
+        oldblock = m.component("d")
+
+        # we should have a dictionary on each _DisjunctData and similarly
+        # on each _BlockData of the corresponding disjunct block on the
+        # transformation block
+        for i in [0,1]:
+            infodict = getattr(oldblock[i], "_gdp_trans_info")
+            self.assertIsInstance(infodict, dict)
+            self.assertIs(infodict['bigm'](), transblock[i])
+        
+            infodict2 = getattr(transblock[i], "_gdp_trans_info")
+            self.assertIsInstance(infodict2, dict)
+            self.assertIs(infodict2['src'](), oldblock[i])
+
     def test_new_block_nameCollision(self):
         m = self.makeModel()
         m._pyomo_gdp_relaxation = Block()
@@ -69,7 +90,9 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         gdpblock = m.component("_pyomo_gdp_relaxation4")
         self.assertIsInstance(gdpblock, Block)
         # it has the disjunct on it
-        self.assertIsInstance(m._pyomo_gdp_relaxation4.component("d"), Block)
+        self.assertIsInstance(
+            m._pyomo_gdp_relaxation4[0].component("c"), 
+            Constraint)
 
     def test_indicator_vars(self):
         m = self.makeModel()
@@ -132,11 +155,17 @@ class TwoTermDisj_coopr3(unittest.TestCase):
     def test_transformed_constraints(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
-        gdpblock = m._pyomo_gdp_relaxation.component("d")
+        gdpblock = m._pyomo_gdp_relaxation
 
         oldc = m.d[0].component("c")
-        newc = gdpblock[0].component("c_eq")
-        self.assertIsInstance(newc, Constraint)
+        # we have an indexed constraint called c.
+        newcons = gdpblock[0].component("c")
+        self.assertIsInstance(newcons, Constraint)
+        self.assertTrue(newcons.active)
+
+        # c[0] is the only constraint we had to use since original had
+        # only LB
+        newc = newcons[0]
         self.assertTrue(newc.active)
 
         # test new constraint is right
@@ -156,12 +185,15 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         self.assertEqual(len(newc.body._args[1]._args), 1)
         self.assertEqual(len(newc.body._args[1]._coef), 1)
         
-        oldc = m.d[1].component("c")
-        newc_lo = gdpblock[1].component("c_lo")
-        newc_hi = gdpblock[1].component("c_hi")
 
-        self.assertIsInstance(newc_lo, Constraint)
-        self.assertIsInstance(newc_hi, Constraint)
+        # second constraint
+        oldc = m.d[1].component("c")
+        newc = gdpblock[1].component("c")
+        self.assertIsInstance(newc, Constraint)
+        # now we've used both indices since original constraint was equality
+        newc_lo = newc[0]
+        newc_hi = newc[1]
+
         self.assertTrue(newc_lo.active)
         self.assertTrue(newc_hi.active)
 
@@ -227,8 +259,6 @@ class TwoTermIndexedDisj_coopr3(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
 
-        set_trace()
-
         xor = m.component("_pyomo_gdp_relaxation_disjunction_xor")
         self.assertIsInstance(xor, Constraint)
         for i in m.disjunction.index_set():
@@ -256,21 +286,79 @@ class TwoTermIndexedDisj_coopr3(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         transBlock = m.component("_pyomo_gdp_relaxation")
         self.assertIsInstance(transBlock, Block)
-        disjBlock = transBlock.component("disjunct")
-        self.assertIsInstance(disjBlock, Block)
-        self.assertIsInstance(disjBlock[0,1,'A'].c_eq, Constraint)
-        self.assertIsInstance(disjBlock[0,1,'B'].c_eq, Constraint)
-        self.assertIsInstance(disjBlock[0,2,'A'].c_eq, Constraint)
-        self.assertIsInstance(disjBlock[0,2,'B'].c_eq, Constraint)
+        self.assertIsInstance(transBlock[0].c, Constraint)
+        self.assertIsInstance(transBlock[2].c, Constraint)
+        self.assertIsInstance(transBlock[4].c, Constraint)
+        self.assertIsInstance(transBlock[6].c, Constraint)
 
-        self.assertIsInstance(disjBlock[1,1,'A'].c_lo, Constraint)
-        self.assertIsInstance(disjBlock[1,1,'A'].c_hi, Constraint)
-        self.assertIsInstance(disjBlock[1,1,'B'].c_lo, Constraint)
-        self.assertIsInstance(disjBlock[1,1,'B'].c_hi, Constraint)
-        self.assertIsInstance(disjBlock[1,2,'A'].c_lo, Constraint)
-        self.assertIsInstance(disjBlock[1,2,'A'].c_hi, Constraint)
-        self.assertIsInstance(disjBlock[1,2,'B'].c_lo, Constraint)
-        self.assertIsInstance(disjBlock[1,2,'B'].c_hi, Constraint)
+        self.assertIsInstance(transBlock[1].c, Constraint)
+        self.assertIsInstance(transBlock[3].c, Constraint)
+        self.assertIsInstance(transBlock[5].c, Constraint)
+        self.assertIsInstance(transBlock[7].c, Constraint)
+
+    def test_disjunct_weakrefs(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        transBlock = m.component("_pyomo_gdp_relaxation")
+        oldblock = m.component("disjunct")
+        
+        # let the record show that this was a terrible idea...
+        infodict = getattr(transBlock[0], "_gdp_trans_info")
+        self.assertIsInstance(infodict, dict)
+        self.assertIs(infodict['src'](), oldblock[0,1,'A'])
+        infodict2 = getattr(oldblock[0,1,'A'], "_gdp_trans_info")
+        self.assertIsInstance(infodict2, dict)
+        self.assertIs(infodict2['bigm'](), transBlock[0])
+
+        infodict = getattr(transBlock[1], "_gdp_trans_info")
+        self.assertIsInstance(infodict, dict)
+        self.assertIs(infodict['src'](), oldblock[1,1,'A'])
+        infodict2 = getattr(oldblock[1,1,'A'], "_gdp_trans_info")
+        self.assertIsInstance(infodict2, dict)
+        self.assertIs(infodict2['bigm'](), transBlock[1])
+
+        infodict = getattr(transBlock[2], "_gdp_trans_info")
+        self.assertIsInstance(infodict, dict)
+        self.assertIs(infodict['src'](), oldblock[0,1,'B'])
+        infodict2 = getattr(oldblock[0,1,'B'], "_gdp_trans_info")
+        self.assertIsInstance(infodict2, dict)
+        self.assertIs(infodict2['bigm'](), transBlock[2])
+
+        infodict = getattr(transBlock[3], "_gdp_trans_info")
+        self.assertIsInstance(infodict, dict)
+        self.assertIs(infodict['src'](), oldblock[1,1,'B'])
+        infodict2 = getattr(oldblock[1,1,'B'], "_gdp_trans_info")
+        self.assertIsInstance(infodict2, dict)
+        self.assertIs(infodict2['bigm'](), transBlock[3])
+
+        infodict = getattr(transBlock[4], "_gdp_trans_info")
+        self.assertIsInstance(infodict, dict)
+        self.assertIs(infodict['src'](), oldblock[0,2,'A'])
+        infodict2 = getattr(oldblock[0,2,'A'], "_gdp_trans_info")
+        self.assertIsInstance(infodict2, dict)
+        self.assertIs(infodict2['bigm'](), transBlock[4])
+
+        infodict = getattr(transBlock[5], "_gdp_trans_info")
+        self.assertIsInstance(infodict, dict)
+        self.assertIs(infodict['src'](), oldblock[1,2,'A'])
+        infodict2 = getattr(oldblock[1,2,'A'], "_gdp_trans_info")
+        self.assertIsInstance(infodict2, dict)
+        self.assertIs(infodict2['bigm'](), transBlock[5])
+
+        infodict = getattr(transBlock[6], "_gdp_trans_info")
+        self.assertIsInstance(infodict, dict)
+        self.assertIs(infodict['src'](), oldblock[0,2,'B'])
+        infodict2 = getattr(oldblock[0,2,'B'], "_gdp_trans_info")
+        self.assertIsInstance(infodict2, dict)
+        self.assertIs(infodict2['bigm'](), transBlock[6])
+
+        infodict = getattr(transBlock[7], "_gdp_trans_info")
+        self.assertIsInstance(infodict, dict)
+        self.assertIs(infodict['src'](), oldblock[1,2,'B'])
+        infodict2 = getattr(oldblock[1,2,'B'], "_gdp_trans_info")
+        self.assertIsInstance(infodict2, dict)
+        self.assertIs(infodict2['bigm'](), transBlock[7])
 
     def test_deactivated_disjuncts(self):
         m = self.makeModel()
@@ -323,7 +411,7 @@ class DisjOnBlock(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         
         self.assertIsInstance(m.component('_pyomo_gdp_relaxation'), Block)
-        self.assertFalse(m.b.hasattr(m.b, '_pyomo_gdp_relaxation'))
+        self.assertFalse(hasattr(m.b, '_pyomo_gdp_relaxation'))
 
 
 class MultiTermDisj_coopr3(unittest.TestCase):
@@ -422,19 +510,38 @@ class IndexedConstraintsInDisj_coopr3(unittest.TestCase):
         m.disjunction = Disjunction(rule=disj_rule)
         return m
 
-    def test_transformed_constraints(self):
+    def test_transformed_constraints_on_block(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
 
         transBlock = m.component("_pyomo_gdp_relaxation")
         self.assertIsInstance(transBlock, Block)
-        disjBlock = transBlock.component("disjunct")
-        self.assertIsInstance(disjBlock, Block)
-        #set_trace()
-        # QUESTION: Do we want to keep being so cagey about names?
-        # the periods are really annoying. And we don't have any
-        # risk of name collisions here. So why not underscore?
-        #self.assertIsInstance(disjBlock[0].c.1_eq, Constraint)
+        
+        cons1 = transBlock[0].component("c.1")
+        self.assertIsInstance(cons1, Constraint)
+        self.assertTrue(cons1.active)
+        self.assertTrue(cons1[0].active)
+        #self.assertTrue(cons1[1].active)
+        # QUESTION: does the second index need to be not active?
+        cons2 = transBlock[0].component("c.2")
+        self.assertIsInstance(cons2, Constraint)
+        self.assertTrue(cons2.active)
+        self.assertTrue(cons2[0].active)
+        # QUESTION: same as above
+        #self.assertFalse(cons2[1].active)
+
+        cons3 = transBlock[1].component("c.1")
+        self.assertIsInstance(cons3, Constraint)
+        self.assertTrue(cons3.active)
+        self.assertTrue(cons3[0].active)
+        self.assertTrue(cons3[1].active)
+
+        cons4 = transBlock[1].component("c.2")
+        self.assertIsInstance(cons4, Constraint)
+        self.assertTrue(cons4.active)
+        self.assertTrue(cons4[0].active)
+        self.assertTrue(cons4[1].active)
+
 
 class DisjunctInMultipleDisjunctions(unittest.TestCase):
     @staticmethod
@@ -464,7 +571,84 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase):
         m.disjunction2 = Disjunction(rule=disj2_rule)
         return m
 
-    def test_transformed_once(self):
+    def test_disjunction1_xor(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
+        
+        xor1 = m.component("_pyomo_gdp_relaxation_disjunction1_xor")
+        self.assertIsInstance(xor1, Constraint)
+        self.assertTrue(xor1.active)
+        self.assertEqual(xor1.lower, 1)
+        self.assertEqual(xor1.upper, 1)
+
+        self.assertEqual(xor1.body._coef[0], 1)
+        self.assertEqual(xor1.body._coef[1], 1)
+        self.assertEqual(xor1.body._const, 0)
+        self.assertIs(xor1.body._args[0], m.disjunct1[0].indicator_var)
+        self.assertIs(xor1.body._args[1], m.disjunct1[1].indicator_var)
+
+        self.assertEqual(len(xor1.body._args), 2)
+        self.assertEqual(len(xor1.body._coef), 2)
+
+    def test_disjunction2_xor(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        
+        xor2 = m.component("_pyomo_gdp_relaxation_disjunction2_xor")
+        self.assertIsInstance(xor2, Constraint)
+        self.assertTrue(xor2.active)
+        self.assertEqual(xor2.lower, 1)
+        self.assertEqual(xor2.upper, 1)
+
+        self.assertEqual(xor2.body._coef[0], 1)
+        self.assertEqual(xor2.body._coef[1], 1)
+        self.assertEqual(xor2.body._const, 0)
+        self.assertIs(xor2.body._args[0], m.disjunct2[0].indicator_var)
+        self.assertIs(xor2.body._args[1], m.disjunct1[1].indicator_var)
+
+        self.assertEqual(len(xor2.body._args), 2)
+        self.assertEqual(len(xor2.body._coef), 2)
+
+    def test_constraints_deactivated(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        self.assertFalse(m.disjunct1[0].c.active)
+        self.assertFalse(m.disjunct1[1].c.active)
+        self.assertFalse(m.disjunct2[0].c.active)
+    
+    def test_transformation_block_structure(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        transBlock = m.component("_pyomo_gdp_relaxation")
+        self.assertIsInstance(transBlock, Block)
+        self.assertIsInstance(transBlock[0].component("c"), Constraint)
+        self.assertIsInstance(transBlock[0].c, Constraint)
+        self.assertIsInstance(transBlock[1].component("c"), Constraint)
+        self.assertIsInstance(transBlock[1].c, Constraint)
+
+        disj2 = transBlock[2]
+        self.assertIsInstance(disj2.component("c"), Constraint)
+        self.assertIsInstance(disj2.c, Constraint)
+
+    def test_transformed_constraints(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        transBlock = m.component("_pyomo_gdp_relaxation")
+        
         # TODO
+
+    def test_disjunct_dicts(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        transBlock = m.component("_pyomo_gdp_relaxation")
+        disj1 = transBlock[0]
+        dict1 = getattr(disj1, "_gdp_trans_info")
+        self.assertIsInstance(dict1, dict)
+        #self.assertEqual(dict1, {
+        # TODO
+
+# TODO, test m precedence stuffs...

@@ -40,6 +40,8 @@ class BigM_Transformation(Transformation):
         # function, is this an OK way to keep it for later so that other 
         # disjunctions get put on the same block?
         # Or might this be better if I just store the block? I don't know...
+        # TODO: 06/29: I was thinking that I didn't need this anymore, but I 
+        # still need to know if it already exists and what its name is, I think...
         self.transBlockName = None
         self.handlers = {
             Constraint: self._xform_constraint,
@@ -61,6 +63,16 @@ class BigM_Transformation(Transformation):
                 return name
             else:
                 name += str(randint(0,9))
+
+
+    def get_bigm_suffix_list(self, block):
+        suffix_list = []
+        while block is not None:
+            bigm = block.component('BigM')
+            if bigm is not None and type(bigm) is Suffix:
+                suffix_list.append(bigm)
+            block = block.parent_block()
+        return suffix_list
 
 
     def _apply_to(self, instance, **kwds):
@@ -162,72 +174,66 @@ class BigM_Transformation(Transformation):
         obj.deactivate()
 
 
+    # TODO: if this works, you don't need this function anymore.
     def _transformDisjunctionData(self, obj):
         # clone the disjuncts into our new relaxation block (which we'll
         # create if it doesn't exist yet.) We'll relax the disjuncts there.
+        # We'll also add dictionaries to both the original DisjunctData and the
+        # block we create for it on the transformation block, so that they have
+        # weakrefs to each other.
 
-        # TODO: Emma, this is bad... relaxation block isn't necessarily on this guy's
-        # parent component. Need to look for it on the model and create it there if it
-        # isn't there already.
-        parent = obj.parent_block()
-        # make sure that we have a relaxation block.
-        if self.transBlockName is None:
-            self.transBlockName = self._get_unique_name(parent, '_pyomo_gdp_relaxation')
-            parent.add_component(self.transBlockName, Block())
-        transBlock = parent.component(self.transBlockName)
+        # m = obj.model()
+        # # make sure that we have a relaxation block.
+        # if self.transBlockName is None:
+        #     self.transBlockName = self._get_unique_name(m, '_pyomo_gdp_relaxation')
+        #     m.add_component(self.transBlockName, Block(Any))
+        # transBlock = m.component(self.transBlockName)
 
         # build block structure on transformation block to mirror disjunct hierarchy
         for disjunct in obj.disjuncts:
-            disj_parent = disjunct.parent_component()
-            clonedDisj = transBlock.component(disj_parent.name)
-            if clonedDisj is None:
-                clonedDisj = Block(disj_parent.index_set())
-                transBlock.add_component(disj_parent.name, clonedDisj)
+            # disj_parent = disjunct.parent_component()
+            # clonedDisj = transBlock.component(disj_parent.name)
+            # if clonedDisj is None:
+            #     clonedDisj = Block(disj_parent.index_set())
+            #     transBlock.add_component(disj_parent.name, clonedDisj)
+            
+            #transBlock[len(transBlock)]
 
-            # ESJ: TODO: Right now I am just going to pass the transformation block
-            # through so that I have it.
-            self._bigM_relax_disjunct(disjunct, transBlock)
+            self._bigM_relax_disjunct(disjunct)
 
         # deactivate the disjunction so we know we've relaxed it
         obj.deactivate()
 
 
-    def _bigM_relax_disjunct(self, disjunct, transBlock):
+    def _bigM_relax_disjunct(self, disjunct):
+        infodict = disjunct.component("_gdp_trans_info")
+        # deactivated means fix indicator var at 0 and be done
         if not disjunct.active:
-            disjunct.indicator_var.fix(0)
+            if infodict is None or type(infodict) is not dict or 'bigm' not in infodict:
+                # if we haven't transformed it, assume user deactivated and fix ind var
+                disjunct.indicator_var.fix(0)
             return
-        # ESJ: TODO: this is going to be something else... Maybe whether or not the 
-        # constraint is copied over? But no... Because of the belonging to multiple
-        # disjunctions issue. It still should only ge relaxed once. Oh, so it is whether
-        # or not the constraints on the original disjunction is deactivated yet or no?
-        if disjunct.parent_block().local_name.startswith('_gdp_relax'):
-            # Do not transform a block more than once
-            return
+        
+        m = disjunct.model()
+        # make sure that we have a relaxation block.
+        if self.transBlockName is None:
+            self.transBlockName = self._get_unique_name(m, '_pyomo_gdp_relaxation')
+            m.add_component(self.transBlockName, Block(Any))
+        transBlock = m.component(self.transBlockName)
 
-        # _tmp = disjunct.parent_block().component('_gdp_relax')
-        # if _tmp is None:
-        #     _tmp = Block()
-        #     disjunct.parent_block().add_component('_gdp_relax', _tmp)
+        # add reference to original disjunct to info dict on transformation block
+        disjBlock = transBlock[len(transBlock)]
+        if not hasattr(disjBlock, "_gdp_trans_info"):
+            disjBlock._gdp_trans_info = {}
+        transdict = getattr(disjBlock, "_gdp_trans_info")
+        transdict['src'] = weakref.ref(disjunct)
 
-        # Move this disjunct over to a Block component (so the writers
-        # will pick it up)
-        # if disjunct.parent_component().dim() == 0:
-        #     # Since there can't be more than one Disjunct in a
-        #     # SimpleDisjunct, then we can just reclassify the entire
-        #     # component into our scratch space
-        #     disjunct.parent_block().del_component(disjunct)
-        #     _tmp.add_component(disjunct.local_name, disjunct)
-        #     _tmp.reclassify_component_type(disjunct, Block)
-        # else:
-        #     _block = _tmp.component(disjunct.parent_component().local_name)
-        #     if _block is None:
-        #         _block = Block(disjunct.parent_component().index_set())
-        #         _tmp.add_component(disjunct.parent_component().local_name, _block)
-        #     # Move this disjunction over to the Constraint
-        #     idx = disjunct.index()
-        #     _block._data[idx] = disjunct.parent_component()._data.pop(idx)
-        #     _block._data[idx]._component = weakref.ref(_block)
-
+        # add reference to transformation block on original disjunct
+        if not hasattr(disjunct, "_gdp_trans_info"):
+            disjunct._gdp_trans_info = {}
+        disjdict = getattr(disjunct, "_gdp_trans_info")
+        disjdict['bigm'] = weakref.ref(disjBlock)
+        
         # Transform each component within this disjunct
         for name, obj in list(disjunct.component_map().iteritems()):
             handler = self.handlers.get(obj.type(), None)
@@ -237,14 +243,15 @@ class BigM_Transformation(Transformation):
                         "No BigM transformation handler registered "
                         "for modeling components of type %s" % obj.type() )
                 continue
-            handler(name, obj, disjunct, transBlock)
+            handler(name, obj, disjunct, disjBlock)
+        
         # deactivate disjunct so we know we've relaxed it
         disjunct.deactivate()
 
 
     def _xform_constraint(self, _name, constraint, disjunct, transBlock):
         # add constraint to the transformation block, we'll transform it there.
-        mirrorDisj = transBlock.component(disjunct.parent_component().name)[disjunct.index()]
+        #mirrorDisj = transBlock.component(disjunct.parent_component().name)[disjunct.index()]
         #mirrorDisj.add_component(constraint.name, Constraint(expr=constraint.expr.clone()))
         #constraint.deactivate()
 
@@ -252,6 +259,7 @@ class BigM_Transformation(Transformation):
             M = disjunct.component('BigM').get(constraint)
         else:
             M = None
+        # TODO: if expr.polynomial_degree() in (0,1):
         lin_body_map = getattr(disjunct.model(),"lin_body",None)
         for cname, c in iteritems(constraint._data):
             if not c.active:
@@ -283,34 +291,59 @@ class BigM_Transformation(Transformation):
                    ( c.upper is not None and m[1] is None ):
                 m = self._estimate_M(c.body, name, m, disjunct)
 
-            bounds = (c.lower, c.upper)
-            for i in (0,1):
-                if bounds[i] is None:
-                    continue
-                if m[i] is None:
+            #bounds = (c.lower, c.upper)
+
+            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                     logger.debug("GDP(BigM): Promoting local constraint "
+                                  "'%s' as '%s'", constraint.local_name, name)
+
+            # TODO: this maybe isn't the most efficient thing ever? But I'm not
+            # sure about the loop option either??
+            newC = Constraint([0,1])
+            newC.construct()
+            if c.lower is not None:
+                if m[0] is None:
                     raise GDP_Error("Cannot relax disjunctive " + \
                           "constraint %s because M is not defined." % name)
-                n = name;
-                if bounds[1-i] is None:
-                    n += '_eq'
-                else:
-                    n += ('_lo','_hi')[i]
+                M_expr = (m[0]-c.lower)*(1-disjunct.indicator_var)
+                newC.add(0, c.lower <= c. body - M_expr)
+            if c.upper is not None:
+                if m[1] is None:
+                    raise GDP_Error("Cannot relax disjunctive " + \
+                          "constraint %s because M is not defined." % name)
+                M_expr = (m[1]-c.upper)*(1-disjunct.indicator_var)
+                newC.add(1, c.body - M_expr <= c.upper)
+            transBlock.add_component(name, newC)
+            
 
-                if __debug__ and logger.isEnabledFor(logging.DEBUG):
-                    logger.debug("GDP(BigM): Promoting local constraint "
-                                 "'%s' as '%s'", constraint.local_name, n)
-                # TODO: this will be true when we can leave the indicator
-                # vars in the disjunct:
-                M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
-                # But for now:
-                #M_expr = (m[i] - bounds[i])*(1-mirrorDisj.indicator_var)
-                if i == 0:
-                    newC = Constraint(expr=c.lower <= c.body - M_expr)
-                else:
-                    newC = Constraint(expr=c.body - M_expr <= c.upper)
-                mirrorDisj.add_component(n, newC)
-                #disjunct.add_component(n, newC)
-                newC.construct()
+            # for i in (0,1):
+            #     if bounds[i] is None:
+            #         continue
+            #     if m[i] is None:
+            #         raise GDP_Error("Cannot relax disjunctive " + \
+            #               "constraint %s because M is not defined." % name)
+                
+            #     newC = Constraint([0,1])
+            #     M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
+            #     # n = name;
+            #     if bounds[1-i] is None:
+            #         #n += '_eq'
+            #         # we don't have the other bound.
+                    
+            #     else:
+            #         n += ('_lo','_hi')[i]
+
+            #     if __debug__ and logger.isEnabledFor(logging.DEBUG):
+            #         logger.debug("GDP(BigM): Promoting local constraint "
+            #                      "'%s' as '%s'", constraint.local_name, n)
+                
+            #     # M_expr = (m[i]-bounds[i])*(1-disjunct.indicator_var)
+            #     if i == 0:
+            #         newC = Constraint(expr=c.lower <= c.body - M_expr)
+            #     else:
+            #         newC = Constraint(expr=c.body - M_expr <= c.upper)
+            #     transBlock.add_component(n, newC)
+            #     newC.construct()
 
 
     def _estimate_M(self, expr, name, m, disjunct):
