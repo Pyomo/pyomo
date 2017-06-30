@@ -2,11 +2,13 @@
 # This script runs performance tests on expressions
 #
 
-import pprint as pp
 from pyomo.environ import *
+import pyomo.version
 from pyomo.core.base.expr_common import _clear_expression_pool
 from pyomo.core.base import expr 
 from pyomo.repn import generate_canonical_repn
+
+import pprint as pp
 import gc
 import time
 try:
@@ -16,37 +18,25 @@ try:
 except:
     pympler_available=False
 import sys
-import getopt
+import argparse
 
 sys.setrecursionlimit(1000000)
 #NTerms = 100000
 #N = 50
-NTerms = 1000
-N = 25
+NTerms = 100
+N = 5
 
 
-try:
-    opts, args = getopt.gnu_getopt(sys.argv[1:], "h:", ["help", "output=", 'num=', 'terms='])
-except getopt.GetoptError as err:
-    # print help information and exit:
-    print(str(err))  # will print something like "option -a not recognized"
-    print(sys.argv[0] + " -h --num=<ntrials> --terms=<nterms> --output=<filename>")
-    sys.exit(2)
+parser = argparse.ArgumentParser()
+parser.add_argument("-o", "--output", help="Save results to the specified file", action="store", default=None)
+parser.add_argument("--nterms", help="The number of terms in test expressions", action="store", default=None)
+parser.add_argument("--ntrials", help="The number of test trials", action="store", default=None)
+args = parser.parse_args()
 
-ofile = None
-for o, a in opts:
-    if o in ("-h", "--help"):
-        print(sys.argv[0] + " -h --num=<ntrials> --terms=<nterms> --output=<filename>")
-        sys.exit()
-    elif o == "--output":
-        ofile = a
-    elif o == "--num":
-        N = int(a)
-    elif o == "--terms":
-        NTerms = int(a)
-    else:
-        assert False, "unhandled option"
-
+if args.nterms:
+    NTerms = args.nterms
+if args.ntrials:
+    N = args.ntrials
 print("NTerms %d   NTrials %d\n\n" % (NTerms, N))
 
 
@@ -60,13 +50,15 @@ def measure(f, n=25):
     data = []
     for i in range(n):
         data.append(f())
+        sys.stdout.write('.')
+    sys.stdout.write('\n')
     #
     ans = {}
     for key in data[0]:
-        total = 0
+        d_ = []
         for i in range(n):
-            total += data[i][key]
-        ans[key] = total/float(n)
+            d_.append( data[i][key] )
+        ans[key] = {"mean": sum(d_)/float(n), "data": d_}
     #
     return ans
 
@@ -414,10 +406,29 @@ expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees)
 runall(["PYOMO4"], res)
 
 
-if ofile:
-    import json
-    OUTPUT = open(ofile, 'w')
-    res_ = {'script': sys.argv[0], 'NTerms':NTerms, 'NTrials':N, 'data': remap_keys(res)}
-    json.dump(res_, OUTPUT)
-    OUTPUT.close()
 
+if args.output:
+    if args.output.endswith(".csv"):
+        #
+        # Write csv file
+        #
+        perf_types = sorted(next(iter(res.values())).keys())
+        res_ = [ list(key) + [res[key][k]['mean'] for k in perf_types] for key in res]
+        with open(args.output, 'w') as OUTPUT:
+            import csv
+            writer = csv.writer(OUTPUT)
+            writer.writerow(['Version', 'ExprType', 'ExprNum'] + perf_types)
+            for line in res_:
+                writer.writerow(line)
+
+    elif args.output.endswith(".json"):
+        res_ = {'script': sys.argv[0], 'NTerms':NTerms, 'NTrials':N, 'data': remap_keys(res), 'pyomo_version':pyomo.version.version, 'pyomo_versioninfo':pyomo.version.version_info[:3]}
+        #
+        # Write json file
+        #
+        with open(args.output, 'w') as OUTPUT:
+            import json
+            json.dump(res_, OUTPUT)
+
+    else:
+        print("Unknown output format for file '%s'" % args.output)

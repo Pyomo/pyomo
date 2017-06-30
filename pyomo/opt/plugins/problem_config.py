@@ -110,7 +110,8 @@ def minlp_config_block(init=False):
                 [],
                 ConfigValue(None, str, 'Transformation', None),
                 'List of model transformations',
-                None) ).declare_as_argument(dest='transformations')
+                None) ).declare_as_argument( dest='transformations',
+                                             action='append' )
     if init:
         transform_list.append()
 
