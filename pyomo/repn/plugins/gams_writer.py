@@ -301,7 +301,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
             i += 1
             v = symbolMap.getObject(var)
             if not v.is_expression():
-                if v.is_binary():
+                if v.is_fixed():
+                    reals.append(var)
+                elif v.is_binary():
                     binary.append(var)
                 elif v.is_integer():
                     if v.bounds == (0,1):
@@ -368,7 +370,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             elif varName in otherInts:
                 if var.lb is None:
                     # GAMS doesn't allow -INF lower bound for ints
-                    # Set bound to lowest possible bound in Gams
+                    # Set bound to lowest possible bound in GAMS
                     logger.warning("Lower bound for integer variable %s "
                                    "set to lowest possible in GAMS: -1.0E+10"
                                    % var.name)
