@@ -361,27 +361,26 @@ and implementation in Pyomo are shown below:
 Discretization Transformations
 ------------------------------
 
-Before a Pyomo model with ``DerivativeVar`` or ``Integral`` components
-can be sent to a solver it must first be sent through a discretization
-transformation. These transformations approximate any derivatives or
-integrals in the model by using a numerical method. The numerical
-methods currently included in this tool discretize the continuous
-domains in the problem and introduce equality constraints which
-approximate the derivatives and integrals at the discretization
-points. Two families of discretization schemes have been implemented in
-Pyomo, Finite Difference and Collocation. These schemes are described in
-more detail below.
+Before a Pyomo model with :py:class:`DerivativeVar<pyomo.dae.DerivativeVar>`
+or :py:class:`Integral<pyomo.dae.Integral>` components can be sent to a
+solver it must first be sent through a discretization transformation. These
+transformations approximate any derivatives or integrals in the model by
+using a numerical method. The numerical methods currently included in pyomo.DAE
+discretize the continuous domains in the problem and introduce equality
+constraints which approximate the derivatives and integrals at the
+discretization points. Two families of discretization schemes have been
+implemented in pyomo.DAE, Finite Difference and Collocation. These schemes are
+described in more detail below.
 
 .. note:: 
-   The schemes described here are for derivatives only. All
-   integrals will be transformed using the trapezoid rule.
+   The schemes described here are for derivatives only. All integrals will
+   be transformed using the trapezoid rule.
 
-The user must write a Python script in order to use these
-discretizations, they have not been tested on the pyomo command
-line. Example scripts are shown below for each of the discretization
-schemes. The transformations are applied to Pyomo model objects which
-can be further manipulated before being sent to a solver. Examples of
-this are also shown below.
+The user must write a Python script in order to use these discretizations,
+they have not been tested on the pyomo command line. Example scripts are
+shown below for each of the discretization schemes. The transformations are
+applied to Pyomo model objects which can be further manipulated before being
+sent to a solver. Examples of this are also shown below.
 
 Finite Difference Transformation
 ********************************
@@ -393,49 +392,53 @@ discretization equations for this method are shown below:
 
 .. math::
    \begin{array}{l}
-   \mathrm{Given } dx/dt = f(t,x) \mathrm{ and } x(t0) = x_{0} \\
-   \mathrm{discretize } t \mathrm{ and } x \mathrm{ such that} \\
-   x(t0+kh)= x_{k} \\
-   x_{k+1}= x_{k}+h*f(t_{k+1},x_{k+1}) \\
-   t_{k+1}= t_{k}+h
+   \mathrm{Given: } \\
+   {dx}/{dt} = f(t, x) , \quad x(t_0) = x_{0} \\
+   \text{discretize $t$ and $x$ such that } \\
+   x(t_0 + kh) = x_{k} \\
+   x_{k + 1} = x_{k} + h * f(t_{k + 1}, x_{k + 1}) \\
+   t_{k + 1} = t_{k} + h
    \end{array}
 
-where :math:`h` is the step size between discretization points
-or the size of each finite element. These equations are generated
-automatically as +Constraint+ components when the backward
+where :math:`h` is the step size between discretization points or the size of
+each finite element. These equations are generated automatically as
+:py:class:`Constraints<pyomo.environ.Constraint>` when the backward
 difference method is applied to a Pyomo model.
 
 There are several discretization options available to a
-+dae.finite_difference+ transformation which can be specified as
-keyword arguments to the .apply_to() function of the transformation
-object. These keywords are summarized below:
+``dae.finite_difference`` transformation which can be specified as keyword
+arguments to the ``.apply_to()`` function of the transformation object. These
+keywords are summarized below:
 
-.. Replace this with in-code documentation
+.. Replace with in-code documentation. The autoclass that works with the
+.. plugins: pyomo.dae.plugins.finitedifference.Finite_Difference_Transformation
+
 
 Keyword arguments for applying a finite difference transformation:
 
 'nfe': The desired number of finite element points to be included in the
 discretization. The default value is 10.
 
-'wrt': Indicates which ``ContinuousSet`` the transformation should be
-applied to. If this keyword argument is not specified then the same
-scheme will be applied to every ``ContinuousSet``.
+'wrt': Indicates which :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` the
+    transformation should be applied to. If this keyword argument is not
+    specified then the same scheme will be applied to every
+    :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` .
 
 'scheme': Indicates which finite difference method to apply. Options are
-'BACKWARD', 'CENTRAL', or 'FORWARD'. The default scheme is the backward
-difference method.
+    'BACKWARD', 'CENTRAL', or 'FORWARD'. The default scheme is the backward
+    difference method.
 
-If the existing number of finite element points in a ``ContinuousSet``
-is less than the desired number, new discretization points will be
-added to the set. If a user specifies a number of finite element
-points which is less than the number of points already included in the
-``ContinuousSet`` then the transformation will ignore the specified
-number and proceed with the larger set of points. Discretization points
-will never be removed from a ``ContinousSet`` during the discretization.
+If the existing number of finite element points in a
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` is less than the desired
+number, new discretization points will be added to the set. If a user specifies
+a number of finite element points which is less than the number of points
+already included in the :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` then
+the transformation will ignore the specified number and proceed with the larger
+set of points. Discretization points will never be removed from a
+:py:class:`ContinousSet<pyomo.dae.ContinuousSet>` during the discretization.
 
 The following code is a Python script applying the backward difference
-method. The code also shows how to add a constraint to a discretized
-model.
+method. The code also shows how to add a constraint to a discretized model.
 
 .. code-block:: python
 
@@ -462,43 +465,43 @@ Collocation Transformation
 **************************
 
 This transformation uses orthogonal collocation to discretize the
-differential equations in the model. Currently, two types of
-collocation have been implemented. They both use Lagrange polynomials
-with either Gauss-Radau roots or Gauss-Legendre roots. For more
-information on orthogonal collocation and the discretization equations
-associated with this method please see chapter 10 of the book
-"Nonlinear Programming: Concepts, Algorithms, and Applications to
-Chemical Processes" by L.T. Biegler.
+differential equations in the model. Currently, two types of collocation
+have been implemented. They both use Lagrange polynomials with either
+Gauss-Radau roots or Gauss-Legendre roots. For more information on
+orthogonal collocation and the discretization equations associated with this
+method please see chapter 10 of the book "Nonlinear Programming: Concepts,
+Algorithms, and Applications to Chemical Processes" by L.T. Biegler.
 
-The discretization options available to a
-``dae.collocation`` transformation are the same as those
-described above for the finite difference transformation with
-different available schemes and the addition of the 'ncp' option.
+The discretization options available to a ``dae.collocation`` transformation
+are the same as those described above for the finite difference transformation
+with different available schemes and the addition of the 'ncp' option.
 
-.. Replace with in-code documentation
+.. Replace with in-code documentation. The autoclass that works with the
+.. plugins: pyomo.dae.plugins.finitedifference.Finite_Difference_Transformation
 
 Additional keyword arguments for collocation discretizations:
 
 'scheme': The desired collocation scheme, either 'LAGRANGE-RADAU' or
-'LAGRANGE-LEGENDRE'. The default is 'LAGRANGE-RADAU'.
+    'LAGRANGE-LEGENDRE'. The default is 'LAGRANGE-RADAU'.
 
 'ncp': The number of collocation points within each finite element. The
-default value is 3.
-
-.. note:: 
-   If the user's version of Python has access to the package Numpy
-   then any number of collocation points may be specified, otherwise the
-   maximum number is 10.
+    default value is 3.
 
 .. note::
-   Any points that exist in a ``ContinuousSet`` before discretization
-   will be used as finite element boundaries and not as collocation
-   points. The locations of the collocation points cannot be specified
-   by the user, they must be generated by the transformation.
+    If the user's version of Python has access to the package Numpy then any
+    number of collocation points may be specified, otherwise the maximum number
+    is 10.
 
-The following code is a Python script applying collocation with
-Lagrange polynomials and Radau roots. The code also shows how to add
-an objective function to a discretized model.
+.. note::
+    Any points that exist in a
+    :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` before discretization
+    will be used as finite element boundaries and not as collocation points.
+    The locations of the collocation points cannot be specified by the user,
+    they must be generated by the transformation.
+
+The following code is a Python script applying collocation with Lagrange
+polynomials and Radau roots. The code also shows how to add an objective
+function to a discretized model.
 
 .. code-block:: python
 
@@ -523,18 +526,17 @@ an objective function to a discretized model.
 
 Piecewise Constant Optimal Control Profiles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
-
-Describe the reduce_collocation_points method, include figures showing
+TODO: Describe the reduce_collocation_points method, include figures showing
 the difference in profiles
 
 
 Applying Multiple Discretization Transformations
 ************************************************
 
-Discretizations can be applied independently to each ``ContinuousSet``
-in a model. This allows the user great flexibility in discretizing
-their model. For example the same numerical method can be applied with
-different resolutions:
+Discretizations can be applied independently to each
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` in a model. This allows the
+user great flexibility in discretizing their model. For example the same
+numerical method can be applied with different resolutions:
 
 .. code-block:: python
 
@@ -542,9 +544,11 @@ different resolutions:
    discretizer.apply_to(model,wrt=model.t1,nfe=10)
    discretizer.apply_to(model,wrt=model.t2,nfe=100)
 
-This also allows the user to combine different methods. For example,
-applying the forward difference method to one ``ContinuousSet`` and the
-central finite difference method to another ``ContinuousSet``:
+This also allows the user to combine different methods. For example, applying
+the forward difference method to one
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` and the central finite
+difference method to another
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`:
 
 .. code-block:: python
 
@@ -563,18 +567,18 @@ discretizations. For example:
    disc_col.apply_to(model,wrt=model.t2,nfe=10,ncp=5)
 
 If the user would like to apply the same discretization to all
-``ContinuousSet`` components in a model, just specify the discretization
-once without the 'wrt' keyword argument. This will apply that scheme
-to all ``ContinuousSet`` components in the model that haven't already been
-discretized.
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` components in a model, just
+specify the discretization once without the 'wrt' keyword argument. This will
+apply that scheme to all :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`
+components in the model that haven't already been discretized.
 
 Custom Discretization Schemes
 *****************************
 
-A transformation framework along with certain utility functions has
-been created so that advanced users may easily implement custom
-discretization schemes other than those listed above. The
-transformation framework consists of the following steps:
+A transformation framework along with certain utility functions has been
+created so that advanced users may easily implement custom discretization
+schemes other than those listed above. The transformation framework consists of
+the following steps:
 
    1. Specify Discretization Options
    2. Discretize the ContinuousSet(s)
@@ -582,13 +586,13 @@ transformation framework consists of the following steps:
    4. Add Discretization Equations
    5. Return Discretized Model
 
-If a user would like to create a custom finite difference scheme then
-they only have to worry about step (4) in the framework. The
-discretization equations for a particular scheme have been isolated
-from of the rest of the code for implementing the transformation. The
-function containing these discretization equations can be found at the
-top of the source code file for the transformation. For example, below
-is the function for the forward difference method:
+If a user would like to create a custom finite difference scheme then they only
+have to worry about step (4) in the framework. The discretization equations for
+a particular scheme have been isolated from of the rest of the code for
+implementing the transformation. The function containing these discretization
+equations can be found at the top of the source code file for the
+transformation. For example, below is the function for the forward
+difference method:
 
 .. code-block:: python
 
@@ -602,23 +606,21 @@ is the function for the forward difference method:
          return 1/(tmp[idx+1]-tmp[idx])*(v(tmp[idx+1])-v(tmp[idx]))
       return _fwd_fun
 
-In this function, 'v' represents the continuous variable or function
-that the method is being applied to. 's' represents the set of
-discrete points in the continuous domain. In order to implement a
-custom finite difference method, a user would have to copy the above
-function and just replace the equation next to the first return
-statement with their method.
+In this function, 'v' represents the continuous variable or function that the
+method is being applied to. 's' represents the set of discrete points in the
+continuous domain. In order to implement a custom finite difference method, a
+user would have to copy the above function and just replace the equation next
+to the first return statement with their method.
 
-After implementing a custom finite difference method using the above
-function template, the only other change that must be made is to add
-the custom method to the 'all_schemes' dictionary in the
-Finite_Difference_Transformation class. 
+After implementing a custom finite difference method using the above function
+template, the only other change that must be made is to add the custom method
+to the 'all_schemes' dictionary in the ``dae.finite_difference``
+class.
 
-In the case of a custom collocation method, changes will have to be
-made in steps (2) and (4) of the transformation framework. In addition
-to implementing the discretization equations, the user would also have
-to ensure that the desired collocation points are added to the
-ContinuousSet being discretized.
+In the case of a custom collocation method, changes will have to be made in
+steps (2) and (4) of the transformation framework. In addition to implementing
+the discretization equations, the user would also have to ensure that the
+desired collocation points are added to the ContinuousSet being discretized.
 
 Dynamic Model Simulation
 ------------------------
