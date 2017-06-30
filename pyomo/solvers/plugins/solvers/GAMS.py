@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base import Constraint, Suffix
+from pyomo.core.base import Constraint, Suffix, Var, value
 from pyomo.opt import ProblemFormat, SolverFactory
 import os, sys, subprocess, pipes, math, logging
 
@@ -91,6 +91,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         """
 
         from gams import GamsWorkspace, DebugLevel
+        from gams.workspace import GamsExceptionExecution
 
         var_list = []
         io_options['var_list'] = var_list
@@ -112,10 +113,16 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         
         t1 = ws.add_job_from_string(output_file.getvalue())
 
-        if tee:
-            t1.run(output=sys.stdout)
-        else:
-            t1.run()
+        try:
+            if tee:
+                t1.run(output=sys.stdout)
+            else:
+                t1.run()
+        except GamsExceptionExecution:
+            try:
+                check_expr_evaluation(model, var_list, symbolMap, 'direct')
+            finally:
+                raise
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
@@ -222,8 +229,15 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             rc = subprocess.call(command, shell=True)
         else:
             rc = subprocess.call(command + " lo=0", shell=True)
+
         if rc == 1 or rc == 127:
             raise RuntimeError("Command 'gams' was not recognized")
+        elif rc == 3:
+            # Run check_expr_evaluation, which errors if necessary
+            check_expr_evaluation(model, var_list, symbolMap, 'shell')
+            # If nothing was raised, raise the regular RuntimeError
+            raise RuntimeError("GAMS encountered an error during solve. "
+                               "Check listing file for details.")
         elif rc != 0:
             raise RuntimeError("GAMS encountered an error during solve. "
                                "Check listing file for details.")
@@ -301,3 +315,57 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                         # nothing else to do here
                         break
         return None
+
+
+def check_expr_evaluation(model, var_list, symbolMap, solver_io):
+    try:
+        # Temporarily initialize uninitialized variables in order to call
+        # value() on each expression to check domain violations
+        uninit_vars = list()
+        for var in model.component_data_objects(Var, active=True):
+            if var.value is None:
+                uninit_vars.append(var)
+                var.value = 0
+
+        # Constraints
+        for con in model.component_data_objects(Constraint, active=True):
+            if con.body.is_fixed():
+                continue
+            check_expr(con.body, con.name, solver_io)
+
+        # Objective
+        obj = list(model.component_data_objects(Objective, active=True))
+        assert len(obj) == 1, "GAMS writer can only take 1 active objective"
+        obj = obj[0]
+        check_expr(obj.expr, obj.name, solver_io)
+
+        # Expressions
+        # Iterate through var_list in case for some reason model has Expressions
+        # that do not appear in any constraints or the objective, since GAMS
+        # never sees those anyway so they should be skipped
+        for var in var_list:
+            v = symbolMap.getObject(var)
+            if v.is_expression:
+                check_expr(v.expr, v.name, solver_io)
+    finally:
+        # Return uninitialized variables to None
+        for var in uninit_vars:
+            var.value = None
+
+def check_expr(expr, name, solver_io):
+    # Check if GAMS will encounter domain violations in presolver
+    # operations at current values, which are None (0) by default
+    # Used to handle log and log10 violations, for example
+    try:
+        value(expr)
+    except ValueError:
+        logger.warning("While evaluating value(%s), GAMS solver encountered "
+                       "an error.\nGAMS requires that all equations and "
+                       "expressions evaluate at initial values.\n"
+                       "Ensure variable values do not violate any domains "
+                       "(are you using log or log10?)" % name)
+        if solver_io == 'shell':
+            # For shell, there is no previous exception to worry about
+            # overwriting, so raise the ValueError.
+            # But for direct, the GamsExceptionExecution will be raised.
+            raise

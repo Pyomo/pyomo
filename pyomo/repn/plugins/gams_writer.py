@@ -236,14 +236,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     "Unallowable component %s.\nThe GAMS writer cannot export"
                     " models with this component type" % ( c.type().__name__, ))
 
-        # Temporarily initialize uninitialized variables in order to call
-        # value() on each constraint to check domain violations
-        uninit_vars = list()
-        for var in model.component_data_objects(Var, active=True):
-            if var.value is None:
-                uninit_vars.append(var)
-                var.value = 0
-
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
         # encountered will be added to the var_list due to the labeler
@@ -251,12 +243,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
         for con in model.component_data_objects(Constraint, active=True):
             if con.body.is_fixed():
                 continue
-
-            # Ensure GAMS will not encounter domain violations in presolver
-            # operations at current values, which are None (0) by default
-            # Used to handle log and log10 violations, for example
-            check_expr_evaluation(con.body, con.name)
-
             if linear:
                 if con.body.polynomial_degree() not in linear_degree:
                     linear = False
@@ -291,9 +277,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 "GAMS writer requires exactly one active objective (found %s)"
                 % (len(obj)))
         obj = obj[0]
-
-        check_expr_evaluation(obj.expr, obj.name)
-
         if linear:
             if obj.expr.polynomial_degree() not in linear_degree:
                 linear = False
@@ -332,7 +315,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 else:
                     reals.append(var)
             else:
-                check_expr_evaluation(v.expr, v.name)
                 body = str(v.expr)
                 if linear:
                     if v.expr.polynomial_degree() not in linear_degree:
@@ -348,10 +330,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 # expressions) -- so update the length of the var_list
                 # so that we process / categorize these new symbols
                 numVar = len(var_list)
-
-        # Return uninitialized variables to None
-        for var in uninit_vars:
-            var.value = None
 
         # Write the GAMS model
         output_file.write("EQUATIONS\n\t")
@@ -448,103 +426,83 @@ class ProblemWriter_gams(AbstractProblemWriter):
                               "GAMS_OBJECTIVE.m;\n")
 
 
-def check_expr_evaluation(expr, name):
-    # Ensure GAMS will not encounter domain violations in presolver
-    # operations at current values, which are None (0) by default
-    # Used to handle log and log10 violations, for example
-    try:
-        value(expr)
-    except ValueError:
-        logger.error("While evaluating %s, ProblemWriter_gams "
-                     "encountered an error.\nGAMS requires that all "
-                     "equations and expressions evaluate at initial values.\n"
-                     "Ensure variable values do not violate any domains "
-                     "(are you using log or log10?)" % name)
-        raise
-
-
-solver_chart = """\
-ALPHAECP    MINLP MIQCP
-AMPL        LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
-ANTIGONE    NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-BARON       LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-BDMLP       LP MIP RMIP
-BDMLPD      LP RMIP
-BENCH       LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-BONMIN      MINLP MIQCP
-BONMINH     MINLP MIQCP
-CBC         LP MIP RMIP
-COINBONMIN  MINLP MIQCP
-COINCBC     LP MIP RMIP
-COINCOUENNE NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-COINIPOPT   LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-COINOS      LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-COINSCIP    MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-CONOPT      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-CONOPT3     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-CONOPT4     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-CONOPTD     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-CONVERT     LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-CONVERTD    LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
-COUENNE     NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-CPLEX       LP MIP RMIP QCP MIQCP RMIQCP
-CPLEXD      LP MIP RMIP QCP MIQCP RMIQCP
-CPOPTIMIZER MIP MINLP MIQCP
-DE          EMP
-DECIS       EMP
-DECISC      LP
-DECISM      LP
-DICOPT      MINLP MIQCP
-DICOPTD     MINLP MIQCP
-EXAMINER    LP MIP RMIP NLP MCP MPEC RMPEC DNLP RMINLP MINLP QCP MIQCP RMIQCP
-EXAMINER2   LP MIP RMIP NLP MCP DNLP RMINLP MINLP QCP MIQCP RMIQCP
-GAMSCHK     LP MIP RMIP NLP MCP DNLP RMINLP MINLP QCP MIQCP RMIQCP
-GLOMIQO     QCP MIQCP RMIQCP
-GUROBI      LP MIP RMIP QCP MIQCP RMIQCP
-IPOPT       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-IPOPTH      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-JAMS        EMP
-KESTREL     LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
-KNITRO      LP RMIP NLP MPEC RMPEC CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-LGO         LP RMIP NLP DNLP RMINLP QCP RMIQCP
-LGOD        LP RMIP NLP DNLP RMINLP QCP RMIQCP
-LINDO       LP MIP RMIP NLP DNLP RMINLP MINLP QCP MIQCP RMIQCP EMP
-LINDOGLOBAL LP MIP RMIP NLP DNLP RMINLP MINLP QCP MIQCP RMIQCP
-LINGO       LP MIP RMIP NLP DNLP RMINLP MINLP
-LOCALSOLVER MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-LOGMIP      EMP
-LS          LP RMIP
-MILES       MCP
-MILESE      MCP
-MINOS       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-MINOS5      LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-MINOS55     LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-MOSEK       LP MIP RMIP NLP DNLP RMINLP QCP MIQCP RMIQCP
-MPECDUMP    LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
-MPSGE      
-MSNLP       NLP DNLP RMINLP QCP RMIQCP
-NLPEC       MCP MPEC RMPEC
-OS          LP MIP RMIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-OSICPLEX    LP MIP RMIP
-OSIGUROBI   LP MIP RMIP
-OSIMOSEK    LP MIP RMIP
-OSISOPLEX   LP RMIP
-OSIXPRESS   LP MIP RMIP
-PATH        MCP CNS
-PATHC       MCP CNS
-PATHNLP     LP RMIP NLP DNLP RMINLP QCP RMIQCP
-PYOMO       LP MIP RMIP NLP MCP MPEC RMPEC CNS DNLP RMINLP MINLP
-QUADMINOS   LP
-SBB         MINLP MIQCP
-SCENSOLVER  LP MIP RMIP NLP MCP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-SCIP        MIP NLP CNS DNLP RMINLP MINLP QCP MIQCP RMIQCP
-SNOPT       LP RMIP NLP CNS DNLP RMINLP QCP RMIQCP
-SOPLEX      LP RMIP
-XA          LP MIP RMIP
-XPRESS      LP MIP RMIP QCP MIQCP RMIQCP\
-"""
-
-valid_solvers = dict()
-for line in solver_chart.splitlines():
-    items = line.split()
-    valid_solvers[items[0]] = items[1:]
+valid_solvers = {
+'ALPHAECP': ['MINLP','MIQCP'],
+'AMPL': ['LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP'],
+'ANTIGONE': ['NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'BARON': ['LP','MIP','RMIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'BDMLP': ['LP','MIP','RMIP'],
+'BDMLPD': ['LP','RMIP'],
+'BENCH': ['LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'BONMIN': ['MINLP','MIQCP'],
+'BONMINH': ['MINLP','MIQCP'],
+'CBC': ['LP','MIP','RMIP'],
+'COINBONMIN': ['MINLP','MIQCP'],
+'COINCBC': ['LP','MIP','RMIP'],
+'COINCOUENNE': ['NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'COINIPOPT': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'COINOS': ['LP','MIP','RMIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'COINSCIP': ['MIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'CONOPT': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'CONOPT3': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'CONOPT4': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'CONOPTD': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'CONVERT': ['LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'CONVERTD': ['LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP','EMP'],
+'COUENNE': ['NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'CPLEX': ['LP','MIP','RMIP','QCP','MIQCP','RMIQCP'],
+'CPLEXD': ['LP','MIP','RMIP','QCP','MIQCP','RMIQCP'],
+'CPOPTIMIZER': ['MIP','MINLP','MIQCP'],
+'DE': ['EMP'],
+'DECIS': ['EMP'],
+'DECISC': ['LP'],
+'DECISM': ['LP'],
+'DICOPT': ['MINLP','MIQCP'],
+'DICOPTD': ['MINLP','MIQCP'],
+'EXAMINER': ['LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'EXAMINER2': ['LP','MIP','RMIP','NLP','MCP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'GAMSCHK': ['LP','MIP','RMIP','NLP','MCP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'GLOMIQO': ['QCP','MIQCP','RMIQCP'],
+'GUROBI': ['LP','MIP','RMIP','QCP','MIQCP','RMIQCP'],
+'IPOPT': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'IPOPTH': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'JAMS': ['EMP'],
+'KESTREL': ['LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP','EMP'],
+'KNITRO': ['LP','RMIP','NLP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'LGO': ['LP','RMIP','NLP','DNLP','RMINLP','QCP','RMIQCP'],
+'LGOD': ['LP','RMIP','NLP','DNLP','RMINLP','QCP','RMIQCP'],
+'LINDO': ['LP','MIP','RMIP','NLP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP','EMP'],
+'LINDOGLOBAL': ['LP','MIP','RMIP','NLP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'LINGO': ['LP','MIP','RMIP','NLP','DNLP','RMINLP','MINLP'],
+'LOCALSOLVER': ['MIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'LOGMIP': ['EMP'],
+'LS': ['LP','RMIP'],
+'MILES': ['MCP'],
+'MILESE': ['MCP'],
+'MINOS': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'MINOS5': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'MINOS55': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'MOSEK': ['LP','MIP','RMIP','NLP','DNLP','RMINLP','QCP','MIQCP','RMIQCP'],
+'MPECDUMP': ['LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP'],
+'MPSGE': [],
+'MSNLP': ['NLP','DNLP','RMINLP','QCP','RMIQCP'],
+'NLPEC': ['MCP','MPEC','RMPEC'],
+'OS': ['LP','MIP','RMIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'OSICPLEX': ['LP','MIP','RMIP'],
+'OSIGUROBI': ['LP','MIP','RMIP'],
+'OSIMOSEK': ['LP','MIP','RMIP'],
+'OSISOPLEX': ['LP','RMIP'],
+'OSIXPRESS': ['LP','MIP','RMIP'],
+'PATH': ['MCP','CNS'],
+'PATHC': ['MCP','CNS'],
+'PATHNLP': ['LP','RMIP','NLP','DNLP','RMINLP','QCP','RMIQCP'],
+'PYOMO': ['LP','MIP','RMIP','NLP','MCP','MPEC','RMPEC','CNS','DNLP','RMINLP','MINLP'],
+'QUADMINOS': ['LP'],
+'SBB': ['MINLP','MIQCP'],
+'SCENSOLVER': ['LP','MIP','RMIP','NLP','MCP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'SCIP': ['MIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
+'SNOPT': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
+'SOPLEX': ['LP','RMIP'],
+'XA': ['LP','MIP','RMIP'],
+'XPRESS': ['LP','MIP','RMIP','QCP','MIQCP','RMIQCP']
+}
