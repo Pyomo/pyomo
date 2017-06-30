@@ -8,6 +8,8 @@ constraints as well as logical conditions.
 These approaches include:
 
 - Outer approximation
+- Partial surrogate cuts [pending]
+- Generalized Bender decomposition [pending]
 
 This solver implementation was developed by Carnegie Mellon University in the
 research group of Ignacio Grossmann.
@@ -23,10 +25,11 @@ from pprint import pprint
 
 import pyomo.util.plugin
 from pyomo.core.base import expr as EXPR
+from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.environ import (Binary, Block, ComponentUID, Constraint,
+from pyomo.environ import (Binary, Block, Constraint,
                            ConstraintList, Expression, NonNegativeReals,
                            Objective, RangeSet, Reals, Set, Suffix, Var,
                            maximize, minimize, value, TransformationFactory,
@@ -39,6 +42,7 @@ from copy import deepcopy
 from pyomo.gdp import Disjunct
 
 from six.moves import range
+from six import iteritems
 
 
 class GDPDTSolver(pyomo.util.plugin.Plugin):
@@ -139,9 +143,14 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Save model initial values. These are used later to initialize NLP
         # subproblems.
+        model_obj_to_cuid = generate_cuid_names(
+            model, ctype=(Var, Disjunct), descend_into=(Block, Disjunct))
+        model_cuid_to_obj = {cuid: obj
+                             for obj, cuid in iteritems(model_obj_to_cuid)}
         self.initial_variable_values = {
-            id(v): v.value for v in m.component_data_objects(
-                ctype=Var, descend_into=True)}
+            model_obj_to_cuid[v]: value(v, exception=False)
+            for v in model.component_data_objects(
+                ctype=Var, descend_into=(Block, Disjunct))}
 
         # Create a model block on which to store GDPDT-specific utility
         # modeling objects.
@@ -230,13 +239,29 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Update values in original model
         if self.load_solutions:
-            self._copy_values(self.best_solution_found, model)
+            self._copy_values(self.best_solution_found, model,
+                              to_map=model_cuid_to_obj)
 
-    def _copy_values(self, source_model, destination_model):
-        for v in source_model.component_data_objects(
+    def _copy_values(self, from_model, to_model, from_map=None, to_map=None):
+        """Copy variable values from one model to another.
+
+        from_map: a mapping of source model objects to uid names
+        to_map: a mapping of uid names to destination model objects
+        """
+        if from_map is None:
+            from_map = generate_cuid_names(from_model,
+                                           ctype=(Var, Disjunct),
+                                           descend_into=(Block, Disjunct))
+        if to_map is None:
+            tm_obj_to_uid = generate_cuid_names(to_model,
+                                                ctype=(Var, Disjunct),
+                                                descend_into=(Block, Disjunct))
+            to_map = {cuid: obj
+                      for obj, cuid in iteritems(tm_obj_to_uid)}
+        for v in from_model.component_data_objects(
                 ctype=Var, descend_into=(Block, Disjunct)):
-            uid = ComponentUID(v)
-            dest_model_var = uid.find_component_on(destination_model)
+            uid = from_map[v]
+            dest_model_var = to_map.get(uid, None)
             if dest_model_var is not None:
                 try:
                     dest_model_var.set_value(value(v))
@@ -252,6 +277,24 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                     elif 'No value for uninitialized' in err.message:
                         # Variable value was None
                         dest_model_var.set_value(None)
+
+    def _copy_suffix(self, from_suffix, to_suffix, from_map=None, to_map=None):
+        """Copy suffix values from one model to another."""
+        if from_map is None:
+            from_map = generate_cuid_names(from_suffix.model(),
+                                           ctype=(Var, Constraint, Disjunct),
+                                           descend_into=(Block, Disjunct))
+        if to_map is None:
+            tm_obj_to_uid = generate_cuid_names(
+                to_suffix.model(), ctype=(Var, Constraint, Disjunct),
+                descend_into=(Block, Disjunct))
+            to_map = {cuid: obj
+                      for obj, cuid in iteritems(tm_obj_to_uid)}
+
+        to_suffix.clear()
+        for model_obj in from_suffix:
+            to_model_obj = to_map[from_map[model_obj]]
+            to_suffix[to_model_obj] = from_suffix[model_obj]
 
     def _validate_model(self):
         m, GDPDT = self.working_model, self.working_model.GDPDT_utils
@@ -343,6 +386,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
     def _init_rNLP(self):
         """Initialize by solving the rNLP (relaxed binary variables)."""
         m = self.working_model
+        GDPDT = m.GDPDT_utils
         self.nlp_iter += 1
         print("NLP {}: Solve relaxed integrality.".format(self.nlp_iter))
         for v in self.binary_vars:
@@ -355,11 +399,11 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         subprob_terminate_cond = results.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
             # Add OA cut
-            if self.obj.sense == minimize:
-                self.LB = value(self.obj.expr)
+            if GDPDT.objective.sense == minimize:
+                self.LB = value(GDPDT.objective.expr)
             else:
-                self.UB = value(self.obj.expr)
-            print('Objective {}'.format(value(self.obj.expr)))
+                self.UB = value(GDPDT.objective.expr)
+            print('Objective {}'.format(value(GDPDT.objective.expr)))
             self._add_oa_cut()
         elif subprob_terminate_cond is tc.infeasible:
             # TODO fail? try something else?
@@ -413,6 +457,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 solve_terminate_cond))
 
     def _GDPDT_iteration_loop(self):
+        m = self.working_model
+        GDPDT = m.GDPDT_utils
         # Backup counter to prevent infinite loop
         backup_max_iter = max(1000, self.iteration_limit)
         backup_iter = 0
@@ -451,7 +497,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
             # If the hybrid algorithm is not making progress, switch to OA.
             progress_required = 1E-6
-            if self.obj.sense == minimize:
+            if GDPDT.objective.sense == minimize:
                 log = self.LB_progress
                 sign_adjust = 1
             else:
@@ -482,25 +528,35 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 self._decomposition_strategy = 'OA'
 
     def _solve_OA_master(self):
-        m = self.working_model
         self.mip_iter += 1
+        m = self.working_model.clone()
+        GDPDT = m.GDPDT_utils
         print('MILP {}: Solve master problem.'.format(self.mip_iter))
-        # Set up MILP
-        for c in self.nonlinear_constraints:
+        nonlinear_constraints = (
+            c for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (0, 1))
+        for c in nonlinear_constraints:
             c.deactivate()
-        m.GDPDT_linear_cuts.activate()
-        self.obj.deactivate()
-        m.del_component('GDPDT_penalty_expr')
-        sign_adjust = 1 if self.obj.sense == minimize else -1
-        m.GDPDT_penalty_expr = Expression(
+
+        # Set up augmented Lagrangean penalty objective
+        GDPDT.objective.deactivate()
+        sign_adjust = 1 if GDPDT.objective.sense == minimize else -1
+        GDPDT.OA_penalty_expr = Expression(
             expr=sign_adjust * self.OA_penalty_factor * sum(
-                v for v in m.GDPDT_linear_cuts.slack_vars[...]))
-        m.del_component('GDPDT_oa_obj')
-        m.GDPDT_oa_obj = Objective(
-            expr=self.obj.expr + m.GDPDT_penalty_expr,
-            sense=self.obj.sense)
+                v for v in GDPDT.slack_vars[...]))
+        GDPDT.oa_obj = Objective(
+            expr=GDPDT.objective.expr + GDPDT.OA_penalty_expr,
+            sense=GDPDT.objective.sense)
+
+        # Transform disjunctions
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        # Deactivate extraneous IMPORT/EXPORT suffixes
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
+
+        # Solve
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
         master_terminate_cond = results.solver.termination_condition
@@ -516,26 +572,20 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                                             **self.mip_solver_kwargs)
             master_terminate_cond = results.solver.termination_condition
             self.mip_solver.options.update(old_options)
-        self.obj.activate()
-        for c in self.nonlinear_constraints:
-            c.activate()
-        m.GDPDT_linear_cuts.deactivate()
-        m.GDPDT_oa_obj.deactivate()
-        getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
-        getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
 
         # Process master problem result
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
-            if self.obj.sense == minimize:
-                self.LB = max(value(m.GDPDT_oa_obj.expr), self.LB)
+            self._copy_values(m, self.working_model)
+            if GDPDT.objective.sense == minimize:
+                self.LB = max(value(GDPDT.oa_obj.expr), self.LB)
                 self.LB_progress.append(self.LB)
             else:
-                self.UB = min(value(m.GDPDT_oa_obj.expr), self.UB)
+                self.UB = min(value(GDPDT.oa_obj.expr), self.UB)
                 self.UB_progress.append(self.UB)
             print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(m.GDPDT_oa_obj.expr), self.LB,
+                  .format(self.mip_iter, value(GDPDT.oa_obj.expr), self.LB,
                           self.UB))
         elif master_terminate_cond is tc.infeasible:
             print('MILP master problem is infeasible. '
@@ -544,7 +594,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 print('GDPDT initialization may have generated poor '
                       'quality cuts.')
             # set optimistic bound to infinity
-            if self.obj.sense == minimize:
+            if GDPDT.objective.sense == minimize:
                 self.LB = float('inf')
             else:
                 self.UB = float('-inf')
@@ -559,6 +609,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
     def _solve_PSC_master(self):
         m = self.working_model
+        GDPDT = m.GDPDT_utils
         self.mip_iter += 1
         print('MILP {}: Solve master problem.'.format(self.mip_iter))
         # Set up MILP
@@ -580,14 +631,14 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
-            if self.obj.sense == minimize:
-                self.LB = max(value(self.obj.expr), self.LB)
+            if GDPDT.objective.sense == minimize:
+                self.LB = max(value(GDPDT.objective.expr), self.LB)
                 self.LB_progress.append(self.LB)
             else:
-                self.UB = min(value(self.obj.expr), self.UB)
+                self.UB = min(value(GDPDT.objective.expr), self.UB)
                 self.UB_progress.append(self.UB)
             print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(self.obj.expr), self.LB,
+                  .format(self.mip_iter, value(GDPDT.objective.expr), self.LB,
                           self.UB))
         elif master_terminate_cond is tc.infeasible:
             print('MILP master problem is infeasible. '
@@ -596,7 +647,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 print('GDPDT initialization may have generated poor '
                       'quality cuts.')
             # set optimistic bound to infinity
-            if self.obj.sense == minimize:
+            if GDPDT.objective.sense == minimize:
                 self.LB = float('inf')
             else:
                 self.UB = float('-inf')
@@ -614,6 +665,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
     def _solve_GBD_master(self, leave_linear_active=False):
         m = self.working_model
+        GDPDT = m.GDPDT_utils
         self.mip_iter += 1
         print('MILP {}: Solve master problem.'.format(self.mip_iter))
         if not leave_linear_active:
@@ -661,14 +713,14 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
-            if self.obj.sense == minimize:
-                self.LB = max(value(self.obj.expr), self.LB)
+            if GDPDT.objective.sense == minimize:
+                self.LB = max(value(GDPDT.objective.expr), self.LB)
                 self.LB_progress.append(self.LB)
             else:
-                self.UB = min(value(self.obj.expr), self.UB)
+                self.UB = min(value(GDPDT.objective.expr), self.UB)
                 self.UB_progress.append(self.UB)
             print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(self.obj.expr), self.LB,
+                  .format(self.mip_iter, value(GDPDT.objective.expr), self.LB,
                           self.UB))
         elif master_terminate_cond is tc.infeasible:
             print('MILP master problem is infeasible. '
@@ -677,7 +729,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 print('GDPDT initialization may have generated poor '
                       'quality cuts.')
             # set optimistic bound to infinity
-            if self.obj.sense == minimize:
+            if GDPDT.objective.sense == minimize:
                 self.LB = float('inf')
             else:
                 self.UB = float('-inf')
@@ -700,6 +752,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
     def _solve_NLP_subproblem(self):
         m = self.working_model.clone()
+        GDPDT = m.GDPDT_utils
         self.nlp_iter += 1
         print('NLP {}: Solve subproblem for fixed binaries and '
               'logical realizations.'
@@ -711,6 +764,15 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             if v.is_binary() and not v.fixed]
         for v in binary_vars:
             v.fix()
+        # TODO round the integer variables so that they are exactly 0 or 1
+        # first?
+
+        # Deactivate the OA cuts
+        for constr in m.component_objects(ctype=Constraint, active=True,
+                                          descend_into=(Block, Disjunct)):
+            if constr.local_name == 'GDPDT_oa_cuts':
+                constr.deactivate()
+
         # Activate or deactivate disjuncts according to the value of their
         # indicator variable
         for disj in m.component_data_objects(
@@ -725,29 +787,36 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                     'Non-binary value of disjunct indicator variable '
                     'for {}: {}'.format(disj.name, value(disj.indicator_var)))
         # restore original variable values
-        for v in m.component_data_objects(ctype=Var, descend_into=True):
+        obj_to_cuid = generate_cuid_names(m, ctype=(Var, Constraint, Disjunct),
+                                          descend_into=(Block, Disjunct))
+        for v in m.component_data_objects(ctype=Var,
+                                          descend_into=(Block, Disjunct)):
             if not v.fixed and not v.is_binary():
                 try:
-                    v.set_value(self.initial_variable_values[id(v)])
-                except KeyError:
+                    v.set_value(self.initial_variable_values[
+                        obj_to_cuid[v]])
+                except KeyError as e:
                     continue
+
         # Solve the NLP
         results = self.nlp_solver.solve(m, load_solutions=False,
                                         **self.nlp_solver_kwargs)
         subprob_terminate_cond = results.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
             m.solutions.load_from(results)
-            self._copy_values(m, self.working_model)
-            if self.obj.sense == minimize:
-                self.UB = min(value(self.obj.expr), self.UB)
+            self._copy_values(m, self.working_model, from_map=obj_to_cuid)
+            self._copy_suffix(m.dual, self.working_model.dual,
+                              from_map=obj_to_cuid)
+            if GDPDT.objective.sense == minimize:
+                self.UB = min(value(GDPDT.objective.expr), self.UB)
                 self.solution_improved = self.UB < self.UB_progress[-1]
                 self.UB_progress.append(self.UB)
             else:
-                self.LB = max(value(self.obj.expr), self.LB)
+                self.LB = max(value(GDPDT.objective.expr), self.LB)
                 self.solution_improved = self.LB > self.LB_progress[-1]
                 self.LB_progress.append(self.LB)
             print('NLP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.nlp_iter, value(self.obj.expr), self.LB,
+                  .format(self.nlp_iter, value(GDPDT.objective.expr), self.LB,
                           self.UB))
             if self.solution_improved:
                 self.best_solution_found = m.clone()
@@ -807,25 +876,45 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                             for var, jac in zip(constraint_vars, jac_list)}
 
     def _add_oa_cut(self):
-        m = self.working_model
-        m.GDPDT_linear_cuts.nlp_iters.add(self.nlp_iter)
-        sign_adjust = -1 if self.obj.sense == minimize else 1
+        m, GDPDT = self.working_model, self.working_model.GDPDT_utils
+        GDPDT.nlp_iters.add(self.nlp_iter)
+        sign_adjust = -1 if GDPDT.objective.sense == minimize else 1
+
+        # deactivate inactive disjuncts
+        deactivated_disj = set()
+        for disj in m.component_data_objects(ctype=Disjunct, active=True,
+                                             descend_into=(Block, Disjunct)):
+            disj.deactivate()
+            deactivated_disj.add(disj)
+
+        nonlinear_constraints = (
+            c for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (0, 1))
 
         # generate new constraints
         # TODO some kind of special handling if the dual is phenomenally small?
-        for constr in self.jacs:
-            c = m.GDPDT_linear_cuts.oa_cuts.add(
+        for constr in nonlinear_constraints:
+            parent_block = constr.parent_block()
+            oa_cuts = parent_block.component('GDPDT_oa_cuts')
+            if oa_cuts is None:
+                oa_cuts = parent_block.GDPDT_oa_cuts = ConstraintList()
+            c = oa_cuts.add(
                 expr=copysign(1, sign_adjust * m.dual[constr]) * sum(
                     value(self.jacs[constr][id(var)]) * (var - value(var))
                     for var in list(EXPR.identify_variables(constr.body))) +
-                m.GDPDT_linear_cuts.slack_vars[self.nlp_iter,
-                                               self.nl_map[constr]] <= 0)
-            self.OA_constr_map[constr, self.nlp_iter] = c
+                GDPDT.slack_vars[self.nlp_iter, self.nl_map[constr]] <= 0)
+            GDPDT.OA_constr_map[constr, self.nlp_iter] = c
+
+        # Restore deactivated constraints
+        for disj in deactivated_disj:
+            disj.activate()
 
     def _add_psc_cut(self, nlp_feasible=True):
         m = self.working_model
+        GDPDT = m.GDPDT_utils
 
-        sign_adjust = 1 if self.obj.sense == minimize else -1
+        sign_adjust = 1 if GDPDT.objective.sense == minimize else -1
 
         # generate the sum of all multipliers with the nonlinear constraints
         var_to_val = {id(var): NumericConstant(value(var))
@@ -886,8 +975,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         if nlp_feasible:
             # Optimality cut (for feasible NLP)
             m.GDPDT_linear_cuts.psc_cuts.add(
-                expr=self.obj.expr * sign_adjust >= sign_adjust * (
-                    self.obj.expr + sum_nonlinear + sum_linear +
+                expr=GDPDT.objective.expr * sign_adjust >= sign_adjust * (
+                    GDPDT.objective.expr + sum_nonlinear + sum_linear +
                     sum_var_bounds))
         else:
             # Feasibility cut (for infeasible NLP)
@@ -897,8 +986,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
     def _add_gbd_cut(self, nlp_feasible=True):
         m = self.working_model
+        GDPDT = m.GDPDT_utils
 
-        sign_adjust = 1 if self.obj.sense == minimize else -1
+        sign_adjust = 1 if GDPDT.objective.sense == minimize else -1
 
         for c in m.component_data_objects(ctype=Constraint, active=True,
                                           descend_into=True):
@@ -950,34 +1040,38 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         if nlp_feasible:
             m.GDPDT_linear_cuts.gbd_cuts.add(
-                expr=self.obj.expr * sign_adjust >= sign_adjust * (
-                    self.obj.expr + sum_constraints + sum_var_bounds))
+                expr=GDPDT.objective.expr * sign_adjust >= sign_adjust * (
+                    GDPDT.objective.expr + sum_constraints + sum_var_bounds))
         else:
             m.GDPDT_linear_cuts.gbd_cuts.add(
                 expr=sign_adjust * (sum_constraints + sum_var_bounds) <= 0)
 
     def _add_int_cut(self, feasible=False):
-        m = self.working_model
+        m, GDPDT = self.working_model, self.working_model.GDPDT_utils
         int_tol = self.integer_tolerance
+        binary_vars = [
+            v for v in m.component_data_objects(
+                ctype=Var, descend_into=(Block, Disjunct))
+            if v.is_binary() and not v.fixed]
         # check to make sure that binary variables are all 0 or 1
-        for v in self.binary_vars:
+        for v in binary_vars:
             if value(abs(v - 1)) > int_tol and value(abs(v)) > int_tol:
                 raise ValueError('Binary {} = {} is not 0 or 1'.format(
                     v.name, value(v)))
 
-        if not self.binary_vars:  # if no binary variables, skip.
+        if not binary_vars:  # if no binary variables, skip.
             return
 
-        int_cut = (sum(1 - v for v in self.binary_vars
+        int_cut = (sum(1 - v for v in binary_vars
                        if value(abs(v - 1)) <= int_tol) +
-                   sum(v for v in self.binary_vars
+                   sum(v for v in binary_vars
                        if value(abs(v)) <= int_tol) >= 1)
 
         if not feasible:
             # Add the integer cut
-            m.GDPDT_integer_cuts.add(expr=int_cut)
+            GDPDT.integer_cuts.add(expr=int_cut)
         else:
-            m.GDPDT_feasible_integer_cuts.add(expr=int_cut)
+            GDPDT.feasible_integer_cuts.add(expr=int_cut)
 
     def _detect_nonlinear_vars(self):
         """Identify the variables that participate in nonlinear terms."""
