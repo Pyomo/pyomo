@@ -69,6 +69,7 @@ from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn, canonical_d
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.core.kernel.numvalue import value
+import pyomo.core.kernel
 
 GRB_MAX = -1
 GRB_MIN = 1
@@ -1117,6 +1118,8 @@ class GurobiDirect(DirectSolver):
         for con in block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint, descend_into=True, active=True):
             self._add_constraint(con)
 
+        self._compile_objective()
+
     def _add_constraint(self, con):
         if not con.active:
             return None
@@ -1159,3 +1162,23 @@ class GurobiDirect(DirectSolver):
         else:
             raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
         return vtype
+
+    def _compile_objective(self):
+        obj_counter = 0
+
+        for obj in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.objective.Objective, descend_into=True, active=True)
+            obj_counter += 1
+            if obj_counter > 1:
+                raise ValueError('Multiple active objectives found. Solver only handles one active objective')
+
+            if obj.sense == pyomo.core.kernel.minimize:
+                sense = self._gurobipy.GRB.MINIMIZE
+            elif obj.sense == pyomo.core.kernel.maximize:
+                sense = self._gurobipy.GRB.MAXIMIZE
+            else:
+                raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
+
+            self._solver_model.setObjective(self._get_expr_from_pyomo_expr(obj.expr), sense=sense)
+
+    def _load_results(self):
+        pass

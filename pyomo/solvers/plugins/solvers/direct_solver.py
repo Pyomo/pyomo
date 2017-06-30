@@ -10,16 +10,18 @@ class DirectSolver(OptSolver):
     1.) Initialize self._solver_model during _presolve before calling DirectSolver._presolve
     """
     def __init__(self, **kwds):
+        super(DirectSolver, self).__init__(**kwds)
+
+        self._pyomo_model = None
         self._solver_model = None
         self._symbol_map = None
         self._labeler = None
         self._pyomo_var_to_solver_var_map = None
         self._pyomo_con_to_solver_con_map = None
 
-        super(DirectSolver, self).__init__(**kwds)
-
     def _presolve(self, *args, **kwds):
         model = args[0]
+        self._pyomo_model = model
         if not isinstance(model, (Model, IBlockStorage)):
             msg = "The problem instance supplied to the CPLEXDirect plugin " \
                   "method '_presolve' must be of type 'Model' - "\
@@ -51,7 +53,7 @@ class DirectSolver(OptSolver):
     def _add_block(self, block):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
-    def _compile_objective(self, obj):
+    def _compile_objective(self):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
     def _add_constraint(self, con):
