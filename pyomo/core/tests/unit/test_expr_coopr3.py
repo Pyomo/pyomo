@@ -10,9 +10,6 @@
 #
 # Unit Tests for expression generation
 #
-#
-
-from __future__ import print_function
 
 import os
 import six
@@ -26,11 +23,13 @@ from pyutilib.th import nottest
 
 from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
+from pyomo.core.base.var import SimpleVar
+from pyomo.core.base.numvalue import potentially_variable
+
 from pyomo.core.base.expr_coopr3 import UNREFERENCED_EXPR_COUNT, \
      UNREFERENCED_RELATIONAL_EXPR_COUNT, UNREFERENCED_INTRINSIC_EXPR_COUNT, \
      _getrefcount_available
-from pyomo.core.base.var import SimpleVar
-from pyomo.core.base.numvalue import potentially_variable
+
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
 
