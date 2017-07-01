@@ -942,11 +942,15 @@ class TestGenerate_ProductExpression(unittest.TestCase):
 
     def test_simpleProduct(self):
         #
-        # Check the structure of a simple product
+        # Check the structure of a simple product of variables
         #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
+
+        #    *
+        #   / \
+        #  a   b
         e = m.a * m.b
         self.assertIs(type(e), EXPR._ProductExpression)
         self.assertEqual(len(e._args), 2)
@@ -954,8 +958,15 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1], m.b)
 
     def test_constProduct(self):
+        #
+        # Check the structure of a simple product with a constant
+        #
         m = AbstractModel()
         m.a = Var()
+
+        #    *
+        #   / \
+        #  a   5
         e = m.a * 5
         self.assertIs(type(e), EXPR._LinearExpression)
         self.assertEqual(e._coef[id(m.a)], 5)
@@ -963,6 +974,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(e._const, 0)
         self.assertIs(e._args[0], m.a)
 
+        #    *
+        #   / \
+        #  5   a
         e = 5 * m.a
         self.assertIs(type(e), EXPR._LinearExpression)
         self.assertEqual(e._coef[id(m.a)], 5)
@@ -971,12 +985,20 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0], m.a)
 
     def test_nestedProduct(self):
+        #
+        # Check the structure of nested products
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
         m.d = Var()
 
+        #       *
+        #      / \
+        #     *   5
+        #    / \
+        #   a   b
         e1 = m.a * m.b
         e = e1 * 5
         self.assertIs(type(e), EXPR._ProductExpression)
@@ -986,6 +1008,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
 
+        #       *
+        #      / \
+        #     5   *
+        #        / \
+        #       a   b
         e1 = m.a * m.b
         e = 5 * e1
         self.assertIs(type(e), EXPR._ProductExpression)
@@ -995,6 +1022,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
 
+        #       *
+        #      / \
+        #     *   c
+        #    / \
+        #   a   b
         e1 = m.a * m.b
         e = e1 * m.c
         self.assertIs(type(e), EXPR._ProductExpression)
@@ -1004,6 +1036,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
 
+        #       *
+        #      / \
+        #     c   *
+        #        / \
+        #       a   b
         e1 = m.a * m.b
         e = m.c * e1
         self.assertIs(type(e), EXPR._ProductExpression)
@@ -1013,6 +1050,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
 
+        #            *
+        #          /   \
+        #         *     *
+        #        / \   / \
+        #       a   b c   d
         e1 = m.a * m.b
         e2 = m.c * m.d
         e = e1 * e2
@@ -1026,6 +1068,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[1], m.d)
 
     def test_trivialProduct(self):
+        #
+        # Check that multiplying by zero gives zero
+        #
         m = AbstractModel()
         m.a = Var()
         e = m.a * 0
@@ -1036,6 +1081,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e), int)
         self.assertEqual(e, 0)
 
+        #
+        # Check that multiplying by one gives the original expression
+        #
         e = m.a * 1
         self.assertIs(type(e), type(m.a))
         self.assertIs(e, m.a)
@@ -1044,15 +1092,24 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e), type(m.a))
         self.assertIs(e, m.a)
 
+        #
+        # Check that numeric constants are simply muliplied out
+        #
         e = NumericConstant(3) * NumericConstant(2)
         self.assertIs(type(e), int)
         self.assertEqual(e, 6)
 
-
     def test_simpleDivision(self):
+        #
+        # Check the structure of a simple division with variables
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
+
+        #    /
+        #   / \
+        #  a   b
         e = m.a / m.b
         self.assertIs(type(e), EXPR._DivisionExpression)
         self.assertEqual(len(e._args), 2)
@@ -1060,8 +1117,15 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1], m.b)
 
     def test_constDivision(self):
+        #
+        # Check the structure of a simple division with a constant
+        #
         m = AbstractModel()
         m.a = Var()
+
+        #    /
+        #   / \
+        #  a   5
         e = m.a / 5
         self.assertIs(type(e), EXPR._LinearExpression)
         self.assertEqual(len(e._args), 1)
@@ -1069,6 +1133,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(e._coef[id(m.a)], 0.2)
         self.assertIs(e._args[0], m.a)
 
+        #    /
+        #   / \
+        #  5   a
         e = 5 / m.a
         self.assertIs(type(e), EXPR._DivisionExpression)
         self.assertEqual(len(e._args), 2)
@@ -1076,12 +1143,20 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1], m.a)
 
     def test_nestedDivision(self):
+        #
+        # Check the structure of nested divisions
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
         m.d = Var()
 
+        #       /
+        #      / \
+        #     /   5
+        #    / \
+        #   a   b
         e1 = m.a / m.b
         e = e1 / 5
         self.assertIs(type(e), EXPR._DivisionExpression)
@@ -1091,6 +1166,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
 
+        #       /
+        #      / \
+        #     5   /
+        #        / \
+        #       a   b
         e1 = m.a / m.b
         e = 5 / e1
         self.assertIs(type(e), EXPR._DivisionExpression)
@@ -1100,6 +1180,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
 
+        #       /
+        #      / \
+        #     /   c
+        #    / \
+        #   a   b
         e1 = m.a / m.b
         e = e1 / m.c
         self.assertIs(type(e), EXPR._DivisionExpression)
@@ -1109,6 +1194,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
 
+        #       /
+        #      / \
+        #     c   /
+        #        / \
+        #       a   b
         e1 = m.a / m.b
         e = m.c / e1
         self.assertIs(type(e), EXPR._DivisionExpression)
@@ -1118,6 +1208,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
 
+        #            /
+        #          /   \
+        #         /     /
+        #        / \   / \
+        #       a   b c   d
         e1 = m.a / m.b
         e2 = m.c / m.d
         e = e1 / e2
@@ -1131,24 +1226,39 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[1], m.d)
 
     def test_trivialDivision(self):
+        #
+        # Check that dividing by zero generates an exception
+        #
         m = AbstractModel()
         m.a = Var()
         self.assertRaises(ZeroDivisionError, m.a.__div__, 0)
 
+        #
+        # Check that dividing zero by anything non-zero gives zero
+        #
         e = 0 / m.a
         self.assertIs(type(e), int)
         self.assertAlmostEqual(e, 0.0)
 
+        #
+        # Check that dividing by one 1 gives the original expression
+        #
         e = m.a / 1
         self.assertIs(type(e), type(m.a))
         self.assertIs(e, m.a)
 
+        #
+        # Check the structure dividing 1 by an expression
+        #
         e = 1 / m.a
         self.assertIs(type(e), EXPR._DivisionExpression)
         self.assertEqual(len(e._args), 2)
         self.assertEqual(e._args[0], 1)
         self.assertIs(e._args[1], m.a)
 
+        #
+        # Check that dividing two non-zero constants gives a constant
+        #
         e = NumericConstant(3) / NumericConstant(2)
         self.assertIs(type(e), float)
         self.assertEqual(e, 1.5)
@@ -1173,6 +1283,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.m = None
 
     def test_simpleEquality(self):
+        #
+        # Check the structure of a simple equality statement
+        #
         m = self.m
         e = m.a == m.b
         self.assertIs(type(e), EXPR._EqualityExpression)
@@ -1181,8 +1294,16 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertIs(e._args[1], m.b)
 
     def test_equalityErrors(self):
+        #
+        # Check equality errors
+        #
         m = self.m
         e = m.a == m.b
+        #       =
+        #      / \
+        #     =   5
+        #    / \
+        #   a   b
         # Python 2.7 supports better testing of exceptions
         if sys.hexversion >= 0x02070000:
             self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
@@ -1214,6 +1335,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         except TypeError:
             pass
 
+        #
+        # Test expression with an indexed variable
+        #
         try:
             m.x == m.a
             self.fail("expected use of indexed variable to raise TypeError")
@@ -1227,7 +1351,13 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
             pass
 
     def test_simpleInequality(self):
+        #
+        # Check the structure of a simple inequality
+        #
         m = self.m
+        #    <
+        #   / \
+        #  a   b
         e = m.a < m.b
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
@@ -1236,6 +1366,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict[0], True)
 
+        #    <=
+        #   / \
+        #  a   b
         e = m.a <= m.b
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
@@ -1244,6 +1377,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict[0], False)
 
+        #    >
+        #   / \
+        #  a   b
         e = m.a > m.b
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
@@ -1252,6 +1388,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(len(e._strict), 1)
         self.assertEqual(e._strict[0], True)
 
+        #    >=
+        #   / \
+        #  a   b
         e = m.a >= m.b
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
@@ -1262,6 +1401,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
 
     def test_compoundInequality(self):
         m = self.m
+        #       <
+        #      / \
+        #     <   c
+        #    / \
+        #   a   b
         e = m.a < m.b < m.c
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
@@ -1272,6 +1416,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], True)
         self.assertEqual(e._strict[1], True)
 
+        #       <=
+        #      / \
+        #     <=  c
+        #    / \
+        #   a   b
         e = m.a <= m.b <= m.c
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
@@ -1282,6 +1431,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], False)
 
+        #       >
+        #      / \
+        #     >   c
+        #    / \
+        #   a   b
         e = m.a > m.b > m.c
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
@@ -1292,6 +1446,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], True)
         self.assertEqual(e._strict[1], True)
 
+        #       >=
+        #      / \
+        #     >=  c
+        #    / \
+        #   a   b
         e = m.a >= m.b >= m.c
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
@@ -1302,6 +1461,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], False)
 
+        #       <
+        #      / \
+        #     <=  1
+        #    / \
+        #   0   a
         e = 0 <= m.a < 1
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 3)
@@ -1312,18 +1476,33 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], False)
         self.assertEqual(e._strict[1], True)
 
+        #       <=
+        #      / \
+        #     <=  0
+        #    / \
+        #   0   a
         e = 0 <= m.a <= 0
         self.assertIs(type(e), EXPR._EqualityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertEqual(e._args[1](), 0)
 
+        #       >=
+        #      / \
+        #     >=  0
+        #    / \
+        #   0   a
         e = 0 >= m.a >= 0
         self.assertIs(type(e), EXPR._EqualityExpression)
         self.assertEqual(len(e._args), 2)
         self.assertEqual(e._args[0](), 0)
         self.assertIs(e._args[1], m.a)
 
+        #       <=
+        #      / \
+        #     <   0
+        #    / \
+        #   0   a
         try:
             0 < m.a <= 0
             self.fail("expected construction of invalid compound inequality: "
@@ -1335,6 +1514,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 "lower bounds using strict inequalities",
                 re.sub('\s+',' ',str(e)) )
 
+        #       <
+        #      / \
+        #     <=  0
+        #    / \
+        #   0   a
         try:
             0 <= m.a < 0
             self.fail("expected construction of invalid compound inequality: "
@@ -1346,6 +1530,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 "lower bounds using strict inequalities",
                 re.sub('\s+',' ',str(e)) )
 
+        #       <
+        #      / \
+        #     <=  a
+        #    / \
+        #   0   1
         e = 0 <= 1 < m.a
         self.assertIs(type(e), EXPR._InequalityExpression)
         self.assertEqual(len(e._args), 2)
@@ -1355,6 +1544,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertEqual(e._strict[0], True)
 
     def test_eval_compoundInequality(self):
+        #
+        # Evaluate a compound inequality
+        #
         m = ConcreteModel()
         m.x = Var(initialize=0)
 
@@ -1373,9 +1565,17 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         self.assertIsNone(EXPR.generate_relational_expression.chainedInequality)
 
     def test_compoundInequality_errors(self):
+        #
+        # Evaluate errors in a compound inequality
+        #
         m = ConcreteModel()
         m.x = Var()
 
+        #       >=
+        #      / \
+        #     <=  0
+        #    / \
+        #   0   x
         try:
             0 <= m.x >= 0
             self.fail("expected construction of relational expression to "
@@ -1385,6 +1585,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 "Relational expression used in an unexpected Boolean context.",
                 str(e) )
 
+        #       >=
+        #      / \
+        #     <=  1
+        #    / \
+        #   0   x
         try:
             0 <= m.x >= 1
             self.fail("expected construction of relational expression to "
@@ -1394,6 +1599,11 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 "Attempting to form a compound inequality with two lower bounds",
                 str(e) )
 
+        #       <=
+        #      / \
+        #     >=  1
+        #    / \
+        #   0   x
         try:
             0 >= m.x <= 1
             self.fail("expected construction of relational expression to "
@@ -1403,6 +1613,8 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 "Attempting to form a compound inequality with two upper bounds",
                 str(e) )
 
+        #
+        # Confirm error when 
         self.assertTrue(m.x <= 0)
         self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
         try:
@@ -1425,6 +1637,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 "Relational expression used in an unexpected Boolean context.",
                 str(e) )
 
+        #
+        # Error because expression is being detected in an unusual context
+        #
         self.assertTrue(m.x <= 0)
         self.assertIsNotNone(EXPR.generate_relational_expression.chainedInequality)
         try:
@@ -1437,11 +1652,17 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                 str(e) )
 
     def test_inequalityErrors(self):
+        #
+        # Check inequality errors
+        #
         m = self.m
         e = m.a <= m.b <= m.c
         e1 = m.a == m.b
-        # Python 2.7 supports better testing of exceptions
         if sys.hexversion >= 0x02070000:
+            # Python 2.7 supports better testing of exceptions
+            #
+            # Check error with indexed variable
+            #
             self.assertRaisesRegexp(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__lt__, m.x)
@@ -1449,6 +1670,9 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                                     "is an indexed numeric value",
                                     m.a.__gt__, m.x)
 
+            #
+            # Check error with more than two inequalities
+            #
             self.assertRaisesRegexp(ValueError, "InequalityExpression .*"
                                    "more than 3 terms",
                                    e.__lt__, m.c)
@@ -1456,10 +1680,12 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
                                    "more than 3 terms",
                                    e.__gt__, m.c)
 
+            #
+            # Check error when both expressions are relational
+            #
             self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
                                    "both sub-expressions are also relational",
                                    e.__lt__, m.a < m.b)
-
             self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
                                    "sub-expressions is an equality",
                                    m.a.__lt__, e1)
@@ -1475,43 +1701,44 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
             self.assertRaises(TypeError, m.a.__lt__, e1)
             self.assertRaises(TypeError, m.a.__gt__, e1)
 
+        #
+        # Check error with indexed variable
+        #
         try:
             m.x < m.a
             self.fail("expected use of indexed variable to raise TypeError")
         except TypeError:
             pass
-
         try:
             m.a < m.x
             self.fail("expected use of indexed variable to raise TypeError")
         except TypeError:
             pass
 
+        #
+        # Check error with more than two relational expressions
+        #
         try:
             e < m.c
             self.fail("expected 4-term inequality to raise ValueError")
         except ValueError:
             pass
-
         try:
             m.c < e
             self.fail("expected 4-term inequality to raise ValueError")
         except ValueError:
             pass
-
         try:
             e1 = m.a < m.b
             e < e1
             self.fail("expected inequality of inequalities to raise TypeError")
         except TypeError:
             pass
-
         try:
             m.a < (m.a == m.b)
             self.fail("expected equality within inequality to raise TypeError")
         except TypeError:
             pass
-
         try:
             m.a > (m.a == m.b)
             self.fail("expected equality within inequality to raise TypeError")
@@ -1534,6 +1761,9 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
+        #
+        # Print simple sum
+        #
         model = ConcreteModel()
         model.a = Var()
 
@@ -1543,7 +1773,10 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         expr += 5
         self.assertEqual("linear( 10 , 2*a )", str(expr))
 
-    def test_prod(self):
+    def test_expr(self):
+        #
+        # Print simple expressions with products and divisions
+        #
         model = ConcreteModel()
         model.a = Var()
 
@@ -1569,6 +1802,9 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
                           str(expr) )
 
     def test_inequality(self):
+        #
+        # Print inequalities
+        #
         model = ConcreteModel()
         model.a = Var()
 
@@ -1588,6 +1824,9 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         self.assertEqual( "( 5.0  <=  linear( 5 , a )  <  10.0 )", str(expr) )
 
     def test_equality(self):
+        #
+        # Print equality
+        #
         model = ConcreteModel()
         model.a = Var()
         model.b = Param(initialize=5, mutable=True)
@@ -1613,6 +1852,9 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         self.assertEqual( "( linear( 5 , a )  ==  5.0 )", str(expr) )
 
     def test_small_expression(self):
+        #
+        # Print complex
+        #
         model = AbstractModel()
         model.a = Var()
         model.b = Param(initialize=2, mutable=True)
@@ -1652,6 +1894,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         pyomo.core.base.expr_common.TO_STRING_VERBOSE = TestPrettyPrinter_oldStyle._save
 
     def test_sum(self):
+        #
+        # Print sum
+        #
         model = ConcreteModel()
         model.a = Var()
 
@@ -1672,6 +1917,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
             self.assertEqual("5 + a + a + 5", str(expr))
 
     def test_prod(self):
+        #
+        # Print expressions
+        #
         model = ConcreteModel()
         model.a = Var()
 
@@ -1701,6 +1949,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
                           str(expr) )
 
     def test_inequality(self):
+        #
+        # Print inequalities
+        #
         model = ConcreteModel()
         model.a = Var()
 
@@ -1720,6 +1971,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual( "5.0  <=  5 + a  <  10.0", str(expr) )
 
     def test_equality(self):
+        #
+        # Print equalities
+        #
         model = ConcreteModel()
         model.a = Var()
         model.b = Param(initialize=5, mutable=True)
@@ -1745,6 +1999,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual( "5 + a  ==  5.0", str(expr) )
 
     def test_linear(self):
+        #
+        # Print linear
+        #
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
@@ -1777,8 +2034,10 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
             self.assertIs(type(expr), EXPR._SumExpression)
             self.assertEqual( "x - p*y + -5 + p", str(expr) )
 
-
     def test_small_expression(self):
+        #
+        # Print complex expression
+        #
         model = AbstractModel()
         model.a = Var()
         model.b = Param(initialize=2, mutable=True)
@@ -1801,6 +2060,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
             str(expr) )
 
     def test_large_expression(self):
+        #
+        # Diff against a large model
+        #
         def c1_rule(model):
             return (1.0,model.b[1],None)
         def c2_rule(model):
@@ -1889,6 +2151,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
                                        currdir+"varpprint.txt" )
 
 
+#
+# Check cloning with in-place expressions
+#
 class TestInplaceExpressionGeneration(unittest.TestCase):
 
     def setUp(self):
@@ -2060,6 +2325,9 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_invalidIndexing(self):
+        #
+        # Check for errors when generating expressions with invalid indices
+        #
         m = AbstractModel()
         m.A = Set()
         m.p = Param(m.A, mutable=True)
@@ -2105,6 +2373,9 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
             pass
 
     def test_negation(self):
+        #
+        # Test negation logic for various expressions
+        #
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
@@ -2177,6 +2448,19 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
+        #
+        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        #
+        self.checkCondition(model.p > 0, True)
+        self.checkCondition(model.p >= 0, True)
+        self.checkCondition(model.p < 1, True)
+        self.checkCondition(model.p <= 1, True)
+        self.checkCondition(model.p == 0, None)
+
+        instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the parameter is initialized
+        #
         self.checkCondition(model.p > 0, True)
         self.checkCondition(model.p >= 0, True)
         self.checkCondition(model.p < 1, True)
@@ -2198,6 +2482,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
+        #
+        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        #
         self.checkCondition(0 < model.p, True)
         self.checkCondition(0 <= model.p, True)
         self.checkCondition(1 > model.p, True)
@@ -2205,6 +2492,39 @@ class TestExprConditionalContext(unittest.TestCase):
         self.checkCondition(0 == model.p, None)
 
         instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the parameter is initialized
+        #
+        self.checkCondition(0 < instance.p, True)
+        self.checkCondition(2 < instance.p, False)
+        self.checkCondition(1 <= instance.p, True)
+        self.checkCondition(instance.p > 0, True)
+        self.checkCondition(instance.p > 2, False)
+        self.checkCondition(instance.p >= 1, True)
+        self.checkCondition(instance.p >= 2, False)
+        self.checkCondition(instance.p < 2, True)
+        self.checkCondition(instance.p < 0, False)
+        self.checkCondition(instance.p <= 1, True)
+        self.checkCondition(instance.p <= 0, False)
+        self.checkCondition(instance.p == 1, True)
+        self.checkCondition(instance.p == 2, False)
+
+    def test_immutable_paramConditional_reversed(self):
+        model = AbstractModel()
+        model.p = Param(initialize=1.0, mutable=False)
+        #
+        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        #
+        self.checkCondition(0 < model.p, True)
+        self.checkCondition(0 <= model.p, True)
+        self.checkCondition(1 > model.p, True)
+        self.checkCondition(1 >= model.p, True)
+        self.checkCondition(0 == model.p, None)
+
+        instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the parameter is initialized
+        #
         self.checkCondition(0 < instance.p, True)
         self.checkCondition(2 < instance.p, False)
         self.checkCondition(1 <= instance.p, True)
@@ -2219,6 +2539,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_mutable_paramConditional(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
+        #
+        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        #
         self.checkCondition(model.p > 0, True)
         self.checkCondition(model.p >= 0, True)
         self.checkCondition(model.p < 1, True)
@@ -2226,6 +2549,9 @@ class TestExprConditionalContext(unittest.TestCase):
         self.checkCondition(model.p == 0, None)
 
         instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the parameter is initialized
+        #
         self.checkCondition(instance.p > 0, True)
         self.checkCondition(instance.p > 2, True)
         self.checkCondition(instance.p >= 1, True)
@@ -2240,6 +2566,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_mutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
+        #
+        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        #
         self.checkCondition(0 < model.p, True)
         self.checkCondition(0 <= model.p, True)
         self.checkCondition(1 > model.p, True)
@@ -2247,6 +2576,9 @@ class TestExprConditionalContext(unittest.TestCase):
         self.checkCondition(0 == model.p, None)
 
         instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the parameter is initialized
+        #
         self.checkCondition(0 < instance.p, True)
         self.checkCondition(2 < instance.p, True)
         self.checkCondition(1 <= instance.p, True)
@@ -2261,6 +2593,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_varConditional(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
+        #
+        # TODO: Inequalities evaluate True when the variable is unconstructed?
+        #
         self.checkCondition(model.v > 0, True)
         self.checkCondition(model.v >= 0, True)
         self.checkCondition(model.v < 1, True)
@@ -2268,6 +2603,9 @@ class TestExprConditionalContext(unittest.TestCase):
         self.checkCondition(model.v == 0, None)
 
         instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the variable is initialized
+        #
         self.checkCondition(instance.v > 0, True)
         self.checkCondition(instance.v > 2, True)
         self.checkCondition(instance.v >= 1, True)
@@ -2282,6 +2620,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_varConditional_reversed(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
+        #
+        # TODO: Inequalities evaluate True when the variable is unconstructed?
+        #
         self.checkCondition(0 < model.v, True)
         self.checkCondition(0 <= model.v, True)
         self.checkCondition(1 > model.v, True)
@@ -2289,6 +2630,9 @@ class TestExprConditionalContext(unittest.TestCase):
         self.checkCondition(0 == model.v, None)
 
         instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the variable is initialized
+        #
         self.checkCondition(0 < instance.v, True)
         self.checkCondition(2 < instance.v, True)
         self.checkCondition(1 <= instance.v, True)
@@ -2303,6 +2647,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_eval_sub_varConditional(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
+        #
+        # The value() function generates an exception when the variable is unconstructed!
+        #
         try:
             self.checkCondition(value(model.v) > 0, None)
             self.fail("Expected ValueError because component was undefined")
@@ -2330,6 +2677,9 @@ class TestExprConditionalContext(unittest.TestCase):
             pass
 
         instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the variable is initialized
+        #
         self.checkCondition(value(instance.v) > 0, True)
         self.checkCondition(value(instance.v) > 2, False)
         self.checkCondition(value(instance.v) >= 1, True)
@@ -2344,6 +2694,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_eval_sub_varConditional_reversed(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
+        #
+        # The value() function generates an exception when the variable is unconstructed!
+        #
         try:
             self.checkCondition(0 < value(model.v), None)
             self.fail("Expected ValueError because component was undefined")
@@ -2371,6 +2724,9 @@ class TestExprConditionalContext(unittest.TestCase):
             pass
 
         instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the variable is initialized
+        #
         self.checkCondition(0 < value(instance.v), True)
         self.checkCondition(2 < value(instance.v), False)
         self.checkCondition(1 <= value(instance.v), True)
@@ -2385,6 +2741,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_eval_varConditional(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
+        #
+        # The value() function generates an exception when the variable is unconstructed!
+        #
         try:
             self.checkCondition(value(model.v > 0), None)
             self.fail("Expected ValueError because component was undefined")
@@ -2412,6 +2771,9 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_eval_varConditional_reversed(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
+        #
+        # The value() function generates an exception when the variable is unconstructed!
+        #
         try:
             self.checkCondition(value(0 < model.v), None)
             self.fail("Expected ValueError because component was undefined")
@@ -2429,6 +2791,9 @@ class TestExprConditionalContext(unittest.TestCase):
             pass
 
         instance = model.create_instance()
+        #
+        # Inequalities evaluate normally when the variable is initialized
+        #
         self.checkCondition(value(0 < instance.v), True)
         self.checkCondition(value(2 < instance.v), False)
         self.checkCondition(value(1 <= instance.v), True)
@@ -2457,73 +2822,106 @@ class TestPolynomialDegree(unittest.TestCase):
         self.instance = None
 
     def test_param(self):
+        #
+        # Check that a parameter has degree 0
+        #
         self.assertEqual(self.model.d.polynomial_degree(), 0)
 
     def test_var(self):
-        save = self.model.a.fixed
+        #
+        # Check that a non-fixed variable has degree 1
+        #
         self.model.a.fixed = False
         self.assertEqual(self.model.a.polynomial_degree(), 1)
+        #
+        # Check that a fixed variable has degree 0
+        #
         self.model.a.fixed = True
         self.assertEqual(self.model.a.polynomial_degree(), 0)
-        self.model.a.fixed = save
 
     def test_simple_sum(self):
+        #
+        # A sum of parameters has degree 0
+        #
         expr = self.model.c + self.model.d
         self.assertEqual(expr.polynomial_degree(), 0)
-
+        #
+        # A sum of variables has degree 1
+        #
         expr = self.model.a + self.model.b
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.a.fixed = False
-
+        #
+        # A sum of fixed variables has degree 0
+        #
         expr = self.model.a + self.model.c
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
-        self.model.a.fixed = False
 
     def test_relational_ops(self):
+        #
+        # TODO: Should a relational expression have a polynomial degree?
+        #
+        # A relational expression with parameters has degree 0
+        #
         expr = self.model.c < self.model.d
         self.assertEqual(expr.polynomial_degree(), 0)
-
+        #
+        # A relational expression with variables has degree 1
+        #
         expr = self.model.a <= self.model.d
         self.assertEqual(expr.polynomial_degree(), 1)
-
+        #
+        # A relational expression with variable products has degree 2
+        #
         expr = self.model.a * self.model.a >= self.model.b
         self.assertEqual(expr.polynomial_degree(), 2)
         self.model.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.a.fixed = False
-
+        #
         expr = self.model.a > self.model.a * self.model.b
         self.assertEqual(expr.polynomial_degree(), 2)
         self.model.b.fixed = True
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.b.fixed = False
-
+        #
         expr = self.model.a == self.model.a * self.model.b
         self.assertEqual(expr.polynomial_degree(), 2)
         self.model.b.fixed = True
         self.assertEqual(expr.polynomial_degree(), 1)
-        self.model.b.fixed = False
 
     def test_simple_product(self):
+        #
+        # A product of parameters has degree 0
+        #
         expr = self.model.c * self.model.d
         self.assertEqual(expr.polynomial_degree(), 0)
-
+        #
+        # A product of variables has degree 2
+        #
         expr = self.model.a * self.model.b
         self.assertEqual(expr.polynomial_degree(), 2)
-
+        #
+        # A product of a variable and parameter has degree 1
+        #
         expr = self.model.a * self.model.c
         self.assertEqual(expr.polynomial_degree(), 1)
         self.model.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
         self.model.a.fixed = False
-
+        #
+        # A fraction with a variable and parameter has degree 1
+        #
         expr = self.model.a / self.model.c
         self.assertEqual(expr.polynomial_degree(), 1)
-
+        #
+        # A fraction with a variable in the denominator has degree None.
+        # This indicates that it is not a polyomial.
+        #
         expr = self.model.c / self.model.a
         self.assertEqual(expr.polynomial_degree(), None)
         self.model.a.fixed = True
@@ -2531,6 +2929,9 @@ class TestPolynomialDegree(unittest.TestCase):
         self.model.a.fixed = False
 
     def test_nested_expr(self):
+        #
+        # Verify that nested expressions compute polynomial degrees appropriately
+        #
         expr1 = self.model.c * self.model.d
         expr2 = expr1 + expr1
         self.assertEqual(expr2.polynomial_degree(), 0)
@@ -2553,14 +2954,18 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr2.polynomial_degree(), 2)
         self.model.b.fixed = True
         self.assertEqual(expr2.polynomial_degree(), 0)
-        self.model.b.fixed = False
-        self.model.a.fixed = False
 
     def test_misc_operators(self):
+        #
+        # Check that polynomial checks work with Negation
+        #
         expr = -(self.model.a * self.model.b)
         self.assertEqual(expr.polynomial_degree(), 2)
 
     def test_nonpolynomial_abs(self):
+        #
+        # Check that an expression containing abs() is not a polynomial
+        #
         expr1 = abs(self.model.a * self.model.b)
         self.assertEqual(expr1.polynomial_degree(), None)
 
@@ -2569,18 +2974,25 @@ class TestPolynomialDegree(unittest.TestCase):
 
         expr3 = self.model.a * ( self.model.b + abs(self.model.b) )
         self.assertEqual(expr3.polynomial_degree(), None)
-
-        # fixing variables should turn intrinsic functions into constants
+        #
+        # Fixing variables should turn intrinsic functions into constants
+        #
+        # Fixing 'a' still leaves a non-constant expression
+        #
         self.model.a.fixed = True
         self.assertEqual(expr1.polynomial_degree(), None)
         self.assertEqual(expr2.polynomial_degree(), None)
         self.assertEqual(expr3.polynomial_degree(), None)
-
+        #
+        # Fixing 'a' and 'b' creates a constant expression
+        #
         self.model.b.fixed = True
         self.assertEqual(expr1.polynomial_degree(), 0)
         self.assertEqual(expr2.polynomial_degree(), 0)
         self.assertEqual(expr3.polynomial_degree(), 0)
-
+        #
+        # Fixing 'b' still leaves a non-constant expression for expr1
+        #
         self.model.a.fixed = False
         self.assertEqual(expr1.polynomial_degree(), None)
         self.assertEqual(expr2.polynomial_degree(), 1)
@@ -2588,21 +3000,29 @@ class TestPolynomialDegree(unittest.TestCase):
 
     def test_nonpolynomial_pow(self):
         m = self.instance
-        # We check for special polynomial cases of the pow() function,
-        # but only if the exponent is fixed, that is, constant at model
-        # generation/solve time.
+        #
+        # A power with a variable exponent is not a polynomial
+        #
         expr = pow(m.a, m.b)
         self.assertEqual(expr.polynomial_degree(), None)
-
+        #
+        # A power with a constant exponent is not a polynomial
+        #
         m.b.fixed = True
         self.assertEqual(expr.polynomial_degree(), 2)
-
+        #
+        # A power with a constant base and exponent is a constant
+        #
         m.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
-
+        #
+        # A power with a constant base and variable exponent is not a polynomial
+        #
         m.b.fixed = False
         self.assertEqual(expr.polynomial_degree(), None)
-
+        #
+        # Confirm that pow() expresses the correct degree
+        #
         m.a.fixed = False
 
         expr = pow(m.a, 1)
@@ -2613,13 +3033,19 @@ class TestPolynomialDegree(unittest.TestCase):
 
         expr = pow(m.a*m.a, 2)
         self.assertEqual(expr.polynomial_degree(), 4)
-
+        #
+        # A non-integer exponent is not a polynomial
+        #
         expr = pow(m.a*m.a, 2.1)
         self.assertEqual(expr.polynomial_degree(), None)
-
+        #
+        # A negative exponent is not a polynomial
+        #
         expr = pow(m.a*m.a, -1)
         self.assertEqual(expr.polynomial_degree(), None)
-
+        #
+        # A nonpolynomial base is not a polynomial if the exponent is nonzero
+        #
         expr = pow(2**m.a, 1)
         self.assertEqual(expr.polynomial_degree(), None)
 
@@ -2629,7 +3055,9 @@ class TestPolynomialDegree(unittest.TestCase):
 
     def test_Expr_if(self):
         m = self.instance
-
+        #
+        # When IF conditional is constant, then polynomial degree is propigated
+        #
         expr = EXPR.Expr_if(IF=1,THEN=m.a,ELSE=m.a**2)
         self.assertEqual(expr.polynomial_degree(), 1)
         m.a.fixed = True
@@ -2641,12 +3069,14 @@ class TestPolynomialDegree(unittest.TestCase):
         m.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
         m.a.fixed = False
-
-        expr = EXPR.Expr_if(IF=m.a,THEN=m.a,ELSE=m.a**2)
+        #
+        # When IF conditional is variable, then polynomial degree is propagated
+        #
+        expr = EXPR.Expr_if(IF=m.a,THEN=m.b,ELSE=m.b**2)
         self.assertEqual(expr.polynomial_degree(), None)
         m.a.fixed = True
-        self.assertEqual(expr.polynomial_degree(), 0)
-        m.a.fixed = False
+        m.a.value = 1
+        self.assertEqual(expr.polynomial_degree(), 1)
 
 
 @unittest.skipIf(
@@ -3205,6 +3635,10 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual(expr1._else(), expr2._else())
 
 
+#
+# Fixed    - Has a fixed value
+# Constant - Does not contain a variable or mutable parameter
+#
 class TestIsFixedIsConstant(unittest.TestCase):
 
     def setUp(self):
@@ -3227,94 +3661,146 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.instance = None
 
     def test_simple_sum(self):
+        #
+        # Sum of mutable parameters:  fixed, not constant
+        #
         expr = self.instance.c + self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-
+        #
+        # Sum of mutable and immutable parameters:  fixed, not constant
+        #
         expr = self.instance.e + self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-
+        #
+        # Sum of immutable parameters:  fixed, constant
+        #
         expr = self.instance.e + self.instance.e
         self.assertEqual(is_fixed(expr), True)
         self.assertEqual(is_constant(expr), True)
-
+        #
+        # Sum of unfixed variables:  not fixed, not constant
+        #
         expr = self.instance.a + self.instance.b
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        #
+        # Sum of fixed and unfixed variables:  not fixed, not constant
+        #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        #
+        # Sum of fixed variables:  fixed, not constant
+        #
         self.instance.b.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-        self.instance.a.fixed = False
-        self.instance.b.fixed = False
 
     def test_relational_ops(self):
+        #
+        # Relation of mutable parameters:  fixed, not constant
+        #
         expr = self.instance.c < self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-
+        #
+        # Relation of unfixed variable and mutable parameters:  not fixed, not constant
+        #
         expr = self.instance.a <= self.instance.d
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        #
+        # Relation of unfixed variables:  not fixed, not constant
+        #
         expr = self.instance.a * self.instance.a >= self.instance.b
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        #
+        # Relation of fixed and unfixed variables:  not fixed, not constant
+        #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        #
+        # Relation of fixed variables:  fixed, not constant
+        #
         self.instance.b.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-        self.instance.a.fixed = False
-        self.instance.b.fixed = False
 
     def test_simple_product(self):
+        #
+        # Product of mutable parameters:  fixed, not constant
+        #
         expr = self.instance.c * self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-
+        #
+        # Product of unfixed variable and mutable parameter:  not fixed, not constant
+        #
         expr = self.instance.a * self.instance.c
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        #
+        # Product of unfixed variables:  not fixed, not constant
+        #
         expr = self.instance.a * self.instance.b
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        #
+        # Product of fixed and unfixed variables:  not fixed, not constant
+        #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        #
+        # Product of fixed variables:  fixed, not constant
+        #
         self.instance.b.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
         self.instance.a.fixed = False
-        self.instance.b.fixed = False
 
+        #
+        # Fraction of unfixed variable and mutable parameter:  not fixed, not constant
+        #
         expr = self.instance.a / self.instance.c
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        #
+        # Fraction of fixed variable and mutable parameter:  fixed, not constant
+        #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
         self.instance.a.fixed = False
-
+        #
+        # Fraction of unfixed variable and mutable parameter:  not fixed, not constant
+        #
         expr = self.instance.c / self.instance.a
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        #
+        # Fraction of fixed variable and mutable parameter:  fixed, not constant
+        #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-        self.instance.a.fixed = False
 
     def test_misc_operators(self):
+        #
+        # Negation of product of unfixed variables:  not fixed, not constant
+        #
         expr = -(self.instance.a * self.instance.b)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
 
     def test_nonpolynomial_abs(self):
+        #
+        # abs() is fixed or constant depending on its arguments
+        #
         expr1 = abs(self.instance.a * self.instance.b)
         self.assertEqual(expr1.is_fixed(), False)
         self.assertEqual(expr1.is_constant(), False)
@@ -3327,7 +3813,9 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr3.is_fixed(), False)
         self.assertEqual(expr3.is_constant(), False)
 
-        # fixing variables should turn intrinsic functions into constants
+        #
+        # Fixing variables should turn intrinsic functions into constants
+        #
         self.instance.a.fixed = True
         self.assertEqual(expr1.is_fixed(), False)
         self.assertEqual(expr1.is_constant(), False)
@@ -3354,13 +3842,15 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
     def test_nonpolynomial_pow(self):
         m = self.instance
-        # We check for special polynomial cases of the pow() function,
-        # but only if the exponent is fixed, that is, constant at model
-        # generation/solve time.
+        #
+        # A power with a variable exponent: not fixed, not constant
+        #
         expr = pow(m.a, m.b)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        #
+        # A power with a constant exponent is not a polynomial
+        #
         m.b.fixed = True
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
@@ -3546,6 +4036,9 @@ class TestExpressionUtilities(unittest.TestCase):
         EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_identify_vars_numeric(self):
+        #
+        # There are no variables in a constant expression
+        #
         self.assertEqual( list(EXPR.identify_variables(5)), [] )
 
     def test_identify_vars_params(self):
@@ -3553,6 +4046,9 @@ class TestExpressionUtilities(unittest.TestCase):
         m.I = RangeSet(3)
         m.a = Param(initialize=1)
         m.b = Param(m.I, initialize=1, mutable=True)
+        #
+        # There are no variables in expressions with only parameters
+        #
         self.assertEqual( list(EXPR.identify_variables(m.a)), [] )
         self.assertEqual( list(EXPR.identify_variables(m.b[1])), [] )
         self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])), [] )
@@ -3568,6 +4064,9 @@ class TestExpressionUtilities(unittest.TestCase):
         m.a = Var(initialize=1)
         m.b = Var(m.I, initialize=1)
         m.x = ExternalFunction(library='foo.so', function='bar')
+        #
+        # Identify variables in various algebraic expressions
+        #
         self.assertEqual( list(EXPR.identify_variables(m.a)), [m.a] )
         self.assertEqual( list(EXPR.identify_variables(m.b[1])), [m.b[1]] )
         self.assertEqual( list(EXPR.identify_variables(m.a+m.b[1])),
@@ -3582,12 +4081,19 @@ class TestExpressionUtilities(unittest.TestCase):
         self.assertEqual( list(EXPR.identify_variables(
             m.a**m.b[1] + m.b[2]/m.b[3]*m.b[2])),
                           [ m.a, m.b[1], m.b[2], m.b[3] ] )
-
+        #
+        # Identify variables in the arguments to functions
+        #
         self.assertEqual( list(EXPR.identify_variables(
             m.x(m.a, 'string_param', 1)*m.b[1] )),
                           [ m.a, m.b[1] ] )
-
-
+        self.assertEqual( list(EXPR.identify_variables(
+            tanh(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+        self.assertEqual( list(EXPR.identify_variables(
+            abs(m.a)*m.b[1] )), [ m.a, m.b[1] ] )
+        #
+        # Check logic for allowing duplicates
+        #
         self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a)),
                           [ m.a ] )
         self.assertEqual( list(EXPR.identify_variables(m.a**m.a + m.a, allow_duplicates=True)),
