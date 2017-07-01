@@ -151,6 +151,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
             return ans
 
         def var_label(obj):
+            if obj.is_fixed():
+                return str(value(obj))
             return symbolMap.getSymbol(obj, var_recorder)
 
         # If using StringIO, return the StringIO object instead of filename
@@ -301,9 +303,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             i += 1
             v = symbolMap.getObject(var)
             if not v.is_expression():
-                if v.is_fixed():
-                    reals.append(var)
-                elif v.is_binary():
+                if v.is_binary():
                     binary.append(var)
                 elif v.is_integer():
                     if v.bounds == (0,1):
