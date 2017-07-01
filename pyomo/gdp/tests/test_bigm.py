@@ -10,6 +10,11 @@ import weakref
 # DEBUG
 from nose.tools import set_trace
 
+# TODO: check lengths of containers (so in particular, the transformation
+# block.
+# TODO: Should mark the tests that are relying on the order of transforming
+# the disjunctions...
+
 class TwoTermDisj_coopr3(unittest.TestCase):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
@@ -163,9 +168,7 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         self.assertIsInstance(newcons, Constraint)
         self.assertTrue(newcons.active)
 
-        # c[0] is the only constraint we had to use since original had
-        # only LB
-        newc = newcons[0]
+        newc = newcons['lb']
         self.assertTrue(newc.active)
 
         # test new constraint is right
@@ -191,8 +194,8 @@ class TwoTermDisj_coopr3(unittest.TestCase):
         newc = gdpblock[1].component("c")
         self.assertIsInstance(newc, Constraint)
         # now we've used both indices since original constraint was equality
-        newc_lo = newc[0]
-        newc_hi = newc[1]
+        newc_lo = newc['lb']
+        newc_hi = newc['ub']
 
         self.assertTrue(newc_lo.active)
         self.assertTrue(newc_hi.active)
@@ -286,6 +289,7 @@ class TwoTermIndexedDisj_coopr3(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         transBlock = m.component("_pyomo_gdp_relaxation")
         self.assertIsInstance(transBlock, Block)
+        
         self.assertIsInstance(transBlock[0].c, Constraint)
         self.assertIsInstance(transBlock[2].c, Constraint)
         self.assertIsInstance(transBlock[4].c, Constraint)
@@ -303,6 +307,23 @@ class TwoTermIndexedDisj_coopr3(unittest.TestCase):
         transBlock = m.component("_pyomo_gdp_relaxation")
         oldblock = m.component("disjunct")
         
+        # TODO: finish this
+        pairs = [
+            ( (0,1,'A'), 0 ),
+            ( (1,1,'A'), 1 ),
+            ( (0,1,'B'), 2 ),
+            ( (1,1,'B'), 3 ),
+            ( (0,2,'A'), 4 ),
+            ( (1,2,'A'), 5 ),
+        ]
+        for src, dest in pairs:
+            infodict = getattr(transBlock[dest], "_gdp_trans_info")
+            self.assertIsInstance(infodict, dict)
+            self.assertIs(infodict['src'](), oldblock[src])
+            infodict2 = getattr(oldblock[src], "_gdp_trans_info")
+            self.assertIsInstance(infodict2, dict)
+            self.assertIs(infodict2['bigm'](), transBlock[dest])
+
         # let the record show that this was a terrible idea...
         infodict = getattr(transBlock[0], "_gdp_trans_info")
         self.assertIsInstance(infodict, dict)
@@ -517,30 +538,19 @@ class IndexedConstraintsInDisj_coopr3(unittest.TestCase):
         transBlock = m.component("_pyomo_gdp_relaxation")
         self.assertIsInstance(transBlock, Block)
         
-        cons1 = transBlock[0].component("c.1")
+        cons1 = transBlock[0].component("c")
         self.assertIsInstance(cons1, Constraint)
         self.assertTrue(cons1.active)
-        self.assertTrue(cons1[0].active)
-        #self.assertTrue(cons1[1].active)
-        # QUESTION: does the second index need to be not active?
-        cons2 = transBlock[0].component("c.2")
+        self.assertTrue(cons1[1,'lb'].active)
+        self.assertTrue(cons1[2,'lb'].active)
+
+        cons2 = transBlock[1].component("c")
         self.assertIsInstance(cons2, Constraint)
         self.assertTrue(cons2.active)
-        self.assertTrue(cons2[0].active)
-        # QUESTION: same as above
-        #self.assertFalse(cons2[1].active)
-
-        cons3 = transBlock[1].component("c.1")
-        self.assertIsInstance(cons3, Constraint)
-        self.assertTrue(cons3.active)
-        self.assertTrue(cons3[0].active)
-        self.assertTrue(cons3[1].active)
-
-        cons4 = transBlock[1].component("c.2")
-        self.assertIsInstance(cons4, Constraint)
-        self.assertTrue(cons4.active)
-        self.assertTrue(cons4[0].active)
-        self.assertTrue(cons4[1].active)
+        self.assertTrue(cons2[1,'lb'].active)
+        self.assertTrue(cons2[1,'ub'].active)
+        self.assertTrue(cons2[2,'lb'].active)
+        self.assertTrue(cons2[2,'ub'].active)
 
 
 class DisjunctInMultipleDisjunctions(unittest.TestCase):
