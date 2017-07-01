@@ -73,7 +73,8 @@ def create_test_method(model,
 
         model_class.post_solve_test_validation(self, results)
         if termination_condition == TerminationCondition.unbounded or \
-           termination_condition == TerminationCondition.infeasible:
+           termination_condition == TerminationCondition.infeasible or \
+           termination_condition == TerminationCondition.infeasibleOrUnbounded:
             return
 
         # validate the solution returned by the solver
