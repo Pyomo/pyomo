@@ -3636,8 +3636,9 @@ class TestCloneExpression(unittest.TestCase):
 
 
 #
-# Fixed    - Has a fixed value
-# Constant - Does not contain a variable or mutable parameter
+# Fixed               - Expr has a fixed value
+# Constant            - Expr only contains constants and immutable parameters
+# PotentiallyVariable - Expr contains one or more variables
 #
 class TestIsFixedIsConstant(unittest.TestCase):
 
@@ -3662,140 +3663,161 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
     def test_simple_sum(self):
         #
-        # Sum of mutable parameters:  fixed, not constant
+        # Sum of mutable parameters:  fixed, not constant, not pvar
         #
         expr = self.instance.c + self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), False)
         #
-        # Sum of mutable and immutable parameters:  fixed, not constant
+        # Sum of mutable and immutable parameters:  fixed, not constant, not pvar
         #
         expr = self.instance.e + self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), False)
         #
-        # Sum of immutable parameters:  fixed, constant
+        # Sum of immutable parameters:  fixed, constant, not pvar
         #
         expr = self.instance.e + self.instance.e
         self.assertEqual(is_fixed(expr), True)
         self.assertEqual(is_constant(expr), True)
+        self.assertEqual(potentially_variable(expr), False)
         #
-        # Sum of unfixed variables:  not fixed, not constant
+        # Sum of unfixed variables:  not fixed, not constant, pvar
         #
         expr = self.instance.a + self.instance.b
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Sum of fixed and unfixed variables:  not fixed, not constant
+        # Sum of fixed and unfixed variables:  not fixed, not constant, pvar
         #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Sum of fixed variables:  fixed, not constant
+        # Sum of fixed variables:  fixed, not constant, pvar
         #
         self.instance.b.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
 
     def test_relational_ops(self):
         #
-        # Relation of mutable parameters:  fixed, not constant
+        # Relation of mutable parameters:  fixed, not constant, pvar
         #
         expr = self.instance.c < self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), False)
         #
-        # Relation of unfixed variable and mutable parameters:  not fixed, not constant
+        # Relation of unfixed variable and mutable parameters:  not fixed, not constant, pvar
         #
         expr = self.instance.a <= self.instance.d
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Relation of unfixed variables:  not fixed, not constant
+        # Relation of unfixed variables:  not fixed, not constant, pvar
         #
         expr = self.instance.a * self.instance.a >= self.instance.b
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Relation of fixed and unfixed variables:  not fixed, not constant
+        # Relation of fixed and unfixed variables:  not fixed, not constant, pvar
         #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Relation of fixed variables:  fixed, not constant
+        # Relation of fixed variables:  fixed, not constant, pvar
         #
         self.instance.b.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
 
     def test_simple_product(self):
         #
-        # Product of mutable parameters:  fixed, not constant
+        # Product of mutable parameters:  fixed, not constant, not pvar
         #
         expr = self.instance.c * self.instance.d
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), False)
         #
-        # Product of unfixed variable and mutable parameter:  not fixed, not constant
+        # Product of unfixed variable and mutable parameter:  not fixed, not constant, pvar
         #
         expr = self.instance.a * self.instance.c
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Product of unfixed variables:  not fixed, not constant
+        # Product of unfixed variables:  not fixed, not constant, pvar
         #
         expr = self.instance.a * self.instance.b
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Product of fixed and unfixed variables:  not fixed, not constant
+        # Product of fixed and unfixed variables:  not fixed, not constant, pvar
         #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Product of fixed variables:  fixed, not constant
+        # Product of fixed variables:  fixed, not constant, pvar
         #
         self.instance.b.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
         self.instance.a.fixed = False
+        self.assertEqual(expr._potentially_variable(), True)
 
         #
-        # Fraction of unfixed variable and mutable parameter:  not fixed, not constant
+        # Fraction of unfixed variable and mutable parameter:  not fixed, not constant, pvar
         #
         expr = self.instance.a / self.instance.c
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Fraction of fixed variable and mutable parameter:  fixed, not constant
+        # Fraction of fixed variable and mutable parameter:  fixed, not constant, pvar
         #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         self.instance.a.fixed = False
         #
-        # Fraction of unfixed variable and mutable parameter:  not fixed, not constant
+        # Fraction of unfixed variable and mutable parameter:  not fixed, not constant, pvar
         #
         expr = self.instance.c / self.instance.a
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # Fraction of fixed variable and mutable parameter:  fixed, not constant
+        # Fraction of fixed variable and mutable parameter:  fixed, not constant, pvar
         #
         self.instance.a.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
 
     def test_misc_operators(self):
         #
-        # Negation of product of unfixed variables:  not fixed, not constant
+        # Negation of product of unfixed variables:  not fixed, not constant, pvar
         #
         expr = -(self.instance.a * self.instance.b)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
 
     def test_nonpolynomial_abs(self):
         #
@@ -3804,14 +3826,17 @@ class TestIsFixedIsConstant(unittest.TestCase):
         expr1 = abs(self.instance.a * self.instance.b)
         self.assertEqual(expr1.is_fixed(), False)
         self.assertEqual(expr1.is_constant(), False)
+        self.assertEqual(expr1._potentially_variable(), True)
 
         expr2 = self.instance.a + self.instance.b * abs(self.instance.b)
         self.assertEqual(expr2.is_fixed(), False)
         self.assertEqual(expr2.is_constant(), False)
+        self.assertEqual(expr2._potentially_variable(), True)
 
         expr3 = self.instance.a * ( self.instance.b + abs(self.instance.b) )
         self.assertEqual(expr3.is_fixed(), False)
         self.assertEqual(expr3.is_constant(), False)
+        self.assertEqual(expr3._potentially_variable(), True)
 
         #
         # Fixing variables should turn intrinsic functions into constants
@@ -3819,76 +3844,109 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.instance.a.fixed = True
         self.assertEqual(expr1.is_fixed(), False)
         self.assertEqual(expr1.is_constant(), False)
+        self.assertEqual(expr1._potentially_variable(), True)
         self.assertEqual(expr2.is_fixed(), False)
         self.assertEqual(expr2.is_constant(), False)
+        self.assertEqual(expr2._potentially_variable(), True)
         self.assertEqual(expr3.is_fixed(), False)
         self.assertEqual(expr3.is_constant(), False)
+        self.assertEqual(expr3._potentially_variable(), True)
 
         self.instance.b.fixed = True
         self.assertEqual(expr1.is_fixed(), True)
         self.assertEqual(expr1.is_constant(), False)
+        self.assertEqual(expr1._potentially_variable(), True)
         self.assertEqual(expr2.is_fixed(), True)
         self.assertEqual(expr2.is_constant(), False)
+        self.assertEqual(expr2._potentially_variable(), True)
         self.assertEqual(expr3.is_fixed(), True)
         self.assertEqual(expr3.is_constant(), False)
+        self.assertEqual(expr3._potentially_variable(), True)
 
         self.instance.a.fixed = False
         self.assertEqual(expr1.is_fixed(), False)
         self.assertEqual(expr1.is_constant(), False)
+        self.assertEqual(expr1._potentially_variable(), True)
         self.assertEqual(expr2.is_fixed(), False)
         self.assertEqual(expr2.is_constant(), False)
+        self.assertEqual(expr2._potentially_variable(), True)
         self.assertEqual(expr3.is_fixed(), False)
         self.assertEqual(expr3.is_constant(), False)
+        self.assertEqual(expr3._potentially_variable(), True)
 
     def test_nonpolynomial_pow(self):
         m = self.instance
         #
-        # A power with a variable exponent: not fixed, not constant
+        # A power with a mutable base and exponent: fixed, not constant, not pvar
+        #
+        expr = pow(m.d, m.e)
+        self.assertEqual(expr.is_fixed(), True)
+        self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), False)
+        #
+        # A power with a variable exponent: not fixed, not constant, pvar
         #
         expr = pow(m.a, m.b)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         #
-        # A power with a constant exponent is not a polynomial
+        # A power with a variable base and fixed exponent: not fixed, not constant, pvar
         #
         m.b.fixed = True
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
+        # A power with a fixed base and fixed exponent: fixed, not constant, pvar
+        #
         m.a.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
+        # A power with a fixed base and variable exponent: not fixed, not constant, pvar
+        #
         m.b.fixed = False
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
         m.a.fixed = False
-
+        #
+        # A power with a variable base and constant integer exponent: not fixed, not constant, pvar
+        #
         expr = pow(m.a, 1)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
         expr = pow(m.a, 2)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
         expr = pow(m.a*m.a, 2)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
+        # A power with a variable base and constant float exponent: not fixed, not constant, pvar
+        #
         expr = pow(m.a*m.a, 2.1)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
         expr = pow(m.a*m.a, -1)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
         expr = pow(2**m.a, 1)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
         expr = pow(2**m.a, 0)
         self.assertEqual(is_fixed(expr), True)
         self.assertEqual(is_constant(expr), True)
@@ -3897,117 +3955,139 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
     def test_Expr_if(self):
         m = self.instance
-
+        #
+        # When IF conditional is constant, then fixed/constant/pvar is propigated
+        #
         expr = EXPR.Expr_if(IF=1,THEN=m.a,ELSE=m.e)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         m.a.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
         m.a.fixed = False
 
         expr = EXPR.Expr_if(IF=0,THEN=m.a,ELSE=m.e)
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), True)
+        # BUG
+        #self.assertEqual(expr._potentially_variable(), False)
         m.a.fixed = True
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), True)
+        # BUG
+        #self.assertEqual(expr._potentially_variable(), False)
         m.a.fixed = False
 
+        #
+        # When IF conditional is variable, then 
+        #   is_fixed                == is_fixed(True) AND is_fixed(FALSE)
+        #   is_constant             == is_constant(True) AND is_constant(FALSE)
+        #   potentially_variable    == potentially_variable(True) OR potentially_variable(FALSE)
+        #
         expr = EXPR.Expr_if(IF=m.a,THEN=m.b,ELSE=m.b)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-        m.a.fixed = True
+        # BUG
+        #self.assertEqual(expr._potentially_variable(), False)
+        #
+        expr = EXPR.Expr_if(IF=m.a,THEN=m.e,ELSE=m.e)
+        # BUG
+        #self.assertEqual(expr.is_fixed(), True)
+        # BUG
+        #self.assertEqual(expr.is_constant(), True)
+        # BUG
+        #self.assertEqual(expr._potentially_variable(), False)
+        #
+        expr = EXPR.Expr_if(IF=m.a,THEN=m.c,ELSE=m.e)
+        # BUG
+        #self.assertEqual(expr.is_fixed(), True)
+        self.assertEqual(expr.is_constant(), False)
+        # BUG
+        #self.assertEqual(expr._potentially_variable(), False)
+        #
+        expr = EXPR.Expr_if(IF=m.a,THEN=m.b,ELSE=m.c)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-        m.a.fixed = False
+        self.assertEqual(expr._potentially_variable(), True)
+        #
+        # When IF conditional is variable and the argument is fixed, then 
+        #   is_fixed                == is_fixed of specified branch
+        #   is_constant             == is_constant of specified branch
+        #   potentially_variable    == potentially_variable(True) OR potentially_variable(FALSE)
+        #
+        m.a.fixed = True
+        m.a.value = 1
+        self.assertEqual(expr.is_fixed(), False)
+        self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
+        m.a.value = 0
+        self.assertEqual(expr.is_fixed(), True)
+        self.assertEqual(expr.is_constant(), False)
+        self.assertEqual(expr._potentially_variable(), True)
 
     def test_LinearExpr(self):
         m = self.instance
-
+        #
+        # A sum of two variables: not fixed, not constant, pvar
+        #
         expr = m.a + m.b
         self.assertIs(type(expr), EXPR._LinearExpression)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
+        # A sum of a fixed and unfixed variable: not fixed, not constant, pvar
+        #
         m.a.fix(1)
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
+        # A sum of two fixed variables: fixed, not constant, pvar
+        #
         m.b.fix(1)
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
+        # A sum of a fixed and unfixed variable: not fixed, not constant, pvar
+        #
         m.a.unfix()
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
         m.a.unfix()
-
+        #
+        # A sum with a single fixed variable: fixed, not constant, pvar
+        #
         expr -= m.a
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), False)
-
+        self.assertEqual(expr._potentially_variable(), True)
+        #
+        # A sum with 0 coefficients: fixed, not constant, pvar
+        #
         expr -= m.b
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), True)
+        # BUG
+        #self.assertEqual(expr._potentially_variable(), True)
 
-
-class TestPotentiallyVariable(unittest.TestCase):
-
-    def setUp(self):
-        # This class tests the Pyomo 4.x expression trees
-        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
-
-    def tearDown(self):
-        EXPR.set_expression_tree_format(expr_common._default_mode)
-
-    def test_var(self):
-        m = ConcreteModel()
-        m.x = Var()
-        e = m.x
-        self.assertEqual(e._potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
-
-        e = m.x + 1
-        self.assertEqual(e._potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
-
-        e = m.x**2
-        self.assertEqual(e._potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
-
-        e = m.x**2/(m.x + 1)
-        self.assertEqual(e._potentially_variable(), True)
-        self.assertEqual(potentially_variable(e), True)
-
-    def test_param(self):
-        m = ConcreteModel()
-        m.x = Param(mutable=True)
-        e = m.x
-        self.assertEqual(e._potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
-
-        e = m.x + 1
-        self.assertEqual(e._potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
-
-        e = m.x**2
-        self.assertEqual(e._potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
-
-        e = m.x**2/(m.x + 1)
-        self.assertEqual(e._potentially_variable(), False)
-        self.assertEqual(potentially_variable(e), False)
-
-    # TODO: This test fails due to bugs in Pyomo4 expression generation
-    def Xtest_expression(self):
+    def test_expression(self):
+        #
+        # Test expressions in an Expression component
+        #
+        # These tests _should_ be redundant, but ...
+        #
         m = ConcreteModel()
         m.x = Expression()
+        
         e = m.x
         self.assertEqual(e._potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
-
+        
         e = m.x + 1
         self.assertEqual(e._potentially_variable(), True)
         self.assertEqual(potentially_variable(e), True)
