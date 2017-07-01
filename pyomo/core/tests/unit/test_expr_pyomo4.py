@@ -2449,7 +2449,7 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        # BUG: Inequalities evaluate True when the parameter is unconstructed?
         #
         self.checkCondition(model.p > 0, True)
         self.checkCondition(model.p >= 0, True)
@@ -2483,7 +2483,7 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        # BUG: Inequalities evaluate True when the parameter is unconstructed?
         #
         self.checkCondition(0 < model.p, True)
         self.checkCondition(0 <= model.p, True)
@@ -2513,7 +2513,7 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        # BUG: Inequalities evaluate True when the parameter is unconstructed?
         #
         self.checkCondition(0 < model.p, True)
         self.checkCondition(0 <= model.p, True)
@@ -2540,7 +2540,7 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        # BUG: Inequalities evaluate True when the parameter is unconstructed?
         #
         self.checkCondition(model.p > 0, True)
         self.checkCondition(model.p >= 0, True)
@@ -2567,7 +2567,7 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
+        # BUG: Inequalities evaluate True when the parameter is unconstructed?
         #
         self.checkCondition(0 < model.p, True)
         self.checkCondition(0 <= model.p, True)
@@ -2594,7 +2594,7 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # TODO: Inequalities evaluate True when the variable is unconstructed?
+        # BUG: Inequalities evaluate True when the variable is unconstructed?
         #
         self.checkCondition(model.v > 0, True)
         self.checkCondition(model.v >= 0, True)
@@ -2621,7 +2621,7 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # TODO: Inequalities evaluate True when the variable is unconstructed?
+        # BUG: Inequalities evaluate True when the variable is unconstructed?
         #
         self.checkCondition(0 < model.v, True)
         self.checkCondition(0 <= model.v, True)
@@ -2862,8 +2862,6 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(expr.polynomial_degree(), 0)
 
     def test_relational_ops(self):
-        #
-        # TODO: Should a relational expression have a polynomial degree?
         #
         # A relational expression with parameters has degree 0
         #
