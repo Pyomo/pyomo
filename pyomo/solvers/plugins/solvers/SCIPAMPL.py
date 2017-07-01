@@ -267,10 +267,10 @@ class SCIPAMPL(SystemCallSolver):
             results.solver.status = \
                 SolverStatus.warning
             results.solver.termination_condition = \
-                TerminationCondition.unbounded
+                TerminationCondition.infeasibleOrUnbounded
             if len(results.solution) > 0:
                 results.solution(0).status = \
-                    SolutionStatus.unbounded
+                    SolutionStatus.unsure
         else:
             logger.warning("Unexpected SCIP solver message: %s"
                            % (results.solver.message))
