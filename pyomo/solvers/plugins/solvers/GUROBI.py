@@ -499,7 +499,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             else:
                 soln_constraints.setdefault('r_l_'+key,{})["Slack"] = us    # Use the same key
 
-        if solution_seen is True:
+        if solution_seen:
             results.solution.insert(soln)
 
     def _postsolve(self):
