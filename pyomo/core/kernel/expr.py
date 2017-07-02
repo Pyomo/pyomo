@@ -56,17 +56,26 @@ _pyomo4_module_members = [
     '_NegationExpression',
     'EntangledExpressionError',
 ]
+_pyomo5_module_members = [
+    '_LinearExpression',
+    '_DivisionExpression',
+    '_NegationExpression',
+    'EntangledExpressionError',
+]
 
 def set_expression_tree_format(mode):
     if mode is common.Mode.coopr3_trees:
         from pyomo.core.kernel import expr_coopr3 as expr3
         for obj in _common_module_members:
             globals()[obj] = getattr(expr3, obj)
-        for obj in _coopr3_module_members:
-            globals()[obj] = getattr(expr3, obj)
         for obj in _pyomo4_module_members:
             if obj in globals():
                 del globals()[obj]
+        for obj in _pyomo5_module_members:
+            if obj in globals():
+                del globals()[obj]
+        for obj in _coopr3_module_members:
+            globals()[obj] = getattr(expr3, obj)
 
     elif mode is common.Mode.pyomo4_trees:
         from pyomo.core.kernel import expr_pyomo4 as expr4
@@ -75,14 +84,32 @@ def set_expression_tree_format(mode):
         for obj in _coopr3_module_members:
             if obj in globals():
                 del globals()[obj]
+        for obj in _pyomo5_module_members:
+            if obj in globals():
+                del globals()[obj]
         for obj in _pyomo4_module_members:
             globals()[obj] = getattr(expr4, obj)
+
+    elif mode is common.Mode.pyomo5_trees:
+        from pyomo.core.kernel import expr_pyomo5 as expr5
+        for obj in _common_module_members:
+            globals()[obj] = getattr(expr5, obj)
+        for obj in _coopr3_module_members:
+            if obj in globals():
+                del globals()[obj]
+        for obj in _pyomo4_module_members:
+            if obj in globals():
+                del globals()[obj]
+        for obj in _pyomo5_module_members:
+            globals()[obj] = getattr(expr5, obj)
+
     else:
         raise RuntimeError("Unrecognized expression tree mode: %s\n"
                            "Must be one of [%s, %s]"
                            % (mode,
                               common.Mode.coopr3_trees,
-                              common.Mode.pyomo4_trees))
+                              common.Mode.pyomo4_trees,
+                              common.Mode.pyomo5_trees))
     #
     # Propagate the generate_expression functions to the numvalue namespace
     numvalue.generate_expression = generate_expression

@@ -29,6 +29,7 @@ except ImportError:
 class Mode(object):
     coopr3_trees = (1,)
     pyomo4_trees = (2,)
+    pyomo5_trees = (3,)
 if _getrefcount_available:
     mode = _default_mode = Mode.coopr3_trees
 else:
@@ -45,8 +46,12 @@ def _clear_expression_pool():
         _clear_expression_pool_coopr3
     from pyomo.core.base.expr_pyomo4 import _clear_expression_pool as \
         _clear_expression_pool_pyomo4
+    from pyomo.core.base.expr_pyomo5 import _clear_expression_pool as \
+        _clear_expression_pool_pyomo5
     if mode == Mode.pyomo4_trees:
         _clear_expression_pool_pyomo4()
+    elif mode == Mode.pyomo5_trees:
+        _clear_expression_pool_pyomo5()
     else:
         assert mode == Mode.coopr3_trees
         _clear_expression_pool_coopr3()
