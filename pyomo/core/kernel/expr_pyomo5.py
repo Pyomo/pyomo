@@ -521,44 +521,6 @@ class _NegationExpression(_ExpressionBase):
         return -result[0]
 
 
-class _UnaryFunctionExpression(_ExpressionBase):
-    """An object that defines a mathematical expression that can be evaluated"""
-
-    # TODO: Unary functions should define their own subclasses so as to
-    # eliminate the need for the fcn and name slots
-    __slots__ = ('_fcn', '_name')
-
-    def __init__(self, arg, name, fcn):
-        """Construct an expression with an operation and a set of arguments"""
-        self._args = (arg,)
-        self._fcn = fcn
-        self._name = name
-
-    def __getstate__(self):
-        result = super(_UnaryFunctionExpression, self).__getstate__()
-        for i in _UnaryFunctionExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    def getname(self, *args, **kwds):
-        return self._name
-
-    def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.getname())
-
-    def _polynomial_degree(self, result):
-        if result[0] == 0:
-            return 0
-        else:
-            return None
-
-    def _apply_operation(self, result):
-        return self._fcn(result[0])
-
-# Backwards compatibility: Coopr 3.x expected a slightly less informative name
-_IntrinsicFunctionExpression =  _UnaryFunctionExpression
-
-
 class _ExternalFunctionExpression(_ExpressionBase):
     __slots__ = ('_fcn',)
 
@@ -588,16 +550,6 @@ class _ExternalFunctionExpression(_ExpressionBase):
 
     def _inline_operator(self):
         return ', '
-
-
-# TODO: Should this actually be a special class, or just an instance of
-#       _UnaryFunctionExpression (like sin, cos, etc)?
-class _AbsExpression(_UnaryFunctionExpression):
-
-    __slots__ = ()
-
-    def __init__(self, arg):
-        super(_AbsExpression, self).__init__(arg, 'abs', abs)
 
 
 class _PowExpression(_ExpressionBase):
@@ -1059,13 +1011,20 @@ class Expr_if(_ExpressionBase):
         return _then if _if else _else
 
 
+#
+# NOTE: The list self._args may contain expressions and not just variables
+#
 class _LinearExpression(_ExpressionBase):
     __slots__ = ('_const', '_coef')
 
-    def __init__(self, var, coef):
+    def __init__(self, var, coef=None, sum_=False):
         self._const = 0
-        self._args = [var]
-        self._coef = {id(var): coef}
+        if sum_:
+            self._args = var
+            self._coef = {id(var[0]): 1.0, id(var[1]): 1.0}
+        else:
+            self._args = [var]
+            self._coef = {id(var): coef}
 
     def __getstate__(self):
         state = super(_LinearExpression, self).__getstate__()
@@ -1117,7 +1076,7 @@ class _LinearExpression(_ExpressionBase):
         def impl(args):
             # By definition, the const and all coef must be fixed.  The
             # linear expression *might* be fixed if the variables are
-            # fixed, OR if the coeficient on a non-fixed variabel is 0.
+            # fixed, OR if the coefficient on a non-fixed variabel is 0.
             return all( a or not value(self._coef[id(self._args[i])])
                         for i,a in enumerate(args) )
         return impl
@@ -1161,15 +1120,14 @@ class _LinearExpression(_ExpressionBase):
             else:
                 ostream.write(' + ')
 
-    def polynomial_degree(self):
-        # Because _LinearExpression is a special "terminal node", we
-        # will define a specialized polynomial_degree() to avoid
-        # building up a potentially large list of 0/1, just to find out
-        # that one of them is 1.
-        return 0 if all(a.is_fixed() for a in self._args) else 1
-
     def _polynomial_degree(self, result):
-        return 1 if any(result) else 0
+        ans = 0
+        for x in result:
+            if x is None:
+                return None
+            elif ans < x:
+                ans = x
+        return ans
 
     def _apply_operation(self, result):
         assert( len(result) == len(self._args) )
@@ -1278,6 +1236,7 @@ class _LinearExpression(_ExpressionBase):
 
 zero_or_one = set([0,1])
 
+
 def generate_expression(etype, _self, _other, _process=0):
     if _process is not None:
         _self, _other = process_args(_self, _other)
@@ -1375,7 +1334,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 ans = _LinearExpression(_other, 1)
                 ans._const = _self
                 return ans
-        ans = _SumExpression([_self, _other])
+        ans = _LinearExpression([_self, _other], sum_=True)
 
     elif etype == _sub:
         if not _self_var and _self.__class__ in native_numeric_types:
@@ -1393,7 +1352,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 ans = _LinearExpression(_other, -1)
                 ans._const = _self
                 return ans
-        ans = _SumExpression([_self, -_other])
+        ans = _LinearExpression([_self, -_other], sum_=True)
 
     elif etype == _div:
         if not _other_var and _other.__class__ in native_numeric_types:
@@ -1575,6 +1534,58 @@ def generate_relational_expression(etype, lhs, rhs):
 # expressions of the type "a < b < c".  This provides a buffer to hold
 # the first inequality so the second inequality can access it later.
 generate_relational_expression.chainedInequality = None
+
+
+# ---------------------------------------------------------------------------
+#  Expressions for unary/intrinsic functions
+# ---------------------------------------------------------------------------
+
+class _UnaryFunctionExpression(_ExpressionBase):
+    """An object that defines a mathematical expression that can be evaluated"""
+
+    # TODO: Unary functions should define their own subclasses so as to
+    # eliminate the need for the fcn and name slots
+    __slots__ = ('_fcn', '_name')
+
+    def __init__(self, arg, name, fcn):
+        """Construct an expression with an operation and a set of arguments"""
+        self._args = (arg,)
+        self._fcn = fcn
+        self._name = name
+
+    def __getstate__(self):
+        result = super(_UnaryFunctionExpression, self).__getstate__()
+        for i in _UnaryFunctionExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def getname(self, *args, **kwds):
+        return self._name
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.getname())
+
+    def _polynomial_degree(self, result):
+        if result[0] == 0:
+            return 0
+        else:
+            return None
+
+    def _apply_operation(self, result):
+        return self._fcn(result[0])
+
+# Backwards compatibility: Coopr 3.x expected a slightly less informative name
+_IntrinsicFunctionExpression =  _UnaryFunctionExpression
+
+
+# TODO: Should this actually be a special class, or just an instance of
+#       _UnaryFunctionExpression (like sin, cos, etc)?
+class _AbsExpression(_UnaryFunctionExpression):
+
+    __slots__ = ()
+
+    def __init__(self, arg):
+        super(_AbsExpression, self).__init__(arg, 'abs', abs)
 
 
 def generate_intrinsic_function_expression(arg, name, fcn):
