@@ -50,7 +50,7 @@ class BigM_Transformation(Transformation):
         # test if this name already exists in model. If not, we're good. 
         # Else, we add random numbers until it doesn't
         while True:
-            if not instance.component(name):
+            if instance.component(name) is None:
                 return name
             else:
                 name += str(randint(0,9))
