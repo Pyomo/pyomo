@@ -228,6 +228,11 @@ def potentially_variable(obj):
 # share constants we have seen before.
 KnownConstants = {}
 
+def update_KnownConstants(obj, val):
+    if len(KnownConstants) < 100:
+        KnownConstants[obj] = val
+
+
 def as_numeric(obj):
     """
     Verify that this obj is a NumericValue or intrinsic value.
@@ -245,13 +250,13 @@ def as_numeric(obj):
                 tmp = float(obj)
                 if tmp == obj:
                     tmp = NumericConstant(tmp)
-                    KnownConstants[obj] = tmp
+                    update_KnownConstants(obj, tmp)
                     return tmp
             except:
                 pass
 
             tmp = NumericConstant(obj)
-            KnownConstants[obj] = tmp
+            update_KnownConstants(obj, tmp)
             return tmp
     try:
         return obj.as_numeric()
@@ -267,7 +272,7 @@ def as_numeric(obj):
                     return KnownConstants[obj]
                 else:
                     tmp = NumericConstant(obj)
-                    KnownConstants[obj] = tmp
+                    update_KnownConstants(obj, tmp)
 
                     # If we get here, this is a reasonably well-behaving
                     # numeric type: add it to the native numeric types
@@ -607,6 +612,7 @@ functions.""" % (self.name,))
         if ostream is None:
             ostream = sys.stdout
         ostream.write(self.__str__())
+
 
 class NumericConstant(NumericValue):
     """An object that contains a constant numeric value.
