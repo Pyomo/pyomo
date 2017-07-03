@@ -1050,6 +1050,8 @@ class GurobiDirect(DirectSolver):
         kwds['type'] = 'gurobi_direct'
         super(GurobiDirect, self).__init__(**kwds)
 
+        self._range_constraints = set()
+
         self._capabilities = Options()
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
@@ -1060,8 +1062,12 @@ class GurobiDirect(DirectSolver):
 
     def _presolve(self, *args, **kwds):
         self._solver_model = self._gurobipy.Model()
+        warmstart_flag = kwds.pop('warmstart', False)
 
         super(GurobiDirect, self)._presolve(*args, **kwds)
+
+        if warmstart_flag:
+            self._warm_start()
 
         if self._log_file is None:
             self._log_file = pyutilib.services.TempfileManager.create_tempfile(suffix='.gurobi.log')
@@ -1113,11 +1119,12 @@ class GurobiDirect(DirectSolver):
             raise ValueError('GurobiDirect only supports linear and quadratic constraints\n{0}'.format(expr))
 
         if isinstance(repn, LinearCanonicalRepn):
+            # list(map(self._referenced_variable_ids.add, map(id, repn.variables)))
             return repn.constant + sum(coeff*self._pyomo_var_to_solver_var_map[id(repn.variables[i])] for i, coeff in
                                        enumerate(repn.linear))
 
         else:
-            assert degree == 2
+            # list(map(self._referenced_variable_ids.add, map(id, repn[-1].values())))
             new_expr = 0
             if 0 in repn:
                 new_expr += repn[0][None]
@@ -1127,6 +1134,10 @@ class GurobiDirect(DirectSolver):
                     new_expr += coeff * self._pyomo_var_to_solver_var_map[id(repn[-1][ndx])]
 
             if 2 in repn:
+                if self._gurobipy.gurobi.version()[0] < 5:
+                    raise ValueError('The gurobi direct plugin does not handle quadratic constraint ' +
+                                     'expressions for \nGurobi versions < 5. Current ' +
+                                     'version: {0}'.format(self._gurobipy.gurobi.version()))
                 for key, coeff in repn[2].items():
                     tmp_expr = coeff
                     for ndx, power in key.items():
@@ -1174,11 +1185,20 @@ class GurobiDirect(DirectSolver):
         for con in block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint, descend_into=True, active=True):
             self._add_constraint(con)
 
+        for con in block.component_data_objects(ctype=pyomo.core.base.sos.SOSConstraint, descend_into=True, active=True):
+            self._add_sos_constraint(con)
+
         self._compile_objective()
 
     def _add_constraint(self, con):
         if not con.active:
             return None
+
+        if is_fixed(con.body):
+            if self._skip_trivial_constraints:
+                return None
+            raise ValueError('Expression for constraint body is a constant: {0} \n'.format(con) +
+                             'To suppress this error, add skip_trivial_constraints=True to the call to solve.')
 
         conname = self._symbol_map.getSymbol(con, self._labeler)
         gurobi_expr = self._get_expr_from_pyomo_expr(con.body)
@@ -1193,16 +1213,30 @@ class GurobiDirect(DirectSolver):
         if con.equality:
             gurobipy_con = self._solver_model.addConstr(gurobi_expr==value(con.lower), name=conname)
         elif con.has_lb() and con.has_ub():
-            raise ValueError('GurobiDirect does not support range constraints. Please split this into two constraints: {0}'.format(con))
-            # gurobipy_con = self._solver_model.addRange(gurobi_expr, value(con.lower), value(con.upper), name=conname)
+            if 'slack' in self._suffixes:
+                raise ValueError('GurobiDirect does not support range constraints and slack suffixes. \nIf you want ' +
+                                 'slack information, please split this into two constraints: \n{0}'.format(con))
+            gurobipy_con = self._solver_model.addRange(gurobi_expr, value(con.lower), value(con.upper), name=conname)
+            self._range_constraints.add(con)
         elif con.has_lb():
             gurobipy_con = self._solver_model.addConstr(gurobi_expr>=value(con.lower), name=conname)
         elif con.has_ub():
             gurobipy_con = self._solver_model.addConstr(gurobi_expr<=value(con.upper), name=conname)
         else:
-            raise ValueError('Constraint does not have a lower or an upper bound: {0}'.format(con))
+            if self._skip_trivial_constraints:
+                return None
+            raise ValueError('Constraint does not have a lower or an upper bound: {0} \n'.format(con) +
+                             'To suppress this error, add skip_trival_constraints=True to the call to solve.')
 
         self._pyomo_con_to_solver_con_map[id(con)] = gurobipy_con
+
+    def _add_sos_constraint(self, con):
+        level = con.level
+        gurobipy_con = self._solver_model.addSOS()
+
+        if level > 2:
+            raise ValueError('Solver does not support SOS level {0} constraints'.format(level))
+
 
     def _gurobi_vtype_from_var(self, var):
         """
@@ -1255,6 +1289,12 @@ class GurobiDirect(DirectSolver):
             if re.match(suffix,"slack"):
                 extract_slacks = True
                 flag=True
+                if len(self._range_constraints) != 0:
+                    err_msg = ('GurobiDirect does not support range constraints and slack suffixes. \nIf you want ' +
+                               'slack information, please split up the following constraints:\n')
+                    for con in self._range_constraints:
+                        err_msg += '{0}\n'.format(con)
+                    raise ValueError(err_msg)
             if re.match(suffix,"rc"):
                 extract_reduced_costs = True
                 flag=True
@@ -1446,3 +1486,13 @@ class GurobiDirect(DirectSolver):
 
     def available(self, exception_flag=True):
         return True
+
+    def warm_start_capable(self):
+        return True
+
+    def _warm_start(self):
+        for var_id, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
+            varname = self._symbol_map.byObject[var_id]
+            pyomo_var = self._symbol_map.bySymbol[varname]()
+            if pyomo_var.value is not None:
+                gurobipy_var.setAttr(self._gurobipy.GRB.Attr.Start, pyomo_var.value)

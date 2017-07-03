@@ -21,6 +21,9 @@ class DirectSolver(OptSolver):
         self._objective_label = None
         self.results = None
         self._smap_id = None
+        self._skip_trivial_constraints = False
+        # self._output_fixed_variables = False
+        # self._referenced_variable_ids = set()
 
         # this interface doesn't use files, but we can create a log file if requested
         self._keepfiles = False
@@ -43,10 +46,11 @@ class DirectSolver(OptSolver):
             self._labeler = TextLabeler()
         else:
             self._labeler = NumericLabeler('x')
-
-        self._compile_instance(model)
+        self._skip_trivial_constraints = kwds.pop('skip_trivial_constraints', False)
 
         super(DirectSolver, self)._presolve(*args, **kwds)
+
+        self._compile_instance(model)
 
     def _apply_solver(self):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
