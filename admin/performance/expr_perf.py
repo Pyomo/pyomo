@@ -69,14 +69,15 @@ def measure(f, n=25):
 # Evaluate standard operations on an expression
 #
 def evaluate(expr, seconds):
-    gc.collect()
-    _clear_expression_pool()
-    start = time.time()
-    #
-    expr_ = expr.clone()
-    #
-    stop = time.time()
-    seconds['clone'] = stop-start
+    if False:
+        gc.collect()
+        _clear_expression_pool()
+        start = time.time()
+        #
+        expr_ = expr.clone()
+        #
+        stop = time.time()
+        seconds['clone'] = stop-start
 
     gc.collect()
     _clear_expression_pool()
@@ -341,57 +342,57 @@ def print_results(factors_, ans_, output):
 #
 def runall(factors, res, output=True):
 
-    factors_ = tuple(factors+['Constant','Loop 1'])
-    ans_ = res[factors_] = measure(constant(NTerms, 1), n=N)
+    if False:
+        factors_ = tuple(factors+['Constant','Loop 1'])
+        ans_ = res[factors_] = measure(constant(NTerms, 1), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Constant','Loop 2'])
+        ans_ = res[factors_] = measure(constant(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Constant','Loop 3'])
+        ans_ = res[factors_] = measure(constant(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+
+        factors_ = tuple(factors+['Linear','Loop 1'])
+        ans_ = res[factors_] = measure(linear(NTerms, 1), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Linear','Loop 2'])
+        ans_ = res[factors_] = measure(linear(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Linear','Loop 3'])
+        ans_ = res[factors_] = measure(linear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+
+        factors_ = tuple(factors+['Bilinear','Loop 1'])
+        ans_ = res[factors_] = measure(bilinear(NTerms, 1), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Bilinear','Loop 2'])
+        ans_ = res[factors_] = measure(bilinear(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Bilinear','Loop 3'])
+        ans_ = res[factors_] = measure(bilinear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+
+        factors_ = tuple(factors+['Nonlinear','Loop 2'])
+        ans_ = res[factors_] = measure(nonlinear(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Nonlinear','Loop 3'])
+        ans_ = res[factors_] = measure(nonlinear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+    factors_ = tuple(factors+['Polynomial','Loop 3'])
+    ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
     print_results(factors_, ans_, output)
-
-    factors_ = tuple(factors+['Constant','Loop 2'])
-    ans_ = res[factors_] = measure(constant(NTerms, 2), n=N)
-    print_results(factors_, ans_, output)
-
-    factors_ = tuple(factors+['Constant','Loop 3'])
-    ans_ = res[factors_] = measure(constant(NTerms, 3), n=N)
-    print_results(factors_, ans_, output)
-
-
-    factors_ = tuple(factors+['Linear','Loop 1'])
-    ans_ = res[factors_] = measure(linear(NTerms, 1), n=N)
-    print_results(factors_, ans_, output)
-
-    factors_ = tuple(factors+['Linear','Loop 2'])
-    ans_ = res[factors_] = measure(linear(NTerms, 2), n=N)
-    print_results(factors_, ans_, output)
-
-    factors_ = tuple(factors+['Linear','Loop 3'])
-    ans_ = res[factors_] = measure(linear(NTerms, 3), n=N)
-    print_results(factors_, ans_, output)
-
-
-    factors_ = tuple(factors+['Bilinear','Loop 1'])
-    ans_ = res[factors_] = measure(bilinear(NTerms, 1), n=N)
-    print_results(factors_, ans_, output)
-
-    factors_ = tuple(factors+['Bilinear','Loop 2'])
-    ans_ = res[factors_] = measure(bilinear(NTerms, 2), n=N)
-    print_results(factors_, ans_, output)
-
-    factors_ = tuple(factors+['Bilinear','Loop 3'])
-    ans_ = res[factors_] = measure(bilinear(NTerms, 3), n=N)
-    print_results(factors_, ans_, output)
-
-
-    factors_ = tuple(factors+['Nonlinear','Loop 2'])
-    ans_ = res[factors_] = measure(nonlinear(NTerms, 2), n=N)
-    print_results(factors_, ans_, output)
-
-    factors_ = tuple(factors+['Nonlinear','Loop 3'])
-    ans_ = res[factors_] = measure(nonlinear(NTerms, 3), n=N)
-    print_results(factors_, ans_, output)
-
-
-    #factors_ = tuple(factors+['Polynomial','Loop 3'])
-    #ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
-    #print_results(factors_, ans_, output)
 
 
 def remap_keys(mapping):
@@ -406,6 +407,8 @@ res = {}
 
 #expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
 #runall(["PYOMO4"], res)
+
+#import pdb; pdb.set_trace()
 
 expr.set_expression_tree_format(expr.common.Mode.pyomo5_trees) 
 runall(["PYOMO5"], res)
