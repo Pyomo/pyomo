@@ -18,6 +18,12 @@ class DirectSolver(OptSolver):
         self._labeler = None
         self._pyomo_var_to_solver_var_map = None
         self._pyomo_con_to_solver_con_map = None
+        self._objective_label = None
+        self.results = None
+        self._smap_id = None
+
+        # this interface doesn't use files, but we can create a log file if requested
+        self._keepfiles = False
 
     def _presolve(self, *args, **kwds):
         model = args[0]
@@ -29,6 +35,7 @@ class DirectSolver(OptSolver):
             raise ValueError(msg)
 
         self._symbol_map = SymbolMap()
+        self._smap_id = id(self._symbol_map)
         self._pyomo_var_to_solver_var_map = {}
         self._pyomo_con_to_solver_con_map = {}
         symbolic_solver_labels = kwds.pop('symbolic_solver_labels', False)
@@ -45,7 +52,7 @@ class DirectSolver(OptSolver):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
     def _postsolve(self):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+        return super(DirectSolver, self)._postsolve()
 
     def _compile_instance(self, model):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
