@@ -29,8 +29,8 @@ N = 5
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--output", help="Save results to the specified file", action="store", default=None)
-parser.add_argument("--nterms", help="The number of terms in test expressions", action="store", default=None)
-parser.add_argument("--ntrials", help="The number of test trials", action="store", default=None)
+parser.add_argument("--nterms", help="The number of terms in test expressions", action="store", type=int, default=None)
+parser.add_argument("--ntrials", help="The number of test trials", action="store", type=int, default=None)
 args = parser.parse_args()
 
 if args.nterms:
@@ -51,6 +51,7 @@ def measure(f, n=25):
     for i in range(n):
         data.append(f())
         sys.stdout.write('.')
+        sys.stdout.flush()
     sys.stdout.write('\n')
     #
     ans = {}
@@ -162,6 +163,7 @@ def linear(N, flag):
         stop = time.time()
         seconds['construction'] = stop-start
 
+        #import pdb;  pdb.set_trace()
         seconds = evaluate(expr, seconds)
 
         return seconds
@@ -387,9 +389,9 @@ def runall(factors, res, output=True):
     print_results(factors_, ans_, output)
 
 
-    factors_ = tuple(factors+['Polynomial','Loop 3'])
-    ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
-    print_results(factors_, ans_, output)
+    #factors_ = tuple(factors+['Polynomial','Loop 3'])
+    #ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
+    #print_results(factors_, ans_, output)
 
 
 def remap_keys(mapping):
@@ -400,20 +402,27 @@ def remap_keys(mapping):
 #
 res = {}
 
-runall(["COOPR3"], res)
+#runall(["COOPR3"], res)
 
-expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
-runall(["PYOMO4"], res)
+#expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
+#runall(["PYOMO4"], res)
+
+expr.set_expression_tree_format(expr.common.Mode.pyomo5_trees) 
+runall(["PYOMO5"], res)
 
 
+print("HERE")
 
 if args.output:
     if args.output.endswith(".csv"):
         #
         # Write csv file
         #
+        print("HERE")
         perf_types = sorted(next(iter(res.values())).keys())
-        res_ = [ list(key) + [res[key][k]['mean'] for k in perf_types] for key in res]
+        print("HERE")
+        res_ = [ list(key) + [res[key][k]['mean'] for k in perf_types] for key in sorted(res.keys())]
+        print("HERE")
         with open(args.output, 'w') as OUTPUT:
             import csv
             writer = csv.writer(OUTPUT)
