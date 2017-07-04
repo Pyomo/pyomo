@@ -764,7 +764,6 @@ class gurobi_direct ( OptSolver ):
         # significant failure?
         return Bunch(rc=None, log=None)
 
-
     def _gurobi_get_solution_status ( self ):
         status = self._gurobi_instance.Status
         if   gurobi_direct._gurobi_module.GRB.OPTIMAL == status:
@@ -860,7 +859,7 @@ class gurobi_direct ( OptSolver ):
             solver.termination_condition = TerminationCondition.infeasible
         elif gprob.Status == 4: # infeasible or unbounded
             solver.termination_message = "Model was proven to be either infeasible or unbounded."
-            solver.termination_condition = TerminationCondition.infeasible # picking one of the pre-specified Pyomo termination conditions - we don't have either-or.
+            solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
         elif gprob.Status == 5: # unbounded
             solver.termination_message = "Model was proven to be unbounded."
             solver.termination_condition = TerminationCondition.unbounded
