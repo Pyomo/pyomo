@@ -991,6 +991,89 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[1]._args[0], m.c)
         self.assertIs(e._args[1]._args[1], m.d)
 
+    def test_nestedProduct2(self):
+        #
+        # Check the structure of nested products
+        #
+        m = AbstractModel()
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        m.d = Var()
+
+        #
+        # Check the structure of nested products
+        #
+        #            *
+        #          /   \
+        #         +     +
+        #        / \   / \
+        #       c    +    d
+        #           / \
+        #          a   b
+        e1 = m.a + m.b
+        e2 = m.c + e1
+        e3 = e1 + m.d
+        e = e2 * e3
+        _e = EXPR.compress_expression(e)
+        #
+        self.assertIs(type(_e), EXPR._ProductExpression)
+        self.assertEqual(len(_e._args), 2)
+
+        self.assertIs(type(_e._args[0]), EXPR._MultiSumExpression)
+        self.assertIs(len(_e._args[0]._args), 4)
+        self.assertIs(_e._args[0]._args[0], 0)
+        self.assertIs(_e._args[0]._args[1], m.c)
+        self.assertIs(_e._args[0]._args[2], m.a)
+        self.assertIs(_e._args[0]._args[3], m.b)
+
+        self.assertIs(type(_e._args[1]), EXPR._MultiSumExpression)
+        self.assertIs(len(_e._args[1]._args), 4)
+        self.assertIs(_e._args[1]._args[0], 0)
+        self.assertIs(_e._args[1]._args[1], m.a)
+        self.assertIs(_e._args[1]._args[2], m.b)
+        self.assertIs(_e._args[1]._args[3], m.d)
+
+        #
+        # Check the structure of nested products
+        #
+        #            *
+        #          /   \
+        #         *     *
+        #        / \   / \
+        #       c    +    d
+        #           / \
+        #          a   b
+        e1 = m.a + m.b
+        e2 = m.c * e1
+        e3 = e1 * m.d
+        e = e2 * e3
+        _e = EXPR.compress_expression(e)
+        #
+        self.assertIs(type(_e), EXPR._ProductExpression)
+        self.assertEqual(len(_e._args), 2)
+
+        self.assertIs(type(_e._args[0]), EXPR._ProductExpression)
+        self.assertIs(len(_e._args[0]._args), 2)
+        self.assertIs(_e._args[0]._args[0], m.c)
+
+        self.assertIs(type(_e._args[0]._args[1]), EXPR._MultiSumExpression)
+        self.assertIs(len(_e._args[0]._args[1]._args), 3)
+        self.assertIs(_e._args[0]._args[1]._args[0], 0)
+        self.assertIs(_e._args[0]._args[1]._args[1], m.a)
+        self.assertIs(_e._args[0]._args[1]._args[2], m.b)
+
+        self.assertIs(type(_e._args[1]), EXPR._ProductExpression)
+        self.assertIs(len(_e._args[1]._args), 2)
+        self.assertIs(_e._args[1]._args[1], m.d)
+
+        self.assertIs(type(_e._args[1]._args[0]), EXPR._MultiSumExpression)
+        self.assertIs(len(_e._args[1]._args[0]._args), 3)
+        self.assertIs(_e._args[1]._args[0]._args[0], 0)
+        self.assertIs(_e._args[1]._args[0]._args[1], m.a)
+        self.assertIs(_e._args[1]._args[0]._args[2], m.b)
+
+
     def test_trivialProduct(self):
         #
         # Check that multiplying by zero gives zero
