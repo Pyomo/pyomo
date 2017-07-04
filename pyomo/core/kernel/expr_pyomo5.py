@@ -80,6 +80,161 @@ class bypass_clone_check(object):
         pass
 
 
+def compress_expression(expr):
+    if expr.__class__ in native_numeric_types:
+        return expr
+    #
+    # The stack starts with the current expression
+    #
+    _stack = [ False, (expr, expr._args, 0, len(expr._args), [])]
+    #
+    # Iterate until the stack is empty
+    #
+    # Note: 1 is faster than True for Python 2.x
+    #
+    while 1:
+        #
+        # Get the top of the stack
+        #   _obj        Current expression object
+        #   _argList    The arguments for this expression objet
+        #   _idx        The current argument being considered
+        #   _len        The number of arguments
+        #   _parent     The expression object that points to this expression
+        #   _pidx       The argument of the parent expression object
+        #
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        _clone = _stack.pop()
+        if _clone and _stack:
+            _stack[-2] = True
+        #print("X")
+        #print(_obj)
+        #print(_result)
+        #
+        # Iterate through the arguments
+        #
+        while _idx < _len:
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types:
+                #
+                # What do we do with a native numeric type?
+                #
+                _result.append( _sub )
+            elif _sub.is_expression():
+                #
+                # Push an expression onto the stack
+                #
+                _stack.append( False )
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = len(_argList)
+                _result  = []
+                _clone   = False
+            else:
+                #
+                # What are the other types?
+                #
+                _result.append( _sub )
+        #
+        # Now replace the current expression object if it's a sum
+        #
+        #print("HERE")
+        #print(_clone)
+        #print(_obj)
+        #print(type(_obj))
+        #print(_result)
+        #print(_obj._args)
+
+        if _obj.__class__ == _SumExpression:
+            _l, _r = _result
+            #print("_l "+str(_l))
+            #print("_l "+str(_l.__class__))
+            #print("_r "+str(_r.__class__))
+            #print(isinstance(_r, _MultiSumExpression))
+            #
+            # Replace the current expression
+            #
+            if _r.__class__ == _MultiSumExpression:
+                ans = _r
+                #
+                # 1 + MultiSum
+                # p + MultiSum
+                #
+                # Add the LHS to the first term of the multisum
+                #
+                if _l.__class__ in native_numeric_types or \
+                   not _l._potentially_variable():
+                    #print("x1")
+                    ans._args = (ans._args[0] + _l,) + ans._args[1:]
+                #
+                # MultiSum + MultiSum
+                #
+                # Add the constant terms, and place the others in order
+                #
+                elif _l.__class__ == _MultiSumExpression:
+                    #print("x2")
+                    ans._args = (_r._args[0]+_l._args[0],) + _l._args[1:] + _r._args[1:]
+                #
+                # expr + MultiSum
+                #
+                # Insert the expression in order
+                #
+                else:
+                    #print("x3")
+                    ans._args = (_r._args[0], _l) + _r._args[1:]
+
+            elif _l.__class__ == _MultiSumExpression:
+                ans = _l
+                #
+                # MultiSum + p
+                #
+                # Add the RHS to the first term of the multisum
+                #
+                if not _r._potentially_variable():
+                    #print("x4")
+                    ans._args = (ans._args[0] + _r,) + ans._args[1:]
+                #
+                # Multisum + expr
+                #
+                # Insert the expression in order
+                #
+                else:
+                    #print("x5")
+                    ans._args = _l._args + (_r,)
+
+            elif _l.__class__ in native_numeric_types or \
+                   not _l._potentially_variable():
+                #
+                # 1 + expr
+                # p + expr
+                #
+                #print("x6")
+                ans = _MultiSumExpression((_l, _r))
+
+            else:
+                #
+                # expr + expr
+                #
+                #print("x7")
+                ans = _MultiSumExpression((0, _l, _r))
+            if _stack:
+                _stack[-2] = True
+        elif _clone:
+            ans = _obj.__class_( tuple(_result) )
+        else:
+            ans = _obj
+        #print(type(ans))
+        #print(ans._args)
+        #print(id(ans))
+        if _stack:
+            _stack[-1][-1].append( ans )
+        else:
+            #print(id(ans))
+            return ans
+
+
 def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
@@ -161,6 +316,10 @@ class _ExpressionBase(NumericValue):
 
     def __nonzero__(self):
         return bool(self())
+
+    # TODO
+    #def __deepcopy__(self):
+    #
 
     __bool__ = __nonzero__
 
@@ -722,10 +881,27 @@ class _SumExpression(_LinearOperatorExpression):
                 ostream.write(' + ')
 
     def _apply_operation(self, result):
-        return sum(result)
+        l_, r_ = result
+        return l_ + r_
 
     def getname(self, *args, **kwds):
         return 'sum'
+
+
+class _MultiSumExpression(_SumExpression):
+    """An object that defines a summation with 1 or more terms and a constant term."""
+
+    __slots__ = ()
+    PRECEDENCE = 6
+
+    def _precedence(self):
+        return _MultiSumExpression.PRECEDENCE
+
+    def _apply_operation(self, result):
+        return sum(result)
+
+    def getname(self, *args, **kwds):
+        return 'multisum'
 
 
 class _GetItemExpression(_ExpressionBase):

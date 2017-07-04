@@ -61,6 +61,8 @@ _pyomo5_module_members = [
     '_DivisionExpression',
     '_NegationExpression',
     'EntangledExpressionError',
+    '_MultiSumExpression',
+    'compress_expression',
 ]
 
 def set_expression_tree_format(mode):
