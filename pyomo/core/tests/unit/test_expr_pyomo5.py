@@ -374,26 +374,48 @@ class TestGenerate_SumExpression(unittest.TestCase):
         m.a = Var()
         m.b = Var()
         e = m.a + m.b
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], 0)
+        self.assertIs(_e._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
 
     def test_constSum(self):
         # a + 5
         m = AbstractModel()
         m.a = Var()
         e = m.a + 5
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 2)
+        self.assertIs(_e._args[0], 5)
+        self.assertIs(_e._args[1], m.a)
 
         e = 5 + m.a
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 2)
+        self.assertIs(_e._args[0], 5)
+        self.assertIs(_e._args[1], m.a)
 
     def test_nestedSum(self):
         #
@@ -414,10 +436,18 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a + m.b
         e = e1 + 5
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), expectedType)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], e1)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], 5)
+        self.assertIs(_e._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
 
         #       + 
         #      / \ 
@@ -426,10 +456,18 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a + m.b
         e = 5 + e1
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), expectedType)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], e1)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], 5)
+        self.assertIs(_e._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
 
         #           +
         #          / \
@@ -438,10 +476,19 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a + m.b
         e = e1 + m.c
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), expectedType)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], e1)
         self.assertIs(e._args[1], m.c)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 4)
+        self.assertIs(_e._args[0], 0)
+        self.assertIs(_e._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
+        self.assertIs(_e._args[3], m.c)
 
         #       + 
         #      / \ 
@@ -450,11 +497,20 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   b
         e1 = m.a + m.b
         e = m.c + e1
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), EXPR._SumExpression)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.c)
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 4)
+        self.assertIs(_e._args[0], 0)
+        self.assertIs(_e._args[1], m.c)
+        self.assertIs(_e._args[2], m.a)
+        self.assertIs(_e._args[3], m.b)
 
         #            +
         #          /   \
@@ -464,10 +520,20 @@ class TestGenerate_SumExpression(unittest.TestCase):
         e1 = m.a + m.b
         e2 = m.c + m.d
         e = e1 + e2
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), expectedType)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], e1)
         self.assertIs(e._args[1], e2)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 5)
+        self.assertIs(_e._args[0], 0)
+        self.assertIs(_e._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
+        self.assertIs(_e._args[3], m.c)
+        self.assertIs(_e._args[4], m.d)
 
     def test_trivialSum(self):
         #
@@ -499,14 +565,20 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #   a   5
         e1 = m.a * 5
         e = e1 + m.b
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), EXPR._SumExpression)
-        self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
-        self.assertIs(e._args[0], m.a)
+        self.assertIs(e._args[0]._args[0], 5)
+        self.assertIs(e._args[0]._args[1], m.a)
         self.assertIs(e._args[1], m.b)
-        self.assertEqual(len(e._coef), 2)
-        self.assertEqual(e._coef[0], 5)
-        self.assertEqual(e._coef[1], 1)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], 0)
+        self.assertIs(_e._args[1]._args[0], 5)
+        self.assertIs(_e._args[1]._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
 
         #       +
         #      / \
@@ -514,14 +586,20 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #        / \
         #       a   5
         e = m.b + e1
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), EXPR._SumExpression)
-        self.assertEqual(e._const, 0)
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.b)
-        self.assertIs(e._args[1], m.a)
-        self.assertEqual(len(e._coef), 2)
-        self.assertEqual(e._coef[0], 1)
-        self.assertEqual(e._coef[1], 5)
+        self.assertIs(e._args[1]._args[0], 5)
+        self.assertIs(e._args[1]._args[1], m.a)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 3)
+        self.assertIs(_e._args[0], 0)
+        self.assertIs(_e._args[1], m.b)
+        self.assertIs(_e._args[2]._args[0], 5)
+        self.assertIs(_e._args[2]._args[1], m.a)
 
         #            +
         #          /   \
@@ -530,16 +608,24 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       a   5 b   c
         e2 = m.b + m.c
         e = e1 + e2
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), EXPR._SumExpression)
-        self.assertEqual(e._const, 0)
-        self.assertEqual(len(e._args), 3)
-        self.assertIs(e._args[0], m.a)
-        self.assertIs(e._args[1], m.b)
-        self.assertIs(e._args[2], m.c)
-        self.assertEqual(len(e._coef), 3)
-        self.assertEqual(e._coef[0], 5)
-        self.assertEqual(e._coef[1], 1)
-        self.assertEqual(e._coef[2], 1)
+        self.assertEqual(len(e._args), 2)
+        self.assertIs(type(e._args[0]), EXPR._ProductExpression)
+        self.assertIs(type(e._args[1]), EXPR._SumExpression)
+        self.assertIs(e._args[0]._args[0], 5)
+        self.assertIs(e._args[0]._args[1], m.a)
+        self.assertIs(e._args[1]._args[0], m.b)
+        self.assertIs(e._args[1]._args[1], m.c)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 4)
+        self.assertIs(_e._args[0], 0)
+        self.assertIs(_e._args[1]._args[0], 5)
+        self.assertIs(_e._args[1]._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
+        self.assertIs(_e._args[3], m.c)
 
         #            +
         #          /   \
@@ -548,16 +634,24 @@ class TestGenerate_SumExpression(unittest.TestCase):
         #       b   c a   5
         e2 = m.b + m.c
         e = e2 + e1
+        _e = EXPR.compress_expression(e)
+        #
         self.assertIs(type(e), EXPR._SumExpression)
-        self.assertEqual(e._const, 0)
-        self.assertEqual(len(e._args), 3)
-        self.assertIs(e._args[0], m.b)
-        self.assertIs(e._args[1], m.c)
-        self.assertIs(e._args[2], m.a)
-        self.assertEqual(len(e._coef), 3)
-        self.assertEqual(e._coef[0], 1)
-        self.assertEqual(e._coef[1], 1)
-        self.assertEqual(e._coef[2], 5)
+        self.assertEqual(len(e._args), 2)
+        self.assertIs(type(e._args[0]), EXPR._SumExpression)
+        self.assertIs(type(e._args[1]), EXPR._ProductExpression)
+        self.assertIs(e._args[0]._args[0], m.b)
+        self.assertIs(e._args[0]._args[1], m.c)
+        self.assertIs(e._args[1]._args[0], 5)
+        self.assertIs(e._args[1]._args[1], m.a)
+        #
+        self.assertIs(type(_e), EXPR._MultiSumExpression)
+        self.assertEqual(len(_e._args), 4)
+        self.assertIs(_e._args[0], 0)
+        self.assertIs(_e._args[1], m.b)
+        self.assertIs(_e._args[2], m.c)
+        self.assertIs(_e._args[3]._args[0], 5)
+        self.assertIs(_e._args[3]._args[1], m.a)
 
     def test_simpleDiff(self):
         #
@@ -703,7 +797,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 1)
         self.assertIs(e._args[0], m.a)
 
-    def test_sumOf_nestedTrivialProduct(self):
+    def test_sumOf_nestedTrivialProduct2(self):
         #
         # Check the structure of sum of products
         #
@@ -901,13 +995,24 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         #
         # Check that multiplying by zero gives zero
         #
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
+        m.p = Param(initialize=0)
+        m.q = Param(initialize=1)
+
         e = m.a * 0
         self.assertIs(type(e), int)
         self.assertEqual(e, 0)
 
         e = 0 * m.a
+        self.assertIs(type(e), int)
+        self.assertEqual(e, 0)
+
+        e = m.a * m.p
+        self.assertIs(type(e), int)
+        self.assertEqual(e, 0)
+
+        e = m.p * m.a
         self.assertIs(type(e), int)
         self.assertEqual(e, 0)
 
@@ -919,6 +1024,14 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e, m.a)
 
         e = 1 * m.a
+        self.assertIs(type(e), type(m.a))
+        self.assertIs(e, m.a)
+
+        e = m.a * m.q
+        self.assertIs(type(e), type(m.a))
+        self.assertIs(e, m.a)
+
+        e = m.q * m.a
         self.assertIs(type(e), type(m.a))
         self.assertIs(e, m.a)
 
