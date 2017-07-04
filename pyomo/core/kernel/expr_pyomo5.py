@@ -80,8 +80,18 @@ class bypass_clone_check(object):
         pass
 
 
-def compress_expression(expr):
-    if expr.__class__ in native_numeric_types:
+def compress_expression(expr, verbose=False):
+    #
+    # Only compress a true expression DAG
+    #
+    # Note: This does not try to optimize the compression to recognize
+    #   subgraphs.
+    #
+    # Note: This uses a two-part stack.  The boolean indicates whether the
+    #   parent should be cloned (because a child has been replaced), and the
+    #   tuple represents the current context during the tree search.
+    #
+    if expr.__class__ in native_numeric_types or not expr.is_expression():
         return expr
     #
     # The stack starts with the current expression
@@ -99,31 +109,40 @@ def compress_expression(expr):
         #   _argList    The arguments for this expression objet
         #   _idx        The current argument being considered
         #   _len        The number of arguments
-        #   _parent     The expression object that points to this expression
-        #   _pidx       The argument of the parent expression object
         #
         _obj, _argList, _idx, _len, _result = _stack.pop()
         _clone = _stack.pop()
-        if _clone and _stack:
+        if _clone and len(_stack) > 1:
             _stack[-2] = True
-        #print("X")
-        #print(_obj)
-        #print(_result)
+        if verbose: #pragma:nocover
+            print("*"*10 + " POP  " + "*"*10)
         #
         # Iterate through the arguments
         #
         while _idx < _len:
+            if verbose: #pragma:nocover
+                print("-"*30)
+                print(type(_obj))
+                print(_obj)
+                print(_argList)
+                print(_idx)
+                print(_len)
+                print(_result)
+                print(_clone)
+
             _sub = _argList[_idx]
             _idx += 1
-            if _sub.__class__ in native_numeric_types:
+            if _sub.__class__ in native_numeric_types or not _sub.is_expression():
                 #
-                # What do we do with a native numeric type?
+                # Store a native or numeric object
                 #
                 _result.append( _sub )
-            elif _sub.is_expression():
+            else:
                 #
                 # Push an expression onto the stack
                 #
+                if verbose: #pragma:nocover
+                    print("*"*10 + " PUSH " + "*"*10)
                 _stack.append( False )
                 _stack.append( (_obj, _argList, _idx, _len, _result) )
                 _obj     = _sub
@@ -132,27 +151,21 @@ def compress_expression(expr):
                 _len     = len(_argList)
                 _result  = []
                 _clone   = False
-            else:
-                #
-                # What are the other types?
-                #
-                _result.append( _sub )
+    
+        if verbose: #pragma:nocover
+            print("="*30)
+            print(type(_obj))
+            print(_obj)
+            print(_argList)
+            print(_idx)
+            print(_len)
+            print(_result)
+            print(_clone)
         #
         # Now replace the current expression object if it's a sum
         #
-        #print("HERE")
-        #print(_clone)
-        #print(_obj)
-        #print(type(_obj))
-        #print(_result)
-        #print(_obj._args)
-
         if _obj.__class__ == _SumExpression:
             _l, _r = _result
-            #print("_l "+str(_l))
-            #print("_l "+str(_l.__class__))
-            #print("_r "+str(_r.__class__))
-            #print(isinstance(_r, _MultiSumExpression))
             #
             # Replace the current expression
             #
@@ -166,7 +179,6 @@ def compress_expression(expr):
                 #
                 if _l.__class__ in native_numeric_types or \
                    not _l._potentially_variable():
-                    #print("x1")
                     ans._args = (ans._args[0] + _l,) + ans._args[1:]
                 #
                 # MultiSum + MultiSum
@@ -174,7 +186,6 @@ def compress_expression(expr):
                 # Add the constant terms, and place the others in order
                 #
                 elif _l.__class__ == _MultiSumExpression:
-                    #print("x2")
                     ans._args = (_r._args[0]+_l._args[0],) + _l._args[1:] + _r._args[1:]
                 #
                 # expr + MultiSum
@@ -182,7 +193,6 @@ def compress_expression(expr):
                 # Insert the expression in order
                 #
                 else:
-                    #print("x3")
                     ans._args = (_r._args[0], _l) + _r._args[1:]
 
             elif _l.__class__ == _MultiSumExpression:
@@ -193,7 +203,6 @@ def compress_expression(expr):
                 # Add the RHS to the first term of the multisum
                 #
                 if not _r._potentially_variable():
-                    #print("x4")
                     ans._args = (ans._args[0] + _r,) + ans._args[1:]
                 #
                 # Multisum + expr
@@ -201,7 +210,6 @@ def compress_expression(expr):
                 # Insert the expression in order
                 #
                 else:
-                    #print("x5")
                     ans._args = _l._args + (_r,)
 
             elif _l.__class__ in native_numeric_types or \
@@ -210,28 +218,33 @@ def compress_expression(expr):
                 # 1 + expr
                 # p + expr
                 #
-                #print("x6")
                 ans = _MultiSumExpression((_l, _r))
 
             else:
                 #
                 # expr + expr
                 #
-                #print("x7")
                 ans = _MultiSumExpression((0, _l, _r))
-            if _stack:
+            if len(_stack) > 1:
+                #
+                # We've replaced a node, so set the context for the parent's search to
+                # ensure that it is cloned.
+                #
                 _stack[-2] = True
         elif _clone:
             ans = _obj.__class__( tuple(_result) )
+            if len(_stack) > 1:
+                _stack[-2] = True
         else:
             ans = _obj
-        #print(type(ans))
-        #print(ans._args)
-        #print(id(ans))
+        if verbose: #pragma:nocover
+            print("STACK LEN %d" % len(_stack))
         if _stack:
+            #
+            # "return" the recursion by putting the return value on the end of the reults stack
+            #
             _stack[-1][-1].append( ans )
         else:
-            #print(id(ans))
             return ans
 
 
