@@ -222,7 +222,7 @@ def compress_expression(expr):
             if _stack:
                 _stack[-2] = True
         elif _clone:
-            ans = _obj.__class_( tuple(_result) )
+            ans = _obj.__class__( tuple(_result) )
         else:
             ans = _obj
         #print(type(ans))
