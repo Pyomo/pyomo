@@ -5,7 +5,7 @@
 from pyomo.environ import *
 import pyomo.version
 from pyomo.core.base.expr_common import _clear_expression_pool
-from pyomo.core.base import expr 
+from pyomo.core.base import expr as EXPR 
 from pyomo.repn import generate_canonical_repn
 
 import pprint as pp
@@ -127,6 +127,15 @@ def evaluate(expr, seconds):
         seconds['generate_canonical'] = stop-start
     except:
         seconds['generate_canonical'] = -1
+
+    gc.collect()
+    _clear_expression_pool()
+    start = time.time()
+    #
+    s_ = EXPR.compress_expression(expr)
+    #
+    stop = time.time()
+    seconds['compress'] = stop-start
 
     return seconds
 
@@ -405,12 +414,12 @@ res = {}
 
 #runall(["COOPR3"], res)
 
-#expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
+#EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
 #runall(["PYOMO4"], res)
 
 #import pdb; pdb.set_trace()
 
-expr.set_expression_tree_format(expr.common.Mode.pyomo5_trees) 
+EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
 runall(["PYOMO5"], res)
 
 
