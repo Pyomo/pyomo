@@ -16,7 +16,7 @@ from pyutilib.misc import Bunch, Options
 from pyutilib.services import TempfileManager
 
 from pyomo.util.plugin import alias
-from pyomo.opt import SolverResults
+from pyomo.opt import SolverResults, TerminationCondition
 from pyomo.opt.base import OptSolver, SolverFactory, ProblemFormat, ResultsFormat
 from pyomo.opt.solver import SystemCallSolver
 from pyomo.opt.base.solvers import _extract_version
@@ -121,6 +121,25 @@ class MIPCLSHELL(SystemCallSolver):
         return results
 
     def process_soln_file(self, results):
-        pass
+        """Process solution file"""
+        try:
+            with open(self._soln_file) as f:
+                lines = f.readlines()
+            for i, line in enumerate(lines):
+                if i == 0:
+                    line = line.split()
+                    if line[0] == '=infeas=':
+                        results.solver.termination_condition = TerminationCondition.infeasible
+                    elif line[0] == '=obj=':
+                        results.solution.objective['__default_objective__']['Value'] = eval(line[1])
+                    else:
+                        raise RuntimeError('objective status unknown')
+                else:
+                    line = line.split()
+                    results.solution.variable[line[0]] = {"Value" : eval(line[1])} 
+        except:
+            raise RuntimeError('please debug me')
+                    
+                
 
 services.register_executable(name="mps_mipcl")
