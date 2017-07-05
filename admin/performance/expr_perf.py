@@ -128,14 +128,17 @@ def evaluate(expr, seconds):
     except:
         seconds['generate_canonical'] = -1
 
-    gc.collect()
-    _clear_expression_pool()
-    start = time.time()
-    #
-    s_ = EXPR.compress_expression(expr)
-    #
-    stop = time.time()
-    seconds['compress'] = stop-start
+    try:
+        gc.collect()
+        _clear_expression_pool()
+        start = time.time()
+        #
+        s_ = EXPR.compress_expression(expr)
+        #
+        stop = time.time()
+        seconds['compress'] = stop-start
+    except:
+        seconds['compress'] = 0
 
     return seconds
 
@@ -351,7 +354,7 @@ def print_results(factors_, ans_, output):
 #
 def runall(factors, res, output=True):
 
-    if False:
+    if True:
         factors_ = tuple(factors+['Constant','Loop 1'])
         ans_ = res[factors_] = measure(constant(NTerms, 1), n=N)
         print_results(factors_, ans_, output)
@@ -399,9 +402,10 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(nonlinear(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
-    factors_ = tuple(factors+['Polynomial','Loop 3'])
-    ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
-    print_results(factors_, ans_, output)
+    if False:
+        factors_ = tuple(factors+['Polynomial','Loop 3'])
+        ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
 
 
 def remap_keys(mapping):
@@ -412,10 +416,10 @@ def remap_keys(mapping):
 #
 res = {}
 
-#runall(["COOPR3"], res)
+runall(["COOPR3"], res)
 
-#EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
-#runall(["PYOMO4"], res)
+EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
+runall(["PYOMO4"], res)
 
 #import pdb; pdb.set_trace()
 
@@ -423,18 +427,13 @@ EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees)
 runall(["PYOMO5"], res)
 
 
-print("HERE")
-
 if args.output:
     if args.output.endswith(".csv"):
         #
         # Write csv file
         #
-        print("HERE")
         perf_types = sorted(next(iter(res.values())).keys())
-        print("HERE")
         res_ = [ list(key) + [res[key][k]['mean'] for k in perf_types] for key in sorted(res.keys())]
-        print("HERE")
         with open(args.output, 'w') as OUTPUT:
             import csv
             writer = csv.writer(OUTPUT)
