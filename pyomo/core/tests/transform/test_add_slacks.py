@@ -269,7 +269,162 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         logging.getLogger().removeHandler(asserting_handler)
        
 
-class AddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
+# TODO: QUESTION: Is this bad? I just copied all of the tests that involve 
+# expressions and changed what I needed to. But the only thing different is the
+# coefficients as dictionaries rather than constraints... So... the code is 
+# nearly identical... 
+class TestAddSlacks_pyomo4(unittest.TestCase):
+    def setUp(self):
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    @staticmethod
+    def makeModel():
+        return TestAddSlacks_coopr3.makeModel()
+
+    # wrapping this as a method because I use it again later when I test
+    # targets
+    def checkRule1(self, m):
+        # check all original variables still there:
+        cons = m.rule1
+        transBlock = m.component("_core_add_slack_variables")
+        
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 5)
+        
+        self.assertIs(cons.body._args[0], m.x)
+        self.assertEqual(cons.body._coef[id(cons.body._args[0])], 1)
+        self.assertIs(cons.body._args[1], transBlock._slack_minus_rule1)
+        self.assertEqual(cons.body._coef[id(cons.body._args[1])], -1)
+        
+        self.assertEqual(len(cons.body._args), 2)
+        self.assertEqual(len(cons.body._coef), 2)
+        self.assertEqual(cons.body._const, 0)
+        
+    def checkRule3(self, m):
+        # check all original variables still there:
+        cons = m.rule3
+        transBlock = m.component("_core_add_slack_variables")
+
+        self.assertIsNone(cons.upper)
+        self.assertEqual(cons.lower, 0.1)
+        
+        self.assertIs(cons.body._args[0], m.x)
+        self.assertEqual(cons.body._coef[id(cons.body._args[0])], 1)
+        self.assertIs(cons.body._args[1], transBlock._slack_plus_rule3)
+        self.assertEqual(cons.body._coef[id(cons.body._args[1])], 1)
+        
+        self.assertEqual(len(cons.body._args), 2)
+        self.assertEqual(len(cons.body._coef), 2)
+        self.assertEqual(cons.body._const, 0)
+
+    def test_ub_constraint_modified(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(m)
+        self.checkRule1(m)
+
+    def test_lb_constraint_modified(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(m)
+        self.checkRule3(m)
+        
+    def test_both_bounds_constraint_modified(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(m)
+
+        # check all original variables still there:
+        cons = m.rule2
+        transBlock = m.component("_core_add_slack_variables")
+        
+        self.assertEqual(cons.lower, 1)
+        self.assertEqual(cons.upper, 3)
+
+        self.assertIs(cons.body._args[0], m.y)
+        self.assertEqual(cons.body._coef[id(cons.body._args[0])], 1)
+        self.assertIs(cons.body._args[1], transBlock._slack_plus_rule2)
+        self.assertEqual(cons.body._coef[id(cons.body._args[1])], 1)
+        self.assertIs(cons.body._args[2], transBlock._slack_minus_rule2)
+        self.assertEqual(cons.body._coef[id(cons.body._args[2])], -1)
+        
+        self.assertEqual(len(cons.body._args), 3)
+        self.assertEqual(len(cons.body._coef), 3)
+        self.assertEqual(cons.body._const, 0)
+
+    def test_new_obj_created(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(m)
+        
+        transBlock = m.component("_core_add_slack_variables")
+
+        # active objective should minimize sum of slacks
+        obj = transBlock.component("_slack_objective")
+        self.assertIsInstance(obj, Objective)
+        self.assertTrue(obj.active)
+        
+        self.assertIs(obj.expr._args[0], transBlock._slack_minus_rule1)
+        self.assertIs(obj.expr._args[1], transBlock._slack_plus_rule2)
+        self.assertIs(obj.expr._args[2], transBlock._slack_minus_rule2)
+        self.assertIs(obj.expr._args[3], transBlock._slack_plus_rule3)
+        for i in range(0, 4):
+            self.assertEqual(obj.expr._coef[id(obj.expr._args[i])], 1)
+        self.assertEqual(obj.expr._const, 0)
+        self.assertEqual(len(obj.expr._args), 4)
+        self.assertEqual(len(obj.expr._coef), 4)
+
+    def test_leave_deactivated_constraints(self):
+        m = self.makeModel()
+        m.rule2.deactivate()
+        TransformationFactory('core.add_slack_variables').apply_to(m)
+        
+        cons = m.rule2
+        self.assertFalse(cons.active)
+        self.assertEqual(cons.lower, 1)
+        self.assertEqual(cons.upper, 3)
+        self.assertIs(cons.body, m.y)
+
+    def test_nontarget_constraint_same(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m, 
+            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+        
+        cons = m.rule2
+        self.assertEqual(cons.lower, 1)
+        self.assertEqual(cons.upper, 3)
+        # cons.body is a SimpleVar
+        self.assertIs(cons.body, m.y)
+
+    def test_target_constraints_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m, 
+            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+
+        self.checkRule1(m)
+        self.checkRule3(m)
+
+    def test_target_objective(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m, 
+            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+
+        self.assertFalse(m.obj.active)
+
+        transBlock = m._core_add_slack_variables
+        obj = transBlock.component("_slack_objective")
+        self.assertEqual(len(obj.expr._args), 2)
+        self.assertEqual(len(obj.expr._coef), 2)
+        self.assertIs(obj.expr._args[0], transBlock._slack_minus_rule1)
+        self.assertEqual(obj.expr._coef[id(obj.expr._args[0])], 1)
+        self.assertIs(obj.expr._args[1], transBlock._slack_plus_rule3)
+        self.assertEqual(obj.expr._coef[id(obj.expr._args[1])], 1)
+        self.assertEqual(obj.expr._const, 0)
+
+
+class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
 
@@ -386,6 +541,121 @@ class AddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         self.assertEqual(len(c.body._denominator), 0)
         self.assertIs(c.body._numerator[0], m.x[i])
         self.assertEqual(c.body._coef, 2)
+
+    def test_ConstraintDatatarget_nontargets_same(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule1[2])])
+        
+        self.checkUntransformedRule1(m, 1)
+        self.checkUntransformedRule1(m, 3)
+        self.checkRule2(m)
+
+    def test_ConstraintDatatarget_target_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule1[2])])
+
+        self.checkTransformedRule1(m, 2)
+
+    def test_ConstraintDatatarget_objective(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule1[2])])
+
+        self.assertFalse(m.obj.active)
+        
+        transBlock = m._core_add_slack_variables
+        obj = transBlock.component("_slack_objective")
+        self.assertIsInstance(obj, Objective)
+        self.assertIs(obj.expr, transBlock.component("_slack_plus_rule1[2]"))
+
+
+# TODO: QUESTION: same as above here...
+class TestAddSlacks_IndexedConstraints_pyomo4(unittest.TestCase):
+    def setUp(self):
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo4_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    @staticmethod
+    def makeModel():
+        return TestAddSlacks_IndexedConstraints_coopr3.makeModel()
+
+    def checkRule2(self, m):
+        cons = m.rule2
+        self.assertEqual(cons.upper, 6)
+        self.assertIsNone(cons.lower)
+        self.assertIs(cons.body, m.y)
+        
+    def test_indexedtarget_nontarget_same(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule1)])
+
+        self.checkRule2(m)
+
+    def test_indexedtarget_objective(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule1)])
+        
+        self.assertFalse(m.obj.active)
+        
+        transBlock = m._core_add_slack_variables
+        obj = transBlock.component("_slack_objective")
+        self.assertIsInstance(obj, Objective)
+        self.assertEqual(len(obj.expr._args), 3)
+        self.assertEqual(len(obj.expr._coef), 3)
+        self.assertEqual(obj.expr._const, 0)
+        self.assertIs(obj.expr._args[0], 
+                      transBlock.component("_slack_plus_rule1[1]"))
+        self.assertIs(obj.expr._args[1], 
+                      transBlock.component("_slack_plus_rule1[2]"))
+        self.assertIs(obj.expr._args[2], 
+                      transBlock.component("_slack_plus_rule1[3]"))
+        self.assertIs(obj.expr._coef[id(obj.expr._args[0])], 1) 
+        self.assertIs(obj.expr._coef[id(obj.expr._args[1])], 1) 
+        self.assertIs(obj.expr._coef[id(obj.expr._args[2])], 1) 
+
+    def checkTransformedRule1(self, m, i):
+        c = m.rule1[i]
+        self.assertEqual(c.lower, 4)
+        self.assertIsNone(c.upper)
+        self.assertEqual(len(c.body._args), 2)
+        self.assertEqual(len(c.body._coef), 2)
+        self.assertIs(c.body._args[0], m.x[i])
+        self.assertIs(
+            c.body._args[1], 
+            m._core_add_slack_variables.component(
+                "_slack_plus_rule1[%s]" % i))
+        self.assertEqual(c.body._coef[id(c.body._args[0])], 2)
+        self.assertEqual(c.body._coef[id(c.body._args[1])], 1)
+        self.assertEqual(c.body._const, 0)
+
+    def test_indexedtarget_targets_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule1)])
+        
+        for i in [1,2,3]:
+            self.checkTransformedRule1(m, i)
+
+    def checkUntransformedRule1(self, m, i):
+        c = m.rule1[i]
+        self.assertEqual(c.lower, 4)
+        self.assertIsNone(c.upper)
+        self.assertEqual(len(c.body._args), 1)
+        self.assertEqual(len(c.body._coef), 1)
+        self.assertIs(c.body._args[0], m.x[i])
+        self.assertEqual(c.body._coef[id(c.body._args[0])], 2)
 
     def test_ConstraintDatatarget_nontargets_same(self):
         m = self.makeModel()
