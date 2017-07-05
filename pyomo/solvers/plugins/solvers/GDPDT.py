@@ -20,7 +20,7 @@ Questions: Please make a post at StackOverflow and email the link to Qi Chen
 <qichen at andrew.cmu.edu>.
 
 """
-from math import copysign
+from math import copysign, fabs
 from pprint import pprint
 
 import pyomo.util.plugin
@@ -348,15 +348,14 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             # Map Constraint, nlp_iter -> generated OA Constraint
             GDPDT.OA_constr_map = {}
             self._calc_jacobians()  # preload jacobians
-        # if self._decomposition_strategy == 'PSC':
-        #     if not hasattr(m, 'dual'):  # Set up dual value reporting
-        #         m.dual = Suffix(direction=Suffix.IMPORT)
-        #     if not hasattr(m, 'ipopt_zL_out'):
-        #         m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
-        #     if not hasattr(m, 'ipopt_zU_out'):
-        #         m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
-        #     self._detect_nonlinear_vars()
-        #     GDPDT.psc_cuts = ConstraintList(doc='Partial surrogate cuts')
+        if self._decomposition_strategy == 'PSC':
+            if not hasattr(m, 'dual'):  # Set up dual value reporting
+                m.dual = Suffix(direction=Suffix.IMPORT)
+            if not hasattr(m, 'ipopt_zL_out'):
+                m.ipopt_zL_out = Suffix(direction=Suffix.IMPORT)
+            if not hasattr(m, 'ipopt_zU_out'):
+                m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
+            GDPDT.psc_cuts = ConstraintList()
         # if self._decomposition_strategy == 'GBD':
         #     if not hasattr(m, 'dual'):
         #         m.dual = Suffix(direction=Suffix.IMPORT)
@@ -418,7 +417,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         """Initialize by maximizing binary variables and disjuncts.
 
         This function activates as many binary variables and disjucts as
-        feasible. The user would usually want to call _solve_NLP_subproblem
+        feasible. The user would usually want to call _solve_NLP_subproblem()
         after an invocation of this function.
 
         """
@@ -496,42 +495,70 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             self._solve_NLP_subproblem()
 
             # If the hybrid algorithm is not making progress, switch to OA.
-            progress_required = 1E-6
+            relax_prog_req = 1E-6
+            feas_prog_req = 1E-6
             if GDPDT.objective.sense == minimize:
-                log = self.LB_progress
+                relax_prog_log = self.LB_progress
+                feas_prog_log = self.UB_progress
                 sign_adjust = 1
             else:
-                log = self.UB_progress
+                relax_prog_log = self.UB_progress
+                feas_prog_log = self.LB_progress
                 sign_adjust = -1
             # Maximum number of iterations in which the lower (optimistic)
             # bound does not improve before switching to OA
-            max_nonimprove_iter = 5
-            making_progress = True
-            for i in range(1, max_nonimprove_iter + 1):
+            max_nonimprove_relax_iter = 5
+            max_nonimprove_feas_iter = 5
+            relax_making_progress = True
+            feas_making_progress = True
+            for i in range(1, max_nonimprove_relax_iter + 1):
                 try:
-                    if (sign_adjust * log[-i]
-                            <= (log[-i - 1] + progress_required)
+                    if (sign_adjust * relax_prog_log[-i]
+                            <= (relax_prog_log[-i - 1] + relax_prog_req)
                             * sign_adjust):
-                        making_progress = False
+                        relax_making_progress = False
                     else:
-                        making_progress = True
+                        relax_making_progress = True
                         break
                 except IndexError:
                     # Not enough history yet, keep going.
-                    making_progress = True
+                    relax_making_progress = True
                     break
-            if not making_progress and (
+            if not relax_making_progress and (
                     self.decomposition_strategy == 'hPSC' and
                     self._decomposition_strategy == 'PSC'):
-                print('Not making enough progress for {} iterations. '
-                      'Switching to OA.'.format(max_nonimprove_iter))
+                print('Relaxation not making enough progress '
+                      'for {} iterations. '
+                      'Switching to OA.'.format(max_nonimprove_relax_iter))
                 self._decomposition_strategy = 'OA'
+
+            for i in range(1, max_nonimprove_feas_iter + 1):
+                try:
+                    if (sign_adjust * feas_prog_log[-i]
+                            >= (feas_prog_log[-i - 1] - feas_prog_req)
+                            * sign_adjust):
+                        # TODO check this logic, and also the one above
+                        feas_making_progress = False
+                    else:
+                        feas_making_progress = True
+                        break
+                except IndexError:
+                    feas_making_progress = True
+                    break
+            if (not feas_making_progress and
+                    not GDPDT.feasible_integer_cuts.active):
+                print('Feasible solutions not making enough progress '
+                      'for {} iterations. Turning on no-backtracking '
+                      'integer cuts.'.format(max_nonimprove_feas_iter))
+                GDPDT.feasible_integer_cuts.activate()
 
     def _solve_OA_master(self):
         self.mip_iter += 1
         m = self.working_model.clone()
         GDPDT = m.GDPDT_utils
         print('MILP {}: Solve master problem.'.format(self.mip_iter))
+
+        # Deactivate nonlinear constraints
         nonlinear_constraints = (
             c for c in m.component_data_objects(
                 ctype=Constraint, active=True, descend_into=(Block, Disjunct))
@@ -608,29 +635,35 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         self.master_postsolve(m, self)
 
     def _solve_PSC_master(self):
-        m = self.working_model
-        GDPDT = m.GDPDT_utils
         self.mip_iter += 1
+        m = self.working_model.clone()
+        GDPDT = m.GDPDT_utils
         print('MILP {}: Solve master problem.'.format(self.mip_iter))
-        # Set up MILP
-        for c in self.nonlinear_constraints:
+
+        # Deactivate nonlinear constraints
+        nonlinear_constraints = (
+            c for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (0, 1))
+        for c in nonlinear_constraints:
             c.deactivate()
-        m.GDPDT_linear_cuts.activate()
+
+        # Transform disjunctions
+        TransformationFactory('gdp.bigm').apply_to(m)
+
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
+
+        # Solve
         results = self.mip_solver.solve(m, load_solutions=False,
                                         **self.mip_solver_kwargs)
-        for c in self.nonlinear_constraints:
-            c.activate()
-        m.GDPDT_linear_cuts.deactivate()
-        getattr(m, 'ipopt_zL_out', _DoNothing()).activate()
-        getattr(m, 'ipopt_zU_out', _DoNothing()).activate()
 
         # Process master problem result
         master_terminate_cond = results.solver.termination_condition
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
             m.solutions.load_from(results)
+            self._copy_values(m, self.working_model)
             if GDPDT.objective.sense == minimize:
                 self.LB = max(value(GDPDT.objective.expr), self.LB)
                 self.LB_progress.append(self.LB)
@@ -767,10 +800,11 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         # TODO round the integer variables so that they are exactly 0 or 1
         # first?
 
-        # Deactivate the OA cuts
+        # Deactivate the OA and PSC cuts
         for constr in m.component_objects(ctype=Constraint, active=True,
                                           descend_into=(Block, Disjunct)):
-            if constr.local_name == 'GDPDT_oa_cuts':
+            if (constr.local_name == 'GDPDT_oa_cuts' or
+                    constr.local_name == 'psc_cuts'):
                 constr.deactivate()
 
         # Activate or deactivate disjuncts according to the value of their
@@ -884,8 +918,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         deactivated_disj = set()
         for disj in m.component_data_objects(ctype=Disjunct, active=True,
                                              descend_into=(Block, Disjunct)):
-            disj.deactivate()
-            deactivated_disj.add(disj)
+            if fabs(value(disj.indicator_var)) <= self.integer_tolerance:
+                disj.deactivate()
+                deactivated_disj.add(disj)
 
         nonlinear_constraints = (
             c for c in m.component_data_objects(
@@ -911,26 +946,32 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             disj.activate()
 
     def _add_psc_cut(self, nlp_feasible=True):
-        m = self.working_model
-        GDPDT = m.GDPDT_utils
+        m, GDPDT = self.working_model, self.working_model.GDPDT_utils
 
         sign_adjust = 1 if GDPDT.objective.sense == minimize else -1
 
+        nonlinear_variables, nonlinear_variable_IDs = \
+            self._detect_nonlinear_vars(m)
+        nonlinear_constraints = (
+            c for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (0, 1))
+
         # generate the sum of all multipliers with the nonlinear constraints
         var_to_val = {id(var): NumericConstant(value(var))
-                      for var in self.nonlinear_variables}
+                      for var in nonlinear_variables}
         sum_nonlinear = (
             # Address constraints of form f(x) <= upper
             sum(value(m.dual[c]) * -1 *
                 (clone_expression(c.body, substitute=var_to_val) - c.upper)
-                for c in self.nonlinear_constraints
-                if value(abs(m.dual[c])) > self.small_dual_tolerance
+                for c in nonlinear_constraints
+                if fabs(value(m.dual.get(c, 0))) > self.small_dual_tolerance
                 and c.upper is not None) +
             # Address constraints of form f(x) >= lower
             sum(value(m.dual[c]) *
                 (c.lower - clone_expression(c.body, substitute=var_to_val))
-                for c in self.nonlinear_constraints
-                if value(abs(m.dual[c])) > self.small_dual_tolerance
+                for c in nonlinear_constraints
+                if fabs(value(m.dual.get(c, 0))) > self.small_dual_tolerance
                 and c.lower is not None and not c.upper == c.lower))
 
         # Generate the sum of all multipliers with linear constraints
@@ -957,30 +998,30 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             m.dual[c] *
             sum(coef_dict[c][id(var)] * (var - value(var))
                 for var in constr_vars[c]
-                if id(var) in self.nonlinear_variable_IDs)
+                if id(var) in nonlinear_variable_IDs)
             for c in lin_cons
-            if value(abs(m.dual[c])) > self.small_dual_tolerance)
+            if fabs(value(m.dual.get(c, 0))) > self.small_dual_tolerance)
 
         # Generate the sum of all bound multipliers with nonlinear variables
         sum_var_bounds = (
             sum(m.ipopt_zL_out.get(var, 0) * (var - value(var))
-                for var in self.nonlinear_variables
-                if value(abs(m.ipopt_zL_out.get(var, 0))) >
+                for var in nonlinear_variables
+                if fabs(value(m.ipopt_zL_out.get(var, 0))) >
                 self.small_dual_tolerance) +
             sum(m.ipopt_zU_out.get(var, 0) * (var - value(var))
-                for var in self.nonlinear_variables
-                if value(abs(m.ipopt_zU_out.get(var, 0))) >
+                for var in nonlinear_variables
+                if fabs(value(m.ipopt_zU_out.get(var, 0))) >
                 self.small_dual_tolerance))
 
         if nlp_feasible:
             # Optimality cut (for feasible NLP)
-            m.GDPDT_linear_cuts.psc_cuts.add(
+            GDPDT.psc_cuts.add(
                 expr=GDPDT.objective.expr * sign_adjust >= sign_adjust * (
                     GDPDT.objective.expr + sum_nonlinear + sum_linear +
                     sum_var_bounds))
         else:
             # Feasibility cut (for infeasible NLP)
-            m.GDPDT_linear_cuts.psc_cuts.add(
+            GDPDT.psc_cuts.add(
                 expr=sign_adjust * (
                     sum_nonlinear + sum_linear + sum_var_bounds) <= 0)
 
@@ -1073,13 +1114,19 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         else:
             GDPDT.feasible_integer_cuts.add(expr=int_cut)
 
-    def _detect_nonlinear_vars(self):
+    def _detect_nonlinear_vars(self, m):
         """Identify the variables that participate in nonlinear terms."""
-        self.nonlinear_variables = []
+        nonlinear_variables = []
         # This is a workaround because Var is not hashable, and I do not want
-        # duplicates in self.nonlinear_variables.
+        # duplicates in nonlinear_variables.
         seen = set()
-        for constr in self.nonlinear_constraints:
+
+        nonlinear_constraints = (
+            c for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (0, 1))
+
+        for constr in nonlinear_constraints:
             if isinstance(constr.body, EXPR._SumExpression):
                 # go through each term and check to see if the term is
                 # nonlinear
@@ -1091,7 +1138,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                                 expr, include_fixed=False):
                             if id(var) not in seen:
                                 seen.add(id(var))
-                                self.nonlinear_variables.append(var)
+                                nonlinear_variables.append(var)
             # if the root expression object is not a summation, then something
             # else is the cause of the nonlinearity. Collect all participating
             # variables.
@@ -1101,9 +1148,11 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                                                    include_fixed=False):
                     if id(var) not in seen:
                         seen.add(id(var))
-                        self.nonlinear_variables.append(var)
-        self.nonlinear_variable_IDs = set(
-            id(v) for v in self.nonlinear_variables)
+                        nonlinear_variables.append(var)
+        nonlinear_variable_IDs = set(
+            id(v) for v in nonlinear_variables)
+
+        return nonlinear_variables, nonlinear_variable_IDs
 
 
 class _DoNothing(object):
