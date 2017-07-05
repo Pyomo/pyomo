@@ -7,8 +7,6 @@
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
 
-import numpy as np
-
 from pyomo.environ import Constraint, Param, value, Suffix
 
 from pyomo.dae import ContinuousSet, DerivativeVar
@@ -31,6 +29,13 @@ import logging
 
 __all__ = ('Simulator', )
 logger = logging.getLogger('pyomo.core')
+
+# Check numpy availability
+numpy_available = True
+try:
+    import numpy as np
+except:
+    numpy_available = True
 
 # Check integrator availability
 scipy_available = True
@@ -556,7 +561,11 @@ class Simulator:
         be specified as keyword arguments and will be passed on to the
         integrator.
         """
-        
+
+        if not numpy_available:
+            raise ImportError("The numpy module is not available. "
+                              "Cannot simulate the model.")
+
         if self._intpackage == 'scipy':
             # Specify the scipy integrator to use for simulation
             valid_integrators = ['vode', 'zvode', 'lsoda', 'dopri5', 'dop853']
