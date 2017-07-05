@@ -8,8 +8,8 @@ from pyomo.core.plugins.transform.hierarchy import NonIsomorphicTransformation
 
 from random import randint
 
-#DEBUG
-import pdb
+# DEBUG
+from nose.tools import set_trace
 
 class AddSlackVariables(NonIsomorphicTransformation):
     """
@@ -27,7 +27,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
         # test if this name already exists in model. If not, we're good. 
         # Else, we add random numbers until it doesn't
         while True:
-            if not instance.component(name):
+            if instance.component(name) is None:
                 return name
             else:
                 name += str(randint(0,9))
@@ -36,8 +36,8 @@ class AddSlackVariables(NonIsomorphicTransformation):
     #  - support targets= argument to specify the constraints to relax
     #    - make sure that works for apply_to and crate_using
     #    - make sure that works for Constraint, IndexedConstraint, and _ConstraintData
-    #  - make sure no bogus kwds are passed!
-    #  - shouldn't add slacks to deactivated constraints
+    #  DONE- make sure no bogus kwds are passed!
+    #  DONE- shouldn't add slacks to deactivated constraints
 
     def _apply_to(self, instance, **kwds):
         targets = kwds.pop('targets', None)
@@ -46,7 +46,19 @@ class AddSlackVariables(NonIsomorphicTransformation):
             logger.warning("Unrecognized keyword arguments in add slack variable transformation:\n%s"
                            % ( '\n'.join(iterkeys(kwds)), ))
 
-        
+        if targets is None:
+            constraintDatas = instance.component_data_objects(
+                Constraint, 
+                descend_into=(Block, Disjunct))
+        else:
+            constraintDatas = []
+            for cuid in targets:
+                cons = cuid.find_component(instance)
+                if cons.is_indexed():
+                    for i in cons.index_set():
+                        constraintDatas.append(cons[i])
+                else:
+                    constraintDatas.append(cons)
 
         # deactivate the objective
         for o in instance.component_data_objects(Objective):
@@ -58,7 +70,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
         xblock = instance.component(xblockname)
 
         obj_expr = 0
-        for cons in instance.component_data_objects(Constraint, descend_into=(Block, Disjunct)):
+        for cons in constraintDatas:
             if (cons.lower is not None and cons.upper is not None) and \
                value(cons.lower) > value(cons.upper):
                 # this is a structural infeasibility so slacks aren't going to help:
@@ -69,8 +81,6 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 # declare positive slack
                 varName = "_slack_plus_" + cons.name
                 posSlack = Var(within=NonNegativeReals)
-                # TODO: Should I be making my own block and adding variables to that?
-                # Did we talk about that??
                 xblock.add_component(varName, posSlack)
                 # add positive slack to body expression
                 cons._body += posSlack
