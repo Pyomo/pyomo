@@ -13,6 +13,7 @@ from __future__ import division
 import logging
 import sys
 import traceback
+from copy import deepcopy
 
 logger = logging.getLogger('pyomo.core')
 
@@ -36,7 +37,7 @@ from pyomo.core.kernel.expr_common import \
      _unary, _radd, _rsub, _rmul,
      _rdiv, _rpow, _iadd, _isub,
      _imul, _idiv, _ipow, _lt, _le,
-     _eq, clone_expression,
+     _eq, 
      chainedInequalityErrorMessage as cIEM)
 from pyomo.core.kernel import expr_common as common
 
@@ -75,6 +76,14 @@ def _sum_with_iadd(iterable):
     return ans
 
 sum = builtins.sum if _getrefcount_available else _sum_with_iadd
+
+
+def clone_expression(exp, substitute=None):
+    memo = {'__block_scope__': { id(None): False }}
+    if substitute:
+        memo.update(substitute)
+    return deepcopy(exp, memo)
+
 
 def identify_variables(expr,
                        include_fixed=True,

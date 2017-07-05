@@ -33,7 +33,7 @@ from pyomo.core.kernel.expr_common import \
      _unary, _radd, _rsub, _rmul,
      _rdiv, _rpow, _iadd, _isub,
      _imul, _idiv, _ipow, _lt, _le,
-     _eq, clone_expression,
+     _eq, 
      chainedInequalityErrorMessage as cIEM)
 from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
@@ -248,6 +248,93 @@ def compress_expression(expr, verbose=False):
             return ans
 
 
+def clone_expression(expr, verbose=False):
+    from pyomo.core.kernel.numvalue import native_numeric_types
+    #
+    # Note: This does not try to optimize the compression to recognize
+    #   subgraphs.
+    #
+    if expr.__class__ in native_numeric_types or not expr.is_expression():
+        return expr
+    #
+    # The stack starts with the current expression
+    #
+    _stack = [ (expr, expr._args, 0, len(expr._args), [])]
+    #
+    # Iterate until the stack is empty
+    #
+    # Note: 1 is faster than True for Python 2.x
+    #
+    while 1:
+        #
+        # Get the top of the stack
+        #   _obj        Current expression object
+        #   _argList    The arguments for this expression objet
+        #   _idx        The current argument being considered
+        #   _len        The number of arguments
+        #
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        if verbose: #pragma:nocover
+            print("*"*10 + " POP  " + "*"*10)
+        #
+        # Iterate through the arguments
+        #
+        while _idx < _len:
+            if verbose: #pragma:nocover
+                print("-"*30)
+                print(type(_obj))
+                print(_obj)
+                print(_argList)
+                print(_idx)
+                print(_len)
+                print(_result)
+                print(_clone)
+
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types or not _sub.is_expression():
+                #
+                # Store a native or numeric object
+                #
+                _result.append( _sub )
+            else:
+                #
+                # Push an expression onto the stack
+                #
+                if verbose: #pragma:nocover
+                    print("*"*10 + " PUSH " + "*"*10)
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = len(_argList)
+                _result  = []
+                _clone   = False
+    
+        if verbose: #pragma:nocover
+            print("="*30)
+            print(type(_obj))
+            print(_obj)
+            print(_argList)
+            print(_idx)
+            print(_len)
+            print(_result)
+            print(_clone)
+        #
+        # Now replace the current expression object
+        #
+        ans = _obj._clone( tuple(_result) )
+        if verbose: #pragma:nocover
+            print("STACK LEN %d" % len(_stack))
+        if _stack:
+            #
+            # "return" the recursion by putting the return value on the end of the reults stack
+            #
+            _stack[-1][-1].append( ans )
+        else:
+            return ans
+
+
 def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
@@ -330,10 +417,6 @@ class _ExpressionBase(NumericValue):
     def __nonzero__(self):
         return bool(self())
 
-    # TODO
-    #def __deepcopy__(self):
-    #
-
     __bool__ = __nonzero__
 
     def __str__(self):
@@ -365,8 +448,16 @@ class _ExpressionBase(NumericValue):
             else:
                 return ans
 
-    def clone(self, substitute=None):
-        return clone_expression(self, substitute)
+    def clone(self, verbose=False):
+        return clone_expression(self, verbose=False)
+
+    __deepcopy__ = clone
+
+    def _clone(self, args):
+        try:
+            return self.__class__(args)
+        except:
+            print(str(self.__class__))
 
     def getname(self, *args, **kwds):
         """The text name of this Expression function"""
@@ -745,6 +836,9 @@ class _InequalityExpression(_LinearOperatorExpression):
             result[i] = getattr(self, i)
         return result
 
+    def _clone(self, args):
+        return self.__class__(args, self._strict, self._cloned_from)
+
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
             raise TypeError(chainedInequalityErrorMessage())
@@ -1002,11 +1096,11 @@ class Expr_if(_ExpressionBase):
     #           on a number of occasions. It is important that
     #           one uses __call__ for value() and NOT bool().
 
-    def __init__(self, IF=None, THEN=None, ELSE=None):
+    def __init__(self, args):
         """Constructor"""
         # TODO: This used to unilaterally convert the args with
         # as_numeric().  Verify if not doing that is OK.
-        self._args = (IF, THEN, ELSE)
+        self._args = args
         self._if, self._then, self._else = self._args
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)

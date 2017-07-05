@@ -14,6 +14,7 @@ import logging
 import math
 import sys
 import traceback
+from copy import deepcopy
 
 logger = logging.getLogger('pyomo.core')
 
@@ -37,7 +38,7 @@ from pyomo.core.kernel.expr_common import \
      _neg, _abs, _inplace, _unary,
     _radd, _rsub, _rmul, _rdiv, _rpow,
      _iadd, _isub, _imul, _idiv, _ipow,
-     _lt, _le, _eq, clone_expression,
+     _lt, _le, _eq, 
      chainedInequalityErrorMessage as cIEM,
      _getrefcount_available, getrefcount)
 
@@ -47,6 +48,14 @@ chainedInequalityErrorMessage \
     = lambda *x: cIEM(generate_relational_expression, *x)
 
 sum = builtins.sum
+
+
+def clone_expression(exp, substitute=None):
+    memo = {'__block_scope__': { id(None): False }}
+    if substitute:
+        memo.update(substitute)
+    return deepcopy(exp, memo)
+
 
 def identify_variables(expr,
                        include_fixed=True,
