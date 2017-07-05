@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 from __future__ import division
-from copy import deepcopy
 from six import StringIO
 
 import logging
@@ -35,11 +34,11 @@ if _getrefcount_available:
 else:
     mode = _default_mode = Mode.pyomo4_trees
 
-def clone_expression(exp, substitute=None):
-    memo = {'__block_scope__': { id(None): False }}
-    if substitute:
-        memo.update(substitute)
-    return deepcopy(exp, memo)
+#def clone_expression(exp, substitute=None):
+#    memo = {'__block_scope__': { id(None): False }}
+#    if substitute:
+#        memo.update(substitute)
+#    return deepcopy(exp, memo)
 
 def _clear_expression_pool():
     from pyomo.core.base.expr_coopr3 import _clear_expression_pool as \
