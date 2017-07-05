@@ -3015,13 +3015,13 @@ class TestPolynomialDegree(unittest.TestCase):
         #
         # When IF conditional is constant, then polynomial degree is propigated
         #
-        expr = EXPR.Expr_if(IF=1,THEN=m.a,ELSE=m.a**2)
+        expr = EXPR.Expr_if((1,m.a,m.a**2))
         self.assertEqual(expr.polynomial_degree(), 1)
         m.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
         m.a.fixed = False
 
-        expr = EXPR.Expr_if(IF=0,THEN=m.a,ELSE=m.a**2)
+        expr = EXPR.Expr_if((0,m.a,m.a**2))
         self.assertEqual(expr.polynomial_degree(), 2)
         m.a.fixed = True
         self.assertEqual(expr.polynomial_degree(), 0)
@@ -3029,7 +3029,7 @@ class TestPolynomialDegree(unittest.TestCase):
         #
         # When IF conditional is variable, then polynomial degree is propagated
         #
-        expr = EXPR.Expr_if(IF=m.a,THEN=m.b,ELSE=m.b**2)
+        expr = EXPR.Expr_if((m.a,m.b,m.b**2))
         self.assertEqual(expr.polynomial_degree(), None)
         m.a.fixed = True
         m.a.value = 1
@@ -3080,28 +3080,6 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual( expr1(), 15 )
         self.assertEqual( expr2(), 15 )
         self.assertNotEqual( id(expr1),       id(expr2) )
-        print(id(expr1._args))
-        print(id(expr1._args[0]))
-        print(id(expr1._args[1]))
-        print(id(expr2._args))
-        print(id(expr2._args[0]))
-        print(id(expr2._args[1]))
-        self.assertNotEqual( id(expr1._args), id(expr2._args) )
-        self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
-        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
-        expr1._args[0] = self.m.b
-        self.assertEqual( expr1(), 20 )
-        self.assertEqual( expr2(), 15 )
-        self.assertNotEqual( id(expr1),       id(expr2) )
-        self.assertNotEqual( id(expr1._args), id(expr2._args) )
-        self.assertNotEqual( id(expr1._args[0]), id(expr2._args[0]) )
-        self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
-
-        expr1 = self.m.a + self.m.b
-        expr2 = expr1.clone()
-        self.assertEqual( expr1(), 15 )
-        self.assertEqual( expr2(), 15 )
-        self.assertNotEqual( id(expr1),       id(expr2) )
         self.assertNotEqual( id(expr1._args), id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
@@ -3119,9 +3097,7 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual( expr1(), 50 )
         self.assertEqual( expr2(), 50 )
         self.assertNotEqual( id(expr1),      id(expr2) )
-        # Note: as the _args are both components, Python will not
-        # duplicate the tuple
-        self.assertEqual( id(expr1._args),    id(expr2._args) )
+        self.assertNotEqual( id(expr1._args),    id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
@@ -3130,9 +3106,7 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual( expr2(), 50 )
         self.assertNotEqual( id(expr1),                 id(expr2) )
         self.assertNotEqual( id(expr1._args),           id(expr2._args) )
-        # Note: as the _args are both components, Python will not
-        # duplicate the tuple
-        self.assertEqual( id(expr1._args[0]._args),     id(expr2._args) )
+        self.assertNotEqual( id(expr1._args[0]._args),     id(expr2._args) )
         self.assertEqual( id(expr1._args[1]),           id(expr2._args[1]) )
         self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[0]._args[1]),  id(expr2._args[1]) )
@@ -3156,9 +3130,7 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual( expr1(), 0.5 )
         self.assertEqual( expr2(), 0.5 )
         self.assertNotEqual( id(expr1),       id(expr2) )
-        # Note: as the _args are both components, Python will not
-        # duplicate the tuple
-        self.assertEqual( id(expr1._args),    id(expr2._args) )
+        self.assertNotEqual( id(expr1._args),    id(expr2._args) )
         self.assertEqual( id(expr1._args[0]), id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[1]), id(expr2._args[1]) )
 
@@ -3167,9 +3139,7 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual( expr2(), 0.5 )
         self.assertNotEqual( id(expr1),                 id(expr2) )
         self.assertNotEqual( id(expr1._args),              id(expr2._args) )
-        # Note: as the _args are both components, Python will not
-        # duplicate the tuple
-        self.assertEqual( id(expr1._args[0]._args),  id(expr2._args) )
+        self.assertNotEqual( id(expr1._args[0]._args),  id(expr2._args) )
         self.assertEqual( id(expr1._args[1]),           id(expr2._args[1]) )
         self.assertEqual( id(expr1._args[0]._args[0]),  id(expr2._args[0]) )
         self.assertEqual( id(expr1._args[0]._args[1]),  id(expr2._args[1]) )
@@ -3282,7 +3252,7 @@ class TestCloneExpression(unittest.TestCase):
         self.assertEqual(len(expr2._args), 2)
 
     def test_Expr_if(self):
-        expr1 = EXPR.Expr_if(IF=self.m.a + self.m.b < 20, THEN=self.m.a, ELSE=self.m.b)
+        expr1 = EXPR.Expr_if( (self.m.a + self.m.b < 20, self.m.a, self.m.b))
         expr2 = expr1.clone()
         self.assertNotEqual(id(expr1), id(expr2))
         self.assertEqual(expr1(), value(self.m.a))
@@ -3609,7 +3579,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
     def test_Expr_if(self):
         m = self.instance
 
-        expr = EXPR.Expr_if(IF=1,THEN=m.a,ELSE=m.e)
+        expr = EXPR.Expr_if((1,m.a,m.e))
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr._potentially_variable(), True)
@@ -3619,7 +3589,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         self.assertEqual(expr._potentially_variable(), True)
         m.a.fixed = False
 
-        expr = EXPR.Expr_if(IF=0,THEN=m.a,ELSE=m.e)
+        expr = EXPR.Expr_if((0,m.a,m.e))
         self.assertEqual(expr.is_fixed(), True)
         self.assertEqual(expr.is_constant(), True)
         # BUG
@@ -3631,7 +3601,7 @@ class TestIsFixedIsConstant(unittest.TestCase):
         #self.assertEqual(expr._potentially_variable(), False)
         m.a.fixed = False
 
-        expr = EXPR.Expr_if(IF=m.a,THEN=m.b,ELSE=m.b)
+        expr = EXPR.Expr_if((m.a,m.b,m.b))
         self.assertEqual(expr.is_fixed(), False)
         self.assertEqual(expr.is_constant(), False)
         self.assertEqual(expr._potentially_variable(), True)
