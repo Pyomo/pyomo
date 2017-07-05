@@ -13,7 +13,7 @@ import logging
 import pyutilib.services as services
 
 from pyutilib.misc import Bunch, Options
-from pyutilib.services.TempfileManager import create_tempfile
+from pyutilib.services import TempfileManager
 
 from pyomo.util.plugin import alias
 from pyomo.opt import SolverResults
@@ -62,7 +62,7 @@ class MIPCLSHELL(SystemCallSolver):
         SystemCallSolver.__init__(self, **kwds)
 
         self._valid_problem_formats = [ProblemFormat.mps]
-        self._valid_result_formats = {ProblemFormat.mps: ResultsFormat.sol}
+        self._valid_result_formats = {ProblemFormat.mps: ResultsFormat.soln}
         self.set_problem_format(ProblemFormat.mps)
 
         self._capabilities = Options()
@@ -70,7 +70,7 @@ class MIPCLSHELL(SystemCallSolver):
         self._capabilities.integer = True
 
     def _default_results_format(self, prob_format):
-        return ResultsFormat.sol
+        return ResultsFormat.soln
 
     def _default_executable(self):
         executable = services.registered_executable('mps_mipcl')
@@ -89,18 +89,25 @@ class MIPCLSHELL(SystemCallSolver):
 
     def create_command_line(self, executable, problem_files):
         if self._log_file is None:
-            self._log_file = create_tempfile(suffix='.mipcl.log')
+            self._log_file = TempfileManager.create_tempfile(suffix='.mipcl.log')
 
-        self._soln_file = None
+        problem_filename_prefix = problem_files[0]
+        if '.' in problem_filename_prefix:
+            tmp = problem_filename_prefix.split('.')
+            if len(tmp) > 2:
+                problem_filename_prefix = '.'.join(tmp[:-1])
+            else:
+                problem_filename_prefix = tmp[0]
+        self._soln_file = problem_filename_prefix+".sol"
 
-        cmd = [executable]
+        cmd = [executable, problem_files[0]]
         if self._timer:
             cmd.insert(0, self._timer)
         for k, v in iteritems(self.options):
             if v is None or (isinstance(v, string_types) and v.strip() == ''):
-                cmd.append("--%s" % k)
+                cmd.append("-%s" % k)
             else:
-                cmd.extend(["--%s" % k, str(v)])
+                cmd.extend(["-%s" % k, str(v)])
 
         if self._timelimit is not None and self._timelimit > 0.0:
             cmd.extend(['-time', str(self._timelimit)])
