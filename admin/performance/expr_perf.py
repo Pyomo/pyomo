@@ -172,6 +172,7 @@ def linear(N, flag):
             expr=0
             for i in model.A:
                 expr += model.p[i] * model.x[i]
+        #print(expr)
         #
         stop = time.time()
         seconds['construction'] = stop-start
@@ -195,20 +196,21 @@ def constant(N, flag):
         model = ConcreteModel()
         model.A = RangeSet(N)
         model.p = Param(model.A, default=2)
-        model.x = Param(model.A, initialize=2, mutable=True)
+        model.q = Param(model.A, initialize=2, mutable=True)
 
         gc.collect()
         _clear_expression_pool()
         start = time.time()
         #
         if flag == 1:
-            expr = summation(model.p, model.x, index=model.A)
+            expr = summation(model.p, model.q, index=model.A)
         elif flag == 2:
-            expr=sum(model.p[i]*model.x[i] for i in model.A)
+            expr=sum(model.p[i]*model.q[i] for i in model.A)
         else:
             expr=0
             for i in model.A:
-                expr += model.p[i] * model.x[i]
+                expr += model.p[i] * model.q[i]
+        #print(expr)
         #
         stop = time.time()
         seconds['construction'] = stop-start
@@ -337,6 +339,42 @@ def polynomial(N, flag):
 
 
 #
+# Create an expression that is a large product
+#
+def product(N, flag):
+
+    def f():
+        seconds = {}
+
+        model = ConcreteModel()
+        model.A = RangeSet(N)
+        model.p = Param(model.A, default=2)
+        model.x = Var(initialize=2)
+
+        gc.collect()
+        _clear_expression_pool()
+        start = time.time()
+        #
+        if flag == 1:
+            expr=model.x+model.x
+            for i in model.A:
+                expr = model.p[i]*expr
+        else:
+            expr=model.x+model.x
+            for i in model.A:
+                expr *= model.p[i]
+       #
+        stop = time.time()
+        seconds['construction'] = stop-start
+
+        seconds = evaluate(expr, seconds)
+
+        return seconds
+
+    return f
+
+
+#
 # Utility function used by runall()
 #
 def print_results(factors_, ans_, output):
@@ -368,10 +406,12 @@ def runall(factors, res, output=True):
         print_results(factors_, ans_, output)
 
 
+    if True:
         factors_ = tuple(factors+['Linear','Loop 1'])
         ans_ = res[factors_] = measure(linear(NTerms, 1), n=N)
         print_results(factors_, ans_, output)
 
+    if True:
         factors_ = tuple(factors+['Linear','Loop 2'])
         ans_ = res[factors_] = measure(linear(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
@@ -381,6 +421,7 @@ def runall(factors, res, output=True):
         print_results(factors_, ans_, output)
 
 
+    if True:
         factors_ = tuple(factors+['Bilinear','Loop 1'])
         ans_ = res[factors_] = measure(bilinear(NTerms, 1), n=N)
         print_results(factors_, ans_, output)
@@ -407,6 +448,15 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
+    if False:
+        factors_ = tuple(factors+['Product','Loop 1'])
+        ans_ = res[factors_] = measure(polynomial(NTerms, 1), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Product','Loop 2'])
+        ans_ = res[factors_] = measure(polynomial(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
+
 
 def remap_keys(mapping):
     return [{'factors':k, 'performance': v} for k, v in mapping.items()]
@@ -420,8 +470,6 @@ runall(["COOPR3"], res)
 
 EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
 runall(["PYOMO4"], res)
-
-#import pdb; pdb.set_trace()
 
 EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
 runall(["PYOMO5"], res)
