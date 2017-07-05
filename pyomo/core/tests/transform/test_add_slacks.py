@@ -267,6 +267,46 @@ class TestAddSlacks_coopr3(unittest.TestCase):
                                         "in add slack variable transformation:"
                                         "\nnotakwd")
         logging.getLogger().removeHandler(asserting_handler)
+
+    def test_transformed_constraints_sumexpression_body(self):
+        m = self.makeModel()
+        m.rule4 = Constraint(expr=5 <= m.x - 2*m.y <= 9)
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule4)])
+
+        transBlock = m._core_add_slack_variables
+        c = m.rule4
+        self.assertEqual(c.lower, 5)
+        self.assertEqual(c.upper, 9)
+        self.assertEqual(len(c.body._args), 4)
+        self.assertEqual(len(c.body._coef), 4)
+        self.assertIs(c.body._args[0], m.x)
+        self.assertIs(c.body._args[1], m.y)
+        self.assertIs(c.body._args[2], transBlock._slack_plus_rule4)
+        self.assertIs(c.body._args[3], transBlock._slack_minus_rule4)
+        self.assertEqual(c.body._coef[0], 1)
+        self.assertEqual(c.body._coef[1], -2)
+        self.assertEqual(c.body._coef[2], 1)
+        self.assertEqual(c.body._coef[3], -1)
+
+    def test_transformed_constraint_scalar_body(self):
+        m = self.makeModel()
+        m.p = Param(initialize=6)
+        m.rule4 = Constraint(expr=m.p <= 9)
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule4)])
+        
+        transBlock = m._core_add_slack_variables
+        c = m.rule4
+        self.assertIsNone(c.lower)
+        self.assertEqual(c.upper, 9)
+        self.assertEqual(len(c.body._args), 1)
+        self.assertEqual(len(c.body._coef), 1)
+        self.assertEqual(c.body._const, 6)
+        self.assertIs(c.body._args[0], transBlock._slack_minus_rule4)
+        self.assertEqual(c.body._coef[0], -1)
        
 
 # TODO: QUESTION: Is this bad? I just copied all of the tests that involve 
@@ -422,6 +462,76 @@ class TestAddSlacks_pyomo4(unittest.TestCase):
         self.assertIs(obj.expr._args[1], transBlock._slack_plus_rule3)
         self.assertEqual(obj.expr._coef[id(obj.expr._args[1])], 1)
         self.assertEqual(obj.expr._const, 0)
+
+    def test_transformed_constraints_linearexpression_body(self):
+        m = self.makeModel()
+        m.rule4 = Constraint(expr=5 <= m.x - 2*m.y <= 9)
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule4)])
+
+        transBlock = m._core_add_slack_variables
+        c = m.rule4
+        self.assertEqual(c.lower, 5)
+        self.assertEqual(c.upper, 9)
+        self.assertEqual(len(c.body._args), 4)
+        self.assertEqual(len(c.body._coef), 4)
+        self.assertIs(c.body._args[0], m.x)
+        self.assertIs(c.body._args[1], m.y)
+        self.assertIs(c.body._args[2], transBlock._slack_plus_rule4)
+        self.assertIs(c.body._args[3], transBlock._slack_minus_rule4)
+        self.assertEqual(c.body._coef[id(c.body._args[0])], 1)
+        self.assertEqual(c.body._coef[id(c.body._args[1])], -2)
+        self.assertEqual(c.body._coef[id(c.body._args[2])], 1)
+        self.assertEqual(c.body._coef[id(c.body._args[3])], -1)
+
+    def test_transformed_constraints_sumexpression_body(self):
+        m = self.makeModel()
+        m.rule4 = Constraint(expr=5 <= m.x**2 - 2*m.y <= 9)
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule4)])
+
+        transBlock = m._core_add_slack_variables
+        c = m.rule4
+        self.assertEqual(c.lower, 5)
+        self.assertEqual(c.upper, 9)
+        self.assertEqual(len(c.body._args), 4)
+        # this is a PowExpression now
+        self.assertIs(c.body._args[0]._args[0], m.x)
+        self.assertEqual(c.body._args[0]._args[1], 2)
+        # this is a linear expression
+        term2 = c.body._args[1]
+        self.assertEqual(len(term2._args), 1)
+        self.assertEqual(len(term2._coef), 1)
+        self.assertIs(term2._args[0], m.y)
+        self.assertEqual(term2._coef[id(term2._args[0])], -2)
+        # this is just a variable
+        self.assertIs(c.body._args[2], transBlock._slack_plus_rule4)
+        # this is a linear expression
+        term4 = c.body._args[3]
+        self.assertEqual(len(term4._args), 1)
+        self.assertEqual(len(term4._coef), 1)
+        self.assertIs(term4._args[0], transBlock._slack_minus_rule4)
+        self.assertEqual(term4._coef[id(term4._args[0])], -1)
+
+    def test_transformed_constraint_scalar_body(self):
+        m = self.makeModel()
+        m.p = Param(initialize=6)
+        m.rule4 = Constraint(expr=m.p <= 9)
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule4)])
+        
+        transBlock = m._core_add_slack_variables
+        c = m.rule4
+        self.assertIsNone(c.lower)
+        self.assertEqual(c.upper, 9)
+        self.assertEqual(len(c.body._args), 1)
+        self.assertEqual(len(c.body._coef), 1)
+        self.assertEqual(c.body._const, 6)
+        self.assertIs(c.body._args[0], transBlock._slack_minus_rule4)
+        self.assertEqual(c.body._coef[id(c.body._args[0])], -1)
 
 
 class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
