@@ -202,6 +202,14 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         # cons.body is a SimpleVar
         self.assertIs(cons.body, m.y)
 
+    def checkTargetSlackVars(self, transBlock):
+        self.assertIsInstance(transBlock.component("_slack_minus_rule1"), Var)
+        self.assertFalse(hasattr(transBlock, "_slack_plus_rule1"))
+        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
+        self.assertIsNone(transBlock.component("_slack_plus_rule2"))
+        self.assertFalse(hasattr(transBlock, "_slack_minus_rule3"))
+        self.assertIsInstance(transBlock.component("_slack_plus_rule3"), Var)
+
     def test_only_targets_have_slack_vars(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
@@ -210,12 +218,24 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         
         transBlock = m.component("_core_add_slack_variables")
         # check that we only made slack vars for targets
-        self.assertIsInstance(transBlock.component("_slack_minus_rule1"), Var)
-        self.assertFalse(hasattr(transBlock, "_slack_plus_rule1"))
-        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
-        self.assertIsNone(transBlock.component("_slack_plus_rule2"))
-        self.assertFalse(hasattr(transBlock, "_slack_minus_rule3"))
-        self.assertIsInstance(transBlock.component("_slack_plus_rule3"), Var)
+        self.checkTargetSlackVars(transBlock)
+
+    def test_only_targets_have_slack_vars_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m, 
+            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+
+        transBlock = m2.component("_core_add_slack_variables")
+        # check that we only made slack vars for targets
+        self.checkTargetSlackVars(transBlock)
+        
+    def checkNonTargetCons(self, m):
+        cons = m.rule2
+        self.assertEqual(cons.lower, 1)
+        self.assertEqual(cons.upper, 3)
+        # cons.body is a SimpleVar
+        self.assertIs(cons.body, m.y)
 
     def test_nontarget_constraint_same(self):
         m = self.makeModel()
@@ -223,11 +243,15 @@ class TestAddSlacks_coopr3(unittest.TestCase):
             m, 
             targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
         
-        cons = m.rule2
-        self.assertEqual(cons.lower, 1)
-        self.assertEqual(cons.upper, 3)
-        # cons.body is a SimpleVar
-        self.assertIs(cons.body, m.y)
+        self.checkNonTargetCons(m)
+
+    def test_nontarget_constraint_same_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m, 
+            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+        
+        self.checkNonTargetCons(m2)
 
     def test_target_constraints_transformed(self):
         m = self.makeModel()
@@ -238,14 +262,16 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         self.checkRule1(m)
         self.checkRule3(m)
 
-    def test_target_objective(self):
+    def test_target_constraints_transformed_create_using(self):
         m = self.makeModel()
-        TransformationFactory('core.add_slack_variables').apply_to(
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
             m, 
             targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
 
-        self.assertFalse(m.obj.active)
+        self.checkRule1(m2)
+        self.checkRule3(m2)
 
+    def checkTargetsObj(self, m):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
         self.assertEqual(len(obj.expr._args), 2)
@@ -255,6 +281,24 @@ class TestAddSlacks_coopr3(unittest.TestCase):
         self.assertIs(obj.expr._args[1], transBlock._slack_plus_rule3)
         self.assertEqual(obj.expr._coef[1], 1)
         self.assertEqual(obj.expr._const, 0)
+
+    def test_target_objective(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m, 
+            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+
+        self.assertFalse(m.obj.active)
+        self.checkTargetsObj(m)
+
+    def test_target_objective_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m, 
+            targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
+
+        self.assertFalse(m2.obj.active)
+        self.checkTargetsObj(m2)
 
     def test_err_for_bogus_kwds(self):
         m = self.makeModel()
@@ -553,6 +597,12 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         m.rule2 = Constraint(expr=m.y <= 6)
         m.obj = Objective(expr=sum(m.x[s] for s in m.S) - m.y)
         return m
+    
+    def checkSlackVars_indexedtarget(self, transBlock):
+        self.assertIsInstance(transBlock.component("_slack_plus_rule1[1]"), Var)
+        self.assertIsInstance(transBlock.component("_slack_plus_rule1[2]"), Var)
+        self.assertIsInstance(transBlock.component("_slack_plus_rule1[3]"), Var)
+        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
 
     def test_indexedtarget_only_create_slackvars_for_targets(self):
         m = self.makeModel()
@@ -564,11 +614,17 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         # TODO: So, right now indexed constraints don't result in indexed
         # slack variables. They could... But I don't know if it matters much?
         # They are named sensibly either way... Dunno.
-        self.assertIsInstance(transBlock.component("_slack_plus_rule1[1]"), Var)
-        self.assertIsInstance(transBlock.component("_slack_plus_rule1[2]"), Var)
-        self.assertIsInstance(transBlock.component("_slack_plus_rule1[3]"), Var)
-        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
+        self.checkSlackVars_indexedtarget(transBlock)
+    
+    def test_indexedtarget_only_create_slackvars_for_targets_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m,
+            targets=[ComponentUID(m.rule1)])
 
+        transBlock = m2.component("_core_add_slack_variables")
+        self.checkSlackVars_indexedtarget(transBlock)
+        
     def checkRule2(self, m):
         cons = m.rule2
         self.assertEqual(cons.upper, 6)
@@ -583,14 +639,15 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
 
         self.checkRule2(m)
 
-    def test_indexedtarget_objective(self):
+    def test_indexedtarget_nontarget_same_create_using(self):
         m = self.makeModel()
-        TransformationFactory('core.add_slack_variables').apply_to(
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
             targets=[ComponentUID(m.rule1)])
-        
-        self.assertFalse(m.obj.active)
-        
+
+        self.checkRule2(m2)
+
+    def checkTargetObj(self, m):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
         self.assertIsInstance(obj, Objective)
@@ -607,6 +664,24 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         self.assertIs(obj.expr._coef[1], 1) 
         self.assertIs(obj.expr._coef[2], 1) 
 
+    def test_indexedtarget_objective(self):
+        m = self.makeModel()
+        TransformationFactory('core.add_slack_variables').apply_to(
+            m,
+            targets=[ComponentUID(m.rule1)])
+        
+        self.assertFalse(m.obj.active)
+        self.checkTargetObj(m)
+
+    def test_indexedtarget_objective_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m,
+            targets=[ComponentUID(m.rule1)])
+        
+        self.assertFalse(m2.obj.active)
+        self.checkTargetObj(m2)
+        
     def checkTransformedRule1(self, m, i):
         c = m.rule1[i]
         self.assertEqual(c.lower, 4)
@@ -631,17 +706,38 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         for i in [1,2,3]:
             self.checkTransformedRule1(m, i)
 
-    def test_ConstraintDatatarget_only_create_slackvars_for_targets(self):
+    def test_indexedtarget_targets_transformed_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m,
+            targets=[ComponentUID(m.rule1)])
+        
+        for i in [1,2,3]:
+            self.checkTransformedRule1(m2, i)
+
+    def checkSlackVars_constraintDataTarget(self, transBlock):
+        self.assertIsInstance(transBlock.component("_slack_plus_rule1[2]"), Var)
+        self.assertIsNone(transBlock.component("_slack_plus_rule1[1]"))
+        self.assertIsNone(transBlock.component("_slack_plus_rule1[3]"))
+        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
+
+    def test_ConstraintDatatarget_only_add_slackvars_for_targets(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
             targets=[ComponentUID(m.rule1[2])])
 
         transBlock = m._core_add_slack_variables
-        self.assertIsInstance(transBlock.component("_slack_plus_rule1[2]"), Var)
-        self.assertIsNone(transBlock.component("_slack_plus_rule1[1]"))
-        self.assertIsNone(transBlock.component("_slack_plus_rule1[3]"))
-        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
+        self.checkSlackVars_constraintDataTarget(transBlock)
+
+    def test_ConstraintDatatarget_only_add_slackvars_for_targets_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m,
+            targets=[ComponentUID(m.rule1[2])])
+
+        transBlock = m2._core_add_slack_variables
+        self.checkSlackVars_constraintDataTarget(transBlock)
 
     def checkUntransformedRule1(self, m, i):
         c = m.rule1[i]
@@ -662,6 +758,16 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
         self.checkUntransformedRule1(m, 3)
         self.checkRule2(m)
 
+    def test_ConstraintDatatarget_nontargets_same_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m,
+            targets=[ComponentUID(m.rule1[2])])
+        
+        self.checkUntransformedRule1(m2, 1)
+        self.checkUntransformedRule1(m2, 3)
+        self.checkRule2(m2)
+
     def test_ConstraintDatatarget_target_transformed(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
@@ -670,6 +776,20 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
 
         self.checkTransformedRule1(m, 2)
 
+    def test_ConstraintDatatarget_target_transformed_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m,
+            targets=[ComponentUID(m.rule1[2])])
+
+        self.checkTransformedRule1(m2, 2)
+
+    def checkConstraintDataObj(self, m):
+        transBlock = m._core_add_slack_variables
+        obj = transBlock.component("_slack_objective")
+        self.assertIsInstance(obj, Objective)
+        self.assertIs(obj.expr, transBlock.component("_slack_plus_rule1[2]"))
+
     def test_ConstraintDatatarget_objective(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
@@ -677,11 +797,16 @@ class TestAddSlacks_IndexedConstraints_coopr3(unittest.TestCase):
             targets=[ComponentUID(m.rule1[2])])
 
         self.assertFalse(m.obj.active)
-        
-        transBlock = m._core_add_slack_variables
-        obj = transBlock.component("_slack_objective")
-        self.assertIsInstance(obj, Objective)
-        self.assertIs(obj.expr, transBlock.component("_slack_plus_rule1[2]"))
+        self.checkConstraintDataObj(m)
+
+    def test_ConstraintDatatarget_objective_create_using(self):
+        m = self.makeModel()
+        m2 = TransformationFactory('core.add_slack_variables').create_using(
+            m,
+            targets=[ComponentUID(m.rule1[2])])
+
+        self.assertFalse(m2.obj.active)
+        self.checkConstraintDataObj(m2)
 
 
 # TODO: QUESTION: same as above here...
