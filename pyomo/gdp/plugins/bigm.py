@@ -71,26 +71,30 @@ class BigM_Transformation(Transformation):
 
         # TODO: I'm going to pass the dictionary of args through until I need it
         # so all the way to transform constraint, I guess.
-        bigM = options.pop('bigM', None)
-        bigM = kwds.pop('bigM', bigM)
-        # TODO: this is all changing so that we first use M's from args, then
-        # suffixes, then estimate if we still don't have anything.
-        # QUESTION: So is this making the args/options a suffix?
-        # How does this work if the args are more specific?
-        if bigM is not None:
-            #
-            # Test for the suffix - this test will (correctly) generate
-            # a warning if the component is already declared, but is a
-            # different ctype (e.g., a constraint or block)
-            #
-            if 'BigM' not in instance.component_map(Suffix):
-                instance.BigM = Suffix(direction=Suffix.LOCAL)
-            #
-            # Note: this will implicitly change the model default BigM
-            # value so that the argument overrides the option, which
-            # overrides any default specified on the model.
-            #
-            instance.BigM[None] = bigM
+        # For now, we're not accepting options. We will let args override suffixes and
+        # estimate as a last resort. More specific args/suffixes override ones higher up
+        # in the tree.
+        #bigM = options.pop('bigM', None)
+        bigM = kwds.pop('bigM', None)
+        if bigM is not None and type(bigM) is not dict:
+            raise GDP_Error(
+                "'bigM' argument was not a dictionary! Expected cuids as keys and big-m  "
+                "values (or tuples) as values.")
+        
+            # if bigM is not None:
+        #     #
+        #     # Test for the suffix - this test will (correctly) generate
+        #     # a warning if the component is already declared, but is a
+        #     # different ctype (e.g., a constraint or block)
+        #     #
+        #     if 'BigM' not in instance.component_map(Suffix):
+        #         instance.BigM = Suffix(direction=Suffix.LOCAL)
+        #     #
+        #     # Note: this will implicitly change the model default BigM
+        #     # value so that the argument overrides the option, which
+        #     # overrides any default specified on the model.
+        #     #
+        #     instance.BigM[None] = bigM
 
         targets = kwds.pop('targets', None)
 
@@ -111,34 +115,52 @@ class BigM_Transformation(Transformation):
             for block in instance.block_data_objects(
                     active=True, 
                     sort=SortComponents.deterministic ):
-                self._transformBlock(block, transBlock)
-        # ESJ: I've yet to touch this, and I don't get it yet...
+                self._transformBlock(block, transBlock, bigM)
+        
         else:
-            if isinstance(targets, Component):
-                targets = (targets, )
-            for _t in target:
-                if not _t.active:
+            for _t in targets:
+                t = _t.find_component(instance)
+                if t is None:
+                    raise GDP_Error(
+                        "Target %s is not a component on the instance!" % _t)
+                if not t.active:
                     continue
-                if _t.parent_component() is _t:
-                    _name = _t.local_name
-                    for _idx, _obj in _t.iteritems():
-                        if _obj.active:
-                            self._transformDisjunction(_name, _idx, _obj)
+                # TODO: I think this was the intent of the thing originally?
+                # Is this solution safe? It's more readable, but... I'm not sure it will
+                # always be right?
+                if t.type() is Block:
+                    self._transformBlock(t, transBlock, bigM)
+                elif t.type() is Disjunction:
+                    self._transformDisjunction(t, transBlock, bigM)
                 else:
-                    self._transformDisjunction(
-                        _t.parent_component().local_name, _t.index(), _t)
+                    raise GDP_Error(
+                        "Target %s was neither a Block nor a Disjunction. "
+                        "It was of type %s and can't be transformed" % (t.name, type(t)) )
+            # if isinstance(targets, Component):
+            #     targets = (targets, )
+            # for _t in targets:
+            #     if not _t.active:
+            #         continue
+            #     if _t.parent_component() is _t:
+            #         _name = _t.local_name
+            #         for _idx, _obj in _t.iteritems():
+            #             if _obj.active:
+            #                 self._transformDisjunction(_name, _idx, _obj)
+            #     else:
+            #         self._transformDisjunction(
+            #             _t.parent_component().local_name, _t.index(), _t)
 
 
-    def _transformBlock(self, block, transBlock):
+    def _transformBlock(self, block, transBlock, bigM):
         # Transform every (active) disjunction in the block
         for disjunction in block.component_objects(
                 Disjunction,
                 active=True,
                 sort=SortComponents.deterministic):
-            self._transformDisjunction(disjunction, transBlock)
+            self._transformDisjunction(disjunction, transBlock, bigM)
 
     
-    def _transformDisjunction(self, obj, transBlock): 
+    def _transformDisjunction(self, obj, transBlock, bigM): 
         # Put the disjunction constraint on its parent block, then relax
         # each of the disjuncts
         
@@ -158,26 +180,33 @@ class BigM_Transformation(Transformation):
         
         nm = '_xor' if obj.xor else '_or'
         orCname = self._get_unique_name(parent, '_pyomo_gdp_relaxation_' + \
-                                            obj.name + nm)
+                                            obj.local_name + nm)
         parent.add_component(orCname, orC)
 
         # relax each of the disjunctions (or the SimpleDisjunction if it wasn't indexed)
         for i in obj:
             #self._transformDisjunctionData(obj[i])
             for disjunct in obj[i].disjuncts:
-                self._bigM_relax_disjunct(disjunct, transBlock)
+                self._bigM_relax_disjunct(disjunct, transBlock, bigM)
             obj[i].deactivate()
 
         # deactivate so we know we relaxed
         obj.deactivate()
 
 
-    def _bigM_relax_disjunct(self, disjunct, transBlock):
+    def _bigM_relax_disjunct(self, disjunct, transBlock, bigM):
         infodict = disjunct.component("_gdp_trans_info")
+        # TODO: this is not the best error handling ever... At this point, I would just
+        # hijack the dictionary of the same name it was in there because someone put it there.
+        # I'm not sure how to get around this...
+        if infodict is not None and type(infodict) is not dict:
+            raise GDP_Error(
+                "Model contains an attribute named _gdp_trans_info. "
+                "The transformation requires that it can create this attribute!")
         # deactivated means fix indicator var at 0 and be done
         if not disjunct.active:
-            if infodict is None or type(infodict) is not dict or 'bigm' not in infodict:
-                # if we haven't transformed it, assume user deactivated and fix ind var
+            if infodict is None or 'bigm' not in infodict:
+                # if we haven't transformed it, user deactivated and so we fix ind var
                 disjunct.indicator_var.fix(0)
             return
         
@@ -205,21 +234,22 @@ class BigM_Transformation(Transformation):
                         "No BigM transformation handler registered "
                         "for modeling components of type %s" % obj.type() )
                 continue
-            handler(name, obj, disjunct, disjBlock)
+            handler(obj, disjunct, disjBlock, bigM)
         
         # deactivate disjunct so we know we've relaxed it
         disjunct.deactivate()
 
 
     # TODO: don't need to be passing name through here...
-    def _xform_constraint(self, _name, constraint, disjunct, disjBlock):
+    def _xform_constraint(self, constraint, disjunct, disjBlock, bigM):
         # add constraint to the transformation block, we'll transform it there.
 
+        
         # TODO: I don't think this is where we are actually getting bigm...?
-        if 'BigM' in disjunct.component_map(Suffix):
-            M = disjunct.component('BigM').get(constraint)
-        else:
-            M = None
+        # if 'BigM' in disjunct.component_map(Suffix):
+        #     M = disjunct.component('BigM').get(constraint)
+        # else:
+        #     M = None
 
         transBlock = disjBlock.parent_component()
         name = constraint.local_name
@@ -237,30 +267,93 @@ class BigM_Transformation(Transformation):
                 continue
             c.deactivate()
 
-            #name = _name + ('.'+str(cname) if cname is not None else '')
+            M = None
+            # check args
+            if bigM is not None:
+                component = c
+                while component is not c.model():
+                    cuid = ComponentUID(component)
+                    if cuid in bigM:
+                        M = bigM[cuid]
+                        break
+                    if component is component.parent_component():
+                        component = component.parent_block()
+                    else:
+                        component = component.parent_component()
+                if M is None and None in bigM:
+                    M = bigM[None]
+            
+            # DEBUG
+            print("after args, M is: ")
+            print(M)
+            
+            # if we didn't get something from args, try suffixes:
+            if M is None:
+                # make suffix list
+                suffix_list = self.get_bigm_suffix_list(c.parent_block())
+                #set_trace()
+                for bigm in suffix_list:
+                    if c in bigm:
+                        M = bigm[c]
+                        break
 
-            if isinstance(M, list):
-                if len(M):
-                    m = M.pop(0)
-                else:
-                    m = (None,None)
-            else:
-                m = M
-            if not isinstance(m, tuple):
-                if m is None:
+                    # if c is indexed, check for the parent component
+                    if c.parent_component() in bigm:
+                        print("not crazy!")
+                        M = bigm[c.parent_component()]
+                        break
+ 
+                if M is None:
+                    for bigm in suffix_list:
+                        if None in bigm:
+                            M = bigm[None]
+                            break
+
+            # DEBUG
+            print("after suffixes, M is: ")
+            print(M)
+            
+            # TODO: I don't get this... Why would M be a list? Do I need to support that?
+            # if isinstance(M, list):
+            #     if len(M):
+            #         m = M.pop(0)
+            #     else:
+            #         m = (None,None)
+            # else:
+            #     m = M
+            if not isinstance(M, tuple):
+                if M is None:
                     m = (None, None)
                 else:
-                    m = (-1*m,m)
+                    m = (-1*M,M)
+            else:
+                m = M
             
+            if not isinstance(m, tuple):
+                raise GDP_Error("Expected either a tuple or a single value for M! "
+                                "Can't use %s for M in transformation of constraint "
+                                "%s." % (m, c.name))
+
             # If we need an M (either for upper and/or lower bounding of
             # the expression, then try and estimate it
-            if ( c.lower is not None and m[0] is None ) or \
-                   ( c.upper is not None and m[1] is None ):
-                m = self._estimate_M(c.body, name, m, disjunct)
+            # if ( c.lower is not None and m[0] is None ) or \
+            #        ( c.upper is not None and m[1] is None ):
+            #     m = self._estimate_M(c.body, name, m, disjunct)
+            # TODO: this seems hacky, but will work for now.x
+            m = list(m)
+            if c.lower is not None and m[0] is None:
+                m[0] = self._estimate_M(c.body, name, m, disjunct)[0] - c.lower
+            if c.upper is not None and m[1] is None:
+                m[1] = self._estimate_M(c.body, name, m, disjunct)[1] - c.upper
+            m = tuple(m)
+
+            # DEBUG
+            print("after estimating, m is: ")
+            print(m)
 
             # TODO: I can't get this to work because ('lb',) isn't the same as 'lb'...
             # I get the DeveloperError about IndexedConstraint failing to define
-            # _default(). So for now I'll just check if the constraint's indexed below.
+            # _default(). So for now I'll just check if the constraint is indexed below.
             # if i.__class__ is tuple:
             #     pass
             # elif constraint.is_indexed():
@@ -271,7 +364,10 @@ class BigM_Transformation(Transformation):
                 if m[0] is None:
                     raise GDP_Error("Cannot relax disjunctive " + \
                           "constraint %s because M is not defined." % name)
-                M_expr = (m[0]-c.lower)*(1-disjunct.indicator_var)
+                # TODO: QUESTION: so, if you specify M, should it be exactly what you said?
+                # I'm confused about subtracting the bound. Shouldn't my M be my M?
+                #M_expr = (m[0]-c.lower)*(1-disjunct.indicator_var)
+                M_expr = m[0]*(1 - disjunct.indicator_var)
                 #newC.add(i+('lb',), c.lower <= c. body - M_expr)
                 if constraint.is_indexed():
                     newC.add((i, 'lb'), c.lower <= c.body - M_expr)
@@ -281,7 +377,9 @@ class BigM_Transformation(Transformation):
                 if m[1] is None:
                     raise GDP_Error("Cannot relax disjunctive " + \
                           "constraint %s because M is not defined." % name)
-                M_expr = (m[1]-c.upper)*(1-disjunct.indicator_var)
+                # M_expr = (m[1]-c.upper)*(1-disjunct.indicator_var)
+                # TODO: same as above here
+                M_expr = m[1]*(1-disjunct.indicator_var)
                 #newC.add(i+('ub',), c.body - M_expr <= c.upper)
                 if constraint.is_indexed():
                     newC.add((i, 'ub'), c.body - M_expr <= c.upper)
@@ -289,6 +387,9 @@ class BigM_Transformation(Transformation):
                     newC.add('ub', c.body - M_expr <= c.upper)
 
 
+    # TODO: this needs some updating so that the user-defined values don't get involved here
+    # (they don't right now since I'm only calling this if I don't have them, but I don't
+    # think they should be in this function at all.)
     def _estimate_M(self, expr, name, m, disjunct):
         # Calculate a best guess at M
         repn = generate_canonical_repn(expr)
