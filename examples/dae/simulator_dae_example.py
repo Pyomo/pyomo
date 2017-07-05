@@ -15,10 +15,11 @@ from pyomo.environ import *
 from pyomo.dae import *
 from pyomo.dae.simulator import Simulator
 
+
 def create_model():
     m = ConcreteModel()
 
-    m.t = ContinuousSet(bounds=(0.0,1))
+    m.t = ContinuousSet(bounds=(0.0, 1))
 
     m.p1 = Param(initialize=4.0)
     m.p2 = Param(initialize=2.0)
@@ -35,35 +36,37 @@ def create_model():
     m.za[0.0] = 1
     m.zb[0.0] = 0
 
-    def _diffeq1(m,t):
-        return m.dza[t] == -m.p1*m.za[t]+m.p2*m.zb[t]
-    m.diffeq1 = Constraint(m.t,rule=_diffeq1)
+    def _diffeq1(m, t):
+        return m.dza[t] == -m.p1 * m.za[t] + m.p2 * m.zb[t]
+    m.diffeq1 = Constraint(m.t, rule=_diffeq1)
 
-    def _diffeq2(m,t):
-        return m.dzb[t] == m.p1*m.za[t]-(m.p2+m.p3)*m.zb[t]+m.p4*m.zc[t]
-    m.diffeq2 = Constraint(m.t,rule=_diffeq2)
+    def _diffeq2(m, t):
+        return m.dzb[t] == m.p1 * m.za[t] - \
+                           (m.p2 + m.p3) * m.zb[t] + m.p4 * m.zc[t]
+    m.diffeq2 = Constraint(m.t, rule=_diffeq2)
 
-    def _algeq1(m,t):
-        return m.za[t]+m.zb[t]+m.zc[t] == 1
-    m.algeq1 = Constraint(m.t,rule=_algeq1)
+    def _algeq1(m, t):
+        return m.za[t] + m.zb[t] + m.zc[t] == 1
+    m.algeq1 = Constraint(m.t, rule=_algeq1)
     return m
 
-def simulate_model(model):
+
+def simulate_model(m):
     # Simulate the model using casadi
     sim = Simulator(m, package='casadi')
-    tsim, profiles = sim.simulate(numpoints=100,integrator='idas')
-
-    varorder = sim.get_variable_order()
-    algorder = sim.get_variable_order(vartype='algebraic')
+    tsim, profiles = sim.simulate(numpoints=100, integrator='idas')
 
     # Discretize model using Orthogonal Collocation
     discretizer = TransformationFactory('dae.collocation')
-    discretizer.apply_to(m,nfe=10,ncp=3)
+    discretizer.apply_to(m, nfe=10, ncp=3)
 
     # Initialize the discretized model using the simulator profiles
     sim.initialize_model()
 
-def plot_result(m):
+    return sim, tsim, profiles
+
+
+def plot_result(m, sim, tsim, profiles):
     import matplotlib.pyplot as plt
 
     time = list(m.t)
@@ -71,22 +74,23 @@ def plot_result(m):
     zb = [value(m.zb[t]) for t in m.t]
     zc = [value(m.zc[t]) for t in m.t]
 
-    for idx1,v in enumerate(varorder):
-        plt.plot(tsim,profiles[:,idx1],label=v)
+    varorder = sim.get_variable_order()
+    algorder = sim.get_variable_order(vartype='algebraic')
 
-    for idx2,v in enumerate(algorder):
-        plt.plot(tsim,profiles[:,len(varorder)+idx2],label=v)
+    for idx1, v in enumerate(varorder):
+        plt.plot(tsim, profiles[:, idx1], label=v)
 
-    plt.plot(time,za,'o',label='za interp')
-    plt.plot(time,zb,'o',label='zb interp')
-    plt.plot(time,zc,'o',label='zc interp')
+    for idx2, v in enumerate(algorder):
+        plt.plot(tsim, profiles[:, len(varorder) + idx2], label=v)
+
+    plt.plot(time, za, 'o', label='za interp')
+    plt.plot(time, zb, 'o', label='zb interp')
+    plt.plot(time, zc, 'o', label='zc interp')
     plt.xlabel('t')
     plt.legend(loc='best')
     plt.show()
 
 if __name__ == "__main__":
     model = create_model()
-    simulate_model(model)
-    plot_result(model)
-
-
+    sim, tsim, profiles = simulate_model(model)
+    plot_result(model, sim, tsim, profiles)
