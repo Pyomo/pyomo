@@ -32,13 +32,6 @@ class AddSlackVariables(NonIsomorphicTransformation):
             else:
                 name += str(randint(0,9))
 
-    # JDS: TODOs:
-    #  - support targets= argument to specify the constraints to relax
-    #    - make sure that works for apply_to and crate_using
-    #    - make sure that works for Constraint, IndexedConstraint, and _ConstraintData
-    #  DONE- make sure no bogus kwds are passed!
-    #  DONE- shouldn't add slacks to deactivated constraints
-
     def _apply_to(self, instance, **kwds):
         targets = kwds.pop('targets', None)
 
