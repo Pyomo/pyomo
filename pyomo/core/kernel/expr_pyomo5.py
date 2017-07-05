@@ -80,6 +80,17 @@ class bypass_clone_check(object):
         pass
 
 
+import time
+class Timer:    
+    def __enter__(self):
+        self.start = time.time()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.time()
+        self.interval = self.end - self.start
+
+
 def compress_expression(expr, verbose=False):
     #
     # Only compress a true expression DAG
@@ -112,7 +123,7 @@ def compress_expression(expr, verbose=False):
         #
         _obj, _argList, _idx, _len, _potentially_variable, _result = _stack.pop()
         _clone = _stack.pop()
-        if _clone and len(_stack) > 1:
+        if _clone and _stack:
             _stack[-2] = True
         if verbose: #pragma:nocover
             print("*"*10 + " POP  " + "*"*10)
@@ -130,6 +141,7 @@ def compress_expression(expr, verbose=False):
                 print(_potentially_variable)
                 print(_result)
                 print(_clone)
+                print("-"*30)
 
             _sub = _argList[_idx]
             _idx += 1
@@ -168,17 +180,13 @@ def compress_expression(expr, verbose=False):
             print(_potentially_variable)
             print(_result)
             print(_clone)
+            print("="*30)
         #
         # Now replace the current expression object if it's a sum
         #
         if _obj.__class__ == _SumExpression:
             _l_pvar, _r_pvar = _potentially_variable
             _l, _r = _result
-            #
-            #if not _l.__class__ in native_numeric_types:
-            #    assert( _l_pvar == _l._potentially_variable() )
-            #if not _r.__class__ in native_numeric_types:
-            #    assert( _r_pvar == _r._potentially_variable() )
             #
             # Replace the current expression
             #
@@ -191,21 +199,22 @@ def compress_expression(expr, verbose=False):
                 # Add the LHS to the first term of the multisum
                 #
                 if _l.__class__ in native_numeric_types or not _l_pvar:
-                    ans._args = (ans._args[0] + _l,) + ans._args[1:]
+                    ans._args[0] += _l
                 #
                 # MultiSum + MultiSum
                 #
-                # Add the constant terms, and place the others in order
+                # Add the constant terms, and place the others
                 #
                 elif _l.__class__ == _MultiSumExpression:
-                    ans._args = (_r._args[0]+_l._args[0],) + _l._args[1:] + _r._args[1:]
+                    ans._args[0] += _l._args[0]
+                    ans._args += _l._args[1:]
                 #
                 # expr + MultiSum
                 #
-                # Insert the expression in order
+                # Insert the expression
                 #
                 else:
-                    ans._args = (_r._args[0], _l) + _r._args[1:]
+                    ans._args.append(_l)
 
             elif _l.__class__ == _MultiSumExpression:
                 ans = _l
@@ -215,28 +224,28 @@ def compress_expression(expr, verbose=False):
                 # Add the RHS to the first term of the multisum
                 #
                 if not _r_pvar:
-                    ans._args = (ans._args[0] + _r,) + ans._args[1:]
+                    ans._args[0] += _r
                 #
                 # Multisum + expr
                 #
-                # Insert the expression in order
+                # Insert the expression
                 #
                 else:
-                    ans._args = _l._args + (_r,)
+                    ans._args.append(_r)
 
             elif _l.__class__ in native_numeric_types or not _l_pvar:
                 #
                 # 1 + expr
                 # p + expr
                 #
-                ans = _MultiSumExpression((_l, _r))
+                ans = _MultiSumExpression([_l, _r])
 
             else:
                 #
                 # expr + expr
                 #
-                ans = _MultiSumExpression((0, _l, _r))
-            if len(_stack) > 1:
+                ans = _MultiSumExpression([0, _l, _r])
+            if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
                 # ensure that it is cloned.
@@ -244,7 +253,7 @@ def compress_expression(expr, verbose=False):
                 _stack[-2] = True
         elif _clone:
             ans = _obj.__class__( tuple(_result) )
-            if len(_stack) > 1:
+            if _stack:
                 _stack[-2] = True
         else:
             ans = _obj
@@ -252,7 +261,7 @@ def compress_expression(expr, verbose=False):
             print("STACK LEN %d" % len(_stack))
         if _stack:
             #
-            # "return" the recursion by putting the return value on the end of the reults stack
+            # "return" the recursion by putting the return value on the end of the results stack
             #
             _stack[-1][-2].append( any(_potentially_variable) )
             _stack[-1][-1].append( ans )

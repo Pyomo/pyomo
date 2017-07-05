@@ -508,9 +508,9 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(_e), EXPR._MultiSumExpression)
         self.assertEqual(len(_e._args), 4)
         self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.c)
-        self.assertIs(_e._args[2], m.a)
-        self.assertIs(_e._args[3], m.b)
+        self.assertIs(_e._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
+        self.assertIs(_e._args[3], m.c)
 
         #            +
         #          /   \
@@ -530,10 +530,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(_e), EXPR._MultiSumExpression)
         self.assertEqual(len(_e._args), 5)
         self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
-        self.assertIs(_e._args[3], m.c)
-        self.assertIs(_e._args[4], m.d)
+        self.assertIs(_e._args[1], m.c)
+        self.assertIs(_e._args[2], m.d)
+        self.assertIs(_e._args[3], m.a)
+        self.assertIs(_e._args[4], m.b)
 
     def test_trivialSum(self):
         #
@@ -622,10 +622,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(_e), EXPR._MultiSumExpression)
         self.assertEqual(len(_e._args), 4)
         self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1]._args[0], 5)
-        self.assertIs(_e._args[1]._args[1], m.a)
-        self.assertIs(_e._args[2], m.b)
-        self.assertIs(_e._args[3], m.c)
+        self.assertIs(_e._args[1], m.b)
+        self.assertIs(_e._args[2], m.c)
+        self.assertIs(_e._args[3]._args[0], 5)
+        self.assertIs(_e._args[3]._args[1], m.a)
 
         #            +
         #          /   \
@@ -1023,9 +1023,9 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(_e._args[0]), EXPR._MultiSumExpression)
         self.assertIs(len(_e._args[0]._args), 4)
         self.assertIs(_e._args[0]._args[0], 0)
-        self.assertIs(_e._args[0]._args[1], m.c)
-        self.assertIs(_e._args[0]._args[2], m.a)
-        self.assertIs(_e._args[0]._args[3], m.b)
+        self.assertIs(_e._args[0]._args[1], m.a)
+        self.assertIs(_e._args[0]._args[2], m.b)
+        self.assertIs(_e._args[0]._args[3], m.c)
 
         self.assertIs(type(_e._args[1]), EXPR._MultiSumExpression)
         self.assertIs(len(_e._args[1]._args), 4)
