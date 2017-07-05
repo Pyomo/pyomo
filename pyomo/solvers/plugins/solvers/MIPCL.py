@@ -100,7 +100,7 @@ class MIPCLSHELL(SystemCallSolver):
                 problem_filename_prefix = tmp[0]
         self._soln_file = problem_filename_prefix+".sol"
 
-        cmd = [executable, problem_files[0]]
+        cmd = [executable, problem_files[0], '-solfile', self._soln_file]
         if self._timer:
             cmd.insert(0, self._timer)
         for k, v in iteritems(self.options):
