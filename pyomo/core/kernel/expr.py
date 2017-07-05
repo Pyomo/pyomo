@@ -27,9 +27,8 @@ def generate_intrinsic_function_expression(arg, name, fcn):
 from pyomo.core.kernel import numvalue
 
 # Import global methods that are common to all expression systems
-from pyomo.core.kernel.expr_common import clone_expression
-
 _common_module_members = [
+    'clone_expression',
     'identify_variables',
     'generate_expression',
     'generate_intrinsic_function_expression',
