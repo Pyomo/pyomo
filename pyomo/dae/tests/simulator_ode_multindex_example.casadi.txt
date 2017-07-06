@@ -1,0 +1,549 @@
+2 Param Declarations
+    b : Size=51, Index=t, Domain=Any, Default=(function), Mutable=False
+        Key  : Value
+         0.0 :  0.25
+        20.0 :  0.25
+    c : Size=51, Index=t, Domain=Any, Default=(function), Mutable=False
+        Key  : Value
+         0.0 :   5.0
+        20.0 :   5.0
+
+4 Var Declarations
+    domegadt : Size=51, Index=t
+        Key       : Lower : Value : Upper : Fixed : Stale : Domain
+              0.0 :  None :  None :  None : False :  True :  Reals
+         0.114208 :  None :  None :  None : False :  True :  Reals
+         0.553686 :  None :  None :  None : False :  True :  Reals
+         1.167181 :  None :  None :  None : False :  True :  Reals
+          1.72048 :  None :  None :  None : False :  True :  Reals
+              2.0 :  None :  None :  None : False :  True :  Reals
+         2.114208 :  None :  None :  None : False :  True :  Reals
+         2.553686 :  None :  None :  None : False :  True :  Reals
+         3.167181 :  None :  None :  None : False :  True :  Reals
+          3.72048 :  None :  None :  None : False :  True :  Reals
+              4.0 :  None :  None :  None : False :  True :  Reals
+         4.114208 :  None :  None :  None : False :  True :  Reals
+         4.553686 :  None :  None :  None : False :  True :  Reals
+         5.167181 :  None :  None :  None : False :  True :  Reals
+          5.72048 :  None :  None :  None : False :  True :  Reals
+              6.0 :  None :  None :  None : False :  True :  Reals
+         6.114208 :  None :  None :  None : False :  True :  Reals
+         6.553686 :  None :  None :  None : False :  True :  Reals
+         7.167181 :  None :  None :  None : False :  True :  Reals
+          7.72048 :  None :  None :  None : False :  True :  Reals
+              8.0 :  None :  None :  None : False :  True :  Reals
+         8.114208 :  None :  None :  None : False :  True :  Reals
+         8.553686 :  None :  None :  None : False :  True :  Reals
+         9.167181 :  None :  None :  None : False :  True :  Reals
+          9.72048 :  None :  None :  None : False :  True :  Reals
+             10.0 :  None :  None :  None : False :  True :  Reals
+        10.114208 :  None :  None :  None : False :  True :  Reals
+        10.553686 :  None :  None :  None : False :  True :  Reals
+        11.167181 :  None :  None :  None : False :  True :  Reals
+         11.72048 :  None :  None :  None : False :  True :  Reals
+             12.0 :  None :  None :  None : False :  True :  Reals
+        12.114208 :  None :  None :  None : False :  True :  Reals
+        12.553686 :  None :  None :  None : False :  True :  Reals
+        13.167181 :  None :  None :  None : False :  True :  Reals
+         13.72048 :  None :  None :  None : False :  True :  Reals
+             14.0 :  None :  None :  None : False :  True :  Reals
+        14.114208 :  None :  None :  None : False :  True :  Reals
+        14.553686 :  None :  None :  None : False :  True :  Reals
+        15.167181 :  None :  None :  None : False :  True :  Reals
+         15.72048 :  None :  None :  None : False :  True :  Reals
+             16.0 :  None :  None :  None : False :  True :  Reals
+        16.114208 :  None :  None :  None : False :  True :  Reals
+        16.553686 :  None :  None :  None : False :  True :  Reals
+        17.167181 :  None :  None :  None : False :  True :  Reals
+         17.72048 :  None :  None :  None : False :  True :  Reals
+             18.0 :  None :  None :  None : False :  True :  Reals
+        18.114208 :  None :  None :  None : False :  True :  Reals
+        18.553686 :  None :  None :  None : False :  True :  Reals
+        19.167181 :  None :  None :  None : False :  True :  Reals
+         19.72048 :  None :  None :  None : False :  True :  Reals
+             20.0 :  None :  None :  None : False :  True :  Reals
+    dthetadt : Size=51, Index=t
+        Key       : Lower : Value : Upper : Fixed : Stale : Domain
+              0.0 :  None :  None :  None : False :  True :  Reals
+         0.114208 :  None :  None :  None : False :  True :  Reals
+         0.553686 :  None :  None :  None : False :  True :  Reals
+         1.167181 :  None :  None :  None : False :  True :  Reals
+          1.72048 :  None :  None :  None : False :  True :  Reals
+              2.0 :  None :  None :  None : False :  True :  Reals
+         2.114208 :  None :  None :  None : False :  True :  Reals
+         2.553686 :  None :  None :  None : False :  True :  Reals
+         3.167181 :  None :  None :  None : False :  True :  Reals
+          3.72048 :  None :  None :  None : False :  True :  Reals
+              4.0 :  None :  None :  None : False :  True :  Reals
+         4.114208 :  None :  None :  None : False :  True :  Reals
+         4.553686 :  None :  None :  None : False :  True :  Reals
+         5.167181 :  None :  None :  None : False :  True :  Reals
+          5.72048 :  None :  None :  None : False :  True :  Reals
+              6.0 :  None :  None :  None : False :  True :  Reals
+         6.114208 :  None :  None :  None : False :  True :  Reals
+         6.553686 :  None :  None :  None : False :  True :  Reals
+         7.167181 :  None :  None :  None : False :  True :  Reals
+          7.72048 :  None :  None :  None : False :  True :  Reals
+              8.0 :  None :  None :  None : False :  True :  Reals
+         8.114208 :  None :  None :  None : False :  True :  Reals
+         8.553686 :  None :  None :  None : False :  True :  Reals
+         9.167181 :  None :  None :  None : False :  True :  Reals
+          9.72048 :  None :  None :  None : False :  True :  Reals
+             10.0 :  None :  None :  None : False :  True :  Reals
+        10.114208 :  None :  None :  None : False :  True :  Reals
+        10.553686 :  None :  None :  None : False :  True :  Reals
+        11.167181 :  None :  None :  None : False :  True :  Reals
+         11.72048 :  None :  None :  None : False :  True :  Reals
+             12.0 :  None :  None :  None : False :  True :  Reals
+        12.114208 :  None :  None :  None : False :  True :  Reals
+        12.553686 :  None :  None :  None : False :  True :  Reals
+        13.167181 :  None :  None :  None : False :  True :  Reals
+         13.72048 :  None :  None :  None : False :  True :  Reals
+             14.0 :  None :  None :  None : False :  True :  Reals
+        14.114208 :  None :  None :  None : False :  True :  Reals
+        14.553686 :  None :  None :  None : False :  True :  Reals
+        15.167181 :  None :  None :  None : False :  True :  Reals
+         15.72048 :  None :  None :  None : False :  True :  Reals
+             16.0 :  None :  None :  None : False :  True :  Reals
+        16.114208 :  None :  None :  None : False :  True :  Reals
+        16.553686 :  None :  None :  None : False :  True :  Reals
+        17.167181 :  None :  None :  None : False :  True :  Reals
+         17.72048 :  None :  None :  None : False :  True :  Reals
+             18.0 :  None :  None :  None : False :  True :  Reals
+        18.114208 :  None :  None :  None : False :  True :  Reals
+        18.553686 :  None :  None :  None : False :  True :  Reals
+        19.167181 :  None :  None :  None : False :  True :  Reals
+         19.72048 :  None :  None :  None : False :  True :  Reals
+             20.0 :  None :  None :  None : False :  True :  Reals
+    omega : Size=51, Index=t
+        Key       : Lower : Value            : Upper : Fixed : Stale : Domain
+              0.0 :  None :              0.0 :  None : False : False :  Reals
+         0.114208 :  None : -0.0584052578938 :  None : False : False :  Reals
+         0.553686 :  None :  -0.339032970813 :  None : False : False :  Reals
+         1.167181 :  None :    -1.3085813728 :  None : False : False :  Reals
+          1.72048 :  None :   -3.31953476548 :  None : False : False :  Reals
+              2.0 :  None :   -3.97140607556 :  None : False : False :  Reals
+         2.114208 :  None :   -3.79414242508 :  None : False : False :  Reals
+         2.553686 :  None :   -1.87415989325 :  None : False : False :  Reals
+         3.167181 :  None :    1.15054360239 :  None : False : False :  Reals
+          3.72048 :  None :    3.15494012302 :  None : False : False :  Reals
+              4.0 :  None :    2.95904997851 :  None : False : False :  Reals
+         4.114208 :  None :    2.56317201727 :  None : False : False :  Reals
+         4.553686 :  None :   0.437993838251 :  None : False : False :  Reals
+         5.167181 :  None :   -2.24814541938 :  None : False : False :  Reals
+          5.72048 :  None :   -2.17126376795 :  None : False : False :  Reals
+              6.0 :  None :   -1.03460743462 :  None : False : False :  Reals
+         6.114208 :  None :  -0.511210101297 :  None : False : False :  Reals
+         6.553686 :  None :    1.37740185505 :  None : False : False :  Reals
+         7.167181 :  None :   0.889332600945 :  None : False : False :  Reals
+          7.72048 :  None :   0.279189792878 :  None : False : False :  Reals
+              8.0 :  None :    1.25264983609 :  None : False : False :  Reals
+         8.114208 :  None :   0.360039532424 :  None : False : False :  Reals
+         8.553686 :  None :   -0.37650136964 :  None : False : False :  Reals
+         9.167181 :  None :   -1.08194831437 :  None : False : False :  Reals
+          9.72048 :  None :    1.47263866269 :  None : False : False :  Reals
+             10.0 :  None :  -0.617334302628 :  None : False : False :  Reals
+        10.114208 :  None :   -1.42837229393 :  None : False : False :  Reals
+        10.553686 :  None :    1.16122545389 :  None : False : False :  Reals
+        11.167181 :  None :  -0.709902142476 :  None : False : False :  Reals
+         11.72048 :  None :  -0.143033280586 :  None : False : False :  Reals
+             12.0 :  None :  -0.834040087779 :  None : False : False :  Reals
+        12.114208 :  None :  -0.264764663766 :  None : False : False :  Reals
+        12.553686 :  None :   0.329045088402 :  None : False : False :  Reals
+        13.167181 :  None :    0.69325749595 :  None : False : False :  Reals
+         13.72048 :  None :  -0.912242843384 :  None : False : False :  Reals
+             14.0 :  None :   0.332757536694 :  None : False : False :  Reals
+        14.114208 :  None :    0.81993163423 :  None : False : False :  Reals
+        14.553686 :  None :  -0.819092714178 :  None : False : False :  Reals
+        15.167181 :  None :   0.520931768276 :  None : False : False :  Reals
+         15.72048 :  None :  0.0909453934102 :  None : False : False :  Reals
+             16.0 :  None :   0.647547856913 :  None : False : False :  Reals
+        16.114208 :  None :   0.159231570628 :  None : False : False :  Reals
+        16.553686 :  None :  -0.230675325002 :  None : False : False :  Reals
+        17.167181 :  None :  -0.623976486551 :  None : False : False :  Reals
+         17.72048 :  None :   0.655441416139 :  None : False : False :  Reals
+             18.0 :  None :  -0.318472771289 :  None : False : False :  Reals
+        18.114208 :  None :  -0.620355007629 :  None : False : False :  Reals
+        18.553686 :  None :   0.682800758587 :  None : False : False :  Reals
+        19.167181 :  None :  -0.447135799476 :  None : False : False :  Reals
+         19.72048 :  None : -0.0584028363221 :  None : False : False :  Reals
+             20.0 :  None :  -0.709688679945 :  None : False : False :  Reals
+    theta : Size=51, Index=t
+        Key       : Lower : Value            : Upper : Fixed : Stale : Domain
+              0.0 :  None :             3.04 :  None : False : False :  Reals
+         0.114208 :  None :    3.03414968935 :  None : False : False :  Reals
+         0.553686 :  None :     2.9527910798 :  None : False : False :  Reals
+         1.167181 :  None :    2.50353492264 :  None : False : False :  Reals
+          1.72048 :  None :    1.25038734969 :  None : False : False :  Reals
+              2.0 :  None :   0.214977757715 :  None : False : False :  Reals
+         2.114208 :  None :  -0.224858250303 :  None : False : False :  Reals
+         2.553686 :  None :   -1.52697150354 :  None : False : False :  Reals
+         3.167181 :  None :    -1.7242388562 :  None : False : False :  Reals
+          3.72048 :  None :  -0.449765913555 :  None : False : False :  Reals
+              4.0 :  None :   0.436416451536 :  None : False : False :  Reals
+         4.114208 :  None :   0.745364697702 :  None : False : False :  Reals
+         4.553686 :  None :    1.41918820376 :  None : False : False :  Reals
+         5.167181 :  None :   0.804036306996 :  None : False : False :  Reals
+          5.72048 :  None :  -0.582363112315 :  None : False : False :  Reals
+              6.0 :  None :   -1.04032085734 :  None : False : False :  Reals
+         6.114208 :  None :   -1.13000769903 :  None : False : False :  Reals
+         6.553686 :  None :  -0.918025239162 :  None : False : False :  Reals
+         7.167181 :  None :    0.20387757648 :  None : False : False :  Reals
+          7.72048 :  None :   -0.24868114103 :  None : False : False :  Reals
+              8.0 :  None :   0.126051094754 :  None : False : False :  Reals
+         8.114208 :  None :   0.241463566602 :  None : False : False :  Reals
+         8.553686 :  None :  -0.202793188079 :  None : False : False :  Reals
+         9.167181 :  None :   0.117930402934 :  None : False : False :  Reals
+          9.72048 :  None :  0.0203203438467 :  None : False : False :  Reals
+             10.0 :  None :   0.145997082822 :  None : False : False :  Reals
+        10.114208 :  None :  0.0525273120298 :  None : False : False :  Reals
+        10.553686 :  None : -0.0560898179522 :  None : False : False :  Reals
+        11.167181 :  None :  -0.118326206618 :  None : False : False :  Reals
+         11.72048 :  None :   0.176485174765 :  None : False : False :  Reals
+             12.0 :  None : -0.0601043180384 :  None : False : False :  Reals
+        12.114208 :  None :  -0.161024576532 :  None : False : False :  Reals
+        12.553686 :  None :   0.135994004702 :  None : False : False :  Reals
+        13.167181 :  None : -0.0872828635129 :  None : False : False :  Reals
+         13.72048 :  None : -0.0146516681089 :  None : False : False :  Reals
+             14.0 :  None : -0.0985083880672 :  None : False : False :  Reals
+        14.114208 :  None : -0.0280094635414 :  None : False : False :  Reals
+        14.553686 :  None :  0.0397261585264 :  None : False : False :  Reals
+        15.167181 :  None :   0.084135158928 :  None : False : False :  Reals
+         15.72048 :  None :  -0.101500735908 :  None : False : False :  Reals
+             16.0 :  None :  0.0418304000833 :  None : False : False :  Reals
+        16.114208 :  None :  0.0955793974675 :  None : False : False :  Reals
+        16.553686 :  None :  -0.106759456842 :  None : False : False :  Reals
+        17.167181 :  None :  0.0727930738426 :  None : False : False :  Reals
+         17.72048 :  None :  0.0109256078817 :  None : False : False :  Reals
+             18.0 :  None :  0.0961324284498 :  None : False : False :  Reals
+        18.114208 :  None :  0.0223686975544 :  None : False : False :  Reals
+        18.553686 :  None : -0.0279649824344 :  None : False : False :  Reals
+        19.167181 :  None : -0.0807160101341 :  None : False : False :  Reals
+         19.72048 :  None :  0.0866781225585 :  None : False : False :  Reals
+             20.0 :  None : -0.0505391218538 :  None : False : False :  Reals
+
+4 Constraint Declarations
+    diffeq1 : Size=51, Index=t, Active=True
+        Key       : Lower : Body                                                                      : Upper : Active
+              0.0 :   0.0 :                   domegadt[0.0] + 0.25*omega[0.0] + 5.0*sin( theta[0.0] ) :   0.0 :   True
+         0.114208 :   0.0 :      domegadt[0.114208] + 0.25*omega[0.114208] + 5*sin( theta[0.114208] ) :   0.0 :   True
+         0.553686 :   0.0 :      domegadt[0.553686] + 0.25*omega[0.553686] + 5*sin( theta[0.553686] ) :   0.0 :   True
+         1.167181 :   0.0 :      domegadt[1.167181] + 0.25*omega[1.167181] + 5*sin( theta[1.167181] ) :   0.0 :   True
+          1.72048 :   0.0 :         domegadt[1.72048] + 0.25*omega[1.72048] + 5*sin( theta[1.72048] ) :   0.0 :   True
+              2.0 :   0.0 :                     domegadt[2.0] + 0.25*omega[2.0] + 5*sin( theta[2.0] ) :   0.0 :   True
+         2.114208 :   0.0 :      domegadt[2.114208] + 0.25*omega[2.114208] + 5*sin( theta[2.114208] ) :   0.0 :   True
+         2.553686 :   0.0 :      domegadt[2.553686] + 0.25*omega[2.553686] + 5*sin( theta[2.553686] ) :   0.0 :   True
+         3.167181 :   0.0 :      domegadt[3.167181] + 0.25*omega[3.167181] + 5*sin( theta[3.167181] ) :   0.0 :   True
+          3.72048 :   0.0 :         domegadt[3.72048] + 0.25*omega[3.72048] + 5*sin( theta[3.72048] ) :   0.0 :   True
+              4.0 :   0.0 :                     domegadt[4.0] + 0.25*omega[4.0] + 5*sin( theta[4.0] ) :   0.0 :   True
+         4.114208 :   0.0 :      domegadt[4.114208] + 0.25*omega[4.114208] + 5*sin( theta[4.114208] ) :   0.0 :   True
+         4.553686 :   0.0 :      domegadt[4.553686] + 0.25*omega[4.553686] + 5*sin( theta[4.553686] ) :   0.0 :   True
+         5.167181 :   0.0 :      domegadt[5.167181] + 0.25*omega[5.167181] + 5*sin( theta[5.167181] ) :   0.0 :   True
+          5.72048 :   0.0 :         domegadt[5.72048] + 0.25*omega[5.72048] + 5*sin( theta[5.72048] ) :   0.0 :   True
+              6.0 :   0.0 :                     domegadt[6.0] + 0.25*omega[6.0] + 5*sin( theta[6.0] ) :   0.0 :   True
+         6.114208 :   0.0 :      domegadt[6.114208] + 0.25*omega[6.114208] + 5*sin( theta[6.114208] ) :   0.0 :   True
+         6.553686 :   0.0 :      domegadt[6.553686] + 0.25*omega[6.553686] + 5*sin( theta[6.553686] ) :   0.0 :   True
+         7.167181 :   0.0 :     domegadt[7.167181] + 0.25*omega[7.167181] + 50*sin( theta[7.167181] ) :   0.0 :   True
+          7.72048 :   0.0 :        domegadt[7.72048] + 0.25*omega[7.72048] + 50*sin( theta[7.72048] ) :   0.0 :   True
+              8.0 :   0.0 :                    domegadt[8.0] + 0.25*omega[8.0] + 50*sin( theta[8.0] ) :   0.0 :   True
+         8.114208 :   0.0 :     domegadt[8.114208] + 0.25*omega[8.114208] + 50*sin( theta[8.114208] ) :   0.0 :   True
+         8.553686 :   0.0 :     domegadt[8.553686] + 0.25*omega[8.553686] + 50*sin( theta[8.553686] ) :   0.0 :   True
+         9.167181 :   0.0 :     domegadt[9.167181] + 0.25*omega[9.167181] + 50*sin( theta[9.167181] ) :   0.0 :   True
+          9.72048 :   0.0 :        domegadt[9.72048] + 0.25*omega[9.72048] + 50*sin( theta[9.72048] ) :   0.0 :   True
+             10.0 :   0.0 :                 domegadt[10.0] + 0.25*omega[10.0] + 50*sin( theta[10.0] ) :   0.0 :   True
+        10.114208 :   0.0 :  domegadt[10.114208] + 0.25*omega[10.114208] + 50*sin( theta[10.114208] ) :   0.0 :   True
+        10.553686 :   0.0 :  domegadt[10.553686] + 0.25*omega[10.553686] + 50*sin( theta[10.553686] ) :   0.0 :   True
+        11.167181 :   0.0 :  domegadt[11.167181] + 0.25*omega[11.167181] + 50*sin( theta[11.167181] ) :   0.0 :   True
+         11.72048 :   0.0 :     domegadt[11.72048] + 0.25*omega[11.72048] + 50*sin( theta[11.72048] ) :   0.0 :   True
+             12.0 :   0.0 :                 domegadt[12.0] + 0.25*omega[12.0] + 50*sin( theta[12.0] ) :   0.0 :   True
+        12.114208 :   0.0 :  domegadt[12.114208] + 0.25*omega[12.114208] + 50*sin( theta[12.114208] ) :   0.0 :   True
+        12.553686 :   0.0 :  domegadt[12.553686] + 0.25*omega[12.553686] + 50*sin( theta[12.553686] ) :   0.0 :   True
+        13.167181 :   0.0 :  domegadt[13.167181] + 0.25*omega[13.167181] + 50*sin( theta[13.167181] ) :   0.0 :   True
+         13.72048 :   0.0 :     domegadt[13.72048] + 0.25*omega[13.72048] + 50*sin( theta[13.72048] ) :   0.0 :   True
+             14.0 :   0.0 :                 domegadt[14.0] + 0.25*omega[14.0] + 50*sin( theta[14.0] ) :   0.0 :   True
+        14.114208 :   0.0 :  domegadt[14.114208] + 0.25*omega[14.114208] + 50*sin( theta[14.114208] ) :   0.0 :   True
+        14.553686 :   0.0 :  domegadt[14.553686] + 0.25*omega[14.553686] + 50*sin( theta[14.553686] ) :   0.0 :   True
+        15.167181 :   0.0 : domegadt[15.167181] + 0.025*omega[15.167181] + 50*sin( theta[15.167181] ) :   0.0 :   True
+         15.72048 :   0.0 :    domegadt[15.72048] + 0.025*omega[15.72048] + 50*sin( theta[15.72048] ) :   0.0 :   True
+             16.0 :   0.0 :                domegadt[16.0] + 0.025*omega[16.0] + 50*sin( theta[16.0] ) :   0.0 :   True
+        16.114208 :   0.0 : domegadt[16.114208] + 0.025*omega[16.114208] + 50*sin( theta[16.114208] ) :   0.0 :   True
+        16.553686 :   0.0 : domegadt[16.553686] + 0.025*omega[16.553686] + 50*sin( theta[16.553686] ) :   0.0 :   True
+        17.167181 :   0.0 : domegadt[17.167181] + 0.025*omega[17.167181] + 50*sin( theta[17.167181] ) :   0.0 :   True
+         17.72048 :   0.0 :    domegadt[17.72048] + 0.025*omega[17.72048] + 50*sin( theta[17.72048] ) :   0.0 :   True
+             18.0 :   0.0 :                domegadt[18.0] + 0.025*omega[18.0] + 50*sin( theta[18.0] ) :   0.0 :   True
+        18.114208 :   0.0 : domegadt[18.114208] + 0.025*omega[18.114208] + 50*sin( theta[18.114208] ) :   0.0 :   True
+        18.553686 :   0.0 : domegadt[18.553686] + 0.025*omega[18.553686] + 50*sin( theta[18.553686] ) :   0.0 :   True
+        19.167181 :   0.0 : domegadt[19.167181] + 0.025*omega[19.167181] + 50*sin( theta[19.167181] ) :   0.0 :   True
+         19.72048 :   0.0 :    domegadt[19.72048] + 0.025*omega[19.72048] + 50*sin( theta[19.72048] ) :   0.0 :   True
+             20.0 :   0.0 :                domegadt[20.0] + 0.25*omega[20.0] + 5.0*sin( theta[20.0] ) :   0.0 :   True
+    diffeq2 : Size=51, Index=t, Active=True
+        Key       : Lower : Body                                   : Upper : Active
+              0.0 :   0.0 :             dthetadt[0.0] - omega[0.0] :   0.0 :   True
+         0.114208 :   0.0 :   dthetadt[0.114208] - omega[0.114208] :   0.0 :   True
+         0.553686 :   0.0 :   dthetadt[0.553686] - omega[0.553686] :   0.0 :   True
+         1.167181 :   0.0 :   dthetadt[1.167181] - omega[1.167181] :   0.0 :   True
+          1.72048 :   0.0 :     dthetadt[1.72048] - omega[1.72048] :   0.0 :   True
+              2.0 :   0.0 :             dthetadt[2.0] - omega[2.0] :   0.0 :   True
+         2.114208 :   0.0 :   dthetadt[2.114208] - omega[2.114208] :   0.0 :   True
+         2.553686 :   0.0 :   dthetadt[2.553686] - omega[2.553686] :   0.0 :   True
+         3.167181 :   0.0 :   dthetadt[3.167181] - omega[3.167181] :   0.0 :   True
+          3.72048 :   0.0 :     dthetadt[3.72048] - omega[3.72048] :   0.0 :   True
+              4.0 :   0.0 :             dthetadt[4.0] - omega[4.0] :   0.0 :   True
+         4.114208 :   0.0 :   dthetadt[4.114208] - omega[4.114208] :   0.0 :   True
+         4.553686 :   0.0 :   dthetadt[4.553686] - omega[4.553686] :   0.0 :   True
+         5.167181 :   0.0 :   dthetadt[5.167181] - omega[5.167181] :   0.0 :   True
+          5.72048 :   0.0 :     dthetadt[5.72048] - omega[5.72048] :   0.0 :   True
+              6.0 :   0.0 :             dthetadt[6.0] - omega[6.0] :   0.0 :   True
+         6.114208 :   0.0 :   dthetadt[6.114208] - omega[6.114208] :   0.0 :   True
+         6.553686 :   0.0 :   dthetadt[6.553686] - omega[6.553686] :   0.0 :   True
+         7.167181 :   0.0 :   dthetadt[7.167181] - omega[7.167181] :   0.0 :   True
+          7.72048 :   0.0 :     dthetadt[7.72048] - omega[7.72048] :   0.0 :   True
+              8.0 :   0.0 :             dthetadt[8.0] - omega[8.0] :   0.0 :   True
+         8.114208 :   0.0 :   dthetadt[8.114208] - omega[8.114208] :   0.0 :   True
+         8.553686 :   0.0 :   dthetadt[8.553686] - omega[8.553686] :   0.0 :   True
+         9.167181 :   0.0 :   dthetadt[9.167181] - omega[9.167181] :   0.0 :   True
+          9.72048 :   0.0 :     dthetadt[9.72048] - omega[9.72048] :   0.0 :   True
+             10.0 :   0.0 :           dthetadt[10.0] - omega[10.0] :   0.0 :   True
+        10.114208 :   0.0 : dthetadt[10.114208] - omega[10.114208] :   0.0 :   True
+        10.553686 :   0.0 : dthetadt[10.553686] - omega[10.553686] :   0.0 :   True
+        11.167181 :   0.0 : dthetadt[11.167181] - omega[11.167181] :   0.0 :   True
+         11.72048 :   0.0 :   dthetadt[11.72048] - omega[11.72048] :   0.0 :   True
+             12.0 :   0.0 :           dthetadt[12.0] - omega[12.0] :   0.0 :   True
+        12.114208 :   0.0 : dthetadt[12.114208] - omega[12.114208] :   0.0 :   True
+        12.553686 :   0.0 : dthetadt[12.553686] - omega[12.553686] :   0.0 :   True
+        13.167181 :   0.0 : dthetadt[13.167181] - omega[13.167181] :   0.0 :   True
+         13.72048 :   0.0 :   dthetadt[13.72048] - omega[13.72048] :   0.0 :   True
+             14.0 :   0.0 :           dthetadt[14.0] - omega[14.0] :   0.0 :   True
+        14.114208 :   0.0 : dthetadt[14.114208] - omega[14.114208] :   0.0 :   True
+        14.553686 :   0.0 : dthetadt[14.553686] - omega[14.553686] :   0.0 :   True
+        15.167181 :   0.0 : dthetadt[15.167181] - omega[15.167181] :   0.0 :   True
+         15.72048 :   0.0 :   dthetadt[15.72048] - omega[15.72048] :   0.0 :   True
+             16.0 :   0.0 :           dthetadt[16.0] - omega[16.0] :   0.0 :   True
+        16.114208 :   0.0 : dthetadt[16.114208] - omega[16.114208] :   0.0 :   True
+        16.553686 :   0.0 : dthetadt[16.553686] - omega[16.553686] :   0.0 :   True
+        17.167181 :   0.0 : dthetadt[17.167181] - omega[17.167181] :   0.0 :   True
+         17.72048 :   0.0 :   dthetadt[17.72048] - omega[17.72048] :   0.0 :   True
+             18.0 :   0.0 :           dthetadt[18.0] - omega[18.0] :   0.0 :   True
+        18.114208 :   0.0 : dthetadt[18.114208] - omega[18.114208] :   0.0 :   True
+        18.553686 :   0.0 : dthetadt[18.553686] - omega[18.553686] :   0.0 :   True
+        19.167181 :   0.0 : dthetadt[19.167181] - omega[19.167181] :   0.0 :   True
+         19.72048 :   0.0 :   dthetadt[19.72048] - omega[19.72048] :   0.0 :   True
+             20.0 :   0.0 :           dthetadt[20.0] - omega[20.0] :   0.0 :   True
+    domegadt_disc_eq : Size=50, Index=t, Active=True
+        Key       : Lower : Body                                                                                                                                                                                                              : Upper : Active
+         0.114208 :   0.0 :           domegadt[0.114208] + 5.5193396206*omega[0.0] - 4.37796198897*omega[0.114208] - 1.44597130769*omega[0.553686] + 0.4375931981*omega[1.167181] - 0.19985260397*omega[1.72048] + 0.0668530819246*omega[2.0] :   0.0 :   True
+         0.553686 :   0.0 :        domegadt[0.553686] - 1.79153426125*omega[0.0] + 3.58069036007*omega[0.114208] - 0.903038862042*omega[0.553686] - 1.18189858803*omega[1.167181] + 0.432950390142*omega[1.72048] - 0.137169038888*omega[2.0] :   0.0 :   True
+         1.167181 :   0.0 :         domegadt[1.167181] + 1.17208577895*omega[0.0] - 2.06108262312*omega[0.114208] + 2.24800856291*omega[0.553686] - 0.428382622699*omega[1.167181] - 1.25916047461*omega[1.72048] + 0.328531378567*omega[2.0] :   0.0 :   True
+          1.72048 :   0.0 :              domegadt[1.72048] - 1.1413177501*omega[0.0] + 1.93933160986*omega[0.114208] - 1.69657595903*omega[0.553686] + 2.5941704532*omega[1.167181] - 0.29061652629*omega[1.72048] - 1.40499182764*omega[2.0] :   0.0 :   True
+              2.0 :   0.0 :                                     domegadt[2.0] + 2.5*omega[0.0] - 4.2062121118*omega[0.114208] + 3.48512805833*omega[0.553686] - 4.38855710208*omega[1.167181] + 9.10964115554*omega[1.72048] - 6.5*omega[2.0] :   0.0 :   True
+         2.114208 :   0.0 :           domegadt[2.114208] + 5.5193396206*omega[2.0] - 4.37796198897*omega[2.114208] - 1.44597130769*omega[2.553686] + 0.4375931981*omega[3.167181] - 0.19985260397*omega[3.72048] + 0.0668530819246*omega[4.0] :   0.0 :   True
+         2.553686 :   0.0 :        domegadt[2.553686] - 1.79153426125*omega[2.0] + 3.58069036007*omega[2.114208] - 0.903038862042*omega[2.553686] - 1.18189858803*omega[3.167181] + 0.432950390142*omega[3.72048] - 0.137169038888*omega[4.0] :   0.0 :   True
+         3.167181 :   0.0 :         domegadt[3.167181] + 1.17208577895*omega[2.0] - 2.06108262312*omega[2.114208] + 2.24800856291*omega[2.553686] - 0.428382622699*omega[3.167181] - 1.25916047461*omega[3.72048] + 0.328531378567*omega[4.0] :   0.0 :   True
+          3.72048 :   0.0 :              domegadt[3.72048] - 1.1413177501*omega[2.0] + 1.93933160986*omega[2.114208] - 1.69657595903*omega[2.553686] + 2.5941704532*omega[3.167181] - 0.29061652629*omega[3.72048] - 1.40499182764*omega[4.0] :   0.0 :   True
+              4.0 :   0.0 :                                     domegadt[4.0] + 2.5*omega[2.0] - 4.2062121118*omega[2.114208] + 3.48512805833*omega[2.553686] - 4.38855710208*omega[3.167181] + 9.10964115554*omega[3.72048] - 6.5*omega[4.0] :   0.0 :   True
+         4.114208 :   0.0 :           domegadt[4.114208] + 5.5193396206*omega[4.0] - 4.37796198897*omega[4.114208] - 1.44597130769*omega[4.553686] + 0.4375931981*omega[5.167181] - 0.19985260397*omega[5.72048] + 0.0668530819246*omega[6.0] :   0.0 :   True
+         4.553686 :   0.0 :        domegadt[4.553686] - 1.79153426125*omega[4.0] + 3.58069036007*omega[4.114208] - 0.903038862042*omega[4.553686] - 1.18189858803*omega[5.167181] + 0.432950390142*omega[5.72048] - 0.137169038888*omega[6.0] :   0.0 :   True
+         5.167181 :   0.0 :         domegadt[5.167181] + 1.17208577895*omega[4.0] - 2.06108262312*omega[4.114208] + 2.24800856291*omega[4.553686] - 0.428382622699*omega[5.167181] - 1.25916047461*omega[5.72048] + 0.328531378567*omega[6.0] :   0.0 :   True
+          5.72048 :   0.0 :              domegadt[5.72048] - 1.1413177501*omega[4.0] + 1.93933160986*omega[4.114208] - 1.69657595903*omega[4.553686] + 2.5941704532*omega[5.167181] - 0.29061652629*omega[5.72048] - 1.40499182764*omega[6.0] :   0.0 :   True
+              6.0 :   0.0 :                                     domegadt[6.0] + 2.5*omega[4.0] - 4.2062121118*omega[4.114208] + 3.48512805833*omega[4.553686] - 4.38855710208*omega[5.167181] + 9.10964115554*omega[5.72048] - 6.5*omega[6.0] :   0.0 :   True
+         6.114208 :   0.0 :           domegadt[6.114208] + 5.5193396206*omega[6.0] - 4.37796198897*omega[6.114208] - 1.44597130769*omega[6.553686] + 0.4375931981*omega[7.167181] - 0.19985260397*omega[7.72048] + 0.0668530819246*omega[8.0] :   0.0 :   True
+         6.553686 :   0.0 :        domegadt[6.553686] - 1.79153426125*omega[6.0] + 3.58069036007*omega[6.114208] - 0.903038862042*omega[6.553686] - 1.18189858803*omega[7.167181] + 0.432950390142*omega[7.72048] - 0.137169038888*omega[8.0] :   0.0 :   True
+         7.167181 :   0.0 :         domegadt[7.167181] + 1.17208577895*omega[6.0] - 2.06108262312*omega[6.114208] + 2.24800856291*omega[6.553686] - 0.428382622699*omega[7.167181] - 1.25916047461*omega[7.72048] + 0.328531378567*omega[8.0] :   0.0 :   True
+          7.72048 :   0.0 :              domegadt[7.72048] - 1.1413177501*omega[6.0] + 1.93933160986*omega[6.114208] - 1.69657595903*omega[6.553686] + 2.5941704532*omega[7.167181] - 0.29061652629*omega[7.72048] - 1.40499182764*omega[8.0] :   0.0 :   True
+              8.0 :   0.0 :                                     domegadt[8.0] + 2.5*omega[6.0] - 4.2062121118*omega[6.114208] + 3.48512805833*omega[6.553686] - 4.38855710208*omega[7.167181] + 9.10964115554*omega[7.72048] - 6.5*omega[8.0] :   0.0 :   True
+         8.114208 :   0.0 :          domegadt[8.114208] + 5.5193396206*omega[8.0] - 4.37796198897*omega[8.114208] - 1.44597130769*omega[8.553686] + 0.4375931981*omega[9.167181] - 0.19985260397*omega[9.72048] + 0.0668530819246*omega[10.0] :   0.0 :   True
+         8.553686 :   0.0 :       domegadt[8.553686] - 1.79153426125*omega[8.0] + 3.58069036007*omega[8.114208] - 0.903038862042*omega[8.553686] - 1.18189858803*omega[9.167181] + 0.432950390142*omega[9.72048] - 0.137169038888*omega[10.0] :   0.0 :   True
+         9.167181 :   0.0 :        domegadt[9.167181] + 1.17208577895*omega[8.0] - 2.06108262312*omega[8.114208] + 2.24800856291*omega[8.553686] - 0.428382622699*omega[9.167181] - 1.25916047461*omega[9.72048] + 0.328531378567*omega[10.0] :   0.0 :   True
+          9.72048 :   0.0 :             domegadt[9.72048] - 1.1413177501*omega[8.0] + 1.93933160986*omega[8.114208] - 1.69657595903*omega[8.553686] + 2.5941704532*omega[9.167181] - 0.29061652629*omega[9.72048] - 1.40499182764*omega[10.0] :   0.0 :   True
+             10.0 :   0.0 :                                   domegadt[10.0] + 2.5*omega[8.0] - 4.2062121118*omega[8.114208] + 3.48512805833*omega[8.553686] - 4.38855710208*omega[9.167181] + 9.10964115554*omega[9.72048] - 6.5*omega[10.0] :   0.0 :   True
+        10.114208 :   0.0 :    domegadt[10.114208] + 5.5193396206*omega[10.0] - 4.37796198897*omega[10.114208] - 1.44597130769*omega[10.553686] + 0.4375931981*omega[11.167181] - 0.19985260397*omega[11.72048] + 0.0668530819246*omega[12.0] :   0.0 :   True
+        10.553686 :   0.0 : domegadt[10.553686] - 1.79153426125*omega[10.0] + 3.58069036007*omega[10.114208] - 0.903038862042*omega[10.553686] - 1.18189858803*omega[11.167181] + 0.432950390142*omega[11.72048] - 0.137169038888*omega[12.0] :   0.0 :   True
+        11.167181 :   0.0 :  domegadt[11.167181] + 1.17208577895*omega[10.0] - 2.06108262312*omega[10.114208] + 2.24800856291*omega[10.553686] - 0.428382622699*omega[11.167181] - 1.25916047461*omega[11.72048] + 0.328531378567*omega[12.0] :   0.0 :   True
+         11.72048 :   0.0 :       domegadt[11.72048] - 1.1413177501*omega[10.0] + 1.93933160986*omega[10.114208] - 1.69657595903*omega[10.553686] + 2.5941704532*omega[11.167181] - 0.29061652629*omega[11.72048] - 1.40499182764*omega[12.0] :   0.0 :   True
+             12.0 :   0.0 :                              domegadt[12.0] + 2.5*omega[10.0] - 4.2062121118*omega[10.114208] + 3.48512805833*omega[10.553686] - 4.38855710208*omega[11.167181] + 9.10964115554*omega[11.72048] - 6.5*omega[12.0] :   0.0 :   True
+        12.114208 :   0.0 :    domegadt[12.114208] + 5.5193396206*omega[12.0] - 4.37796198897*omega[12.114208] - 1.44597130769*omega[12.553686] + 0.4375931981*omega[13.167181] - 0.19985260397*omega[13.72048] + 0.0668530819246*omega[14.0] :   0.0 :   True
+        12.553686 :   0.0 : domegadt[12.553686] - 1.79153426125*omega[12.0] + 3.58069036007*omega[12.114208] - 0.903038862042*omega[12.553686] - 1.18189858803*omega[13.167181] + 0.432950390142*omega[13.72048] - 0.137169038888*omega[14.0] :   0.0 :   True
+        13.167181 :   0.0 :  domegadt[13.167181] + 1.17208577895*omega[12.0] - 2.06108262312*omega[12.114208] + 2.24800856291*omega[12.553686] - 0.428382622699*omega[13.167181] - 1.25916047461*omega[13.72048] + 0.328531378567*omega[14.0] :   0.0 :   True
+         13.72048 :   0.0 :       domegadt[13.72048] - 1.1413177501*omega[12.0] + 1.93933160986*omega[12.114208] - 1.69657595903*omega[12.553686] + 2.5941704532*omega[13.167181] - 0.29061652629*omega[13.72048] - 1.40499182764*omega[14.0] :   0.0 :   True
+             14.0 :   0.0 :                              domegadt[14.0] + 2.5*omega[12.0] - 4.2062121118*omega[12.114208] + 3.48512805833*omega[12.553686] - 4.38855710208*omega[13.167181] + 9.10964115554*omega[13.72048] - 6.5*omega[14.0] :   0.0 :   True
+        14.114208 :   0.0 :    domegadt[14.114208] + 5.5193396206*omega[14.0] - 4.37796198897*omega[14.114208] - 1.44597130769*omega[14.553686] + 0.4375931981*omega[15.167181] - 0.19985260397*omega[15.72048] + 0.0668530819246*omega[16.0] :   0.0 :   True
+        14.553686 :   0.0 : domegadt[14.553686] - 1.79153426125*omega[14.0] + 3.58069036007*omega[14.114208] - 0.903038862042*omega[14.553686] - 1.18189858803*omega[15.167181] + 0.432950390142*omega[15.72048] - 0.137169038888*omega[16.0] :   0.0 :   True
+        15.167181 :   0.0 :  domegadt[15.167181] + 1.17208577895*omega[14.0] - 2.06108262312*omega[14.114208] + 2.24800856291*omega[14.553686] - 0.428382622699*omega[15.167181] - 1.25916047461*omega[15.72048] + 0.328531378567*omega[16.0] :   0.0 :   True
+         15.72048 :   0.0 :       domegadt[15.72048] - 1.1413177501*omega[14.0] + 1.93933160986*omega[14.114208] - 1.69657595903*omega[14.553686] + 2.5941704532*omega[15.167181] - 0.29061652629*omega[15.72048] - 1.40499182764*omega[16.0] :   0.0 :   True
+             16.0 :   0.0 :                              domegadt[16.0] + 2.5*omega[14.0] - 4.2062121118*omega[14.114208] + 3.48512805833*omega[14.553686] - 4.38855710208*omega[15.167181] + 9.10964115554*omega[15.72048] - 6.5*omega[16.0] :   0.0 :   True
+        16.114208 :   0.0 :    domegadt[16.114208] + 5.5193396206*omega[16.0] - 4.37796198897*omega[16.114208] - 1.44597130769*omega[16.553686] + 0.4375931981*omega[17.167181] - 0.19985260397*omega[17.72048] + 0.0668530819246*omega[18.0] :   0.0 :   True
+        16.553686 :   0.0 : domegadt[16.553686] - 1.79153426125*omega[16.0] + 3.58069036007*omega[16.114208] - 0.903038862042*omega[16.553686] - 1.18189858803*omega[17.167181] + 0.432950390142*omega[17.72048] - 0.137169038888*omega[18.0] :   0.0 :   True
+        17.167181 :   0.0 :  domegadt[17.167181] + 1.17208577895*omega[16.0] - 2.06108262312*omega[16.114208] + 2.24800856291*omega[16.553686] - 0.428382622699*omega[17.167181] - 1.25916047461*omega[17.72048] + 0.328531378567*omega[18.0] :   0.0 :   True
+         17.72048 :   0.0 :       domegadt[17.72048] - 1.1413177501*omega[16.0] + 1.93933160986*omega[16.114208] - 1.69657595903*omega[16.553686] + 2.5941704532*omega[17.167181] - 0.29061652629*omega[17.72048] - 1.40499182764*omega[18.0] :   0.0 :   True
+             18.0 :   0.0 :                              domegadt[18.0] + 2.5*omega[16.0] - 4.2062121118*omega[16.114208] + 3.48512805833*omega[16.553686] - 4.38855710208*omega[17.167181] + 9.10964115554*omega[17.72048] - 6.5*omega[18.0] :   0.0 :   True
+        18.114208 :   0.0 :    domegadt[18.114208] + 5.5193396206*omega[18.0] - 4.37796198897*omega[18.114208] - 1.44597130769*omega[18.553686] + 0.4375931981*omega[19.167181] - 0.19985260397*omega[19.72048] + 0.0668530819246*omega[20.0] :   0.0 :   True
+        18.553686 :   0.0 : domegadt[18.553686] - 1.79153426125*omega[18.0] + 3.58069036007*omega[18.114208] - 0.903038862042*omega[18.553686] - 1.18189858803*omega[19.167181] + 0.432950390142*omega[19.72048] - 0.137169038888*omega[20.0] :   0.0 :   True
+        19.167181 :   0.0 :  domegadt[19.167181] + 1.17208577895*omega[18.0] - 2.06108262312*omega[18.114208] + 2.24800856291*omega[18.553686] - 0.428382622699*omega[19.167181] - 1.25916047461*omega[19.72048] + 0.328531378567*omega[20.0] :   0.0 :   True
+         19.72048 :   0.0 :       domegadt[19.72048] - 1.1413177501*omega[18.0] + 1.93933160986*omega[18.114208] - 1.69657595903*omega[18.553686] + 2.5941704532*omega[19.167181] - 0.29061652629*omega[19.72048] - 1.40499182764*omega[20.0] :   0.0 :   True
+             20.0 :   0.0 :                              domegadt[20.0] + 2.5*omega[18.0] - 4.2062121118*omega[18.114208] + 3.48512805833*omega[18.553686] - 4.38855710208*omega[19.167181] + 9.10964115554*omega[19.72048] - 6.5*omega[20.0] :   0.0 :   True
+    dthetadt_disc_eq : Size=50, Index=t, Active=True
+        Key       : Lower : Body                                                                                                                                                                                                              : Upper : Active
+         0.114208 :   0.0 :           dthetadt[0.114208] + 5.5193396206*theta[0.0] - 4.37796198897*theta[0.114208] - 1.44597130769*theta[0.553686] + 0.4375931981*theta[1.167181] - 0.19985260397*theta[1.72048] + 0.0668530819246*theta[2.0] :   0.0 :   True
+         0.553686 :   0.0 :        dthetadt[0.553686] - 1.79153426125*theta[0.0] + 3.58069036007*theta[0.114208] - 0.903038862042*theta[0.553686] - 1.18189858803*theta[1.167181] + 0.432950390142*theta[1.72048] - 0.137169038888*theta[2.0] :   0.0 :   True
+         1.167181 :   0.0 :         dthetadt[1.167181] + 1.17208577895*theta[0.0] - 2.06108262312*theta[0.114208] + 2.24800856291*theta[0.553686] - 0.428382622699*theta[1.167181] - 1.25916047461*theta[1.72048] + 0.328531378567*theta[2.0] :   0.0 :   True
+          1.72048 :   0.0 :              dthetadt[1.72048] - 1.1413177501*theta[0.0] + 1.93933160986*theta[0.114208] - 1.69657595903*theta[0.553686] + 2.5941704532*theta[1.167181] - 0.29061652629*theta[1.72048] - 1.40499182764*theta[2.0] :   0.0 :   True
+              2.0 :   0.0 :                                     dthetadt[2.0] + 2.5*theta[0.0] - 4.2062121118*theta[0.114208] + 3.48512805833*theta[0.553686] - 4.38855710208*theta[1.167181] + 9.10964115554*theta[1.72048] - 6.5*theta[2.0] :   0.0 :   True
+         2.114208 :   0.0 :           dthetadt[2.114208] + 5.5193396206*theta[2.0] - 4.37796198897*theta[2.114208] - 1.44597130769*theta[2.553686] + 0.4375931981*theta[3.167181] - 0.19985260397*theta[3.72048] + 0.0668530819246*theta[4.0] :   0.0 :   True
+         2.553686 :   0.0 :        dthetadt[2.553686] - 1.79153426125*theta[2.0] + 3.58069036007*theta[2.114208] - 0.903038862042*theta[2.553686] - 1.18189858803*theta[3.167181] + 0.432950390142*theta[3.72048] - 0.137169038888*theta[4.0] :   0.0 :   True
+         3.167181 :   0.0 :         dthetadt[3.167181] + 1.17208577895*theta[2.0] - 2.06108262312*theta[2.114208] + 2.24800856291*theta[2.553686] - 0.428382622699*theta[3.167181] - 1.25916047461*theta[3.72048] + 0.328531378567*theta[4.0] :   0.0 :   True
+          3.72048 :   0.0 :              dthetadt[3.72048] - 1.1413177501*theta[2.0] + 1.93933160986*theta[2.114208] - 1.69657595903*theta[2.553686] + 2.5941704532*theta[3.167181] - 0.29061652629*theta[3.72048] - 1.40499182764*theta[4.0] :   0.0 :   True
+              4.0 :   0.0 :                                     dthetadt[4.0] + 2.5*theta[2.0] - 4.2062121118*theta[2.114208] + 3.48512805833*theta[2.553686] - 4.38855710208*theta[3.167181] + 9.10964115554*theta[3.72048] - 6.5*theta[4.0] :   0.0 :   True
+         4.114208 :   0.0 :           dthetadt[4.114208] + 5.5193396206*theta[4.0] - 4.37796198897*theta[4.114208] - 1.44597130769*theta[4.553686] + 0.4375931981*theta[5.167181] - 0.19985260397*theta[5.72048] + 0.0668530819246*theta[6.0] :   0.0 :   True
+         4.553686 :   0.0 :        dthetadt[4.553686] - 1.79153426125*theta[4.0] + 3.58069036007*theta[4.114208] - 0.903038862042*theta[4.553686] - 1.18189858803*theta[5.167181] + 0.432950390142*theta[5.72048] - 0.137169038888*theta[6.0] :   0.0 :   True
+         5.167181 :   0.0 :         dthetadt[5.167181] + 1.17208577895*theta[4.0] - 2.06108262312*theta[4.114208] + 2.24800856291*theta[4.553686] - 0.428382622699*theta[5.167181] - 1.25916047461*theta[5.72048] + 0.328531378567*theta[6.0] :   0.0 :   True
+          5.72048 :   0.0 :              dthetadt[5.72048] - 1.1413177501*theta[4.0] + 1.93933160986*theta[4.114208] - 1.69657595903*theta[4.553686] + 2.5941704532*theta[5.167181] - 0.29061652629*theta[5.72048] - 1.40499182764*theta[6.0] :   0.0 :   True
+              6.0 :   0.0 :                                     dthetadt[6.0] + 2.5*theta[4.0] - 4.2062121118*theta[4.114208] + 3.48512805833*theta[4.553686] - 4.38855710208*theta[5.167181] + 9.10964115554*theta[5.72048] - 6.5*theta[6.0] :   0.0 :   True
+         6.114208 :   0.0 :           dthetadt[6.114208] + 5.5193396206*theta[6.0] - 4.37796198897*theta[6.114208] - 1.44597130769*theta[6.553686] + 0.4375931981*theta[7.167181] - 0.19985260397*theta[7.72048] + 0.0668530819246*theta[8.0] :   0.0 :   True
+         6.553686 :   0.0 :        dthetadt[6.553686] - 1.79153426125*theta[6.0] + 3.58069036007*theta[6.114208] - 0.903038862042*theta[6.553686] - 1.18189858803*theta[7.167181] + 0.432950390142*theta[7.72048] - 0.137169038888*theta[8.0] :   0.0 :   True
+         7.167181 :   0.0 :         dthetadt[7.167181] + 1.17208577895*theta[6.0] - 2.06108262312*theta[6.114208] + 2.24800856291*theta[6.553686] - 0.428382622699*theta[7.167181] - 1.25916047461*theta[7.72048] + 0.328531378567*theta[8.0] :   0.0 :   True
+          7.72048 :   0.0 :              dthetadt[7.72048] - 1.1413177501*theta[6.0] + 1.93933160986*theta[6.114208] - 1.69657595903*theta[6.553686] + 2.5941704532*theta[7.167181] - 0.29061652629*theta[7.72048] - 1.40499182764*theta[8.0] :   0.0 :   True
+              8.0 :   0.0 :                                     dthetadt[8.0] + 2.5*theta[6.0] - 4.2062121118*theta[6.114208] + 3.48512805833*theta[6.553686] - 4.38855710208*theta[7.167181] + 9.10964115554*theta[7.72048] - 6.5*theta[8.0] :   0.0 :   True
+         8.114208 :   0.0 :          dthetadt[8.114208] + 5.5193396206*theta[8.0] - 4.37796198897*theta[8.114208] - 1.44597130769*theta[8.553686] + 0.4375931981*theta[9.167181] - 0.19985260397*theta[9.72048] + 0.0668530819246*theta[10.0] :   0.0 :   True
+         8.553686 :   0.0 :       dthetadt[8.553686] - 1.79153426125*theta[8.0] + 3.58069036007*theta[8.114208] - 0.903038862042*theta[8.553686] - 1.18189858803*theta[9.167181] + 0.432950390142*theta[9.72048] - 0.137169038888*theta[10.0] :   0.0 :   True
+         9.167181 :   0.0 :        dthetadt[9.167181] + 1.17208577895*theta[8.0] - 2.06108262312*theta[8.114208] + 2.24800856291*theta[8.553686] - 0.428382622699*theta[9.167181] - 1.25916047461*theta[9.72048] + 0.328531378567*theta[10.0] :   0.0 :   True
+          9.72048 :   0.0 :             dthetadt[9.72048] - 1.1413177501*theta[8.0] + 1.93933160986*theta[8.114208] - 1.69657595903*theta[8.553686] + 2.5941704532*theta[9.167181] - 0.29061652629*theta[9.72048] - 1.40499182764*theta[10.0] :   0.0 :   True
+             10.0 :   0.0 :                                   dthetadt[10.0] + 2.5*theta[8.0] - 4.2062121118*theta[8.114208] + 3.48512805833*theta[8.553686] - 4.38855710208*theta[9.167181] + 9.10964115554*theta[9.72048] - 6.5*theta[10.0] :   0.0 :   True
+        10.114208 :   0.0 :    dthetadt[10.114208] + 5.5193396206*theta[10.0] - 4.37796198897*theta[10.114208] - 1.44597130769*theta[10.553686] + 0.4375931981*theta[11.167181] - 0.19985260397*theta[11.72048] + 0.0668530819246*theta[12.0] :   0.0 :   True
+        10.553686 :   0.0 : dthetadt[10.553686] - 1.79153426125*theta[10.0] + 3.58069036007*theta[10.114208] - 0.903038862042*theta[10.553686] - 1.18189858803*theta[11.167181] + 0.432950390142*theta[11.72048] - 0.137169038888*theta[12.0] :   0.0 :   True
+        11.167181 :   0.0 :  dthetadt[11.167181] + 1.17208577895*theta[10.0] - 2.06108262312*theta[10.114208] + 2.24800856291*theta[10.553686] - 0.428382622699*theta[11.167181] - 1.25916047461*theta[11.72048] + 0.328531378567*theta[12.0] :   0.0 :   True
+         11.72048 :   0.0 :       dthetadt[11.72048] - 1.1413177501*theta[10.0] + 1.93933160986*theta[10.114208] - 1.69657595903*theta[10.553686] + 2.5941704532*theta[11.167181] - 0.29061652629*theta[11.72048] - 1.40499182764*theta[12.0] :   0.0 :   True
+             12.0 :   0.0 :                              dthetadt[12.0] + 2.5*theta[10.0] - 4.2062121118*theta[10.114208] + 3.48512805833*theta[10.553686] - 4.38855710208*theta[11.167181] + 9.10964115554*theta[11.72048] - 6.5*theta[12.0] :   0.0 :   True
+        12.114208 :   0.0 :    dthetadt[12.114208] + 5.5193396206*theta[12.0] - 4.37796198897*theta[12.114208] - 1.44597130769*theta[12.553686] + 0.4375931981*theta[13.167181] - 0.19985260397*theta[13.72048] + 0.0668530819246*theta[14.0] :   0.0 :   True
+        12.553686 :   0.0 : dthetadt[12.553686] - 1.79153426125*theta[12.0] + 3.58069036007*theta[12.114208] - 0.903038862042*theta[12.553686] - 1.18189858803*theta[13.167181] + 0.432950390142*theta[13.72048] - 0.137169038888*theta[14.0] :   0.0 :   True
+        13.167181 :   0.0 :  dthetadt[13.167181] + 1.17208577895*theta[12.0] - 2.06108262312*theta[12.114208] + 2.24800856291*theta[12.553686] - 0.428382622699*theta[13.167181] - 1.25916047461*theta[13.72048] + 0.328531378567*theta[14.0] :   0.0 :   True
+         13.72048 :   0.0 :       dthetadt[13.72048] - 1.1413177501*theta[12.0] + 1.93933160986*theta[12.114208] - 1.69657595903*theta[12.553686] + 2.5941704532*theta[13.167181] - 0.29061652629*theta[13.72048] - 1.40499182764*theta[14.0] :   0.0 :   True
+             14.0 :   0.0 :                              dthetadt[14.0] + 2.5*theta[12.0] - 4.2062121118*theta[12.114208] + 3.48512805833*theta[12.553686] - 4.38855710208*theta[13.167181] + 9.10964115554*theta[13.72048] - 6.5*theta[14.0] :   0.0 :   True
+        14.114208 :   0.0 :    dthetadt[14.114208] + 5.5193396206*theta[14.0] - 4.37796198897*theta[14.114208] - 1.44597130769*theta[14.553686] + 0.4375931981*theta[15.167181] - 0.19985260397*theta[15.72048] + 0.0668530819246*theta[16.0] :   0.0 :   True
+        14.553686 :   0.0 : dthetadt[14.553686] - 1.79153426125*theta[14.0] + 3.58069036007*theta[14.114208] - 0.903038862042*theta[14.553686] - 1.18189858803*theta[15.167181] + 0.432950390142*theta[15.72048] - 0.137169038888*theta[16.0] :   0.0 :   True
+        15.167181 :   0.0 :  dthetadt[15.167181] + 1.17208577895*theta[14.0] - 2.06108262312*theta[14.114208] + 2.24800856291*theta[14.553686] - 0.428382622699*theta[15.167181] - 1.25916047461*theta[15.72048] + 0.328531378567*theta[16.0] :   0.0 :   True
+         15.72048 :   0.0 :       dthetadt[15.72048] - 1.1413177501*theta[14.0] + 1.93933160986*theta[14.114208] - 1.69657595903*theta[14.553686] + 2.5941704532*theta[15.167181] - 0.29061652629*theta[15.72048] - 1.40499182764*theta[16.0] :   0.0 :   True
+             16.0 :   0.0 :                              dthetadt[16.0] + 2.5*theta[14.0] - 4.2062121118*theta[14.114208] + 3.48512805833*theta[14.553686] - 4.38855710208*theta[15.167181] + 9.10964115554*theta[15.72048] - 6.5*theta[16.0] :   0.0 :   True
+        16.114208 :   0.0 :    dthetadt[16.114208] + 5.5193396206*theta[16.0] - 4.37796198897*theta[16.114208] - 1.44597130769*theta[16.553686] + 0.4375931981*theta[17.167181] - 0.19985260397*theta[17.72048] + 0.0668530819246*theta[18.0] :   0.0 :   True
+        16.553686 :   0.0 : dthetadt[16.553686] - 1.79153426125*theta[16.0] + 3.58069036007*theta[16.114208] - 0.903038862042*theta[16.553686] - 1.18189858803*theta[17.167181] + 0.432950390142*theta[17.72048] - 0.137169038888*theta[18.0] :   0.0 :   True
+        17.167181 :   0.0 :  dthetadt[17.167181] + 1.17208577895*theta[16.0] - 2.06108262312*theta[16.114208] + 2.24800856291*theta[16.553686] - 0.428382622699*theta[17.167181] - 1.25916047461*theta[17.72048] + 0.328531378567*theta[18.0] :   0.0 :   True
+         17.72048 :   0.0 :       dthetadt[17.72048] - 1.1413177501*theta[16.0] + 1.93933160986*theta[16.114208] - 1.69657595903*theta[16.553686] + 2.5941704532*theta[17.167181] - 0.29061652629*theta[17.72048] - 1.40499182764*theta[18.0] :   0.0 :   True
+             18.0 :   0.0 :                              dthetadt[18.0] + 2.5*theta[16.0] - 4.2062121118*theta[16.114208] + 3.48512805833*theta[16.553686] - 4.38855710208*theta[17.167181] + 9.10964115554*theta[17.72048] - 6.5*theta[18.0] :   0.0 :   True
+        18.114208 :   0.0 :    dthetadt[18.114208] + 5.5193396206*theta[18.0] - 4.37796198897*theta[18.114208] - 1.44597130769*theta[18.553686] + 0.4375931981*theta[19.167181] - 0.19985260397*theta[19.72048] + 0.0668530819246*theta[20.0] :   0.0 :   True
+        18.553686 :   0.0 : dthetadt[18.553686] - 1.79153426125*theta[18.0] + 3.58069036007*theta[18.114208] - 0.903038862042*theta[18.553686] - 1.18189858803*theta[19.167181] + 0.432950390142*theta[19.72048] - 0.137169038888*theta[20.0] :   0.0 :   True
+        19.167181 :   0.0 :  dthetadt[19.167181] + 1.17208577895*theta[18.0] - 2.06108262312*theta[18.114208] + 2.24800856291*theta[18.553686] - 0.428382622699*theta[19.167181] - 1.25916047461*theta[19.72048] + 0.328531378567*theta[20.0] :   0.0 :   True
+         19.72048 :   0.0 :       dthetadt[19.72048] - 1.1413177501*theta[18.0] + 1.93933160986*theta[18.114208] - 1.69657595903*theta[18.553686] + 2.5941704532*theta[19.167181] - 0.29061652629*theta[19.72048] - 1.40499182764*theta[20.0] :   0.0 :   True
+             20.0 :   0.0 :                              dthetadt[20.0] + 2.5*theta[18.0] - 4.2062121118*theta[18.114208] + 3.48512805833*theta[18.553686] - 4.38855710208*theta[19.167181] + 9.10964115554*theta[19.72048] - 6.5*theta[20.0] :   0.0 :   True
+
+1 ContinuousSet Declarations
+    t : Dim=0, Dimen=1, Size=51, Domain=None, Ordered=Sorted, Bounds=(0.0, 20.0)
+        [0.0, 0.114208, 0.553686, 1.167181, 1.72048, 2.0, 2.114208, 2.553686, 3.167181, 3.72048, 4.0, 4.114208, 4.553686, 5.167181, 5.72048, 6.0, 6.114208, 6.553686, 7.167181, 7.72048, 8.0, 8.114208, 8.553686, 9.167181, 9.72048, 10.0, 10.114208, 10.553686, 11.167181, 11.72048, 12.0, 12.114208, 12.553686, 13.167181, 13.72048, 14.0, 14.114208, 14.553686, 15.167181, 15.72048, 16.0, 16.114208, 16.553686, 17.167181, 17.72048, 18.0, 18.114208, 18.553686, 19.167181, 19.72048, 20.0]
+
+1 Suffix Declarations
+    var_input : Direction=Suffix.LOCAL, Datatype=Suffix.FLOAT
+        Key : Value
+          b : {0: 0.25, 15: 0.025}
+          c : {0: 5.0, 7: 50}
+
+12 Declarations: t b c omega theta domegadt dthetadt diffeq1 diffeq2 var_input domegadt_disc_eq dthetadt_disc_eq
+[[ 0.          3.04      ]
+ [-0.10331187  3.0296515 ]
+ [-0.2222991   2.9972059 ]
+ [-0.37988877  2.93724629]
+ [-0.60478367  2.83920255]
+ [-0.93467419  2.68583802]
+ [-1.41555533  2.45137844]
+ [-2.0856679   2.10102221]
+ [-2.91676053  1.59742304]
+ [-3.69676238  0.92536297]
+ [-4.00192204  0.13604607]
+ [-3.55540066 -0.6395425 ]
+ [-2.58025782 -1.26449765]
+ [-1.4782638  -1.67413575]
+ [-0.4452453  -1.8668704 ]
+ [ 0.51524027 -1.85902504]
+ [ 1.45289377 -1.66009213]
+ [ 2.35622642 -1.27394511]
+ [ 3.06220432 -0.72101568]
+ [ 3.28492562 -0.06956179]
+ [ 2.87758107  0.56291101]
+ [ 2.01696356  1.06233314]
+ [ 0.99177799  1.36712585]
+ [-0.03233399  1.46340466]
+ [-1.00502112  1.35752355]
+ [-1.87859371  1.06378739]
+ [-2.51845918  0.61403775]
+ [-2.72452668  0.0756919 ]
+ [-2.40152037 -0.45056866]
+ [-1.67372622 -0.86714403]
+ [-0.76069938 -1.1145395 ]
+ [ 0.17960009 -1.17283756]
+ [ 1.05835314 -1.04609977]
+ [ 1.78223703 -0.75551377]
+ [ 2.21089754 -0.34588932]
+ [ 2.26587469 -0.04985709]
+ [ 2.11972869  0.10848287]
+ [-0.45676911  0.30824314]
+ [-2.15226421 -0.01234519]
+ [-0.19297413 -0.2966084 ]
+ [ 1.9891714  -0.07510853]
+ [ 0.76163546  0.26015751]
+ [-1.66742701  0.14708675]
+ [-1.20878669 -0.20474486]
+ [ 1.23375424 -0.19901721]
+ [ 1.50807789  0.13718482]
+ [-0.73834844  0.22863386]
+ [-1.64843601 -0.06458463]
+ [ 0.22996458 -0.23583534]
+ [ 1.63398451 -0.00629442]
+ [ 0.24756591  0.22240191]
+ [-1.48223452  0.06959226]
+ [-0.65776559 -0.19162085]
+ [ 1.22081639 -0.12075689]
+ [ 0.97328992  0.14785463]
+ [-0.88353729  0.15677547]
+ [-1.17720626 -0.09607987]
+ [ 0.50649375 -0.17623358]
+ [ 1.2635266   0.04141861]
+ [-0.12482302  0.17923525]
+ [-1.23683196  0.011302  ]
+ [-0.22985228 -0.16721379]
+ [ 1.11081574 -0.05792383]
+ [ 0.53135746  0.14267055]
+ [-0.90607452  0.0952336 ]
+ [-0.76036488 -0.10886554]
+ [ 0.64748738 -0.12112364]
+ [ 0.90528046  0.06947929]
+ [-0.36158177  0.13463739]
+ [-0.96249348 -0.02827506]
+ [ 0.07423184 -0.13591962]
+ [ 0.93598416 -0.01121551]
+ [ 0.19126708  0.12608417]
+ [-0.83622705  0.0459596 ]
+ [-0.41570814 -0.1070244 ]
+ [ 0.67862322 -0.07361734]
+ [ 0.80840794 -0.03565557]
+ [ 0.60622723  0.08307602]
+ [-0.49370727  0.0967342 ]
+ [-0.74429938 -0.05504914]
+ [ 0.27881347 -0.1119489 ]
+ [ 0.8203024   0.0228153 ]
+ [-0.04347032  0.1178908 ]
+ [-0.82860892  0.01095298]
+ [-0.19301357 -0.11417375]
+ [ 0.76923082 -0.04348486]
+ [ 0.41145703  0.10119858]
+ [-0.6477602   0.0721406 ]
+ [-0.59429    -0.08011377]
+ [ 0.47482066 -0.09462735]
+ [ 0.72695188  0.05271561]
+ [-0.26507344  0.10918034]
+ [-0.79906677 -0.02129881]
+ [ 0.03595648 -0.1147009 ]
+ [ 0.80532619 -0.01153544]
+ [ 0.19375643  0.11083557]
+ [-0.74588651  0.04309674]
+ [-0.40544769 -0.09799302]
+ [ 0.62631658 -0.07082686]
+ [ 0.58210827  0.07730765]
+ [-0.4570482   0.09251018]
+ [-0.70968868 -0.05053912]]
