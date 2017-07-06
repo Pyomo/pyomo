@@ -35,7 +35,6 @@ from pyomo.core.base.template_expr import (
 )
 
 import os
-import importlib as importlib
 from pyutilib.misc import setup_redirect, reset_redirect
 from pyutilib.misc import import_file
 
