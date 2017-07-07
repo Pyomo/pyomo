@@ -129,9 +129,9 @@ class MIPCLSHELL(SystemCallSolver):
                 if i == 0:
                     line = line.split()
                     if line[0] == '=infeas=':
-                        results.solver.termination_condition = TerminationCondition.infeasible
+                        results.Solver.Termination_condition = TerminationCondition.infeasible
                     elif line[0] == '=obj=':
-                        results.solution.objective['__default_objective__']['Value'] = eval(line[1])
+                        results.Solution.Objective['obj'] = {"Value" : eval(line[1])}
                     else:
                         raise RuntimeError('objective status unknown')
                 else:
