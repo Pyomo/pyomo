@@ -35,7 +35,7 @@ from pyomo.environ import (Binary, Block, Constraint,
                            maximize, minimize, value, TransformationFactory,
                            SolverFactory)
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverStatus
+from pyomo.opt import SolverStatus, SolutionStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from copy import deepcopy
@@ -603,6 +603,22 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         # Process master problem result
         if master_terminate_cond is tc.optimal:
             # proceed. Just need integer values
+            m.solutions.load_from(results)
+            self._copy_values(m, self.working_model)
+            if GDPDT.objective.sense == minimize:
+                self.LB = max(value(GDPDT.oa_obj.expr), self.LB)
+                self.LB_progress.append(self.LB)
+            else:
+                self.UB = min(value(GDPDT.oa_obj.expr), self.UB)
+                self.UB_progress.append(self.UB)
+            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                  .format(self.mip_iter, value(GDPDT.oa_obj.expr), self.LB,
+                          self.UB))
+        elif (master_terminate_cond is tc.other and
+                results.solution.status is SolutionStatus.feasible):
+            # load the solution and suppress the warning message by setting
+            # solver status to ok.
+            results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             self._copy_values(m, self.working_model)
             if GDPDT.objective.sense == minimize:
