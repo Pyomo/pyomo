@@ -191,7 +191,6 @@ def compress_expression(expr, verbose=False):
             # Replace the current expression
             #
             if _r.__class__ == _MultiSumExpression:
-                ans = _r
                 #
                 # 1 + MultiSum
                 # p + MultiSum
@@ -199,52 +198,50 @@ def compress_expression(expr, verbose=False):
                 # Add the LHS to the first term of the multisum
                 #
                 if _l.__class__ in native_numeric_types or not _l_pvar:
-                    ans._args[0] += _l
+                    ans = _MultiSumExpression((_r._args[0]+_l,) + _r._args[1:])
                 #
                 # MultiSum + MultiSum
                 #
                 # Add the constant terms, and place the others
                 #
                 elif _l.__class__ == _MultiSumExpression:
-                    ans._args[0] += _l._args[0]
-                    ans._args += _l._args[1:]
+                    ans = _MultiSumExpression((_r._args[0]+_l._args[0],) + _r._args[1:] + _l._args[1:])
                 #
                 # expr + MultiSum
                 #
                 # Insert the expression
                 #
                 else:
-                    ans._args.append(_l)
+                    ans = _MultiSumExpression(_r._args + (_l,))
 
             elif _l.__class__ == _MultiSumExpression:
-                ans = _l
                 #
                 # MultiSum + p
                 #
                 # Add the RHS to the first term of the multisum
                 #
                 if not _r_pvar:
-                    ans._args[0] += _r
+                    ans = _MultiSumExpression((_l._args[0]+_r,) + _l._args[1:])
                 #
                 # Multisum + expr
                 #
                 # Insert the expression
                 #
                 else:
-                    ans._args.append(_r)
+                    ans = _MultiSumExpression(_l._args + (_r,))
 
             elif _l.__class__ in native_numeric_types or not _l_pvar:
                 #
                 # 1 + expr
                 # p + expr
                 #
-                ans = _MultiSumExpression([_l, _r])
+                ans = _MultiSumExpression((_l, _r))
 
             else:
                 #
                 # expr + expr
                 #
-                ans = _MultiSumExpression([0, _l, _r])
+                ans = _MultiSumExpression((0, _l, _r))
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to

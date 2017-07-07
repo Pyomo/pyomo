@@ -3057,6 +3057,25 @@ class EntangledExpressionErrors(unittest.TestCase):
         #except EntangledExpressionError as exc:
         #    self.assertIn(str(e), str(exc))
 
+    def test_entangled_test1(self):
+        self.m = ConcreteModel()
+        self.m.a = Var()
+        self.m.b = Var()
+        self.m.c = Var()
+        self.m.d = Var()
+
+        e1 = self.m.a + self.m.b
+        e1_ = EXPR.compress_expression(e1)
+
+        e2 = self.m.c + e1_
+        e2_ = EXPR.compress_expression(e2)
+
+        e3 = self.m.d + e1_
+        e3_ = EXPR.compress_expression(e3)
+
+        self.assertEqual( len(e1_._args), 3)
+        self.assertEqual( len(e2_._args), 4)
+        self.assertEqual( len(e3_._args), 4)
 
 
 class TestCloneExpression(unittest.TestCase):
