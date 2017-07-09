@@ -389,6 +389,16 @@ class TwoTermDisj_coopr3(unittest.TestCase):
             m, 
             bigM={None: (-20,19, 32)})
 
+    def test_list_M_err(self):
+        m = self.makeModel()
+        M = [-20, 19]
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Expected either a tuple or a single value for M! Can't use .* of type list for M in transformation of constraint*",
+            TransformationFactory('gdp.bigm').apply_to,
+            m,
+            bigM={None: M})
+
 
 class TwoTermIndexedDisj_coopr3(unittest.TestCase):
     def setUp(self):
@@ -1073,3 +1083,4 @@ class TestTargets(unittest.TestCase):
             TransformationFactory('gdp.bigm').apply_to,
             m, 
             targets=[ComponentUID(decoy.block)])
+

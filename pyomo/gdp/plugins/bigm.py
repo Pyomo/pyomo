@@ -235,17 +235,9 @@ class BigM_Transformation(Transformation):
                 continue
             c.deactivate()
 
-            M = None
-            # check args: we only have to look for constraint, constraintdata, and None
-            if bigMargs is not None:
-                cuid = ComponentUID(c)
-                parentcuid = ComponentUID(c.parent_component())
-                if cuid in bigMargs:
-                    M = bigMargs[cuid]
-                elif parentcuid in bigMargs:
-                    M = bigMargs[parentcuid]
-                elif None in bigMargs:
-                    M = bigMargs[None]
+            # first, we see if an M value was specified in the arguments.
+            # (We get None if not)
+            M = self._get_M_from_args(c, bigMargs)
             
             # DEBUG
             print("after args, M is: ")
@@ -253,52 +245,39 @@ class BigM_Transformation(Transformation):
             
             # if we didn't get something from args, try suffixes:
             if M is None:
-                # make suffix list
-                suffix_list = self.get_bigm_suffix_list(c.parent_block())
-                # first we check if the component or its parent is a key in any of the
-                # suffix lists
-                for bigm in suffix_list:
-                    if c in bigm:
-                        M = bigm[c]
-                        break
-                        
-                    # if c is indexed, check for the parent component
-                    if c.parent_component() in bigm:
-                        print("not crazy!")
-                        M = bigm[c.parent_component()]
-                        break
-                # if we didn't get an M that way, traverse upwards through the blocks and 
-                # see if None has a value on any of them.
-                if M is None:
-                    for bigm in suffix_list:
-                        if None in bigm:
-                            M = bigm[None]
-                            break
-
+                M = self._get_M_from_suffixes(c)
+                
             # DEBUG
             print("after suffixes, M is: ")
             print(M)
             
+            # TODO: should lists of length 2 be allowed for M?
             if not isinstance(M, tuple):
                 if M is None:
                     m = (None, None)
                 else:
-                    m = (-1*M,M)
+                    # TODO: Maybe? I got worried that someone could out in all sorts of silly
+                    # things for M and I would have no idea. But I'm not sure this is the best
+                    # way to handle it...
+                    try:
+                        m_up = int(M)
+                    except ValueError:
+                        m_up = float(M)
+                    except TypeError:
+                        raise GDP_Error("Expected either a tuple or a single value for M! "
+                                "Can't use %s of type %s for M in transformation of constraint "
+                                "%s." % (M, type(M).__name__, c.name))
+                    m = (-1*m_up, m_up)
             else:
                 assert len(M) == 2, "Big-M tuple is not of length 2: %s" % str(M)
                 m = M
-            
-            if not isinstance(m, tuple):
-                raise GDP_Error("Expected either a tuple or a single value for M! "
-                                "Can't use %s for M in transformation of constraint "
-                                "%s." % (m, c.name))
 
             # TODO: this seems hacky (with the list conversions), but will work for now...
             m = list(m)
             if c.lower is not None and m[0] is None:
-                m[0] = self._estimate_M(c.body, name, m, disjunct)[0] - c.lower
+                m[0] = self._estimate_M(c.body, name)[0] - c.lower
             if c.upper is not None and m[1] is None:
-                m[1] = self._estimate_M(c.body, name, m, disjunct)[1] - c.upper
+                m[1] = self._estimate_M(c.body, name)[1] - c.upper
             m = tuple(m)
 
             # DEBUG
@@ -336,10 +315,48 @@ class BigM_Transformation(Transformation):
                     newC.add('ub', c.body - M_expr <= c.upper)
 
 
-    # TODO: this needs some updating so that the user-defined values don't get involved here
-    # (they don't right now since I'm only calling this if I don't have them, but I don't
-    # think they should be in this function at all.)
-    def _estimate_M(self, expr, name, m, disjunct):
+    def _get_M_from_args(self, cons, bigMargs):
+        M = None
+        # check args: we only have to look for constraint, constraintdata, and None
+        if bigMargs is not None:
+            cuid = ComponentUID(cons)
+            parentcuid = ComponentUID(cons.parent_component())
+            if cuid in bigMargs:
+                M = bigMargs[cuid]
+            elif parentcuid in bigMargs:
+                M = bigMargs[parentcuid]
+            elif None in bigMargs:
+                M = bigMargs[None]
+        return M
+
+
+    def _get_M_from_suffixes(self, cons):
+        M = None
+        # make suffix list
+        suffix_list = self.get_bigm_suffix_list(cons.parent_block())
+        # first we check if the component or its parent is a key in any of the
+        # suffix lists
+        for bigm in suffix_list:
+            if cons in bigm:
+                M = bigm[cons]
+                break
+        
+            # if c is indexed, check for the parent component
+            if cons.parent_component() in bigm:
+                M = bigm[cons.parent_component()]
+                break
+
+        # if we didn't get an M that way, traverse upwards through the blocks and 
+        # see if None has a value on any of them.
+        if M is None:
+            for bigm in suffix_list:
+                if None in bigm:
+                    M = bigm[None]
+                    break
+        return M
+
+
+    def _estimate_M(self, expr, name):
         # Calculate a best guess at M
         repn = generate_canonical_repn(expr)
         M = [0,0]
@@ -370,32 +387,6 @@ class BigM_Transformation(Transformation):
                         "expressions.\n\t(found while processing %s)",
                         name)
             M = [None,None]
-
-
-        # Allow user-defined M values to override the estimates
-        for i in (0,1):
-            if m[i] is not None:
-                M[i] = m[i]
-
-        # Search for global BigM values: if there are still undefined
-        # M's, then search up the block hierarchy for the first block
-        # that contains a BigM Suffix with a non-None value for the
-        # "None" component.
-        if None in M:
-            m = None
-            while m is None and disjunct is not None:
-                if 'BigM' in disjunct.component_map(Suffix):
-                    m = disjunct.component('BigM').get(None)
-                disjunct = disjunct.parent_block()
-            if m is not None:
-                try:
-                    # We always allow M values to be specified as pairs
-                    # (for lower / upper bounding)
-                    M = [m[i] if x is None else x for i,x in enumerate(M)]
-                except:
-                    # We assume the default M is positive (so we need to
-                    # invert it for the lower-bound M)
-                    M = [(2*i-1)*m if x is None else x for i,x in enumerate(M)]
 
         return tuple(M)
 
