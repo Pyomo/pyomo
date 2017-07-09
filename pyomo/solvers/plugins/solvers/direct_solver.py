@@ -2,6 +2,8 @@ from pyomo.core.base.PyomoModel import Model
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.opt.base.solvers import OptSolver
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
+import pyutilib.common
+import pyomo.opt.base.solvers
 
 
 class DirectSolver(OptSolver):
@@ -23,6 +25,9 @@ class DirectSolver(OptSolver):
         self._smap_id = None
         self._skip_trivial_constraints = False
         self._output_fixed_variable_bounds = False
+        self._python_api_exists = False
+        self._version = None
+        self._version_major = None
 
         self._referenced_variable_ids = {}
         """dict: {var_id: count} where count is the number of constraints/objective referencing the var"""
@@ -31,12 +36,51 @@ class DirectSolver(OptSolver):
         self._keepfiles = False
 
     def _presolve(self, *args, **kwds):
+        """
+        kwds not consumed here or at the beginning of OptSolver._presolve will raise an error in
+        OptSolver._presolve.
+
+        args
+        ----
+        pyomo Model or IBlockStorage
+
+        kwds
+        ----
+        warmstart: bool
+            can only be True if the subclass is warmstart capable; if not, an error will be raised
+        symbolic_solver_labels: bool
+            if True, the model will be translated using the names from the pyomo model; otherwise, the variables and
+            constraints will be numbered with a generic xi
+        skip_trivial_constraints: bool
+            if True, any trivial constraints (e.g., 1 == 1) will be skipped (i.e., not passed to the solver).
+        output_fixed_variable_bounds: bool
+            if False, an error will be raised if a fixed variable is used in any expression rather than the value of the
+            fixed variable.
+        keepfiles: bool
+            if True, the solver log file will be saved and the name of the file will be printed.
+
+        kwds accepted by OptSolver._presolve
+        """
         model = args[0]
+        if len(args) != 1:
+            msg = ("The {0} plugin method '_presolve' must be supplied a single problem instance - {1} were " +
+                   "supplied.").format(type(self), len(args))
+            raise ValueError(msg)
+
+        warmstart_flag = kwds.pop('warmstart', False)
+        symbolic_solver_labels = kwds.pop('symbolic_solver_labels', False)
+        self._skip_trivial_constraints = kwds.pop('skip_trivial_constraints', False)
+        self._output_fixed_variable_bounds = kwds.pop('output_fixed_variable_bounds', False)
+        self._keepfiles = kwds.pop('keepfiles', False)
+
+        # create a context in the temporary file manager for
+        # this plugin - is "pop"ed in the _postsolve method.
+        pyutilib.services.TempfileManager.push()
+
         self._pyomo_model = model
         if not isinstance(model, (Model, IBlockStorage)):
-            msg = "The problem instance supplied to the CPLEXDirect plugin " \
-                  "method '_presolve' must be of type 'Model' - "\
-                  "interface does not currently support file names"
+            msg = "The problem instance supplied to the {0} plugin " \
+                  "'_presolve' method must be of type 'Model'".format(type(self))
             raise ValueError(msg)
 
         self._symbol_map = SymbolMap()
@@ -55,15 +99,10 @@ class DirectSolver(OptSolver):
         self._objective_label = None
         self.results = None
 
-        symbolic_solver_labels = kwds.pop('symbolic_solver_labels', False)
         if symbolic_solver_labels:
             self._labeler = TextLabeler()
         else:
             self._labeler = NumericLabeler('x')
-
-        self._skip_trivial_constraints = kwds.pop('skip_trivial_constraints', False)
-        self._output_fixed_variable_bounds = kwds.pop('output_fixed_variable_bounds', False)
-        self._keepfiles = kwds.pop('keepfiles', False)
 
         # this implies we have a custom solution "parser",
         # preventing the OptSolver _presolve method from
@@ -74,6 +113,15 @@ class DirectSolver(OptSolver):
         super(DirectSolver, self)._presolve(*args, **kwds)
 
         self._compile_instance(model)
+
+        if warmstart_flag:
+            if self.warm_start_capable():
+                self._warm_start()
+            else:
+                raise ValueError('{0} solver plugin is not capable of warmstart.'.format(type(self)))
+
+        if self._log_file is None:
+            self._log_file = pyutilib.services.TempfileManager.create_tempfile(suffix='.log')
 
     def _apply_solver(self):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
@@ -101,3 +149,26 @@ class DirectSolver(OptSolver):
 
     def _load_results(self):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+
+    def warm_start_capable(self):
+        return False
+
+    def _warm_start(self):
+        raise NotImplementedError('If a subclass can warmstart, then it should implement this method.')
+
+    def available(self, exception_flag=True):
+        """True if the solver is available."""
+
+        if exception_flag is False:
+            return self._python_api_exists
+        else:
+            if self._python_api_exists is False:
+                raise pyutilib.common.ApplicationError(("No Python bindings available for {0} solver " +
+                                                        "plugin").format(type(self)))
+            else:
+                return True
+
+    def _get_version(self):
+        if self._version is None:
+            return pyomo.opt.base.solvers._extract_version('')
+        return self._version
