@@ -86,6 +86,12 @@ class MIPCLSHELL(SystemCallSolver):
         if _mipcl_version is None:
             return _extract_version('')
         return _mipcl_version
+    
+    def _set_version(self, ver):
+        """Sets version while processing log file"""
+        global _mipcl_version
+        if _mipcl_version is None:
+            _mipcl_version = ver
 
     def create_command_line(self, executable, problem_files):
         if self._log_file is None:
@@ -117,7 +123,48 @@ class MIPCLSHELL(SystemCallSolver):
     def process_logfile(self):
         """Process logfile"""
         results = SolverResults()
-        # TODO
+        
+        prob   = results.problem
+        solv   = results.solver
+        solv.termination_condition = TerminationCondition.unknown
+        stats  = results.solver.statistics
+        bbound = stats.branch_and_bound
+
+        prob.upper_bound = float('inf')
+        prob.lower_bound = float('-inf')
+        bbound.number_of_created_subproblems = 0
+        bbound.number_of_bounded_subproblems = 0
+
+        with open(self._log_file, 'r') as f:
+            lines = f.readlines()
+            lines = [line.rstrip('\r\n') for line in lines]
+        for i, line in enumerate(lines):
+            if i in {0, 1, 2, 3, 4, 5} or line == '':
+                continue
+            toks = line.split()
+            if 'NAME' in line and len(toks) == 2:
+                prob.name = toks[-1]
+            elif 'Start preprocessing:' in line:
+                prob.number_of_constraints = eval(toks[4][:-1]) # Rows ?
+                prob.number_of_nonzeros    = eval(toks[-1])
+                prob.number_of_variables   = eval(toks[7]) # Cols ?
+            elif 'After preprocessing:' in line:
+                prob.number_of_constraints = eval(toks[4][:-1]) # Rows ?
+                prob.number_of_nonzeros    = eval(toks[-1])
+                prob.number_of_variables   = eval(toks[7]) # Cols ?
+            elif 'Preprocessing Time:' in line:
+                solv.system_time = eval(toks[-1])
+            elif 'Solution time:' in line:
+                solv.system_time = eval(toks[-1])
+            elif 'MIPCL version' in line:
+                self._set_version(line)
+            elif 'Branch-and-Cut' in line:
+                nodes = eval(toks[-1]) # number_of_created or number_of_bounded ?
+            elif 'Objective value:' in line:
+                value = eval(toks[2]) # assign ?
+                if toks[-2] + toks[-1] == 'optimalityproven':
+                    solv.termination_condition = TerminationCondition.optimal
+            
         return results
 
     def process_soln_file(self, results):
