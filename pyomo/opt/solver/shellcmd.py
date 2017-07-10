@@ -347,7 +347,7 @@ class SystemCallSolver(OptSolver):
                                                suffixes=self._suffixes)
             results_reader_completion_time = time.time()
             if self._report_timing is True:
-                print("      %6.2f seconds required for results reader" % (results_reader_completion_time - log_file_completion_time))
+                print("      %6.2f seconds required to read solution file" % (results_reader_completion_time - log_file_completion_time))
         if rc != None:
             results.solver.error_rc=rc
             if rc != 0:

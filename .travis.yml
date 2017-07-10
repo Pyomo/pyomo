@@ -77,7 +77,9 @@ install:
      fi
   fi
 - conda install -q -y --channel conda-forge glpk
+- glpsol -v
 - conda install -q -y --channel cachemeorg ipopt_bin
+- ipopt -v
 #
 # Clone but don't install pyomo-model-libraries
 #
