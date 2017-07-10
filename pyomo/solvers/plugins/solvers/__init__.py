@@ -27,5 +27,6 @@ import pyomo.solvers.plugins.solvers.SCIPAMPL
 import pyomo.solvers.plugins.solvers.CONOPT
 import pyomo.solvers.plugins.solvers.XPRESS
 import pyomo.solvers.plugins.solvers.IPOPT
+import pyomo.solvers.plugins.solvers.GAMS
 import pyomo.solvers.plugins.solvers.MINDT
 import pyomo.solvers.plugins.solvers.GDPDT

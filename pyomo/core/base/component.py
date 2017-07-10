@@ -680,17 +680,20 @@ class ComponentData(_ComponentBase):
         return None
 
     def __str__(self):
-        """Return a string with the component name and index"""
-        return self.name
+        """
+        Return a string with the component name and index,
+        applying ComponentData.labeler if present
+        """
+        if not ComponentData.labeler:
+            return self.name
+        else:
+            return ComponentData.labeler[-1](self)
 
     def to_string(self, ostream=None, verbose=None, precedence=0):
         """Write the component name and index to a buffer"""
         if ostream is None:
             ostream = sys.stdout
-        if not ComponentData.labeler:
-            ostream.write(self.__str__())
-        else:
-            ostream.write(ComponentData.labeler[-1](self))
+        ostream.write(self.__str__())
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """Return a string with the component name and index"""
