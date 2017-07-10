@@ -242,8 +242,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # for all active constraints.  Any Vars / Expressions that are
         # encountered will be added to the var_list due to the labeler
         # defined above.
-        for con in model.component_data_objects(Constraint, active=True):
-            if con.body.is_fixed():
+        for con in model.component_data_objects(Constraint,
+                                                active=True,
+                                                sort=file_determinism):
+            if skip_trivial_constraints and con.body.is_fixed():
                 continue
             if linear:
                 if con.body.polynomial_degree() not in linear_degree:
@@ -273,7 +275,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                         value(con.upper)
                     ))
 
-        obj = list(model.component_data_objects(Objective, active=True))
+        obj = list(model.component_data_objects(Objective,
+                                                active=True,
+                                                sort=file_determinism))
         if len(obj) != 1:
             raise RuntimeError(
                 "GAMS writer requires exactly one active objective (found %s)"
