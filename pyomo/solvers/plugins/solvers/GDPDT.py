@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 """Implementation of the GDPDT solver.
 
 The GDPDT (GDP Decomposition Tookit) solver applies a variety of
@@ -22,6 +23,7 @@ Questions: Please make a post at StackOverflow and email the link to Qi Chen
 """
 from math import copysign, fabs
 from pprint import pprint
+import logging
 
 import pyomo.util.plugin
 from pyomo.core.base import expr as EXPR
@@ -43,6 +45,8 @@ from pyomo.gdp import Disjunct
 
 from six.moves import range
 from six import iteritems
+
+logger = logging.getLogger('pyomo.solvers')
 
 
 class GDPDTSolver(pyomo.util.plugin.Plugin):
@@ -278,6 +282,18 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                         # Variable value was None
                         dest_model_var.set_value(None)
 
+    def _copy_dual_suffixes(self, from_model, to_model,
+                            from_map=None, to_map=None):
+        """Copy suffix values from one model to another."""
+        self._copy_suffix(from_model.dual, to_model.dual,
+                          from_map=from_map, to_map=to_map)
+        if hasattr(from_model, 'ipopt_zL_out'):
+            self._copy_suffix(from_model.ipopt_zL_out, to_model.ipopt_zL_out,
+                              from_map=from_map, to_map=to_map)
+        if hasattr(from_model, 'ipopt_zU_out'):
+            self._copy_suffix(from_model.ipopt_zU_out, to_model.ipopt_zU_out,
+                              from_map=from_map, to_map=to_map)
+
     def _copy_suffix(self, from_suffix, to_suffix, from_map=None, to_map=None):
         """Copy suffix values from one model to another."""
         if from_map is None:
@@ -365,8 +381,15 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         #         m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
         #     GDPDT.gbd_cuts = ConstraintList(doc='Generalized Benders cuts')
 
-        self._init_max_binaries()
-        self._solve_NLP_subproblem()
+        if self.initialization_strategy is None:
+            self._init_max_binaries()
+            self._solve_NLP_subproblem()
+        elif self.initialization_strategy == 'fixed_binary':
+            self._validate_disjunctions()
+            self._solve_NLP_subproblem()
+        else:
+            raise ValueError('Unknown initialization strategy: {}'
+                             .format(self.initialization_strategy))
 
         # # Set default initialization_strategy
         # if self.initialization_strategy is None:
@@ -381,6 +404,11 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         # elif self.initialization_strategy == 'max_binary':
         #     self._init_max_binaries()
         #     self._solve_NLP_subproblem()
+
+    def _validate_disjunctions(self):
+        """Validate if the disjunctions are satisfied by the current values."""
+        # TODO implement this
+        pass
 
     def _init_rNLP(self):
         """Initialize by solving the rNLP (relaxed binary variables)."""
@@ -508,6 +536,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             # Maximum number of iterations in which the lower (optimistic)
             # bound does not improve before switching to OA
             max_nonimprove_relax_iter = 5
+            # Max number of iterations in which upper (feasible) bound does not
+            # improve before turning on no-backtracking
             max_nonimprove_feas_iter = 5
             relax_making_progress = True
             feas_making_progress = True
@@ -703,6 +733,22 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         elif master_terminate_cond is tc.unbounded:
             print('MILP master problem is unbounded. ')
             m.solutions.load_from(results)
+        elif master_terminate_cond is tc.maxTimeLimit:
+            # TODO check that status is actually ok and everything is feasible
+            print('Unable to optimize MILP master problem within time limit. '
+                  'Using current solver feasible solution.')
+            results.solver.status = SolverStatus.ok
+            m.solutions.load_from(results)
+            self._copy_values(m, self.working_model)
+            if GDPDT.objective.sense == minimize:
+                self.LB = max(value(GDPDT.objective.expr), self.LB)
+                self.LB_progress.append(self.LB)
+            else:
+                self.UB = min(value(GDPDT.objective.expr), self.UB)
+                self.UB_progress.append(self.UB)
+            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                  .format(self.mip_iter, value(GDPDT.objective.expr), self.LB,
+                          self.UB))
         else:
             raise ValueError(
                 'GDPDT unable to handle MILP master termination condition '
@@ -812,6 +858,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 ctype=Var, descend_into=(Block, Disjunct))
             if v.is_binary() and not v.fixed]
         for v in binary_vars:
+            if v.value is None:
+                logger.warning('No value is defined for binary variable {}'
+                               ' for the NLP subproblem.'.format(v.name))
             v.fix()
         # TODO round the integer variables so that they are exactly 0 or 1
         # first?
@@ -851,12 +900,12 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         # Solve the NLP
         results = self.nlp_solver.solve(m, load_solutions=False,
                                         **self.nlp_solver_kwargs)
-        subprob_terminate_cond = results.solver.termination_condition
-        if subprob_terminate_cond is tc.optimal:
+
+        def process_feasible_solution():
             m.solutions.load_from(results)
             self._copy_values(m, self.working_model, from_map=obj_to_cuid)
-            self._copy_suffix(m.dual, self.working_model.dual,
-                              from_map=obj_to_cuid)
+            self._copy_dual_suffixes(m, self.working_model,
+                                     from_map=obj_to_cuid)
             if GDPDT.objective.sense == minimize:
                 self.UB = min(value(GDPDT.objective.expr), self.UB)
                 self.solution_improved = self.UB < self.UB_progress[-1]
@@ -886,6 +935,10 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             self._add_int_cut(feasible=True)
 
             self.subproblem_postfeasible(m, self)
+
+        subprob_terminate_cond = results.solver.termination_condition
+        if subprob_terminate_cond is tc.optimal:
+            process_feasible_solution()
         elif subprob_terminate_cond is tc.infeasible:
             # TODO try something else? Reinitialize with different initial
             # value?
@@ -895,6 +948,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             self._copy_values(m, self.working_model)
+            self._copy_dual_suffixes(m, self.working_model,
+                                     from_map=obj_to_cuid)
             if self._decomposition_strategy == 'PSC':
                 print('Adding PSC feasibility cut.')
                 self._add_psc_cut(nlp_feasible=False)
@@ -907,8 +962,15 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             # TODO try something else? Reinitialize with different initial
             # value?
             print('NLP subproblem failed to converge within iteration limit.')
-            # Add an integer cut to exclude this discrete option
-            self._add_int_cut()
+            results.solver.status = SolverStatus.ok
+            m.solutions.load_from(results)
+            if self._is_feasible(m):
+                print('NLP solution is still feasible. '
+                      'Using potentially suboptimal feasible solution.')
+                process_feasible_solution()
+            else:
+                # Add an integer cut to exclude this discrete option
+                self._add_int_cut()
         else:
             raise ValueError(
                 'GDPDT unable to handle NLP subproblem termination '
@@ -916,6 +978,39 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Call the NLP post-solve callback
         self.subproblem_postsolve(m, self)
+
+    def _is_feasible(self, m, constr_tol=1E-6, var_tol=1E-8):
+        for constr in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct)):
+            # constraint is an equality
+            if constr.equality:
+                if abs(value(constr.lower) - value(constr.body)) >= constr_tol:
+                    print('{}: {} ≠ {}'.format(
+                        constr.name, value(constr.body), value(constr.lower)))
+                    return False
+            if constr.lower is not None:
+                if value(constr.lower) - value(constr.body) >= constr_tol:
+                    print('{}: {} < {}'.format(
+                        constr.name, value(constr.body), value(constr.lower)))
+                    return False
+            if constr.upper is not None:
+                if value(constr.body) - value(constr.upper) >= constr_tol:
+                    print('{}: {} > {}'.format(
+                        constr.name, value(constr.body), value(constr.upper)))
+                    return False
+        for var in m.component_data_objects(
+                ctype=Var, descend_into=(Block, Disjunct)):
+            if var.lb is not None:
+                if value(var.lb) - value(var) >= var_tol:
+                    print('{}: {} < {}'.format(
+                        var.name, value(var), value(var.lb)))
+                    return False
+            if var.ub is not None:
+                if value(var) - value(var.ub) >= var_tol:
+                    print('{}: {} > {}'.format(
+                        var.name, value(var), value(var.ub)))
+                    return False
+        return True
 
     def _calc_jacobians(self):
         self.jacs = {}
