@@ -139,7 +139,7 @@ class MIPCLSHELL(SystemCallSolver):
             lines = f.readlines()
             lines = [line.rstrip('\r\n') for line in lines]
         for i, line in enumerate(lines):
-            if i in {0, 1, 2, 3, 4, 5} or line == '':
+            if i in [0, 1, 2, 3, 4, 5] or line == '':
                 continue
             toks = line.split()
             if 'NAME' in line and len(toks) == 2:
