@@ -194,6 +194,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         phi = 0.0
         sub_phi_map = {}
+
         for scenario in ph._scenario_tree._scenarios:
             cumulative_sub_phi = 0.0
             for tree_node in scenario._node_list[:-1]:
@@ -202,19 +203,16 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         var_values = scenario._x[tree_node._name]
                         varval = var_values[variable_id]
                         weight_values = scenario._w[tree_node._name]
-#                        print "WEIGHT VALUES=",weight_values[variable_id]
-#                        print "TREE NODE ZS=",tree_node_zs[variable_id]
-#                        print "YS=",scenario._y[variable_id]
-#                        print "VAR VALUE=",varval
                         if varval is not None:
-#                            print "COMPUTING SUB PHI", "Y=",scenario._y[variable_id],"W=",weight_values[variable_id]
                             this_sub_phi_term = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
                             cumulative_sub_phi += this_sub_phi_term
                             
                         else:
                             foobar # HEY! Fix this!
+
             with open(self._JName,"a") as f:
                 f.write(", %10f" % (cumulative_sub_phi))
+
             sub_phi_map[scenario._name] = cumulative_sub_phi
             phi += cumulative_sub_phi
 
@@ -327,30 +325,30 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         print("Initiating post-projection calculations...")
 
         phi = 0.0
-
         sub_phi_to_scenario_map = {}
 
         for scenario in ph._scenario_tree._scenarios:
+            cumulative_sub_phi = 0.0
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
-                cumulative_sub_phi = 0.0
                 for variable_id in tree_node._standard_variable_ids:
                     var_values = scenario._x[tree_node._name]
                     varval = var_values[variable_id]
                     weight_values = scenario._w[tree_node._name]
                     if varval is not None:
-                        sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
-                        cumulative_sub_phi += sub_phi
-                        phi += sub_phi
+                        this_sub_phi_term = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
+                        cumulative_sub_phi += this_sub_phi_term
                     else:
-                        foobar
+                        foobar # HEY! Fix this!
+
+            with open(self._JName,"a") as f:
+                f.write(", %10f" % (cumulative_sub_phi))
 
             if not cumulative_sub_phi in sub_phi_to_scenario_map:
                 sub_phi_to_scenario_map[cumulative_sub_phi] = []
             sub_phi_to_scenario_map[cumulative_sub_phi].append(scenario._name)
 
-            with open(self._JName,"a") as f:
-                f.write(", %10f" % (cumulative_sub_phi))
+            phi += cumulative_sub_phi
 
         print("Computed sub-phi values (scenario, phi, iters-since-last-incorporated):")
         for sub_phi in sorted(sub_phi_to_scenario_map.keys()):
@@ -373,7 +371,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
             random.shuffle(all_phis)
             for phi in all_phis[0:ph._async_buffer_length]:
                 scenario_name = sub_phi_to_scenario_map[phi][0]
-                print("Queueing sub-problem=%s",scenario_name)
+                print("Queueing sub-problem=%s" % scenario_name)
                 self._subproblems_to_queue.append(scenario_name)
 
         else:
