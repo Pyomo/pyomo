@@ -15,7 +15,7 @@ from pyomo.util.plugin import alias
 from pyomo.core import *
 from pyomo.repn import *
 from pyomo.core.base import Transformation
-from pyomo.core.base.block import SortComponents
+from pyomo.core.base.block import SortComponents, _BlockData
 from pyomo.repn import LinearCanonicalRepn
 from pyomo.gdp import *
 
@@ -78,7 +78,7 @@ class BigM_Transformation(Transformation):
         # override ones higher up in the tree.
         bigM = kwds.pop('bigM', None)
         if bigM is not None and type(bigM) is not dict:
-            if type(bigM) in (float, int):
+            if type(bigM) in (float, int, tuple, list):
                 bigM = {None: bigM}
             else:
                 raise GDP_Error(
@@ -112,26 +112,34 @@ class BigM_Transformation(Transformation):
                     "Target %s is not a component on the instance!" % _t)
             if not t.active:
                 continue
-            if t.type() in (Block, Disjunct):
+            if type(t) is _BlockData or t.type() in (Block, Disjunct):
                 self._transformBlock(t, transBlock, bigM)
             elif t.type() is Disjunction:
                 self._transformDisjunction(t, transBlock, bigM)
             else:
                 raise GDP_Error(
-                    "Target %s was neither a Block nor a Disjunction. "
+                    "Target %s was not a Block, Disjunct, or Disjunction. "
                     "It was of type %s and can't be transformed" 
                     % (t.name, type(t)) )
 
 
     def _transformBlock(self, block, transBlock, bigM):
-        # Transform every (active) disjunction in the block
-        for disjunction in block.component_objects(
-                Disjunction,
-                active=True,
-                sort=SortComponents.deterministic,
-                descend_into=(Block,Disjunct),
-                descent_order=TraversalStrategy.PostfixDFS):
-            self._transformDisjunction(disjunction, transBlock, bigM)
+        if block.is_indexed():
+            for i in block:
+                self._transformBlockData(block[i], transBlock, bigM)
+        else:
+            self._transformBlockData(block, transBlock, bigM)
+
+
+    def _transformBlockData(self, block, transBlock, bigM):
+         # Transform every (active) disjunction in the block
+            for disjunction in block.component_objects(
+                    Disjunction,
+                    active=True,
+                    sort=SortComponents.deterministic,
+                    descend_into=(Block,Disjunct),
+                    descent_order=TraversalStrategy.PostfixDFS):
+                self._transformDisjunction(disjunction, transBlock, bigM)
 
     
     def _transformDisjunction(self, obj, transBlock, bigM): 

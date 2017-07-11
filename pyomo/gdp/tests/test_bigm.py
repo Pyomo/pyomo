@@ -48,7 +48,7 @@ class TwoTermDisj(unittest.TestCase):
         transBlock = m.component("_pyomo_gdp_bigm_relaxation")
         self.assertIsInstance(transBlock, Block)
 
-        # check that we have the lbub set on the transformation block
+       # check that we have the lbub set on the transformation block
         lbub = transBlock.component("lbub")
         self.assertIsInstance(lbub, Set)
         self.assertEqual(len(lbub), 2)
@@ -141,7 +141,8 @@ class TwoTermDisj(unittest.TestCase):
         m.d[0]._gdp_trans_info = Block()
         self.assertRaisesRegexp(
             GDP_Error, 
-            "Model contains an attribute named _gdp_trans_info. The transformation requires that it can create this attribute!*", 
+            "Model contains an attribute named _gdp_trans_info. "
+            "The transformation requires that it can create this attribute!*", 
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
@@ -280,18 +281,19 @@ class TwoTermDisj(unittest.TestCase):
 
     # helper method to check the M values in all of the transformed constraints
     # (m, M) is the tuple for M.
-    def checkMs(self, model, m, M):
+    def checkMs(self, model, cons1lb, cons2lb, cons2ub):
         disjBlock = model._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
 
         # first constraint
-        self.assertEqual(disjBlock[0].component("c")['lb'].body._coef[1], m) 
+        self.assertEqual(disjBlock[0].component("c")['lb'].body._coef[1], 
+                         cons1lb) 
 
         # second constraint
         newc = disjBlock[1].component("c")
         newc_lo = newc['lb']
         newc_hi = newc['ub']
-        self.assertEqual(newc_lo.body._coef[1], m) 
-        self.assertEqual(newc_hi.body._coef[1], M)
+        self.assertEqual(newc_lo.body._coef[1], cons2lb) 
+        self.assertEqual(newc_hi.body._coef[1], cons2ub)
 
     def test_suffix_M_None(self):
         m = self.makeModel()
@@ -300,9 +302,9 @@ class TwoTermDisj(unittest.TestCase):
         m.BigM[None] = 20
 
         TransformationFactory('gdp.bigm').apply_to(m)
-        self.checkMs(m, 20, -20)
+        self.checkMs(m, 20, 20, -20)
 
-    def test_suffix_M_disjunctData(self):
+    def test_suffix_M_None_on_disjunctData(self):
         m = self.makeModel()
         # specify a suffix on None
         m.BigM = Suffix(direction=Suffix.LOCAL)
@@ -313,17 +315,19 @@ class TwoTermDisj(unittest.TestCase):
 
         TransformationFactory('gdp.bigm').apply_to(m)
         # there should now be different values of m on d[0] and d[1]
-        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        self.checkMs(m, 18, 20, -20)
 
-        # first constraint
-        self.assertEqual(disjBlock[0].component("c")['lb'].body._coef[1], 18) 
+    def test_suffix_M_simpleConstraint_on_disjunctData(self):
+        m = self.makeModel()
+        # specify a suffix on None
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+        # override for the first index:
+        m.d[0].BigM = Suffix(direction=Suffix.LOCAL)
+        m.d[0].BigM[m.d[0].c] = 18
 
-        # second constraint
-        newc = disjBlock[1].component("c")
-        newc_lo = newc['lb']
-        newc_hi = newc['ub']
-        self.assertEqual(newc_lo.body._coef[1], 20) 
-        self.assertEqual(newc_hi.body._coef[1],-20)
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.checkMs(m, 18, 20, -20)
 
     def test_arg_M_None(self):
         m = self.makeModel()
@@ -333,7 +337,7 @@ class TwoTermDisj(unittest.TestCase):
 
         # give an arg
         TransformationFactory('gdp.bigm').apply_to(m, bigM={None: 19})
-        self.checkMs(m, 19, -19)
+        self.checkMs(m, 19, 19, -19)
 
     def test_arg_M_singleNum(self):
         m = self.makeModel()
@@ -343,9 +347,61 @@ class TwoTermDisj(unittest.TestCase):
         
         # give an arg
         TransformationFactory('gdp.bigm').apply_to(m, bigM=19.2)
-        self.checkMs(m, 19.2, -19.2)
+        self.checkMs(m, 19.2, 19.2, -19.2)
 
-    def test_arg_M_component(self):
+    def test_singleArg_M_tuple(self):
+        m = self.makeModel()
+        # specify a suffix on None so we can be happy we overrode it.
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+        
+        # give an arg
+        TransformationFactory('gdp.bigm').apply_to(m, bigM=(-18, 19.2))
+        self.checkMs(m, 18, 18, -19.2)
+
+    def test_singleArg_M_tuple_wrongLength(self):
+        m = self.makeModel()
+        # specify a suffix on None so we can be happy we overrode it.
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+        
+        # give an arg
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Big-M \(-18, 19.2, 3\) for constraint c is not of "
+            "length two. Expected either a single value or "
+            "tuple or list of length two for M.*",
+            TransformationFactory('gdp.bigm').apply_to,
+            m, 
+            bigM=(-18, 19.2, 3))
+
+    def test_singleArg_M_list(self):
+        m = self.makeModel()
+        # specify a suffix on None so we can be happy we overrode it.
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+        
+        # give an arg
+        TransformationFactory('gdp.bigm').apply_to(m, bigM=[-18, 19.2])
+        self.checkMs(m, 18, 18, -19.2)
+
+    def test_singleArg_M_list_wrongLength(self):
+        m = self.makeModel()
+        # specify a suffix on None so we can be happy we overrode it.
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+        
+        # give an arg
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Big-M \[-18, 19.2, 3\] for constraint c is not of "
+            "length two. Expected either a single value or "
+            "tuple or list of length two for M.*",
+            TransformationFactory('gdp.bigm').apply_to,
+            m, 
+            bigM=[-18, 19.2, 3])
+
+    def test_arg_M_simpleConstraint(self):
         m = self.makeModel()
         # specify a suffix on None so we can be happy we overrode it.
         m.BigM = Suffix(direction=Suffix.LOCAL)
@@ -360,18 +416,7 @@ class TwoTermDisj(unittest.TestCase):
             bigM={None: 19, 
                   ComponentUID(m.d[0].c): 18, 
                   ComponentUID(m.d[1].c): 17})
-        # there should now be different values of m on d[0] and d[1]
-        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
-
-        # first constraint
-        self.assertEqual(disjBlock[0].component("c")['lb'].body._coef[1], 18) 
-
-        # second constraint
-        newc = disjBlock[1].component("c")
-        newc_lo = newc['lb']
-        newc_hi = newc['ub']
-        self.assertEqual(newc_lo.body._coef[1], 17) 
-        self.assertEqual(newc_hi.body._coef[1],-17)
+        self.checkMs(m, 18, 17, -17)
 
     def test_tuple_M_arg(self):
         m = self.makeModel()
@@ -379,14 +424,14 @@ class TwoTermDisj(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(
             m, 
             bigM={None: (-20,19)})
-        self.checkMs(m, 20, -19)
+        self.checkMs(m, 20, 20, -19)
 
     def test_tuple_M_suffix(self):
         m = self.makeModel()
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = (-18, 20)
         TransformationFactory('gdp.bigm').apply_to(m)
-        self.checkMs(m, 18, -20)
+        self.checkMs(m, 18, 18, -20)
 
     def test_list_M_arg(self):
         m = self.makeModel()
@@ -394,14 +439,14 @@ class TwoTermDisj(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(
             m, 
             bigM={None: [-20,19]})
-        self.checkMs(m, 20, -19)
+        self.checkMs(m, 20, 20, -19)
 
     def test_list_M_suffix(self):
         m = self.makeModel()
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = [-18, 20]
         TransformationFactory('gdp.bigm').apply_to(m)
-        self.checkMs(m, 18, -20)
+        self.checkMs(m, 18, 18, -20)
 
     def test_tuple_wrong_length_err(self):
         m = self.makeModel()
@@ -667,6 +712,99 @@ class DisjOnBlock(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         self.checkFirstDisjMs(m, 87, -87, -64)
        
+    def test_suffix_M_constraintKeyOnSimpleDisj(self):
+        m = self.makeModel()
+        m = self.add_disj_not_on_block(m)
+        m.simpledisj.BigM = Suffix(direction=Suffix.LOCAL)
+        m.simpledisj.BigM[None] = 45
+        m.simpledisj.BigM[m.simpledisj.c] = 87
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.checkMs(m, 20, -20, -20, 87, -20)
+
+class SimpleDisjIndexedConstraints(unittest.TestCase):
+    def setUp(self):
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    @staticmethod
+    def makeModel():
+        m = ConcreteModel()
+        m.s = Set(initialize=[1,2])
+        m.a = Var(m.s)
+        m.b = Block()
+        def disj1_rule(disjunct):
+            m = disjunct.model()
+            def c_rule(d, s):
+                return m.a[s] == 0
+            disjunct.c = Constraint(m.s, rule=c_rule)
+        m.b.simpledisj1 = Disjunct(rule=disj1_rule)
+        def disj2_rule(disjunct):
+            m = disjunct.model()
+            def c_rule(d, s):
+                return m.a[s] <= 3
+            disjunct.c = Constraint(m.s, rule=c_rule)
+        m.b.simpledisj2 = Disjunct(rule=disj2_rule)
+        m.b.disjunction = Disjunction(expr=[m.b.simpledisj1, m.b.simpledisj2])
+
+        return m
+
+    def checkMs(self, m, disj1c1lb, disj1c1ub, disj1c2lb, disj1c2ub, disj2c1ub,
+                disj2c2ub):
+        cons = m.b.simpledisj1._gdp_trans_info['bigm']().c
+        self.assertEqual(cons[1,'lb'].body._coef[1], disj1c1lb)
+        self.assertEqual(cons[1,'ub'].body._coef[1], disj1c1ub)
+        self.assertEqual(cons[2,'lb'].body._coef[1], disj1c2lb)
+        self.assertEqual(cons[2,'ub'].body._coef[1], disj1c2ub)
+
+        cons2 = m.b.simpledisj2._gdp_trans_info['bigm']().c
+        self.assertEqual(cons2[1,'ub'].body._coef[1], disj2c1ub)
+        self.assertEqual(cons2[2,'ub'].body._coef[1], disj2c2ub)
+
+    def test_suffix_M_constraintData_on_block(self):
+        m = self.makeModel()
+        m.b.BigM = Suffix(direction=Suffix.LOCAL)
+        m.b.BigM[None] = 30
+        m.b.BigM[m.b.simpledisj1.c[1]] = 15
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.checkMs(m, 15, -15, 30, -30, -30, -30)
+
+    def test_suffix_M_indexedConstraint_on_block(self):
+        m = self.makeModel()
+        m.b.BigM = Suffix(direction=Suffix.LOCAL)
+        m.b.BigM[None] = 30
+        m.b.BigM[m.b.simpledisj2.c] = 15
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.checkMs(m, 30, -30, 30, -30, -15, -15)
+
+    def test_suffix_M_constraintData_on_simpleDisjunct(self):
+        m = self.makeModel()
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 65
+        m.b.simpledisj1.BigM = Suffix(direction=Suffix.LOCAL)
+        m.b.simpledisj1.BigM[m.b.simpledisj1.c[2]] = (-14, 13)
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.checkMs(m, 65, -65, 14, -13, -65, -65)
+
+    def test_suffix_M_indexedConstraint_on_simpleDisjunct(self):
+        m = self.makeModel()
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 65
+        m.b.simpledisj1.BigM = Suffix(direction=Suffix.LOCAL)
+        m.b.simpledisj1.BigM[m.b.simpledisj1.c] = (-14, 13)
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.checkMs(m, 14, -13, 14, -13, -65, -65)
+
 
 class MultiTermDisj(unittest.TestCase):
     def setUp(self):
@@ -802,7 +940,7 @@ class IndexedConstraintsInDisj(unittest.TestCase):
         self.assertEqual(cons2[2,'lb'].body._coef[1], c22lb)
         self.assertEqual(cons2[2,'ub'].body._coef[1], c22ub)
 
-    def test_arg_M_componentdata(self):
+    def test_arg_M_constraintdata(self):
         m = self.makeModel()
         # specify a suffix on None so we can be happy we overrode it.
         m.BigM = Suffix(direction=Suffix.LOCAL)
@@ -819,7 +957,7 @@ class IndexedConstraintsInDisj(unittest.TestCase):
         # check that m values are what we expect
         self.checkMs(m, 17, 18, 19, -19, 19, -19)
 
-    def test_arg_M_component(self):
+    def test_arg_M_indexedConstraint(self):
         m = self.makeModel()
         # specify a suffix on None so we can be happy we overrode it.
         m.BigM = Suffix(direction=Suffix.LOCAL)
@@ -831,10 +969,9 @@ class IndexedConstraintsInDisj(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(
             m, 
             bigM={None: 19, ComponentUID(m.disjunct[0].c): 17})
-
         self.checkMs(m, 17, 17, 19, -19, 19, -19)
 
-    def test_suffix_M_component(self):
+    def test_suffix_M_None_on_indexedConstraint(self):
         m = self.makeModel()
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = 20
@@ -842,20 +979,40 @@ class IndexedConstraintsInDisj(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         self.checkMs(m, 19, 19, 20, -20, 20, -20)
 
-    def test_suffix_M_componentdata(self):
+    def test_suffix_M_None_on_constraintdata(self):
         m = self.makeModel()
         # specify a suffix on None so we can be happy we overrode it.
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = 20
-        # specify a suffix on a componentdata so we can be happy we overrode it
         m.BigM[m.disjunct[0].c[1]] = 19
         
-        # give an arg
         TransformationFactory('gdp.bigm').apply_to(m)
         
         # check that m values are what we expect
         self.checkMs(m, 19, 20, 20, -20, 20, -20)
-        
+
+    def test_suffix_M_indexedConstraint_on_disjData(self):
+        m = self.makeModel()
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+        # specify a suffix on a disjunctData 
+        m.disjunct[0].BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[m.disjunct[0].c] = 19
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.checkMs(m, 19, 19, 20, -20, 20, -20)
+
+    def test_suffix_M_constraintData_on_disjData(self):
+        m = self.makeModel()
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 20
+        # specify a suffix on a disjunctData 
+        m.disjunct[0].BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[m.disjunct[0].c] = 19
+        m.BigM[m.disjunct[0].c[1]] = 18
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.checkMs(m, 18, 19, 20, -20, 20, -20)
 
 class DisjunctInMultipleDisjunctions(unittest.TestCase):
     @staticmethod
@@ -1052,7 +1209,7 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase):
 
 # TODO: add test for target as one disjunction out of an indexed disjunction
 
-class TestTargets(unittest.TestCase):
+class TestTargets_SingleDisjunction(unittest.TestCase):
     @staticmethod
     def makeModel():
         m = ConcreteModel()
@@ -1121,6 +1278,7 @@ class TestTargets(unittest.TestCase):
             dict2 = getattr(m.disjunct1[j], "_gdp_trans_info")
             self.assertIsInstance(dict2, dict)
             self.assertIs(dict2['bigm'](), disjBlock[i])
+            self.assertTrue(dict2['relaxed'])
 
         self.assertFalse(hasattr(m.disjunct2[0], "_gdp_trans_info"))
         self.assertFalse(hasattr(m.disjunct2[1], "_gdp_trans_info"))
@@ -1137,3 +1295,186 @@ class TestTargets(unittest.TestCase):
             m, 
             targets=[ComponentUID(decoy.block)])
 
+class TestTargets_IndexedDisjunction(unittest.TestCase):
+    @staticmethod
+    def makeModel():
+        m = ConcreteModel()
+        m.s = Set(initialize=[1,2])
+        m.a = Var(m.s, bounds=(0, 70))
+        def disjunct1_rule(disjunct, s, flag):
+            m = disjunct.model()
+            if not flag:
+                disjunct.c = Constraint(expr=m.a[s] == 0)
+            else:
+                disjunct.c = Constraint(expr=m.a[s] >= 7)
+        m.disjunct1 = Disjunct(m.s, [0,1], rule=disjunct1_rule)
+        def disjunction1_rule(m, s):
+            return [m.disjunct1[s, flag] for flag in [0,1]]
+        m.disjunction1 = Disjunction(m.s, rule=disjunction1_rule)
+
+        m.b = Block([0,1])
+        m.b[0].x = Var(bounds=(-2, 2))
+        def disjunct2_rule(disjunct, flag):
+            if not flag:
+                disjunct.c = Constraint(expr=m.b[0].x <= 0)
+            else:
+                disjunct.c = Constraint(expr=m.b[0].x >= 0)
+        m.b[0].disjunct = Disjunct([0,1], rule=disjunct2_rule)
+        m.b[0].disjunction = Disjunction(expr=[m.b[0].disjunct[0],
+                                               m.b[0].disjunct[1]])
+        m.b[1].y = Var(bounds=(-3, 3))
+        def disjunct3_rule(disjunct, flag):
+            if not flag:
+                disjunct.c = Constraint(expr=m.b[1].y <= 0)
+            else:
+                disjunct.c = Constraint(expr=m.b[1].y >= 0)
+        m.b[1].disjunct = Disjunct([0,1], rule=disjunct3_rule)
+        m.b[1].disjunction = Disjunction(expr=[m.b[1].disjunct[0],
+                                               m.b[1].disjunct[1]])
+        return m
+
+    def test_indexedDisj_targets_inactive(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.disjunction1)])
+
+        self.assertFalse(m.disjunct1[1,0].active)
+        self.assertFalse(m.disjunct1[1,1].active)
+        self.assertFalse(m.disjunct1[2,0].active)
+        self.assertFalse(m.disjunct1[2,1].active)
+
+        self.assertTrue(m.b[0].disjunct[0].active)
+        self.assertTrue(m.b[0].disjunct[1].active)
+        self.assertTrue(m.b[1].disjunct[0].active)
+        self.assertTrue(m.b[1].disjunct[1].active)
+
+    def test_indexedDisj_only_targets_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.disjunction1)])
+
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        self.assertEqual(len(disjBlock), 4)
+        self.assertIsInstance(disjBlock[0].c, Constraint)
+        self.assertIsInstance(disjBlock[1].c, Constraint)
+        self.assertIsInstance(disjBlock[2].c, Constraint)
+        self.assertIsInstance(disjBlock[3].c, Constraint)
+
+        # This relies on the disjunctions being transformed in the same order
+        # every time. These are the mappings between the indices of the original
+        # disjuncts and the indices on the indexed block on the transformation
+        # block.
+        pairs = [
+            ((1,0), 0),
+            ((1,1), 1),
+            ((2,0), 2),
+            ((2,1), 3),
+        ]
+        for i, j in pairs:
+            dict1 = getattr(disjBlock[j], "_gdp_trans_info")
+            self.assertIsInstance(dict1, dict)
+            self.assertIs(dict1['src'](), m.disjunct1[i])
+            dict2 = getattr(m.disjunct1[i], "_gdp_trans_info")
+            self.assertIsInstance(dict2, dict)
+            self.assertIs(dict2['bigm'](), disjBlock[j])
+            self.assertTrue(dict2['relaxed'])
+
+    def test_indexedBlock_targets_inactive(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.b)])
+
+        self.assertTrue(m.disjunct1[1,0].active)
+        self.assertTrue(m.disjunct1[1,1].active)
+        self.assertTrue(m.disjunct1[2,0].active)
+        self.assertTrue(m.disjunct1[2,1].active)
+
+        self.assertFalse(m.b[0].disjunct[0].active)
+        self.assertFalse(m.b[0].disjunct[1].active)
+        self.assertFalse(m.b[1].disjunct[0].active)
+        self.assertFalse(m.b[1].disjunct[1].active)
+
+    def test_indexedBlock_only_targets_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.b)])
+
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        self.assertEqual(len(disjBlock), 4)
+        self.assertIsInstance(disjBlock[0].c, Constraint)
+        self.assertIsInstance(disjBlock[1].c, Constraint)
+        self.assertIsInstance(disjBlock[2].c, Constraint)
+        self.assertIsInstance(disjBlock[3].c, Constraint)
+
+        # This relies on the disjunctions being transformed in the same order
+        # every time. This dictionary maps the block index to the list of
+        # pairs of (originalDisjunctIndex, transBlockIndex)
+        pairs = {
+            0:
+            [
+                (0,0),
+                (1,1),
+            ],
+            1:
+            [
+                (0,2),
+                (1,3),
+            ]
+        }
+        for blocknum, lst in pairs.iteritems():
+            original = m.b[blocknum].disjunct
+            for i, j in lst:
+                dict1 = getattr(disjBlock[j], "_gdp_trans_info")
+                self.assertIsInstance(dict1, dict)
+                self.assertIs(dict1['src'](), original[i])
+                dict2 = getattr(original[i], "_gdp_trans_info")
+                self.assertIsInstance(dict2, dict)
+                self.assertIs(dict2['bigm'](), disjBlock[j])
+                self.assertTrue(dict2['relaxed'])
+    
+    def test_blockData_targets_inactive(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.b[0])])
+
+        self.assertTrue(m.disjunct1[1,0].active)
+        self.assertTrue(m.disjunct1[1,1].active)
+        self.assertTrue(m.disjunct1[2,0].active)
+        self.assertTrue(m.disjunct1[2,1].active)
+
+        self.assertFalse(m.b[0].disjunct[0].active)
+        self.assertFalse(m.b[0].disjunct[1].active)
+        self.assertTrue(m.b[1].disjunct[0].active)
+        self.assertTrue(m.b[1].disjunct[1].active)
+
+    def test_blockData_only_targets_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.b[0])])
+
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        self.assertEqual(len(disjBlock), 2)
+        self.assertIsInstance(disjBlock[0].c, Constraint)
+        self.assertIsInstance(disjBlock[1].c, Constraint)
+
+        # This relies on the disjunctions being transformed in the same order
+        # every time. This dictionary maps the block index to the list of
+        # pairs of (originalDisjunctIndex, transBlockIndex)
+        pairs = [
+                (0,0),
+                (1,1),
+        ]
+        for i, j in pairs:
+            dict1 = getattr(disjBlock[j], "_gdp_trans_info")
+            self.assertIsInstance(dict1, dict)
+            self.assertIs(dict1['src'](), m.b[0].disjunct[i])
+            dict2 = getattr(m.b[0].disjunct[i], "_gdp_trans_info")
+            self.assertIsInstance(dict2, dict)
+            self.assertIs(dict2['bigm'](), disjBlock[j])
+            self.assertTrue(dict2['relaxed'])
