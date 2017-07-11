@@ -958,14 +958,14 @@ def convert_external(output_directory,
     # first and the config file is second. So ddsiputils
     # gets it almost right.
     with open(script_filename, "w") as f:
-        f.write(input_files["core"]+"\n")
-        f.write(input_files["config"]+"\n")
+        f.write(os.path.relpath(input_files["core"], output_directory)+"\n")
+        f.write(os.path.relpath(input_files["config"], output_directory)+"\n")
         assert "rhs" in input_files
-        f.write(input_files["rhs"]+"\n")
+        f.write(os.path.relpath(input_files["rhs"], output_directory)+"\n")
         if "cost" in input_files:
-            f.write(input_files["cost"]+"\n")
+            f.write(os.path.relpath(input_files["cost"], output_directory)+"\n")
         if "matrix" in input_files:
-            f.write(input_files["matrix"]+"\n")
+            f.write(os.path.relpath(input_files["matrix"], output_directory)+"\n")
     input_files["script"] = script_filename
 
     return input_files

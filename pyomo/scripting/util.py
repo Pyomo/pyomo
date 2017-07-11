@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import argparse
 import gc
@@ -270,9 +271,11 @@ def create_model(data):
     # Find the Model objects
     #
     _models = {}
+    _model_IDS = set()
     for _name, _obj in iteritems(data.local.usermodel.__dict__):
-        if isinstance(_obj, Model):
+        if isinstance(_obj, Model) and id(_obj) not in _model_IDS:
             _models[_name] = _obj
+            _model_IDS.add(id(_obj))
     model_name = data.options.model.object_name
     if len(_models) == 1:
         _name  = list(_models.keys())[0]
@@ -579,15 +582,24 @@ def apply_optimizer(data, instance=None):
             keywords['file_determinism'] = data.options.model.file_determinism
         keywords['tee'] = data.options.runtime.stream_output
         keywords['timelimit'] = getattr(data.options.solvers[0].options, 'timelimit', 0)
+        keywords['report_timing'] = data.options.runtime.report_timing
+
+        # FIXME: solver_io and executable are not being used
+        #        in the case of a non-serial solver manager
+
         #
         # Call the solver
         #
         if solver_mngr_name == 'serial':
             #
-            # If we're running locally, then we create the optimizer and pass it into the 
-            # solver manager.
+            # If we're running locally, then we create the
+            # optimizer and pass it into the solver manager.
             #
-            with SolverFactory(solver, solver_io=data.options.solvers[0].io_format) as opt:
+            sf_kwds = {}
+            sf_kwds['solver_io'] = data.options.solvers[0].io_format
+            if data.options.solvers[0].solver_executable is not None:
+                sf_kwds['executable'] = data.options.solvers[0].solver_executable
+            with SolverFactory(solver, **sf_kwds) as opt:
                 if opt is None:
                     raise ValueError("Problem constructing solver `%s`" % str(solver))
 

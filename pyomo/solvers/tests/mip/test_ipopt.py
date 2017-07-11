@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import os
 from os.path import abspath, dirname, join
@@ -191,6 +192,20 @@ class Test(unittest.TestCase):
                                        join(currdir, "test_solve_from_instance.baseline"),
                                        tolerance=1e-7)
         #self.sisser_instance.load_solutions(results)
+
+    def test_bad_dof(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.c = ConstraintList()
+        m.c.add(m.x + m.y == 1)
+        m.c.add(m.x - m.y == 0)
+        m.c.add(2*m.x - 3*m.y == 1)
+        m.write('j.nl')
+        res = self.ipopt.solve(m)
+        self.assertEqual(str(res.solver.status), "warning")
+        self.assertEqual(str(res.solver.termination_condition), "other")
+        self.assertTrue("Too few degrees of freedom" in res.solver.message)
 
 if __name__ == "__main__":
     unittest.main()

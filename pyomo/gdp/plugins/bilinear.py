@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import logging
 from six import iteritems
@@ -35,8 +36,8 @@ class Bilinear_Transformation(Transformation):
             instance.bilinear_data_ = Block()
             instance.bilinear_data_.vlist = VarList()
             instance.bilinear_data_.vlist_boolean = []
-            instance.bilinear_data_.index = Set()
-            instance.bilinear_data_.disjuncts_   = Disjunct(instance.bilinear_data_.index*[0,1])
+            instance.bilinear_data_.IDX = Set()
+            instance.bilinear_data_.disjuncts_   = Disjunct(instance.bilinear_data_.IDX*[0,1])
             instance.bilinear_data_.disjunction_data = {}
             instance.bilinear_data_.o_expr = {}
             instance.bilinear_data_.c_body = {}
@@ -51,7 +52,7 @@ class Bilinear_Transformation(Transformation):
         #
         def rule(block, i):
             return instance.bilinear_data_.disjunction_data[i]
-        instance.bilinear_data_.disjunction_ = Disjunction(instance.bilinear_data_.index, rule=rule)
+        instance.bilinear_data_.disjunction_ = Disjunction(instance.bilinear_data_.IDX, rule=rule)
 
     def _transformBlock(self, block, instance):
         for component in block.component_objects(Objective, active=True, descend_into=False):
@@ -99,7 +100,7 @@ class Bilinear_Transformation(Transformation):
                     v.setlb(bounds[0])
                     v.setub(bounds[1])
                     id = len(instance.bilinear_data_.vlist)
-                    instance.bilinear_data_.index.add(id)
+                    instance.bilinear_data_.IDX.add(id)
                     # First disjunct
                     d0 = instance.bilinear_data_.disjuncts_[id,0]
                     d0.c1 = Constraint(expr=vars[0] == 1)
@@ -121,7 +122,7 @@ class Bilinear_Transformation(Transformation):
                     v.setlb(bounds[0])
                     v.setub(bounds[1])
                     id = len(instance.bilinear_data_.vlist)
-                    instance.bilinear_data_.index.add(id)
+                    instance.bilinear_data_.IDX.add(id)
                     # First disjunct
                     d0 = instance.bilinear_data_.disjuncts_[id,0]
                     d0.c1 = Constraint(expr=vars[1] == 1)

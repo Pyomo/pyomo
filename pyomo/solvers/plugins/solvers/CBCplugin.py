@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['CBC', 'MockCBC']
 
@@ -466,7 +467,14 @@ class CBCSHELL(SystemCallSolver):
             INPUT = []
         for line in INPUT:
             tokens = re.split('[ \t]+',line.strip())
-            # these are the only header entries CBC will generate (identified via browsing CbcSolver.cpp)
+            #
+            # Ignore warnings of values out of bounds
+            #
+            if tokens[0] == "**":
+                tokens = tokens[1:]
+            #
+            # These are the only header entries CBC will generate (identified via browsing CbcSolver.cpp)
+            #
             if tokens[0] == "Optimal":
                 solution.status = SolutionStatus.optimal
                 solution.gap = 0.0

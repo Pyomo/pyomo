@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import sys
 import logging
@@ -13,7 +14,8 @@ from pyutilib.misc import Options
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import test_models
 from pyomo.solvers.tests.solvers import test_solver_cases
-
+import pyomo.kernel
+from pyomo.core.kernel.component_block import IBlockStorage
 
 # For expected failures that appear in all known version
 _trunk_version =  (float('inf'), float('inf'), float('inf'), float('inf'))
@@ -79,6 +81,11 @@ ExpectedFailures['cbc', 'lp', 'LP_duals_maximize'] = \
     "practice this should be reported as a negative number. A ticket has "
     "been filed at:\nhttps://projects.coin-or.org/Cbc/ticket/125")
 
+ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+     "Cbc fails to report a MILP model as unbounded when it"
+     "is defined as an NL file.")
+
 #
 # PICO
 #
@@ -118,6 +125,39 @@ ExpectedFailures['pico', 'nl', 'LP_compiled'] = \
     "Pico just gets the wrong answer.")
 
 ExpectedFailures['pico', 'nl', 'LP_trivial_constraints'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'lp', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'LP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'lp', 'LP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+
+ExpectedFailures['pico', 'lp', 'MILP_infeasible1'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'MILP_infeasible1'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'LP_infeasible1'] = \
+    (lambda v: v <= _trunk_version,
+    "Pico just gets the wrong answer.")
+
+ExpectedFailures['pico', 'nl', 'LP_infeasible2'] = \
     (lambda v: v <= _trunk_version,
     "Pico just gets the wrong answer.")
 
@@ -209,6 +249,10 @@ ExpectedFailures['baron', 'bar', 'QCP_simple'] = \
     "Baron will not return dual solution when a solution is "
     "found during preprocessing.")
 
+ExpectedFailures['baron', 'bar', 'MILP_unbounded'] = \
+    (lambda v: v <= _trunk_version,
+     "Baron fails to report a MILP model as unbounded")
+
 #
 # KNITROAMPL
 #
@@ -238,8 +282,8 @@ def test_scenarios(arg=None):
             if not _solver_case.available:
                 status='skip'
                 msg="Skipping test because solver %s (%s) is unavailable" % (solver,io)
-            if (solver, io, model) in ExpectedFailures:
-                case = ExpectedFailures[solver, io, model]
+            if (solver,io,_model.description) in ExpectedFailures:
+                case = ExpectedFailures[solver,io,_model.description]
                 if _solver_case.version is not None and\
                    case[0](_solver_case.version):
                     status='expected failure'
@@ -276,8 +320,10 @@ def run_test_scenarios(options):
             solver,
             io,
             test_case.testcase.io_options,
+            {},
             symbolic_labels,
             load_solutions)
+
         termination_condition = results['Solver'][0]['termination condition']
         # Validate solution status
         try:
@@ -294,7 +340,12 @@ def run_test_scenarios(options):
             stat[key] = (True, "")
         else:
             # Validate the solution returned by the solver
-            model_class.model.solutions.load_from(results, default_variable_value=opt.default_variable_value())
+            if isinstance(model_class.model, IBlockStorage):
+                model_class.model.load_solution(results.solution)
+            else:
+                model_class.model.solutions.load_from(
+                    results,
+                    default_variable_value=opt.default_variable_value())
             rc = model_class.validate_current_solution(suffixes=model_class.test_suffixes)
 
             if test_case.status == 'expected failure':
@@ -312,7 +363,7 @@ def run_test_scenarios(options):
         print("---------------")
         print(" Test Failures")
         print("---------------")
-        nfail = 0
+    nfail = 0
     #
     # Summarize the runtime statistics, by solver
     #
@@ -333,11 +384,11 @@ def run_test_scenarios(options):
             if _str == "Unexpected failure":
                 summary[solver].NumUFail += 1
                 if options.verbose:
-                    print("- Unexpected Test Failure: "+", ".join(model, solver, io))
+                    print("- Unexpected Test Failure: "+", ".join((model, solver, io)))
             else:
                 summary[solver].NumUPass += 1
                 if options.verbose:
-                    print("- Unexpected Test Success: "+", ".join(model, solver, io))
+                    print("- Unexpected Test Success: "+", ".join((model, solver, io)))
     if options.verbose:
         if nfail == 0:
             print("- NONE")
@@ -359,10 +410,10 @@ def run_test_scenarios(options):
         total.NumEFail += ans.NumEFail
         total.NumUPass += ans.NumUPass
         total.NumUFail += ans.NumUFail
-        stream.write(fmtStr.format(_solver, str(ans.NumEPass), str(ans.NumUFail), str(ans.NumEFail), str(ans.NumUPass), str(100.0*(ans.NumEPass+ans.NumEFail)/(ans.NumEPass+ans.NumEFail+ans.NumUFail+ans.NumUPass))))
+        stream.write(fmtStr.format(_solver, str(ans.NumEPass), str(ans.NumUFail), str(ans.NumEFail), str(ans.NumUPass), str(int(100.0*(ans.NumEPass+ans.NumEFail)/(ans.NumEPass+ans.NumEFail+ans.NumUFail+ans.NumUPass)))))
     #
     stream.write("=" * (maxSolverNameLen + 66) + "\n")
-    stream.write(fmtStr.format("TOTALS", str(total.NumEPass), str(total.NumUFail), str(total.NumEFail), str(total.NumUPass), str(100.0*(total.NumEPass+total.NumEFail)/(total.NumEPass+total.NumEFail+total.NumUFail+total.NumUPass))))
+    stream.write(fmtStr.format("TOTALS", str(total.NumEPass), str(total.NumUFail), str(total.NumEFail), str(total.NumUPass), str(int(100.0*(total.NumEPass+total.NumEFail)/(total.NumEPass+total.NumEFail+total.NumUFail+total.NumUPass)))))
     stream.write("=" * (maxSolverNameLen + 66) + "\n")
 
     logger.setLevel( _level )

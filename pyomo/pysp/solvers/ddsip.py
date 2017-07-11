@@ -269,8 +269,8 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
 
         working_directory = self._create_tempdir("workdir")
         input_directory = os.path.join(working_directory,
-                                       "sipin")
-        output_directory = os.path.join(working_directory,
+                                       "ddsip_files")
+        output_directory = os.path.join(input_directory,
                                         "sipout")
 
         logfile = self._files['logfile'] = \
@@ -320,7 +320,7 @@ class DDSIPSolver(SPSolverShellCommand, PySPConfiguredObject):
         start = time.time()
         rc, log = pyutilib.subprocess.run(
             self.executable,
-            cwd=working_directory,
+            cwd=input_directory,
             stdin=ddsipstdin,
             outfile=logfile,
             tee=output_solver_log)
