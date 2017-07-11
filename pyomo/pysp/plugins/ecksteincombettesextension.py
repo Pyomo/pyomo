@@ -193,10 +193,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         phi = 0.0
         sub_phi_map = {}
-        for scenario in tree_node._scenarios:
+        for scenario in ph._scenario_tree._scenarios:
+            cumulative_sub_phi = 0.0
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
-                cumulative_sub_phi = 0.0
                 for variable_id in tree_node._standard_variable_ids:
                         var_values = scenario._x[tree_node._name]
                         varval = var_values[variable_id]
@@ -207,14 +207,15 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 #                        print "VAR VALUE=",varval
                         if varval is not None:
 #                            print "COMPUTING SUB PHI", "Y=",scenario._y[variable_id],"W=",weight_values[variable_id]
-                            sub_phi = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
-                            cumulative_sub_phi += sub_phi
-                            phi += sub_phi
+                            this_sub_phi_term = scenario._probability * ((tree_node_zs[variable_id] - varval) * (scenario._y[variable_id] + weight_values[variable_id]))
+                            cumulative_sub_phi += this_sub_phi_term
+                            
                         else:
-                            foobar
-                with open(self._JName,"a") as f:
-                    f.write(", %10f" % (cumulative_sub_phi))
-                sub_phi_map[scenario._name] = cumulative_sub_phi
+                            foobar # HEY! Fix this!
+            with open(self._JName,"a") as f:
+                f.write(", %10f" % (cumulative_sub_phi))
+            sub_phi_map[scenario._name] = cumulative_sub_phi
+            phi += cumulative_sub_phi
 
         with open(self._JName,"a") as f:
             for subproblem in subproblems:
@@ -328,7 +329,7 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
         sub_phi_to_scenario_map = {}
 
-        for scenario in tree_node._scenarios:
+        for scenario in ph._scenario_tree._scenarios:
             for tree_node in scenario._node_list[:-1]:
                 tree_node_zs = tree_node._z
                 cumulative_sub_phi = 0.0
@@ -343,14 +344,12 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                     else:
                         foobar
 
-                # HEY - shouldn't the following be moved out one level of indentation, to map to the scenario? it of course works for two-stage.
-                    
-                if not cumulative_sub_phi in sub_phi_to_scenario_map:
-                    sub_phi_to_scenario_map[cumulative_sub_phi] = []
-                sub_phi_to_scenario_map[cumulative_sub_phi].append(scenario._name)
+            if not cumulative_sub_phi in sub_phi_to_scenario_map:
+                sub_phi_to_scenario_map[cumulative_sub_phi] = []
+            sub_phi_to_scenario_map[cumulative_sub_phi].append(scenario._name)
 
-                with open(self._JName,"a") as f:
-                    f.write(", %10f" % (cumulative_sub_phi))
+            with open(self._JName,"a") as f:
+                f.write(", %10f" % (cumulative_sub_phi))
 
         print("Computed sub-phi values (scenario, phi, iters-since-last-incorporated):")
         for sub_phi in sorted(sub_phi_to_scenario_map.keys()):
