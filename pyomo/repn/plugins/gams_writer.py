@@ -19,7 +19,7 @@ from pyutilib.misc import PauseGC
 from pyomo.core.base import (
     SymbolMap, AlphaNumericTextLabeler, NumericLabeler, 
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
-    value, minimize, Suffix)
+    value, minimize, Suffix, SortComponents)
 
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
@@ -90,6 +90,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
         file_determinism = io_options.pop("file_determinism", 1)
+        sorter_map = {0:SortComponents.unsorted,
+                      1:SortComponents.deterministic,
+                      2:SortComponents.sortBoth}
+        sort = sorter_map[file_determinism]
 
         # Write results to GAMS_results.dat for solver parsing
         put_results = io_options.pop("put_results", False)
@@ -169,7 +173,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                         var_list=var_list,
                         symbolMap=symbolMap,
                         con_labeler=con_labeler,
-                        file_determinism=file_determinism,
+                        sort=sort,
                         skip_trivial_constraints=skip_trivial_constraints,
                         solver=solver,
                         mtype=mtype,
@@ -197,7 +201,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                         var_list=var_list,
                         symbolMap=symbolMap,
                         con_labeler=con_labeler,
-                        file_determinism=file_determinism,
+                        sort=sort,
                         skip_trivial_constraints=skip_trivial_constraints,
                         solver=solver,
                         mtype=mtype,
@@ -216,7 +220,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                      var_list,
                      symbolMap,
                      con_labeler,
-                     file_determinism,
+                     sort,
                      skip_trivial_constraints,
                      solver,
                      mtype,
@@ -244,7 +248,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # defined above.
         for con in model.component_data_objects(Constraint,
                                                 active=True,
-                                                sort=file_determinism):
+                                                sort=sort):
             if skip_trivial_constraints and con.body.is_fixed():
                 continue
             if linear:
@@ -277,7 +281,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         obj = list(model.component_data_objects(Objective,
                                                 active=True,
-                                                sort=file_determinism))
+                                                sort=sort))
         if len(obj) != 1:
             raise RuntimeError(
                 "GAMS writer requires exactly one active objective (found %s)"
