@@ -1,13 +1,7 @@
-from pyomo.core.base.PyomoModel import Model
-from pyomo.core.kernel.component_block import IBlockStorage
-from pyomo.opt.base.solvers import OptSolver
-from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
-import pyutilib.common
-import pyomo.opt.base.solvers
-from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
 
 
-class PersistentSolver(OptSolver):
+class PersistentSolver(DirectOrPersistentSolver):
 
     def __init__(self, **kwds):
         super(PersistentSolver, self).__init__(**kwds)
@@ -15,28 +9,7 @@ class PersistentSolver(OptSolver):
         # Ensure any subclasses inherit from PersistentSolver before any direct solver
         assert type(self).__bases__[0] is PersistentSolver
 
-        self._pyomo_model = kwds.pop('model', None)
-        self._solver_model = None
-        self._symbol_map = None
-        self._labeler = None
-        self._pyomo_var_to_solver_var_map = ComponentMap()
-        self._pyomo_con_to_solver_con_map = ComponentMap()
-        self._objective_label = None
-        self.results = None
-        self._smap_id = None
-        self._skip_trivial_constraints = False
-        self._output_fixed_variable_bounds = False
-        self._python_api_exists = False
-        self._version = None
-        self._version_major = None
-        self._symbolic_solver_labels = False
-
-        self._referenced_variables = ComponentMap()
-        """dict: {var: count} where count is the number of constraints/objective referencing the var"""
-
-        # this interface doesn't use files, but we can create a log file if requested
-        self._keepfiles = False
-
+        self._pyomo_model = kwds.pop('model', self._pyomo_model)
         if self._pyomo_model is not None:
             self.compile_instance(self._pyomo_model, **kwds)
 
@@ -46,40 +19,16 @@ class PersistentSolver(OptSolver):
             msg += ' The problem instance should be compiled before the solve using the compile_instance method.'
             raise ValueError(msg)
 
-        warmstart_flag = kwds.pop('warmstart', False)
-        self._keepfiles = kwds.pop('keepfiles', False)
-
-        # create a context in the temporary file manager for
-        # this plugin - is "pop"ed in the _postsolve method.
-        pyutilib.services.TempfileManager.push()
-
-        self.results = None
-
-        # this implies we have a custom solution "parser",
-        # preventing the OptSolver _presolve method from
-        # creating one
-        self._results_format = ResultsFormat.soln
-        # use the base class _presolve to consume the
-        # important keywords
         super(PersistentSolver, self)._presolve(*args, **kwds)
-
-        if warmstart_flag:
-            if self.warm_start_capable():
-                self._warm_start()
-            else:
-                raise ValueError('{0} solver plugin is not capable of warmstart.'.format(type(self)))
-
-        if self._log_file is None:
-            self._log_file = pyutilib.services.TempfileManager.create_tempfile(suffix='.log')
 
     def _apply_solver(self):
         raise NotImplementedError('The subclass should implement this method.')
 
     def _postsolve(self):
-        raise NotImplementedError('The subclass should implement this method.')
+        return super(PersistentSolver, self)._postsolve()
 
     def _compile_instance(self, model, **kwds):
-        raise NotImplementedError('The subclass should implement this method.')
+        super(PersistentSolver, self)._compile_instance(model, **kwds)
 
     def _add_block(self, block):
         raise NotImplementedError('The subclass should implement this method.')
@@ -97,7 +46,7 @@ class PersistentSolver(OptSolver):
         raise NotImplementedError('The subclass should implement this method.')
 
     def compile_instance(self, model, **kwds):
-        return self._compile_instance(model)
+        return self._compile_instance(model, **kwds)
 
     def add_block(self, block):
         return self._add_block(block)
@@ -123,8 +72,17 @@ class PersistentSolver(OptSolver):
     def remove_var(self):
         raise NotImplementedError('The subclass should implement this method.')
 
-    def available(self, exception_flag=True):
+    def _get_expr_from_pyomo_repn(self, repn):
         raise NotImplementedError('The subclass should implement this method.')
 
-    def _get_version(self):
+    def _get_expr_from_pyomo_expr(self, expr):
         raise NotImplementedError('The subclass should implement this method.')
+
+    def _load_vars(self, vars_to_load):
+        raise NotImplementedError('The subclass should implement this method.')
+
+    def warm_start_capable(self):
+        return False
+
+    def _warm_start(self):
+        raise NotImplementedError('If a subclass can warmstart, then it should implement this method.')
