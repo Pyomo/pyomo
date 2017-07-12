@@ -21,9 +21,10 @@ Questions: Please make a post at StackOverflow and email the link to Qi Chen
 <qichen at andrew.cmu.edu>.
 
 """
+import logging
+from copy import deepcopy
 from math import copysign, fabs
 from pprint import pprint
-import logging
 
 import pyomo.util.plugin
 from pyomo.core.base import expr as EXPR
@@ -31,19 +32,16 @@ from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.environ import (Binary, Block, Constraint,
-                           ConstraintList, Expression, NonNegativeReals,
-                           Objective, RangeSet, Reals, Set, Suffix, Var,
-                           maximize, minimize, value, TransformationFactory,
-                           SolverFactory)
+from pyomo.environ import (Binary, Block, Constraint, ConstraintList,
+                           Expression, NonNegativeReals, Objective, RangeSet,
+                           Reals, Set, SolverFactory, Suffix,
+                           TransformationFactory, Var, maximize, minimize,
+                           value)
+from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolverStatus, SolutionStatus
+from pyomo.opt import SolutionStatus, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.repn.canonical_repn import generate_canonical_repn
-from copy import deepcopy
-from pyomo.gdp import Disjunct
-
-from six.moves import range
 from six import iteritems
 
 logger = logging.getLogger('pyomo.solvers')
@@ -523,8 +521,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             self._solve_NLP_subproblem()
 
             # If the hybrid algorithm is not making progress, switch to OA.
-            relax_prog_req = 1E-6
-            feas_prog_req = 1E-6
+            required_relax_prog = 1E-6
+            required_feas_prog = 1E-6
             if GDPDT.objective.sense == minimize:
                 relax_prog_log = self.LB_progress
                 feas_prog_log = self.UB_progress
@@ -534,53 +532,45 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 feas_prog_log = self.LB_progress
                 sign_adjust = -1
             # Maximum number of iterations in which the lower (optimistic)
-            # bound does not improve before switching to OA
-            max_nonimprove_relax_iter = 5
+            # bound does not improve sufficiently before switching to OA
+            LB_stall_after = 5
+            if (len(relax_prog_log) > LB_stall_after and
+                (sign_adjust * relax_prog_log[-1] <= sign_adjust * (
+                    relax_prog_log[-1 - LB_stall_after]
+                    + required_relax_prog))):
+                if (self.decomposition_strategy == 'hPSC' and
+                        self._decomposition_strategy == 'PSC'):
+                    print('Relaxation not making enough progress '
+                          'for {} iterations. '
+                          'Switching to OA.'.format(LB_stall_after))
+                    self._decomposition_strategy = 'OA'
+
             # Max number of iterations in which upper (feasible) bound does not
             # improve before turning on no-backtracking
-            max_nonimprove_feas_iter = 5
-            relax_making_progress = True
-            feas_making_progress = True
-            for i in range(1, max_nonimprove_relax_iter + 1):
-                try:
-                    if (sign_adjust * relax_prog_log[-i]
-                            <= (relax_prog_log[-i - 1] + relax_prog_req)
-                            * sign_adjust):
-                        relax_making_progress = False
-                    else:
-                        relax_making_progress = True
-                        break
-                except IndexError:
-                    # Not enough history yet, keep going.
-                    relax_making_progress = True
-                    break
-            if not relax_making_progress and (
-                    self.decomposition_strategy == 'hPSC' and
-                    self._decomposition_strategy == 'PSC'):
-                print('Relaxation not making enough progress '
-                      'for {} iterations. '
-                      'Switching to OA.'.format(max_nonimprove_relax_iter))
-                self._decomposition_strategy = 'OA'
+            no_backtrack_after = 5
+            if (len(feas_prog_log) > no_backtrack_after and
+                (sign_adjust * feas_prog_log[-1] <= sign_adjust * (
+                    feas_prog_log[-1 - no_backtrack_after]
+                    + required_feas_prog))):
+                if not GDPDT.feasible_integer_cuts.active:
+                    print('Feasible solutions not making enough progress '
+                          'for {} iterations. Turning on no-backtracking '
+                          'integer cuts.'.format(no_backtrack_after))
+                    GDPDT.feasible_integer_cuts.activate()
 
-            for i in range(1, max_nonimprove_feas_iter + 1):
-                try:
-                    if (sign_adjust * feas_prog_log[-i]
-                            >= (feas_prog_log[-i - 1] - feas_prog_req)
-                            * sign_adjust):
-                        # TODO check this logic, and also the one above
-                        feas_making_progress = False
-                    else:
-                        feas_making_progress = True
-                        break
-                except IndexError:
-                    feas_making_progress = True
-                    break
-            if (not feas_making_progress and
-                    not GDPDT.feasible_integer_cuts.active):
+            # Maximum number of iterations in which feasible bound does not
+            # improve before terminating algorithm
+            algorithm_stall_after = 8
+            if (len(feas_prog_log) > algorithm_stall_after and
+                (sign_adjust * feas_prog_log[-1] <= sign_adjust * (
+                    feas_prog_log[-1 - algorithm_stall_after]
+                    + required_feas_prog))):
                 print('Feasible solutions not making enough progress '
-                      'for {} iterations. Turning on no-backtracking '
-                      'integer cuts.'.format(max_nonimprove_feas_iter))
-                GDPDT.feasible_integer_cuts.activate()
+                      'for {} iterations. Algorithm stalled. Exiting.\n'
+                      'To continue, increase value of parameter '
+                      'algorithm_stall_after.'
+                      .format(algorithm_stall_after))
+                break
 
     def _solve_OA_master(self):
         self.mip_iter += 1
@@ -621,7 +611,6 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             # Linear solvers will sometimes tell me that it's infeasible or
             # unbounded during presolve, but fails to distinguish. We need to
             # resolve with a solver option flag on.
-            from copy import deepcopy
             old_options = deepcopy(self.mip_solver.options)
             # This solver option is specific to Gurobi.
             self.mip_solver.options['DualReductions'] = 0
@@ -643,6 +632,22 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 self.UB_progress.append(self.UB)
             print('MIP {}: OBJ: {}  LB: {}  UB: {}'
                   .format(self.mip_iter, value(GDPDT.oa_obj.expr), self.LB,
+                          self.UB))
+        elif master_terminate_cond is tc.maxTimeLimit:
+            # TODO check that status is actually ok and everything is feasible
+            print('Unable to optimize MILP master problem within time limit. '
+                  'Using current solver feasible solution.')
+            results.solver.status = SolverStatus.ok
+            m.solutions.load_from(results)
+            self._copy_values(m, self.working_model)
+            if GDPDT.objective.sense == minimize:
+                self.LB = max(value(GDPDT.objective.expr), self.LB)
+                self.LB_progress.append(self.LB)
+            else:
+                self.UB = min(value(GDPDT.objective.expr), self.UB)
+                self.UB_progress.append(self.UB)
+            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                  .format(self.mip_iter, value(GDPDT.objective.expr), self.LB,
                           self.UB))
         elif (master_terminate_cond is tc.other and
                 results.solution.status is SolutionStatus.feasible):
@@ -902,7 +907,6 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                                         **self.nlp_solver_kwargs)
 
         def process_feasible_solution():
-            m.solutions.load_from(results)
             self._copy_values(m, self.working_model, from_map=obj_to_cuid)
             self._copy_dual_suffixes(m, self.working_model,
                                      from_map=obj_to_cuid)
@@ -938,6 +942,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         subprob_terminate_cond = results.solver.termination_condition
         if subprob_terminate_cond is tc.optimal:
+            m.solutions.load_from(results)
             process_feasible_solution()
         elif subprob_terminate_cond is tc.infeasible:
             # TODO try something else? Reinitialize with different initial
