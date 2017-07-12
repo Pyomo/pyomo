@@ -47,7 +47,11 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
 
     def __init__(self):
 
-        self._check_output = False
+        import random
+        random.seed(1234)
+        print("Kludge warning: set random seed to 1234")
+
+        self._check_output = True
         self._JName = "PhiSummary.csv"
 
         self._subproblems_to_queue = []
@@ -78,6 +82,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         # the expected value of the y vector should be 0 if the solution is optimal
 
     def compute_updates(self, ph, subproblems, scenario_solve_counts):
+
+        scale_factor = 1.0               # This should be a command-line parameter
 
         self._total_projection_steps += 1
         print("Initiating projection step: %d" % self._total_projection_steps)
@@ -178,6 +184,9 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                         p_vnorm += tree_node._probability * this_v_val * this_v_val
                         this_u_val = scenario._u[variable_id]
                         p_unorm += scenario._probability * this_u_val * this_u_val
+
+        if self._check_output :
+            print("unorm^2 = " + str(p_unorm) + " vnorm^2 = " + str(p_vnorm))
                     
         p_unorm = math.sqrt(p_unorm)
         p_vnorm = math.sqrt(p_vnorm)
@@ -228,8 +237,10 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
         print("Computed phi:    %16e" % phi)
         if phi > 0:
             tau = 1.0 # this is the over-relaxation parameter - we need to do something more useful
-            # probability weighted norms are used below - this doesn't match the paper.
-            theta = phi/(p_unorm*p_unorm + p_vnorm*p_vnorm) 
+            denominator = p_unorm*p_unorm + scale_factor*p_vnorm*p_vnorm
+            if self._check_output :
+                print("denominator = " + str(denominator))
+            theta = phi/denominator 
             print("Computed theta: %16e" % theta)
             for stage in ph._scenario_tree._stages[:-1]:
                 for tree_node in stage._tree_nodes:
@@ -245,8 +256,8 @@ class EcksteinCombettesExtension(pyomo.util.plugin.SingletonPlugin):
                                 print("WEIGHT VALUE PRIOR TO MODIFICATION=",weight_values[variable_id])
                                 print("U VALUE PRIOR TO MODIFICATION=",scenario._u[variable_id])
 #                            print("SUBTRACTING TERM TO Z=%s" % (tau * theta * tree_node._v[variable_id]))
-                            tree_node._z[variable_id] -= (tau * theta * tree_node._v[variable_id])
-                            weight_values[variable_id] += (tau * theta * scenario._u[variable_id])
+                            tree_node._z[variable_id] -= (tau * theta * scale_factor * tree_node._v[variable_id])
+                            weight_values[variable_id] += (tau * theta *  scenario._u[variable_id])
                             if self._check_output:
                                 print("NEW WEIGHT FOR VARIABLE=",variable_id,"FOR SCENARIO=",scenario._name,"EQUALS",weight_values[variable_id])
 #                    print("TREE NODE ZS AFTER: %s" % tree_node._z)
