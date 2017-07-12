@@ -19,7 +19,7 @@ from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn, canonical_d
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.core.kernel.numvalue import value
 import pyomo.core.kernel
-from pyomo.core.kernel.component_map import ComponentSet
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition
@@ -33,12 +33,14 @@ class DegreeError(ValueError):
 
 
 class GurobiDirect(DirectSolver):
-    alias('gurobi_direct', doc='Direct python interface to gurobi')
+    alias('gurobi_direct', doc='Direct python interface to Gurobi')
 
     def __init__(self, **kwds):
         kwds['type'] = 'gurobi_direct'
         super(GurobiDirect, self).__init__(**kwds)
+        self._init()
 
+    def _init(self):
         try:
             import gurobipy
             self._gurobipy = gurobipy
@@ -275,6 +277,7 @@ class GurobiDirect(DirectSolver):
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
+        self._vars_referenced_by_con[con] = referenced_vars
         self._pyomo_con_to_solver_con_map[con] = gurobipy_con
 
     def _add_sos_constraint(self, con):
@@ -293,7 +296,10 @@ class GurobiDirect(DirectSolver):
         gurobi_vars = []
         weights = []
 
+        self._vars_referenced_by_con[con] = ComponentSet()
+
         for v, w in con.get_items():
+            self._vars_referenced_by_con[con].add(v)
             gurobi_vars.append(self._pyomo_var_to_solver_var_map[v])
             self._referenced_variables[v] += 1
             weights.append(w)

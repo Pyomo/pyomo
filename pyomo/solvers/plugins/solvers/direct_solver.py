@@ -66,17 +66,17 @@ class DirectSolver(DirectOrPersistentSolver):
     def _add_var(self, var):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
-    def _get_expr_from_pyomo_repn(self, repn):
+    def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
         raise NotImplementedError('The subclass should implement this method.')
 
-    def _get_expr_from_pyomo_expr(self, expr):
+    def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
     def _load_vars(self, vars_to_load):
         raise NotImplementedError('The specific direct solver interface should implement this method.')
 
     def warm_start_capable(self):
-        return False
+        raise NotImplementedError('The subclass should implement this method.')
 
     def _warm_start(self):
         raise NotImplementedError('If a subclass can warmstart, then it should implement this method.')

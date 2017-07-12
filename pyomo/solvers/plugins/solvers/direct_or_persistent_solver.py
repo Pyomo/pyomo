@@ -24,6 +24,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._labeler = None
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = ComponentMap()
+        self._vars_referenced_by_con = ComponentMap()
         self._objective_label = None
         self.results = None
         self._smap_id = None
@@ -96,6 +97,7 @@ class DirectOrPersistentSolver(OptSolver):
                                                       self._output_fixed_variable_bounds)
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = ComponentMap()
+        self._vars_referenced_by_con = ComponentMap()
         self._referenced_variables = ComponentMap()
         self._objective_label = None
 
@@ -118,17 +120,17 @@ class DirectOrPersistentSolver(OptSolver):
     def _add_var(self, var):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
-    def _get_expr_from_pyomo_repn(self, repn):
+    def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
         raise NotImplementedError('The subclass should implement this method.')
 
-    def _get_expr_from_pyomo_expr(self, expr):
+    def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
     def _load_vars(self, vars_to_load):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
     def warm_start_capable(self):
-        return False
+        raise NotImplementedError('The subclass should implement this method.')
 
     def _warm_start(self):
         raise NotImplementedError('If a subclass can warmstart, then it should implement this method.')
