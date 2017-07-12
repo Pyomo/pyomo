@@ -16,7 +16,7 @@ class DirectOrPersistentSolver(OptSolver):
     1.) Initialize self._solver_model during _presolve before calling DirectSolver._presolve
     """
     def __init__(self, **kwds):
-        super(DirectOrPersistentSolver, self).__init__(**kwds)
+        OptSolver.__init__(self, **kwds)
 
         self._pyomo_model = None
         self._solver_model = None
@@ -68,7 +68,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._results_format = ResultsFormat.soln
         # use the base class _presolve to consume the
         # important keywords
-        super(DirectOrPersistentSolver, self)._presolve(*args, **kwds)
+        OptSolver._presolve(self, *args, **kwds)
 
         if warmstart_flag:
             if self.warm_start_capable():
@@ -83,7 +83,7 @@ class DirectOrPersistentSolver(OptSolver):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
     def _postsolve(self):
-        return super(DirectOrPersistentSolver, self)._postsolve()
+        return OptSolver._postsolve(self)
 
     def _compile_instance(self, model, **kwds):
         if not isinstance(model, (Model, IBlockStorage)):

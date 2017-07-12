@@ -37,7 +37,7 @@ class GurobiDirect(DirectSolver):
 
     def __init__(self, **kwds):
         kwds['type'] = 'gurobi_direct'
-        super(GurobiDirect, self).__init__(**kwds)
+        DirectSolver.__init__(self, **kwds)
         self._init()
 
     def _init(self):
@@ -82,7 +82,7 @@ class GurobiDirect(DirectSolver):
         self._capabilities.sos2 = True
 
     def _presolve(self, *args, **kwds):
-        super(GurobiDirect, self)._presolve(*args, **kwds)
+        DirectSolver._presolve(self, *args, **kwds)
 
     def _apply_solver(self):
         if self._tee:
@@ -196,7 +196,7 @@ class GurobiDirect(DirectSolver):
 
     def _compile_instance(self, model, **kwds):
         self._range_constraints = set()
-        super(GurobiDirect, self)._compile_instance(model, **kwds)
+        DirectSolver._compile_instance(self, model, **kwds)
         try:
             self._solver_model = self._gurobipy.Model()
         except Exception:
@@ -564,7 +564,7 @@ class GurobiDirect(DirectSolver):
         # manager, created populated *directly* by this plugin.
         pyutilib.services.TempfileManager.pop(remove=not self._keepfiles)
 
-        return super(GurobiDirect, self)._postsolve()
+        return DirectSolver._postsolve(self)
 
     def warm_start_capable(self):
         return True

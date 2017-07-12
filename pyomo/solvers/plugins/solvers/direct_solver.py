@@ -7,7 +7,7 @@ class DirectSolver(DirectOrPersistentSolver):
     1.) Initialize self._solver_model during _presolve before calling DirectSolver._presolve
     """
     def __init__(self, **kwds):
-        super(DirectSolver, self).__init__(**kwds)
+        DirectOrPersistentSolver.__init__(self, **kwds)
 
     def _presolve(self, *args, **kwds):
         """
@@ -43,16 +43,16 @@ class DirectSolver(DirectOrPersistentSolver):
 
         self._compile_instance(model, **kwds)
 
-        super(DirectSolver, self)._presolve(*args, **kwds)
+        DirectOrPersistentSolver._presolve(self, *args, **kwds)
 
     def _apply_solver(self):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
 
     def _postsolve(self):
-        return super(DirectSolver, self)._postsolve()
+        return DirectOrPersistentSolver._postsolve(self)
 
     def _compile_instance(self, model, **kwds):
-        super(DirectSolver, self)._compile_instance(model, **kwds)
+        DirectOrPersistentSolver._compile_instance(self, model, **kwds)
 
     def _add_block(self, block):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')

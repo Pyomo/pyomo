@@ -4,7 +4,7 @@ from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPe
 class PersistentSolver(DirectOrPersistentSolver):
 
     def __init__(self, **kwds):
-        super(PersistentSolver, self).__init__(**kwds)
+        DirectOrPersistentSolver.__init__(self, **kwds)
 
         # Ensure any subclasses inherit from PersistentSolver before any direct solver
         assert type(self).__bases__[0] is PersistentSolver
@@ -15,16 +15,16 @@ class PersistentSolver(DirectOrPersistentSolver):
             msg += ' The problem instance should be compiled before the solve using the compile_instance method.'
             raise ValueError(msg)
 
-        super(PersistentSolver, self)._presolve(*args, **kwds)
+        DirectOrPersistentSolver._presolve(self, *args, **kwds)
 
     def _apply_solver(self):
         raise NotImplementedError('The subclass should implement this method.')
 
     def _postsolve(self):
-        return super(PersistentSolver, self)._postsolve()
+        return DirectOrPersistentSolver._postsolve(self)
 
     def _compile_instance(self, model, **kwds):
-        super(PersistentSolver, self)._compile_instance(model, **kwds)
+        DirectOrPersistentSolver._compile_instance(self, model, **kwds)
 
     def _add_block(self, block):
         raise NotImplementedError('The subclass should implement this method.')

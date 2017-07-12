@@ -14,15 +14,33 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         PersistentSolver.__init__(self, **kwds)
         self._init()
 
-        self._pyomo_model = kwds.pop('model', self._pyomo_model)
+        self._pyomo_model = kwds.pop('model', None)
         if self._pyomo_model is not None:
             self.compile_instance(self._pyomo_model, **kwds)
+
+    def _apply_solver(self):
+        return GurobiDirect._apply_solver(self)
 
     def _postsolve(self):
         return GurobiDirect._postsolve(self)
 
     def _compile_instance(self, model, **kwds):
         GurobiDirect._compile_instance(self, model, **kwds)
+
+    def _add_block(self, block):
+        GurobiDirect._add_block(self, block)
+
+    def _compile_objective(self):
+        GurobiDirect._compile_objective(self)
+
+    def _add_constraint(self, con):
+        GurobiDirect._add_constraint(self, con)
+
+    def _add_var(self, var):
+        GurobiDirect._add_var(self, var)
+
+    def _add_sos_constraint(self, con):
+        GurobiDirect._add_sos_constraint(self, con)
 
     def remove_block(self, block):
         for sub_block in block.block_data_objects(descend_into=True, active=True):
@@ -62,4 +80,21 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             self._referenced_variables[var] -= 1
         del self._vars_referenced_by_con[con]
         del self._pyomo_con_to_solver_con_map[con]
+
+    def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
+        return GurobiDirect._get_expr_from_pyomo_repn(self, repn, max_degree)
+
+    def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
+        return GurobiDirect._get_expr_from_pyomo_expr(self, expr, max_degree)
+
+    def _load_vars(self, vars_to_load):
+        GurobiDirect._load_vars(self, vars_to_load)
+
+    def warm_start_capable(self):
+        return GurobiDirect.warm_start_capable(self)
+
+    def _warm_start(self):
+        GurobiDirect._warm_start(self)
+
+
 
