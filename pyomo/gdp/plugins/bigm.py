@@ -112,7 +112,13 @@ class BigM_Transformation(Transformation):
                     "Target %s is not a component on the instance!" % _t)
             if not t.active:
                 continue
-            if type(t) is _BlockData or t.type() in (Block, Disjunct):
+            # TODO: I don't like this at all. I have to make sure that I will
+            # never ask for the ctype of a blockdata or a disjunctiondata. So
+            # I am doing this first, but it is really unclear and maybe I
+            # shouldn't be using ctypes at all??
+            if type(t) is disjunct._DisjunctionData:
+                self._transformDisjunction(t, transBlock, bigM)
+            elif type(t) is _BlockData or t.type() in (Block, Disjunct):
                 self._transformBlock(t, transBlock, bigM)
             elif t.type() is Disjunction:
                 self._transformDisjunction(t, transBlock, bigM)
@@ -149,25 +155,27 @@ class BigM_Transformation(Transformation):
         parent = obj.parent_block()
 
         # add the XOR (or OR) constraints to parent block (with unique name)
-        # It's indexed if this is an IndexedDisjunction.
-        # TODO: fix to work with single _DisjunctionData
-        # idea: _index = obj.index_set() if obj.is_indexed() else None
-        orC = Constraint(obj.index_set())
-        nm = '_xor' if obj.xor else '_or'
+        # It's indexed if this is an IndexedDisjunction, not otherwise
+        orC = Constraint(obj.index_set()) if obj.is_indexed() else Constraint()
+        if hasattr(obj, 'xor'):
+            xor = obj.xor
+        else:
+            # it's a _DisjunctionData
+            assert type(obj) is disjunct._DisjunctionData
+            xor = obj.parent_component().xor
+        nm = '_xor' if xor else '_or'
         orCname = self._get_unique_name(parent, '_gdp_bigm_relaxation_' + \
                                         obj.local_name + nm)
         parent.add_component(orCname, orC)
 
         if obj.is_indexed():
             for i in obj:
-                self._transformDisjunctionData(obj[i], orC, i, obj.xor, 
+                self._transformDisjunctionData(obj[i], orC, i, xor, 
                                                transBlock, bigM)
         else:
-            self._transformDisjunctionData(obj, orC, None, obj.xor, transBlock, 
+            self._transformDisjunctionData(obj, orC, None, xor, transBlock, 
                                            bigM)
 
-
-        # TODO: Move this into a transformDisjunctionData method
         # TODO: update the map dictionaries to include the 
         # disjunction <-> constraint maps
         # for i in obj.index_set():

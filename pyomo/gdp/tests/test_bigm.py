@@ -1381,6 +1381,50 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
             self.assertIs(dict2['bigm'](), disjBlock[j])
             self.assertTrue(dict2['relaxed'])
 
+    def test_disjData_targets_inactive(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.disjunction1[2])])
+
+        self.assertTrue(m.disjunct1[1,0].active)
+        self.assertTrue(m.disjunct1[1,1].active)
+        self.assertFalse(m.disjunct1[2,0].active)
+        self.assertFalse(m.disjunct1[2,1].active)
+
+        self.assertTrue(m.b[0].disjunct[0].active)
+        self.assertTrue(m.b[0].disjunct[1].active)
+        self.assertTrue(m.b[1].disjunct[0].active)
+        self.assertTrue(m.b[1].disjunct[1].active)
+
+    def test_disjData_only_targets_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.disjunction1[2])])
+
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        self.assertEqual(len(disjBlock), 2)
+        self.assertIsInstance(disjBlock[0].c, Constraint)
+        self.assertIsInstance(disjBlock[1].c, Constraint)
+
+        # This relies on the disjunctions being transformed in the same order
+        # every time. These are the mappings between the indices of the original
+        # disjuncts and the indices on the indexed block on the transformation
+        # block.
+        pairs = [
+            ((2,0), 0),
+            ((2,1), 1),
+        ]
+        for i, j in pairs:
+            dict1 = getattr(disjBlock[j], "_gdp_trans_info")
+            self.assertIsInstance(dict1, dict)
+            self.assertIs(dict1['src'](), m.disjunct1[i])
+            dict2 = getattr(m.disjunct1[i], "_gdp_trans_info")
+            self.assertIsInstance(dict2, dict)
+            self.assertIs(dict2['bigm'](), disjBlock[j])
+            self.assertTrue(dict2['relaxed'])
+
     def test_indexedBlock_targets_inactive(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(
