@@ -8,9 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base import Constraint, Suffix, Var, value
+from six import StringIO
+from tempfile import mkdtemp
+
+from pyomo.core.base import Constraint, Suffix, Var, value, Expression
 from pyomo.opt import ProblemFormat, SolverFactory
-import os, sys, subprocess, pipes, math, logging
+import os, sys, subprocess, pipes, math, logging, shutil
 
 import pyomo.util.plugin
 from pyomo.opt.base import IOptSolver
@@ -22,7 +25,16 @@ logger = logging.getLogger('pyomo.solvers')
 pyutilib.services.register_executable(name="gams")
 
 class GAMSSolver(pyomo.util.plugin.Plugin):
-    """A generic interface to GAMS solvers"""
+    """
+    A generic interface to GAMS solvers
+
+    Pass solver_io keyword arg to SolverFactory to choose solver mode:
+        solver_io='direct' or 'python' to use GAMS Python API
+            Requires installation, visit this url for help:
+            https://www.gams.com/latest/docs/apis/examples_python/index.html
+        solver_io='shell' or 'gms' to use command line to call gams
+            Requires the gams executable be on your system PATH
+    """
     pyomo.util.plugin.implements(IOptSolver)
     pyomo.util.plugin.alias('gams', doc='The GAMS modeling language')
 
@@ -35,9 +47,9 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         except KeyError:
             mode = 'direct'
 
-        if mode == 'direct':
+        if mode == 'direct' or mode == 'python':
             return SolverFactory('_gams_direct', **kwds)
-        if mode == 'shell':
+        if mode == 'shell' or mode == 'gms':
             return SolverFactory('_gams_shell', **kwds)
         else:
             logger.error('Unknown IO type: %s' % mode)
@@ -55,12 +67,26 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             return True
         except ImportError:
             return False
- 
+
+    def available(self, exception_flag=True):
+        """True if the solver is available"""
+        try:
+            from gams import GamsWorkspace, DebugLevel
+            return True
+        except ImportError as e:
+            if exception_flag is False:
+                return False
+            else:
+                raise ImportError("Import of gams failed - GAMS direct "
+                                  "solver functionality is not available.\n"
+                                  "GAMS message: %s" % e)
+
     def solve(self,
               model,
               tee=False,
               load_model=True,
               keep_files=False,
+              tmpdir=None,
               io_options={}):
         """
         Uses GAMS Python API. For installation help visit:
@@ -69,11 +95,14 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         tee=False:
             Output GAMS log to stdout.
         load_model=True:
-            Load results back into pyomo model.
+            Does not support load_model=False.
         keep_files=False:
             Keep temporary files in folder '_GAMSSolver_files'.
             Equivalent of DebugLevel.KeepFiles.
             Summary of temp files can be found in _gams_py_gjo0.pf
+        tmpdir=None:
+            Specify directory path for storing temporary files.
+            A directory will be created if one of this name doesn't exist.
         io_options:
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
@@ -90,39 +119,40 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 For model attributes, <model name> = GAMS_MODEL
         """
 
+        # Make sure available() doesn't crash
+        self.available()
+
         from gams import GamsWorkspace, DebugLevel
         from gams.workspace import GamsExceptionExecution
 
-        var_list = []
-        io_options['var_list'] = var_list
-        io_options['stringio'] = True
+        assert load_model == True, 'GAMSSolver does not support '\
+                                   'load_model=False.'
 
-        (output_file, smap_id) = model.write(format=ProblemFormat.gams,
-                                                 io_options=io_options)
+        # Create StringIO stream to pass to gams_writer, on which the
+        # model file will be written. The writer also passes this StringIO
+        # back, but output_file is defined in advance for clarity.
+        output_file = StringIO()
+        (_, smap_id) = model.write(filename=output_file,
+                                   format=ProblemFormat.gams,
+                                   io_options=io_options)
         symbolMap = model.solutions.symbol_map[smap_id]
 
-        # If keeping files, set dir to current dir
-        # All tmp files will be created and kept there
-        # Otherwise dir is in /tmp/ folder and deleted after
-        if keep_files:
-            folder = os.path.join(os.getcwd(),'_GAMSSolver_files')
-            ws = GamsWorkspace(working_directory=folder,
-                               debug=DebugLevel.KeepFiles)
-        else:
-            ws = GamsWorkspace()
+        ws = GamsWorkspace(debug=DebugLevel.KeepFiles if keep_files
+                           else DebugLevel.Off,
+                           working_directory=tmpdir)
         
         t1 = ws.add_job_from_string(output_file.getvalue())
 
         try:
-            if tee:
-                t1.run(output=sys.stdout)
-            else:
-                t1.run()
+            t1.run(output=sys.stdout if tee else None)
         except GamsExceptionExecution:
             try:
-                check_expr_evaluation(model, var_list, symbolMap, 'direct')
+                check_expr_evaluation(model, symbolMap, 'direct')
             finally:
                 raise
+        finally:
+            if keep_files:
+                print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
@@ -131,20 +161,17 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             elif (suf.name == 'rc' and suf.import_enabled()):
                 has_rc = True
 
-        if load_model:
-            for var in var_list:
-                v = symbolMap.getObject(var)
-                if not v.is_expression():
-                    rec = t1.out_db[var].first_record()
-                    if v.is_binary() or v.is_integer():
-                        v.set_value(int(rec.level))
-                    else:
-                        v.set_value(rec.level)
-                    if has_rc and not math.isnan(rec.marginal):
-                        # Do not set marginals to nan
-                        model.rc.set_value(v, rec.marginal)
+        for sym, ref in symbolMap.bySymbol.iteritems():
+            obj = ref()
+            if not obj.parent_component().type() is Var:
+                continue
+            rec = t1.out_db[sym].first_record()
+            obj.value = rec.level
+            if has_rc and not math.isnan(rec.marginal):
+                # Do not set marginals to nan
+                model.rc.set_value(obj, rec.marginal)
 
-        if load_model and has_dual:
+        if has_dual:
             for c in model.component_data_objects(Constraint, active=True):
                 if c.body.is_fixed():
                     continue
@@ -177,18 +204,29 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
 
 class GAMSShell(pyomo.util.plugin.Plugin):
-    """Shell interface to GAMS solvers"""
+    """A generic interface to GAMS solvers"""
     pyomo.util.plugin.implements(IOptSolver)
     pyomo.util.plugin.alias('_gams_shell', doc='The GAMS modeling language')
 
     def available(self, exception_flag=True):
-        return pyutilib.services.registered_executable("gams") is not None
+        """True if the solver is available"""
+        exe = pyutilib.services.registered_executable("gams")
+        if exception_flag is False:
+            return exe is not None
+        else:
+            if exe is not None:
+                return True
+            else:
+                raise NameError(
+                    "No 'gams' command found on system PATH - GAMS shell "
+                    "solver functionality is not available.")
  
     def solve(self,
               model,
               tee=False,
               load_model=True,
               keep_files=False,
+              tmpdir=None,
               io_options={}):
         """
         Uses command line to call GAMS.
@@ -197,9 +235,12 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         tee=False:
             Output GAMS log to stdout.
         load_model=True:
-            Load results back into pyomo model.
+            Does not support load_model=False.
         keep_files=False:
             Keep .gms and .lst files in current directory.
+        tmpdir=None:
+            Specify directory path for storing temporary files.
+            A directory will be created if one of this name doesn't exist.
         io_options:
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
@@ -216,43 +257,61 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 For model attributes, <model name> = GAMS_MODEL
         """
 
-        var_list = []
-        io_options['var_list'] = var_list
-        io_options['put_results'] = True
+        # Make sure available() doesn't crash
+        self.available()
 
-        (output_filename, smap_id) = model.write(format=ProblemFormat.gams,
-                                                 io_options=io_options)
+        assert load_model == True, 'GAMSSolver does not support '\
+                                   'load_model=False.'
+
+        if tmpdir is None:
+            tmpdir = mkdtemp()
+        else:
+            if not os.path.exists(tmpdir):
+                os.makedirs(tmpdir)
+        output_filename = os.path.join(tmpdir, 'model.gms')
+        lst_filename = os.path.join(tmpdir, 'output.lst')
+        results_filename = os.path.join(tmpdir, 'results.dat')
+
+        io_options['put_results'] = results_filename
+
+        (_, smap_id) = model.write(filename=output_filename,
+                                   format=ProblemFormat.gams,
+                                   io_options=io_options)
         symbolMap = model.solutions.symbol_map[smap_id]
 
-        command = "gams " + pipes.quote(output_filename)
-        if tee:
-            rc = subprocess.call(command, shell=True)
-        else:
-            rc = subprocess.call(command + " lo=0", shell=True)
+        exe = pyutilib.services.registered_executable("gams")
+        command = [exe.get_path(), output_filename, 'o=' + lst_filename]
+        if not tee:
+            command.append("lo=0")
 
-        if rc == 1 or rc == 127:
-            raise RuntimeError("Command 'gams' was not recognized")
-        elif rc == 3:
-            # Run check_expr_evaluation, which errors if necessary
-            check_expr_evaluation(model, var_list, symbolMap, 'shell')
-            # If nothing was raised, raise the regular RuntimeError
-            raise RuntimeError("GAMS encountered an error during solve. "
-                               "Check listing file for details.")
-        elif rc != 0:
-            raise RuntimeError("GAMS encountered an error during solve. "
-                               "Check listing file for details.")
+        try:
+            rc = subprocess.call(command)
 
-        with open('GAMS_results.dat', 'r') as results_file:
-            results_text = results_file.read()
+            if keep_files:
+                print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
+
+            if rc == 1 or rc == 127:
+                raise RuntimeError("Command 'gams' was not recognized")
+            elif rc != 0:
+                if rc == 3:
+                    # Execution Error
+                    # Run check_expr_evaluation, which errors if necessary
+                    check_expr_evaluation(model, symbolMap, 'shell')
+                # If nothing was raised, or for all other cases, raise this
+                raise RuntimeError("GAMS encountered an error during solve. "
+                                   "Check listing file for details.")
+
+            with open(results_filename, 'r') as results_file:
+                results_text = results_file.read()
+        finally:
+            if not keep_files:
+                shutil.rmtree(tmpdir)
+
         soln = dict()
-        for line in results_text.splitlines():
+        # Skip first line of explanatory text
+        for line in results_text.splitlines()[1:]:
             items = line.split()
             soln[items[0]] = (items[1], items[2])
-        os.remove('GAMS_results.dat')
-
-        if not keep_files:
-            os.remove(output_filename)
-            os.remove(os.path.splitext(output_filename)[0] + '.lst')
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
@@ -261,23 +320,20 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             elif (suf.name == 'rc' and suf.import_enabled()):
                 has_rc = True
 
-        if load_model:
-            for var in var_list:
-                rec = soln[var]
-                v = symbolMap.getObject(var)
-                if not v.is_expression():
-                    if v.is_binary() or v.is_integer():
-                        v.set_value(int(float(rec[0])))
-                    else:
-                        v.set_value(float(rec[0]))
-                    if has_rc:
-                        try:
-                            model.rc.set_value(v, float(rec[1]))
-                        except ValueError:
-                            # Solver didn't provide marginals
-                            pass
+        for sym, ref in symbolMap.bySymbol.iteritems():
+            obj = ref()
+            if not obj.parent_component().type() is Var:
+                continue
+            rec = soln[sym]
+            obj.value = float(rec[0])
+            if has_rc:
+                try:
+                    model.rc.set_value(obj, float(rec[1]))
+                except ValueError:
+                    # Solver didn't provide marginals
+                    pass
 
-        if load_model and has_dual:
+        if has_dual:
             for c in model.component_data_objects(Constraint, active=True):
                 if c.body.is_fixed():
                     continue
@@ -317,7 +373,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         return None
 
 
-def check_expr_evaluation(model, var_list, symbolMap, solver_io):
+def check_expr_evaluation(model, symbolMap, solver_io):
     try:
         # Temporarily initialize uninitialized variables in order to call
         # value() on each expression to check domain violations
@@ -340,13 +396,13 @@ def check_expr_evaluation(model, var_list, symbolMap, solver_io):
         check_expr(obj.expr, obj.name, solver_io)
 
         # Expressions
-        # Iterate through var_list in case for some reason model has Expressions
-        # that do not appear in any constraints or the objective, since GAMS
-        # never sees those anyway so they should be skipped
-        for var in var_list:
-            v = symbolMap.getObject(var)
-            if v.is_expression:
-                check_expr(v.expr, v.name, solver_io)
+        # Iterate through symbolMap in case for some reason model has
+        # Expressions that do not appear in any constraints or the objective,
+        # since GAMS never sees those anyway so they should be skipped
+        for ref in symbolMap.bySymbol.itervalues():
+            obj = ref()
+            if obj.type() is Expression:
+                check_expr(obj.expr, obj.name, solver_io)
     finally:
         # Return uninitialized variables to None
         for var in uninit_vars:

@@ -12,7 +12,7 @@
 # Problem Writer for GAMS Format Files
 #
 
-from six import StringIO
+from six import StringIO, string_types
 
 from pyutilib.misc import PauseGC
 
@@ -43,6 +43,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                  solver_capability,
                  io_options):
         """
+        output_filename:
+            Name of file to write GAMS model to. Optionally pass a file-like
+            stream and the model will be written to that instead.
         io_options:
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
@@ -57,6 +60,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 List of additional lines to write directly
                 into model file before the solve statement.
                 For model attributes, <model name> = GAMS_MODEL
+            put_results:
+                Filename for optionally writing solution values and marginals.
         """
 
         # Make sure not to modify the user's dictionary,
@@ -95,21 +100,15 @@ class ProblemWriter_gams(AbstractProblemWriter):
                       2:SortComponents.sortBoth}
         sort = sorter_map[file_determinism]
 
-        # Write results to GAMS_results.dat for solver parsing
-        put_results = io_options.pop("put_results", False)
-
-        # GAMS solver passes (empty) var_list so that it can
-        # access the list after the model is written
-        var_list = io_options.pop("var_list", None)
-
-        # Use StringIO object instead of file,
-        # if GAMS solver is using Python API
-        stringio = io_options.pop("stringio", False)
+        # Filename for optionally writing solution values and marginals
+        # Set to True by GAMSSolver
+        put_results = io_options.pop("put_results", None)
 
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_gams passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
+                "\n\t".join("%s = %s"
+                            % (k,v) for k,v in io_options.iteritems()))
 
         if solver is not None:
             if solver.upper() not in valid_solvers:
@@ -145,8 +144,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         else:
             var_labeler = con_labeler = labeler
 
-        if var_list is None:
-            var_list = []
+        var_list = []
         symbolMap = SymbolMap()
 
         def var_recorder(obj):
@@ -159,31 +157,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 return str(value(obj))
             return symbolMap.getSymbol(obj, var_recorder)
 
-        # If using StringIO, return the StringIO object instead of filename
-        # The GAMS solver will interpret it as such
-        if stringio:
-            with PauseGC() as pgc:
-                try:
-                    ComponentData.labeler.append(var_label)
-                    output_file = StringIO()
-                    self._write_model(
-                        model=model,
-                        output_file=output_file,
-                        solver_capability=solver_capability,
-                        var_list=var_list,
-                        symbolMap=symbolMap,
-                        con_labeler=con_labeler,
-                        sort=sort,
-                        skip_trivial_constraints=skip_trivial_constraints,
-                        solver=solver,
-                        mtype=mtype,
-                        add_options=add_options,
-                        put_results=put_results
-                    )
-                finally:
-                    ComponentData.labeler.pop()
-            return output_file, symbolMap
-
         # when sorting, there are a non-trivial number of
         # temporary objects created. these all yield
         # non-circular references, so disable GC - the
@@ -191,25 +164,32 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # are non-circular, everything will be collected
         # immediately anyway.
         with PauseGC() as pgc:
-            with open(output_filename, "w") as output_file:
-                try:
-                    ComponentData.labeler.append(var_label)
-                    self._write_model(
-                        model=model,
-                        output_file=output_file,
-                        solver_capability=solver_capability,
-                        var_list=var_list,
-                        symbolMap=symbolMap,
-                        con_labeler=con_labeler,
-                        sort=sort,
-                        skip_trivial_constraints=skip_trivial_constraints,
-                        solver=solver,
-                        mtype=mtype,
-                        add_options=add_options,
-                        put_results=put_results
-                    )
-                finally:
-                    ComponentData.labeler.pop()
+            try:
+                if isinstance(output_filename, string_types):
+                    output_file = open(output_filename, "w")
+                else:
+                    # Support passing of stream such as a StringIO
+                    # on which to write the model file
+                    output_file = output_filename
+                ComponentData.labeler.append(var_label)
+                self._write_model(
+                    model=model,
+                    output_file=output_file,
+                    solver_capability=solver_capability,
+                    var_list=var_list,
+                    symbolMap=symbolMap,
+                    con_labeler=con_labeler,
+                    sort=sort,
+                    skip_trivial_constraints=skip_trivial_constraints,
+                    solver=solver,
+                    mtype=mtype,
+                    add_options=add_options,
+                    put_results=put_results
+                )
+            finally:
+                if isinstance(output_filename, string_types):
+                    output_file.close()
+                ComponentData.labeler.pop()
 
         return output_filename, symbolMap
 
@@ -423,11 +403,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 mtype,
                 'min' if obj.sense == minimize else 'max'))
 
-        if put_results:
-            output_file.write("\nfile results /GAMS_results.dat/;")
+        if put_results is not None:
+            output_file.write("\nfile results /'%s'/;" % put_results)
             output_file.write("\nresults.nd=15;")
             output_file.write("\nresults.nw=21;")
-            output_file.write("\nput results;")        
+            output_file.write("\nput results;")
+            output_file.write("\nput 'SYMBOL  :  LEVEL  :  MARGINAL' /;")
             for var in var_list:
                 output_file.write("\nput %s %s.l %s.m /;" % (var, var, var))
             for con in constraint_names:
