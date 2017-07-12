@@ -164,3 +164,38 @@ class ComponentMap(collections.MutableMapping):
         else:
             self[key] = default
         return default
+
+
+class ComponentSet(collections.MutableSet):
+    __slots__ = ("_dict",)
+
+    def __init__(self, iterable=None):
+        self._dict = {}
+        if iterable is not None:
+            for i in iterable:
+                self.add(i)
+
+    def __contains__(self, item):
+        return id(item) in self._dict
+
+    def __iter__(self):
+        return itervalues(self._dict)
+
+    def __len__(self):
+        return len(self._dict)
+
+    def __str__(self):
+        tmp = '('
+        for i in self:
+            tmp += str(i) + ', '
+        tmp += ')'
+        return tmp
+
+    def add(self, value):
+        self._dict[id(value)] = value
+
+    def discard(self, value):
+        try:
+            del self._dict[id(value)]
+        except KeyError:
+            pass
