@@ -130,3 +130,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
     def _gurobi_vtype_from_var(self, var):
         return GurobiDirect._gurobi_vtype_from_var(self, var)
+
+    def write(self, filename):
+        self._solver_model.write(filename)

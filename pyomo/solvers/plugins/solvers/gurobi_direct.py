@@ -219,17 +219,18 @@ class GurobiDirect(DirectSolver):
                                          % (var.name, self._pyomo_model.name,))
 
     def _add_block(self, block):
-        for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True, active=True):
+        for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
+                                                active=True, sort=True):
             self._add_var(var)
         self._solver_model.update()
 
         for sub_block in block.block_data_objects(descend_into=True, active=True):
             for con in sub_block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint,
-                                                        descend_into=False, active=True):
+                                                        descend_into=False, active=True, sort=True):
                 self._add_constraint(con)
 
             for con in sub_block.component_data_objects(ctype=pyomo.core.base.sos.SOSConstraint,
-                                                        descend_into=False, active=True):
+                                                        descend_into=False, active=True, sort=True):
                 self._add_sos_constraint(con)
 
             if len([obj for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective,
