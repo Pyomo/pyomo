@@ -37,11 +37,17 @@ class BigM_Transformation(Transformation):
         super(BigM_Transformation, self).__init__()
         self.handlers = {
             Constraint: self._xform_constraint,
-            Var:       False,
-            Connector: False,
-            Suffix:    False,
-            Param:     False,
-            Set:       False,
+            Var:        False,
+            Connector:  False,
+            Suffix:     False,
+            Param:      False,
+            Set:        False,
+            Disjunction: False,
+            Disjunct:   False, # These are OK because we are always
+                              # traversing with postfix DFS, so if we
+                              # encounter a disjunct inside something,
+                              # it has already been transformed if it
+                              # was going to be.
             }
 
 
@@ -112,12 +118,14 @@ class BigM_Transformation(Transformation):
                     "Target %s is not a component on the instance!" % _t)
             if not t.active:
                 continue
-            # TODO: I don't like this at all. I have to make sure that I will
-            # never ask for the ctype of a blockdata or a disjunctiondata. So
-            # I am doing this first, but it is really unclear and maybe I
-            # shouldn't be using ctypes at all??
+            # TODO: This is compensating for Issue #185. I do need to
+            # check if something is a DisjunctData, but the other
+            # places where I am checking type I would like to only
+            # check ctype.
             if type(t) is disjunct._DisjunctionData:
-                self._transformDisjunction(t, transBlock, bigM)
+                self._transformDisjunctionData(t, transBlock, bigM, t.index())
+            elif type(t) is disjunct._DisjunctData:
+                self._transformBlock(t, transBlock, bigM)
             elif type(t) is _BlockData or t.type() in (Block, Disjunct):
                 self._transformBlock(t, transBlock, bigM)
             elif t.type() is Disjunction:
@@ -148,11 +156,19 @@ class BigM_Transformation(Transformation):
                 self._transformDisjunction(disjunction, transBlock, bigM)
 
     
-    def _transformDisjunction(self, obj, transBlock, bigM): 
-        # Put the disjunction constraint on its parent block, then relax
-        # each of the disjuncts
-        
+    def _declareXorConstraint(self, obj):
+        # Put the disjunction constraint on its parent block and
+        # determine whether it is an OR or XOR constraint.
         parent = obj.parent_block()
+        if hasattr(parent, "_gdp_transformation_info"):
+            infodict = parent._gdp_transformation_info
+            if type(infodict) is not dict:
+                raise GDP_Error(
+                    "Component %s contains an attribute named "
+                    "_gdp_transformation_info. The transformation requires that "
+                    "it can create this attribute!" % parent.name)
+        else:
+            infodict = parent._gdp_transformation_info = {}
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
@@ -160,65 +176,77 @@ class BigM_Transformation(Transformation):
         if hasattr(obj, 'xor'):
             xor = obj.xor
         else:
-            # it's a _DisjunctionData
             assert type(obj) is disjunct._DisjunctionData
             xor = obj.parent_component().xor
         nm = '_xor' if xor else '_or'
         orCname = self._get_unique_name(parent, '_gdp_bigm_relaxation_' + \
                                         obj.local_name + nm)
         parent.add_component(orCname, orC)
+        infodict[obj.name] = weakref.ref(orC)
+        return orC, xor
 
+        
+    def _transformDisjunction(self, obj, transBlock, bigM): 
+        # create the disjunction constraint and then relax each of the
+        # disjunctionDatas
+        orC, xor = self._declareXorConstraint(obj)
         if obj.is_indexed():
             for i in obj:
-                self._transformDisjunctionData(obj[i], orC, i, xor, 
-                                               transBlock, bigM)
+                self._transformDisjunctionData(obj[i], transBlock,
+                                               bigM, i, orC, xor)
         else:
-            self._transformDisjunctionData(obj, orC, None, xor, transBlock, 
-                                           bigM)
+            self._transformDisjunctionData(obj, transBlock, bigM, None, orC, xor)
 
         # TODO: update the map dictionaries to include the 
         # disjunction <-> constraint maps
-        # for i in obj.index_set():
-        #     or_expr = 0
-        #     for disjunct in obj[i].disjuncts:
-        #         or_expr += disjunct.indicator_var
-        #     #c_expr = or_expr==1 if obj.xor else or_expr >= 1
-        #     #orC.add(i, c_expr)
-        #     orC.add(i, (1, or_expr, 1 if obj.xor else None))
-
-        # relax each of the disjunctions (or the SimpleDisjunction if it wasn't 
-        # indexed)
-        # for i in obj:
-        #     for disjunct in obj[i].disjuncts:
-        #         self._bigM_relax_disjunct(disjunct, transBlock, bigM)
-        #     obj[i].deactivate()
-
+        # and the constraint <-> transformed constraint maps
+       
         # deactivate so we know we relaxed
         obj.deactivate()
 
 
-    def _transformDisjunctionData(self, obj, orConstraint, idx, xor, transBlock, 
-                                  bigM):
+    def _transformDisjunctionData(self, obj, transBlock, bigM,
+                                  index, orConstraint=None, xor=None):
+        parent_component = obj.parent_component()
+        if xor is None:
+            # 1) if the orConstraint is aldready on the block (using
+            # the dictionary that you haven't finished yet) fetch it.
+            # Otherwise call _declareXorConstraint.
+            # 2) fetch xor
+            parent_block = obj.parent_block()
+            if (hasattr(parent_block, "_gdp_transformation_info") and 
+            type(parent_block._gdp_transformation_info) is dict):
+                infodict = parent_block._gdp_transformation_info
+                if parent_component.name in infodict:
+                    orConstraint = infodict[parent_component.name]()
+                    xor = parent_component.xor
+            #if (( orConstraint has already been declared)):
+                #fetch it.
+                #set xor from parent.
+            if xor is None:
+                orConstraint, xor = self._declareXorConstraint(
+                    obj.parent_component() )
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
             # relax the disjunct
             self._bigM_relax_disjunct(disjunct, transBlock, bigM)
         # add or (or xor) constraint
-        orConstraint.add(idx, (1, or_expr, 1 if xor else None))
+        orConstraint.add(index, (1, or_expr, 1 if xor else None))
         obj.deactivate()
 
 
     def _bigM_relax_disjunct(self, disjunct, transBlock, bigM):
-        if hasattr(disjunct, "_gdp_trans_info"):
-            infodict = disjunct._gdp_trans_info
+        if hasattr(disjunct, "_gdp_transformation_info"):
+            infodict = disjunct._gdp_transformation_info
             # If the user has something with our name that is not a dict, we 
             # scream. If they have a dict with this name then we are just going 
             # to use it...
             if type(infodict) is not dict:
                 raise GDP_Error(
-                    "Model contains an attribute named _gdp_trans_info. The "
-                    "transformation requires that it can create this attribute!")
+                    "Disjunct %s contains an attribute named "
+                    "_gdp_transformation_info. The transformation requires that "
+                    "it can create this attribute!" % disjunct.name)
         else:
             infodict = {}
         # deactivated means either we've already transformed or user deactivated
@@ -241,7 +269,7 @@ class BigM_Transformation(Transformation):
         relaxedBlock = disjuncts[len(disjuncts)]
         # TODO: trans info should be a class that implements __getstate and 
         # __setstate (for pickling)
-        relaxedBlock._gdp_trans_info = {'src': weakref.ref(disjunct)}
+        relaxedBlock._gdp_transformation_info = {'src': weakref.ref(disjunct)}
 
         # add reference to transformation block on original disjunct
         assert 'bigm' not in infodict
@@ -256,25 +284,31 @@ class BigM_Transformation(Transformation):
                         "No BigM transformation handler registered "
                         "for modeling components of type %s" % obj.type() )
                 continue
-            handler(obj, disjunct, relaxedBlock, bigM)
+            handler(obj, disjunct, relaxedBlock, bigM, infodict)
         
         # deactivate disjunct so we know we've relaxed it
         disjunct.deactivate()
         infodict['relaxed'] = True
-        disjunct._gdp_trans_info = infodict
+        disjunct._gdp_transformation_info = infodict
 
 
-    def _xform_constraint(self, constraint, disjunct, relaxedBlock, bigMargs):
+    def _xform_constraint(self, constraint, disjunct, relaxedBlock,
+                          bigMargs, infodict):
         # add constraint to the transformation block, we'll transform it there.
 
         transBlock = relaxedBlock.parent_block()
-        name = constraint.local_name
+        name = constraint.name
+        infodict['relaxedConstraints'] = {}
         
         if constraint.is_indexed():
             newC = Constraint(constraint.index_set(), transBlock.lbub)
         else:
             newC = Constraint(transBlock.lbub)
         relaxedBlock.add_component(name, newC)
+        # add mapping of original constraint to transformed constraint
+        # in transformation info dictionary
+        infodict['relaxedConstraints'][
+            ComponentUID(constraint)] = weakref.ref(newC)
         
         for i in constraint:
             c = constraint[i]
@@ -287,8 +321,8 @@ class BigM_Transformation(Transformation):
             M = self._get_M_from_args(c, bigMargs)
             
             # DEBUG
-            print("after args, M is: ")
-            print(M)
+            # print("after args, M is: ")
+            # print(M)
             
             # if we didn't get something from args, try suffixes:
             # TODO: wouldn't hurt to generate the suffix list at the disjunct 
@@ -297,8 +331,8 @@ class BigM_Transformation(Transformation):
                 M = self._get_M_from_suffixes(c)
                 
             # DEBUG
-            print("after suffixes, M is: ")
-            print(M)
+            # print("after suffixes, M is: ")
+            # print(M)
            
             if not isinstance(M, (tuple, list)):
                 if M is None:
@@ -318,8 +352,8 @@ class BigM_Transformation(Transformation):
                 M[1] = self._estimate_M(c.body, name)[1] - c.upper
 
             # DEBUG
-            print("after estimating, m is: ")
-            print(M)
+            # print("after estimating, m is: ")
+            # print(M)
 
             # TODO: I can't get this to work because ('lb',) isn't the same as 
             # 'lb'... I get the DeveloperError about IndexedConstraint failing 
@@ -417,15 +451,21 @@ class BigM_Transformation(Transformation):
                     else:
                         j = 1-i
 
-                    try:
+                    # try:
+                    #     M[j] += value(bounds[i]) * coef
+                    # except:
+                    #     M[j] = None
+                    if bounds[i] is not None:
                         M[j] += value(bounds[i]) * coef
-                    except:
-                        M[j] = None
+                    else:
+                        raise GDP_Error("Cannot estimate M for "
+                                        "expressions with unbounded variables."
+                                        "\n\t(found while processing constraint "
+                                        "%s)" % name)
         else:
-            logger.info("GDP(BigM): cannot estimate M for nonlinear "
-                        "expressions.\n\t(found while processing %s)",
-                        name)
-            M = [None,None]
+            raise GDP_Error("Cannot estimate M for nonlinear "
+                            "expressions.\n\t(found while processing constraint "
+                            "%s)" % name)
 
         return tuple(M)
 

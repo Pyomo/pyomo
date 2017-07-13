@@ -6,6 +6,7 @@ from pyomo.core.base import expr_common, expr as EXPR
 
 import random
 import weakref
+import sys
 
 # DEBUG
 from nose.tools import set_trace
@@ -15,7 +16,20 @@ from nose.tools import set_trace
 # TODO: Should mark the tests that are relying on the order of transforming
 # the disjunctions...
 
-class TwoTermDisj(unittest.TestCase):
+class CommonTests:
+    def diff_apply_to_and_create_using(self, model):
+        stdoutbuffer = sys.stdout.getvalue()
+        starting_index = len(stdoutbuffer)
+        modelcopy = TransformationFactory('gdp.bigm').create_using(model)
+        modelcopy.pprint()
+        modelcopy_output = sys.stdout.getvalue()[starting_index:]
+        starting_index = len(modelcopy_output)
+        TransformationFactory('gdp.bigm').apply_to(model)
+        model.pprint()
+        model_output = sys.stdout.getvalue()[starting_index:]
+        self.assertMultiLineEqual(modelcopy_output, model_output)
+
+class TwoTermDisj(unittest.TestCase, CommonTests):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed so we can test name collisions predictably
@@ -59,10 +73,10 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(len(disjBlock), 2)
         # it has the disjuncts on it
         self.assertIsInstance(
-            disjBlock[0].component("c"),
+            disjBlock[0].component("d[0].c"),
             Constraint)
         self.assertIsInstance(
-            disjBlock[1].component("c"),
+            disjBlock[1].component("d[1].c"),
             Constraint)
 
     def test_disjunction_deactivated(self):
@@ -81,7 +95,7 @@ class TwoTermDisj(unittest.TestCase):
         self.assertFalse(oldblock.disjuncts[0].active)
         self.assertFalse(oldblock.disjuncts[1].active)
 
-    def test_disjunct_weakrefs(self):
+    def test_disjunct_and_constraint_weakrefs(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)        
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
@@ -94,13 +108,19 @@ class TwoTermDisj(unittest.TestCase):
         # that in this case, the indices of the disjuncts correspond to the
         # indices of the transformation block.)
         for i in [0,1]:
-            infodict = getattr(oldblock[i], "_gdp_trans_info")
+            infodict = getattr(oldblock[i], "_gdp_transformation_info")
             self.assertIsInstance(infodict, dict)
             self.assertIs(infodict['bigm'](), disjBlock[i])
-            self.assertEqual(len(infodict), 2)
+            self.assertEqual(len(infodict), 3)
             self.assertTrue(infodict['relaxed'])
+            constraintdict = infodict['relaxedConstraints']
+            self.assertIsInstance(constraintdict, dict)
+            self.assertEqual(len(constraintdict), 1)
+            # check constraint weakrefs
+            self.assertIs(constraintdict[ComponentUID(oldblock[i].c)](),
+                          disjBlock[i].component(oldblock[i].c.name))
         
-            infodict2 = getattr(disjBlock[i], "_gdp_trans_info")
+            infodict2 = getattr(disjBlock[i], "_gdp_transformation_info")
             self.assertIsInstance(infodict2, dict)
             self.assertIs(infodict2['src'](), oldblock[i])
             self.assertEqual(len(infodict2), 1)
@@ -124,10 +144,10 @@ class TwoTermDisj(unittest.TestCase):
 
         # disjBlock has the disjuncts on it
         self.assertIsInstance(
-            disjBlock[0].component("c"), 
+            disjBlock[0].component("d[0].c"), 
             Constraint)
         self.assertIsInstance(
-            disjBlock[1].component("c"), 
+            disjBlock[1].component("d[1].c"), 
             Constraint)
 
     def test_info_dict_nameCollision(self):
@@ -135,14 +155,15 @@ class TwoTermDisj(unittest.TestCase):
         # if it's taken.
         m = self.makeModel()
         # We have no way of knowing if there is already a dictionary called 
-        # _gdp_trans_info in the model. If that happens, it will just get used. 
-        # We can, however, yell if there is an attribute of the wrong type with 
-        # the same name.
-        m.d[0]._gdp_trans_info = Block()
+        # _gdp_transformation_info in the model. If that happens, it will just 
+        # get used. We can, however, yell if there is an attribute of the wrong 
+        # type with the same name.
+        m.d[0]._gdp_transformation_info = Block()
         self.assertRaisesRegexp(
             GDP_Error, 
-            "Model contains an attribute named _gdp_trans_info. "
-            "The transformation requires that it can create this attribute!*", 
+            "Disjunct d\[0\] contains an attribute named "
+            "_gdp_transformation_info. The transformation requires that it can "
+            "create this attribute!*", 
             TransformationFactory('gdp.bigm').apply_to,
             m)
 
@@ -211,9 +232,9 @@ class TwoTermDisj(unittest.TestCase):
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
 
         oldc = m.d[0].component("c")
-        # we have an indexed constraint called c (indexed by ['lb', 'ub']
+        # we have an indexed constraint called d[0].c (indexed by ['lb', 'ub']
         # but we only had to use 'lb' since the original constraint had no ub.
-        newcons = disjBlock[0].component("c")
+        newcons = disjBlock[0].component("d[0].c")
         self.assertIsInstance(newcons, Constraint)
         self.assertTrue(newcons.active)
 
@@ -240,7 +261,7 @@ class TwoTermDisj(unittest.TestCase):
 
         # second constraint
         oldc = m.d[1].component("c")
-        newc = disjBlock[1].component("c")
+        newc = disjBlock[1].component("d[1].c")
         self.assertIsInstance(newc, Constraint)
         # now we've used both indices since original constraint was equality
         newc_lo = newc['lb']
@@ -285,11 +306,11 @@ class TwoTermDisj(unittest.TestCase):
         disjBlock = model._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
 
         # first constraint
-        self.assertEqual(disjBlock[0].component("c")['lb'].body._coef[1], 
+        self.assertEqual(disjBlock[0].component("d[0].c")['lb'].body._coef[1], 
                          cons1lb) 
 
         # second constraint
-        newc = disjBlock[1].component("c")
+        newc = disjBlock[1].component("d[1].c")
         newc_lo = newc['lb']
         newc_hi = newc['ub']
         self.assertEqual(newc_lo.body._coef[1], cons2lb) 
@@ -368,7 +389,7 @@ class TwoTermDisj(unittest.TestCase):
         # give an arg
         self.assertRaisesRegexp(
             GDP_Error,
-            "Big-M \(-18, 19.2, 3\) for constraint c is not of "
+            "Big-M \(-18, 19.2, 3\) for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
             "tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
@@ -394,7 +415,7 @@ class TwoTermDisj(unittest.TestCase):
         # give an arg
         self.assertRaisesRegexp(
             GDP_Error,
-            "Big-M \[-18, 19.2, 3\] for constraint c is not of "
+            "Big-M \[-18, 19.2, 3\] for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
             "tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
@@ -453,7 +474,7 @@ class TwoTermDisj(unittest.TestCase):
         M = (-20,19, 32)
         self.assertRaisesRegexp(
             GDP_Error,
-            "Big-M \(-20, 19, 32\) for constraint c is not of "
+            "Big-M \(-20, 19, 32\) for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
             "tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
@@ -465,15 +486,19 @@ class TwoTermDisj(unittest.TestCase):
         M = [-20, 19, 34]
         self.assertRaisesRegexp(
             GDP_Error,
-            "Big-M \[-20, 19, 34\] for constraint c is not of "
+            "Big-M \[-20, 19, 34\] for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
             "tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
             m,
             bigM={None: M})
 
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m)
+        
 
-class TwoTermIndexedDisj(unittest.TestCase):
+class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed so we can test name collisions predictably
@@ -530,6 +555,23 @@ class TwoTermIndexedDisj(unittest.TestCase):
         for i in m.disjunct.index_set():
             self.assertFalse(m.disjunct[i].c.active)
 
+    def get_index_disjindex_pairs(self):
+        # these are the pairs of which disjunct indices map to which
+        # blocks in the list of block on the transformation
+        # block. This is needed in multiple tests, so I am storing it
+        # here.
+        pairs = [
+            ( (0,1,'A'), 0 ),
+            ( (1,1,'A'), 1 ),
+            ( (0,1,'B'), 2 ),
+            ( (1,1,'B'), 3 ),
+            ( (0,2,'A'), 4 ),
+            ( (1,2,'A'), 5 ),
+            ( (0,2,'B'), 6 ),
+            ( (1,2,'B'), 7 ),
+        ]
+        return pairs
+
     def test_transformed_block_structure(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
@@ -546,11 +588,14 @@ class TwoTermIndexedDisj(unittest.TestCase):
         disjBlock = transBlock.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 8)
         
-        # check that all 8 blocks have a constraint called c.
-        for i in range(8):
-            self.assertIsInstance(disjBlock[i].c, Constraint)
+        # check that all 8 blocks have the right constraint on them.
+        # this relies on the order in which they are transformed.
+        for i,j in self.get_index_disjindex_pairs():
+            self.assertIsInstance(
+                disjBlock[j].component(m.disjunct[i].c.name), 
+                Constraint)
 
-    def test_disjunct_weakrefs(self):
+    def test_disjunct_and_constraint_weakrefs(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
 
@@ -560,26 +605,25 @@ class TwoTermIndexedDisj(unittest.TestCase):
         # this test relies on the fact that the disjuncts are going to be 
         # relaxed in the same order every time, so they will correspond to 
         # these indices on the transformation block:
-        pairs = [
-            ( (0,1,'A'), 0 ),
-            ( (1,1,'A'), 1 ),
-            ( (0,1,'B'), 2 ),
-            ( (1,1,'B'), 3 ),
-            ( (0,2,'A'), 4 ),
-            ( (1,2,'A'), 5 ),
-            ( (0,2,'B'), 6 ),
-            ( (1,2,'B'), 7 ),
-        ]
+        pairs = self.get_index_disjindex_pairs()
         for src, dest in pairs:
-            infodict = getattr(disjBlock[dest], "_gdp_trans_info")
+            infodict = getattr(disjBlock[dest], "_gdp_transformation_info")
             self.assertIsInstance(infodict, dict)
-            self.assertIs(infodict['src'](), oldblock[src])
+            srcDisjunct = oldblock[src]
+            self.assertIs(infodict['src'](), srcDisjunct)
             self.assertEqual(len(infodict), 1)
-            infodict2 = getattr(oldblock[src], "_gdp_trans_info")
+            infodict2 = getattr(oldblock[src], "_gdp_transformation_info")
             self.assertIsInstance(infodict2, dict)
-            self.assertIs(infodict2['bigm'](), disjBlock[dest])
+            relaxedDisj = disjBlock[dest]
+            self.assertIs(infodict2['bigm'](), relaxedDisj)
             self.assertTrue(infodict2['relaxed'])
-            self.assertEqual(len(infodict2), 2)
+            consDict = infodict2['relaxedConstraints']
+            self.assertIsInstance(consDict, dict)
+            self.assertIs(
+                consDict[ComponentUID(srcDisjunct.c)](),
+                disjBlock[dest].component(srcDisjunct.c.name))
+            self.assertTrue(len(consDict), 1)
+            self.assertEqual(len(infodict2), 3)
 
     def test_deactivated_disjuncts(self):
         m = self.makeModel()
@@ -597,8 +641,12 @@ class TwoTermIndexedDisj(unittest.TestCase):
         for i in m.disjunction.index_set():
             self.assertFalse(m.disjunction[i].active)
 
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m)
 
-class DisjOnBlock(unittest.TestCase):
+
+class DisjOnBlock(unittest.TestCase, CommonTests):
     # when the disjunction is on a block, we want the xor constraint
     # on its parent block, but the transformation block still on the
     # model.
@@ -653,21 +701,25 @@ class DisjOnBlock(unittest.TestCase):
         return m
 
     def checkFirstDisjMs(self, model, disj1c1lb, disj1c1ub, disj1c2):
-        c1 = model.b.disjunct[0]._gdp_trans_info['bigm']().c
+        c1 = model.b.disjunct[0]._gdp_transformation_info['bigm'](). \
+             component("b.disjunct[0].c")
         self.assertEqual(c1['lb'].body._coef[1], disj1c1lb)
         self.assertEqual(c1['ub'].body._coef[1], disj1c1ub)
         self.assertEqual(
-            model.b.disjunct[1]._gdp_trans_info['bigm']().c['ub'].body._coef[1],
+            (model.b.disjunct[1]._gdp_transformation_info['bigm']().
+             component("b.disjunct[1].c")['ub'].body._coef[1]),
             disj1c2)
 
     def checkMs(self, model, disj1c1lb, disj1c1ub, disj1c2, disj2c1, disj2c2):
         self.checkFirstDisjMs(model, disj1c1lb, disj1c1ub, disj1c2)
 
         self.assertEqual(
-            model.simpledisj._gdp_trans_info['bigm']().c['lb'].body._coef[1], 
+            (model.simpledisj._gdp_transformation_info['bigm']().
+             component("simpledisj.c")['lb'].body._coef[1]), 
             disj2c1)
         self.assertEqual(
-            model.simpledisj2._gdp_trans_info['bigm']().c['ub'].body._coef[1], 
+            (model.simpledisj2._gdp_transformation_info['bigm']().
+             component("simpledisj2.c")['ub'].body._coef[1]), 
             disj2c2)
 
     def test_suffix_M_onBlock(self):
@@ -724,7 +776,53 @@ class DisjOnBlock(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         self.checkMs(m, 20, -20, -20, 87, -20)
 
-class SimpleDisjIndexedConstraints(unittest.TestCase):
+    def test_block_targets_inactive(self):
+        m = self.makeModel()
+        m = self.add_disj_not_on_block(m)
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            targets=[ComponentUID(m.b)])
+
+        self.assertFalse(m.b.disjunct[0].active)
+        self.assertFalse(m.b.disjunct[1].active)
+        self.assertTrue(m.simpledisj.active)
+        self.assertTrue(m.simpledisj2.active)
+
+    def tests_block_only_targets_transformed(self):
+        m = self.makeModel()
+        m = self.add_disj_not_on_block(m)
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            targets=[ComponentUID(m.b)])
+
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        self.assertEqual(len(disjBlock), 2)
+        self.assertIsInstance(disjBlock[0].component("b.disjunct[0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[1].component("b.disjunct[1].c"), 
+                              Constraint)
+
+        # this relies on the disjuncts being transformed in the same order every
+        # time
+        pairs = [
+            (0,0),
+            (1,1),
+        ]
+        for i, j in pairs:
+            dict1 = getattr(disjBlock[j], "_gdp_transformation_info")
+            self.assertIsInstance(dict1, dict)
+            self.assertIs(dict1['src'](), m.b.disjunct[i])
+            dict2 = getattr(m.b.disjunct[i], "_gdp_transformation_info")
+            self.assertIsInstance(dict2, dict)
+            self.assertIs(dict2['bigm'](), disjBlock[j])
+            self.assertTrue(dict2['relaxed'])
+
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m)
+
+
+class SimpleDisjIndexedConstraints(unittest.TestCase, CommonTests):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed so we can test name collisions predictably
@@ -757,13 +855,15 @@ class SimpleDisjIndexedConstraints(unittest.TestCase):
 
     def checkMs(self, m, disj1c1lb, disj1c1ub, disj1c2lb, disj1c2ub, disj2c1ub,
                 disj2c2ub):
-        cons = m.b.simpledisj1._gdp_trans_info['bigm']().c
+        cons = m.b.simpledisj1._gdp_transformation_info['bigm'](). \
+        component("b.simpledisj1.c")
         self.assertEqual(cons[1,'lb'].body._coef[1], disj1c1lb)
         self.assertEqual(cons[1,'ub'].body._coef[1], disj1c1ub)
         self.assertEqual(cons[2,'lb'].body._coef[1], disj1c2lb)
         self.assertEqual(cons[2,'ub'].body._coef[1], disj1c2ub)
 
-        cons2 = m.b.simpledisj2._gdp_trans_info['bigm']().c
+        cons2 = m.b.simpledisj2._gdp_transformation_info['bigm'](). \
+        component("b.simpledisj2.c")
         self.assertEqual(cons2[1,'ub'].body._coef[1], disj2c1ub)
         self.assertEqual(cons2[2,'ub'].body._coef[1], disj2c2ub)
 
@@ -805,8 +905,23 @@ class SimpleDisjIndexedConstraints(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         self.checkMs(m, 14, -13, 14, -13, -65, -65)
 
+    def test_unbounded_var_m_estimation_err(self):
+        m = self.makeModel()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Cannot estimate M for expressions with unbounded variables."
+            "\n\t\(found while processing constraint b.simpledisj1.c\)",
+            TransformationFactory('gdp.bigm').apply_to,
+            m)
 
-class MultiTermDisj(unittest.TestCase):
+    def test_create_using(self):
+        m = self.makeModel()
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 100
+        self.diff_apply_to_and_create_using(m)
+
+
+class MultiTermDisj(unittest.TestCase, CommonTests):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed so we can test name collisions predictably
@@ -866,10 +981,12 @@ class MultiTermDisj(unittest.TestCase):
         self.assertIs(xor[2].body._args[2], m.disjunct[2,2].indicator_var)
         self.assertEqual(xor[2].body._coef[2], 1)
 
-    # TODO: I don't know, is anything else really different?
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m)
 
 
-class IndexedConstraintsInDisj(unittest.TestCase):
+class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed so we can test name collisions predictably
@@ -916,13 +1033,13 @@ class IndexedConstraintsInDisj(unittest.TestCase):
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
         
-        cons1 = disjBlock[0].component("c")
+        cons1 = disjBlock[0].component("disjunct[0].c")
         self.assertIsInstance(cons1, Constraint)
         self.assertTrue(cons1.active)
         self.assertTrue(cons1[1,'lb'].active)
         self.assertTrue(cons1[2,'lb'].active)
 
-        cons2 = disjBlock[1].component("c")
+        cons2 = disjBlock[1].component("disjunct[1].c")
         self.assertIsInstance(cons2, Constraint)
         self.assertTrue(cons2.active)
         self.assertTrue(cons2[1,'lb'].active)
@@ -931,10 +1048,12 @@ class IndexedConstraintsInDisj(unittest.TestCase):
         self.assertTrue(cons2[2,'ub'].active)
 
     def checkMs(self, model, c11lb, c12lb, c21lb, c21ub, c22lb, c22ub):
-        cons1 = model.disjunct[0]._gdp_trans_info['bigm']().c
+        cons1 = model.disjunct[0]._gdp_transformation_info['bigm'](). \
+                component("disjunct[0].c")
         self.assertEqual(cons1[1,'lb'].body._coef[1], c11lb)
         self.assertEqual(cons1[2,'lb'].body._coef[1], c12lb)
-        cons2 = model.disjunct[1]._gdp_trans_info['bigm']().c
+        cons2 = model.disjunct[1]._gdp_transformation_info['bigm'](). \
+                component("disjunct[1].c")
         self.assertEqual(cons2[1,'lb'].body._coef[1], c21lb)
         self.assertEqual(cons2[1,'ub'].body._coef[1], c21ub)
         self.assertEqual(cons2[2,'lb'].body._coef[1], c22lb)
@@ -1014,7 +1133,12 @@ class IndexedConstraintsInDisj(unittest.TestCase):
         TransformationFactory('gdp.bigm').apply_to(m)
         self.checkMs(m, 18, 19, 20, -20, 20, -20)
 
-class DisjunctInMultipleDisjunctions(unittest.TestCase):
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m)
+
+
+class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
     @staticmethod
     def makeModel():
         m = ConcreteModel()
@@ -1113,14 +1237,12 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase):
         disjBlock = transBlock.component("relaxedDisjuncts")
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 3)
-        self.assertIsInstance(disjBlock[0].component("c"), Constraint)
-        self.assertIsInstance(disjBlock[0].c, Constraint)
-        self.assertIsInstance(disjBlock[1].component("c"), Constraint)
-        self.assertIsInstance(disjBlock[1].c, Constraint)
-
-        disj2 = disjBlock[2]
-        self.assertIsInstance(disj2.component("c"), Constraint)
-        self.assertIsInstance(disj2.c, Constraint)
+        self.assertIsInstance(
+            disjBlock[0].component("disjunct1[0].c"), Constraint)
+        self.assertIsInstance(
+            disjBlock[1].component("disjunct1[1].c"), Constraint)
+        self.assertIsInstance(
+            disjBlock[2].component("disjunct2[0].c"), Constraint)
 
     def test_info_dicts(self):
         m = self.makeModel()
@@ -1143,16 +1265,21 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase):
             if k==1:
                 pairs = disj2pairs
             for i, j in pairs:
-                infodict = getattr(disjBlock[j], "_gdp_trans_info")
+                infodict = getattr(disjBlock[j], "_gdp_transformation_info")
                 self.assertIsInstance(infodict, dict)
                 self.assertEqual(len(infodict), 1)
                 self.assertIs(infodict['src'](), disj[i])
 
-                infodict2 = getattr(disj[i], "_gdp_trans_info")
+                infodict2 = getattr(disj[i], "_gdp_transformation_info")
                 self.assertIsInstance(infodict2, dict)
-                self.assertEqual(len(infodict2), 2)
+                self.assertEqual(len(infodict2), 3)
                 self.assertIs(infodict2['bigm'](), disjBlock[j])
                 self.assertTrue(infodict2['relaxed'])
+                constraintdict = infodict2['relaxedConstraints']
+                self.assertIsInstance(constraintdict, dict)
+                # check the constraint weakrefs
+                self.assertIs(constraintdict[ComponentUID(disj[i].c)](),
+                              disjBlock[j].component(disj[i].c.name))
 
     def test_transformed_constraints(self):
         m = self.makeModel()
@@ -1161,26 +1288,26 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase):
         # we will gather the constraints and check the bounds here, then check
         # bodies below.
         # the real test is that disjunct1[1] only got transformed once
-        disj11 = m.disjunct1[1]._gdp_trans_info['bigm']()
+        disj11 = m.disjunct1[1]._gdp_transformation_info['bigm']()
         # check lb first
-        cons11lb = disj11.c['lb']
+        cons11lb = disj11.component("disjunct1[1].c")['lb']
         self.assertEqual(cons11lb.lower, 0)
         self.assertIsNone(cons11lb.upper)
 
         # check ub
-        cons11ub = disj11.c['ub']
+        cons11ub = disj11.component("disjunct1[1].c")['ub']
         self.assertEqual(cons11ub.upper, 0)
         self.assertIsNone(cons11ub.lower)
 
         # check disjunct1[0] for good measure
-        disj10 = m.disjunct1[0]._gdp_trans_info['bigm']()
-        cons10 = disj10.c['lb']
+        disj10 = m.disjunct1[0]._gdp_transformation_info['bigm']()
+        cons10 = disj10.component("disjunct1[0].c")['lb']
         self.assertEqual(cons10.lower, 5)
         self.assertIsNone(cons10.upper)
 
         # check disjunct2[0] for even better measure
-        disj20 = m.disjunct2[0]._gdp_trans_info['bigm']()
-        cons20 = disj20.c['lb']
+        disj20 = m.disjunct2[0]._gdp_transformation_info['bigm']()
+        cons20 = disj20.component("disjunct2[0].c")['lb']
         self.assertEqual(cons20.lower, 30)
         self.assertIsNone(cons20.upper)
 
@@ -1207,9 +1334,12 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase):
             self.assertEqual(cons.body._args[1]._const, 1)
             self.assertEqual(cons.body._const, 0)
 
-# TODO: add test for target as one disjunction out of an indexed disjunction
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m)
 
-class TestTargets_SingleDisjunction(unittest.TestCase):
+
+class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
     @staticmethod
     def makeModel():
         m = ConcreteModel()
@@ -1264,24 +1394,27 @@ class TestTargets_SingleDisjunction(unittest.TestCase):
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         # only two disjuncts relaxed
         self.assertEqual(len(disjBlock), 2)
-        self.assertIsInstance(disjBlock[0].c, Constraint)
-        self.assertIsInstance(disjBlock[1].c, Constraint)
+        m.pprint()
+        self.assertIsInstance(disjBlock[0].component("disjunct1[0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[1].component("disjunct1[1].c"),
+                              Constraint)
 
         pairs = [
             (0, 0),
             (1, 1)
         ]
         for i, j in pairs:
-            dict1 = getattr(disjBlock[i], "_gdp_trans_info")
+            dict1 = getattr(disjBlock[i], "_gdp_transformation_info")
             self.assertIsInstance(dict1, dict)
             self.assertIs(dict1['src'](), m.disjunct1[j])
-            dict2 = getattr(m.disjunct1[j], "_gdp_trans_info")
+            dict2 = getattr(m.disjunct1[j], "_gdp_transformation_info")
             self.assertIsInstance(dict2, dict)
             self.assertIs(dict2['bigm'](), disjBlock[i])
             self.assertTrue(dict2['relaxed'])
 
-        self.assertFalse(hasattr(m.disjunct2[0], "_gdp_trans_info"))
-        self.assertFalse(hasattr(m.disjunct2[1], "_gdp_trans_info"))
+        self.assertFalse(hasattr(m.disjunct2[0], "_gdp_transformation_info"))
+        self.assertFalse(hasattr(m.disjunct2[1], "_gdp_transformation_info"))
 
     def test_target_not_a_component_err(self):
         decoy = ConcreteModel()
@@ -1295,7 +1428,14 @@ class TestTargets_SingleDisjunction(unittest.TestCase):
             m, 
             targets=[ComponentUID(decoy.block)])
 
-class TestTargets_IndexedDisjunction(unittest.TestCase):
+    def test_create_using(self):
+        m = self.makeModel()
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 100
+        self.diff_apply_to_and_create_using(m)
+
+
+class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
     @staticmethod
     def makeModel():
         m = ConcreteModel()
@@ -1357,10 +1497,14 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 4)
-        self.assertIsInstance(disjBlock[0].c, Constraint)
-        self.assertIsInstance(disjBlock[1].c, Constraint)
-        self.assertIsInstance(disjBlock[2].c, Constraint)
-        self.assertIsInstance(disjBlock[3].c, Constraint)
+        self.assertIsInstance(disjBlock[0].component("disjunct1[1,0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[1].component("disjunct1[1,1].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[2].component("disjunct1[2,0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[3].component("disjunct1[2,1].c"),
+                              Constraint)
 
         # This relies on the disjunctions being transformed in the same order
         # every time. These are the mappings between the indices of the original
@@ -1373,10 +1517,10 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
             ((2,1), 3),
         ]
         for i, j in pairs:
-            dict1 = getattr(disjBlock[j], "_gdp_trans_info")
+            dict1 = getattr(disjBlock[j], "_gdp_transformation_info")
             self.assertIsInstance(dict1, dict)
             self.assertIs(dict1['src'](), m.disjunct1[i])
-            dict2 = getattr(m.disjunct1[i], "_gdp_trans_info")
+            dict2 = getattr(m.disjunct1[i], "_gdp_transformation_info")
             self.assertIsInstance(dict2, dict)
             self.assertIs(dict2['bigm'](), disjBlock[j])
             self.assertTrue(dict2['relaxed'])
@@ -1405,8 +1549,10 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 2)
-        self.assertIsInstance(disjBlock[0].c, Constraint)
-        self.assertIsInstance(disjBlock[1].c, Constraint)
+        self.assertIsInstance(disjBlock[0].component("disjunct1[2,0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[1].component("disjunct1[2,1].c"),
+                              Constraint)
 
         # This relies on the disjunctions being transformed in the same order
         # every time. These are the mappings between the indices of the original
@@ -1417,10 +1563,10 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
             ((2,1), 1),
         ]
         for i, j in pairs:
-            dict1 = getattr(disjBlock[j], "_gdp_trans_info")
+            dict1 = getattr(disjBlock[j], "_gdp_transformation_info")
             self.assertIsInstance(dict1, dict)
             self.assertIs(dict1['src'](), m.disjunct1[i])
-            dict2 = getattr(m.disjunct1[i], "_gdp_trans_info")
+            dict2 = getattr(m.disjunct1[i], "_gdp_transformation_info")
             self.assertIsInstance(dict2, dict)
             self.assertIs(dict2['bigm'](), disjBlock[j])
             self.assertTrue(dict2['relaxed'])
@@ -1449,10 +1595,14 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 4)
-        self.assertIsInstance(disjBlock[0].c, Constraint)
-        self.assertIsInstance(disjBlock[1].c, Constraint)
-        self.assertIsInstance(disjBlock[2].c, Constraint)
-        self.assertIsInstance(disjBlock[3].c, Constraint)
+        self.assertIsInstance(disjBlock[0].component("b[0].disjunct[0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[1].component("b[0].disjunct[1].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[2].component("b[1].disjunct[0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[3].component("b[1].disjunct[1].c"),
+                              Constraint)
 
         # This relies on the disjunctions being transformed in the same order
         # every time. This dictionary maps the block index to the list of
@@ -1472,10 +1622,10 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
         for blocknum, lst in pairs.iteritems():
             original = m.b[blocknum].disjunct
             for i, j in lst:
-                dict1 = getattr(disjBlock[j], "_gdp_trans_info")
+                dict1 = getattr(disjBlock[j], "_gdp_transformation_info")
                 self.assertIsInstance(dict1, dict)
                 self.assertIs(dict1['src'](), original[i])
-                dict2 = getattr(original[i], "_gdp_trans_info")
+                dict2 = getattr(original[i], "_gdp_transformation_info")
                 self.assertIsInstance(dict2, dict)
                 self.assertIs(dict2['bigm'](), disjBlock[j])
                 self.assertTrue(dict2['relaxed'])
@@ -1504,8 +1654,10 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
 
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 2)
-        self.assertIsInstance(disjBlock[0].c, Constraint)
-        self.assertIsInstance(disjBlock[1].c, Constraint)
+        self.assertIsInstance(disjBlock[0].component("b[0].disjunct[0].c"),
+                              Constraint)
+        self.assertIsInstance(disjBlock[1].component("b[0].disjunct[1].c"),
+                              Constraint)
 
         # This relies on the disjunctions being transformed in the same order
         # every time. This dictionary maps the block index to the list of
@@ -1515,10 +1667,165 @@ class TestTargets_IndexedDisjunction(unittest.TestCase):
                 (1,1),
         ]
         for i, j in pairs:
-            dict1 = getattr(disjBlock[j], "_gdp_trans_info")
+            dict1 = getattr(disjBlock[j], "_gdp_transformation_info")
             self.assertIsInstance(dict1, dict)
             self.assertIs(dict1['src'](), m.b[0].disjunct[i])
-            dict2 = getattr(m.b[0].disjunct[i], "_gdp_trans_info")
+            dict2 = getattr(m.b[0].disjunct[i], "_gdp_transformation_info")
             self.assertIsInstance(dict2, dict)
             self.assertIs(dict2['bigm'](), disjBlock[j])
             self.assertTrue(dict2['relaxed'])
+
+    def test_create_using(self):
+        m = self.makeModel()
+        m.BigM = Suffix(direction=Suffix.LOCAL)
+        m.BigM[None] = 100
+        self.diff_apply_to_and_create_using(m)
+
+
+class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
+    def setUp(self):
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    @staticmethod
+    def makeModel():
+        m = ConcreteModel()
+        m.x = Var(bounds=(-9,9))
+        m.z = Var(bounds=(0, 10))
+        m.a = Var(bounds=(0, 23))
+        def disjunct_rule(disjunct, flag):
+            m = disjunct.model()
+            if flag:
+                def innerdisj_rule(disjunct, flag):
+                    m = disjunct.model()
+                    if flag:
+                        disjunct.c = Constraint(expr=m.z>=5)
+                    else:
+                        disjunct.c = Constraint(expr=m.z==0)
+                disjunct.innerdisjunct = Disjunct([0,1], rule=innerdisj_rule)
+                disjunct.innerdisjunction = Disjunction(
+                    expr=[disjunct.innerdisjunct[0], disjunct.innerdisjunct[1]])
+                disjunct.c = Constraint(expr=m.a <= 2)
+            else:
+                disjunct.c = Constraint(expr=m.x==2)
+        m.disjunct = Disjunct([0,1], rule=disjunct_rule)
+        # I want a SimpleDisjunct with a disjunction in it too
+        def simpledisj_rule(disjunct):
+            m = disjunct.model()
+            def inner_disj_rule(disjunct, flag):
+                if flag:
+                    disjunct.c = Constraint(expr=m.x >= 4)
+                else:
+                    disjunct.c = Constraint(expr=m.x <= 2)
+            disjunct.innerdisjunct = Disjunct([0,1], rule=inner_disj_rule)
+            disjunct.innerdisjunction = Disjunction(
+                expr=[disjunct.innerdisjunct[0], disjunct.innerdisjunct[1]])
+        m.simpledisjunct = Disjunct(rule=simpledisj_rule)
+        m.disjunction = Disjunction(
+            expr=[m.simpledisjunct, m.disjunct[0], m.disjunct[1]])
+        return m
+
+    def test_disjunct_targets_inactive(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            targets=[ComponentUID(m.simpledisjunct)])
+        
+        self.assertTrue(m.disjunct[0].active)
+        self.assertTrue(m.disjunct[1].active)
+        self.assertTrue(m.disjunct[1].innerdisjunct[0].active)
+        self.assertTrue(m.disjunct[1].innerdisjunct[1].active)
+        
+        self.assertTrue(m.simpledisjunct.active)
+        self.assertFalse(m.simpledisjunct.innerdisjunct[0].active)
+        self.assertFalse(m.simpledisjunct.innerdisjunct[1].active)
+
+    def test_disjunct_only_targets_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            targets=[ComponentUID(m.simpledisjunct)])
+
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        self.assertEqual(len(disjBlock), 2)
+        self.assertIsInstance(
+            disjBlock[0].component("simpledisjunct.innerdisjunct[0].c"), 
+            Constraint)
+        self.assertIsInstance(
+            disjBlock[1].component("simpledisjunct.innerdisjunct[1].c"), 
+            Constraint)
+        
+        # This also relies on the disjuncts being transformed in the same
+        # order every time.
+        pairs = [
+            (0,0),
+            (1,1),
+        ]
+        for i, j in pairs:
+            dict1 = getattr(disjBlock[j], "_gdp_transformation_info")
+            self.assertIsInstance(dict1, dict)
+            self.assertIs(dict1['src'](), m.simpledisjunct.innerdisjunct[i])
+            dict2 = getattr(
+                m.simpledisjunct.innerdisjunct[i], 
+                "_gdp_transformation_info")
+            self.assertIsInstance(dict2, dict)
+            self.assertIs(dict2['bigm'](), disjBlock[j])
+            self.assertTrue(dict2['relaxed'])
+        
+    def test_disjunctData_targets_inactive(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            targets=[ComponentUID(m.disjunct[1])])
+        
+        self.assertTrue(m.disjunct[0].active)
+        self.assertTrue(m.disjunct[1].active)
+        self.assertFalse(m.disjunct[1].innerdisjunct[0].active)
+        self.assertFalse(m.disjunct[1].innerdisjunct[1].active)
+        
+        self.assertTrue(m.simpledisjunct.active)
+        self.assertTrue(m.simpledisjunct.innerdisjunct[0].active)
+        self.assertTrue(m.simpledisjunct.innerdisjunct[1].active)
+
+    def test_disjunctData_only_targets_transformed(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m,
+            targets=[ComponentUID(m.disjunct[1])])
+
+        disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
+        self.assertEqual(len(disjBlock), 2)
+        self.assertIsInstance(
+            disjBlock[0].component("disjunct[1].innerdisjunct[0].c"), 
+            Constraint)
+        self.assertIsInstance(
+            disjBlock[1].component("disjunct[1].innerdisjunct[1].c"), 
+            Constraint)
+        
+        # This also relies on the disjuncts being transformed in the same
+        # order every time.
+        pairs = [
+            (0,0),
+            (1,1),
+        ]
+        for i, j in pairs:
+            dict1 = getattr(disjBlock[j], "_gdp_transformation_info")
+            self.assertIsInstance(dict1, dict)
+            self.assertIs(dict1['src'](), m.disjunct[1].innerdisjunct[i])
+            dict2 = getattr(
+                m.disjunct[1].innerdisjunct[i], 
+                "_gdp_transformation_info")
+            self.assertIsInstance(dict2, dict)
+            self.assertIs(dict2['bigm'](), disjBlock[j])
+            self.assertTrue(dict2['relaxed'])
+
+    # TODO: test that everything is transformed only once, and make sure that
+    # the XOR constraint from the inner disjunction gets transformed as expected
+
+    def test_create_using(self):
+        m = self.makeModel()
+        self.diff_apply_to_and_create_using(m)
