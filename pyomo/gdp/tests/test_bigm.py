@@ -2040,6 +2040,53 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.diff_apply_to_and_create_using(m)
 
 
+class IndexedDisjunction(unittest.TestCase):
+    # this tests that if the targets are a subset of the
+    # _DisjunctDatas in an IndexedDisjunction that the xor constraint
+    # created on the parent block will still be indexed as expected.
+    def setUp(self):
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def makeModel(self):
+        m = ConcreteModel()
+        m.s = Set(initialize=[1, 2, 3])
+        m.a = Var(m.s, bounds=(-100, 100))
+        def disjunct_rule(d, s, flag):
+            m = d.model()
+            if flag:
+                d.c = Constraint(expr=m.a[s] >= 6)
+            else:
+                d.c = Constraint(expr=m.a[s] <= 3)
+        m.disjunct = Disjunct(m.s, [0,1], rule=disjunct_rule)
+        def disjunction_rule(m, s):
+            return [m.disjunct[s, flag] for flag in [0,1]]
+        m.disjunction = Disjunction(m.s, rule=disjunction_rule)
+        return m
+
+    def test_xor_constraint(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(
+            m, 
+            targets=[ComponentUID(m.disjunction[1]), 
+                     ComponentUID(m.disjunction[3])])
+
+        xorC = m._gdp_transformation_info[m.disjunction.name]()
+        self.assertEqual(len(xorC), 2)
+        
+        # check the constraints
+        for i in [1,3]:
+            self.assertEqual(xorC[i].lower, 1)
+            self.assertEqual(xorC[i].upper, 1)
+            self.assertEqual(len(xorC[i].body._args), 2)
+            self.assertEqual(len(xorC[i].body._coef), 2)
+            self.assertIs(xorC[i].body._args[0], m.disjunct[i, 0].indicator_var)
+            self.assertIs(xorC[i].body._args[1], m.disjunct[i, 1].indicator_var)
+            self.assertEqual(xorC[i].body._coef[0], 1)
+            self.assertEqual(xorC[i].body._coef[1], 1)
+            self.assertEqual(xorC[i].body._const, 0)
 # TODO: I need to test the crazy case where either I index by 1 and '1' or
 # where I have a disjunction called m.b.d and one called d on m.b.
 # to make sure that unique names are really doing what we want.
