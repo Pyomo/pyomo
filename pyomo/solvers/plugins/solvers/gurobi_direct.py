@@ -531,9 +531,10 @@ class GurobiDirect(DirectSolver):
 
             soln.objective[self._objective_label] = {'Value': gprob.ObjVal}
 
-            for pyomo_var, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
-                if self._referenced_variables[pyomo_var] > 0:
-                    soln_variables[gurobipy_var.VarName] = {"Value": gurobipy_var.x}
+            self._load_vars()
+            # for pyomo_var, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
+            #     if self._referenced_variables[pyomo_var] > 0:
+            #         soln_variables[gurobipy_var.VarName] = {"Value": gurobipy_var.x}
 
             if extract_reduced_costs:
                 for var in pvars:
@@ -576,9 +577,11 @@ class GurobiDirect(DirectSolver):
                 gurobipy_var.setAttr(self._gurobipy.GRB.Attr.Start, value(pyomo_var))
 
     def _load_vars(self, vars_to_load=None):
+        var_map = self._pyomo_var_to_solver_var_map
+        ref_vars = self._referenced_variables
         if vars_to_load is None:
-            vars_to_load = self._pyomo_var_to_solver_var_map.keys()
+            vars_to_load = var_map.keys()
 
         for var in vars_to_load:
-            if self._referenced_variables[var] > 0:
-                var.value = self._pyomo_var_to_solver_var_map[var].x
+            if ref_vars[var] > 0:
+                var.value = var_map[var].x
