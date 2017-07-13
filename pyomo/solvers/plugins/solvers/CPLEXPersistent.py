@@ -19,6 +19,7 @@ import pyutilib.services
 from pyutilib.misc import Bunch, Options
 
 import pyomo.util.plugin
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt.base import *
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.results import *

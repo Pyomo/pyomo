@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.util.plugin import alias
@@ -12,17 +22,21 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def __init__(self, **kwds):
         kwds['type'] = 'gurobi_persistent'
         PersistentSolver.__init__(self, **kwds)
-        self._init()
+        GurobiDirect._init(self)
 
         self._pyomo_model = kwds.pop('model', None)
         if self._pyomo_model is not None:
             self.compile_instance(self._pyomo_model, **kwds)
 
+    def _presolve(self, *args, **kwds):
+        PersistentSolver._presolve(self, *args, **kwds)
+
     def _apply_solver(self):
         return GurobiDirect._apply_solver(self)
 
     def _postsolve(self):
-        return GurobiDirect._postsolve(self)
+        results = GurobiDirect._postsolve(self)
+        return results
 
     def _compile_instance(self, model, **kwds):
         GurobiDirect._compile_instance(self, model, **kwds)
@@ -87,7 +101,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
         return GurobiDirect._get_expr_from_pyomo_expr(self, expr, max_degree)
 
-    def _load_vars(self, vars_to_load):
+    def _load_vars(self, vars_to_load=None):
         GurobiDirect._load_vars(self, vars_to_load)
 
     def warm_start_capable(self):
@@ -96,5 +110,23 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def _warm_start(self):
         GurobiDirect._warm_start(self)
 
+    def compile_instance(self, model, **kwds):
+        return self._compile_instance(model, **kwds)
 
+    def add_block(self, block):
+        return self._add_block(block)
 
+    def compile_objective(self):
+        return self._compile_objective()
+
+    def add_constraint(self, con):
+        return self._add_constraint(con)
+
+    def add_var(self, var):
+        return self._add_var(var)
+
+    def add_sos_constraint(self, con):
+        return self._add_sos_constraint(con)
+
+    def _gurobi_vtype_from_var(self, var):
+        return GurobiDirect._gurobi_vtype_from_var(self, var)

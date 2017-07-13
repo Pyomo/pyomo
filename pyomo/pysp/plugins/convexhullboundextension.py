@@ -13,7 +13,8 @@ import logging
 import copy
 
 import pyomo.util.plugin
-from pyomo.opt import SolverFactory, PersistentSolver
+from pyomo.opt import SolverFactory
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.core import *
 from pyomo.pysp import phextension
 from pyomo.pysp.plugins.phboundextension import (_PHBoundBase,

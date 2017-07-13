@@ -18,7 +18,8 @@ import time
 # these are the only two preprocessors currently invoked by the
 # simple_preprocessor, which in turn is invoked by the preprocess()
 # method of PyomoModel.
-from pyomo.opt import ProblemFormat, PersistentSolver
+from pyomo.opt import ProblemFormat
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.repn.canonical_repn import LinearCanonicalRepn
 from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
     as canonical_preprocess_block_objectives

@@ -10,7 +10,6 @@
 
 __all__ = ('IOptSolver',
            'OptSolver',
-           'PersistentSolver',
            'SolverFactory',
            'UnknownSolver',
            'check_available_solvers')
@@ -818,15 +817,6 @@ class OptSolver(Plugin):
     def config_block(self, init=False):
         config, blocks = default_config_block(self, init=init)
         return config
-
-
-class PersistentSolver(OptSolver):
-
-    def __init__(self, **kwds):
-        """ Constructor """
-
-        OptSolver.__init__(self,**kwds)
-
 
 
 def default_config_block(solver, init=False):

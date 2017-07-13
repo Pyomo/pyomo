@@ -11,7 +11,8 @@
 import sys
 
 from pyomo.core import *
-from pyomo.opt import ProblemFormat, PersistentSolver
+from pyomo.opt import ProblemFormat
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 # these are the only two preprocessors currently invoked by the
 # simple_preprocessor, which in turn is invoked by the preprocess()

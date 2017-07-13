@@ -28,9 +28,9 @@ from pyomo.opt import UndefinedData
 from pyomo.util import pyomo_command
 from pyomo.util.plugin import ExtensionPoint
 from pyomo.opt import (SolverFactory,
-                       PersistentSolver,
                        TerminationCondition,
                        SolutionStatus)
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.pysp.phextension import IPHSolverServerExtension
 from pyomo.pysp.scenariotree.instance_factory import \
     ScenarioTreeInstanceFactory

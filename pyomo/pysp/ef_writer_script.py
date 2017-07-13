@@ -27,12 +27,12 @@ import pyomo.solvers
 from pyomo.util import pyomo_command
 from pyomo.opt import (SolverFactory,
                        TerminationCondition,
-                       PersistentSolver,
                        undefined,
                        UndefinedData,
                        ProblemFormat,
                        UnknownSolver,
                        SolutionStatus)
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt.parallel import SolverManagerFactory
 from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from pyomo.pysp.util.config import (PySPConfigValue,
