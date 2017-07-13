@@ -38,8 +38,8 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         results = GurobiDirect._postsolve(self)
         return results
 
-    def _compile_instance(self, model, **kwds):
-        GurobiDirect._compile_instance(self, model, **kwds)
+    def _compile_instance(self, model, kwds={}):
+        GurobiDirect._compile_instance(self, model, kwds)
 
     def _add_block(self, block):
         GurobiDirect._add_block(self, block)
@@ -111,7 +111,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         GurobiDirect._warm_start(self)
 
     def compile_instance(self, model, **kwds):
-        return self._compile_instance(model, **kwds)
+        return self._compile_instance(model, kwds)
 
     def add_block(self, block):
         return self._add_block(block)

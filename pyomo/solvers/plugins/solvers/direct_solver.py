@@ -51,7 +51,7 @@ class DirectSolver(DirectOrPersistentSolver):
                    "supplied.").format(type(self), len(args))
             raise ValueError(msg)
 
-        self._compile_instance(model, **kwds)
+        self._compile_instance(model, kwds)
 
         DirectOrPersistentSolver._presolve(self, *args, **kwds)
 
@@ -61,8 +61,8 @@ class DirectSolver(DirectOrPersistentSolver):
     def _postsolve(self):
         return DirectOrPersistentSolver._postsolve(self)
 
-    def _compile_instance(self, model, **kwds):
-        DirectOrPersistentSolver._compile_instance(self, model, **kwds)
+    def _compile_instance(self, model, kwds={}):
+        DirectOrPersistentSolver._compile_instance(self, model, kwds)
 
     def _add_block(self, block):
         raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')

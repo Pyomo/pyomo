@@ -95,7 +95,7 @@ class DirectOrPersistentSolver(OptSolver):
     def _postsolve(self):
         return OptSolver._postsolve(self)
 
-    def _compile_instance(self, model, **kwds):
+    def _compile_instance(self, model, kwds={}):
         if not isinstance(model, (Model, IBlockStorage)):
             msg = "The problem instance supplied to the {0} plugin " \
                   "'_presolve' method must be of type 'Model'".format(type(self))
