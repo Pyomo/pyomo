@@ -38,7 +38,6 @@ from six.moves import xrange
 
 logger = logging.getLogger('pyomo.opt')
 
-
 # The version string is first searched for trunk/Trunk, and if
 # found a tuple of infinities is returned. Otherwise, the first
 # match of number[.number] where [.number] can repeat 1-3 times
@@ -451,7 +450,7 @@ class OptSolver(Plugin):
 
     def version(self):
         """
-        Returns a tuple describing the solver executable version.
+        Returns a 4-tuple describing the solver executable version.
         """
         if self._version is None:
             self._version = self._get_version()
