@@ -180,7 +180,7 @@ class BigM_Transformation(Transformation):
             xor = obj.parent_component().xor
         nm = '_xor' if xor else '_or'
         orCname = self._get_unique_name(parent, '_gdp_bigm_relaxation_' + \
-                                        obj.local_name + nm)
+                                        obj.name + nm)
         parent.add_component(orCname, orC)
         infodict[obj.name] = weakref.ref(orC)
         return orC, xor
@@ -196,10 +196,6 @@ class BigM_Transformation(Transformation):
                                                bigM, i, orC, xor)
         else:
             self._transformDisjunctionData(obj, transBlock, bigM, None, orC, xor)
-
-        # TODO: update the map dictionaries to include the 
-        # disjunction <-> constraint maps
-        # and the constraint <-> transformed constraint maps
        
         # deactivate so we know we relaxed
         obj.deactivate()
@@ -209,21 +205,20 @@ class BigM_Transformation(Transformation):
                                   index, orConstraint=None, xor=None):
         parent_component = obj.parent_component()
         if xor is None:
-            # 1) if the orConstraint is aldready on the block (using
-            # the dictionary that you haven't finished yet) fetch it.
+            # If the orConstraint is already on the block fetch it.
             # Otherwise call _declareXorConstraint.
-            # 2) fetch xor
             parent_block = obj.parent_block()
             if (hasattr(parent_block, "_gdp_transformation_info") and 
             type(parent_block._gdp_transformation_info) is dict):
                 infodict = parent_block._gdp_transformation_info
                 if parent_component.name in infodict:
+                    # if the orConstraint has already been declared,
+                    # we fetch it and get the value of xor from the
+                    # parent.
                     orConstraint = infodict[parent_component.name]()
                     xor = parent_component.xor
-            #if (( orConstraint has already been declared)):
-                #fetch it.
-                #set xor from parent.
             if xor is None:
+                # orConstraint wasn't already declared, so we declare it
                 orConstraint, xor = self._declareXorConstraint(
                     obj.parent_component() )
         or_expr = 0
@@ -259,7 +254,7 @@ class BigM_Transformation(Transformation):
                 disjunct.indicator_var.fix(0)
                 return
         if 'bigm' in infodict:
-            # we've transformed it, so don't do it again.
+            # we've transformed it (with BigM), so don't do it again.
             return
         
         m = disjunct.model()
@@ -320,9 +315,10 @@ class BigM_Transformation(Transformation):
             # (This returns None if not)
             M = self._get_M_from_args(c, bigMargs)
             
-            # DEBUG
-            # print("after args, M is: ")
-            # print(M)
+            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("GDP(BigM): The value for M for constraint %s "
+                             "from the BigM argument is %s." % (constraint.name,
+                                                                str(M)))
             
             # if we didn't get something from args, try suffixes:
             # TODO: wouldn't hurt to generate the suffix list at the disjunct 
@@ -330,10 +326,11 @@ class BigM_Transformation(Transformation):
             if M is None:
                 M = self._get_M_from_suffixes(c)
                 
-            # DEBUG
-            # print("after suffixes, M is: ")
-            # print(M)
-           
+            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("GDP(BigM): The value for M for constraint %s "
+                             "after checking suffixes is %s." % (constraint.name,
+                                                                str(M)))
+
             if not isinstance(M, (tuple, list)):
                 if M is None:
                     M = (None, None)
@@ -351,14 +348,18 @@ class BigM_Transformation(Transformation):
             if c.upper is not None and M[1] is None:
                 M[1] = self._estimate_M(c.body, name)[1] - c.upper
 
-            # DEBUG
-            # print("after estimating, m is: ")
-            # print(M)
+            if __debug__ and logger.isEnabledFor(logging.DEBUG):
+                logger.debug("GDP(BigM): The value for M for constraint %s "
+                             "after estimating (if needed) is %s." % \
+                             (constraint.name, str(M)))
 
-            # TODO: I can't get this to work because ('lb',) isn't the same as 
-            # 'lb'... I get the DeveloperError about IndexedConstraint failing 
-            # to define _default(). So for now I'll just check if the constraint
+            # TODO: The commented out code should work here after
+            # issue #116 is resolved. As it is, I can't get this to
+            # work because ('lb',) isn't the same as 'lb'... I get the
+            # DeveloperError about IndexedConstraint failing to define
+            # _default(). So for now I'll just check if the constraint
             # is indexed below.
+
             # if i.__class__ is tuple:
             #     pass
             # elif constraint.is_indexed():

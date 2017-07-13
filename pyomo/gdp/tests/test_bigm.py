@@ -95,6 +95,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertFalse(oldblock.disjuncts[0].active)
         self.assertFalse(oldblock.disjuncts[1].active)
 
+    def test_xor_constraint_weakref(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)   
+        infodict = m._gdp_transformation_info
+        self.assertIsInstance(infodict, dict)
+        self.assertEqual(len(infodict), 1)
+        self.assertIs(
+            infodict[m.disjunction.name](),
+            m._gdp_bigm_relaxation_disjunction_xor)
+
     def test_disjunct_and_constraint_weakrefs(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)        
@@ -232,8 +242,12 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
 
         oldc = m.d[0].component("c")
-        # we have an indexed constraint called d[0].c (indexed by ['lb', 'ub']
-        # but we only had to use 'lb' since the original constraint had no ub.
+        # we have an indexed constraint called d[0].c (indexed by
+        # ['lb', 'ub'] but we only had to use 'lb' since the original
+        # constraint had no ub.  This test relies on the disjuncts
+        # getting transformed in the same order every time because it
+        # hard-codes which block of the relaxedDisjuncts corresponds
+        # to which of the original disjuncts.
         newcons = disjBlock[0].component("d[0].c")
         self.assertIsInstance(newcons, Constraint)
         self.assertTrue(newcons.active)
@@ -300,8 +314,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(newc_hi.body._args[1]._args), 1)
         self.assertEqual(len(newc_hi.body._args[1]._coef), 1)
 
-    # helper method to check the M values in all of the transformed constraints
-    # (m, M) is the tuple for M.
+    # helper method to check the M values in all of the transformed
+    # constraints (m, M) is the tuple for M.  This also relies on the
+    # disjuncts being transformed in the same order every time.
     def checkMs(self, model, cons1lb, cons2lb, cons2ub):
         disjBlock = model._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
 
@@ -503,6 +518,20 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
         # set seed so we can test name collisions predictably
         random.seed(666)
+        # These are the pairs of which disjunct indices map to which
+        # blocks in the list of block on the transformation
+        # block. This is needed in multiple tests, so I am storing it
+        # here.
+        self.pairs = [
+            ( (0,1,'A'), 0 ),
+            ( (1,1,'A'), 1 ),
+            ( (0,1,'B'), 2 ),
+            ( (1,1,'B'), 3 ),
+            ( (0,2,'A'), 4 ),
+            ( (1,2,'A'), 5 ),
+            ( (0,2,'B'), 6 ),
+            ( (1,2,'B'), 7 ),
+        ]
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
@@ -529,10 +558,6 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
 
-        # TODO: this should not be local name. And it should get a unique name
-        # And I need to add the crazy case where either I index by 1 and '1' or
-        # where I have a disjunction called m.b.d and one called d on m.b.
-        # to make sure that unique names are really doing what we want.
         xor = m.component("_gdp_bigm_relaxation_disjunction_xor")
         self.assertIsInstance(xor, Constraint)
         for i in m.disjunction.index_set():
@@ -555,23 +580,6 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         for i in m.disjunct.index_set():
             self.assertFalse(m.disjunct[i].c.active)
 
-    def get_index_disjindex_pairs(self):
-        # these are the pairs of which disjunct indices map to which
-        # blocks in the list of block on the transformation
-        # block. This is needed in multiple tests, so I am storing it
-        # here.
-        pairs = [
-            ( (0,1,'A'), 0 ),
-            ( (1,1,'A'), 1 ),
-            ( (0,1,'B'), 2 ),
-            ( (1,1,'B'), 3 ),
-            ( (0,2,'A'), 4 ),
-            ( (1,2,'A'), 5 ),
-            ( (0,2,'B'), 6 ),
-            ( (1,2,'B'), 7 ),
-        ]
-        return pairs
-
     def test_transformed_block_structure(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
@@ -590,7 +598,7 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         
         # check that all 8 blocks have the right constraint on them.
         # this relies on the order in which they are transformed.
-        for i,j in self.get_index_disjindex_pairs():
+        for i,j in self.pairs:
             self.assertIsInstance(
                 disjBlock[j].component(m.disjunct[i].c.name), 
                 Constraint)
@@ -605,8 +613,7 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         # this test relies on the fact that the disjuncts are going to be 
         # relaxed in the same order every time, so they will correspond to 
         # these indices on the transformation block:
-        pairs = self.get_index_disjindex_pairs()
-        for src, dest in pairs:
+        for src, dest in self.pairs:
             infodict = getattr(disjBlock[dest], "_gdp_transformation_info")
             self.assertIsInstance(infodict, dict)
             srcDisjunct = oldblock[src]
@@ -672,7 +679,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         TransformationFactory('gdp.bigm').apply_to(m)
        
         self.assertIsInstance(
-            m.b.component('_gdp_bigm_relaxation_disjunction_xor'), 
+            m.b.component('_gdp_bigm_relaxation_b.disjunction_xor'), 
             Constraint)
 
     def test_trans_block_created(self):
@@ -1218,6 +1225,14 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
         self.assertFalse(m.disjunct1[1].c.active)
         self.assertFalse(m.disjunct2[0].c.active)
 
+    def test_transformed_disjuncts_deactivated(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        self.assertFalse(m.disjunct1[0].active)
+        self.assertFalse(m.disjunct1[1].active)
+        self.assertFalse(m.disjunct2[0].active)
+
     def test_untransformed_disj_active(self):
         # We have an extra disjunct not in any of the disjunctions.
         # He doesn't get transformed, and so he should still be active
@@ -1277,9 +1292,22 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
                 self.assertTrue(infodict2['relaxed'])
                 constraintdict = infodict2['relaxedConstraints']
                 self.assertIsInstance(constraintdict, dict)
+                self.assertEqual(len(constraintdict), 1)
                 # check the constraint weakrefs
                 self.assertIs(constraintdict[ComponentUID(disj[i].c)](),
                               disjBlock[j].component(disj[i].c.name))
+
+    def test_xor_constraint_weakref(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        infodict = m._gdp_transformation_info
+        self.assertIsInstance(infodict, dict)
+        self.assertEqual(len(infodict), 2)
+        self.assertIs(infodict[m.disjunction1.name](),
+                      m._gdp_bigm_relaxation_disjunction1_xor)
+        self.assertIs(infodict[m.disjunction2.name](),
+                      m._gdp_bigm_relaxation_disjunction2_xor)
 
     def test_transformed_constraints(self):
         m = self.makeModel()
@@ -1394,7 +1422,6 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
         disjBlock = m._pyomo_gdp_bigm_relaxation.relaxedDisjuncts
         # only two disjuncts relaxed
         self.assertEqual(len(disjBlock), 2)
-        m.pprint()
         self.assertIsInstance(disjBlock[0].component("disjunct1[0].c"),
                               Constraint)
         self.assertIsInstance(disjBlock[1].component("disjunct1[1].c"),
@@ -1430,8 +1457,6 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
 
     def test_create_using(self):
         m = self.makeModel()
-        m.BigM = Suffix(direction=Suffix.LOCAL)
-        m.BigM[None] = 100
         self.diff_apply_to_and_create_using(m)
 
 
@@ -1677,8 +1702,6 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
 
     def test_create_using(self):
         m = self.makeModel()
-        m.BigM = Suffix(direction=Suffix.LOCAL)
-        m.BigM[None] = 100
         self.diff_apply_to_and_create_using(m)
 
 
@@ -1728,6 +1751,195 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         m.disjunction = Disjunction(
             expr=[m.simpledisjunct, m.disjunct[0], m.disjunct[1]])
         return m
+
+    def test_disjuncts_inactive(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        
+        self.assertFalse(m.disjunction.active)
+        self.assertFalse(m.simpledisjunct.active)
+        self.assertFalse(m.disjunct[0].active)
+        self.assertFalse(m.disjunct[1].active)
+
+    def test_transformation_block_structure(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        
+        transBlock = m._pyomo_gdp_bigm_relaxation
+        self.assertIsInstance(transBlock, Block)
+
+        # check that we have the lbub set on the transformation block
+        lbub = transBlock.component("lbub")
+        self.assertIsInstance(lbub, Set)
+        self.assertEqual(len(lbub), 2)
+        self.assertEqual(lbub, ['lb', 'ub'])
+
+        disjBlock = transBlock.relaxedDisjuncts
+        self.assertIsInstance(disjBlock, Block)
+        # There are 7 total disjuncts to relax: 4 nested ones and 3 outer ones
+        self.assertEqual(len(disjBlock), 7)
+        pairs = [
+            (0, ["disjunct[1].innerdisjunct[0].c"]),
+            (1, ["disjunct[1].innerdisjunct[1].c"]),
+            (2, ["simpledisjunct.innerdisjunct[0].c"]),
+            (3, ["simpledisjunct.innerdisjunct[1].c"]),
+            (4, ["simpledisjunct._gdp_bigm_relaxation_simpledisjunct."
+                 "innerdisjunction_xor"]),
+            (5, ["disjunct[0].c"]),
+            (6, ["disjunct[1]._gdp_bigm_relaxation_disjunct[1]."
+                 "innerdisjunction_xor",
+                 "disjunct[1].c"]),
+        ]
+        # This test will also rely on the disjunctions being relaxed
+        # in the same order every time.
+        for i, j in pairs:
+            for nm in j:
+                self.assertIsInstance(
+                    disjBlock[i].component(nm),
+                    Constraint)
+
+    # many of the transformed constraints look like this, so can call this
+    # function to test them.
+    def check_bigM_constraint(self, cons, variable, M, indicator_var):
+        self.assertEqual(len(cons.body._args), 2)
+        self.assertEqual(len(cons.body._coef), 2)
+        self.assertIs(cons.body._args[0], variable)
+        self.assertEqual(cons.body._coef[0], 1)
+        self.assertEqual(cons.body._coef[1], M)
+        self.assertEqual(cons.body._const, 0)
+        self.assertEqual(len(cons.body._args[1]._args), 1)
+        self.assertEqual(len(cons.body._args[1]._coef), 1)
+        self.assertEqual(cons.body._args[1]._const, 1)
+        self.assertEqual(cons.body._args[1]._coef[0], -1)
+        self.assertIs(cons.body._args[1]._args[0], indicator_var)
+
+    def check_xor_relaxation(self, cons, indvar1, indvar2, indvar3, lb):
+        self.assertEqual(len(cons.body._args), 3)
+        self.assertEqual(len(cons.body._coef), 3)
+        self.assertIs(cons.body._args[0], indvar1)
+        self.assertIs(cons.body._args[1], indvar2)
+        self.assertEqual(cons.body._coef[0], 1)
+        self.assertEqual(cons.body._coef[1], 1)
+        if not lb:
+            self.assertEqual(cons.upper, 1)
+            self.assertIsNone(cons.lower)
+            self.assertEqual(cons.body._coef[2], 1)
+            self.assertIs(cons.body._args[2], indvar3)
+            self.assertEqual(cons.body._const, -1)
+        else:
+            self.assertEqual(cons.lower, 1)
+            self.assertIsNone(cons.upper)
+            self.assertEqual(cons.body._coef[2], 1)
+            self.assertEqual(len(cons.body._args[2]._args), 1)
+            self.assertEqual(len(cons.body._args[2]._coef), 1)
+            self.assertIs(cons.body._args[2]._args[0], indvar3)
+            self.assertEqual(cons.body._args[2]._const, 1)
+            self.assertEqual(cons.body._args[2]._coef[0], -1)
+            self.assertEqual(cons.body._const, 0)
+
+    def test_transformed_constraints(self):
+        # We'll check all the transformed constraints to make sure
+        # that nothing was transformed twice. The real key is that the
+        # xor constraints created by the innter disjunctions get
+        # transformed by the outer ones.
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        cons1 = m.disjunct[1].innerdisjunct[0].\
+                _gdp_transformation_info['bigm']().component(
+                    m.disjunct[1].innerdisjunct[0].c.name)
+        cons1lb = cons1['lb']
+        self.assertEqual(cons1lb.lower, 0)
+        self.assertIsNone(cons1lb.upper)
+        self.assertIs(cons1lb.body, m.z)
+        cons1ub = cons1['ub']
+        self.assertIsNone(cons1ub.lower)
+        self.assertEqual(cons1ub.upper, 0)
+        self.check_bigM_constraint(cons1ub, m.z, -10, 
+                                 m.disjunct[1].innerdisjunct[0].indicator_var)  
+        
+        cons2 = m.disjunct[1].innerdisjunct[1].\
+                _gdp_transformation_info['bigm']().component(
+                    m.disjunct[1].innerdisjunct[1].c.name)['lb']
+        self.assertEqual(cons2.lower, 5)
+        self.assertIsNone(cons2.upper)
+        self.check_bigM_constraint(cons2, m.z, 5, 
+                                   m.disjunct[1].innerdisjunct[1].indicator_var)
+
+        cons3 = m.simpledisjunct.innerdisjunct[0].\
+                _gdp_transformation_info['bigm']().component(
+                    m.simpledisjunct.innerdisjunct[0].c.name)['ub']
+        self.assertEqual(cons3.upper, 2)
+        self.assertIsNone(cons3.lower)
+        self.check_bigM_constraint(
+            cons3, m.x, -7, 
+            m.simpledisjunct.innerdisjunct[0].indicator_var)
+
+        cons4 = m.simpledisjunct.innerdisjunct[1].\
+                _gdp_transformation_info['bigm']().component(
+                    m.simpledisjunct.innerdisjunct[1].c.name)['lb']
+        self.assertEqual(cons4.lower, 4)
+        self.assertIsNone(cons4.upper)
+        self.check_bigM_constraint(
+            cons4, m.x, 13, 
+            m.simpledisjunct.innerdisjunct[1].indicator_var)
+
+        # Here we check that the xor constraint from
+        # simpledisjunct.innerdisjunction is transformed.
+        cons5 = m.simpledisjunct._gdp_transformation_info['bigm']().component(
+            "simpledisjunct._gdp_bigm_relaxation_simpledisjunct."
+            "innerdisjunction_xor")
+        cons5lb = cons5['lb']
+        self.check_xor_relaxation(
+            cons5lb, 
+            m.simpledisjunct.innerdisjunct[0].indicator_var, 
+            m.simpledisjunct.innerdisjunct[1].indicator_var, 
+            m.simpledisjunct.indicator_var,
+            lb=True)
+        cons5ub = cons5['ub']
+        self.check_xor_relaxation(
+            cons5ub, 
+            m.simpledisjunct.innerdisjunct[0].indicator_var, 
+            m.simpledisjunct.innerdisjunct[1].indicator_var, 
+            m.simpledisjunct.indicator_var,
+            lb=False)
+        
+        cons6 = m.disjunct[0]._gdp_transformation_info['bigm']().component(
+            "disjunct[0].c")
+        cons6lb = cons6['lb']
+        self.assertIsNone(cons6lb.upper)
+        self.assertEqual(cons6lb.lower, 2)
+        self.check_bigM_constraint(cons6lb, m.x, 11, m.disjunct[0].indicator_var)
+        cons6ub = cons6['ub']
+        self.assertIsNone(cons6ub.lower)
+        self.assertEqual(cons6ub.upper, 2)
+        self.check_bigM_constraint(cons6ub, m.x, -7, m.disjunct[0].indicator_var)
+        
+        # now we check that the xor constraint from
+        # disjunct[1].innerdisjunction gets transformed alongside the
+        # other constraint in disjunct[1].
+        cons7 = m.disjunct[1]._gdp_transformation_info['bigm']().component(
+            "disjunct[1]._gdp_bigm_relaxation_disjunct[1].innerdisjunction_xor")
+        cons7lb = cons7['lb']
+        self.check_xor_relaxation(
+            cons7lb,
+            m.disjunct[1].innerdisjunct[0].indicator_var,
+            m.disjunct[1].innerdisjunct[1].indicator_var,
+            m.disjunct[1].indicator_var,
+            lb=True)
+        cons7ub = cons7['ub']
+        self.check_xor_relaxation(
+            cons7ub,
+            m.disjunct[1].innerdisjunct[0].indicator_var,
+            m.disjunct[1].innerdisjunct[1].indicator_var,
+            m.disjunct[1].indicator_var,
+            lb=False)
+
+        cons8 = m.disjunct[1]._gdp_transformation_info['bigm']().component(
+            "disjunct[1].c")['ub']
+        self.assertIsNone(cons8.lower)
+        self.assertEqual(cons8.upper, 2)
+        self.check_bigM_constraint(cons8, m.a, -21, m.disjunct[1].indicator_var)
 
     def test_disjunct_targets_inactive(self):
         m = self.makeModel()
@@ -1823,9 +2035,11 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             self.assertIs(dict2['bigm'](), disjBlock[j])
             self.assertTrue(dict2['relaxed'])
 
-    # TODO: test that everything is transformed only once, and make sure that
-    # the XOR constraint from the inner disjunction gets transformed as expected
-
     def test_create_using(self):
         m = self.makeModel()
         self.diff_apply_to_and_create_using(m)
+
+
+# TODO: I need to test the crazy case where either I index by 1 and '1' or
+# where I have a disjunction called m.b.d and one called d on m.b.
+# to make sure that unique names are really doing what we want.
