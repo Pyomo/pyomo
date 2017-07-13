@@ -207,15 +207,16 @@ class GurobiDirect(DirectSolver):
 
         self._add_block(model)
 
-        for var in self._referenced_variables:
-            if var.fixed:
-                if not self._output_fixed_variable_bounds:
-                    raise ValueError("Encountered a fixed variable (%s) inside an active objective "
-                                     "or constraint expression on model %s, which is usually indicative of "
-                                     "a preprocessing error. Use the IO-option 'output_fixed_variable_bounds=True' "
-                                     "to suppress this error and fix the variable by overwriting its bounds in "
-                                     "the Gurobi instance."
-                                     % (var.name, self._pyomo_model.name,))
+        for var, n_ref in self._referenced_variables.items():
+            if n_ref != 0:
+                if var.fixed:
+                    if not self._output_fixed_variable_bounds:
+                        raise ValueError("Encountered a fixed variable (%s) inside an active objective "
+                                         "or constraint expression on model %s, which is usually indicative of "
+                                         "a preprocessing error. Use the IO-option 'output_fixed_variable_bounds=True' "
+                                         "to suppress this error and fix the variable by overwriting its bounds in "
+                                         "the Gurobi instance."
+                                         % (var.name, self._pyomo_model.name,))
 
     def _add_block(self, block):
         for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True, active=True):
