@@ -91,6 +91,9 @@ class Timer:
         self.interval = self.end - self.start
 
 
+_compressed_expressions = set()
+
+
 def compress_expression(expr, verbose=False):
     #
     # Only compress a true expression DAG
@@ -191,6 +194,7 @@ def compress_expression(expr, verbose=False):
             # Replace the current expression
             #
             if _r.__class__ == _MultiSumExpression:
+                _r_clone = id(_r) in _compressed_expressions
                 #
                 # 1 + MultiSum
                 # p + MultiSum
@@ -198,50 +202,82 @@ def compress_expression(expr, verbose=False):
                 # Add the LHS to the first term of the multisum
                 #
                 if _l.__class__ in native_numeric_types or not _l_pvar:
-                    ans = _MultiSumExpression((_r._args[0]+_l,) + _r._args[1:])
+                    #print("H1")
+                    if _r_clone:
+                        ans = _MultiSumExpression([_r._args[0]+_l,] + _r._args[1:])
+                    else:
+                        _r._args[0] += _l
+                        ans = _r
                 #
                 # MultiSum + MultiSum
                 #
                 # Add the constant terms, and place the others
                 #
                 elif _l.__class__ == _MultiSumExpression:
-                    ans = _MultiSumExpression((_r._args[0]+_l._args[0],) + _r._args[1:] + _l._args[1:])
+                    #print("H2")
+                    if _r_clone:
+                        if id(_l) in _compressed_expressions:
+                            ans = _MultiSumExpression([_r._args[0]+_l._args[0],] + _r._args[1:] + _l._args[1:])
+                        else:
+                            _l._args[0] += _r._args[0]
+                            _l._args += _r._args[1:]
+                            ans = _l
+                    else:
+                        _r._args[0] += _l._args[0]
+                        _r._args += _l._args[1:]
+                        ans = _r
                 #
                 # expr + MultiSum
                 #
                 # Insert the expression
                 #
                 else:
-                    ans = _MultiSumExpression(_r._args + (_l,))
+                    #print(("H3",_r_clone))
+                    if _r_clone:
+                        ans = _MultiSumExpression(_r._args + [_l,])
+                    else:
+                        _r._args.append(_l)
+                        ans = _r
 
             elif _l.__class__ == _MultiSumExpression:
+                _l_clone = id(_l) in _compressed_expressions
                 #
                 # MultiSum + p
                 #
                 # Add the RHS to the first term of the multisum
                 #
                 if not _r_pvar:
-                    ans = _MultiSumExpression((_l._args[0]+_r,) + _l._args[1:])
+                    #print("H4")
+                    if _l_clone:
+                        ans = _MultiSumExpression([_l._args[0]+_r,] + _l._args[1:])
+                    else:
+                        _l._args[0] += _r
+                        ans = _l
                 #
                 # Multisum + expr
                 #
                 # Insert the expression
                 #
                 else:
-                    ans = _MultiSumExpression(_l._args + (_r,))
+                    #print("H5")
+                    if _l_clone:
+                        ans = _MultiSumExpression(_l._args + [_r,])
+                    else:
+                        _l._args.append(_r)
+                        ans = _l
 
             elif _l.__class__ in native_numeric_types or not _l_pvar:
                 #
                 # 1 + expr
                 # p + expr
                 #
-                ans = _MultiSumExpression((_l, _r))
+                ans = _MultiSumExpression([_l, _r])
 
             else:
                 #
                 # expr + expr
                 #
-                ans = _MultiSumExpression((0, _l, _r))
+                ans = _MultiSumExpression([0, _l, _r])
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
@@ -263,6 +299,7 @@ def compress_expression(expr, verbose=False):
             _stack[-1][-2].append( any(_potentially_variable) )
             _stack[-1][-1].append( ans )
         else:
+            _compressed_expressions.add(id(ans))
             return ans
 
 
@@ -1028,6 +1065,10 @@ class _MultiSumExpression(_SumExpression):
     def getname(self, *args, **kwds):
         return 'multisum'
 
+
+class _CompressedSumExpression(_MultiSumExpression):
+    """A temporary object that defines a summation with 1 or more terms and a constant term."""
+    
 
 class _GetItemExpression(_ExpressionBase):
     """Expression to call "__getitem__" on the base"""

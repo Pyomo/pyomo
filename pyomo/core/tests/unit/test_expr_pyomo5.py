@@ -530,10 +530,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(_e), EXPR._MultiSumExpression)
         self.assertEqual(len(_e._args), 5)
         self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.c)
-        self.assertIs(_e._args[2], m.d)
-        self.assertIs(_e._args[3], m.a)
-        self.assertIs(_e._args[4], m.b)
+        self.assertIs(_e._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
+        self.assertIs(_e._args[3], m.c)
+        self.assertIs(_e._args[4], m.d)
 
     def test_trivialSum(self):
         #
@@ -3067,12 +3067,23 @@ class EntangledExpressionErrors(unittest.TestCase):
         e1 = self.m.a + self.m.b
         e1_ = EXPR.compress_expression(e1)
 
+        #print(e1)
+        #print(e1_)
+        #print("--")
         e2 = self.m.c + e1_
         e2_ = EXPR.compress_expression(e2)
 
+        #print(e1)
+        #print(e1_)
+        #print(e2)
+        #print(e2_)
+        #print("--")
         e3 = self.m.d + e1_
         e3_ = EXPR.compress_expression(e3)
 
+        #print(e1_)
+        #print(e2_)
+        #print(e3_)
         self.assertEqual( len(e1_._args), 3)
         self.assertEqual( len(e2_._args), 4)
         self.assertEqual( len(e3_._args), 4)
