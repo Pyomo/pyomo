@@ -91,6 +91,9 @@ class PersistentSolver(DirectOrPersistentSolver):
     def remove_var(self, var):
         raise NotImplementedError('The subclass should implement this method.')
 
+    def compile_var(self, var):
+        raise NotImplementedError('The subclass should implement this method.')
+
     def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
         raise NotImplementedError('The subclass should implement this method.')
 

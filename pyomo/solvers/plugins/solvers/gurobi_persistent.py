@@ -14,6 +14,7 @@ from pyomo.util.plugin import alias
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.sos import SOSConstraint
+from pyomo.core.kernel.numvalue import value
 
 
 class GurobiPersistent(PersistentSolver, GurobiDirect):
@@ -57,6 +58,10 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         GurobiDirect._add_sos_constraint(self, con)
 
     def remove_block(self, block):
+        if block.is_indexed():
+            for sub_block in block.values():
+                self.remove_block(sub_block)
+            return
         for sub_block in block.block_data_objects(descend_into=True, active=True):
             for con in sub_block.component_data_objects(ctype=Constraint, descend_into=False, active=True):
                 self.remove_constraint(con)
@@ -68,6 +73,10 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
             self.remove_var(var)
 
     def remove_constraint(self, con):
+        if con.is_indexed():
+            for child_con in con.values():
+                self.remove_constraint(child_con)
+            return
         gurobipy_con = self._pyomo_con_to_solver_con_map[con]
         self._solver_model.remove(gurobipy_con)
         self._symbol_map.removeSymbol(con)
@@ -77,8 +86,12 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         del self._pyomo_con_to_solver_con_map[con]
 
     def remove_var(self, var):
+        if var.is_indexed():
+            for child_var in var.values():
+                self.remove_var(child_var)
+            return
         if self._referenced_variables[var] != 0:
-            raise ValueError('Cannot remove Var {0} because it is still referenced by the '
+            raise ValueError('Cannot remove Var {0} because it is still referenced by the '.format(var) +
                              'objective or one or more constraints')
         gurobipy_var = self._pyomo_var_to_solver_var_map[var]
         self._solver_model.remove(gurobipy_var)
@@ -87,6 +100,10 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         del self._pyomo_var_to_solver_var_map[var]
 
     def remove_sos_constraint(self, con):
+        if con.is_indexed():
+            for child_con in con.values():
+                self.remove_sos_constraint(child_con)
+            return
         gurobipy_con = self._pyomo_con_to_solver_con_map[con]
         self._solver_model.remove(gurobipy_con)
         self._symbol_map.removeSymbol(con)
@@ -114,19 +131,59 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         return self._compile_instance(model, kwds)
 
     def add_block(self, block):
+        if block.is_indexed():
+            for sub_block in block.values():
+                self.add_block(sub_block)
+            return
         return self._add_block(block)
 
     def compile_objective(self):
         return self._compile_objective()
 
     def add_constraint(self, con):
+        if con.is_indexed():
+            for child_con in con.values():
+                self.add_constraint(child_con)
+            return
         return self._add_constraint(con)
 
     def add_var(self, var):
+        if var.is_indexed():
+            for child_var in var.values():
+                self.add_var(child_var)
+            return
         return self._add_var(var)
 
     def add_sos_constraint(self, con):
+        if con.is_indexed():
+            for child_con in con.values():
+                self.add_sos_constraint(child_con)
+            return
         return self._add_sos_constraint(con)
+
+    def compile_var(self, var):
+        if var.is_indexed():
+            for child_var in var.values():
+                self.compile_var(child_var)
+            return
+        if var not in self._pyomo_var_to_solver_var_map:
+            raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
+        gurobipy_var = self._pyomo_var_to_solver_var_map[var]
+        vtype = self._gurobi_vtype_from_var(var)
+        if var.is_fixed():
+            lb = var.value
+            ub = var.value
+        else:
+            lb = value(var.lb)
+            ub = value(var.ub)
+        if lb is None:
+            lb = -self._gurobipy.GRB.INFINITY
+        if ub is None:
+            ub = self._gurobipy.GRB.INFINITY
+
+        gurobipy_var.setAttr('lb', lb)
+        gurobipy_var.setAttr('ub', ub)
+        gurobipy_var.setAttr('vtype', vtype)
 
     def _gurobi_vtype_from_var(self, var):
         return GurobiDirect._gurobi_vtype_from_var(self, var)
