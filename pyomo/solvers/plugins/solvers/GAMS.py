@@ -137,6 +137,15 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                                    io_options=io_options)
         symbolMap = model.solutions.symbol_map[smap_id]
 
+        # IMPORTANT - only delete the whole tmpdir if the solver was the one
+        # that made the directory. Otherwise, just delete the files the solver
+        # made, if not keep_files. That way the user can select a directory
+        # they already have, like the current directory, without having to
+        # worry about the rest of the contents of that directory being deleted.
+        newdir = True
+        if tmpdir is not None and os.path.exists(tmpdir):
+            newdir = False
+
         ws = GamsWorkspace(debug=DebugLevel.KeepFiles if keep_files
                            else DebugLevel.Off,
                            working_directory=tmpdir)
@@ -153,6 +162,14 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         finally:
             if keep_files:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
+            elif tmpdir is not None:
+                if newdir:
+                    shutil.rmtree(tmpdir)
+                else:
+                    os.remove(os.path.join(tmpdir, '_gams_py_gjo0.gms'))
+                    os.remove(os.path.join(tmpdir, '_gams_py_gjo0.lst'))
+                    os.remove(os.path.join(tmpdir, '_gams_py_gdb0.gdx'))
+                    # .pf file is not made when DebugLevel is Off
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
@@ -263,11 +280,23 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         assert load_model == True, 'GAMSSolver does not support '\
                                    'load_model=False.'
 
+        # IMPORTANT - only delete the whole tmpdir if the solver was the one
+        # that made the directory. Otherwise, just delete the files the solver
+        # made, if not keep_files. That way the user can select a directory
+        # they already have, like the current directory, without having to
+        # worry about the rest of the contents of that directory being deleted.
+        newdir = False
         if tmpdir is None:
             tmpdir = mkdtemp()
-        else:
-            if not os.path.exists(tmpdir):
-                os.makedirs(tmpdir)
+            newdir = True
+        elif not os.path.exists(tmpdir):
+            # makedirs creates all necessary intermediate directories in order
+            # to create the path to tmpdir, if they don't already exist.
+            # However, if keep_files is False, we only delete the final folder,
+            # leaving the rest of the intermediate ones.
+            os.makedirs(tmpdir)
+            newdir = True
+
         output_filename = os.path.join(tmpdir, 'model.gms')
         lst_filename = os.path.join(tmpdir, 'output.lst')
         results_filename = os.path.join(tmpdir, 'results.dat')
@@ -305,7 +334,12 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 results_text = results_file.read()
         finally:
             if not keep_files:
-                shutil.rmtree(tmpdir)
+                if newdir:
+                    shutil.rmtree(tmpdir)
+                else:
+                    os.remove(output_filename)
+                    os.remove(lst_filename)
+                    os.remove(results_filename)
 
         soln = dict()
         # Skip first line of explanatory text
