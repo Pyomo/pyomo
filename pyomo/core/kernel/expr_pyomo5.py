@@ -191,10 +191,9 @@ def compress_expression(expr, verbose=False):
             _l_pvar, _r_pvar = _potentially_variable
             _l, _r = _result
             #
-            # Replace the current expression
+            # Augment the current multi-sum (RHS)
             #
             if _r.__class__ == _MultiSumExpression:
-                _r_clone = id(_r) in _compressed_expressions
                 #
                 # 1 + MultiSum
                 # p + MultiSum
@@ -203,11 +202,8 @@ def compress_expression(expr, verbose=False):
                 #
                 if _l.__class__ in native_numeric_types or not _l_pvar:
                     #print("H1")
-                    if _r_clone:
-                        ans = _MultiSumExpression([_r._args[0]+_l,] + _r._args[1:])
-                    else:
-                        _r._args[0] += _l
-                        ans = _r
+                    _r._args[0] += _l
+                    ans = _r
                 #
                 # MultiSum + MultiSum
                 #
@@ -215,17 +211,9 @@ def compress_expression(expr, verbose=False):
                 #
                 elif _l.__class__ == _MultiSumExpression:
                     #print("H2")
-                    if _r_clone:
-                        if id(_l) in _compressed_expressions:
-                            ans = _MultiSumExpression([_r._args[0]+_l._args[0],] + _r._args[1:] + _l._args[1:])
-                        else:
-                            _l._args[0] += _r._args[0]
-                            _l._args += _r._args[1:]
-                            ans = _l
-                    else:
-                        _r._args[0] += _l._args[0]
-                        _r._args += _l._args[1:]
-                        ans = _r
+                    _r._args[0] += _l._args[0]
+                    _r._args += _l._args[1:]
+                    ans = _r
                 #
                 # expr + MultiSum
                 #
@@ -233,14 +221,13 @@ def compress_expression(expr, verbose=False):
                 #
                 else:
                     #print(("H3",_r_clone))
-                    if _r_clone:
-                        ans = _MultiSumExpression(_r._args + [_l,])
-                    else:
-                        _r._args.append(_l)
-                        ans = _r
+                    _r._args.append(_l)
+                    ans = _r
 
+            #
+            # Augment the current multi-sum (LHS)
+            #
             elif _l.__class__ == _MultiSumExpression:
-                _l_clone = id(_l) in _compressed_expressions
                 #
                 # MultiSum + p
                 #
@@ -248,11 +235,8 @@ def compress_expression(expr, verbose=False):
                 #
                 if not _r_pvar:
                     #print("H4")
-                    if _l_clone:
-                        ans = _MultiSumExpression([_l._args[0]+_r,] + _l._args[1:])
-                    else:
-                        _l._args[0] += _r
-                        ans = _l
+                    _l._args[0] += _r
+                    ans = _l
                 #
                 # Multisum + expr
                 #
@@ -260,12 +244,12 @@ def compress_expression(expr, verbose=False):
                 #
                 else:
                     #print("H5")
-                    if _l_clone:
-                        ans = _MultiSumExpression(_l._args + [_r,])
-                    else:
-                        _l._args.append(_r)
-                        ans = _l
+                    _l._args.append(_r)
+                    ans = _l
 
+            #
+            # * + expr
+            #
             elif _l.__class__ in native_numeric_types or not _l_pvar:
                 #
                 # 1 + expr
@@ -273,11 +257,73 @@ def compress_expression(expr, verbose=False):
                 #
                 ans = _MultiSumExpression([_l, _r])
 
-            else:
+            elif not (_r.__class__ == _CompressedSumExpression or \
+                      _l.__class__ == _CompressedSumExpression):
                 #
                 # expr + expr
                 #
                 ans = _MultiSumExpression([0, _l, _r])
+
+            #
+            # RHS needs to be cloned
+            #
+            elif _r.__class__ == _CompressedSumExpression:
+                #
+                # 1 + CompressedMultiSum
+                # p + CompressedMultiSum
+                #
+                # Add the LHS to the first term of the multisum
+                #
+                if _l.__class__ in native_numeric_types or not _l_pvar:
+                    #print("H1-c")
+                    ans = _MultiSumExpression([_r._args[0]+_l,] + list(_r._args[1:]))
+                #
+                # MultiSum + CompressedMultiSum
+                #
+                # Add the constant terms, and place the others
+                #
+                elif _l.__class__ == _MultiSumExpression:
+                    #print("H2-c")
+                    _l._args[0] += _r._args[0]
+                    _l._args += list(_r._args[1:])
+                    ans = _l
+                #
+                # CompressedMultiSum + CompressedMultiSum
+                #
+                # Add the constant terms, and place the others
+                #
+                elif _l.__class__ == _CompressedSumExpression:
+                    ans = _MultiSumExpression([_r._args[0]+_l._args[0],] + list(_r._args[1:]) + list(_l._args[1:]))
+                #
+                # expr + MultiSum
+                #
+                # Insert the expression
+                #
+                else:
+                    #print("H3-c")
+                    ans = _MultiSumExpression(list(_r._args) + [_l,])
+
+            #
+            # LHS needs to be cloned
+            #
+            else:   # _l.__class__ == _CompressedSumExpression
+                #
+                # CompressedMultiSum + p
+                #
+                # Add the RHS to the first term of the multisum
+                #
+                if not _r_pvar:
+                    #print("H4-c")
+                    ans = _MultiSumExpression([_l._args[0]+_r,] + list(_l._args[1:]))
+                #
+                # CompressedMultisum + expr
+                #
+                # Insert the expression
+                #
+                else:
+                    #print("H5-c")
+                    ans = _MultiSumExpression(list(_l._args) + [_r,])
+
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
@@ -299,7 +345,8 @@ def compress_expression(expr, verbose=False):
             _stack[-1][-2].append( any(_potentially_variable) )
             _stack[-1][-1].append( ans )
         else:
-            _compressed_expressions.add(id(ans))
+            if ans.__class__ == _MultiSumExpression:
+                return _CompressedSumExpression(tuple(ans._args))
             return ans
 
 
