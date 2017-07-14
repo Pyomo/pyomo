@@ -57,60 +57,14 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def _add_sos_constraint(self, con):
         GurobiDirect._add_sos_constraint(self, con)
 
-    def remove_block(self, block):
-        if block.is_indexed():
-            for sub_block in block.values():
-                self.remove_block(sub_block)
-            return
-        for sub_block in block.block_data_objects(descend_into=True, active=True):
-            for con in sub_block.component_data_objects(ctype=Constraint, descend_into=False, active=True):
-                self.remove_constraint(con)
+    def _remove_constraint(self, solver_con):
+        self._solver_model.remove(solver_con)
 
-            for con in sub_block.component_data_objects(ctype=SOSConstraint, descend_into=False, active=True):
-                self.remove_sos_constraint(con)
+    def _remove_sos_constraint(self, solver_sos_con):
+        self._solver_model.remove(solver_sos_con)
 
-        for var in block.component_data_objects(ctype=Var, descend_into=True, active=True):
-            self.remove_var(var)
-
-    def remove_constraint(self, con):
-        if con.is_indexed():
-            for child_con in con.values():
-                self.remove_constraint(child_con)
-            return
-        gurobipy_con = self._pyomo_con_to_solver_con_map[con]
-        self._solver_model.remove(gurobipy_con)
-        self._symbol_map.removeSymbol(con)
-        for var in self._vars_referenced_by_con[con]:
-            self._referenced_variables[var] -= 1
-        del self._vars_referenced_by_con[con]
-        del self._pyomo_con_to_solver_con_map[con]
-
-    def remove_var(self, var):
-        if var.is_indexed():
-            for child_var in var.values():
-                self.remove_var(child_var)
-            return
-        if self._referenced_variables[var] != 0:
-            raise ValueError('Cannot remove Var {0} because it is still referenced by the '.format(var) +
-                             'objective or one or more constraints')
-        gurobipy_var = self._pyomo_var_to_solver_var_map[var]
-        self._solver_model.remove(gurobipy_var)
-        self._symbol_map.removeSymbol(var)
-        del self._referenced_variables[var]
-        del self._pyomo_var_to_solver_var_map[var]
-
-    def remove_sos_constraint(self, con):
-        if con.is_indexed():
-            for child_con in con.values():
-                self.remove_sos_constraint(child_con)
-            return
-        gurobipy_con = self._pyomo_con_to_solver_con_map[con]
-        self._solver_model.remove(gurobipy_con)
-        self._symbol_map.removeSymbol(con)
-        for var in self._vars_referenced_by_con[con]:
-            self._referenced_variables[var] -= 1
-        del self._vars_referenced_by_con[con]
-        del self._pyomo_con_to_solver_con_map[con]
+    def _remove_var(self, solver_var):
+        self._solver_model.remove(solver_var)
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
         return GurobiDirect._get_expr_from_pyomo_repn(self, repn, max_degree)
