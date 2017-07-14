@@ -42,12 +42,9 @@ class BigM_Transformation(Transformation):
             Suffix:     False,
             Param:      False,
             Set:        False,
-            Disjunction: False,
-            Disjunct:   False, # These are OK because we are always
-                              # traversing with postfix DFS, so if we
-                              # encounter a disjunct inside something,
-                              # it has already been transformed if it
-                              # was going to be.
+            Disjunction: self._warn_for_active_disjunction,
+            Disjunct:   self._warn_for_active_disjunct,
+            Block:      self._transform_block_on_disjunct,
             }
 
 
@@ -271,15 +268,8 @@ class BigM_Transformation(Transformation):
         infodict['bigm'] = weakref.ref(relaxedBlock)
         
         # Transform each component within this disjunct
-        for name, obj in list(disjunct.component_map().iteritems()):
-            handler = self.handlers.get(obj.type(), None)
-            if not handler:
-                if handler is None:
-                    raise GDP_Error(
-                        "No BigM transformation handler registered "
-                        "for modeling components of type %s" % obj.type() )
-                continue
-            handler(obj, disjunct, relaxedBlock, bigM, infodict)
+        self._transform_block_components(disjunct, disjunct, relaxedBlock,
+                                            bigM, infodict)
         
         # deactivate disjunct so we know we've relaxed it
         disjunct.deactivate()
@@ -287,12 +277,92 @@ class BigM_Transformation(Transformation):
         disjunct._gdp_transformation_info = infodict
 
 
+    def _transform_block_components(self, block, disjunct,
+                                    relaxedBlock, bigM, infodict):
+        # Look through the component map of block and transform
+        # everything we have a handler for. Yell if we don't know how
+        # to handle it.
+        for name, obj in list(block.component_map().iteritems()):
+            if hasattr(obj, 'active') and not obj.active:
+                continue
+            handler = self.handlers.get(obj.type(), None)
+            if not handler:
+                if handler is None:
+                    raise GDP_Error(
+                        "No BigM transformation handler registered "
+                        "for modeling components of type %s" % obj.type() )
+                continue
+            # obj is what we are transforming, we pass disjunct
+            # through so that we will have access to the indicator
+            # variables down the line.
+            handler(obj, disjunct, relaxedBlock, bigM, infodict)
+
+
+    def _warn_for_active_disjunction(self, disjunction, disjunct, relaxedBlock,
+                                     bigMargs, infodict):
+        # this should only have gotten called if the disjunction is active
+        assert disjunction.active
+        problemdisj = disjunction
+        if disjunction.is_indexed():
+            for i in disjunction:
+                if disjunction[i].active:
+                    # a _DisjunctionData is active, we will yell about
+                    # it specifically.
+                    problemdisj = disjunction[i]
+                    break
+            # None of the _DisjunctionDatas were actually active. We are OK.
+            return
+        parentblock = problemdisj.parent_block()
+        # the disjunction should only have been active if it wasn't transformed
+        assert (not hasattr(parentblock, "_gdp_transformation_info")) or \
+            problemdisj.name not in parentblock._gdp_transformation_info
+        raise GDP_Error("Found untransformed disjunction %s in disjunct %s! "
+                        "The disjunction must be transformed before the "
+                        "disjunct. If you are using targets, put the "
+                        "disjunction before the disjunct in the list." \
+                        % (problemdisj.name, disjunct.name))
+
+
+    def _warn_for_active_disjunct(self, nesteddisjunct, disjunct,
+                                  relaxedBlock, bigMargs, infodict):
+        assert nesteddisjunct.active
+        problemdisj = nesteddisjunct
+        if nesteddisjunct.is_indexed():
+            for i in nesteddisjunct:
+                if nesteddisjunct[i].active:
+                    # This is shouldn't be true, we will complain about it.
+                    problemdisj = nesteddisjunct[i]
+                    break
+            # None of the _DisjunctDatas were actually active, so we are fine.
+            return
+        raise GDP_Error("Found active disjunct {0} in disjunct {1}! Either {0} "
+                        "is not in a disjunction or the disjunction it is in "
+                        "has not been transformed. {0} needs to be deactivated "
+                        "or its disjunction transformed before {1} can be "
+                        "transformed.".format(problemdisj.name, disjunct.name))
+
+
+    def _transform_block_on_disjunct(self, block, disjunct, relaxedBlock, 
+                                     bigMargs, infodict):
+        # We look through everything on the component map of the block
+        # and transform it just as we would if it was on the disjunct
+        # directly.  (We are passing the disjunct through so that when
+        # we find constraints, the _xform_constraint function will
+        # have access to the correct indicator variable.
+        self._transform_block_components(block, disjunct, relaxedBlock,
+                                            bigMargs, infodict)
+
+
     def _xform_constraint(self, constraint, disjunct, relaxedBlock,
                           bigMargs, infodict):
         # add constraint to the transformation block, we'll transform it there.
 
         transBlock = relaxedBlock.parent_block()
-        name = constraint.name
+        # Though rare, it is possible to get naming conflicts here
+        # since constraints from all blocks are getting moved onto the
+        # same block. So we get a unique name and we record the
+        # mapping.
+        name = self._get_unique_name(relaxedBlock, constraint.name)
         infodict['relaxedConstraints'] = {}
         
         if constraint.is_indexed():

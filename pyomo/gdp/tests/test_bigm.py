@@ -1840,7 +1840,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
     def test_transformed_constraints(self):
         # We'll check all the transformed constraints to make sure
         # that nothing was transformed twice. The real key is that the
-        # xor constraints created by the innter disjunctions get
+        # xor constraints created by the inner disjunctions get
         # transformed by the outer ones.
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
@@ -2040,7 +2040,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.diff_apply_to_and_create_using(m)
 
 
-class IndexedDisjunction(unittest.TestCase):
+class IndexedDisjunction_NastyNames(unittest.TestCase):
     # this tests that if the targets are a subset of the
     # _DisjunctDatas in an IndexedDisjunction that the xor constraint
     # created on the parent block will still be indexed as expected.
@@ -2063,7 +2063,7 @@ class IndexedDisjunction(unittest.TestCase):
         m.disjunct = Disjunct(m.s, [0,1], rule=disjunct_rule)
         def disjunction_rule(m, s):
             return [m.disjunct[s, flag] for flag in [0,1]]
-        m.disjunction = Disjunction(m.s, rule=disjunction_rule)
+        m.disjunction =  Disjunction(m.s, rule=disjunction_rule)
         return m
 
     def test_xor_constraint(self):
@@ -2087,6 +2087,46 @@ class IndexedDisjunction(unittest.TestCase):
             self.assertEqual(xorC[i].body._coef[0], 1)
             self.assertEqual(xorC[i].body._coef[1], 1)
             self.assertEqual(xorC[i].body._const, 0)
-# TODO: I need to test the crazy case where either I index by 1 and '1' or
-# where I have a disjunction called m.b.d and one called d on m.b.
-# to make sure that unique names are really doing what we want.
+
+
+class BlocksOnDisjuncts(unittest.TestCase):
+    def setUp(self):
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        # set seed so we can test name collisions predictably
+        random.seed(666)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+
+    def makeModel(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 1000))
+        m.y = Var(bounds=(0, 800))
+        def disj_rule(d, flag):
+            m = d.model()
+            if flag:
+                d.b = Block()
+                d.b.c = Constraint(expr=m.x == 0)
+                d.add_component('b.c', Constraint(expr=m.y >= 9))
+                d.b.anotherblock = Block()
+                d.b.anotherblock.c = Constraint(expr=m.y >= 11)
+            else:
+                d.c = Constraint(expr=m.x >= 80)
+        m.evil = Disjunct([0,1], rule=disj_rule)
+        m.disjunction = Disjunction(expr=[m.evil[0], m.evil[1]])
+        return m
+        
+    def test_transformed_constraint_nameConflicts(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        transBlock = m._pyomo_gdp_bigm_relaxation
+        disjBlock = transBlock.relaxedDisjuncts
+
+        self.assertIsInstance(disjBlock, Block)
+        self.assertEqual(len(disjBlock), 2)
+        self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c4"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.anotherblock.c"),
+                                                     Constraint)
