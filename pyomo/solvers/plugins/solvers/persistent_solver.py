@@ -37,56 +37,51 @@ class PersistentSolver(DirectOrPersistentSolver):
 
         DirectOrPersistentSolver._presolve(self, *args, **kwds)
 
-    def _apply_solver(self):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _postsolve(self):
-        return DirectOrPersistentSolver._postsolve(self)
-
-    def _compile_instance(self, model, kwds={}):
-        DirectOrPersistentSolver._compile_instance(self, model, kwds)
-
-    def _add_block(self, block):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _compile_objective(self):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _add_constraint(self, con):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _add_var(self, var):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _add_sos_constraint(self, con):
-        raise NotImplementedError('The subclass should implement this method.')
-
     def compile_instance(self, model, **kwds):
-        raise NotImplementedError('The subclass should implement this method.')
+        return self._compile_instance(model, kwds)
 
     def add_block(self, block):
-        raise NotImplementedError('The subclass should implement this method.')
+        if block.is_indexed():
+            for sub_block in block.values():
+                self.add_block(block)
+            return
+        self._add_block(block)
 
     def compile_objective(self):
-        raise NotImplementedError('The subclass should implement this method.')
+        return self._compile_objective()
 
     def add_constraint(self, con):
-        raise NotImplementedError('The subclass should implement this method.')
+        if con.is_indexed():
+            for child_con in con.values():
+                self.add_constraint(child_con)
+            return
+        return self._add_constraint(con)
 
     def add_var(self, var):
-        raise NotImplementedError('The subclass should implement this method.')
+        if var.is_indexed():
+            for child_var in var.values():
+                self.add_var(child_var)
+            return
+        return self._add_var(var)
 
     def add_sos_constraint(self, con):
-        raise NotImplementedError('The subclass should implement this method.')
+        if con.is_indexed():
+            for child_con in con.values():
+                self.add_sos_constraint(child_con)
+            return
+        return self._add_sos_constraint(con)
 
+    """ This method should be implemented by subclasses."""
     def _remove_constraint(self, solver_con):
-        raise NotImplementedError('The subclass should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses.')
 
+    """ This method should be implemented by subclasses."""
     def _remove_sos_constraint(self, solver_sos_con):
-        raise NotImplementedError('The subclass should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses.')
 
+    """ This method should be implemented by subclasses."""
     def _remove_var(self, solver_var):
-        raise NotImplementedError('The subclass should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses.')
 
     def remove_block(self, block):
         if block.is_indexed():
@@ -143,23 +138,9 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._referenced_variables[var]
         del self._pyomo_var_to_solver_var_map[var]
 
+    """ This method should be implemented by subclasses."""
     def compile_var(self, var):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _load_vars(self, vars_to_load):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def warm_start_capable(self):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _warm_start(self):
-        raise NotImplementedError('If a subclass can warmstart, then it should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses.')
 
     def load_vars(self, vars_to_load):
         self._load_vars(vars_to_load)

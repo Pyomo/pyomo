@@ -54,39 +54,3 @@ class DirectSolver(DirectOrPersistentSolver):
         self._compile_instance(model, kwds)
 
         DirectOrPersistentSolver._presolve(self, *args, **kwds)
-
-    def _apply_solver(self):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
-
-    def _postsolve(self):
-        return DirectOrPersistentSolver._postsolve(self)
-
-    def _compile_instance(self, model, kwds={}):
-        DirectOrPersistentSolver._compile_instance(self, model, kwds)
-
-    def _add_block(self, block):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
-
-    def _compile_objective(self):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
-
-    def _add_constraint(self, con):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
-
-    def _add_var(self, var):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
-
-    def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
-
-    def _load_vars(self, vars_to_load):
-        raise NotImplementedError('The specific direct solver interface should implement this method.')
-
-    def warm_start_capable(self):
-        raise NotImplementedError('The subclass should implement this method.')
-
-    def _warm_start(self):
-        raise NotImplementedError('If a subclass can warmstart, then it should implement this method.')

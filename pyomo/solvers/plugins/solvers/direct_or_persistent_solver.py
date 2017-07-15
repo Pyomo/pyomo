@@ -89,12 +89,15 @@ class DirectOrPersistentSolver(OptSolver):
         if self._log_file is None:
             self._log_file = pyutilib.services.TempfileManager.create_tempfile(suffix='.log')
 
+    """ This method should be implemented by subclasses."""
     def _apply_solver(self):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses')
 
+    """ This method should be implemented by subclasses."""
     def _postsolve(self):
         return OptSolver._postsolve(self)
 
+    """ This method should be implemented by subclasses."""
     def _compile_instance(self, model, kwds={}):
         if not isinstance(model, (Model, IBlockStorage)):
             msg = "The problem instance supplied to the {0} plugin " \
@@ -119,28 +122,54 @@ class DirectOrPersistentSolver(OptSolver):
             self._labeler = NumericLabeler('x')
 
     def _add_block(self, block):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+        for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
+                                                active=True, sort=True):
+            self._add_var(var)
 
+        for sub_block in block.block_data_objects(descend_into=True, active=True):
+            for con in sub_block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint,
+                                                        descend_into=False, active=True, sort=True):
+                self._add_constraint(con)
+
+            for con in sub_block.component_data_objects(ctype=pyomo.core.base.sos.SOSConstraint,
+                                                        descend_into=False, active=True, sort=True):
+                self._add_sos_constraint(con)
+
+            if len([obj for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective,
+                                                                    descend_into=False, active=True)]) != 0:
+                self._compile_objective()
+
+    """ This method should be implemented by subclasses."""
     def _compile_objective(self):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses')
 
+    """ This method should be implemented by subclasses."""
     def _add_constraint(self, con):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses')
 
+    """ This method should be implemented by subclasses."""
+    def _add_sos_constraint(self, con):
+        raise NotImplementedError('This method should be implemented by subclasses')
+
+    """ This method should be implemented by subclasses."""
     def _add_var(self, var):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses')
 
+    """ This method should be implemented by subclasses."""
     def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
-        raise NotImplementedError('The subclass should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses')
 
+    """ This method should be implemented by subclasses."""
     def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses')
 
+    """ This method should be implemented by subclasses."""
     def _load_vars(self, vars_to_load):
-        raise NotImplementedError('The specific direct/persistent solver interface should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses')
 
+    """ This method should be implemented by subclasses."""
     def warm_start_capable(self):
-        raise NotImplementedError('The subclass should implement this method.')
+        raise NotImplementedError('This method should be implemented by subclasses')
 
     def _warm_start(self):
         raise NotImplementedError('If a subclass can warmstart, then it should implement this method.')

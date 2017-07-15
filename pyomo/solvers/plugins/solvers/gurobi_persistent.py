@@ -29,34 +29,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         if self._pyomo_model is not None:
             self.compile_instance(self._pyomo_model, **kwds)
 
-    def _presolve(self, *args, **kwds):
-        PersistentSolver._presolve(self, *args, **kwds)
-
-    def _apply_solver(self):
-        return GurobiDirect._apply_solver(self)
-
-    def _postsolve(self):
-        results = GurobiDirect._postsolve(self)
-        return results
-
-    def _compile_instance(self, model, kwds={}):
-        GurobiDirect._compile_instance(self, model, kwds)
-
-    def _add_block(self, block):
-        GurobiDirect._add_block(self, block)
-
-    def _compile_objective(self):
-        GurobiDirect._compile_objective(self)
-
-    def _add_constraint(self, con):
-        GurobiDirect._add_constraint(self, con)
-
-    def _add_var(self, var):
-        GurobiDirect._add_var(self, var)
-
-    def _add_sos_constraint(self, con):
-        GurobiDirect._add_sos_constraint(self, con)
-
     def _remove_constraint(self, solver_con):
         self._solver_model.remove(solver_con)
 
@@ -66,54 +38,8 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def _remove_var(self, solver_var):
         self._solver_model.remove(solver_var)
 
-    def _get_expr_from_pyomo_repn(self, repn, max_degree=None):
-        return GurobiDirect._get_expr_from_pyomo_repn(self, repn, max_degree)
-
-    def _get_expr_from_pyomo_expr(self, expr, max_degree=None):
-        return GurobiDirect._get_expr_from_pyomo_expr(self, expr, max_degree)
-
-    def _load_vars(self, vars_to_load=None):
-        GurobiDirect._load_vars(self, vars_to_load)
-
-    def warm_start_capable(self):
-        return GurobiDirect.warm_start_capable(self)
-
     def _warm_start(self):
         GurobiDirect._warm_start(self)
-
-    def compile_instance(self, model, **kwds):
-        return self._compile_instance(model, kwds)
-
-    def add_block(self, block):
-        if block.is_indexed():
-            for sub_block in block.values():
-                self.add_block(sub_block)
-            return
-        return self._add_block(block)
-
-    def compile_objective(self):
-        return self._compile_objective()
-
-    def add_constraint(self, con):
-        if con.is_indexed():
-            for child_con in con.values():
-                self.add_constraint(child_con)
-            return
-        return self._add_constraint(con)
-
-    def add_var(self, var):
-        if var.is_indexed():
-            for child_var in var.values():
-                self.add_var(child_var)
-            return
-        return self._add_var(var)
-
-    def add_sos_constraint(self, con):
-        if con.is_indexed():
-            for child_con in con.values():
-                self.add_sos_constraint(child_con)
-            return
-        return self._add_sos_constraint(con)
 
     def compile_var(self, var):
         if var.is_indexed():
@@ -138,9 +64,6 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         gurobipy_var.setAttr('lb', lb)
         gurobipy_var.setAttr('ub', ub)
         gurobipy_var.setAttr('vtype', vtype)
-
-    def _gurobi_vtype_from_var(self, var):
-        return GurobiDirect._gurobi_vtype_from_var(self, var)
 
     def write(self, filename):
         self._solver_model.write(filename)
