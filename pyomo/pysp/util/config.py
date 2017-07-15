@@ -112,10 +112,12 @@ class PySPConfigBlock(ConfigBlock):
 
         return outstr
 
+    #
     # Overriding the behavior of ConfigBlock.display
     # so that it prints by default. I think it is
     # confusing that a method on that class named
     # 'display' returns a string
+    #
     def display(self, ostream=None, **kwds):
         """Displays the list of options registered to this
         block. The optional keyword 'ostream' can be a file
@@ -131,6 +133,37 @@ class PySPConfigBlock(ConfigBlock):
                 print(outstr)
             else:
                 ostream.write(outstr)
+
+    #
+    # Change the default behavior of ConfigBlock when
+    # _implicit_declaration are allowed. For some reason, in
+    # this case underscores are removed in implicitly
+    # assigned names (which does not happen when __setitem__
+    # is called).
+    #
+    def __setattr__(self, name, value):
+        # this is copied from the base class, except the
+        # part that replaces '_' with ' ' is removed
+        if name in ConfigBlock._all_slots:
+            super(ConfigBlock, self).__setattr__(name, value)
+        else:
+            ConfigBlock.__setitem__(self, name, value)
+
+    #
+    # Change more strange default behavior for ConfigBlock
+    # when _implicit_declaration are allowed. If the userSet
+    # flag gets set to True on ConfigBlock (happens when new
+    # implicit entry is assigned), this will cause strange
+    # behavior with the user_values() method (it returns
+    # this block).
+    #
+    # Also, make sure that implicitly created entries
+    # have their _userSet flag set to True.
+    def add(self, name, config):
+        ans = super(PySPConfigBlock, self).add(name, config)
+        ans._userSet = True
+        self._userSet = False
+        return ans
 
 def check_options_match(opt1,
                         opt2,
