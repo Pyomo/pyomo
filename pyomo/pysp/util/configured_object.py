@@ -87,7 +87,7 @@ class PySPConfiguredObject(object):
                         registered_only=False):
         """Display the options on the options block currently
         assigned to this class instance. Options that have been
-        explicity set will be marked with a '*' symbol. The optional
+        explicitly set will be marked with a '*' symbol. The optional
         argument 'registered_only' can be set to indicate that only
         options registered to this class should be displayed."""
         if (self._options is None) or \
@@ -233,7 +233,7 @@ class PySPConfiguredObject(object):
         only those values. This method will preserve the _userSet
         status of all options. The optional flag 'prefix' can be set
         to indicate that all registered class options in the
-        returned options object will have a name predended with the
+        returned options object will have a name prepended with the
         given prefix. The optional flag 'srcprefix' can be set to
         indicate that all registered class options on the input
         options object have a named prepended with the given
@@ -276,7 +276,7 @@ class PySPConfiguredObject(object):
         (name -> value) with those values. This method will preserve
         the _userSet status of all options. The optional flag
         'prefix' can be set to indicate that all registered class
-        options will have a name predended with the given prefix in
+        options will have a name prepended with the given prefix in
         the output dictionary. The optional flag 'srcprefix' can be
         set to indicate that all registered class options on the
         input options object have a named prepended with the given
@@ -310,12 +310,12 @@ class PySPConfiguredObject(object):
         """Update the input options object by extracting all registered
         options for this class from an argparse Namespace object. This
         method cannot determine if the values on the argparse Namespace
-        object were set explicity or are defaults. Therefore, the
+        object were set explicitly or are defaults. Therefore, the
         _userSet status will be updated on all options that are found.
         The method only compares the names against the attributes found
         on the argparse Namespace object. No other form of validation
         is performed. The optional flag 'prefix' can be set to indicate
-        that all registered class options will have a name predended
+        that all registered class options will have a name prepended
         with the given prefix on the updated options object. The
         optional flag 'srcprefix' can be set to indicate that
         registered class option names should be prepended with the
@@ -349,7 +349,7 @@ class PySPConfiguredObject(object):
         """Validate that all registered options can be found in the
         options block and that their option definitions are the
         same. The optional flag 'prefix' can be set to indicate that
-        all registered class options will have a name predended with
+        all registered class options will have a name prepended with
         the given prefix. The optional flag 'error_if_missing' can
         be used to control whether or not an exception is raised
         when registered options are missing."""
@@ -466,7 +466,7 @@ class PySPConfiguredExtension(PySPConfiguredObject):
         only those values. This method will preserve the _userSet
         status of all options. The optional flag 'prefix' can be set
         to indicate that all registered class options in the
-        returned options object will have a name predended with the
+        returned options object will have a name prepended with the
         given prefix. The optional flag 'srcprefix' can be set to
         indicate that all registered class options on the input
         options object have a named prepended with the given
@@ -496,7 +496,7 @@ class PySPConfiguredExtension(PySPConfiguredObject):
         (name -> value) with those values. This method will preserve
         the _userSet status of all options. The optional flag
         'prefix' can be set to indicate that all registered class
-        options will have a name predended with the given prefix in
+        options will have a name prepended with the given prefix in
         the output dictionary. The optional flag 'srcprefix' can be
         set to indicate that all registered class options on the
         input options object have a named prepended with the given
@@ -529,13 +529,13 @@ class PySPConfiguredExtension(PySPConfiguredObject):
         """Update the input options object by extracting all
         registered options for this class from an argparse Namespace
         object. This method cannot determine if the values on the
-        argparse Namespace object were set explicity or are
+        argparse Namespace object were set explicitly or are
         defaults. Therefore, the _userSet status will be updated on
         all options that are found.  The method only compares the
         names against the attributes found on the argparse Namespace
         object. No other form of validation is performed. The
         optional flag 'prefix' can be set to indicate that all
-        registered class options will have a name predended with the
+        registered class options will have a name prepended with the
         given prefix on the updated options object. The optional
         flag 'srcprefix' can be set to indicate that registered
         class option names should be prepended with the the given
@@ -569,7 +569,7 @@ class PySPConfiguredExtension(PySPConfiguredObject):
         """Validate that all registered options can be found in the
         options block and that their option definitions are the
         same. The optional flag 'prefix' can be set to indicate that
-        all registered class options will have a name predended with
+        all registered class options will have a name prepended with
         the given prefix. The optional flag 'error_if_missing' can
         be used to control whether or not an exception is raised
         when registered options are missing."""
