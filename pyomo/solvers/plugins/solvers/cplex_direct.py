@@ -24,6 +24,7 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition
+import time
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -33,20 +34,31 @@ class DegreeError(ValueError):
     pass
 
 
-class GurobiDirect(DirectSolver):
-    alias('gurobi_direct', doc='Direct python interface to Gurobi')
+class _CplexExpr(object):
+    def __int__(self):
+        self.variables = []
+        self.coefficients = []
+        self.offset = 0
+        self.q_variables1 = []
+        self.q_variables2 = []
+        self.q_coefficients = []
+
+
+class CPLEXDirect(DirectSolver):
+    alias('cplex_direct', doc='Direct python interface to CPLEX')
 
     def __init__(self, **kwds):
-        kwds['type'] = 'gurobi_direct'
+        kwds['type'] = 'cplexdirect'
         DirectSolver.__init__(self, **kwds)
         self._init()
+        self._wallclock_time = None
 
     def _init(self):
         try:
-            import gurobipy
-            self._gurobipy = gurobipy
+            import cplex
+            self._cplex = cplex
             self._python_api_exists = True
-            self._version = self._gurobipy.gurobi.version()
+            self._version = tuple(self._cplex.Cplex().get_version().split('.'))
             while len(self._version) < 4:
                 self._version += (0,)
             self._version = self._version[:4]
@@ -60,66 +72,49 @@ class GurobiDirect(DirectSolver):
             # course, the license is a token license. unfortunately, you can't
             # import without a license, which means we can't test for the
             # exception above!
-            print("Import of gurobipy failed - gurobi message=" + str(e) + "\n")
+            print("Import of cplex failed - cplex message=" + str(e) + "\n")
             self._python_api_exists = False
 
         self._range_constraints = set()
 
-        if self._version_major < 5:
-            self._max_constraint_degree = 1
-        else:
-            self._max_constraint_degree = 2
+        self._max_constraint_degree = 2
         self._max_obj_degree = 2
 
         # Note: Undefined capabilites default to None
         self._capabilities.linear = True
         self._capabilities.quadratic_objective = True
-        if self._version_major < 5:
-            self._capabilities.quadratic_constraint = False
-        else:
-            self._capabilities.quadratic_constraint = True
+        self._capabilities.quadratic_constraint = True
         self._capabilities.integer = True
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
     def _apply_solver(self):
         if self._tee:
-            self._solver_model.setParam('OutputFlag', 1)
+            def _process_stream(arg):
+                sys.stdout.write(arg)
+                return arg
+            self._solver_model.set_results_stream(self._log_file, _process_stream)
         else:
-            self._solver_model.setParam('OutputFlag', 0)
-
-        self._solver_model.setParam('LogFile', self._log_file)
+            self._solver_model.set_results_stream(self._log_file)
 
         if self._keepfiles:
             print("Solver log file: "+self._log_file)
 
-        # Options accepted by gurobi (case insensitive):
-        # ['Cutoff', 'IterationLimit', 'NodeLimit', 'SolutionLimit', 'TimeLimit',
-        #  'FeasibilityTol', 'IntFeasTol', 'MarkowitzTol', 'MIPGap', 'MIPGapAbs',
-        #  'OptimalityTol', 'PSDTol', 'Method', 'PerturbValue', 'ObjScale', 'ScaleFlag',
-        #  'SimplexPricing', 'Quad', 'NormAdjust', 'BarIterLimit', 'BarConvTol',
-        #  'BarCorrectors', 'BarOrder', 'Crossover', 'CrossoverBasis', 'BranchDir',
-        #  'Heuristics', 'MinRelNodes', 'MIPFocus', 'NodefileStart', 'NodefileDir',
-        #  'NodeMethod', 'PumpPasses', 'RINS', 'SolutionNumber', 'SubMIPNodes', 'Symmetry',
-        #  'VarBranch', 'Cuts', 'CutPasses', 'CliqueCuts', 'CoverCuts', 'CutAggPasses',
-        #  'FlowCoverCuts', 'FlowPathCuts', 'GomoryPasses', 'GUBCoverCuts', 'ImpliedCuts',
-        #  'MIPSepCuts', 'MIRCuts', 'NetworkCuts', 'SubMIPCuts', 'ZeroHalfCuts', 'ModKCuts',
-        #  'Aggregate', 'AggFill', 'PreDual', 'DisplayInterval', 'IISMethod', 'InfUnbdInfo',
-        #  'LogFile', 'PreCrush', 'PreDepRow', 'PreMIQPMethod', 'PrePasses', 'Presolve',
-        #  'ResultFile', 'ImproveStartTime', 'ImproveStartGap', 'Threads', 'Dummy', 'OutputFlag']
         for key, option in self.options.items():
-            self._solver_model.setParam(key, option)
+            opt_cmd = self._solver_model.parameters
+            key_pieces = key.split('_')
+            for key_piece in key_pieces:
+                opt_cmd = getattr(opt_cmd, key_piece)
+            opt_cmd.set(option)
 
-        if self._version_major >= 5:
-            for suffix in self._suffixes:
-                if re.match(suffix, "dual"):
-                    self._solver_model.setParam(self._gurobipy.GRB.Param.QCPDual, 1)
-
-        self._solver_model.optimize()
+        t0 = time.time()
+        self._solver_model.solve()
+        t1 = time.time()
+        self._wallclock_time = t1 - t0
 
         self._solver_model.setParam('LogFile', 'default')
 
-        # FIXME: can we get a return code indicating if Gurobi had a significant failure?
+        # FIXME: can we get a return code indicating if CPLEX had a significant failure?
         return Bunch(rc=None, log=None)
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
@@ -127,37 +122,53 @@ class GurobiDirect(DirectSolver):
 
         degree = canonical_degree(repn)
         if (degree is None) or (degree > max_degree):
-            raise DegreeError('GurobiDirect does not support expressions of degree {0}.'.format(degree))
+            raise DegreeError('CPLEXDirect does not support expressions of degree {0}.'.format(degree))
 
         if isinstance(repn, LinearCanonicalRepn):
-            new_expr = 0
+            new_expr = _CplexExpr()
 
             if repn.constant is not None:
-                new_expr += repn.constant
+                new_expr.offset = repn.constant
 
             if (repn.linear is not None) and (len(repn.linear) > 0):
                 list(map(referenced_vars.add, repn.variables))
-                new_expr += sum(coeff*self._pyomo_var_to_solver_var_map[repn.variables[i]]
-                                for i, coeff in enumerate(repn.linear))
+                new_expr.variables.extend(self._pyomo_var_to_solver_var_map[var] for var in repn.variables)
+                new_expr.coefficients.extend(coeff for coeff in repn.linear)
 
         else:
-            new_expr = 0
+            new_expr = _CplexExpr()
             if 0 in repn:
-                new_expr += repn[0][None]
+                new_expr.offset = repn[0][None]
 
             if 1 in repn:
                 for ndx, coeff in repn[1].items():
-                    new_expr += coeff * self._pyomo_var_to_solver_var_map[repn[-1][ndx]]
-                    referenced_vars.add(repn[-1][ndx])
+                    new_expr.coefficients.append(coeff)
+                    var = repn[-1][ndx]
+                    new_expr.variables.append(self._pyomo_var_to_solver_var_map[var])
+                    referenced_vars.add(var)
 
             if 2 in repn:
                 for key, coeff in repn[2].items():
-                    tmp_expr = coeff
-                    for ndx, power in key.items():
-                        referenced_vars.add(repn[-1][ndx])
-                        for i in range(power):
-                            tmp_expr *= self._pyomo_var_to_solver_var_map[repn[-1][ndx]]
-                    new_expr += tmp_expr
+                    new_expr.q_coefficients.append(coeff)
+                    indices = list(key.keys())
+                    if len(indices) == 1:
+                        ndx = indices[0]
+                        var = repn[-1][ndx]
+                        referenced_vars.add(var)
+                        cplex_var = self._pyomo_var_to_solver_var_map[var]
+                        new_expr.q_variables1.append(cplex_var)
+                        new_expr.q_variables2.append(cplex_var)
+                    else:
+                        ndx = indices[0]
+                        var = repn[-1][ndx]
+                        referenced_vars.add(var)
+                        cplex_var = self._pyomo_var_to_solver_var_map[var]
+                        new_expr.q_variables1.append(cplex_var)
+                        ndx = indices[1]
+                        var = repn[-1][ndx]
+                        referenced_vars.add(var)
+                        cplex_var = self._pyomo_var_to_solver_var_map[var]
+                        new_expr.q_variables2.append(cplex_var)
 
         return new_expr, referenced_vars
 
@@ -165,41 +176,41 @@ class GurobiDirect(DirectSolver):
         repn = generate_canonical_repn(expr)
 
         try:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(repn, max_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(repn, max_degree)
         except DegreeError as e:
             msg = e.args[0]
             msg += '\nexpr: {0}'.format(expr)
             raise DegreeError(msg)
 
-        return gurobi_expr, referenced_vars
+        return cplex_expr, referenced_vars
 
     def _add_var(self, var):
         varname = self._symbol_map.getSymbol(var, self._labeler)
-        vtype = self._gurobi_vtype_from_var(var)
+        vtype = self._cplex_vtype_from_var(var)
         lb = value(var.lb)
         ub = value(var.ub)
         if lb is None:
-            lb = -self._gurobipy.GRB.INFINITY
+            lb = -self._cplex.infinity
         if ub is None:
-            ub = self._gurobipy.GRB.INFINITY
+            ub = self._cplex.infinity
 
-        gurobipy_var = self._solver_model.addVar(lb=lb, ub=ub, vtype=vtype, name=varname)
+        self._solver_model.variables.add(lb=list(lb), ub=list(ub), types=list(vtype), names=list(varname))
 
-        self._pyomo_var_to_solver_var_map[var] = gurobipy_var
+        self._pyomo_var_to_solver_var_map[var] = varname
         self._referenced_variables[var] = 0
 
         if var.is_fixed():
-            gurobipy_var.setAttr('lb', var.value)
-            gurobipy_var.setAttr('ub', var.value)
+            self._solver_model.variables.set_lower_bounds(varname, var.value)
+            self._solver_model.variables.set_upper_bounds(varname, var.value)
 
     def _compile_instance(self, model, kwds={}):
         self._range_constraints = set()
         DirectOrPersistentSolver._compile_instance(self, model, kwds)
         try:
-            self._solver_model = self._gurobipy.Model()
+            self._solver_model = self._cplex.Cplex()
         except Exception:
             e = sys.exc_info()[1]
-            msg = ('Unable to create Gurobi model. Have you ihnstalled the Python bindings for Gurboi?\n\n\t' +
+            msg = ('Unable to create CPLEX model. Have you installed the Python bindings for CPLEX?\n\n\t' +
                    'Error message: {0}'.format(e))
             raise Exception(msg)
 
@@ -216,25 +227,6 @@ class GurobiDirect(DirectSolver):
                                          "the Gurobi instance."
                                          % (var.name, self._pyomo_model.name,))
 
-    def _add_block(self, block):
-        for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
-                                                active=True, sort=True):
-            self._add_var(var)
-        self._solver_model.update()
-
-        for sub_block in block.block_data_objects(descend_into=True, active=True):
-            for con in sub_block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint,
-                                                        descend_into=False, active=True, sort=True):
-                self._add_constraint(con)
-
-            for con in sub_block.component_data_objects(ctype=pyomo.core.base.sos.SOSConstraint,
-                                                        descend_into=False, active=True, sort=True):
-                self._add_sos_constraint(con)
-
-            if len([obj for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective,
-                                                                    descend_into=False, active=True)]) != 0:
-                self._compile_objective()
-
     def _add_constraint(self, con):
         if not con.active:
             return None
@@ -246,12 +238,12 @@ class GurobiDirect(DirectSolver):
         conname = self._symbol_map.getSymbol(con, self._labeler)
 
         if con._linear_canonical_form:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(con.canonical_form(),
-                                                                          self._max_constraint_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(con.canonical_form(),
+                                                                         self._max_constraint_degree)
         elif isinstance(con, LinearCanonicalRepn):
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_repn(con, self._max_constraint_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_repn(con, self._max_constraint_degree)
         else:
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(con.body, self._max_constraint_degree)
 
         if con.has_lb():
             if not is_fixed(con.lower):
@@ -261,24 +253,44 @@ class GurobiDirect(DirectSolver):
                 raise ValueError('Upper bound of constraint {0} is not constant.'.format(con))
 
         if con.equality:
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.EQUAL,
-                                                        rhs=value(con.lower), name=conname)
+            my_sense = 'E'
+            my_rhs = value(con.lower) - cplex_expr.offset
         elif con.has_lb() and (value(con.lower) > -float('inf')) and con.has_ub() and (value(con.upper) < float('inf')):
-            gurobipy_con = self._solver_model.addRange(gurobi_expr, value(con.lower), value(con.upper), name=conname)
+            my_sense = 'R'
+            lb = value(con.lower)
+            ub = value(con.upper)
+            if len(cplex_expr.q_coefficients) == 0:
+                self._solver_model.linear_constraints.add(lin_expr=[[cplex_expr.variables, cplex_expr.coefficients]],
+                                                          senses=my_sense, rhs=[ub-cplex_expr.offset],
+                                                          range_values=[lb-ub], names=[conname])
+            else:
+                raise ValueError('The CPLEXDirect interface does not support quadratic ' +
+                                 'range constraints: {0}'.format(con))
             self._range_constraints.add(con)
         elif con.has_lb() and (value(con.lower) > -float('inf')):
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.GREATER_EQUAL,
-                                                        rhs=value(con.lower), name=conname)
+            my_sense = 'G'
+            my_rhs = value(con.lower) - cplex_expr.offset
         elif con.has_ub() and (value(con.upper) < float('inf')):
-            gurobipy_con = self._solver_model.addConstr(lhs=gurobi_expr, sense=self._gurobipy.GRB.LESS_EQUAL,
-                                                        rhs=value(con.upper), name=conname)
+            my_sense = 'L'
+            my_rhs = value(con.upper) - cplex_expr.offset
         else:
             raise ValueError('Constraint does not have a lower or an upper bound: {0} \n'.format(con))
+
+        if my_sense != 'R':
+            if len(cplex_expr.q_coefficients) == 0:
+                self._solver_model.linear_constraints.add(lin_expr=[[cplex_expr.variables, cplex_expr.coefficients]],
+                                                          senses=my_sense, rhs=[my_rhs], names=[conname])
+            else:
+                self._solver_model.quadratic_constraints.add(lin_expr=[cplex_expr.variables, cplex_expr.coefficients],
+                                                             quad_expr=[cplex_expr.q_variables1,
+                                                                        cplex_expr.q_variables2,
+                                                                        cplex_expr.q_coefficients],
+                                                             sense=my_sense, rhs=my_rhs, name=conname)
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
         self._vars_referenced_by_con[con] = referenced_vars
-        self._pyomo_con_to_solver_con_map[con] = gurobipy_con
+        self._pyomo_con_to_solver_con_map[con] = conname
 
     def _add_sos_constraint(self, con):
         if not con.active:
@@ -307,18 +319,18 @@ class GurobiDirect(DirectSolver):
         gurobipy_con = self._solver_model.addSOS(sos_type, gurobi_vars, weights)
         self._pyomo_con_to_solver_con_map[con] = gurobipy_con
 
-    def _gurobi_vtype_from_var(self, var):
+    def _cplex_vtype_from_var(self, var):
         """
         This function takes a pyomo variable and returns the appropriate gurobi variable type
         :param var: pyomo.core.base.var.Var
         :return: gurobipy.GRB.CONTINUOUS or gurobipy.GRB.BINARY or gurobipy.GRB.INTEGER
         """
         if var.is_binary():
-            vtype = self._gurobipy.GRB.BINARY
+            vtype = self._solver_model.variables.type.binary
         elif var.is_integer():
-            vtype = self._gurobipy.GRB.INTEGER
+            vtype = self._solver_model.variables.type.integer
         elif var.is_continuous():
-            vtype = self._gurobipy.GRB.CONTINUOUS
+            vtype = self._solver_model.variables.type.continuous
         else:
             raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
         return vtype
