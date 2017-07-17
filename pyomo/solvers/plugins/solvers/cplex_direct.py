@@ -441,28 +441,28 @@ class CPLEXDirect(DirectSolver):
         else:
             soln.status = SolutionStatus.error
 
-        if gprob.ModelSense == 1:  # minimizing
+        if gprob.objective.get_sense() == gprob.objective.sense.minimize:  # minimizing
             self.results.problem.sense = pyomo.core.kernel.minimize
             try:
-                self.results.problem.upper_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+                self.results.problem.upper_bound = gprob.solution.get_objective_value()
+            except self._cplex.exceptions.CplexError:
                 self.results.problem.upper_bound = None
             try:
-                self.results.problem.lower_bound = gprob.ObjBound
-            except self._gurobipy.GurobiError:
+                self.results.problem.lower_bound = gprob.solution.MIP.get_best_objective()
+            except self._cplex.exceptions.CplexError:
                 self.results.problem.lower_bound = None
-        elif gprob.ModelSense == -1:  # maximizing
+        elif gprob.objective.get_sense() == gprob.objective.sense.maximize:  # maximizing
             self.results.problem.sense = pyomo.core.kernel.maximize
             try:
-                self.results.problem.upper_bound = gprob.ObjBound
-            except self._gurobipy.GurobiError:
+                self.results.problem.upper_bound = gprob.solution.MIP.get_best_objective()
+            except self._cplex.exceptions.CplexError:
                 self.results.problem.upper_bound = None
             try:
-                self.results.problem.lower_bound = gprob.ObjVal
-            except self._gurobipy.GurobiError:
+                self.results.problem.lower_bound = gprob.solution.get_objective_value()
+            except self._cplex.exceptions.CplexError:
                 self.results.problem.lower_bound = None
         else:
-            raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
+            raise RuntimeError('Unrecognized cplex objective sense: {0}'.format(gprob.objective.get_sense()))
 
         try:
             soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
@@ -484,49 +484,12 @@ class CPLEXDirect(DirectSolver):
                                                                gprob.variables.get_num_integer())
         self.results.problem.number_of_objectives = 1
 
-        status = self._solver_model.Status
-        if self._gurobipy.GRB.OPTIMAL == status:
-            soln.status = SolutionStatus.optimal
-        elif self._gurobipy.GRB.INFEASIBLE == status:
-            soln.status = SolutionStatus.infeasible
-        elif self._gurobipy.GRB.CUTOFF == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.INF_OR_UNBD == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.INTERRUPTED == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.LOADED == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.SUBOPTIMAL == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.UNBOUNDED == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.ITERATION_LIMIT == status:
-            soln.status = SolutionStatus.stoppedByLimit
-        elif self._gurobipy.GRB.NODE_LIMIT == status:
-            soln.status = SolutionStatus.stoppedByLimit
-        elif self._gurobipy.GRB.SOLUTION_LIMIT == status:
-            soln.status = SolutionStatus.stoppedByLimit
-        elif self._gurobipy.GRB.TIME_LIMIT == status:
-            soln.status = SolutionStatus.stoppedByLimit
-        elif self._gurobipy.GRB.NUMERIC == status:
-            soln.status = SolutionStatus.error
-        else:
-            raise RuntimeError("Unknown solution status returned by "
-                               "Gurobi solver")
+        # only try to get objective and variable values if a solution exists
+        if gprob.solution.get_solution_type() > 0:
 
-        # if a solve was stopped by a limit, we still need to check to
-        # see if there is a solution available - this may not always
-        # be the case, both in LP and MIP contexts.
-        if (soln.status == SolutionStatus.optimal) or \
-           ((soln.status == SolutionStatus.stoppedByLimit) and (gprob.SolCount > 0)):
-
-            soln.objective[self._objective_label] = {'Value': gprob.ObjVal}
+            soln.objective[self._objective_label] = {'Value': gprob.solution.get_objective_value()}
 
             self._load_vars()
-            # for pyomo_var, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
-            #     if self._referenced_variables[pyomo_var] > 0:
-            #         soln_variables[gurobipy_var.VarName] = {"Value": gurobipy_var.x}
 
             if extract_reduced_costs:
                 for var in pvars:
@@ -576,4 +539,4 @@ class CPLEXDirect(DirectSolver):
 
         for var in vars_to_load:
             if ref_vars[var] > 0:
-                var.value = var_map[var].x
+                var.value = self._solver_model.solution.get_values(var_map[var])
