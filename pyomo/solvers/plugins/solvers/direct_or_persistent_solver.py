@@ -16,6 +16,7 @@ import pyutilib.common
 import pyutilib.services
 import pyomo.opt.base.solvers
 from pyomo.core.kernel.component_map import ComponentMap
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.base.formats import ResultsFormat
 from pyutilib.misc import Options
 
@@ -35,6 +36,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = ComponentMap()
         self._vars_referenced_by_con = ComponentMap()
+        self._vars_referenced_by_obj = ComponentSet()
         self._objective_label = None
         self.results = None
         self._smap_id = None

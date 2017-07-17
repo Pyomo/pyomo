@@ -254,38 +254,39 @@ class CPLEXDirect(DirectSolver):
 
         if con.equality:
             my_sense = 'E'
-            my_rhs = value(con.lower) - cplex_expr.offset
+            my_rhs = [value(con.lower) - cplex_expr.offset]
+            my_range = []
         elif con.has_lb() and (value(con.lower) > -float('inf')) and con.has_ub() and (value(con.upper) < float('inf')):
             my_sense = 'R'
             lb = value(con.lower)
             ub = value(con.upper)
-            if len(cplex_expr.q_coefficients) == 0:
-                self._solver_model.linear_constraints.add(lin_expr=[[cplex_expr.variables, cplex_expr.coefficients]],
-                                                          senses=my_sense, rhs=[ub-cplex_expr.offset],
-                                                          range_values=[lb-ub], names=[conname])
-            else:
-                raise ValueError('The CPLEXDirect interface does not support quadratic ' +
-                                 'range constraints: {0}'.format(con))
+            my_rhs = [ub - cplex_expr.offset]
+            my_range = [lb - ub]
             self._range_constraints.add(con)
         elif con.has_lb() and (value(con.lower) > -float('inf')):
             my_sense = 'G'
-            my_rhs = value(con.lower) - cplex_expr.offset
+            my_rhs = [value(con.lower) - cplex_expr.offset]
+            my_range = []
         elif con.has_ub() and (value(con.upper) < float('inf')):
             my_sense = 'L'
-            my_rhs = value(con.upper) - cplex_expr.offset
+            my_rhs = [value(con.upper) - cplex_expr.offset]
+            my_range = []
         else:
             raise ValueError('Constraint does not have a lower or an upper bound: {0} \n'.format(con))
 
-        if my_sense != 'R':
-            if len(cplex_expr.q_coefficients) == 0:
-                self._solver_model.linear_constraints.add(lin_expr=[[cplex_expr.variables, cplex_expr.coefficients]],
-                                                          senses=my_sense, rhs=[my_rhs], names=[conname])
-            else:
-                self._solver_model.quadratic_constraints.add(lin_expr=[cplex_expr.variables, cplex_expr.coefficients],
-                                                             quad_expr=[cplex_expr.q_variables1,
-                                                                        cplex_expr.q_variables2,
-                                                                        cplex_expr.q_coefficients],
-                                                             sense=my_sense, rhs=my_rhs, name=conname)
+        if len(cplex_expr.q_coefficients) == 0:
+            self._solver_model.linear_constraints.add(lin_expr=[[cplex_expr.variables, cplex_expr.coefficients]],
+                                                      senses=my_sense, rhs=my_rhs, range_values=my_range,
+                                                      names=[conname])
+        else:
+            if my_sense == 'R':
+                raise ValueError('The CPLEXDirect interface does not support quadratic ' +
+                                 'range constraints: {0}'.format(con))
+            self._solver_model.quadratic_constraints.add(lin_expr=[cplex_expr.variables, cplex_expr.coefficients],
+                                                         quad_expr=[cplex_expr.q_variables1,
+                                                                    cplex_expr.q_variables2,
+                                                                    cplex_expr.q_coefficients],
+                                                         sense=my_sense, rhs=my_rhs, name=conname)
 
         for var in referenced_vars:
             self._referenced_variables[var] += 1
@@ -299,25 +300,25 @@ class CPLEXDirect(DirectSolver):
         conname = self._symbol_map.getSymbol(con, self._labeler)
         level = con.level
         if level == 1:
-            sos_type = self._gurobipy.GRB.SOS_TYPE1
+            sos_type = self._solver_model.SOS.type.SOS1
         elif level == 2:
-            sos_type = self._gurobipy.GRB.SOS_TYPE2
+            sos_type = self._solver_model.SOS.type.SOS2
         else:
             raise ValueError('Solver does not support SOS level {0} constraints'.format(level))
 
-        gurobi_vars = []
+        cplex_vars = []
         weights = []
 
         self._vars_referenced_by_con[con] = ComponentSet()
 
         for v, w in con.get_items():
             self._vars_referenced_by_con[con].add(v)
-            gurobi_vars.append(self._pyomo_var_to_solver_var_map[v])
+            cplex_vars.append(self._pyomo_var_to_solver_var_map[v])
             self._referenced_variables[v] += 1
             weights.append(w)
 
-        gurobipy_con = self._solver_model.addSOS(sos_type, gurobi_vars, weights)
-        self._pyomo_con_to_solver_con_map[con] = gurobipy_con
+        self._solver_model.SOS.add(type=sos_type, SOS=[cplex_vars, weights], name=conname)
+        self._pyomo_con_to_solver_con_map[con] = conname
 
     def _cplex_vtype_from_var(self, var):
         """
@@ -338,6 +339,15 @@ class CPLEXDirect(DirectSolver):
     def _compile_objective(self):
         obj_counter = 0
 
+        for var in self._vars_referenced_by_obj:
+            self._referenced_variables[var] -= 1
+
+        if self._objective_label is not None:
+            self._symbol_map.removeSymbol(self._symbol_map.bySymbol[self._objective_label]())
+
+        self._solver_model.objective.set_linear([(var, 0.0) for var in self._pyomo_var_to_solver_var_map.values()])
+        self._solver_model.objective.set_quadratic([[[],[]] for i in self._pyomo_var_to_solver_var_map.keys()])
+
         for obj in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.objective.Objective,
                                                             descend_into=True, active=True):
             obj_counter += 1
@@ -345,22 +355,27 @@ class CPLEXDirect(DirectSolver):
                 raise ValueError('Multiple active objectives found. Solver only handles one active objective')
 
             if obj.sense == pyomo.core.kernel.minimize:
-                sense = self._gurobipy.GRB.MINIMIZE
+                sense = self._solver_model.objective.sense.minimize
             elif obj.sense == pyomo.core.kernel.maximize:
-                sense = self._gurobipy.GRB.MAXIMIZE
+                sense = self._solver_model.objective.sense.maximize
             else:
                 raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(obj.expr, self._max_obj_degree)
+            cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(obj.expr, self._max_obj_degree)
 
             for var in referenced_vars:
                 self._referenced_variables[var] += 1
 
-            self._solver_model.setObjective(gurobi_expr, sense=sense)
+            self._solver_model.set_sense(sense)
+            self._solver_model.objective.set_linear(zip(cplex_expr.variables, cplex_expr.coefficients))
+            self._solver_model.objective.set_quadratic_coefficients(zip(cplex_expr.q_variables1,
+                                                                        cplex_expr.q_variables2,
+                                                                        cplex_expr.q_coefficients))
             self._objective_label = self._symbol_map.getSymbol(obj, self._labeler)
+            self._vars_referenced_by_obj = referenced_vars
 
     def _postsolve(self):
-        # the only suffixes that we extract from GUROBI are
+        # the only suffixes that we extract from CPLEX are
         # constraint duals, constraint slacks, and variable
         # reduced-costs. scan through the solver suffix list
         # and throw an exception if the user has specified
@@ -377,7 +392,7 @@ class CPLEXDirect(DirectSolver):
                 extract_slacks = True
                 flag = True
                 if len(self._range_constraints) != 0:
-                    err_msg = ('GurobiDirect does not support range constraints and slack suffixes. \nIf you want ' +
+                    err_msg = ('CPLEXDirect does not support range constraints and slack suffixes. \nIf you want ' +
                                'slack information, please split up the following constraints:\n')
                     for con in self._range_constraints:
                         err_msg += '{0}\n'.format(con)
@@ -392,15 +407,9 @@ class CPLEXDirect(DirectSolver):
 
         gprob = self._solver_model
 
-        if gprob.getAttr(self._gurobipy.GRB.Attr.IsMIP):
+        if gprob.get_problem_type() in [gprob.problem_type.MILP, gprob.problem_type.MIQP, gprob.problem_type.MIQCP]:
             extract_reduced_costs = False
             extract_duals = False
-
-        pvars = gprob.getVars()
-        cons = gprob.getConstrs()
-        qcons = []
-        if self._version_major >= 5:
-            qcons = gprob.getQConstrs()
 
         self.results = SolverResults()
         soln = Solution()
@@ -411,61 +420,27 @@ class CPLEXDirect(DirectSolver):
         soln_variables = soln.variable
         soln_constraints = soln.constraint
 
-        self.results.solver.name = ("Gurobi %s.%s%s"
-                                    % self._gurobipy.gurobi.version())
-        self.results.solver.wallclock_time = gprob.Runtime
+        self.results.solver.name = ("CPLEX {0}".format(gprob.get_version()))
+        self.results.solver.wallclock_time = self._wallclock_time
 
-        if gprob.Status == 1:  # problem is loaded, but no solution
-            self.results.solver.termination_message = "Model is loaded, but no solution information is available."
-            self.results.solver.termination_condition = TerminationCondition.other
-        if gprob.Status == 2:  # optimal
-            self.results.solver.termination_message = "Model was solved to optimality (subject to tolerances)."
+        soln_status = gprob.solution.get_status()
+        if soln_status in [1, 101, 102]:
             self.results.solver.termination_condition = TerminationCondition.optimal
-        elif gprob.Status == 3:  # infeasible
-            self.results.solver.termination_message = "Model was proven to be infeasible."
-            self.results.solver.termination_condition = TerminationCondition.infeasible
-        elif gprob.Status == 4:  # infeasible or unbounded
-            self.results.solver.termination_message = "Model was proven to be either infeasible or unbounded."
-            self.results.solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
-        elif gprob.Status == 5:  # unbounded
-            self.results.solver.termination_message = "Model was proven to be unbounded."
+            soln.status = SolutionStatus.optimal
+        elif soln_status in [2, 118]:
             self.results.solver.termination_condition = TerminationCondition.unbounded
-        elif gprob.Status == 6:  # cutoff
-            self.results.solver.termination_message = "Optimal objective for model was proven to be worse than the " \
-                                                      "value specified in the Cutoff parameter."
-            self.results.solver.termination_condition = TerminationCondition.minFunctionValue
-        elif gprob.Status == 7:  # iteration limit
-            self.results.solver.termination_message = "Optimization terminated because the total number of simplex " \
-                                                      "or barrier iterations exceeded specified limits."
-            self.results.solver.termination_condition = TerminationCondition.maxIterations
-        elif gprob.Status == 8:  # node limit
-            self.results.solver.termination_message = "Optimization terminated because the total number of " \
-                                                      "branch-and-cut nodes exceeded specified limits."
-            self.results.solver.termination_condition = TerminationCondition.maxEvaluations
-        elif gprob.Status == 9:  # time limit
-            self.results.solver.termination_message = "Optimization terminated because the total time expended " \
-                                                      "exceeded specified limits."
-            self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
-        elif gprob.Status == 10:  # solution limit
-            self.results.solver.termination_message = "Optimization terminated because the number of solutions " \
-                                                      "found reached specified limits."
-            self.results.solver.termination_condition = TerminationCondition.other
-        elif gprob.Status == 11:  # interrupted
-            self.results.solver.termination_message = "Optimization was terminated by the user."
-            self.results.solver.termination_condition = TerminationCondition.other
-        elif gprob.Status == 12:  # numeric issues
-            self.results.solver.termination_message = "Optimization was terminated due to unrecoverable numerical " \
-                                                      "difficulties."
-            self.results.solver.termination_condition = TerminationCondition.other
-        elif gprob.Status == 13:  # suboptimal
-            self.results.solver.termination_message = "Optimization was unable to satisfy optimality tolerances; " \
-                                                      "returned solution is sub-optimal."
-            self.results.solver.termination_condition = TerminationCondition.other
-        else:  # unknown
-            self.results.solver.termination_message = "Unknown termination condition received following optimization."
-            self.results.solver.termination_condition = TerminationCondition.other
+            soln.status = SolutionStatus.unbounded
+        elif soln_status in [4, 119]:
+            # Note: soln_status of 4 means infeasible or unbounded
+            #       and 119 means MIP infeasible or unbounded
+            self.results.solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
+            soln.status = SolutionStatus.unsure
+        elif soln_status in [3, 103]:
+            self.results.solver.termination_condition = TerminationCondition.infeasible
+            soln.status = SolutionStatus.infeasible
+        else:
+            soln.status = SolutionStatus.error
 
-        self.results.problem.name = gprob.ModelName
         if gprob.ModelSense == 1:  # minimizing
             self.results.problem.sense = pyomo.core.kernel.minimize
             try:
@@ -494,14 +469,20 @@ class CPLEXDirect(DirectSolver):
         except TypeError:
             soln.gap = None
 
-        self.results.problem.number_of_constraints = gprob.NumConstrs + gprob.NumQConstrs + gprob.NumSOS
-        self.results.problem.number_of_nonzeros = gprob.NumNZs
-        self.results.problem.number_of_variables = gprob.NumVars
-        self.results.problem.number_of_binary_variables = gprob.NumBinVars
-        self.results.problem.number_of_integer_variables = gprob.NumIntVars
-        self.results.problem.number_of_continuous_variables = gprob.NumVars - gprob.NumIntVars - gprob.NumBinVars
+        self.results.problem.name = gprob.get_problem_name()
+        assert gprob.indicator_constraints.get_num() == 0
+        self.results.problem.number_of_constraints = (gprob.linear_constraints.get_num() +
+                                                      gprob.quadratic_constraints.get_num() +
+                                                      gprob.SOS.get_num())
+        self.results.problem.number_of_nonzeros = None
+        self.results.problem.number_of_variables = gprob.variables.get_num()
+        self.results.problem.number_of_binary_variables = gprob.variables.get_num_binary()
+        self.results.problem.number_of_integer_variables = gprob.variables.get_num_integer()
+        assert gprob.variables.get_num_semiinteger() == 0
+        self.results.problem.number_of_continuous_variables = (gprob.variables.get_num() -
+                                                               gprob.variables.get_num_binary() -
+                                                               gprob.variables.get_num_integer())
         self.results.problem.number_of_objectives = 1
-        self.results.problem.number_of_solutions = gprob.SolCount
 
         status = self._solver_model.Status
         if self._gurobipy.GRB.OPTIMAL == status:

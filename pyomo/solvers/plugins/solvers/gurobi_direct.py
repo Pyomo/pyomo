@@ -326,6 +326,12 @@ class GurobiDirect(DirectSolver):
     def _compile_objective(self):
         obj_counter = 0
 
+        for var in self._vars_referenced_by_obj:
+            self._referenced_variables[var] -= 1
+
+        if self._objective_label is not None:
+            self._symbol_map.removeSymbol(self._symbol_map.bySymbol[self._objective_label]())
+
         for obj in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.objective.Objective,
                                                             descend_into=True, active=True):
             obj_counter += 1
@@ -346,6 +352,7 @@ class GurobiDirect(DirectSolver):
 
             self._solver_model.setObjective(gurobi_expr, sense=sense)
             self._objective_label = self._symbol_map.getSymbol(obj, self._labeler)
+            self._vars_referenced_by_obj = referenced_vars
 
     def _postsolve(self):
         # the only suffixes that we extract from GUROBI are
