@@ -38,6 +38,14 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def _remove_var(self, solver_var):
         self._solver_model.remove(solver_var)
 
+    def add_var(self, var):
+        if var.is_indexed():
+            for child_var in var.values():
+                self.add_var(child_var)
+            return
+        self._add_var(var)
+        self._solver_model.update()
+
     def _warm_start(self):
         GurobiDirect._warm_start(self)
 
