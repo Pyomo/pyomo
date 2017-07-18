@@ -391,7 +391,6 @@ class GurobiDirect(DirectSolver):
             extract_reduced_costs = False
             extract_duals = False
 
-        pvars = gprob.getVars()
         cons = gprob.getConstrs()
         qcons = []
         if self._version_major >= 5:
@@ -543,8 +542,10 @@ class GurobiDirect(DirectSolver):
             #         soln_variables[gurobipy_var.VarName] = {"Value": gurobipy_var.x}
 
             if extract_reduced_costs:
+                pvars = [var for pyomo_var, var in self._pyomo_var_to_solver_var_map.items()
+                         if self._referenced_variables[pyomo_var] > 0]
                 for var in pvars:
-                    soln_variables[var.VarName]["Rc"] = var.Rc
+                    soln_variables[var.VarName] = {'Rc': var.Rc}
 
             if extract_duals or extract_slacks:
                 for con in cons:

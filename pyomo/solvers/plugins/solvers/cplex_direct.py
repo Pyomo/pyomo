@@ -438,7 +438,14 @@ class CPLEXDirect(DirectSolver):
         elif soln_status in [3, 103]:
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
+        elif soln_status in [10]:
+            self.results.solver.termination_condition = TerminationCondition.maxIterations
+            soln.status = SolutionStatus.stoppedByLimit
+        elif soln_status in [11, 25]:
+            self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
+            soln.status = SolutionStatus.stoppedByLimit
         else:
+            self.results.solver.termination_condition = TerminationCondition.other
             soln.status = SolutionStatus.error
 
         if gprob.objective.get_sense() == gprob.objective.sense.minimize:  # minimizing
@@ -486,34 +493,38 @@ class CPLEXDirect(DirectSolver):
 
         # only try to get objective and variable values if a solution exists
         if gprob.solution.get_solution_type() > 0:
-
             soln.objective[self._objective_label] = {'Value': gprob.solution.get_objective_value()}
 
             self._load_vars()
 
             if extract_reduced_costs:
+                pvars = [var for pyomo_var, var in self._pyomo_var_to_solver_var_map.itesm()
+                         if self._referenced_variables[pyomo_var] > 0]
                 for var in pvars:
-                    soln_variables[var.VarName]["Rc"] = var.Rc
+                    soln_variables[var]["Rc"] = gprob.solution.get_reduced_costs(var)
 
-            if extract_duals or extract_slacks:
+            if extract_slacks:
+                cons = gprob.linear_constraints.get_names()
+                qcons = gprob.quadratic_constraints.get_names()
                 for con in cons:
-                    soln_constraints[con.ConstrName] = {}
+                    soln_constraints[con] = {}
                 for con in qcons:
-                    soln_constraints[con.QCName] = {}
+                    soln_constraints[con] = {}
+            elif extract_duals:
+                cons = gprob.linear_constraints.get_names()
+                for con in cons:
+                    soln_constraints[con] = {}
 
             if extract_duals:
+                # CPLEX Python API does not support quadratic dual collection
                 for con in cons:
-                    # Pi attributes in Gurobi are the constraint duals
-                    soln_constraints[con.ConstrName]["Dual"] = con.Pi
-                for con in qcons:
-                    # QCPI attributes in Gurobi are the constraint duals
-                    soln_constraints[con.QCName]["Dual"] = con.QCPi
+                    soln_constraints[con]["Dual"] = gprob.solution.get_dual_values(con)
 
             if extract_slacks:
                 for con in cons:
-                    soln_constraints[con.ConstrName]["Slack"] = con.Slack
+                    soln_constraints[con]["Slack"] = gprob.solution.get_linear_slacks(con)
                 for con in qcons:
-                    soln_constraints[con.QCName]["Slack"] = con.QCSlack
+                    soln_constraints[con]["Slack"] = gprob.solution.get_quadratic_slacks(con)
 
         self.results.solution.insert(soln)
 
@@ -527,9 +538,15 @@ class CPLEXDirect(DirectSolver):
         return True
 
     def _warm_start(self):
-        for pyomo_var, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
+        var_names = []
+        var_values = []
+        for pyomo_var, cplex_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
-                gurobipy_var.setAttr(self._gurobipy.GRB.Attr.Start, value(pyomo_var))
+                var_names.append(cplex_var)
+                var_values.append(value(pyomo_var))
+
+        if len(var_names):
+            self._solver_model.MIP_starts.add([var_names, var_values], self._solver_model.MIP_starts.effort_level.auto)
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_map
