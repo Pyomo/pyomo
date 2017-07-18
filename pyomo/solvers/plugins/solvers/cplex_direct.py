@@ -100,6 +100,40 @@ class CPLEXDirect(DirectSolver):
         if self._keepfiles:
             print("Solver log file: "+self._log_file)
 
+        if len(self._solver_model.objective.get_quadratic()) != 0:
+            quadratic_objective = True
+        else:
+            quadratic_objective = False
+
+        num_integer_vars = self._solver_model.variables.get_num_integer()
+        num_binary_vars = self._solver_model.variables.get_num_binary()
+        num_sos = self._solver_model.SOS.get_num()
+
+        if self._solver_model.quadratic_constraints.get_num() != 0:
+            quadratic_cons = True
+        else:
+            quadratic_cons = False
+
+        if (num_integer_vars + num_binary_vars + num_sos) > 0:
+            integer = True
+        else:
+            integer = False
+
+        if integer:
+            if quadratic_cons:
+                self._solver_model.set_problem_type(self._solver_model.problem_type.MIQCP)
+            elif quadratic_objective:
+                self._solver_model.set_problem_type(self._solver_model.problem_type.MIQP)
+            else:
+                self._solver_model.set_problem_type(self._solver_model.problem_type.MILP)
+        else:
+            if quadratic_cons:
+                self._solver_model.set_problem_type(self._solver_model.problem_type.QCP)
+            elif quadratic_objective:
+                self._solver_model.set_problem_type(self._solver_model.problem_type.QP)
+            else:
+                self._solver_model.set_problem_type(self._solver_model.problem_type.LP)
+
         for key, option in self.options.items():
             opt_cmd = self._solver_model.parameters
             key_pieces = key.split('_')
@@ -111,8 +145,6 @@ class CPLEXDirect(DirectSolver):
         self._solver_model.solve()
         t1 = time.time()
         self._wallclock_time = t1 - t0
-
-        self._solver_model.setParam('LogFile', 'default')
 
         # FIXME: can we get a return code indicating if CPLEX had a significant failure?
         return Bunch(rc=None, log=None)
@@ -369,10 +401,13 @@ class CPLEXDirect(DirectSolver):
                 self._referenced_variables[var] += 1
 
             self._solver_model.objective.set_sense(sense)
-            self._solver_model.objective.set_linear(zip(cplex_expr.variables, cplex_expr.coefficients))
-            self._solver_model.objective.set_quadratic_coefficients(zip(cplex_expr.q_variables1,
-                                                                        cplex_expr.q_variables2,
-                                                                        cplex_expr.q_coefficients))
+            self._solver_model.objective.set_offset(cplex_expr.offset)
+            if len(cplex_expr.coefficients) != 0:
+                self._solver_model.objective.set_linear(list(zip(cplex_expr.variables, cplex_expr.coefficients)))
+            if len(cplex_expr.q_coefficients) != 0:
+                self._solver_model.objective.set_quadratic_coefficients(list(zip(cplex_expr.q_variables1,
+                                                                                 cplex_expr.q_variables2,
+                                                                                 cplex_expr.q_coefficients)))
             self._objective_label = self._symbol_map.getSymbol(obj, self._labeler)
             self._vars_referenced_by_obj = referenced_vars
 
