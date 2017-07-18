@@ -35,7 +35,7 @@ class DegreeError(ValueError):
 
 
 class _CplexExpr(object):
-    def __int__(self):
+    def __init__(self):
         self.variables = []
         self.coefficients = []
         self.offset = 0
@@ -194,7 +194,7 @@ class CPLEXDirect(DirectSolver):
         if ub is None:
             ub = self._cplex.infinity
 
-        self._solver_model.variables.add(lb=list(lb), ub=list(ub), types=list(vtype), names=list(varname))
+        self._solver_model.variables.add(lb=[lb], ub=[ub], types=[vtype], names=[varname])
 
         self._pyomo_var_to_solver_var_map[var] = varname
         self._referenced_variables[var] = 0
@@ -346,7 +346,7 @@ class CPLEXDirect(DirectSolver):
             self._symbol_map.removeSymbol(self._symbol_map.bySymbol[self._objective_label]())
 
         self._solver_model.objective.set_linear([(var, 0.0) for var in self._pyomo_var_to_solver_var_map.values()])
-        self._solver_model.objective.set_quadratic([[[],[]] for i in self._pyomo_var_to_solver_var_map.keys()])
+        self._solver_model.objective.set_quadratic([[[0], [0]] for i in self._pyomo_var_to_solver_var_map.keys()])
 
         for obj in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.objective.Objective,
                                                             descend_into=True, active=True):
@@ -362,11 +362,13 @@ class CPLEXDirect(DirectSolver):
                 raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
             cplex_expr, referenced_vars = self._get_expr_from_pyomo_expr(obj.expr, self._max_obj_degree)
+            for i in range(len(cplex_expr.q_coefficients)):
+                cplex_expr.q_coefficients[i] *= 2
 
             for var in referenced_vars:
                 self._referenced_variables[var] += 1
 
-            self._solver_model.set_sense(sense)
+            self._solver_model.objective.set_sense(sense)
             self._solver_model.objective.set_linear(zip(cplex_expr.variables, cplex_expr.coefficients))
             self._solver_model.objective.set_quadratic_coefficients(zip(cplex_expr.q_variables1,
                                                                         cplex_expr.q_variables2,
