@@ -17,6 +17,10 @@ import pyutilib.misc
 import pyutilib.common
 import time
 import logging
+from pyomo.core.base.constraint import Constraint
+from pyomo.core.base.var import Var
+from pyomo.core.base.sos import SOSConstraint
+
 
 logger = logging.getLogger('pyomo.solvers')
 

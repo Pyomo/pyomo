@@ -11,9 +11,6 @@
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.util.plugin import alias
-from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.var import Var
-from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.kernel.numvalue import value
 
 
