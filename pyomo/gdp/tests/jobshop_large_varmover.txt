@@ -1,0 +1,128 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: x79
+  Lower bound: 32.0
+  Upper bound: 32.0
+  Number of objectives: 1
+  Number of constraints: 148
+  Number of variables: 79
+  Number of binary variables: 70
+  Number of integer variables: 70
+  Number of continuous variables: 9
+  Number of nonzeros: 365
+  Sense: minimize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Return code: 0
+  Message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Termination condition: optimal
+  Termination message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Wall time: 0.197428941727
+  Error rc: 0
+  Time: 1.16318297386
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Objective:
+    makespan:
+      Value: 32
+  Variable:
+    _gdp_moved_IV_1:
+      Value: 1
+    _gdp_moved_IV_11:
+      Value: 1
+    _gdp_moved_IV_14:
+      Value: 1
+    _gdp_moved_IV_16:
+      Value: 1
+    _gdp_moved_IV_17:
+      Value: 1
+    _gdp_moved_IV_20:
+      Value: 1
+    _gdp_moved_IV_21:
+      Value: 1
+    _gdp_moved_IV_24:
+      Value: 1
+    _gdp_moved_IV_26:
+      Value: 1
+    _gdp_moved_IV_27:
+      Value: 1
+    _gdp_moved_IV_29:
+      Value: 1
+    _gdp_moved_IV_32:
+      Value: 1
+    _gdp_moved_IV_33:
+      Value: 1
+    _gdp_moved_IV_36:
+      Value: 1
+    _gdp_moved_IV_37:
+      Value: 1
+    _gdp_moved_IV_4:
+      Value: 1
+    _gdp_moved_IV_40:
+      Value: 1
+    _gdp_moved_IV_42:
+      Value: 1
+    _gdp_moved_IV_43:
+      Value: 1
+    _gdp_moved_IV_46:
+      Value: 1
+    _gdp_moved_IV_48:
+      Value: 1
+    _gdp_moved_IV_50:
+      Value: 1
+    _gdp_moved_IV_52:
+      Value: 1
+    _gdp_moved_IV_54:
+      Value: 1
+    _gdp_moved_IV_56:
+      Value: 1
+    _gdp_moved_IV_57:
+      Value: 1
+    _gdp_moved_IV_6:
+      Value: 1
+    _gdp_moved_IV_60:
+      Value: 1
+    _gdp_moved_IV_62:
+      Value: 1
+    _gdp_moved_IV_64:
+      Value: 1
+    _gdp_moved_IV_65:
+      Value: 1
+    _gdp_moved_IV_68:
+      Value: 1
+    _gdp_moved_IV_7:
+      Value: 1
+    _gdp_moved_IV_70:
+      Value: 1
+    _gdp_moved_IV_9:
+      Value: 1
+    ms:
+      Value: 32
+    t[A]:
+      Value: 10
+    t[C]:
+      Value: 1
+    t[D]:
+      Value: 18
+    t[E]:
+      Value: 3
+    t[F]:
+      Value: 16
+    t[G]:
+      Value: 10
+  Constraint: No values

@@ -245,14 +245,19 @@ class BigM_Transformation(Transformation):
         or_expr = 0
         for disjunct in obj.disjuncts:
             or_expr += disjunct.indicator_var
+            # make suffix list. (We don't need it until we are
+            # transforming constraints, but it gets created at the
+            # disjunct level, so more efficient to make it here and
+            # pass it down.
+            suffix_list = self.get_bigm_suffix_list(disjunct)
             # relax the disjunct
-            self._bigM_relax_disjunct(disjunct, transBlock, bigM)
+            self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list)
         # add or (or xor) constraint
         orConstraint.add(index, (1, or_expr, 1 if xor else None))
         obj.deactivate()
 
 
-    def _bigM_relax_disjunct(self, obj, transBlock, bigM):
+    def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list):
         if hasattr(obj, "_gdp_transformation_info"):
             infodict = obj._gdp_transformation_info
             # If the user has something with our name that is not a dict, we 
@@ -289,11 +294,6 @@ class BigM_Transformation(Transformation):
         assert 'bigm' not in infodict
         infodict['bigm'] = weakref.ref(relaxationBlock)
         
-        # TODO: the way this is written, I never encounter an
-        # IndexedDisjunct itself. Because I am going through the list
-        # of disjuncts the disjunction keeps. But that makes this not
-        # very fun...
-
         # if this is a disjunctData from an indexed disjunct, we are
         # going to want to check at the end that the container is
         # deactivated if everything in it is. So we save it in our
@@ -305,7 +305,7 @@ class BigM_Transformation(Transformation):
         
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, relaxationBlock,
-                                            bigM, infodict)
+                                            bigM, infodict, suffix_list)
         
         # deactivate disjunct so we know we've relaxed it
         obj.deactivate()
@@ -313,8 +313,8 @@ class BigM_Transformation(Transformation):
         obj._gdp_transformation_info = infodict
 
 
-    def _transform_block_components(self, block, disjunct,
-                                    relaxedBlock, bigM, infodict):
+    def _transform_block_components(self, block, disjunct, relaxedBlock, 
+                                    bigM, infodict, suffix_list):
         # Look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
         # to handle it.
@@ -331,11 +331,11 @@ class BigM_Transformation(Transformation):
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
             # variables down the line.
-            handler(obj, disjunct, relaxedBlock, bigM, infodict)
+            handler(obj, disjunct, relaxedBlock, bigM, infodict, suffix_list)
 
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, relaxedBlock,
-                                     bigMargs, infodict):
+                                     bigMargs, infodict, suffix_list):
         # this should only have gotten called if the disjunction is active
         assert disjunction.active
         problemdisj = disjunction
@@ -363,7 +363,7 @@ class BigM_Transformation(Transformation):
 
 
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct,
-                                  relaxedBlock, bigMargs, infodict):
+                                  relaxedBlock, bigMargs, infodict, suffix_list):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
@@ -386,18 +386,18 @@ class BigM_Transformation(Transformation):
 
 
     def _transform_block_on_disjunct(self, block, disjunct, relaxationBlock, 
-                                     bigMargs, infodict):
+                                     bigMargs, infodict, suffix_list):
         # We look through everything on the component map of the block
         # and transform it just as we would if it was on the disjunct
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _xform_constraint will have access to
         # the correct indicator variable.
         self._transform_block_components(block, disjunct, relaxationBlock,
-                                            bigMargs, infodict)
+                                            bigMargs, infodict, suffix_list)
 
 
     def _xform_constraint(self, obj, disjunct, relaxationBlock,
-                          bigMargs, infodict):
+                          bigMargs, infodict, suffix_list):
         # add constraint to the transformation block, we'll transform it there.
 
         transBlock = relaxationBlock.parent_block()
@@ -434,10 +434,8 @@ class BigM_Transformation(Transformation):
                                                                 str(M)))
             
             # if we didn't get something from args, try suffixes:
-            # TODO: wouldn't hurt to generate the suffix list at the disjunct 
-            # level and pass it through to use here.
             if M is None:
-                M = self._get_M_from_suffixes(c)
+                M = self._get_M_from_suffixes(c, suffix_list)
                 
             if __debug__ and logger.isEnabledFor(logging.DEBUG):
                 logger.debug("GDP(BigM): The value for M for constraint %s "
@@ -517,10 +515,8 @@ class BigM_Transformation(Transformation):
         return M
 
 
-    def _get_M_from_suffixes(self, constraint):
+    def _get_M_from_suffixes(self, constraint, suffix_list):
         M = None
-        # make suffix list
-        suffix_list = self.get_bigm_suffix_list(constraint.parent_block())
         # first we check if the constraint or its parent is a key in any of the
         # suffix lists
         for bigm in suffix_list:

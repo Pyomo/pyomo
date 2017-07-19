@@ -1,0 +1,56 @@
+# ==========================================================
+# = Solver Results                                         =
+# ==========================================================
+# ----------------------------------------------------------
+#   Problem Information
+# ----------------------------------------------------------
+Problem: 
+- Name: x11
+  Lower bound: 11.0
+  Upper bound: 11.0
+  Number of objectives: 1
+  Number of constraints: 16
+  Number of variables: 11
+  Number of binary variables: 6
+  Number of integer variables: 6
+  Number of continuous variables: 5
+  Number of nonzeros: 37
+  Sense: minimize
+# ----------------------------------------------------------
+#   Solver Information
+# ----------------------------------------------------------
+Solver: 
+- Status: ok
+  Return code: 0
+  Message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Termination condition: optimal
+  Termination message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Wall time: 0.00287389755249
+  Error rc: 0
+  Time: 1.13448405266
+# ----------------------------------------------------------
+#   Solution Information
+# ----------------------------------------------------------
+Solution: 
+- number of solutions: 1
+  number of solutions displayed: 1
+- Gap: 0.0
+  Status: optimal
+  Message: Model was solved to optimality (subject to tolerances), and an optimal solution is available.
+  Objective:
+    makespan:
+      Value: 11
+  Variable:
+    _gdp_moved_IV_1:
+      Value: 1
+    _gdp_moved_IV_3:
+      Value: 1
+    _gdp_moved_IV_6:
+      Value: 1
+    ms:
+      Value: 11
+    t[A]:
+      Value: 3
+    t[C]:
+      Value: 1
+  Constraint: No values
