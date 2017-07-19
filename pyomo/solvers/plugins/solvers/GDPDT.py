@@ -380,6 +380,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         #     GDPDT.gbd_cuts = ConstraintList(doc='Generalized Benders cuts')
 
         if self.initialization_strategy is None:
+            self._init_set_covering()
+        elif self.initialization_strategy == 'max_binary':
             self._init_max_binaries()
             self._solve_NLP_subproblem()
         elif self.initialization_strategy == 'fixed_binary':
@@ -389,23 +391,10 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             raise ValueError('Unknown initialization strategy: {}'
                              .format(self.initialization_strategy))
 
-        # # Set default initialization_strategy
-        # if self.initialization_strategy is None:
-        #     if self._decomposition_strategy == 'OA':
-        #         self.initialization_strategy = 'rNLP'
-        #     else:
-        #         self.initialization_strategy = 'max_binary'
-        #
-        # # Do the initialization
-        # if self.initialization_strategy == 'rNLP':
-        #     self._init_rNLP()
-        # elif self.initialization_strategy == 'max_binary':
-        #     self._init_max_binaries()
-        #     self._solve_NLP_subproblem()
-
     def _validate_disjunctions(self):
         """Validate if the disjunctions are satisfied by the current values."""
-        # TODO implement this
+        # TODO implement this? If not, the user will simply get an infeasible
+        # return value
         pass
 
     def _init_rNLP(self):
@@ -480,6 +469,125 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         else:
             raise ValueError('Cannot handle termination condition {}'.format(
                 solve_terminate_cond))
+
+    def _init_set_covering(self, iterlim=8):
+        """Initialize by solving problems to cover the set of all disjuncts.
+
+        The purpose of this initialization is to generate linearizations
+        corresponding to each of the disjuncts.
+
+        This work is based upon prototyping work done by Eloy Fernandez at
+        Carnegie Mellon University.
+
+        """
+        m = self.working_model
+        working_map = generate_cuid_names(m, ctype=(Var, Disjunct),
+                                          descend_into=(Block, Disjunct))
+        nonlinear_disjuncts = frozenset(
+            working_map[disj] for disj in m.component_data_objects(
+                ctype=Disjunct, active=True, descend_into=(Block, Disjunct))
+            if any(constr.body.polynomial_degree() not in (0, 1)
+                   for constr in disj.component_data_objects(
+                       ctype=Constraint, active=True,
+                       descend_into=(Block, Disjunct))))
+        covered_disjuncts = set()
+        not_covered_disjuncts = set(nonlinear_disjuncts)
+        iter_count = 1
+        while not_covered_disjuncts and iter_count <= iterlim:
+            # Solve set covering MIP
+            if not self._solve_set_cover_MIP(
+                    covered_disjuncts=covered_disjuncts,
+                    not_covered_disjuncts=not_covered_disjuncts):
+                # problem is infeasible. break
+                return False
+            # solve local NLP
+            if self._solve_NLP_subproblem():
+                # if successful, updated sets
+                active_disjuncts = frozenset(
+                    working_map[disj] for disj in m.component_data_objects(
+                        ctype=Disjunct, active=True,
+                        descend_into=(Block, Disjunct))
+                    if fabs(value(disj.indicator_var) - 1) <= 1E-5)
+                covered_disjuncts.update(active_disjuncts)
+                not_covered_disjuncts.difference_update(active_disjuncts)
+            iter_count += 1
+        if not_covered_disjuncts:
+            # Iteration limit was hit without a full covering of all nonlinear
+            # disjuncts
+            print('Iteration limit reached for set covering initialization.')
+            return False
+        return True
+
+    def _solve_set_cover_MIP(self, covered_disjuncts, not_covered_disjuncts):
+        m = self.working_model.clone()
+        GDPDT = m.GDPDT_utils
+
+        cuid_map = generate_cuid_names(m, ctype=Disjunct,
+                                       descend_into=(Block, Disjunct))
+        reverse_map = {cuid: obj for obj, cuid in iteritems(cuid_map)}
+
+        # Set up set covering objective
+        weights = {disjID: 1 for disjID in covered_disjuncts}
+        weights.update({disjID: len(covered_disjuncts) + 1
+                        for disjID in not_covered_disjuncts})
+        GDPDT.objective.deactivate()
+        GDPDT.set_cover_obj = Objective(
+            expr=sum(weights[disjID] * reverse_map[disjID].indicator_var
+                     for disjID in weights),
+            sense=maximize)
+
+        # deactivate nonlinear constraints
+        nonlinear_constraints = (
+            c for c in m.component_data_objects(
+                ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in (0, 1))
+        for c in nonlinear_constraints:
+            c.deactivate()
+
+        # Transform disjunctions
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        # Deactivate extraneous IMPORT/EXPORT suffixes
+        getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
+        getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
+
+        results = self.mip_solver.solve(m, load_solutions=False,
+                                        **self.mip_solver_kwargs)
+        terminate_cond = results.solver.termination_condition
+        if terminate_cond is tc.infeasibleOrUnbounded:
+            # Linear solvers will sometimes tell me that it's infeasible or
+            # unbounded during presolve, but fails to distinguish. We need to
+            # resolve with a solver option flag on.
+            old_options = deepcopy(self.mip_solver.options)
+            # This solver option is specific to Gurobi.
+            self.mip_solver.options['DualReductions'] = 0
+            results = self.mip_solver.solve(m, load_solutions=False,
+                                            **self.mip_solver_kwargs)
+            terminate_cond = results.solver.termination_condition
+            self.mip_solver.options.update(old_options)
+
+        if terminate_cond is tc.optimal:
+            m.solutions.load_from(results)
+            self._copy_values(m, self.working_model)
+            print('Solved set covering MIP')
+            return True
+        elif terminate_cond is tc.infeasible:
+            print('Set covering problem is infeasible. '
+                  'Problem may have no more feasible binary configurations.')
+            if self.mip_iter <= 1:
+                print('Check your linear and logical constraints '
+                      'for contradictions.')
+            if GDPDT.objective.sense == minimize:
+                self.LB = float('inf')
+            else:
+                self.UB = float('-inf')
+            return False
+        else:
+            raise ValueError(
+                'GDPDT unable to handle set covering MILP '
+                'termination condition '
+                'of {}. Solver message: {}'.format(
+                    terminate_cond, results.solver.message))
 
     def _GDPDT_iteration_loop(self):
         m = self.working_model
@@ -906,6 +1014,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         results = self.nlp_solver.solve(m, load_solutions=False,
                                         **self.nlp_solver_kwargs)
 
+        solnFeasible = False
+
         def process_feasible_solution():
             self._copy_values(m, self.working_model, from_map=obj_to_cuid)
             self._copy_dual_suffixes(m, self.working_model,
@@ -944,6 +1054,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         if subprob_terminate_cond is tc.optimal:
             m.solutions.load_from(results)
             process_feasible_solution()
+            solnFeasible = True
         elif subprob_terminate_cond is tc.infeasible:
             # TODO try something else? Reinitialize with different initial
             # value?
@@ -973,6 +1084,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 print('NLP solution is still feasible. '
                       'Using potentially suboptimal feasible solution.')
                 process_feasible_solution()
+                solnFeasible = True
             else:
                 # Add an integer cut to exclude this discrete option
                 self._add_int_cut()
@@ -983,6 +1095,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Call the NLP post-solve callback
         self.subproblem_postsolve(m, self)
+        return solnFeasible
 
     def _is_feasible(self, m, constr_tol=1E-6, var_tol=1E-8):
         for constr in m.component_data_objects(
