@@ -105,6 +105,11 @@ class BigM_Transformation(Transformation):
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(Any)
         transBlock.lbub = Set(initialize = ['lb','ub'])
+        # this is a dictionary for keeping track of IndexedDisjuncts
+        # and IndexedDisjunctions so that, at the end of the
+        # transformation, we can check that the ones with no active
+        # DisjstuffDatas are deactivated.
+        transBlock.disjContainers = {}
 
         if targets is None:
             targets = ( instance, )
@@ -133,6 +138,19 @@ class BigM_Transformation(Transformation):
                     "It was of type %s and can't be transformed" 
                     % (t.name, type(t)) )
 
+        # Go through our dictionary of indexed things and deactivate
+        # the containers that don't have any active guys inside of
+        # them. So the invalid component logic will tell us if we
+        # missed something getting transformed.
+        for id, objref in transBlock.disjContainers.iteritems():
+            obj = objref()
+            if obj.active:
+                for i in obj:
+                    if obj[i].active:
+                        break
+                else:
+                    obj.deactivate()
+                
 
     def _transformBlock(self, block, transBlock, bigM):
         if block.is_indexed():
@@ -188,6 +206,10 @@ class BigM_Transformation(Transformation):
         # disjunctionDatas
         orC, xor = self._declareXorConstraint(obj)
         if obj.is_indexed():
+            # TODO: Is this a good idea? Becuase this isn't enough to
+            # keep the thing alive if someone deletes it, right. So it
+            # should be a weakref?
+            transBlock.disjContainers[id(obj)] = weakref.ref(obj)
             for i in obj:
                 self._transformDisjunctionData(obj[i], transBlock,
                                                bigM, i, orC, xor)
@@ -267,6 +289,20 @@ class BigM_Transformation(Transformation):
         assert 'bigm' not in infodict
         infodict['bigm'] = weakref.ref(relaxedBlock)
         
+        # TODO: the way this is written, I never encounter an
+        # IndexedDisjunct itself. Because I am going through the list
+        # of disjuncts the disjunction keeps. But that makes this not
+        # very fun...
+
+        # if this is a disjunctData from an indexed disjunct, we are
+        # going to want to check at the end that the container is
+        # deactivated if everything in it is. So we save it in our
+        # dictionary of things to check if it isn't there already.
+        disjParent = disjunct.parent_component()
+        if disjParent.is_indexed() and \
+           id(disjParent) not in transBlock.disjContainers:
+            transBlock.disjContainers[id(disjParent)] = weakref.ref(disjParent)
+        
         # Transform each component within this disjunct
         self._transform_block_components(disjunct, disjunct, relaxedBlock,
                                             bigM, infodict)
@@ -310,8 +346,11 @@ class BigM_Transformation(Transformation):
                     # it specifically.
                     problemdisj = disjunction[i]
                     break
-            # None of the _DisjunctionDatas were actually active. We are OK.
-            return
+            # None of the _DisjunctionDatas were actually active. We
+            # are OK and we can deactivate the container.
+            else:
+                disjunction.deactivate()
+                return
         parentblock = problemdisj.parent_block()
         # the disjunction should only have been active if it wasn't transformed
         assert (not hasattr(parentblock, "_gdp_transformation_info")) or \
@@ -333,8 +372,11 @@ class BigM_Transformation(Transformation):
                     # This is shouldn't be true, we will complain about it.
                     problemdisj = nesteddisjunct[i]
                     break
-            # None of the _DisjunctDatas were actually active, so we are fine.
-            return
+            # None of the _DisjunctDatas were actually active, so we
+            # are fine and we can deactivate the container.
+            else:
+                nesteddisjunct.deactivate()
+                return
         raise GDP_Error("Found active disjunct {0} in disjunct {1}! Either {0} "
                         "is not in a disjunction or the disjunction it is in "
                         "has not been transformed. {0} needs to be deactivated "

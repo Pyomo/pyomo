@@ -638,15 +638,17 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         # all the disjuncts got transformed, so all should be deactivated
         for i in m.disjunct.index_set():
             self.assertFalse(m.disjunct[i].active)
+        self.assertFalse(m.disjunct.active)
 
     def test_deactivated_disjunction(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
 
-        # all the disjunctions got transformed, so they should be deactivated too
-        self.assertFalse(m.disjunction.active)
+        # all the disjunctions got transformed, so they should be
+        # deactivated too
         for i in m.disjunction.index_set():
             self.assertFalse(m.disjunction[i].active)
+        self.assertFalse(m.disjunction.active)
 
     def test_create_using(self):
         m = self.makeModel()
@@ -792,6 +794,7 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
 
         self.assertFalse(m.b.disjunct[0].active)
         self.assertFalse(m.b.disjunct[1].active)
+        self.assertFalse(m.b.disjunct.active)
         self.assertTrue(m.simpledisj.active)
         self.assertTrue(m.simpledisj2.active)
 
@@ -1232,6 +1235,7 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
         self.assertFalse(m.disjunct1[0].active)
         self.assertFalse(m.disjunct1[1].active)
         self.assertFalse(m.disjunct2[0].active)
+        self.assertFalse(m.disjunct1.active)
 
     def test_untransformed_disj_active(self):
         # We have an extra disjunct not in any of the disjunctions.
@@ -1242,6 +1246,8 @@ class DisjunctInMultipleDisjunctions(unittest.TestCase, CommonTests):
         
         self.assertTrue(m.disjunct2[1].active)
         self.assertTrue(m.disjunct2[1].c.active)
+        # and it means his container is active
+        self.assertTrue(m.disjunct2.active)
     
     def test_transformation_block_structure(self):
         m = self.makeModel()
@@ -1409,6 +1415,7 @@ class TestTargets_SingleDisjunction(unittest.TestCase, CommonTests):
 
         self.assertFalse(m.disjunct1[0].active)
         self.assertFalse(m.disjunct1[1].active)
+        self.assertFalse(m.disjunct1.active)
         self.assertTrue(m.disjunct2[0].active)
         self.assertTrue(m.disjunct2[1].active)
         self.assertTrue(m.disjunct2.active)
@@ -1504,15 +1511,22 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
             m, 
             targets=[ComponentUID(m.disjunction1)])
 
+        self.assertFalse(m.disjunction1.active)
+        self.assertFalse(m.disjunction1[1].active)
+        self.assertFalse(m.disjunction1[2].active)
+
         self.assertFalse(m.disjunct1[1,0].active)
         self.assertFalse(m.disjunct1[1,1].active)
         self.assertFalse(m.disjunct1[2,0].active)
         self.assertFalse(m.disjunct1[2,1].active)
+        self.assertFalse(m.disjunct1.active)
 
         self.assertTrue(m.b[0].disjunct[0].active)
         self.assertTrue(m.b[0].disjunct[1].active)
+        self.assertTrue(m.b[0].disjunct.active)
         self.assertTrue(m.b[1].disjunct[0].active)
         self.assertTrue(m.b[1].disjunct[1].active)
+        self.assertTrue(m.b[1].disjunct.active)
 
     def test_indexedDisj_only_targets_transformed(self):
         m = self.makeModel()
@@ -1550,19 +1564,53 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
             self.assertIs(dict2['bigm'](), disjBlock[j])
             self.assertTrue(dict2['relaxed'])
 
+    def test_disjDataWithNestedDisjunct_target(self):
+        m = self.makeModel()
+        def innerdisj_rule(d, flag):
+            m = d.model()
+            if flag:
+                d.c = Constraint(expr=m.a[1] <= 2)
+            else:
+                d.c = Constraint(expr=m.a[1] >= 65)
+        m.disjunct1[1,1].innerdisjunct = Disjunct([0,1], rule=innerdisj_rule)
+        m.disjunct1[1,1].innerdisjunction = Disjunction(
+            expr=[m.disjunct1[1,1].innerdisjunct[0], 
+                  m.disjunct1[1,1].innerdisjunct[1]])
+        # This test relies on the order that the component objects of
+        # the disjunct get considered. In this case, the disjunct
+        # causes the error, but in another world, it could be the
+        # disjunction, which is also active.
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Found active disjunct disjunct1\[1,1\].innerdisjunct\[0\] "
+            "in disjunct disjunct1\[1,1\]! Either "
+            "disjunct1\[1,1\].innerdisjunct\[0\] is not in a disjunction or "
+            "the disjunction it is in has not been transformed. "
+            "disjunct1\[1,1\].innerdisjunct\[0\] needs to be deactivated or "
+            "its disjunction transformed before disjunct1\[1,1\] can be "
+            "transformed.*",
+            TransformationFactory('gdp.bigm').apply_to,
+            m,
+            targets=[ComponentUID(m.disjunction1[1])])
+
     def test_disjData_targets_inactive(self):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(
             m, 
             targets=[ComponentUID(m.disjunction1[2])])
 
+        self.assertFalse(m.disjunction1[2].active)
+
+        self.assertTrue(m.disjunct1.active)
         self.assertTrue(m.disjunct1[1,0].active)
         self.assertTrue(m.disjunct1[1,1].active)
         self.assertFalse(m.disjunct1[2,0].active)
         self.assertFalse(m.disjunct1[2,1].active)
 
+        self.assertTrue(m.b[0].disjunct.active)
         self.assertTrue(m.b[0].disjunct[0].active)
         self.assertTrue(m.b[0].disjunct[1].active)
+        self.assertTrue(m.b[1].disjunct.active)
         self.assertTrue(m.b[1].disjunct[0].active)
         self.assertTrue(m.b[1].disjunct[1].active)
 
@@ -1602,13 +1650,16 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
             m, 
             targets=[ComponentUID(m.b)])
 
+        self.assertTrue(m.disjunct1.active)
         self.assertTrue(m.disjunct1[1,0].active)
         self.assertTrue(m.disjunct1[1,1].active)
         self.assertTrue(m.disjunct1[2,0].active)
         self.assertTrue(m.disjunct1[2,1].active)
 
+        self.assertFalse(m.b[0].disjunct.active)
         self.assertFalse(m.b[0].disjunct[0].active)
         self.assertFalse(m.b[0].disjunct[1].active)
+        self.assertFalse(m.b[1].disjunct.active)
         self.assertFalse(m.b[1].disjunct[0].active)
         self.assertFalse(m.b[1].disjunct[1].active)
 
@@ -1661,13 +1712,16 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
             m, 
             targets=[ComponentUID(m.b[0])])
 
+        self.assertTrue(m.disjunct1.active)
         self.assertTrue(m.disjunct1[1,0].active)
         self.assertTrue(m.disjunct1[1,1].active)
         self.assertTrue(m.disjunct1[2,0].active)
         self.assertTrue(m.disjunct1[2,1].active)
 
+        self.assertFalse(m.b[0].disjunct.active)
         self.assertFalse(m.b[0].disjunct[0].active)
         self.assertFalse(m.b[0].disjunct[1].active)
+        self.assertTrue(m.b[1].disjunct.active)
         self.assertTrue(m.b[1].disjunct[0].active)
         self.assertTrue(m.b[1].disjunct[1].active)
 
@@ -1760,6 +1814,7 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertFalse(m.simpledisjunct.active)
         self.assertFalse(m.disjunct[0].active)
         self.assertFalse(m.disjunct[1].active)
+        self.assertFalse(m.disjunct.active)
 
     def test_transformation_block_structure(self):
         m = self.makeModel()
@@ -1947,14 +2002,21 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             m,
             targets=[ComponentUID(m.simpledisjunct)])
         
+        self.assertTrue(m.disjunct.active)
         self.assertTrue(m.disjunct[0].active)
         self.assertTrue(m.disjunct[1].active)
+        self.assertTrue(m.disjunct[1].innerdisjunct.active)
         self.assertTrue(m.disjunct[1].innerdisjunct[0].active)
         self.assertTrue(m.disjunct[1].innerdisjunct[1].active)
         
+        # We basically just treated simpledisjunct as a block. It
+        # itself has not been transformed and should not be
+        # deactivated. We just transformed everything in it.
         self.assertTrue(m.simpledisjunct.active)
+
         self.assertFalse(m.simpledisjunct.innerdisjunct[0].active)
         self.assertFalse(m.simpledisjunct.innerdisjunct[1].active)
+        self.assertFalse(m.simpledisjunct.innerdisjunct.active)
 
     def test_disjunct_only_targets_transformed(self):
         m = self.makeModel()
@@ -1996,12 +2058,15 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         
         self.assertTrue(m.disjunct[0].active)
         self.assertTrue(m.disjunct[1].active)
+        self.assertTrue(m.disjunct.active)
         self.assertFalse(m.disjunct[1].innerdisjunct[0].active)
         self.assertFalse(m.disjunct[1].innerdisjunct[1].active)
+        self.assertFalse(m.disjunct[1].innerdisjunct.active)
         
         self.assertTrue(m.simpledisjunct.active)
         self.assertTrue(m.simpledisjunct.innerdisjunct[0].active)
         self.assertTrue(m.simpledisjunct.innerdisjunct[1].active)
+        self.assertTrue(m.simpledisjunct.innerdisjunct.active)
 
     def test_disjunctData_only_targets_transformed(self):
         m = self.makeModel()
@@ -2035,12 +2100,26 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
             self.assertIs(dict2['bigm'](), disjBlock[j])
             self.assertTrue(dict2['relaxed'])
 
+    def test_disjunction_target_err(self):
+        m = self.makeModel()
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Found active disjunct simpledisjunct.innerdisjunct\[0\] in "
+            "disjunct simpledisjunct! Either simpledisjunct.innerdisjunct\[0\] "
+            "is not in a disjunction or the disjunction it is in has not been "
+            "transformed. simpledisjunct.innerdisjunct\[0\] needs to be "
+            "deactivated or its disjunction transformed before simpledisjunct "
+            "can be transformed.*",
+            TransformationFactory('gdp.bigm').apply_to,
+            m,
+            targets=[ComponentUID(m.disjunction)])
+
     def test_create_using(self):
         m = self.makeModel()
         self.diff_apply_to_and_create_using(m)
 
 
-class IndexedDisjunction_NastyNames(unittest.TestCase):
+class IndexedDisjunction(unittest.TestCase):
     # this tests that if the targets are a subset of the
     # _DisjunctDatas in an IndexedDisjunction that the xor constraint
     # created on the parent block will still be indexed as expected.
@@ -2125,8 +2204,44 @@ class BlocksOnDisjuncts(unittest.TestCase):
 
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
+        self.assertEqual(len(disjBlock[0].component_map()), 1)
+        self.assertEqual(len(disjBlock[1].component_map()), 3)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c4"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.anotherblock.c"),
                                                      Constraint)
+
+    def test_do_not_transform_deactivated_constraint(self):
+        m = self.makeModel()
+        m.evil[1].b.anotherblock.c.deactivate()
+        
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        transBlock = m._pyomo_gdp_bigm_relaxation
+        disjBlock = transBlock.relaxedDisjuncts
+
+        self.assertIsInstance(disjBlock, Block)
+        self.assertEqual(len(disjBlock), 2)
+        self.assertEqual(len(disjBlock[0].component_map()), 1)
+        self.assertEqual(len(disjBlock[1].component_map()), 2)
+        self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c4"), Constraint)
+
+    def test_do_not_transform_deactivated_block(self):
+        m = self.makeModel()
+        m.evil[1].b.anotherblock.deactivate()
+        
+        TransformationFactory('gdp.bigm').apply_to(m)
+
+        transBlock = m._pyomo_gdp_bigm_relaxation
+        disjBlock = transBlock.relaxedDisjuncts
+
+        self.assertIsInstance(disjBlock, Block)
+        self.assertEqual(len(disjBlock), 2)
+        self.assertEqual(len(disjBlock[0].component_map()), 1)
+        self.assertEqual(len(disjBlock[1].component_map()), 2)
+        self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c4"), Constraint)
