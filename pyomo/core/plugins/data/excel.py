@@ -30,7 +30,8 @@ def write_dataframes(model):
                 'Doc'   : [obj.doc for obj in objects]}
     TOC = (pd.DataFrame(toc_data)
         .set_index('Name')[['Type', 'Dim', 'Count', 'Doc']])
-    # Store name in TOC dataframe for use with blocks
+    # Store model/block name in TOC dataframe
+    # Used with default file naming and with blocks
     TOC.name = model.name
 
 
@@ -198,7 +199,7 @@ def write_excel(all_frames, filename=None, engine=None,
 
     if writer is None:
         if filename is None:
-            filename = 'ExcelFile.xlsx'
+            filename = TOC.name + '.xlsx'
         writer = pd.ExcelWriter(filename, engine=engine)
 
 
@@ -342,6 +343,8 @@ def write_excel(all_frames, filename=None, engine=None,
     if parent is None:
         writer.save()
 
+    return filename
+
 
 
 
@@ -349,4 +352,6 @@ def write_excel(all_frames, filename=None, engine=None,
 TODO:
 Indexed Blocks?
 Indexed Sets, RangeSets
+Disjunct
+active column
 """
