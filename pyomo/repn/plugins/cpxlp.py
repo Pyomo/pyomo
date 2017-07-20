@@ -249,7 +249,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     if unmatched_var is not None:
                         err.args = err.args + (
                             "You may have added a variable "
-                            "from a different model. "
+                            "from a different model or a deactivated block "
+                            "in your model. "
                             "Please check model variable named {}."
                             .format(unmatched_var.name),)
                     raise
