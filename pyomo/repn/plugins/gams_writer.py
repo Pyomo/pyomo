@@ -129,7 +129,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                  % (solver, mtype))
 
         if output_filename is None:
-            output_filename = AlphaNumericTextLabeler()(model) + ".gms"
+            output_filename = model.name + ".gms"
 
         if symbolic_solver_labels and (labeler is not None):
             raise ValueError("ProblemWriter_gams: Using both the "
