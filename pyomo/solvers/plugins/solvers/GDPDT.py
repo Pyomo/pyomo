@@ -131,6 +131,10 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         self.small_dual_tolerance = 1E-8
         self.integer_tolerance = 1E-5
 
+        self.round_NLP_binaries = True
+        """bool: flag to round binary values to exactly 0 or 1.
+        Rounding is done before solving NLP subproblem"""
+
         # Modify in place decides whether to run the algorithm on a copy of the
         # originally model passed to the solver, or whether to manipulate the
         # original model directly.
@@ -945,9 +949,12 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             if v.value is None:
                 logger.warning('No value is defined for binary variable {}'
                                ' for the NLP subproblem.'.format(v.name))
+            else:
+                # round the integer variable values so that they are exactly 0
+                # or 1
+                if self.round_NLP_binaries:
+                    v.set_value(round(v.value))
             v.fix()
-        # TODO round the integer variables so that they are exactly 0 or 1
-        # first?
 
         # Deactivate the OA and PSC cuts
         for constr in m.component_objects(ctype=Constraint, active=True,
@@ -969,6 +976,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 raise ValueError(
                     'Non-binary value of disjunct indicator variable '
                     'for {}: {}'.format(disj.name, value(disj.indicator_var)))
+
+        # Propagate fixed variables
+        TransformationFactory('core.propagate_fixed_vars').apply_to(m)
 
         # Transform bound constraints
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
