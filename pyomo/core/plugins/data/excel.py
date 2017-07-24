@@ -34,7 +34,7 @@ def write_dataframes(model):
     # Store model/block name in TOC dataframe
     # Used with default file naming and with blocks
     # Replace brackets, which are illegal sheet name characters
-    TOC.name = replace_brackets(model.name)
+    TOC.name = model.name
 
 
     has_dual = has_rc = False
@@ -224,6 +224,9 @@ def write_excel(all_frames, filename=None, engine=None,
                 writer=None, parent=None, parent_row=None):
     TOC, scalar_frames, obj_frames = all_frames
 
+    if parent is not None:
+        parent_sheet = replace_brackets(parent)
+
     block = TOC.name
 
     if writer is None:
@@ -234,13 +237,16 @@ def write_excel(all_frames, filename=None, engine=None,
 
 
     # Table of Contents
+    # One name is the block name, the other is a name safe for sheet naming
+    # Different so that link titles show real name with brackets to look nicer
     toc_name = 'TOC' if parent is None else block
-    TOC.to_excel(writer, sheet_name=toc_name,
+    toc_sheet_name = replace_brackets(toc_name)
+    TOC.to_excel(writer, sheet_name=toc_sheet_name,
                  startrow=0 if parent is None else 1)
 
     # Scalar Sheet
     scalar_startrow = 1
-    scalar_name = 'Scalar' if parent is None else block + '.Scalar'
+    scalar_name = 'Scalar' if parent is None else toc_sheet_name + '.Scalar'
     for df in scalar_frames:
         if df.empty:
             continue
@@ -251,7 +257,7 @@ def write_excel(all_frames, filename=None, engine=None,
 
     if writer.engine == 'xlsxwriter':
         # Create link for each TOC entry to their respective sheet
-        toc = writer.book.get_worksheet_by_name(toc_name)
+        toc = writer.book.get_worksheet_by_name(toc_sheet_name)
         link_format = writer.book.add_format({'color'     : 'blue',
                                               'underline' : 1,
                                               'bold'      : 1,
@@ -262,6 +268,7 @@ def write_excel(all_frames, filename=None, engine=None,
             else:
                 # Use TOC['Name'] -> TOC.index
                 sheet = replace_brackets(TOC.index[i])
+            # name is what is already in the dataframe: obj.name
             name = TOC.index[i]
             # If there is a parent TOC, move the row down 1 for each entry
             i += int(bool(parent))
@@ -271,13 +278,13 @@ def write_excel(all_frames, filename=None, engine=None,
         # Place 'TOC' link on the Scalar sheet
         if scalar_startrow > 1:
             scalar_sheet = writer.book.get_worksheet_by_name(scalar_name)
-            scalar_sheet.write_url('A1', "internal:'%s'!A1" % toc_name,
+            scalar_sheet.write_url('A1', "internal:'%s'!A1" % toc_sheet_name,
                                    string=toc_name)
 
         # Place TOC link on child TOC page
         if parent is not None:
-            toc.write_url('A1', "internal:'%s'!A%s" % (parent, parent_row),
-                          string=parent)
+            toc.write_url('A1', string=parent,
+                          url="internal:'%s'!A%s" % (parent_sheet, parent_row))
 
     elif writer.engine[:8] == 'openpyxl':
         # Engine is actually 'openpyxl22', only check that it starts
@@ -287,7 +294,7 @@ def write_excel(all_frames, filename=None, engine=None,
         from copy import copy
 
         # Create link for each TOC entry to their respective sheet
-        toc = writer.book.get_sheet_by_name(toc_name)
+        toc = writer.book.get_sheet_by_name(toc_sheet_name)
         # Use theme=10 to get color to change when link is clicked
         link_color = Color(theme=10)
         name_font = Font(bold=True, underline='single', color=link_color)
@@ -307,13 +314,13 @@ def write_excel(all_frames, filename=None, engine=None,
         if scalar_startrow > 1:
             scalar_sheet = writer.book.get_sheet_by_name(scalar_name)
             scalar_sheet['A1'].value = toc_name
-            scalar_sheet['A1'].hyperlink = "#'%s'!A1" % toc_name
+            scalar_sheet['A1'].hyperlink = "#'%s'!A1" % toc_sheet_name
             scalar_sheet['A1'].font = toc_font
 
         # Place TOC link on child TOC page
         if parent is not None:
             toc['A1'].value = parent
-            toc['A1'].hyperlink = "#'%s'!A%s" % (parent, parent_row)
+            toc['A1'].hyperlink = "#'%s'!A%s" % (parent_sheet, parent_row)
             toc['A1'].font = toc_font
 
 
@@ -345,21 +352,22 @@ def write_excel(all_frames, filename=None, engine=None,
             i = 0
             for blk in item[2:]:
                 child_toc = blk[0]
-                name = child_toc.name
+                blk_name = child_toc.name
+                blk_sheet_name = replace_brackets(blk_name)
                 parent_row = i + 4 + int(bool(parent))
                 write_excel(blk, writer=writer, parent_row=parent_row,
-                            parent=obj_name)
+                            parent=obj.name)
 
                 # Create link for each subblock
                 if writer.engine == 'xlsxwriter':
                     sheet = writer.book.get_worksheet_by_name(obj_name)
-                    sheet.write_url(row=i + 3, col=col, string=name,
-                                    url="internal:'%s'!A1" % name)
+                    sheet.write_url(row=i + 3, col=col, string=blk_name,
+                                    url="internal:'%s'!A1" % blk_sheet_name)
 
                 elif writer.engine[:8] == 'openpyxl':
                     sheet = writer.book.get_sheet_by_name(obj_name)
                     cell = sheet.cell(row=i + 4, column=col + 1)
-                    cell.hyperlink = "#'%s'!A1" % name
+                    cell.hyperlink = "#'%s'!A1" % blk_sheet_name
                     cell.font = toc_font
                 i += 1
 
@@ -380,7 +388,7 @@ def write_excel(all_frames, filename=None, engine=None,
         if writer.engine == 'xlsxwriter':
             ws = writer.book.get_worksheet_by_name(obj_name)
 
-            ws.write_url('A1', "internal:'%s'!A%s" % (toc_name, toc_row),
+            ws.write_url('A1', "internal:'%s'!A%s" % (toc_sheet_name, toc_row),
                          string=toc_name)
             ws.write('A2', obj.name)
             ws.write('B2', obj.type().__name__)
@@ -394,16 +402,13 @@ def write_excel(all_frames, filename=None, engine=None,
             toc_row = TOC.index.get_loc(obj.name) + 2 + int(bool(parent))
 
             ws['A1'].value = toc_name
-            ws['A1'].hyperlink = "#'%s'!A%s" % (toc_name, toc_row)
+            ws['A1'].hyperlink = "#'%s'!A%s" % (toc_sheet_name, toc_row)
             ws['A1'].font = toc_font
 
             ws['A2'] = obj.name
             ws['B2'] = obj.type().__name__
             ws['C2'] = obj.doc
 
-            # Why is this line causing a bug? It happens when the name of the
-            # sheet has a parenthesis in it...
-            # The code will still work, but Excel needs to repair the file first
             ws.auto_filter.ref = "A3:%s3" % get_column_letter(cols)
 
 
@@ -414,7 +419,7 @@ def write_excel(all_frames, filename=None, engine=None,
 
 
 def replace_brackets(s):
-    return s.replace('[', '(').replace(']', ')')
+    return s.replace('[', '-').replace(']', '')
 
 def try_val(expr):
     """
