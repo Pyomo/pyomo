@@ -32,7 +32,7 @@ from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.environ import (Binary, Block, Constraint, ConstraintList,
+from pyomo.environ import (Block, Constraint, ConstraintList,
                            Expression, NonNegativeReals, Objective, RangeSet,
                            Reals, Set, SolverFactory, Suffix,
                            TransformationFactory, Var, maximize, minimize,
