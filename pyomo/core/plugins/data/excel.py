@@ -2,6 +2,7 @@ import pandas as pd
 
 from pyomo.core.base import (Constraint, Param, Set, RangeSet, Var, Objective,
                              Block, Suffix, Expression, value, SortComponents)
+from pyomo.gdp import Disjunct
 
 
 scalar_types = set(['Param', 'Var', 'Expression', 'Constraint', 'Objective'])
@@ -9,7 +10,7 @@ scalar_types = set(['Param', 'Var', 'Expression', 'Constraint', 'Objective'])
 
 def write_dataframes(model):
     valid_ctypes = set([Var, Constraint, Param, Set, RangeSet,
-                        Expression, Objective, Block])
+                        Expression, Objective, Block, Disjunct])
     objects = []
     scalars = dict()
     for typ in scalar_types:
@@ -33,7 +34,7 @@ def write_dataframes(model):
     # Store model/block name in TOC dataframe
     # Used with default file naming and with blocks
     # Replace brackets, which are illegal sheet name characters
-    TOC.name = model.name.replace('[', '(').replace(']', ')')
+    TOC.name = replace_brackets(model.name)
 
 
     has_dual = has_rc = False
@@ -72,16 +73,16 @@ def write_dataframes(model):
 
     # Scalar Expressions
     expr_data = {'Expression' : [obj.name for obj in scalars['Expression']],
-                 'Value'      : [value(obj) for obj in scalars['Expression']],
+                 'Value'      : [try_val(obj) for obj in scalars['Expression']],
                  'Doc'        : [obj.doc for obj in scalars['Expression']]}
     scalar_frames.append(pd.DataFrame(expr_data)
         .set_index('Expression')[['Value','Doc']])
 
     # Scalar Constraints
     con_data = {'Constraint' : [obj.name for obj in scalars['Constraint']],
-                'Lower' : [value(obj.lower) for obj in scalars['Constraint']],
-                'Body'  : [value(obj.body) for obj in scalars['Constraint']],
-                'Upper' : [value(obj.upper) for obj in scalars['Constraint']],
+                'Lower' : [try_val(obj.lower) for obj in scalars['Constraint']],
+                'Body'  : [try_val(obj.body) for obj in scalars['Constraint']],
+                'Upper' : [try_val(obj.upper) for obj in scalars['Constraint']],
                 'Doc'   : [obj.doc for obj in scalars['Constraint']]}
     if has_dual:
         con_data['Dual'] = []
@@ -96,7 +97,7 @@ def write_dataframes(model):
 
     # Scalar Objectives
     objctv_data = {'Objective' : [obj.name for obj in scalars['Objective']],
-                   'Value'     : [value(obj) for obj in scalars['Objective']],
+                   'Value'     : [try_val(obj) for obj in scalars['Objective']],
                    'Doc'       : [obj.doc for obj in scalars['Objective']]}
     scalar_frames.append(pd.DataFrame(objctv_data)
         .set_index('Objective')[['Value','Doc']])
@@ -106,13 +107,13 @@ def write_dataframes(model):
     obj_frames = []
 
     for obj in objects:
-        if obj.type() is Block and obj.dim() == 0:
+        if obj.type() in (Block, Disjunct) and obj.dim() == 0:
             obj_frames.append(write_dataframes(obj))
             continue
 
         data = dict()
 
-        if obj.type() is Block and obj.dim() > 0:
+        if obj.type() in (Block, Disjunct) and obj.dim() > 0:
             if obj.dim() == 1:
                 indices = [obj.index_set().name]
             else:
@@ -178,9 +179,9 @@ def write_dataframes(model):
                             else:
                                 data['RC'].append(None)
                     else:
-                        data['Lower'].append(value(dobj.lower))
-                        data['Body'].append(value(dobj.body))
-                        data['Upper'].append(value(dobj.upper))
+                        data['Lower'].append(try_val(dobj.lower))
+                        data['Body'].append(try_val(dobj.body))
+                        data['Upper'].append(try_val(dobj.upper))
                         if has_dual:
                             if dobj in model.dual:
                                 data['Dual'].append(model.dual[dobj])
@@ -194,7 +195,7 @@ def write_dataframes(model):
                         data[indices[i]].append(ind if obj.dim() == 1 else
                                                 ind[i])
                     data['Value'].append(val if obj.type() is Param else
-                                         value(val))
+                                         try_val(val))
 
             df = pd.DataFrame(data).set_index(indices)
 
@@ -260,7 +261,7 @@ def write_excel(all_frames, filename=None, engine=None,
                 sheet = scalar_name
             else:
                 # Use TOC['Name'] -> TOC.index
-                sheet = TOC.index[i].replace('[', '(').replace(']', ')')
+                sheet = replace_brackets(TOC.index[i])
             name = TOC.index[i]
             # If there is a parent TOC, move the row down 1 for each entry
             i += int(bool(parent))
@@ -294,7 +295,7 @@ def write_excel(all_frames, filename=None, engine=None,
             if TOC['Type'][i] in scalar_types and TOC['Dim'][i] == 0:
                 sheet = scalar_name
             else:
-                sheet = TOC.index[i].replace('[', '(').replace(']', ')')
+                sheet = replace_brackets(TOC.index[i])
             # If there is a parent TOC, move the row down 1 for each entry
             i += int(bool(parent))
             toc.cell(row=i + 2, column=1).hyperlink = "#'%s'!A1" % sheet
@@ -336,7 +337,7 @@ def write_excel(all_frames, filename=None, engine=None,
             # List items are: object, dataframe listing all subblocks,
             # and then each subblock in the form of a list.
             obj, df = item[0], item[1]
-            obj_name = obj.name.replace('[', '(').replace(']', ')')
+            obj_name = replace_brackets(obj.name)
             df.to_excel(writer, sheet_name=obj_name, startrow=2,
                              merge_cells=False)
 
@@ -365,7 +366,7 @@ def write_excel(all_frames, filename=None, engine=None,
         else:
             # type is tuple -> regular object and dataframe
             obj, df = item
-            obj_name = obj.name.replace('[', '(').replace(']', ')')
+            obj_name = replace_brackets(obj.name)
 
             # When cells are merged, things like the autofilter do not
             # work. For example the autofilter only recognizes the first row
@@ -412,11 +413,24 @@ def write_excel(all_frames, filename=None, engine=None,
     return filename
 
 
+def replace_brackets(s):
+    return s.replace('[', '(').replace(']', ')')
+
+def try_val(expr):
+    """
+    A ValueError is thrown when an expression contains uninitialized components.
+    Return None instead so the Excel entry is blank.
+    """
+    try:
+        return value(expr)
+    except ValueError:
+        return None
+
+
 
 
 """
 TODO:
 Indexed Sets, RangeSets
-Disjunct
 active column
 """
