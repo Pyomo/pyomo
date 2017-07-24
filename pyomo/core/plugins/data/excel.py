@@ -32,7 +32,8 @@ def write_dataframes(model):
         .set_index('Name')[['Type', 'Dim', 'Count', 'Doc']])
     # Store model/block name in TOC dataframe
     # Used with default file naming and with blocks
-    TOC.name = model.name
+    # Replace brackets, which are illegal sheet name characters
+    TOC.name = model.name.replace('[', '(').replace(']', ')')
 
 
     has_dual = has_rc = False
@@ -105,10 +106,37 @@ def write_dataframes(model):
     obj_frames = []
 
     for obj in objects:
-        data = dict()
-
         if obj.type() is Block and obj.dim() == 0:
             obj_frames.append(write_dataframes(obj))
+            continue
+
+        data = dict()
+
+        if obj.type() is Block and obj.dim() > 0:
+            if obj.dim() == 1:
+                indices = [obj.index_set().name]
+            else:
+                indices = [ind.name for ind in obj._implicit_subsets]
+            for ind in indices:
+                data[ind] = []
+
+            data['Block'] = []
+
+            for ind, dobj in sorted(obj.iteritems(), key=lambda item: item[0]):
+                for i in range(len(indices)):
+                    data[indices[i]].append(ind if obj.dim() == 1 else ind[i])
+                data['Block'].append(dobj.name)
+
+            # Indexed blocks are stored as a list containing all of their
+            # constituent blocks, in order to keep them grouped together for
+            # sheet linking purposes. Use string to denote indexed block.
+            df = pd.DataFrame(data).set_index(indices)
+            indx_blk = [obj, df]
+
+            for dobj in sorted(obj.itervalues(), key=lambda val: val.index()):
+                indx_blk.append(write_dataframes(dobj))
+
+            obj_frames.append(indx_blk)
 
         elif (obj.type() in (Var, Constraint, Param, Objective, Expression) and
             obj.dim() > 0):
@@ -138,7 +166,7 @@ def write_dataframes(model):
                 for ind, dobj in sorted(obj.iteritems(),
                                         key=lambda item: item[0]):
                     for i in range(len(indices)):
-                        data[indices[i]].append(ind if obj.dim() < 2 else
+                        data[indices[i]].append(ind if obj.dim() == 1 else
                                                 ind[i])
                     if obj.type() is Var:
                         data['Lower'].append(dobj.lb)
@@ -163,7 +191,7 @@ def write_dataframes(model):
                 for ind, val in sorted(obj.iteritems(),
                                        key=lambda item: item[0]):
                     for i in range(len(indices)):
-                        data[indices[i]].append(ind if obj.dim() < 2 else
+                        data[indices[i]].append(ind if obj.dim() == 1 else
                                                 ind[i])
                     data['Value'].append(val if obj.type() is Param else
                                          value(val))
@@ -199,6 +227,7 @@ def write_excel(all_frames, filename=None, engine=None,
 
     if writer is None:
         if filename is None:
+            # Default filename is model name, stored in top-level TOC.name
             filename = TOC.name + '.xlsx'
         writer = pd.ExcelWriter(filename, engine=engine)
 
@@ -207,7 +236,6 @@ def write_excel(all_frames, filename=None, engine=None,
     toc_name = 'TOC' if parent is None else block
     TOC.to_excel(writer, sheet_name=toc_name,
                  startrow=0 if parent is None else 1)
-
 
     # Scalar Sheet
     scalar_startrow = 1
@@ -232,28 +260,29 @@ def write_excel(all_frames, filename=None, engine=None,
                 sheet = scalar_name
             else:
                 # Use TOC['Name'] -> TOC.index
-                sheet = TOC.index[i]
-            # If there is a parent TOC, move the row down 1 for each entry
+                sheet = TOC.index[i].replace('[', '(').replace(']', ')')
             name = TOC.index[i]
+            # If there is a parent TOC, move the row down 1 for each entry
             i += int(bool(parent))
-            toc.write_url(row=i + 1, col=0, url='internal:%s!A1' % sheet,
+            toc.write_url(row=i + 1, col=0, url="internal:'%s'!A1" % sheet,
                           cell_format=link_format, string=name)
 
         # Place 'TOC' link on the Scalar sheet
         if scalar_startrow > 1:
             scalar_sheet = writer.book.get_worksheet_by_name(scalar_name)
-            scalar_sheet.write_url('A1', 'internal:%s!A1' % toc_name,
+            scalar_sheet.write_url('A1', "internal:'%s'!A1" % toc_name,
                                    string=toc_name)
 
         # Place TOC link on child TOC page
         if parent is not None:
-            toc.write_url('A1', 'internal:%s!A%s' % (parent, parent_row),
+            toc.write_url('A1', "internal:'%s'!A%s" % (parent, parent_row),
                           string=parent)
 
     elif writer.engine[:8] == 'openpyxl':
         # Engine is actually 'openpyxl22', only check that it starts
         # with 'openpyxl' in case there might be other versions
         from openpyxl.styles import Font, Color, colors
+        from openpyxl.utils import get_column_letter
         from copy import copy
 
         # Create link for each TOC entry to their respective sheet
@@ -265,10 +294,10 @@ def write_excel(all_frames, filename=None, engine=None,
             if TOC['Type'][i] in scalar_types and TOC['Dim'][i] == 0:
                 sheet = scalar_name
             else:
-                sheet = TOC.index[i]
+                sheet = TOC.index[i].replace('[', '(').replace(']', ')')
             # If there is a parent TOC, move the row down 1 for each entry
             i += int(bool(parent))
-            toc.cell(row=i + 2, column=1).hyperlink = '#%s!A1' % sheet
+            toc.cell(row=i + 2, column=1).hyperlink = "#'%s'!A1" % sheet
             toc.cell(row=i + 2, column=1).font = name_font
 
         # Place 'TOC' link on the Scalar sheet
@@ -277,44 +306,80 @@ def write_excel(all_frames, filename=None, engine=None,
         if scalar_startrow > 1:
             scalar_sheet = writer.book.get_sheet_by_name(scalar_name)
             scalar_sheet['A1'].value = toc_name
-            scalar_sheet['A1'].hyperlink = '#%s!A1' % toc_name
+            scalar_sheet['A1'].hyperlink = "#'%s'!A1" % toc_name
             scalar_sheet['A1'].font = toc_font
 
         # Place TOC link on child TOC page
         if parent is not None:
             toc['A1'].value = parent
-            toc['A1'].hyperlink = '#%s!A%s' % (parent, parent_row)
+            toc['A1'].hyperlink = "#'%s'!A%s" % (parent, parent_row)
             toc['A1'].font = toc_font
 
 
     for item in obj_frames:
 
-        if type(item) is list:
-            # This is a block's list of dataframes
+        if type(item) is list and type(item[0]) is pd.DataFrame:
+            # This is a singleton block's list of dataframes
+            # The first item in the list if the TOC dataframe
             child_toc = item[0]
             # Pass row of this block's entry in this TOC so that the child
             # block's TOC can link back to its row in the parent TOC
             toc_row = TOC.index.get_loc(child_toc.name) + 2 + int(bool(parent))
             write_excel(item, writer=writer, parent_row=toc_row,
                         parent='TOC' if parent is None else block)
+            # This is the only case where the extra info at
+            # the top of the sheet is not needed.
             continue
 
-        # type is tuple -> regular object and dataframe
-        obj, df = item
+        if type(item) is list:
+            # This is an indexed block, whose first item is the object
+            # List items are: object, dataframe listing all subblocks,
+            # and then each subblock in the form of a list.
+            obj, df = item[0], item[1]
+            obj_name = obj.name.replace('[', '(').replace(']', ')')
+            df.to_excel(writer, sheet_name=obj_name, startrow=2,
+                             merge_cells=False)
 
-        # When cells are merged, things like the autofilter do not
-        # work. For example the autofilter only recognizes the first row
-        # of the merged block when filtering.
-        df.to_excel(writer, sheet_name=obj.name, startrow=2,
-                    merge_cells=False)
+            col = df.index.nlevels
+            i = 0
+            for blk in item[2:]:
+                child_toc = blk[0]
+                name = child_toc.name
+                parent_row = i + 4 + int(bool(parent))
+                write_excel(blk, writer=writer, parent_row=parent_row,
+                            parent=obj_name)
+
+                # Create link for each subblock
+                if writer.engine == 'xlsxwriter':
+                    sheet = writer.book.get_worksheet_by_name(obj_name)
+                    sheet.write_url(row=i + 3, col=col, string=name,
+                                    url="internal:'%s'!A1" % name)
+
+                elif writer.engine[:8] == 'openpyxl':
+                    sheet = writer.book.get_sheet_by_name(obj_name)
+                    cell = sheet.cell(row=i + 4, column=col + 1)
+                    cell.hyperlink = "#'%s'!A1" % name
+                    cell.font = toc_font
+                i += 1
+
+        else:
+            # type is tuple -> regular object and dataframe
+            obj, df = item
+            obj_name = obj.name.replace('[', '(').replace(']', ')')
+
+            # When cells are merged, things like the autofilter do not
+            # work. For example the autofilter only recognizes the first row
+            # of the merged block when filtering.
+            df.to_excel(writer, sheet_name=obj_name, startrow=2,
+                        merge_cells=False)
 
         cols = df.index.nlevels + len(df.columns)
         toc_row = TOC.index.get_loc(obj.name) + 2 + int(bool(parent))
 
         if writer.engine == 'xlsxwriter':
-            ws = writer.book.get_worksheet_by_name(obj.name)
+            ws = writer.book.get_worksheet_by_name(obj_name)
 
-            ws.write_url('A1', 'internal:%s!A%s' % (toc_name, toc_row),
+            ws.write_url('A1', "internal:'%s'!A%s" % (toc_name, toc_row),
                          string=toc_name)
             ws.write('A2', obj.name)
             ws.write('B2', obj.type().__name__)
@@ -323,20 +388,21 @@ def write_excel(all_frames, filename=None, engine=None,
             ws.autofilter(2, 0, 2, cols - 1)
 
         elif writer.engine[:8] == 'openpyxl':
-            from openpyxl.utils import get_column_letter
-
-            ws = writer.book.get_sheet_by_name(obj.name)
+            ws = writer.book.get_sheet_by_name(obj_name)
 
             toc_row = TOC.index.get_loc(obj.name) + 2 + int(bool(parent))
 
             ws['A1'].value = toc_name
-            ws['A1'].hyperlink = '#%s!A%s' % (toc_name, toc_row)
+            ws['A1'].hyperlink = "#'%s'!A%s" % (toc_name, toc_row)
             ws['A1'].font = toc_font
 
             ws['A2'] = obj.name
             ws['B2'] = obj.type().__name__
             ws['C2'] = obj.doc
 
+            # Why is this line causing a bug? It happens when the name of the
+            # sheet has a parenthesis in it...
+            # The code will still work, but Excel needs to repair the file first
             ws.auto_filter.ref = "A3:%s3" % get_column_letter(cols)
 
 
@@ -350,7 +416,6 @@ def write_excel(all_frames, filename=None, engine=None,
 
 """
 TODO:
-Indexed Blocks?
 Indexed Sets, RangeSets
 Disjunct
 active column
