@@ -1693,12 +1693,25 @@ class ScenarioTree(object):
         return self._scenario_bundles
 
     @property
+    def subproblems(self):
+        if self.contains_bundles():
+            return self._scenario_bundles
+        else:
+            return self._scenarios
+
+    @property
     def stages(self):
         return self._stages
 
     @property
     def nodes(self):
         return self._tree_nodes
+
+    def is_bundle(self, object_name):
+        return object_name in self._scenario_bundle_map
+
+    def is_scenario(self, object_name):
+        return object_name in self._scenario_map
 
     #
     # Updates the minimum, maximum, and average for all nodes
