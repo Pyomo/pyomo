@@ -62,13 +62,6 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
     pyomo.util.plugin.alias('_gams_direct', doc='The GAMS modeling language')
 
     def available(self, exception_flag=True):
-        try:
-            from gams import GamsWorkspace, DebugLevel
-            return True
-        except ImportError:
-            return False
-
-    def available(self, exception_flag=True):
         """True if the solver is available"""
         try:
             from gams import GamsWorkspace, DebugLevel
