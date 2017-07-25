@@ -426,10 +426,7 @@ def try_val(expr):
     A ValueError is thrown when an expression contains uninitialized components.
     Return None instead so the Excel entry is blank.
     """
-    try:
-        return value(expr)
-    except ValueError:
-        return None
+    return value(expr, exception=False)
 
 
 
