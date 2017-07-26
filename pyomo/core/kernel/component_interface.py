@@ -87,6 +87,8 @@ class ICategorizedObject(object):
     _is_component = False
     _is_container = False
 
+    labeler = []
+
     #
     # Interface
     #
@@ -210,6 +212,8 @@ class ICategorizedObject(object):
             for a way to generate a static set of component
             names.
         """
+        if ICategorizedObject.labeler:
+            return ICategorizedObject.labeler[-1](self)
         name = self.name
         if name is None:
             return "<"+self.__class__.__name__+">"

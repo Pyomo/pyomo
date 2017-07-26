@@ -23,7 +23,7 @@ from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
 from pyutilib.misc import Options
 
-import pyomo.core.kernel.component_block
+from pyomo.core.kernel import block, variable
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -166,7 +166,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         load_solutions = kwds.pop("load_solutions", True)
         tee            = kwds.pop("tee", False)
         keepfiles      = kwds.pop("keepfiles", False)
-        tmpdir         = kwds.pop("tmpdir", None)
+        tmpdir         = kwds.pop("tmpdir", 'GAMS_files')
         io_options     = kwds.pop("io_options", {})
 
         if "symbolic_solver_labels" in kwds:
@@ -188,19 +188,16 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         # model file will be written. The writer also passes this StringIO
         # back, but output_file is defined in advance for clarity.
         output_file = StringIO()
-        if type(model) is pyomo.core.kernel.component_block.block:
-            # Relevant to pyomo.solvers nosetests
-            # But actually I don't know how to get kernels to work
-            # Or if I even should
-            (_, smap_id) = model.write(filename=output_file,
-                                       format=ProblemFormat.gams,
-                                       _called_by_solver=True,
-                                       **io_options)
+        if type(model) is block:
+            # Kernel blocks have slightly different write method
+            symbolMap = model.write(filename=output_file,
+                                    format=ProblemFormat.gams,
+                                    **io_options)
         else:
             (_, smap_id) = model.write(filename=output_file,
                                        format=ProblemFormat.gams,
                                        io_options=io_options)
-        symbolMap = model.solutions.symbol_map[smap_id]
+            symbolMap = model.solutions.symbol_map[smap_id]
 
         # IMPORTANT - only delete the whole tmpdir if the solver was the one
         # that made the directory. Otherwise, just delete the files the solver
@@ -238,20 +235,31 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
-            if (suf.name == 'dual' and suf.import_enabled()):
-                has_dual = True
-            elif (suf.name == 'rc' and suf.import_enabled()):
-                has_rc = True
+            if type(model) is block:
+                # Kernel suffix's import_enabled is property, not method
+                if suf.name == 'dual' and suf.import_enabled:
+                    has_dual = True
+                elif suf.name == 'rc' and suf.import_enabled:
+                    has_rc = True
+            else:
+                if suf.name == 'dual' and suf.import_enabled():
+                    has_dual = True
+                elif suf.name == 'rc' and suf.import_enabled():
+                    has_rc = True
 
         for sym, ref in symbolMap.bySymbol.iteritems():
             obj = ref()
-            if not obj.parent_component().type() is Var:
+            if type(model) is block:
+                # Kernel variables have no 'parent_component'
+                if type(obj) is not variable:
+                    continue
+            elif obj.parent_component().type() is not Var:
                 continue
             rec = t1.out_db[sym].first_record()
             obj.value = rec.level
             if has_rc and not math.isnan(rec.marginal):
                 # Do not set marginals to nan
-                model.rc.set_value(obj, rec.marginal)
+                model.rc[obj] = rec.marginal
 
         if has_dual:
             for c in model.component_data_objects(Constraint, active=True):
@@ -261,7 +269,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 if c.equality:
                     rec = t1.out_db[con].first_record()
                     if not math.isnan(rec.marginal):
-                        model.dual.set_value(c, rec.marginal)
+                        model.dual[c] = rec.marginal
                     else:
                         # Solver didn't provide marginals,
                         # nothing else to do here
@@ -277,7 +285,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                         rec_hi = t1.out_db[con + '_hi'].first_record()
                         marg += rec_hi.marginal
                     if not math.isnan(rec.marginal):
-                        model.dual.set_value(c, marg)
+                        model.dual[c] = marg
                     else:
                         # Solver didn't provide marginals,
                         # nothing else to do here
@@ -439,17 +447,16 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         io_options['put_results'] = results_filename
 
-        if type(model) is pyomo.core.kernel.component_block.block:
-            # Relevant to pyomo.solvers nosetests
-            (_, smap_id) = model.write(filename=output_filename,
-                                       format=ProblemFormat.gams,
-                                       _called_by_solver=True,
-                                       **io_options)
+        if type(model) is block:
+            # Kernel blocks have slightly different write method
+            symbolMap = model.write(filename=output_filename,
+                                    format=ProblemFormat.gams,
+                                    **io_options)
         else:
             (_, smap_id) = model.write(filename=output_filename,
                                        format=ProblemFormat.gams,
                                        io_options=io_options)
-        symbolMap = model.solutions.symbol_map[smap_id]
+            symbolMap = model.solutions.symbol_map[smap_id]
 
         exe = pyutilib.services.registered_executable("gams")
         command = [exe.get_path(), output_filename, 'o=' + lst_filename]
@@ -492,20 +499,31 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
-            if (suf.name == 'dual' and suf.import_enabled()):
-                has_dual = True
-            elif (suf.name == 'rc' and suf.import_enabled()):
-                has_rc = True
+            if type(model) is block:
+                # Kernel suffix's import_enabled is property, not method
+                if suf.name == 'dual' and suf.import_enabled:
+                    has_dual = True
+                elif suf.name == 'rc' and suf.import_enabled:
+                    has_rc = True
+            else:
+                if suf.name == 'dual' and suf.import_enabled():
+                    has_dual = True
+                elif suf.name == 'rc' and suf.import_enabled():
+                    has_rc = True
 
         for sym, ref in symbolMap.bySymbol.iteritems():
             obj = ref()
-            if not obj.parent_component().type() is Var:
+            if type(model) is block:
+                # Kernel variables have no 'parent_component'
+                if type(obj) is not variable:
+                    continue
+            elif obj.parent_component().type() is not Var:
                 continue
             rec = soln[sym]
             obj.value = float(rec[0])
             if has_rc:
                 try:
-                    model.rc.set_value(obj, float(rec[1]))
+                    model.rc[obj] = float(rec[1])
                 except ValueError:
                     # Solver didn't provide marginals
                     pass
@@ -518,7 +536,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 if c.equality:
                     rec = soln[con]
                     try:
-                        model.dual.set_value(c, float(rec[1]))
+                        model.dual[c] = float(rec[1])
                     except ValueError:
                         # Solver didn't provide marginals
                         # nothing else to do here
@@ -542,7 +560,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                             # Solver didn't provide marginals
                             marg = float('nan')
                     if not math.isnan(marg):
-                        model.dual.set_value(c, marg)
+                        model.dual[c] = marg
                     else:
                         # Solver didn't provide marginals
                         # nothing else to do here

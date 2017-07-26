@@ -26,6 +26,11 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 import pyomo.util.plugin
 
+from pyomo.core.kernel import (block, constraint, expression, objective,
+    variable, parameter, suffix, linear_constraint)
+
+from pyomo.core.kernel.component_interface import ICategorizedObject
+
 import logging
 
 logger = logging.getLogger('pyomo.core')
@@ -171,7 +176,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     # Support passing of stream such as a StringIO
                     # on which to write the model file
                     output_file = output_filename
-                ComponentData.labeler.append(var_label)
+                if type(model) is block:
+                    # Kernel
+                    ICategorizedObject.labeler.append(var_label)
+                else:
+                    ComponentData.labeler.append(var_label)
                 self._write_model(
                     model=model,
                     output_file=output_file,
@@ -189,7 +198,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
             finally:
                 if isinstance(output_filename, string_types):
                     output_file.close()
-                ComponentData.labeler.pop()
+                if type(model) is block:
+                    # Kernel
+                    ICategorizedObject.labeler.pop()
+                else:
+                    ComponentData.labeler.pop()
 
         return output_filename, symbolMap
 
@@ -216,8 +229,18 @@ class ProblemWriter_gams(AbstractProblemWriter):
         valid_ctypes = set([
             Block, Constraint, Expression, Objective, Param, 
             Set, RangeSet, Var, Suffix ])
+        valid_kernel_ctypes = set([
+            block, constraint, expression, objective,
+            variable, parameter, suffix, linear_constraint])
         for c in model.component_objects(active=True):
-            if c.type() not in valid_ctypes:
+            if type(model) is block:
+                # Kernel
+                if type(c) not in valid_kernel_ctypes:
+                    raise RuntimeError(
+                        "Unallowable component %s.\nThe GAMS writer cannot "
+                        "export models with this component type" %
+                        ( type(c).__name__, ))
+            elif c.type() not in valid_ctypes:
                 raise RuntimeError(
                     "Unallowable component %s.\nThe GAMS writer cannot export"
                     " models with this component type" % ( c.type().__name__, ))
