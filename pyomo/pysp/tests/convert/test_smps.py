@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -573,54 +573,6 @@ def create_test_classes(test_class_suffix,
     globals()[class_names[-1]] = type(
         class_names[-1], (TestConvertSMPS_Pyro, unittest.TestCase), {})
 
-    @unittest.skipIf(not (using_pyro3 or using_pyro4),
-                     "Pyro or Pyro4 is not available")
-    @unittest.category('parallel')
-    class TestConvertSMPS_Pyro_MultipleWorkers(_base,
-                                             unittest.TestCase,
-                                             _SMPSPyroTesterBase):
-        def setUp(self):
-            _SMPSPyroTesterBase.setUp(self)
-        def _setup(self, options, servers=None):
-            _SMPSPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-multiple-scenariotreeserver-workers'] = None
-    class_names.append(TestConvertSMPS_Pyro_MultipleWorkers.__name__ + "_"+test_class_suffix)
-    globals()[class_names[-1]] = type(
-        class_names[-1], (TestConvertSMPS_Pyro_MultipleWorkers, unittest.TestCase), {})
-
-    @unittest.skipIf(not (using_pyro3 or using_pyro4),
-                     "Pyro or Pyro4 is not available")
-    @unittest.category('parallel')
-    class TestConvertSMPS_Pyro_HandshakeAtStartup(_base,
-                                                unittest.TestCase,
-                                                _SMPSPyroTesterBase):
-        def setUp(self):
-            _SMPSPyroTesterBase.setUp(self)
-        def _setup(self, options, servers=None):
-            _SMPSPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-handshake-at-startup'] = None
-    class_names.append(TestConvertSMPS_Pyro_HandshakeAtStartup.__name__ + "_"+test_class_suffix)
-    globals()[class_names[-1]] = type(
-        class_names[-1], (TestConvertSMPS_Pyro_HandshakeAtStartup, unittest.TestCase), {})
-
-    @unittest.skipIf(not (using_pyro3 or using_pyro4),
-                     "Pyro or Pyro4 is not available")
-    @unittest.category('parallel')
-    class TestConvertSMPS_Pyro_HandshakeAtStartup_MultipleWorkers(_base,
-                                                                unittest.TestCase,
-                                                                _SMPSPyroTesterBase):
-        def setUp(self):
-            _SMPSPyroTesterBase.setUp(self)
-        def _setup(self, options, servers=None):
-            _SMPSPyroTesterBase._setup(self, options, servers=servers)
-            options['--pyro-handshake-at-startup'] = None
-            options['--pyro-multiple-scenariotreeserver-workers'] = None
-    class_names.append(TestConvertSMPS_Pyro_HandshakeAtStartup_MultipleWorkers.__name__ + "_"+test_class_suffix)
-    globals()[class_names[-1]] = type(
-        class_names[-1],
-        (TestConvertSMPS_Pyro_HandshakeAtStartup_MultipleWorkers, unittest.TestCase),
-        {})
-
     return tuple(globals()[name] for name in class_names)
 
 #
@@ -637,20 +589,21 @@ create_test_classes('farmer',
                     farmer_data_dir,
                     ('nightly','expensive'))
 
-piecewise_model_dir = join(thisdir, "piecewise_model.py")
+piecewise_model = join(thisdir, "piecewise_model.py")
+piecewise_scenario_tree = join(thisdir, "piecewise_scenario_tree.py")
 create_test_classes('piecewise',
                     'piecewise',
-                    piecewise_model_dir,
-                    None,
+                    piecewise_model,
+                    piecewise_scenario_tree,
                     ('nightly','expensive'))
 
 # uses the same baselines as 'piecewise',
 # except annotations are declared differently
-piecewise_model_dir = join(thisdir, "piecewise_model_alt.py")
+piecewise_model = join(thisdir, "piecewise_model_alt.py")
 create_test_classes('piecewise_alt',
                     'piecewise',
-                    piecewise_model_dir,
-                    None,
+                    piecewise_model,
+                    piecewise_scenario_tree,
                     ('nightly','expensive'))
 
 if __name__ == "__main__":

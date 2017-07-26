@@ -3,8 +3,7 @@ from pyomo.pysp.annotations import (StochasticConstraintBoundsAnnotation,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation)
 
-from piecewise_model import (pysp_scenario_tree_model_callback,
-                             create_instance)
+from piecewise_model import create_instance
 
 def pysp_instance_creation_callback(scenario_name, node_names):
 

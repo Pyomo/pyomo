@@ -1,0 +1,11 @@
+ConstrainTotalAcreage
+EnforceCattleFeedRequirement[CORN]
+EnforceCattleFeedRequirement[SUGAR_BEETS]
+EnforceCattleFeedRequirement[WHEAT]
+LimitAmountSold[CORN]
+LimitAmountSold[SUGAR_BEETS]
+LimitAmountSold[WHEAT]
+EnforceQuotas[CORN]
+EnforceQuotas[SUGAR_BEETS]
+EnforceQuotas[WHEAT]
+Total_Cost_Objective

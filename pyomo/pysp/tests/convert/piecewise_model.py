@@ -3,32 +3,6 @@ from pyomo.pysp.annotations import (StochasticConstraintBoundsAnnotation,
                                     StochasticConstraintBodyAnnotation,
                                     StochasticObjectiveAnnotation)
 
-def pysp_scenario_tree_model_callback():
-    from pyomo.pysp.scenariotree.tree_structure_model \
-        import CreateConcreteTwoStageScenarioTreeModel
-
-    st_model = CreateConcreteTwoStageScenarioTreeModel(3)
-
-    first_stage = st_model.Stages.first()
-    second_stage = st_model.Stages.last()
-
-    # First Stage
-    st_model.StageCost[first_stage] = 'StageCost[1]'
-    st_model.StageVariables[first_stage].add('x')
-    st_model.StageDerivedVariables[first_stage].add('y')
-    st_model.StageDerivedVariables[first_stage].add('fx')
-    st_model.StageDerivedVariables[first_stage].add('p_first_stage')
-
-    # Second Stage
-    st_model.StageCost[second_stage] = 'StageCost[2]'
-    st_model.StageVariables[second_stage].add('z')
-    st_model.StageDerivedVariables[second_stage].add('q')
-    st_model.StageDerivedVariables[second_stage].add('fz')
-    st_model.StageDerivedVariables[second_stage].add('r')
-    st_model.StageDerivedVariables[first_stage].add('p_second_stage')
-
-    return st_model
-
 d = {}
 d['Scenario1'] = 0
 d['Scenario2'] = 1

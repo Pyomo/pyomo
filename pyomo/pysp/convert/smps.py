@@ -1521,7 +1521,7 @@ def convert_embedded(output_directory,
     #
     output_filename = os.path.join(output_directory,
                                    basename+".cor")
-    input_files["core"] = output_filename
+    input_files["cor"] = output_filename
     symbols_filename = os.path.join(output_directory,
                                     basename+".core.symbols")
     input_files["symbols"] = symbols_filename
@@ -1584,7 +1584,7 @@ def convert_embedded(output_directory,
     # Write the .tim file
     #
     tim_filename = os.path.join(output_directory, basename+".tim")
-    input_files["time"] = tim_filename
+    input_files["tim"] = tim_filename
     with open(tim_filename, "w") as f_tim:
         f_tim.write("TIME %s\n" % (basename))
         if core_format == 'mps':

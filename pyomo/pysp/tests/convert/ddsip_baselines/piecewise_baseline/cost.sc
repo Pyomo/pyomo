@@ -1,0 +1,20 @@
+Names
+ fx
+ fz
+ r
+ ONE_VAR_CONSTANT
+scen
+  1
+  -1
+  1
+  0
+scen
+  1
+  -1
+  1
+  -1
+scen
+  1
+  -1
+  1
+  -2

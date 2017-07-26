@@ -1,13 +1,13 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
-import re
 import os
 from os.path import join, dirname, abspath
 import time
@@ -15,7 +15,6 @@ import difflib
 import filecmp
 import shutil
 import subprocess
-import pyutilib.subprocess
 import pyutilib.th as unittest
 from pyutilib.pyro import using_pyro3, using_pyro4
 from pyomo.pysp.util.misc import (_get_test_nameserver,
@@ -27,144 +26,13 @@ import pyomo.environ
 from six import StringIO
 
 thisdir = dirname(abspath(__file__))
-baselinedir = os.path.join(thisdir, "ddsip_baselines")
+baselinedir = os.path.join(thisdir, "schuripopt_baselines")
 pysp_examples_dir = \
     join(dirname(dirname(dirname(dirname(thisdir)))), "examples", "pysp")
 
 _run_verbose = True
 
-@unittest.category('nightly','expensive')
-class TestConvertDDSIPSimple(unittest.TestCase):
-
-    @unittest.nottest
-    def _assert_contains(self, filename, *checkstrs):
-        with open(filename, 'rb') as f:
-            fdata = f.read()
-        for checkstr in checkstrs:
-            if re.search(checkstr, fdata) is None:
-                self.fail("File %s does not contain test string:\n%s\n"
-                          "------------------------------------------\n"
-                          "File data:\n%s\n"
-                          % (filename, checkstr, fdata))
-
-    @unittest.nottest
-    def _get_cmd(self,
-                 model_location,
-                 scenario_tree_location=None,
-                 options=None):
-        if options is None:
-            options = {}
-        options['--model-location'] = model_location
-        if scenario_tree_location is not None:
-            options['--scenario-tree-location'] = \
-                scenario_tree_location
-        if _run_verbose:
-            options['--verbose'] = None
-        options['--output-times'] = None
-        options['--traceback'] = None
-        options['--keep-scenario-files'] = None
-        class_name, test_name = self.id().split('.')[-2:]
-        options['--output-directory'] = \
-            join(thisdir, class_name+"."+test_name)
-        if os.path.exists(options['--output-directory']):
-            shutil.rmtree(options['--output-directory'],
-                          ignore_errors=True)
-
-        cmd = ['python','-m','pyomo.pysp.convert.ddsip']
-        for name, val in options.items():
-            cmd.append(name)
-            if val is not None:
-                cmd.append(str(val))
-        class_name, test_name = self.id().split('.')[-2:]
-        print("%s.%s: Testing command: %s" % (class_name,
-                                              test_name,
-                                              str(' '.join(cmd))))
-        return cmd, options['--output-directory']
-
-    @unittest.nottest
-    def _run_bad_conversion_test(self, *args, **kwds):
-        cmd, output_dir = self._get_cmd(*args, **kwds)
-        outfile = output_dir+".out"
-        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
-        self.assertNotEqual(rc[0], 0)
-        self._assert_contains(
-            outfile,
-            b"ValueError: One or more deterministic parts of the problem found in file")
-        shutil.rmtree(output_dir,
-                      ignore_errors=True)
-        os.remove(outfile)
-
-    def test_bad_variable_bounds(self):
-        self._run_bad_conversion_test(
-            join(thisdir, "model_bad_variable_bounds.py"))
-
-    def test_bad_objective_constant(self):
-        self._run_bad_conversion_test(
-            join(thisdir, "model_bad_objective_constant.py"))
-
-    def test_bad_objective_var(self):
-        self._run_bad_conversion_test(
-            join(thisdir, "model_bad_objective_var.py"))
-
-    def test_bad_constraint_var(self):
-        self._run_bad_conversion_test(
-            join(thisdir, "model_bad_constraint_var.py"))
-
-    def test_bad_constraint_rhs(self):
-        self._run_bad_conversion_test(
-            join(thisdir, "model_bad_constraint_rhs.py"))
-
-    def test_too_many_declarations(self):
-        cmd, output_dir = self._get_cmd(
-            join(thisdir, "model_too_many_declarations.py"))
-        outfile = output_dir+".out"
-        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
-        self.assertNotEqual(rc[0], 0)
-        self._assert_contains(
-            outfile,
-            b"RuntimeError: Component b.c was "
-            b"assigned multiple declarations in annotation type "
-            b"StochasticConstraintBodyAnnotation. To correct this "
-            b"issue, ensure that multiple container components under "
-            b"which the component might be stored \(such as a Block "
-            b"and an indexed Constraint\) are not simultaneously set in "
-            b"this annotation.")
-        shutil.rmtree(output_dir,
-                      ignore_errors=True)
-        os.remove(outfile)
-
-    def test_bad_component_type(self):
-        cmd, output_dir = self._get_cmd(
-            join(thisdir, "model_bad_component_type.py"))
-        outfile = output_dir+".out"
-        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
-        self.assertNotEqual(rc[0], 0)
-        self._assert_contains(
-            outfile,
-            b"TypeError: Declarations "
-            b"in annotation type StochasticConstraintBodyAnnotation "
-            b"must be of types Constraint or Block. Invalid type: "
-            b"<class 'pyomo.core.base.objective.SimpleObjective'>")
-        shutil.rmtree(output_dir,
-                      ignore_errors=True)
-        os.remove(outfile)
-
-    def test_unsupported_variable_bounds(self):
-        cmd, output_dir = self._get_cmd(
-            join(thisdir, "model_unsupported_variable_bounds.py"))
-        outfile = output_dir+".out"
-        rc = pyutilib.subprocess.run(cmd, outfile=outfile)
-        self.assertNotEqual(rc[0], 0)
-        self._assert_contains(
-            outfile,
-            b"ValueError: The DDSIP writer does not currently support "
-            b"stochastic variable bounds. Invalid annotation type: "
-            b"StochasticVariableBoundsAnnotation")
-        shutil.rmtree(output_dir,
-                      ignore_errors=True)
-        os.remove(outfile)
-
-class _DDSIPTesterBase(object):
+class _SchurIpoptTesterBase(object):
 
     baseline_basename = None
     model_location = None
@@ -214,7 +82,7 @@ class _DDSIPTesterBase(object):
             shutil.rmtree(options['--output-directory'], ignore_errors=True)
 
     def _get_cmd(self):
-        cmd = ['python','-m','pyomo.pysp.convert.ddsip']
+        cmd = ['python','-m','pyomo.pysp.convert.schuripopt']
         for name, val in self.options.items():
             cmd.append(name)
             if val is not None:
@@ -298,7 +166,7 @@ def tearDownModule():
         except OSError:
             pass
 
-class _DDSIPPyroTesterBase(_DDSIPTesterBase):
+class _SchurIpoptPyroTesterBase(_SchurIpoptTesterBase):
 
     def _setUpPyro(self):
         global _pyomo_ns_port
@@ -346,11 +214,11 @@ class _DDSIPPyroTesterBase(_DDSIPTesterBase):
             self.options.update(self.extra_options)
 
     def _setup(self, options, servers=None):
-        _DDSIPTesterBase._setup(self, options)
+        _SchurIpoptTesterBase._setup(self, options)
         if servers is not None:
             options['--pyro-required-scenariotreeservers'] = servers
 
-    def test_scenarios_LP_1server(self):
+    def test_scenarios_1server(self):
         self._setup(self.options, servers=1)
         cmd = self._get_cmd()
         self._run_cmd(cmd)
@@ -378,26 +246,26 @@ def create_test_classes(test_class_suffix,
     class_names = []
 
     @unittest.category(*categories)
-    class TestConvertDDSIP_Serial(_base,
-                                  _DDSIPTesterBase):
+    class TestConvertSchurIpopt_Serial(_base,
+                                       _SchurIpoptTesterBase):
         pass
-    class_names.append(TestConvertDDSIP_Serial.__name__ + "_"+test_class_suffix)
+    class_names.append(TestConvertSchurIpopt_Serial.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
-        class_names[-1], (TestConvertDDSIP_Serial, unittest.TestCase), {})
+        class_names[-1], (TestConvertSchurIpopt_Serial, unittest.TestCase), {})
 
     @unittest.skipIf(not (using_pyro3 or using_pyro4),
                      "Pyro or Pyro4 is not available")
     @unittest.category('parallel')
-    class TestConvertDDSIP_Pyro(_base,
-                                unittest.TestCase,
-                                _DDSIPPyroTesterBase):
+    class TestConvertSchurIpopt_Pyro(_base,
+                                     unittest.TestCase,
+                                     _SchurIpoptPyroTesterBase):
         def setUp(self):
-            _DDSIPPyroTesterBase.setUp(self)
+            _SchurIpoptPyroTesterBase.setUp(self)
         def _setup(self, options, servers=None):
-            _DDSIPPyroTesterBase._setup(self, options, servers=servers)
-    class_names.append(TestConvertDDSIP_Pyro.__name__ + "_"+test_class_suffix)
+            _SchurIpoptPyroTesterBase._setup(self, options, servers=servers)
+    class_names.append(TestConvertSchurIpopt_Pyro.__name__ + "_"+test_class_suffix)
     globals()[class_names[-1]] = type(
-        class_names[-1], (TestConvertDDSIP_Pyro, unittest.TestCase), {})
+        class_names[-1], (TestConvertSchurIpopt_Pyro, unittest.TestCase), {})
 
     return tuple(globals()[name] for name in class_names)
 
@@ -405,8 +273,8 @@ def create_test_classes(test_class_suffix,
 # create the actual testing classes
 #
 
-farmer_examples_dir = join(pysp_examples_dir, "farmerWintegers")
-farmer_model_dir = join(farmer_examples_dir, "smps_model")
+farmer_examples_dir = join(pysp_examples_dir, "farmer")
+farmer_model_dir = join(farmer_examples_dir, "expr_models")
 farmer_data_dir = join(farmer_examples_dir, "scenariodata")
 create_test_classes('farmer',
                     'farmer',
@@ -422,12 +290,19 @@ create_test_classes('piecewise',
                     piecewise_scenario_tree,
                     ('nightly','expensive'))
 
-piecewise_model = join(thisdir, "piecewise_model_alt.py")
-create_test_classes('piecewise_alt',
+piecewise_scenario_tree_bundles = join(thisdir, "piecewise_scenario_tree_bundles.py")
+create_test_classes('piecewise_bundles',
+                    'piecewise_bundles',
+                    piecewise_model,
+                    piecewise_scenario_tree_bundles,
+                    ('nightly','expensive'))
+
+create_test_classes('piecewise_ignore_bundles',
                     'piecewise',
                     piecewise_model,
-                    piecewise_scenario_tree,
-                    ('nightly','expensive'))
+                    piecewise_scenario_tree_bundles,
+                    ('nightly','expensive'),
+                    extra_options={'--ignore-bundles': None})
 
 if __name__ == "__main__":
     unittest.main()
