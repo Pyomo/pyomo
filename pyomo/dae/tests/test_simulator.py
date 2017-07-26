@@ -1077,7 +1077,7 @@ class TestSimulationInterface():
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
 
-        # os.system('diff ' + ofile + ' ' + bfile)
+        os.system('diff ' + ofile + ' ' + bfile)
         self.assertFileEqualsBaseline(ofile, bfile, tolerance=1E-2)
 
 
