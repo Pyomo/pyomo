@@ -19,6 +19,12 @@ import pyomo.util.plugin
 from pyomo.opt.base import IOptSolver
 import pyutilib.services
 
+from pyomo.opt.base.solvers import _extract_version
+import pyutilib.subprocess
+from pyutilib.misc import Options
+
+import pyomo.core.kernel.component_block
+
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -61,6 +67,21 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
     pyomo.util.plugin.implements(IOptSolver)
     pyomo.util.plugin.alias('_gams_direct', doc='The GAMS modeling language')
 
+    def __init__(self, **kwds):
+        self._version = None
+
+        self._capabilities = Options()
+        self._capabilities.linear = True
+        self._capabilities.quadratic_objective = True
+        self._capabilities.quadratic_constraint = True
+        self._capabilities.integer = True
+        self._capabilities.sos1 = False
+        self._capabilities.sos2 = False
+
+        self.options = Options()
+
+        pyomo.util.plugin.Plugin.__init__(self, **kwds)
+
     def available(self, exception_flag=True):
         """True if the solver is available"""
         try:
@@ -74,24 +95,42 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                                   "solver functionality is not available.\n"
                                   "GAMS message: %s" % e)
 
-    def solve(self,
-              model,
-              tee=False,
-              load_model=True,
-              keep_files=False,
-              tmpdir=None,
-              io_options={}):
+    def _get_version(self):
+        """
+        Returns a tuple describing the solver executable version.
+        """
+        if not self.available(exception_flag=False):
+            return _extract_version('')
+        from gams import GamsWorkspace
+        ws = GamsWorkspace()
+        version = tuple(int(i) for i in ws._version.split('.'))
+        while(len(version) < 4):
+            version += (0,)
+        version = version[:4]
+        return version
+
+    def version(self):
+        """
+        Returns a 4-tuple describing the solver executable version.
+        """
+        if self._version is None:
+            self._version = self._get_version()
+        return self._version
+
+    def warm_start_capable(self):
+        return True
+
+    def solve(self, *args, **kwds):
         """
         Uses GAMS Python API. For installation help visit:
         https://www.gams.com/latest/docs/apis/examples_python/index.html
 
         tee=False:
             Output GAMS log to stdout.
-        load_model=True:
-            Does not support load_model=False.
-        keep_files=False:
-            Keep temporary files in folder '_GAMSSolver_files'.
-            Equivalent of DebugLevel.KeepFiles.
+        load_solutions=True:
+            Does not support load_solutions=False.
+        keepfiles=False:
+            Keep temporary files. Equivalent of DebugLevel.KeepFiles.
             Summary of temp files can be found in _gams_py_gjo0.pf
         tmpdir=None:
             Specify directory path for storing temporary files.
@@ -100,6 +139,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
                 shortened symbols (slower, but useful for debugging).
+                If passed as keyword to solve(), overrides io_options.
             labeler=None:
                 Custom labeler option. Incompatible with symbolic_solver_labels.
             solver=None:
@@ -118,28 +158,60 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         from gams import GamsWorkspace, DebugLevel
         from gams.workspace import GamsExceptionExecution
 
-        assert load_model == True, 'GAMSSolver does not support '\
-                                   'load_model=False.'
+        assert len(args) == 1, 'Exactly one model must be passed '\
+                               'to solve method of GAMSSolver.'
+        model = args[0]
+
+        warmstart      = kwds.pop("warmstart", True) # ignored
+        load_solutions = kwds.pop("load_solutions", True)
+        tee            = kwds.pop("tee", False)
+        keepfiles      = kwds.pop("keepfiles", False)
+        tmpdir         = kwds.pop("tmpdir", None)
+        io_options     = kwds.pop("io_options", {})
+
+        if "symbolic_solver_labels" in kwds:
+            # If passed as keyword, override io_options
+            symbolic_solver_labels = kwds.pop("symbolic_solver_labels")
+            io_options.update(symbolic_solver_labels=symbolic_solver_labels)
+
+        if len(kwds):
+            raise ValueError(
+                "GAMSSolver solve() passed unrecognized keyword args:\n\t" +
+                "\n\t".join("%s = %s"
+                            % (k,v) for k,v in kwds.iteritems()))
+
+        if load_solutions is False:
+            raise ValueError('GAMSSolver does not support '
+                             'load_solutions=False.')
 
         # Create StringIO stream to pass to gams_writer, on which the
         # model file will be written. The writer also passes this StringIO
         # back, but output_file is defined in advance for clarity.
         output_file = StringIO()
-        (_, smap_id) = model.write(filename=output_file,
-                                   format=ProblemFormat.gams,
-                                   io_options=io_options)
+        if type(model) is pyomo.core.kernel.component_block.block:
+            # Relevant to pyomo.solvers nosetests
+            # But actually I don't know how to get kernels to work
+            # Or if I even should
+            (_, smap_id) = model.write(filename=output_file,
+                                       format=ProblemFormat.gams,
+                                       _called_by_solver=True,
+                                       **io_options)
+        else:
+            (_, smap_id) = model.write(filename=output_file,
+                                       format=ProblemFormat.gams,
+                                       io_options=io_options)
         symbolMap = model.solutions.symbol_map[smap_id]
 
         # IMPORTANT - only delete the whole tmpdir if the solver was the one
         # that made the directory. Otherwise, just delete the files the solver
-        # made, if not keep_files. That way the user can select a directory
+        # made, if not keepfiles. That way the user can select a directory
         # they already have, like the current directory, without having to
         # worry about the rest of the contents of that directory being deleted.
         newdir = True
         if tmpdir is not None and os.path.exists(tmpdir):
             newdir = False
 
-        ws = GamsWorkspace(debug=DebugLevel.KeepFiles if keep_files
+        ws = GamsWorkspace(debug=DebugLevel.KeepFiles if keepfiles
                            else DebugLevel.Off,
                            working_directory=tmpdir)
         
@@ -153,7 +225,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             finally:
                 raise
         finally:
-            if keep_files:
+            if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
             elif tmpdir is not None:
                 if newdir:
@@ -218,6 +290,21 @@ class GAMSShell(pyomo.util.plugin.Plugin):
     pyomo.util.plugin.implements(IOptSolver)
     pyomo.util.plugin.alias('_gams_shell', doc='The GAMS modeling language')
 
+    def __init__(self, **kwds):
+        self._version = None
+
+        self._capabilities = Options()
+        self._capabilities.linear = True
+        self._capabilities.quadratic_objective = True
+        self._capabilities.quadratic_constraint = True
+        self._capabilities.integer = True
+        self._capabilities.sos1 = False
+        self._capabilities.sos2 = False
+
+        self.options = Options()
+
+        pyomo.util.plugin.Plugin.__init__(self, **kwds)
+
     def available(self, exception_flag=True):
         """True if the solver is available"""
         exe = pyutilib.services.registered_executable("gams")
@@ -231,23 +318,55 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                     "No 'gams' command found on system PATH - GAMS shell "
                     "solver functionality is not available.")
  
-    def solve(self,
-              model,
-              tee=False,
-              load_model=True,
-              keep_files=False,
-              tmpdir=None,
-              io_options={}):
+    def _default_executable(self):
+        executable = pyutilib.services.registered_executable("gams")
+        if executable is None:
+            logger.warning("Could not locate the 'gams' executable, "
+                           "which is required for solver gams")
+            self.enable = False
+            return None
+        return executable.get_path()
+
+    def executable(self):
+        """
+        Returns the executable used by this solver.
+        """
+        return self._default_executable()
+
+    def _get_version(self):
+        """
+        Returns a tuple describing the solver executable version.
+        """
+        solver_exec = self.executable()
+
+        if solver_exec is None:
+            return _extract_version('')
+        else:
+            results = pyutilib.subprocess.run([solver_exec])
+            return _extract_version(results[1])
+
+    def version(self):
+        """
+        Returns a 4-tuple describing the solver executable version.
+        """
+        if self._version is None:
+            self._version = self._get_version()
+        return self._version
+
+    def warm_start_capable(self):
+        return True
+
+    def solve(self, *args, **kwds):
         """
         Uses command line to call GAMS.
         Uses temp file GAMS_results.dat for parsing result data.
 
         tee=False:
             Output GAMS log to stdout.
-        load_model=True:
-            Does not support load_model=False.
-        keep_files=False:
-            Keep .gms and .lst files in current directory.
+        load_solutions=True:
+            Does not support load_solutions=False.
+        keepfiles=False:
+            Keep temporary files.
         tmpdir=None:
             Specify directory path for storing temporary files.
             A directory will be created if one of this name doesn't exist.
@@ -255,6 +374,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
                 shortened symbols (slower, but useful for debugging).
+                If passed as keyword to solve(), overrides io_options.
             labeler=None:
                 Custom labeler option. Incompatible with symbolic_solver_labels.
             solver=None:
@@ -270,12 +390,35 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         # Make sure available() doesn't crash
         self.available()
 
-        assert load_model == True, 'GAMSSolver does not support '\
-                                   'load_model=False.'
+        assert len(args) == 1, 'Exactly one model must be passed '\
+                               'to solve method of GAMSSolver.'
+        model = args[0]
+
+        warmstart      = kwds.pop("warmstart", True) # ignored
+        load_solutions = kwds.pop("load_solutions", True)
+        tee            = kwds.pop("tee", False)
+        keepfiles      = kwds.pop("keepfiles", False)
+        tmpdir         = kwds.pop("tmpdir", None)
+        io_options     = kwds.pop("io_options", {})
+
+        if "symbolic_solver_labels" in kwds:
+            # If passed as keyword, override io_options
+            symbolic_solver_labels = kwds.pop("symbolic_solver_labels")
+            io_options.update(symbolic_solver_labels=symbolic_solver_labels)
+
+        if len(kwds):
+            raise ValueError(
+                "GAMSSolver solve() passed unrecognized keyword args:\n\t" +
+                "\n\t".join("%s = %s"
+                            % (k,v) for k,v in kwds.iteritems()))
+
+        if load_solutions is False:
+            raise ValueError('GAMSSolver does not support '
+                             'load_solutions=False.')
 
         # IMPORTANT - only delete the whole tmpdir if the solver was the one
         # that made the directory. Otherwise, just delete the files the solver
-        # made, if not keep_files. That way the user can select a directory
+        # made, if not keepfiles. That way the user can select a directory
         # they already have, like the current directory, without having to
         # worry about the rest of the contents of that directory being deleted.
         newdir = False
@@ -285,7 +428,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         elif not os.path.exists(tmpdir):
             # makedirs creates all necessary intermediate directories in order
             # to create the path to tmpdir, if they don't already exist.
-            # However, if keep_files is False, we only delete the final folder,
+            # However, if keepfiles is False, we only delete the final folder,
             # leaving the rest of the intermediate ones.
             os.makedirs(tmpdir)
             newdir = True
@@ -296,9 +439,16 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         io_options['put_results'] = results_filename
 
-        (_, smap_id) = model.write(filename=output_filename,
-                                   format=ProblemFormat.gams,
-                                   io_options=io_options)
+        if type(model) is pyomo.core.kernel.component_block.block:
+            # Relevant to pyomo.solvers nosetests
+            (_, smap_id) = model.write(filename=output_filename,
+                                       format=ProblemFormat.gams,
+                                       _called_by_solver=True,
+                                       **io_options)
+        else:
+            (_, smap_id) = model.write(filename=output_filename,
+                                       format=ProblemFormat.gams,
+                                       io_options=io_options)
         symbolMap = model.solutions.symbol_map[smap_id]
 
         exe = pyutilib.services.registered_executable("gams")
@@ -309,7 +459,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         try:
             rc = subprocess.call(command)
 
-            if keep_files:
+            if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % tmpdir)
 
             if rc == 1 or rc == 127:
@@ -326,7 +476,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             with open(results_filename, 'r') as results_file:
                 results_text = results_file.read()
         finally:
-            if not keep_files:
+            if not keepfiles:
                 if newdir:
                     shutil.rmtree(tmpdir)
                 else:
