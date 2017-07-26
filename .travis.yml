@@ -76,7 +76,7 @@ install:
         pip install scipy;
      fi
   fi
-- wget http://www.mipcl-cpp.appspot.com/mipcl-1.4.0.linux-x86_64.tar.gz
+- wget http://www.mipcl-cpp.appspot.com/static/download/mipcl-1.4.0.linux-x86_64.tar.gz
 - tar -zxvf mipcl-1.4.0.linux-x86_64.tar.gz
 - cd mipcl-1.4.0
 - sudo ./install_libs
