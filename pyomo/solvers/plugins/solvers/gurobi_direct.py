@@ -331,6 +331,7 @@ class GurobiDirect(DirectSolver):
 
         if self._objective_label is not None:
             self._symbol_map.removeSymbol(self._symbol_map.bySymbol[self._objective_label]())
+            self._objective_label = None
 
         for obj in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.objective.Objective,
                                                             descend_into=True, active=True):
@@ -460,26 +461,40 @@ class GurobiDirect(DirectSolver):
             self.results.solver.termination_condition = TerminationCondition.other
 
         self.results.problem.name = gprob.ModelName
-        if gprob.ModelSense == 1:  # minimizing
+
+        if gprob.ModelSense == 1:
             self.results.problem.sense = pyomo.core.kernel.minimize
+        elif gprob.ModelSense == -1:
+            self.results.problem.sense == pyomo.core.kernel.maximize
+        else:
+            raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
+
+        self.results.problem.upper_bound = None
+        self.results.problem.lower_bound = None
+        if (gprob.NumBinVars + gprob.NumIntVars) == 0:
+            try:
+                self.results.problem.upper_bound = gprob.ObjVal
+                self.results.problem.lower_bound = gprob.ObjVal
+            except self._gurobipy.GurobiError:
+                pass
+        elif gprob.ModelSense == 1:  # minimizing
             try:
                 self.results.problem.upper_bound = gprob.ObjVal
             except self._gurobipy.GurobiError:
-                self.results.problem.upper_bound = None
+                pass
             try:
                 self.results.problem.lower_bound = gprob.ObjBound
             except self._gurobipy.GurobiError:
-                self.results.problem.lower_bound = None
+                pass
         elif gprob.ModelSense == -1:  # maximizing
-            self.results.problem.sense = pyomo.core.kernel.maximize
             try:
                 self.results.problem.upper_bound = gprob.ObjBound
             except self._gurobipy.GurobiError:
-                self.results.problem.upper_bound = None
+                pass
             try:
                 self.results.problem.lower_bound = gprob.ObjVal
             except self._gurobipy.GurobiError:
-                self.results.problem.lower_bound = None
+                pass
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
 
