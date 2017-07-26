@@ -1166,7 +1166,7 @@ def convert_external(output_directory,
         print("   - Stoch. Matrix Entries: %d"
               % (stochastic_matrix_count))
         print(" - Objective:")
-        print("    - Stoch. Cost Entries: %d"
+        print("   - Stoch. Cost Entries: %d"
               % (stochastic_cost_count))
 
     if not disable_consistency_checks:
