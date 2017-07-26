@@ -1077,8 +1077,8 @@ class TestSimulationInterface():
         if not os.path.exists(bfile):
             os.rename(ofile, bfile)
 
-        os.system('diff ' + ofile + ' ' + bfile)
-        self.assertFileEqualsBaseline(ofile, bfile, tolerance=1E-2)
+        # os.system('diff ' + ofile + ' ' + bfile)
+        self.assertFileEqualsBaseline(ofile, bfile, tolerance=0.01)
 
 
 @unittest.skipIf(not scipy_available, "Scipy is not available")
