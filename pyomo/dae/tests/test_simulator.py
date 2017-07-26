@@ -1041,7 +1041,7 @@ class TestSimulationInterface():
 
     def _print(self, model, profiles):
         import numpy as np
-        np.set_printoptions(precision=4)
+        np.set_printoptions(formatter={'float':'{: 0.4f}'.format})
         model.pprint()
         print(profiles)
 
