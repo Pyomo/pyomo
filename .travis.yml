@@ -76,6 +76,12 @@ install:
         pip install scipy;
      fi
   fi
+- wget http://www.mipcl-cpp.appspot.com/mipcl-1.4.0.linux-x86_64.tar.gz
+- tar -zxvf mipcl-1.4.0.linux-x86_64.tar.gz
+- cd mipcl-1.4.0
+- sudo ./install_libs
+- cd ..
+- export PATH="$HOME/mipcl-1.4.0/bin:$PATH"
 - conda install -q -y --channel conda-forge glpk
 - glpsol -v
 - conda install -q -y --channel cachemeorg ipopt_bin

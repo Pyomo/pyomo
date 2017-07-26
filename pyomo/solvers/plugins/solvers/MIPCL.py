@@ -33,6 +33,7 @@ class MIPCL(OptSolver):
     alias('mipcl', doc='The MIPCL LP/MIP solver')
 
     def __new__(cls, *args, **kwds):
+        kwds['solver_options']['skip_objective_sense'] = True
         try:
             mode = kwds['solver_io']
             if mode is None:
@@ -64,7 +65,7 @@ class MIPCLSHELL(SystemCallSolver):
         self._valid_problem_formats = [ProblemFormat.mps]
         self._valid_result_formats = {ProblemFormat.mps: ResultsFormat.soln}
         self.set_problem_format(ProblemFormat.mps)
-
+        
         self._capabilities = Options()
         self._capabilities.linear = True
         self._capabilities.integer = True
@@ -119,7 +120,7 @@ class MIPCLSHELL(SystemCallSolver):
             cmd.extend(['-time', str(self._timelimit)])
 
         return Bunch(cmd=cmd, log_file=self._log_file, env=None)
-
+ 
     def process_logfile(self):
         """Process logfile"""
         results = SolverResults()
