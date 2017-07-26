@@ -79,7 +79,7 @@ install:
 
 - if [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
      if [ -n "${EXTRAS}" ]; then
-        pip3 install scipy;
+        conda install -y scipy;
         python -c'import scipy; print(scipy)';
      fi
   fi
