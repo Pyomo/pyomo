@@ -12,7 +12,7 @@
 # Problem Writer for GAMS Format Files
 #
 
-from six import StringIO, string_types
+from six import StringIO, string_types, iteritems
 
 from pyutilib.misc import PauseGC
 
@@ -111,7 +111,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             raise ValueError(
                 "ProblemWriter_gams passed unrecognized io_options:\n\t" +
                 "\n\t".join("%s = %s"
-                            % (k,v) for k,v in io_options.iteritems()))
+                            % (k,v) for k,v in iteritems(io_options)))
 
         if solver is not None:
             if solver.upper() not in valid_solvers:
@@ -174,16 +174,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     # Support passing of stream such as a StringIO
                     # on which to write the model file
                     output_file = output_filename
-                if isinstance(model, IBlockStorage):
-                    # Kernel
-                    ICategorizedObject.labeler.append(var_label)
-                else:
-                    ComponentData.labeler.append(var_label)
                 self._write_model(
                     model=model,
                     output_file=output_file,
                     solver_capability=solver_capability,
                     var_list=var_list,
+                    var_label=var_label,
                     symbolMap=symbolMap,
                     con_labeler=con_labeler,
                     sort=sort,
@@ -196,11 +192,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
             finally:
                 if isinstance(output_filename, string_types):
                     output_file.close()
-                if isinstance(model, IBlockStorage):
-                    # Kernel
-                    ICategorizedObject.labeler.pop()
-                else:
-                    ComponentData.labeler.pop()
 
         return output_filename, symbolMap
 
@@ -209,6 +200,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                      output_file,
                      solver_capability,
                      var_list,
+                     var_label,
                      symbolMap,
                      con_labeler,
                      sort,
@@ -247,13 +239,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if linear:
                 if con.body.polynomial_degree() not in linear_degree:
                     linear = False
-            body = str(con.body)
+            body = StringIO()
+            con.body.to_string(body, labeler=var_label)
             cName = symbolMap.getSymbol(con, con_labeler)
             if con.equality:
                 constraint_names.append('%s' % cName)
                 ConstraintIO.write('%s.. %s =e= %s;\n' % (
                     constraint_names[-1],
-                    body,
+                    body.getvalue(),
                     value(con.upper)
                 ))
             else:
@@ -262,13 +255,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     ConstraintIO.write('%s.. %s =l= %s;\n' % (
                         constraint_names[-1],
                         value(con.lower),
-                        body
+                        body.getvalue()
                     ))
                 if con.upper is not None:
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write('%s.. %s =l= %s;\n' % (
                         constraint_names[-1],
-                        body,
+                        body.getvalue(),
                         value(con.upper)
                     ))
 
@@ -284,11 +277,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if obj.expr.polynomial_degree() not in linear_degree:
                 linear = False
         oName = symbolMap.getSymbol(obj, con_labeler)
-        body = str(obj.expr)
+        body = StringIO()
+        obj.expr.to_string(body, labeler=var_label)
         constraint_names.append(oName)
         ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s;\n' % (
             oName,
-            body
+            body.getvalue()
         ))
 
         # Categorize the variables that we found
@@ -318,7 +312,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 else:
                     reals.append(var)
             else:
-                body = str(v.expr)
+                body = StringIO()
+                v.expr.to_string(body, labeler=var_label)
                 if linear:
                     if v.expr.polynomial_degree() not in linear_degree:
                         linear = False
@@ -326,7 +321,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 ConstraintIO.write('%s.. %s =e= %s;\n' % (
                     constraint_names[-1], 
                     var,
-                    body
+                    body.getvalue()
                 ))
                 reals.append(var)
                 # The Expression could have hit new variables (or other
@@ -362,12 +357,15 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 continue
             if varName in positive:
                 if var.ub is not None:
-                    output_file.write("%s.up = %s;\n" % (varName, var.ub))
+                    output_file.write("%s.up = %s;\n" %
+                                      (varName, value(var.ub)))
             elif varName in posInts:
                 if var.lb != 0:
-                    output_file.write("%s.lo = %s;\n" % (varName, var.lb))
+                    output_file.write("%s.lo = %s;\n" %
+                                      (varName, value(var.lb)))
                 if var.ub is not None:
-                    output_file.write("%s.up = %s;\n" % (varName, var.ub))
+                    output_file.write("%s.up = %s;\n" %
+                                      (varName, value(var.ub)))
             elif varName in otherInts:
                 if var.lb is None:
                     # GAMS doesn't allow -INF lower bound for ints
@@ -377,12 +375,15 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                    % var.name)
                     output_file.write("%s.lo = -1.0E+10;\n" % (varName))
                 if var.ub is not None:
-                    output_file.write("%s.up = %s;\n" % (varName, var.ub))
+                    output_file.write("%s.up = %s;\n" %
+                                      (varName, value(var.ub)))
             elif varName in reals:
                 if var.lb is not None:
-                    output_file.write("%s.lo = %s;\n" % (varName, var.lb))
+                    output_file.write("%s.lo = %s;\n" %
+                                      (varName, value(var.lb)))
                 if var.ub is not None:
-                    output_file.write("%s.up = %s;\n" % (varName, var.ub))
+                    output_file.write("%s.up = %s;\n" %
+                                      (varName, value(var.ub)))
             if var.value is not None:
                 output_file.write("%s.l = %s;\n" % (varName, var.value))
             if var.is_fixed():

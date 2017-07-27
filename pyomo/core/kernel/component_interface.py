@@ -87,10 +87,6 @@ class ICategorizedObject(object):
     _is_component = False
     _is_container = False
 
-    # Initialize labeler for model writer labeling, used in __str__
-    # Currently used by ProblemWriter_gams
-    labeler = []
-
     #
     # Interface
     #
@@ -213,12 +209,7 @@ class ICategorizedObject(object):
             generate_names method, found on most containers,
             for a way to generate a static set of component
             names.
-
-        If ICategorizedObject.labeler contains a labeler, return the
-        result of applying this labeler to self.
         """
-        if ICategorizedObject.labeler:
-            return ICategorizedObject.labeler[-1](self)
         name = self.name
         if name is None:
             return "<"+self.__class__.__name__+">"
