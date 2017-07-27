@@ -614,7 +614,10 @@ def check_expr_evaluation(model, symbolMap, solver_io):
         # since GAMS never sees those anyway so they should be skipped
         for ref in itervalues(symbolMap.bySymbol):
             obj = ref()
-            if obj.type() is Expression:
+            if isinstance(model, IBlockStorage):
+                if obj.ctype is Expression:
+                    check_expr(obj.expr, obj.name, solver_io)
+            elif obj.parent_component().type() is Expression:
                 check_expr(obj.expr, obj.name, solver_io)
     finally:
         # Return uninitialized variables to None

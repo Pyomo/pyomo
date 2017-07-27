@@ -330,6 +330,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 numVar = len(var_list)
 
         # Write the GAMS model
+        # $offdigit ignores extra precise digits instead of erroring
+        output_file.write("$offdigit\n\n")
         output_file.write("EQUATIONS\n\t")
         output_file.write("\n\t".join(constraint_names))
         if binary:
