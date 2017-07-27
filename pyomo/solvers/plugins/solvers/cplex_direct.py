@@ -371,11 +371,14 @@ class CPLEXDirect(DirectSolver):
     def _compile_objective(self):
         obj_counter = 0
 
-        for var in self._vars_referenced_by_obj:
-            self._referenced_variables[var] -= 1
-
-        if self._objective_label is not None:
-            self._symbol_map.removeSymbol(self._symbol_map.bySymbol[self._objective_label]())
+        if self._objective is not None:
+            for var in self._vars_referenced_by_obj:
+                self._referenced_variables[var] -= 1
+            self._vars_referenced_by_obj = ComponentSet()
+            self._labeler.remove_obj(self._objective)
+            self._symbol_map.removeSymbol(self._bjective)
+            self._objective_label = None
+            self._objective = None
 
         self._solver_model.objective.set_linear([(var, 0.0) for var in self._pyomo_var_to_solver_var_map.values()])
         self._solver_model.objective.set_quadratic([[[0], [0]] for i in self._pyomo_var_to_solver_var_map.keys()])
@@ -409,6 +412,7 @@ class CPLEXDirect(DirectSolver):
                                                                                  cplex_expr.q_variables2,
                                                                                  cplex_expr.q_coefficients)))
             self._objective_label = self._symbol_map.getSymbol(obj, self._labeler)
+            self._objective = obj
             self._vars_referenced_by_obj = referenced_vars
 
     def _postsolve(self):

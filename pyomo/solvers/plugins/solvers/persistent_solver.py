@@ -47,7 +47,7 @@ class PersistentSolver(DirectOrPersistentSolver):
     def add_block(self, block):
         if block.is_indexed():
             for sub_block in block.values():
-                self.add_block(block)
+                self._add_block(block)
             return
         self._add_block(block)
 
@@ -57,23 +57,23 @@ class PersistentSolver(DirectOrPersistentSolver):
     def add_constraint(self, con):
         if con.is_indexed():
             for child_con in con.values():
-                self.add_constraint(child_con)
-            return
-        return self._add_constraint(con)
+                self._add_constraint(child_con)
+        else:
+            self._add_constraint(con)
 
     def add_var(self, var):
         if var.is_indexed():
             for child_var in var.values():
-                self.add_var(child_var)
-            return
-        return self._add_var(var)
+                self._add_var(child_var)
+        else:
+            self._add_var(var)
 
     def add_sos_constraint(self, con):
         if con.is_indexed():
             for child_con in con.values():
-                self.add_sos_constraint(child_con)
-            return
-        return self._add_sos_constraint(con)
+                self._add_sos_constraint(child_con)
+        else:
+            self._add_sos_constraint(con)
 
     """ This method should be implemented by subclasses."""
     def _remove_constraint(self, solver_con):
@@ -110,6 +110,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         solver_con = self._pyomo_con_to_solver_con_map[con]
         self._remove_constraint(solver_con)
         self._symbol_map.removeSymbol(con)
+        self._labeler.remove_obj(con)
         for var in self._vars_referenced_by_con[con]:
             self._referenced_variables[var] -= 1
         del self._vars_referenced_by_con[con]
@@ -123,6 +124,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         solver_con = self._pyomo_con_to_solver_con_map[con]
         self._remove_sos_constraint(solver_con)
         self._symbol_map.removeSymbol(con)
+        self._labeler.remove_obj(con)
         for var in self._vars_referenced_by_con[con]:
             self._referenced_variables[var] -= 1
         del self._vars_referenced_by_con[con]
@@ -139,6 +141,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         solver_var = self._pyomo_var_to_solver_var_map[var]
         self._remove_var(solver_var)
         self._symbol_map.removeSymbol(var)
+        self._labeler.remove_obj(var)
         del self._referenced_variables[var]
         del self._pyomo_var_to_solver_var_map[var]
 

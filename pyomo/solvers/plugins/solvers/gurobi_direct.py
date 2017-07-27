@@ -220,7 +220,6 @@ class GurobiDirect(DirectSolver):
         for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
                                                 active=True, sort=True):
             self._add_var(var)
-        self._solver_model.update()
 
         for sub_block in block.block_data_objects(descend_into=True, active=True):
             for con in sub_block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint,
@@ -234,6 +233,7 @@ class GurobiDirect(DirectSolver):
             if len([obj for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective,
                                                                     descend_into=False, active=True)]) != 0:
                 self._compile_objective()
+        self._solver_model.update()
 
     def _add_constraint(self, con):
         if not con.active:
@@ -326,12 +326,14 @@ class GurobiDirect(DirectSolver):
     def _compile_objective(self):
         obj_counter = 0
 
-        for var in self._vars_referenced_by_obj:
-            self._referenced_variables[var] -= 1
-
-        if self._objective_label is not None:
-            self._symbol_map.removeSymbol(self._symbol_map.bySymbol[self._objective_label]())
+        if self._objective is not None:
+            for var in self._vars_referenced_by_obj:
+                self._referenced_variables[var] -= 1
+            self._vars_referenced_by_obj = ComponentSet()
+            self._labeler.remove_obj(self._objective)
+            self._symbol_map.removeSymbol(self._objective)
             self._objective_label = None
+            self._objective = None
 
         for obj in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.objective.Objective,
                                                             descend_into=True, active=True):
@@ -353,6 +355,7 @@ class GurobiDirect(DirectSolver):
 
             self._solver_model.setObjective(gurobi_expr, sense=sense)
             self._objective_label = self._symbol_map.getSymbol(obj, self._labeler)
+            self._objective = obj
             self._vars_referenced_by_obj = referenced_vars
 
     def _postsolve(self):

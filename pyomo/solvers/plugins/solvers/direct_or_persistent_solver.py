@@ -38,6 +38,7 @@ class DirectOrPersistentSolver(OptSolver):
         self._vars_referenced_by_con = ComponentMap()
         self._vars_referenced_by_obj = ComponentSet()
         self._objective_label = None
+        self._objective = None
         self.results = None
         self._smap_id = None
         self._skip_trivial_constraints = False
@@ -113,8 +114,10 @@ class DirectOrPersistentSolver(OptSolver):
         self._pyomo_var_to_solver_var_map = ComponentMap()
         self._pyomo_con_to_solver_con_map = ComponentMap()
         self._vars_referenced_by_con = ComponentMap()
+        self._vars_referenced_by_obj = ComponentSet()
         self._referenced_variables = ComponentMap()
         self._objective_label = None
+        self._objective = None
 
         self._symbol_map = SymbolMap()
 

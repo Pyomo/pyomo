@@ -71,6 +71,9 @@ class NumericLabeler(object):
         self.id += 1
         return self.prefix + str(self.id)
 
+    def remove_obj(self, obj):
+        pass
+
 #
 # TODO: [JDS] I would like to rename TextLabeler to LPLabeler - as it
 # generated LP-file-compliant labels - and make the CNameLabeler the
@@ -94,6 +97,9 @@ class TextLabeler(object):
 
     def __call__(self, obj):
         return cpxlp_label_from_name(obj.getname(True, self.name_buffer))
+
+    def remove_obj(self, obj):
+        self.name_buffer.pop(id(obj))
 
 class AlphaNumTextLabeler(object):
     def __init__(self):
