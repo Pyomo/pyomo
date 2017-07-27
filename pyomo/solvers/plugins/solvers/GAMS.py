@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO
+from six import StringIO, iteritems
 from tempfile import mkdtemp
 
 from pyomo.core.base import Constraint, Suffix, Var, value, Expression
@@ -178,7 +178,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             raise ValueError(
                 "GAMSSolver solve() passed unrecognized keyword args:\n\t" +
                 "\n\t".join("%s = %s"
-                            % (k,v) for k,v in kwds.iteritems()))
+                            % (k,v) for k,v in iteritems(kwds)))
 
         if load_solutions is False:
             raise ValueError('GAMSSolver does not support '
@@ -247,7 +247,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 elif suf.name == 'rc' and suf.import_enabled():
                     has_rc = True
 
-        for sym, ref in symbolMap.bySymbol.iteritems():
+        for sym, ref in iteritems(symbolMap.bySymbol):
             obj = ref()
             if isinstance(model, IBlockStorage):
                 # Kernel variables have no 'parent_component'
@@ -418,7 +418,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             raise ValueError(
                 "GAMSSolver solve() passed unrecognized keyword args:\n\t" +
                 "\n\t".join("%s = %s"
-                            % (k,v) for k,v in kwds.iteritems()))
+                            % (k,v) for k,v in iteritems(kwds)))
 
         if load_solutions is False:
             raise ValueError('GAMSSolver does not support '
@@ -511,7 +511,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 elif suf.name == 'rc' and suf.import_enabled():
                     has_rc = True
 
-        for sym, ref in symbolMap.bySymbol.iteritems():
+        for sym, ref in iteritems(symbolMap.bySymbol):
             obj = ref()
             if isinstance(model, IBlockStorage):
                 # Kernel variables have no 'parent_component'
