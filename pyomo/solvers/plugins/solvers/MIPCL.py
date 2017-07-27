@@ -34,19 +34,11 @@ class MIPCL(OptSolver):
 
     def __new__(cls, *args, **kwds):
         kwds['solver_options']['skip_objective_sense'] = True
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'mps'
-            del kwds['solver_io']
-        except KeyError:
-            mode = 'mps'
+        mode = kwds.pop('solver_io', 'mps')
         if mode == 'mps':
             opt = SolverFactory('_mipcl_shell', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
             return opt
-        if mode == 'os':
-            opt = SolverFactory('_ossolver', **kwds)
         else:
             logger.error('Unknown IO type: %s' % mode)
             return
