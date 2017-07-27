@@ -200,6 +200,7 @@ def parse_command_line(args,
         ap.add_argument("-h", "--help", dest="show_help",
                         action="store_true", default=False,
                         help="show this help message and exit")
+
         return ap
 
     #
@@ -399,17 +400,7 @@ def launch_command(command,
     #       options object is always a PySPConfigBlock
     #
     if isinstance(options, PySPConfigBlock):
-        ignored_options = dict((_c._name, _c.value(False))
-                              for _c in options.unused_user_values())
-        if len(ignored_options):
-            msg = ("The following options were "
-                   "explicitly set but never accessed during "
-                   "execution of this command:\n")
-            for name in sorted(ignored_options):
-                msg += (" - %s: %s\n" % (name, ignored_options[name]))
-            msg += ("If you believe this is a bug, please report it "
-                    "to the PySP developers.\n")
-            logger.warn(msg)
+        options.check_usage(error=False)
 
     logger.setLevel(prev_log_level)
 
