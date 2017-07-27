@@ -88,16 +88,20 @@ class PySPConfigBlock(ConfigBlock):
         """Return a summary string for an option
         registered on this block."""
         configval = self.get(name)
-        outstr = ("PySPConfigValue: %s\n"
-                  % (configval._name))
+        outstr = ("%s: %s\n"
+                  % (configval.__class__.__name__,
+                     configval._name))
         outstr += ("  -    type: %s\n"
                    "  - default: %s\n"
                    % ((configval._domain.doc if \
                        hasattr(configval._domain, 'doc') else \
                        configval._domain),
                       configval._default))
-        lines = textwrap.wrap(configval._description,
-                              width=58)
+        if configval._description is None:
+            lines = ["None"]
+        else:
+            lines = textwrap.wrap(configval._description,
+                                  width=58)
         while lines[-1].strip() == "":
             lines.pop()
         for i, line in enumerate(lines):
@@ -164,6 +168,44 @@ class PySPConfigBlock(ConfigBlock):
         ans._userSet = True
         self._userSet = False
         return ans
+
+    def check_usage(self, error=True):
+        """Check for usage of options that have set
+        by a user.
+
+        Args:
+            error (bool): When :const:`True` (default), an
+                exception is raised when any options set by
+                the user have not been accessed by any
+                code. Otherwise, a warning is logged.
+
+        Returns:
+            :const:`True` when all options set by the user \
+            have been accessed; otherwise, returns \
+            :const:`False` if the :attr:`error` keyword is
+            set to :const:`False`.
+
+        Raises:
+            ValueError: when user-set options exist but have
+                not been accessed (and the :attr:`error`
+                keyword is :const:`True`)
+        """
+        ignored_options = dict((_c._name, _c.value(False))
+                               for _c in self.unused_user_values())
+        if len(ignored_options):
+            msg = ("The following options were "
+                   "explicitly set but never accessed:\n")
+            for name in sorted(ignored_options):
+                msg += (" - %s: %s\n" % (name, ignored_options[name]))
+            msg += ("If you believe this is a bug, please report it "
+                    "to the PySP developers.\n")
+            logger.warning(msg)
+            if error:
+                raise ValueError(msg)
+            else:
+                return False
+        return True
+
 
 def check_options_match(opt1,
                         opt2,
