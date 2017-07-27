@@ -26,9 +26,7 @@ from pyomo.opt import ProblemFormat
 from pyomo.opt.base import AbstractProblemWriter
 import pyomo.util.plugin
 
-from pyomo.core.kernel import (block, constraint, expression, objective,
-    variable, parameter, suffix, linear_constraint)
-
+from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.kernel.component_interface import ICategorizedObject
 
 import logging
@@ -176,7 +174,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     # Support passing of stream such as a StringIO
                     # on which to write the model file
                     output_file = output_filename
-                if type(model) is block:
+                if isinstance(model, IBlockStorage):
                     # Kernel
                     ICategorizedObject.labeler.append(var_label)
                 else:
@@ -198,7 +196,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             finally:
                 if isinstance(output_filename, string_types):
                     output_file.close()
-                if type(model) is block:
+                if isinstance(model, IBlockStorage):
                     # Kernel
                     ICategorizedObject.labeler.pop()
                 else:
@@ -229,21 +227,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
         valid_ctypes = set([
             Block, Constraint, Expression, Objective, Param, 
             Set, RangeSet, Var, Suffix ])
-        valid_kernel_ctypes = set([
-            block, constraint, expression, objective,
-            variable, parameter, suffix, linear_constraint])
-        for c in model.component_objects(active=True):
-            if type(model) is block:
-                # Kernel
-                if type(c) not in valid_kernel_ctypes:
-                    raise RuntimeError(
-                        "Unallowable component %s.\nThe GAMS writer cannot "
-                        "export models with this component type" %
-                        ( type(c).__name__, ))
-            elif c.type() not in valid_ctypes:
-                raise RuntimeError(
-                    "Unallowable component %s.\nThe GAMS writer cannot export"
-                    " models with this component type" % ( c.type().__name__, ))
+        model_ctypes = model.collect_ctypes(active=True)
+        if not model_ctypes.issubset(valid_ctypes):
+            invalids = [t.__name__ for t in (model_ctypes - valid_ctypes)]
+            raise RuntimeError(
+                "Unallowable component(s) %s.\nThe GAMS writer cannot "
+                "export models with this component type" %
+                ", ".join(invalids))
 
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are

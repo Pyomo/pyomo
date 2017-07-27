@@ -23,7 +23,7 @@ from pyomo.opt.base.solvers import _extract_version
 import pyutilib.subprocess
 from pyutilib.misc import Options
 
-from pyomo.core.kernel import block, variable
+from pyomo.core.kernel.component_block import IBlockStorage
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -166,7 +166,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         load_solutions = kwds.pop("load_solutions", True)
         tee            = kwds.pop("tee", False)
         keepfiles      = kwds.pop("keepfiles", False)
-        tmpdir         = kwds.pop("tmpdir", 'GAMS_files')
+        tmpdir         = kwds.pop("tmpdir", None)
         io_options     = kwds.pop("io_options", {})
 
         if "symbolic_solver_labels" in kwds:
@@ -188,7 +188,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         # model file will be written. The writer also passes this StringIO
         # back, but output_file is defined in advance for clarity.
         output_file = StringIO()
-        if type(model) is block:
+        if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
             symbolMap = model.write(filename=output_file,
                                     format=ProblemFormat.gams,
@@ -235,7 +235,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
-            if type(model) is block:
+            if isinstance(model, IBlockStorage):
                 # Kernel suffix's import_enabled is property, not method
                 if suf.name == 'dual' and suf.import_enabled:
                     has_dual = True
@@ -249,9 +249,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         for sym, ref in symbolMap.bySymbol.iteritems():
             obj = ref()
-            if type(model) is block:
+            if isinstance(model, IBlockStorage):
                 # Kernel variables have no 'parent_component'
-                if type(obj) is not variable:
+                if obj.ctype is not Var:
                     continue
             elif obj.parent_component().type() is not Var:
                 continue
@@ -447,7 +447,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         io_options['put_results'] = results_filename
 
-        if type(model) is block:
+        if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
             symbolMap = model.write(filename=output_filename,
                                     format=ProblemFormat.gams,
@@ -499,7 +499,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
-            if type(model) is block:
+            if isinstance(model, IBlockStorage):
                 # Kernel suffix's import_enabled is property, not method
                 if suf.name == 'dual' and suf.import_enabled:
                     has_dual = True
@@ -513,9 +513,9 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         for sym, ref in symbolMap.bySymbol.iteritems():
             obj = ref()
-            if type(model) is block:
+            if isinstance(model, IBlockStorage):
                 # Kernel variables have no 'parent_component'
-                if type(obj) is not variable:
+                if obj.ctype is not Var:
                     continue
             elif obj.parent_component().type() is not Var:
                 continue
