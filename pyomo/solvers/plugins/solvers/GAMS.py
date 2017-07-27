@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from six import StringIO, iteritems
+from six import StringIO, iteritems, itervalues
 from tempfile import mkdtemp
 
 from pyomo.core.base import (Constraint, Suffix, Var, value,
@@ -612,7 +612,7 @@ def check_expr_evaluation(model, symbolMap, solver_io):
         # Iterate through symbolMap in case for some reason model has
         # Expressions that do not appear in any constraints or the objective,
         # since GAMS never sees those anyway so they should be skipped
-        for ref in symbolMap.bySymbol.itervalues():
+        for ref in itervalues(symbolMap.bySymbol):
             obj = ref()
             if obj.type() is Expression:
                 check_expr(obj.expr, obj.name, solver_io)
