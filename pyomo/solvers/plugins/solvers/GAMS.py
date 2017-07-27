@@ -11,9 +11,10 @@
 from six import StringIO, iteritems
 from tempfile import mkdtemp
 
-from pyomo.core.base import Constraint, Suffix, Var, value, Expression
+from pyomo.core.base import (Constraint, Suffix, Var, value,
+                             Expression, Objective)
 from pyomo.opt import ProblemFormat, SolverFactory
-import os, sys, subprocess, pipes, math, logging, shutil
+import os, sys, subprocess, math, logging, shutil
 
 import pyomo.util.plugin
 from pyomo.opt.base import IOptSolver
@@ -220,18 +221,26 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             try:
                 check_expr_evaluation(model, symbolMap, 'direct')
             finally:
+                # Always name working directory or delete files,
+                # regardless of any errors.
+                if keepfiles:
+                    print("\nGAMS WORKING DIRECTORY: %s\n" %
+                          ws.working_directory)
+                elif tmpdir is not None:
+                    # Garbage collect all references to t1.out_db
+                    # So that .gdx file can be deleted
+                    t1 = rec = rec_lo = rec_hi = None
+                    file_removal_gams_direct(tmpdir, newdir)
                 raise
-        finally:
+        except:
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
             elif tmpdir is not None:
-                if newdir:
-                    shutil.rmtree(tmpdir)
-                else:
-                    os.remove(os.path.join(tmpdir, '_gams_py_gjo0.gms'))
-                    os.remove(os.path.join(tmpdir, '_gams_py_gjo0.lst'))
-                    os.remove(os.path.join(tmpdir, '_gams_py_gdb0.gdx'))
-                    # .pf file is not made when DebugLevel is Off
+                # Garbage collect all references to t1.out_db
+                # So that .gdx file can be deleted
+                t1 = rec = rec_lo = rec_hi = None
+                file_removal_gams_direct(tmpdir, newdir)
+            raise
 
         has_dual = has_rc = False
         for suf in model.component_data_objects(Suffix, active=True):
@@ -290,6 +299,15 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                         # Solver didn't provide marginals,
                         # nothing else to do here
                         break
+
+        if keepfiles:
+            print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
+        elif tmpdir is not None:
+            # Garbage collect all references to t1.out_db
+            # So that .gdx file can be deleted
+            t1 = rec = rec_lo = rec_hi = None
+            file_removal_gams_direct(tmpdir, newdir)
+
         return None
 
 
@@ -620,3 +638,12 @@ def check_expr(expr, name, solver_io):
             # overwriting, so raise the ValueError.
             # But for direct, the GamsExceptionExecution will be raised.
             raise
+
+def file_removal_gams_direct(tmpdir, newdir):
+    if newdir:
+        shutil.rmtree(tmpdir)
+    else:
+        os.remove(os.path.join(tmpdir, '_gams_py_gjo0.gms'))
+        os.remove(os.path.join(tmpdir, '_gams_py_gjo0.lst'))
+        os.remove(os.path.join(tmpdir, '_gams_py_gdb0.gdx'))
+        # .pf file is not made when DebugLevel is Off
