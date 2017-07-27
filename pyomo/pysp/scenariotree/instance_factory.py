@@ -308,7 +308,7 @@ class ScenarioTreeInstanceFactory(object):
                                   "ReferenceModel.py",
                                   archives=self._archives)
             if not os.path.exists(self._model_filename):
-                logger.error("Failed to extract reference model .py file"
+                logger.error("Failed to extract reference model python file "
                              "from path specification: %s"
                              % (model))
                 raise IOError("path does not exist: %s"
@@ -350,8 +350,8 @@ class ScenarioTreeInstanceFactory(object):
             self._scenario_tree = scenario_tree
         elif has_networkx and \
              isinstance(scenario_tree, networkx.Graph):
-            self._scenario_tree = \
-                ScenarioTreeModelFromNetworkX(obj)
+            self._scenario_tree_model = \
+                ScenarioTreeModelFromNetworkX(scenario_tree)
         elif isinstance(scenario_tree, six.string_types):
             logger.debug("scenario tree input is a string, attempting "
                          "to load file specification: %s"

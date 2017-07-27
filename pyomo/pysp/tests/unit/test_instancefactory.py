@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -58,6 +58,8 @@ class Test(unittest.TestCase):
             del sys.modules["reference_test_model_with_callback"]
         if "reference_test_scenario_tree_model" in sys.modules:
             del sys.modules["reference_test_scenario_tree_model"]
+        if "ScenarioStructure" in sys.modules:
+            del sys.modules["ScenarioStructure"]
 
     def _get_testfname_prefix(self):
         class_name, test_name = self.id().split('.')[-2:]
@@ -476,6 +478,23 @@ class Test(unittest.TestCase):
             self.assertTrue(factory.scenario_tree_directory() is not None)
             self._check_factory(factory)
         self.assertTrue("reference_test_model" in sys.modules)
+
+    @unittest.skipIf(not has_networkx, "Requires networkx module")
+    def test_init16(self):
+        self.assertTrue("reference_test_model" not in sys.modules)
+        self.assertTrue("ScenarioStructure" not in sys.modules)
+        nx_tree = load_external_module(os.path.join(testdatadir,
+                                                    "ScenarioStructure.py"))[0].G
+        with ScenarioTreeInstanceFactory(
+                model=join(testdatadir,
+                           "reference_test_model.py"),
+                scenario_tree=nx_tree) as factory:
+            self.assertEqual(len(factory._archives), 0)
+            self.assertTrue(factory.model_directory() is not None)
+            self.assertTrue(factory.scenario_tree_directory() is None)
+            self._check_factory(factory)
+        self.assertTrue("reference_test_model" in sys.modules)
+        self.assertTrue("ScenarioStructure" in sys.modules)
 
 Test = unittest.category('smoke','nightly','expensive')(Test)
 
