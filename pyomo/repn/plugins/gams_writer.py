@@ -55,6 +55,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 shortened symbols (slower, but useful for debugging).
             labeler=None:
                 Custom labeler option. Incompatible with symbolic_solver_labels.
+            file_determinism=1:
+                How much effort do we want to put into ensuring the
+                LP file is written deterministically for a Pyomo model:
+                   0 : None
+                   1 : sort keys of indexed components (default)
+                   2 : sort keys AND sort names (over declaration order)
+            skip_trivial_constraints=False:
+                Skip writing constraints whose body section is fixed
             solver=None:
                 If None, GAMS will use default solver for model type.
             mtype=None:
@@ -90,7 +98,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # Skip writing constraints whose body section is
         # fixed (i.e., no variables)
         skip_trivial_constraints = \
-            io_options.pop("skip_trivial_constraints", True)
+            io_options.pop("skip_trivial_constraints", False)
 
         # How much effort do we want to put into ensuring the
         # LP file is written deterministically for a Pyomo model:
@@ -376,7 +384,17 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                    "set to lowest possible in GAMS: -1.0E+10"
                                    % var.name)
                     output_file.write("%s.lo = -1.0E+10;\n" % (varName))
+                else:
+                    output_file.write("%s.lo = %s;\n" %
+                                      (varName, value(var.lb)))
                 if var.ub is not None:
+                    output_file.write("%s.up = %s;\n" %
+                                      (varName, value(var.ub)))
+            elif varName in binary:
+                if var.lb != 0:
+                    output_file.write("%s.lo = %s;\n" %
+                                      (varName, value(var.lb)))
+                if var.ub != 1:
                     output_file.write("%s.up = %s;\n" %
                                       (varName, value(var.ub)))
             elif varName in reals:
@@ -414,10 +432,36 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write("\n\n* END USER ADDITIONAL OPTIONS\n\n")
 
         output_file.write(
-            "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n"
+            "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n\n"
             % ( model_name, 
                 mtype,
                 'min' if obj.sense == minimize else 'max'))
+
+        # Set variables to store certain statuses and attributes
+        output_file.write("Scalars MODELSTAT 'model status', "
+                          "SOLVESTAT 'solve status';\n")
+        output_file.write("MODELSTAT = %s.modelstat;\n" % model_name)
+        output_file.write("SOLVESTAT = %s.solvestat;\n\n" % model_name)
+
+        output_file.write("Scalar OBJEST 'best objective', "
+                          "OBJVAL 'objective value';\n")
+        output_file.write("OBJEST = %s.objest;\n" % model_name)
+        output_file.write("OBJVAL = %s.objval;\n\n" % model_name)
+
+        output_file.write("Scalar NUMVAR 'number of variables';\n")
+        output_file.write("NUMVAR = %s.numvar\n\n" % model_name)
+
+        output_file.write("Scalar NUMEQU 'number of equations';\n")
+        output_file.write("NUMEQU = %s.numequ\n\n" % model_name)
+
+        output_file.write("Scalar NUMDVAR 'number of discrete variables';\n")
+        output_file.write("NUMDVAR = %s.numdvar\n\n" % model_name)
+
+        output_file.write("Scalar NUMNZ 'number of nonzeros';\n")
+        output_file.write("NUMNZ = %s.numnz\n\n" % model_name)
+
+        output_file.write("Scalar ETSOLVE 'time to execute solve statement';\n")
+        output_file.write("ETSOLVE = %s.etsolve\n\n" % model_name)
 
         if put_results is not None:
             output_file.write("\nfile results /'%s'/;" % put_results)

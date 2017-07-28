@@ -10,11 +10,11 @@
 
 from six import StringIO, iteritems, itervalues
 from tempfile import mkdtemp
+import os, sys, subprocess, math, logging, shutil
 
 from pyomo.core.base import (Constraint, Suffix, Var, value,
                              Expression, Objective)
 from pyomo.opt import ProblemFormat, SolverFactory
-import os, sys, subprocess, math, logging, shutil
 
 import pyomo.util.plugin
 from pyomo.opt.base import IOptSolver
@@ -25,6 +25,12 @@ import pyutilib.subprocess
 from pyutilib.misc import Options
 
 from pyomo.core.kernel.component_block import IBlockStorage
+
+import pyomo.core.base.suffix
+import pyomo.core.kernel.component_suffix
+
+from pyomo.opt.results import (SolverResults, SolverStatus, Solution,
+    SolutionStatus, TerminationCondition, ProblemSense)
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -70,6 +76,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
     def __init__(self, **kwds):
         self._version = None
+        self._default_variable_value = None
 
         self._capabilities = Options()
         self._capabilities.linear = True
@@ -120,6 +127,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
     def warm_start_capable(self):
         return True
+
+    def default_variable_value(self):
+        return self._default_variable_value
 
     def solve(self, *args, **kwds):
         """
@@ -181,9 +191,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 "\n\t".join("%s = %s"
                             % (k,v) for k,v in iteritems(kwds)))
 
-        if load_solutions is False:
-            raise ValueError('GAMSSolver does not support '
-                             'load_solutions=False.')
+        ####################################################################
+        # Presolve
+        ####################################################################
 
         # Create StringIO stream to pass to gams_writer, on which the
         # model file will be written. The writer also passes this StringIO
@@ -191,14 +201,20 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         output_file = StringIO()
         if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
-            symbolMap = model.write(filename=output_file,
+            smap_id = model.write(filename=output_file,
                                     format=ProblemFormat.gams,
+                                    _called_by_solver=True,
                                     **io_options)
+            symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
             (_, smap_id) = model.write(filename=output_file,
                                        format=ProblemFormat.gams,
                                        io_options=io_options)
             symbolMap = model.solutions.symbol_map[smap_id]
+
+        ####################################################################
+        # Apply solver
+        ####################################################################
 
         # IMPORTANT - only delete the whole tmpdir if the solver was the one
         # that made the directory. Otherwise, just delete the files the solver
@@ -233,6 +249,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                     file_removal_gams_direct(tmpdir, newdir)
                 raise
         except:
+            # Catch other errors and remove files first
             if keepfiles:
                 print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
             elif tmpdir is not None:
@@ -242,43 +259,174 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 file_removal_gams_direct(tmpdir, newdir)
             raise
 
-        has_dual = has_rc = False
-        for suf in model.component_data_objects(Suffix, active=True):
-            if isinstance(model, IBlockStorage):
-                # Kernel suffix's import_enabled is property, not method
-                if suf.name == 'dual' and suf.import_enabled:
-                    has_dual = True
-                elif suf.name == 'rc' and suf.import_enabled:
-                    has_rc = True
-            else:
-                if suf.name == 'dual' and suf.import_enabled():
-                    has_dual = True
-                elif suf.name == 'rc' and suf.import_enabled():
-                    has_rc = True
+        ####################################################################
+        # Postsolve
+        ####################################################################
+
+        # import suffixes must be on the top-level model
+        if isinstance(model, IBlockStorage):
+            model_suffixes = list(name for (name,comp) \
+                                  in pyomo.core.kernel.component_suffix.\
+                                  import_suffix_generator(model,
+                                                          active=True,
+                                                          descend_into=False,
+                                                          return_key=True))
+        else:
+            model_suffixes = list(name for (name,comp) \
+                                  in pyomo.core.base.suffix.\
+                                  active_import_suffix_generator(model))
+        extract_dual = ('dual' in model_suffixes)
+        extract_rc = ('rc' in model_suffixes)
+
+        results = SolverResults()
+        results.problem.name = t1.name
+        results.problem.lower_bound = t1.out_db["OBJEST"].find_record().value
+        results.problem.upper_bound = t1.out_db["OBJEST"].find_record().value
+        results.problem.number_of_variables = \
+            t1.out_db["NUMVAR"].find_record().value
+        results.problem.number_of_constraints = \
+            t1.out_db["NUMEQU"].find_record().value
+        results.problem.number_of_nonzeros = \
+            t1.out_db["NUMNZ"].find_record().value
+        results.problem.number_of_binary_variables = None
+        results.problem.number_of_integer_variables = \
+            t1.out_db["NUMDVAR"].find_record().value # includes binary vars
+        results.problem.number_of_continuous_variables = \
+            t1.out_db["NUMVAR"].find_record().value \
+            - t1.out_db["NUMDVAR"].find_record().value
+        results.problem.number_of_objectives = 1 # required by GAMS writer
+        obj = list(model.component_data_objects(Objective, active=True))
+        assert len(obj) == 1, 'Only one objective is allowed.'
+        obj = obj[0]
+        objctvval = t1.out_db["OBJVAL"].find_record().value
+        if obj.is_minimizing():
+            results.problem.sense = ProblemSense.minimize
+            results.problem.upper_bound = objctvval
+        else:
+            results.problem.sense = ProblemSense.maximize
+            results.problem.lower_bound = objctvval
+
+        results.solver.name = "GAMS " + str(self.version())
+        solvestat = t1.out_db["SOLVESTAT"].find_record().value
+        # Init termination condition to None to give preference to this first
+        # block of code, only set certain TC's below if it's still None
+        results.solver.termination_condition = None
+        if solvestat == 1:
+            results.solver.status = SolverStatus.ok
+        elif solvestat == 2:
+            results.solver.status = SolverStatus.ok
+            results.solver.termination_condition = TerminationCondition.maxIterations
+        elif solvestat == 3:
+            results.solver.status = SolverStatus.ok
+            results.solver.termination_condition = TerminationCondition.maxTimeLimit
+        elif solvestat == 5:
+            results.solver.status = SolverStatus.ok
+            results.solver.termination_condition = TerminationCondition.maxEvaluations
+        elif solvestat == 7:
+            results.solver.status = SolverStatus.aborted
+            results.solver.termination_condition = TerminationCondition.licensingProblems
+        elif solvestat == 8:
+            results.solver.status = SolverStatus.aborted
+            results.solver.termination_condition = TerminationCondition.userInterrupt
+        elif solvestat == 10:
+            results.solver.status = SolverStatus.error
+            results.solver.termination_condition = TerminationCondition.solverFailure
+        elif solvestat == 11:
+            results.solver.status = SolverStatus.error
+            results.solver.termination_condition = TerminationCondition.internalSolverError
+        elif solvestat in (4, 9, 12, 13):
+            results.solver.status = SolverStatus.error
+        elif solvestat == 6:
+            results.solver.status = SolverStatus.unknown
+        results.solver.return_code = None
+        results.solver.message = None
+        # Not sure if this value is actually user time
+        # "the elapsed time it took to execute a solve statement in total"
+        results.solver.user_time = t1.out_db["ETSOLVE"].find_record().value
+        results.solver.system_time = None
+        results.solver.wallclock_time = None
+        results.solver.termination_message = None
+
+        soln = Solution()
+
+        modelstat = t1.out_db["MODELSTAT"].find_record().value
+        if modelstat == 1:
+            results.solver.termination_condition = TerminationCondition.optimal
+            soln.status = SolutionStatus.optimal
+        if modelstat == 2:
+            results.solver.termination_condition = TerminationCondition.locallyOptimal
+            soln.status = SolutionStatus.locallyOptimal
+        if modelstat in [3, 18]:
+            results.solver.termination_condition = TerminationCondition.unbounded
+            soln.status = SolutionStatus.unbounded
+        if modelstat in [4, 5, 6, 10, 19]:
+            results.solver.termination_condition = TerminationCondition.infeasible
+            soln.status = SolutionStatus.infeasible
+        if modelstat == 7:
+            results.solver.termination_condition = TerminationCondition.feasible
+            soln.status = SolutionStatus.feasible
+        if modelstat == 8:
+            # Not sure here. 8 means 'Integer solution model found'
+            # Is that the same as optimal?
+            results.solver.termination_condition = TerminationCondition.other
+            soln.status = SolutionStatus.other
+        if modelstat == 9:
+            results.solver.termination_condition = TerminationCondition.intermediateNonInteger
+            soln.status = SolutionStatus.other
+        if modelstat == 11:
+            # Should be handled above, if modelstat and solvestat both
+            # indicate a licensing problem
+            if results.solver.termination_condition is None:
+                results.solver.termination_condition = TerminationCondition.licensingProblems
+            soln.status = SolutionStatus.error
+        if modelstat in [12, 13]:
+            if results.solver.termination_condition is None:
+                results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
+        if modelstat == 14:
+            if results.solver.termination_condition is None:
+                results.solver.termination_condition = TerminationCondition.noSolution
+            soln.status = SolutionStatus.unknown
+        if modelstat in [15, 16, 17]:
+            # Having to do with CNS models,
+            # not sure what to make of status descriptions
+            results.solver.termination_condition = TerminationCondition.other
+            soln.status = SolutionStatus.other
+        else:
+            # This is just a backup catch, all cases are handled above
+            soln.status = SolutionStatus.error
+
+        soln.gap = abs(results.problem.upper_bound \
+                       - results.problem.lower_bound)
 
         for sym, ref in iteritems(symbolMap.bySymbol):
             obj = ref()
             if isinstance(model, IBlockStorage):
                 # Kernel variables have no 'parent_component'
+                if obj.ctype is Objective:
+                    soln.objective[sym] = {'Value': objctvval}
                 if obj.ctype is not Var:
                     continue
             elif obj.parent_component().type() is not Var:
                 continue
-            rec = t1.out_db[sym].first_record()
-            obj.value = rec.level
-            if has_rc and not math.isnan(rec.marginal):
+            rec = t1.out_db[sym].find_record()
+            # obj.value = rec.level
+            soln.variable[sym] = {"Value": rec.level}
+            if extract_rc and not math.isnan(rec.marginal):
                 # Do not set marginals to nan
-                model.rc[obj] = rec.marginal
+                # model.rc[obj] = rec.marginal
+                soln.variable[sym]['rc'] = rec.marginal
 
-        if has_dual:
+        if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
                 if c.body.is_fixed():
                     continue
-                con = symbolMap.getSymbol(c)
+                sym = symbolMap.getSymbol(c)
                 if c.equality:
-                    rec = t1.out_db[con].first_record()
+                    rec = t1.out_db[sym].find_record()
                     if not math.isnan(rec.marginal):
-                        model.dual[c] = rec.marginal
+                        # model.dual[c] = rec.marginal
+                        soln.constraint[sym] = {'dual': rec.marginal}
                     else:
                         # Solver didn't provide marginals,
                         # nothing else to do here
@@ -286,19 +434,23 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 else:
                     # Inequality, assume if 2-sided that only
                     # one side's marginal is nonzero
+                    # Negate marginal for _lo equations
                     marg = 0
                     if c.lower is not None:
-                        rec_lo = t1.out_db[con + '_lo'].first_record()
-                        marg += rec_lo.marginal
+                        rec_lo = t1.out_db[sym + '_lo'].find_record()
+                        marg -= rec_lo.marginal
                     if c.upper is not None:
-                        rec_hi = t1.out_db[con + '_hi'].first_record()
+                        rec_hi = t1.out_db[sym + '_hi'].find_record()
                         marg += rec_hi.marginal
-                    if not math.isnan(rec.marginal):
-                        model.dual[c] = marg
+                    if not math.isnan(marg):
+                        # model.dual[c] = marg
+                        soln.constraint[sym] = {'dual': marg}
                     else:
                         # Solver didn't provide marginals,
                         # nothing else to do here
                         break
+
+        results.solution.insert(soln)
 
         if keepfiles:
             print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
@@ -308,7 +460,39 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             t1 = rec = rec_lo = rec_hi = None
             file_removal_gams_direct(tmpdir, newdir)
 
-        return None
+        ####################################################################
+        # Finish with results
+        ####################################################################
+
+        results._smap_id = smap_id
+        results._smap = None
+        if isinstance(model, IBlockStorage):
+            if len(results.solution) == 1:
+                results.solution(0).symbol_map = \
+                    getattr(model, "._symbol_maps")[results._smap_id]
+                results.solution(0).default_variable_value = \
+                    self._default_variable_value
+                if load_solutions:
+                    model.load_solution(results.solution(0))
+                    results.solution.clear()
+            else:
+                assert len(results.solution) == 0
+            # see the hack in the write method
+            # we don't want this to stick around on the model
+            # after the solve
+            assert len(getattr(model, "._symbol_maps")) == 1
+            delattr(model, "._symbol_maps")
+            del results._smap_id
+        else:
+            if load_solutions:
+                model.solutions.load_from(results)
+                results._smap_id = None
+                results.solution.clear()
+            else:
+                results._smap = model.solutions.symbol_map[smap_id]
+                model.solutions.delete_symbol_map(smap_id)
+
+        return results
 
 
 class GAMSShell(pyomo.util.plugin.Plugin):
@@ -515,19 +699,20 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             items = line.split()
             soln[items[0]] = (items[1], items[2])
 
-        has_dual = has_rc = False
-        for suf in model.component_data_objects(Suffix, active=True):
-            if isinstance(model, IBlockStorage):
-                # Kernel suffix's import_enabled is property, not method
-                if suf.name == 'dual' and suf.import_enabled:
-                    has_dual = True
-                elif suf.name == 'rc' and suf.import_enabled:
-                    has_rc = True
-            else:
-                if suf.name == 'dual' and suf.import_enabled():
-                    has_dual = True
-                elif suf.name == 'rc' and suf.import_enabled():
-                    has_rc = True
+        # import suffixes must be on the top-level model
+        if isinstance(model, IBlockStorage):
+            model_suffixes = list(name for (name,comp) \
+                                  in pyomo.core.kernel.component_suffix.\
+                                  import_suffix_generator(model,
+                                                          active=True,
+                                                          descend_into=False,
+                                                          return_key=True))
+        else:
+            model_suffixes = list(name for (name,comp) \
+                                  in pyomo.core.base.suffix.\
+                                  active_import_suffix_generator(model))
+        extract_dual = ('dual' in model_suffixes)
+        extract_rc = ('rc' in model_suffixes)
 
         for sym, ref in iteritems(symbolMap.bySymbol):
             obj = ref()
@@ -539,14 +724,14 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 continue
             rec = soln[sym]
             obj.value = float(rec[0])
-            if has_rc:
+            if extract_rc:
                 try:
                     model.rc[obj] = float(rec[1])
                 except ValueError:
                     # Solver didn't provide marginals
                     pass
 
-        if has_dual:
+        if extract_dual:
             for c in model.component_data_objects(Constraint, active=True):
                 if c.body.is_fixed():
                     continue
