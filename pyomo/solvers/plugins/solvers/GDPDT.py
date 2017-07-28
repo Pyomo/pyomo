@@ -977,6 +977,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                     'Non-binary value of disjunct indicator variable '
                     'for {}: {}'.format(disj.name, value(disj.indicator_var)))
 
+        # Propagate variable bounds
+        TransformationFactory('core.propagate_eq_var_bounds').apply_to(m)
+
         # Propagate fixed variables
         TransformationFactory('core.propagate_fixed_vars').apply_to(m)
 
