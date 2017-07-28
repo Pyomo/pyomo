@@ -38,7 +38,7 @@ except ImportError:
     yaml_available=False
 
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
-nochull = True
+nochull = False
 
 
 if False:

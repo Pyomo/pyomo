@@ -17,13 +17,14 @@ from pyomo.repn import *
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import SortComponents, _BlockData
 from pyomo.repn import LinearCanonicalRepn
+from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.gdp import *
 
 from random import randint
 
-import weakref
 import logging
 logger = logging.getLogger('pyomo.core')
+
 
 class BigM_Transformation(Transformation):
 
@@ -107,7 +108,7 @@ class BigM_Transformation(Transformation):
         # and IndexedDisjunctions so that, at the end of the
         # transformation, we can check that the ones with no active
         # DisjstuffDatas are deactivated.
-        transBlock.disjContainers = {}
+        transBlock.disjContainers = ComponentSet()
 
         if targets is None:
             targets = ( instance, )
@@ -140,8 +141,7 @@ class BigM_Transformation(Transformation):
         # the containers that don't have any active guys inside of
         # them. So the invalid component logic will tell us if we
         # missed something getting transformed.
-        for id, objref in transBlock.disjContainers.iteritems():
-            obj = objref()
+        for obj in transBlock.disjContainers:
             if obj.active:
                 for i in obj:
                     if obj[i].active:
@@ -198,7 +198,8 @@ class BigM_Transformation(Transformation):
         orCname = self._get_unique_name(parent, '_gdp_bigm_relaxation_' + \
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
-        infodict[disjunction.name] = weakref.ref(orC)
+        infodict.setdefault('disjunction_or_constraint',{})[
+            disjunction.local_name ] = orC
         return orC, xor
 
         
@@ -207,10 +208,7 @@ class BigM_Transformation(Transformation):
         # disjunctionDatas
         orConstraint, xor = self._declareXorConstraint(obj)
         if obj.is_indexed():
-            # TODO: Is this a good idea? Becuase this isn't enough to
-            # keep the thing alive if someone deletes it, right. So it
-            # should be a weakref?
-            transBlock.disjContainers[id(obj)] = weakref.ref(obj)
+            transBlock.disjContainers.add(obj)
             for i in obj:
                 self._transformDisjunctionData(obj[i], transBlock,
                                                bigM, i, orConstraint, xor)
@@ -229,15 +227,18 @@ class BigM_Transformation(Transformation):
             # If the orConstraint is already on the block fetch it.
             # Otherwise call _declareXorConstraint.
             parent_block = obj.parent_block()
-            if (hasattr(parent_block, "_gdp_transformation_info") and 
-            type(parent_block._gdp_transformation_info) is dict):
+            if hasattr(parent_block, "_gdp_transformation_info"):
                 infodict = parent_block._gdp_transformation_info
-                if parent_component.name in infodict:
-                    # if the orConstraint has already been declared,
-                    # we fetch it and get the value of xor from the
-                    # parent.
-                    orConstraint = infodict[parent_component.name]()
-                    xor = parent_component.xor
+                if type(infodict) is dict and \
+                    'disjunction_or_constraint' in infodict:
+                    orConsDict = parent_block._gdp_transformation_info[
+                        'disjunction_or_constraint']
+                    if parent_component.local_name in orConsDict:
+                        # if the orConstraint has already been declared,
+                        # we fetch it and get the value of xor from the
+                        # parent.
+                        orConstraint = orConsDict[parent_component.local_name]
+                        xor = parent_component.xor
             if xor is None:
                 # orConstraint wasn't already declared, so we declare it
                 orConstraint, xor = self._declareXorConstraint(
@@ -288,11 +289,11 @@ class BigM_Transformation(Transformation):
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
         # TODO: trans info should be a class that implements __getstate and 
         # __setstate (for pickling)
-        relaxationBlock._gdp_transformation_info = {'src': weakref.ref(obj)}
+        relaxationBlock._gdp_transformation_info = {'src': obj}
 
         # add reference to transformation block on original disjunct
         assert 'bigm' not in infodict
-        infodict['bigm'] = weakref.ref(relaxationBlock)
+        infodict['bigm'] = relaxationBlock
         
         # if this is a disjunctData from an indexed disjunct, we are
         # going to want to check at the end that the container is
@@ -300,8 +301,8 @@ class BigM_Transformation(Transformation):
         # dictionary of things to check if it isn't there already.
         disjParent = obj.parent_component()
         if disjParent.is_indexed() and \
-           id(disjParent) not in transBlock.disjContainers:
-            transBlock.disjContainers[id(disjParent)] = weakref.ref(disjParent)
+           disjParent not in transBlock.disjContainers:
+            transBlock.disjContainers.add(disjParent)
         
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, relaxationBlock,
@@ -406,7 +407,7 @@ class BigM_Transformation(Transformation):
         # same block. So we get a unique name and we record the
         # mapping.
         name = self._get_unique_name(relaxationBlock, obj.name)
-        infodict['relaxedConstraints'] = {}
+        infodict['relaxedConstraints'] = ComponentMap()
         
         if obj.is_indexed():
             newConstraint = Constraint(obj.index_set(), transBlock.lbub)
@@ -415,8 +416,7 @@ class BigM_Transformation(Transformation):
         relaxationBlock.add_component(name, newConstraint)
         # add mapping of original constraint to transformed constraint
         # in transformation info dictionary
-        infodict['relaxedConstraints'][
-            ComponentUID(obj)] = weakref.ref(newConstraint)
+        infodict['relaxedConstraints'][obj] = newConstraint
         
         for i in obj:
             c = obj[i]
