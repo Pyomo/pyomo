@@ -72,7 +72,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 into model file before the solve statement.
                 For model attributes, <model name> = GAMS_MODEL
             put_results:
-                Filename for optionally writing solution values and marginals.
+                Filename for optionally writing solution values and
+                marginals to (put_results).dat, and solver statuses
+                to (put_resultsstat).dat.
         """
 
         # Make sure not to modify the user's dictionary,
@@ -445,6 +447,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 'min' if obj.sense == minimize else 'max'))
 
         # Set variables to store certain statuses and attributes
+        stat_vars = ['MODELSTAT', 'SOLVESTAT', 'OBJEST', 'OBJVAL', 'NUMVAR',
+                     'NUMEQU', 'NUMDVAR', 'NUMNZ', 'ETSOLVE']
         output_file.write("Scalars MODELSTAT 'model status', "
                           "SOLVESTAT 'solve status';\n")
         output_file.write("MODELSTAT = %s.modelstat;\n" % model_name)
@@ -471,7 +475,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write("ETSOLVE = %s.etsolve\n\n" % model_name)
 
         if put_results is not None:
-            output_file.write("\nfile results /'%s'/;" % put_results)
+            results = put_results + '.dat'
+            output_file.write("\nfile results /'%s'/;" % results)
             output_file.write("\nresults.nd=15;")
             output_file.write("\nresults.nw=21;")
             output_file.write("\nput results;")
@@ -482,6 +487,15 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput %s %s.l %s.m /;" % (con, con, con))
             output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
                               "GAMS_OBJECTIVE.m;\n")
+
+            statresults = put_results + 'stat.dat'
+            output_file.write("\nfile statresults /'%s'/;" % statresults)
+            output_file.write("\nstatresults.nd=15;")
+            output_file.write("\nstatresults.nw=21;")
+            output_file.write("\nput statresults;")
+            output_file.write("\nput 'SYMBOL   :   VALUE' /;")
+            for stat in stat_vars:
+                output_file.write("\nput '%s' %s /;\n" % (stat, stat))
 
 
 valid_solvers = {
