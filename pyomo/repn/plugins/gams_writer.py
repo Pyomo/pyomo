@@ -295,8 +295,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         # Categorize the variables that we found
         binary = []
-        posInts = []
-        otherInts = []
+        ints = []
         positive = []
         reals = []
         i = 0
@@ -311,10 +310,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 elif v.is_integer():
                     if v.bounds == (0,1):
                         binary.append(var)
-                    elif v.lb is not None and v.lb >= 0:
-                        posInts.append(var)
                     else:
-                        otherInts.append(var)
+                        ints.append(var)
                 elif v.lb == 0:
                     positive.append(var)
                 else:
@@ -345,14 +342,10 @@ class ProblemWriter_gams(AbstractProblemWriter):
         if binary:
             output_file.write(";\n\nBINARY VARIABLES\n\t")
             output_file.write("\n\t".join(binary))
-        if posInts or otherInts:
+        if ints:
             output_file.write(";\n\nINTEGER VARIABLES")
-            if posInts:
-                output_file.write("\n\t")
-                output_file.write("\n\t".join(posInts))
-            if otherInts:
-                output_file.write("\n\t")
-                output_file.write("\n\t".join(otherInts))
+            output_file.write("\n\t")
+            output_file.write("\n\t".join(ints))
         if positive:
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
             output_file.write("\n\t".join(positive))
@@ -361,6 +354,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write(";\n\n")
         output_file.write(ConstraintIO.getvalue())
         output_file.write("\n")
+
+        warn_int_bounds = False
         for varName in var_list:
             var = symbolMap.getObject(varName)
             if var.is_expression():
@@ -369,25 +364,26 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 if var.ub is not None:
                     output_file.write("%s.up = %s;\n" %
                                       (varName, value(var.ub)))
-            elif varName in posInts:
-                if var.lb != 0:
-                    output_file.write("%s.lo = %s;\n" %
-                                      (varName, value(var.lb)))
-                if var.ub is not None:
-                    output_file.write("%s.up = %s;\n" %
-                                      (varName, value(var.ub)))
-            elif varName in otherInts:
+            elif varName in ints:
                 if var.lb is None:
+                    warn_int_bounds = True
                     # GAMS doesn't allow -INF lower bound for ints
-                    # Set bound to lowest possible bound in GAMS
-                    logger.warning("Lower bound for integer variable %s "
-                                   "set to lowest possible in GAMS: -1.0E+10"
-                                   % var.name)
-                    output_file.write("%s.lo = -1.0E+10;\n" % (varName))
-                else:
+                    logger.warning("Lower bound for integer variable %s set "
+                                   "to -1.0E+100." % var.name)
+                    output_file.write("%s.lo = -1.0E+100;\n" % (varName))
+                elif var.lb != 0:
                     output_file.write("%s.lo = %s;\n" %
                                       (varName, value(var.lb)))
-                if var.ub is not None:
+                if var.ub is None:
+                    warn_int_bounds = True
+                    # GAMS has an option value called IntVarUp that is the
+                    # default upper integer bound, which it applies if the
+                    # integer's upper bound is INF. This option maxes out at
+                    # 2147483647, so we can go higher by setting the bound.
+                    logger.warning("Upper bound for integer variable %s set "
+                                   "to +1.0E+100." % var.name)
+                    output_file.write("%s.up = +1.0E+100;\n" % (varName))
+                else:
                     output_file.write("%s.up = %s;\n" %
                                       (varName, value(var.ub)))
             elif varName in binary:
@@ -407,8 +403,19 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if var.value is not None:
                 output_file.write("%s.l = %s;\n" % (varName, var.value))
             if var.is_fixed():
+                # This probably doesn't run, since all fixed vars are by default
+                # replaced with their value and not assigned a symbol.
+                # But leave this here in case we change handling of fixed vars
                 assert var.value is not None, "Cannot fix variable at None"
                 output_file.write("%s.fx = %s;\n" % (varName, var.value))
+
+        if warn_int_bounds:
+            logger.warning(
+                "GAMS requires finite bounds for integer variables. 1.0E100 "
+                "is as extreme as GAMS will define, and should be enough to "
+                "appear unbounded. If the solver cannot handle this bound, "
+                "explicitly set a smaller bound on the pyomo model, or try a "
+                "different GAMS solver.")
 
         model_name = "GAMS_MODEL"
         output_file.write("\nMODEL %s /all/ ;\n" % model_name)
@@ -416,7 +423,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         if mtype is None:
             mtype =  ('lp','nlp','mip','minlp')[
                 (0 if linear else 1) +
-                (2 if (binary or posInts or otherInts) else 0)]
+                (2 if (binary or ints) else 0)]
 
         if solver is not None:
             if mtype.upper() not in valid_solvers[solver.upper()]:
@@ -515,6 +522,7 @@ valid_solvers = {
 'GAMSCHK': ['LP','MIP','RMIP','NLP','MCP','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
 'GLOMIQO': ['QCP','MIQCP','RMIQCP'],
 'GUROBI': ['LP','MIP','RMIP','QCP','MIQCP','RMIQCP'],
+'GUSS': ['LP', 'MIP', 'NLP', 'MCP', 'CNS', 'DNLP', 'MINLP', 'QCP', 'MIQCP'],
 'IPOPT': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
 'IPOPTH': ['LP','RMIP','NLP','CNS','DNLP','RMINLP','QCP','RMIQCP'],
 'JAMS': ['EMP'],
@@ -538,6 +546,7 @@ valid_solvers = {
 'MPSGE': [],
 'MSNLP': ['NLP','DNLP','RMINLP','QCP','RMIQCP'],
 'NLPEC': ['MCP','MPEC','RMPEC'],
+'OQNLP': ['NLP', 'DNLP', 'MINLP', 'QCP', 'MIQCP'],
 'OS': ['LP','MIP','RMIP','NLP','CNS','DNLP','RMINLP','MINLP','QCP','MIQCP','RMIQCP'],
 'OSICPLEX': ['LP','MIP','RMIP'],
 'OSIGUROBI': ['LP','MIP','RMIP'],
