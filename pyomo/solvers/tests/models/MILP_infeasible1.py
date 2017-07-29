@@ -1,16 +1,17 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Integers, Binary, NonNegativeReals
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
-
 
 @register_model
 class MILP_infeasible1(_BaseTestModel):
@@ -44,10 +45,33 @@ class MILP_infeasible1(_BaseTestModel):
     def warmstart_model(self):
         assert self.model is not None
         model = self.model
-        model.x = None
-        model.y = None
-        model.z = None
+        model.x.value = None
+        model.y.value = None
+        model.z.value = None
 
     def post_solve_test_validation(self, tester, results):
-        assert results['Solver'][0]['termination condition'] == TerminationCondition.infeasible
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] == \
+                TerminationCondition.infeasible
+        else:
+            tester.assertEqual(results['Solver'][0]['termination condition'],
+                               TerminationCondition.infeasible)
 
+@register_model
+class MILP_infeasible1_kernel(MILP_infeasible1):
+
+    def _generate_model(self):
+        self.model = pmo.block()
+        model = self.model
+        model._name = self.description
+
+        model.x = pmo.variable(domain=Binary)
+        model.y = pmo.variable(domain=Binary)
+        model.z = pmo.variable(domain=Binary)
+
+        model.o = pmo.objective(-model.x-model.y-model.z)
+
+        model.c1 = pmo.constraint(model.x+model.y <= 1)
+        model.c2 = pmo.constraint(model.x+model.z <= 1)
+        model.c3 = pmo.constraint(model.y+model.z <= 1)
+        model.c4 = pmo.constraint(model.x+model.y+model.z >= 1.5)

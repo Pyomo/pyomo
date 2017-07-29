@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 # TODO
 # . rename 'filter' to something else
@@ -628,7 +629,7 @@ class Set(IndexedComponent):
 
         # Get dimen from domain, if possible
         if self.domain is not None:
-            tmp_dimen = self.domain.dimen
+            tmp_dimen = getattr(self.domain, 'dimen', 0)
         if self._bounds is None and not self.domain is None:
             self._bounds = copy.copy(self.domain._bounds)
 

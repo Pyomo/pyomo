@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ("_LinearConstraintData", "MatrixConstraint",
            "compile_block_linear_constraints",)
@@ -489,13 +490,12 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         jcols = comp._jcols
         varmap = comp._varmap
         if prows[self._index] == prows[self._index+1]:
-            return None
+            return()
         variables = tuple(varmap[jcols[p]]
                           for p in xrange(prows[self._index],
                                           prows[self._index+1])
                           if not varmap[jcols[p]].fixed)
-        if len(variables) == 0:
-            return None
+
         return variables
 
     @property
@@ -508,12 +508,11 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         vals = comp._vals
         varmap = comp._varmap
         if prows[self._index] == prows[self._index+1]:
-            return None
+            return ()
         coefs = tuple(vals[p] for p in xrange(prows[self._index],
                                               prows[self._index+1])
                       if not varmap[jcols[p]].fixed)
-        if len(coefs) == 0:
-            return None
+
         return coefs
 
     # for backwards compatibility
@@ -529,13 +528,12 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         vals = comp._vals
         varmap = comp._varmap
         if prows[self._index] == prows[self._index+1]:
-            return None
+            return 0
         terms = tuple(vals[p] * varmap[jcols[p]]()
                       for p in xrange(prows[self._index],
                                       prows[self._index+1])
                       if varmap[jcols[p]].fixed)
-        if len(terms) == 0:
-            return None
+
         return sum(terms)
 
     #

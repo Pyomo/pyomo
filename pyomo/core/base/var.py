@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['Var', '_VarData', 'VarList']
 
@@ -68,6 +69,20 @@ class _VarData(ComponentData, NumericValue):
     #
     # Interface
     #
+
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        lb = self.lb
+        return (lb is not None) and \
+            (value(lb) != float('-inf'))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        ub = self.ub
+        return (ub is not None) and \
+            (value(ub) != float('inf'))
 
     @property
     def bounds(self):
@@ -895,4 +910,3 @@ class VarList(IndexedVar):
 
 register_component(Var, "Decision variables.")
 register_component(VarList, "List of decision variables.")
-

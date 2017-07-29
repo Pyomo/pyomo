@@ -1,0 +1,15 @@
+{
+    "Stages": ["FirstStage", "SecondStage"],
+    "StageVariables":
+    {"FirstStage": ["DevotedAcreage[*]"],
+     "SecondStage": [
+	 "QuantitySubQuotaSold[*]",
+         "QuantitySuperQuotaSold[*]",
+         "QuantityPurchased[*]"
+     ]
+    },
+    "StageCost": {
+	"FirstStage": "FirstStageCost",
+        "SecondStage": "SecondStageCost"
+    }
+}

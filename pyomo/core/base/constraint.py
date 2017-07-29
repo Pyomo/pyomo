@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 __all__ = ['Constraint', '_ConstraintData', 'ConstraintList',
            'simple_constraint_rule', 'simple_constraintlist_rule']
@@ -187,6 +188,10 @@ class _ConstraintData(ActiveComponentData):
 
     __slots__ = ()
 
+    # Set to true when a constraint class stores its expression
+    # in linear canonical form
+    _linear_canonical_form = False
+
     def __init__(self, component=None):
         #
         # These lines represent in-lining of the
@@ -207,6 +212,21 @@ class _ConstraintData(ActiveComponentData):
         if self.body is None:
             return None
         return self.body(exception=exception)
+
+
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        lb = self.lower
+        return (lb is not None) and \
+            (value(lb) != float('-inf'))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        ub = self.upper
+        return (ub is not None) and \
+            (value(ub) != float('inf'))
 
     def lslack(self):
         """

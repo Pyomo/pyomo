@@ -1,11 +1,12 @@
-#  _________________________________________________________________________
+#  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright (c) 2014 Sandia Corporation.
-#  Under the terms of Contract DE-AC04-94AL85000 with Sandia Corporation,
-#  the U.S. Government retains certain rights in this software.
-#  This software is distributed under the BSD License.
-#  _________________________________________________________________________
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import sys
 import os
@@ -25,47 +26,32 @@ print("\nStarting jenkins.py")
 print("Configuration=%s" % config)
 
 os.environ['CONFIGFILE'] = os.environ['WORKSPACE']+'/src/pyomo/admin/config.ini'
-sys.path.append(os.getcwd())
+#
+# Is the following even needed?
+#
+if 'PYTHONPATH' in os.environ:
+    os.environ['PYTHONPATH'] += os.environ['WORKSPACE'] + os.pathsep + os.environ['PYTHONPATH']
+else:
+    os.environ['PYTHONPATH'] = os.environ['WORKSPACE']
+sys.path.append(os.environ['WORKSPACE'])
 
 sys.argv = ['dummy', '--trunk', '--source', 'src', '-a', 'pyyaml']
 
-if hname == "carr":
-    os.environ['PATH'] = ':'.join(['/collab/common/bin',
-                              '/collab/common/acro/bin',
-                              '/collab/gurobi/gurobi501/linux64/bin',
-                              '/usr/lib64/openmpi/bin',
-                              os.environ['PATH']]
-                              )
+#
+# Machine-specific configurations
+#
+if hname == "snotra":
+    # Pick up CPLEX
+    _CPLEX = '/opt/ibm/ILOG/CPLEX_Studio126/cplex'
+    if sys.version_info[:2] < (3,0):
+        # Python bindings for 12.6 only support 2.6/2.7
+        sys.argv.append('-a')
+        sys.argv.append(_CPLEX+'/python/x86-64_linux')
+    os.environ['PATH'] += os.pathsep+_CPLEX+'/bin/x86-64_linux'
+    # Pick up the BARON license
+    os.environ['PATH'] += os.pathsep+os.environ['HOME']+'/bin'
 
-    if 'LD_LIBRARY_PATH' in os.environ:
-        tmp_ = "%s:" % os.environ['LD_LIBRARY_PATH']
-    else:
-        tmp_ = ""
-    os.environ['LD_LIBRARY_PATH'] = tmp_ + '/collab/gurobi/gurobi501/linux64/lib'
-    os.environ['GUROBI_HOME'] = '/collab/gurobi/gurobi501/linux64'
-    os.environ['GRB_LICENSE_FILE']='/collab/gurobi/gurobi.lic'
 
-    if sys.version_info < (3,):
-        sys.argv.append('-a')
-        sys.argv.append('/collab/packages/ibm/CPLEX_Studio124/cplex/python/x86-64_sles10_4.1/')
-        sys.argv.append('-a')
-        sys.argv.append('/collab/gurobi/gurobi501/linux64')
-
-elif hname == "sleipnir":
-    os.environ['PATH'] = ':'.join(['/collab/common/bin',
-                                '/collab/common/acro/bin',
-                                os.environ['PATH']]
-                                )
-
-    if sys.version_info < (3,):
-        sys.argv.append('-a')
-        sys.argv.append('/usr/ilog/cplex124/cplex/python/x86-64_sles10_4.1/')
-elif hname == "snotra":
-    if sys.version_info < (3,) and sys.version_info[1] >= 7:
-        sys.argv.append('-a')
-        sys.argv.append('/usr/gurobi/gurobi600/linux64')
-        sys.argv.append('-a')
-        sys.argv.append('/opt/ibm/ILOG/CPLEX_Studio126/cplex/python/x86-64_linux')
 
 if 'LD_LIBRARY_PATH' not in os.environ:
     os.environ['LD_LIBRARY_PATH'] = ""
