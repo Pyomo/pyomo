@@ -63,6 +63,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                    2 : sort keys AND sort names (over declaration order)
             skip_trivial_constraints=False:
                 Skip writing constraints whose body section is fixed
+            warmstart=False:
+                Warmstart by initializing model's variables to their values.
             solver=None:
                 If None, GAMS will use default solver for model type.
             mtype=None:
@@ -112,6 +114,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                       1:SortComponents.deterministic,
                       2:SortComponents.sortBoth}
         sort = sorter_map[file_determinism]
+
+        # Warmstart by initializing model's variables to their values.
+        warmstart = io_options.pop("warmstart", False)
 
         # Filename for optionally writing solution values and marginals
         # Set to True by GAMSSolver
@@ -194,6 +199,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     con_labeler=con_labeler,
                     sort=sort,
                     skip_trivial_constraints=skip_trivial_constraints,
+                    warmstart=warmstart,
                     solver=solver,
                     mtype=mtype,
                     add_options=add_options,
@@ -215,6 +221,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                      con_labeler,
                      sort,
                      skip_trivial_constraints,
+                     warmstart,
                      solver,
                      mtype,
                      add_options,
@@ -402,7 +409,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 if var.ub is not None:
                     output_file.write("%s.up = %s;\n" %
                                       (varName, value(var.ub)))
-            if var.value is not None:
+            if warmstart and var.value is not None:
                 output_file.write("%s.l = %s;\n" % (varName, var.value))
             if var.is_fixed():
                 # This probably doesn't run, since all fixed vars are by default
