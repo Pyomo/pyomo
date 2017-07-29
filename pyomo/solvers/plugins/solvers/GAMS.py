@@ -180,16 +180,10 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         tmpdir         = kwds.pop("tmpdir", None)
         io_options     = kwds.pop("io_options", {})
 
-        if "symbolic_solver_labels" in kwds:
-            # If passed as keyword, override io_options
-            symbolic_solver_labels = kwds.pop("symbolic_solver_labels")
-            io_options.update(symbolic_solver_labels=symbolic_solver_labels)
-
         if len(kwds):
-            raise ValueError(
-                "GAMSSolver solve() passed unrecognized keyword args:\n\t" +
-                "\n\t".join("%s = %s"
-                            % (k,v) for k,v in iteritems(kwds)))
+            # Pass remaining keywords to writer, which will handle
+            # any unrecognized arguments
+            io_options.update(kwds)
 
         ####################################################################
         # Presolve
@@ -307,10 +301,13 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             results.problem.lower_bound = objctvval
 
         results.solver.name = "GAMS " + str(self.version())
-        solvestat = t1.out_db["SOLVESTAT"].find_record().value
+
         # Init termination condition to None to give preference to this first
         # block of code, only set certain TC's below if it's still None
         results.solver.termination_condition = None
+        results.solver.message = None
+
+        solvestat = t1.out_db["SOLVESTAT"].find_record().value
         if solvestat == 1:
             results.solver.status = SolverStatus.ok
         elif solvestat == 2:
@@ -334,12 +331,15 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         elif solvestat == 11:
             results.solver.status = SolverStatus.error
             results.solver.termination_condition = TerminationCondition.internalSolverError
-        elif solvestat in (4, 9, 12, 13):
+        elif solvestat == 4:
+            results.solver.status = SolverStatus.warning
+            results.solver.message = "Solver quit with a problem (see LST file)"
+        elif solvestat in (9, 12, 13):
             results.solver.status = SolverStatus.error
         elif solvestat == 6:
             results.solver.status = SolverStatus.unknown
+
         results.solver.return_code = None
-        results.solver.message = None
         # Not sure if this value is actually user time
         # "the elapsed time it took to execute a solve statement in total"
         results.solver.user_time = t1.out_db["ETSOLVE"].find_record().value
@@ -354,7 +354,8 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
         if modelstat == 2:
-            results.solver.termination_condition = TerminationCondition.locallyOptimal
+            # TerminationCondition.locallyOptimal
+            results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.locallyOptimal
         if modelstat in [3, 18]:
             results.solver.termination_condition = TerminationCondition.unbounded
@@ -363,13 +364,13 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
         if modelstat == 7:
-            results.solver.termination_condition = TerminationCondition.feasible
+            # TerminationCondition.feasible
+            results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.feasible
         if modelstat == 8:
-            # Not sure here. 8 means 'Integer solution model found'
-            # Is that the same as optimal?
-            results.solver.termination_condition = TerminationCondition.other
-            soln.status = SolutionStatus.other
+            # 'Integer solution model found'
+            results.solver.termination_condition = TerminationCondition.optimal
+            soln.status = SolutionStatus.optimal
         if modelstat == 9:
             results.solver.termination_condition = TerminationCondition.intermediateNonInteger
             soln.status = SolutionStatus.other
