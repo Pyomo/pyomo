@@ -574,8 +574,10 @@ class _ProductExpression(_ExpressionBase):
         # Bit of a hack. Used by to_string() in association with precedence to
         # indicate this is the first term in a _SumExpression, which means a
         # negative _coef needs to be bound by parentheses to avoid double
-        # operators being printed in a row. Initialized when to_string() is
-        # called on the parent _SumExpression if it is the first arg.
+        # operators being printed in a row. Note a _SumExpression passes
+        # _ProductExpression.PRECEDENCE in this case.
+        # Initialized when to_string() is called on the
+        # parent _SumExpression if it is the first arg.
         self._is_first_of_sum = None
 
     def __getstate__(self):
@@ -644,7 +646,7 @@ class _ProductExpression(_ExpressionBase):
             ostream.write("( ")
         first = True
         if self._coef != 1:
-            if (precedence == _SumExpression.PRECEDENCE and
+            if (precedence == _ProductExpression.PRECEDENCE and
                 not self._is_first_of_sum and
                 self._coef < 0):
                 ostream.write("(%s)" % str(self._coef))
