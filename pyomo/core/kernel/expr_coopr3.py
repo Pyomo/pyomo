@@ -558,7 +558,7 @@ _ProdExpression_Pool = []
 class _ProductExpression(_ExpressionBase):
     """An object that defines a product expression"""
 
-    __slots__ = ('_denominator','_numerator','_coef')
+    __slots__ = ('_denominator','_numerator','_coef', '_is_first_of_sum')
     PRECEDENCE = 3
 
     def __init__(self):
@@ -571,6 +571,12 @@ class _ProductExpression(_ExpressionBase):
         #self._denominator = []
         #self._numerator = []
         self._coef = 1
+        # Bit of a hack. Used by to_string() in association with precedence to
+        # indicate this is the first term in a _SumExpression, which means a
+        # negative _coef needs to be bound by parentheses to avoid double
+        # operators being printed in a row. Initialized when to_string() is
+        # called on the parent _SumExpression if it is the first arg.
+        self._is_first_of_sum = None
 
     def __getstate__(self):
         result = _ExpressionBase.__getstate__(self)
@@ -638,11 +644,12 @@ class _ProductExpression(_ExpressionBase):
             ostream.write("( ")
         first = True
         if self._coef != 1:
-            if self._coef < 0:
-                ostream.write("(")
-            ostream.write(str(self._coef))
-            if self._coef < 0:
-                ostream.write(")")
+            if (precedence == _SumExpression.PRECEDENCE and
+                not self._is_first_of_sum and
+                self._coef < 0):
+                ostream.write("(%s)" % str(self._coef))
+            else:
+                ostream.write(str(self._coef))
             first = False
         for arg in self._numerator:
             if first:
@@ -759,6 +766,9 @@ class _SumExpression(_LinearExpression):
         for i, arg in enumerate(self._args):
             if first:
                 first = False
+                # Bit of a hack, see _ProductExpression._is_first_of_sum
+                if isinstance(arg, _ProductExpression):
+                    arg._is_first_of_sum = True
                 if self._coef[i] < 0:
                     ostream.write(" - ")
             elif _verbose:
