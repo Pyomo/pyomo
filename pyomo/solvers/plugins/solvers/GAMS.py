@@ -174,7 +174,6 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                              'to solve method of GAMSSolver.')
         model = args[0]
 
-        warmstart      = kwds.pop("warmstart", True) # ignored
         load_solutions = kwds.pop("load_solutions", True)
         tee            = kwds.pop("tee", False)
         keepfiles      = kwds.pop("keepfiles", False)
@@ -612,7 +611,6 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                              'to solve method of GAMSSolver.')
         model = args[0]
 
-        warmstart      = kwds.pop("warmstart", True) # ignored
         load_solutions = kwds.pop("load_solutions", True)
         tee            = kwds.pop("tee", False)
         keepfiles      = kwds.pop("keepfiles", False)

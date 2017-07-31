@@ -261,7 +261,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             cName = symbolMap.getSymbol(con, con_labeler)
             if con.equality:
                 constraint_names.append('%s' % cName)
-                ConstraintIO.write('%s.. %s =e= %s;\n' % (
+                ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
                     body.getvalue(),
                     value(con.upper)
@@ -269,14 +269,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
             else:
                 if con.lower is not None:
                     constraint_names.append('%s_lo' % cName)
-                    ConstraintIO.write('%s.. %s =l= %s;\n' % (
+                    ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         value(con.lower),
                         body.getvalue()
                     ))
                 if con.upper is not None:
                     constraint_names.append('%s_hi' % cName)
-                    ConstraintIO.write('%s.. %s =l= %s;\n' % (
+                    ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         body.getvalue(),
                         value(con.upper)
@@ -297,7 +297,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         body = StringIO()
         obj.expr.to_string(body, labeler=var_label)
         constraint_names.append(oName)
-        ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s;\n' % (
+        ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (
             oName,
             body.getvalue()
         ))
@@ -332,7 +332,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     if v.expr.polynomial_degree() not in linear_degree:
                         linear = False
                 constraint_names.append('%s_expr' % var)
-                ConstraintIO.write('%s.. %s =e= %s;\n' % (
+                ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1], 
                     var,
                     body.getvalue()
@@ -361,7 +361,29 @@ class ProblemWriter_gams(AbstractProblemWriter):
         output_file.write(";\n\nVARIABLES\n\tGAMS_OBJECTIVE\n\t")
         output_file.write("\n\t".join(reals))
         output_file.write(";\n\n")
-        output_file.write(ConstraintIO.getvalue())
+
+        for line in ConstraintIO.getvalue().splitlines():
+            if '**' in line:
+                # Investigate power functions for an integer exponent, in which
+                # case replace with power(x, int) function to improve domain
+                # issues. Skip first term since it's always "con_name.."
+                terms = split_terms(line)
+                new_line = terms[0]
+                for term in terms[1:]:
+                    if '**' in term:
+                        args = term.split('**')
+                        try:
+                            if float(args[-1]) == int(float(args[-1])):
+                                term = ''
+                                for arg in args[:-2]:
+                                    term += arg + '**'
+                                term += 'power(%s, %s)' % (args[-2], args[-1])
+                        except ValueError:
+                            pass
+                    new_line += ' ' + term
+                line = new_line
+            output_file.write(line + "\n")
+
         output_file.write("\n")
 
         warn_int_bounds = False
@@ -503,6 +525,31 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write("\nput 'SYMBOL   :   VALUE' /;")
             for stat in stat_vars:
                 output_file.write("\nput '%s' %s /;\n" % (stat, stat))
+
+
+def split_terms(line):
+    """
+    Take line from GAMS model file and return list of terms split by space
+    but grouping together parentheses-bound expressions. Assumes lines end
+    with space followed by semicolon.
+    """
+    terms = []
+    begin = 0
+    inparens = 0
+    for i in range(len(line)):
+        if line[i] == '(':
+            inparens += 1
+        elif line[i] == ')':
+            assert inparens > 0, "Unexpected close parenthesis ')'"
+            inparens -= 1
+        elif not inparens and line[i] == ' ':
+            if i > begin:
+                terms.append(line[begin:i])
+            begin = i + 1
+    assert (begin == len(line) - 1) and (line[-1] == ';'), \
+        "Line must end with ' ;'"
+    terms.append(';')
+    return terms
 
 
 valid_solvers = {
