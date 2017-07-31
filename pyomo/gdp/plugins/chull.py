@@ -397,8 +397,10 @@ class ConvexHull_Transformation(Transformation):
                 '_bounds_' + disaggregatedVarName, bigmConstraint)
             infodict['bigmConstraints'][var] = bigmConstraint
 
-        var_substitute_map = dict((id(v), newV) for v, newV in iteritems(infodict['disaggregatedVars']))
-        zero_substitute_map = dict((id(v), 0) for v, newV in iteritems(infodict['disaggregatedVars']))
+        var_substitute_map = dict((id(v), newV) for v, newV in 
+                                  iteritems(infodict['disaggregatedVars']))
+        zero_substitute_map = dict((id(v), NumericConstant(0)) for v, newV in 
+                                   iteritems(infodict['disaggregatedVars']))
         
         # Transform each component within this disjunct
         self._transform_block_components(obj, obj, relaxationBlock,
@@ -541,7 +543,6 @@ class ConvexHull_Transformation(Transformation):
                 h_0 = clone_expression(c.body, substitute=zero_substitute_map)
 
             expr = clone_expression(c.body, substitute=var_substitute_map)
-            #expr = self._var_subst(NL, c.body, disjunct.indicator_var, varMap)
             y = disjunct.indicator_var
             if NL:
                 if self._mode == NL_Mode_LeeGrossmann:

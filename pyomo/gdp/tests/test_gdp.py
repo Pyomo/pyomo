@@ -38,7 +38,6 @@ except ImportError:
     yaml_available=False
 
 solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
-nochull = False
 
 
 if False:
@@ -59,7 +58,8 @@ if False:
                         original = getattr(base, key, None)
                         if original is not None:
                             copy = copyfunc(original)
-                            copy.__doc__ = attrs[key].__doc__ + " (%s)" % copy.__name__
+                            copy.__doc__ = attrs[key].__doc__ + \
+                                           " (%s)" % copy.__name__
                             attrs[key] = copy
                             break
             for base in bases:
@@ -96,6 +96,9 @@ class CommonTests:
                 args.append('--transform=gdp.varmover')
             elif pp == 'chull':
                 args.append('--transform=gdp.chull')
+                # ESJ: HACK for now: also apply the varmover
+                # transformation in this case
+                args.append('--transform=gdp.varmover')
         args.append('-c')
         args.append('--symbolic-solver-labels')
         os.chdir(currdir)
@@ -153,7 +156,6 @@ class CommonTests:
         # indicator variable change.
         self.check( 'jobshop_large_varmover', 'bigm' )
 
-    @unittest.skipIf(nochull, "chull not rewritten yet")
     def test_chull_jobshop_small(self):
         self.problem='test_chull_jobshop_small'
         # Run the small jobshop example using the CHull transformation
@@ -161,7 +163,6 @@ class CommonTests:
                     preprocess='chull')
         self.check( 'jobshop_small', 'chull' )
 
-    @unittest.skipIf(nochull, "chull not rewritten yet")
     def test_chull_jobshop_large(self):
         self.problem='test_chull_jobshop_large'
         # Run the large jobshop example using the CHull transformation
@@ -217,7 +218,8 @@ class Solve_GLPK(Solver, CommonTests):
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(not 'cplex' in solvers, "The 'cplex' executable is not available")
+@unittest.skipIf(not 'cplex' in solvers, 
+                 "The 'cplex' executable is not available")
 class Solve_CPLEX(Solver, CommonTests):
 
     def pyomo(self,  *args, **kwds):
