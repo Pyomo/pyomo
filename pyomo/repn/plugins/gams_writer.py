@@ -333,7 +333,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                         linear = False
                 constraint_names.append('%s_expr' % var)
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
-                    constraint_names[-1], 
+                    constraint_names[-1],
                     var,
                     body.getvalue()
                 ))
@@ -367,21 +367,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 # Investigate power functions for an integer exponent, in which
                 # case replace with power(x, int) function to improve domain
                 # issues. Skip first term since it's always "con_name.."
-                terms = split_terms(line)
-                new_line = terms[0]
-                for term in terms[1:]:
-                    if '**' in term:
-                        args = term.split('**')
-                        try:
-                            if float(args[-1]) == int(float(args[-1])):
-                                term = ''
-                                for arg in args[:-2]:
-                                    term += arg + '**'
-                                term += 'power(%s, %s)' % (args[-2], args[-1])
-                        except ValueError:
-                            pass
-                    new_line += ' ' + term
-                line = new_line
+                line = replace_power(line) + ';'
             output_file.write(line + "\n")
 
         output_file.write("\n")
@@ -536,7 +522,7 @@ def split_terms(line):
     terms = []
     begin = 0
     inparens = 0
-    for i in range(len(line)):
+    for i in xrange(len(line)):
         if line[i] == '(':
             inparens += 1
         elif line[i] == ')':
@@ -554,10 +540,59 @@ def split_terms(line):
                     terms.append(line[begin:i])
                 terms.append(line[i])
                 begin = i + 1
-    assert (begin == len(line) - 1) and (line[-1] == ';'), \
-        "Line must end with ' ;'"
-    terms.append(';')
+    if begin < len(line) - 1:
+        terms.append(line[begin:len(line)])
+    if terms[-1][-1] == ';':
+        terms[-1] = terms[-1][:-1]
     return terms
+
+
+def split_args(term):
+    """
+    Split a term by the ** operator but keep parenthesis-bound
+    expressions grouped togeter.
+    """
+    args = []
+    begin = 0
+    inparens = 0
+    for i in xrange(len(term)):
+        if term[i] == '(':
+            inparens += 1
+        elif term[i] == ')':
+            assert inparens > 0, "Unexpected close parenthesis ')'"
+            inparens -= 1
+        elif not inparens and term[i:i + 2] == '**':
+            assert i > begin, "Invalid syntax around '**' operator"
+            args.append(term[begin:i])
+            begin = i + 2
+    args.append(term[begin:len(term)])
+    return args
+
+
+def replace_power(line):
+    new_line = ''
+    for term in split_terms(line):
+        if '**' in term:
+            args = split_args(term)
+            for i in xrange(len(args)):
+                if '**' in args[i]:
+                    assert args[i][0] == '(' and args[i][-1] == ')',\
+                        "Assume arg is a parenthesis-bound expression"
+                    arg = args[i][1:-1]
+                    args[i] = '( %s)' % replace_power(arg)
+            try:
+                if float(args[-1]) == int(float(args[-1])):
+                    term = ''
+                    for arg in args[:-2]:
+                        term += arg + '**'
+                    term += 'power(%s, %s)' % (args[-2], args[-1])
+            except ValueError:
+                term = ''
+                for arg in args[:-1]:
+                    term += arg + '**'
+                term += args[-1]
+        new_line += term + ' '
+    return new_line
 
 
 valid_solvers = {
