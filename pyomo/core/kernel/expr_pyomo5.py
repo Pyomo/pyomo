@@ -94,6 +94,7 @@ class Timer:
 _compressed_expressions = set()
 
 
+#@profile
 def compress_expression(expr, verbose=False):
     #
     # Only compress a true expression DAG
@@ -154,7 +155,8 @@ def compress_expression(expr, verbose=False):
                 #
                 _potentially_variable.append( False )
                 _result.append( _sub )
-            elif not _sub.is_expression():
+            elif not isinstance(_sub, _ExpressionBase):
+            #elif not _sub.is_expression():
                 _potentially_variable.append( _sub._potentially_variable() )
                 _result.append( _sub )
             else:
@@ -191,44 +193,11 @@ def compress_expression(expr, verbose=False):
             _l_pvar, _r_pvar = _potentially_variable
             _l, _r = _result
             #
-            # Augment the current multi-sum (RHS)
-            #
-            if _r.__class__ == _MultiSumExpression:
-                #
-                # 1 + MultiSum
-                # p + MultiSum
-                #
-                # Add the LHS to the first term of the multisum
-                #
-                if _l.__class__ in native_numeric_types or not _l_pvar:
-                    #print("H1")
-                    _r._args[0] += _l
-                    ans = _r
-                #
-                # MultiSum + MultiSum
-                #
-                # Add the constant terms, and place the others
-                #
-                elif _l.__class__ == _MultiSumExpression:
-                    #print("H2")
-                    _r._args[0] += _l._args[0]
-                    _r._args += _l._args[1:]
-                    ans = _r
-                #
-                # expr + MultiSum
-                #
-                # Insert the expression
-                #
-                else:
-                    #print(("H3",_r_clone))
-                    _r._args.append(_l)
-                    ans = _r
-
-            #
             # Augment the current multi-sum (LHS)
             #
-            elif _l.__class__ == _MultiSumExpression:
+            if _l.__class__ == _MultiSumExpression:
                 #
+                # Multisum + 1
                 # MultiSum + p
                 #
                 # Add the RHS to the first term of the multisum
@@ -236,6 +205,16 @@ def compress_expression(expr, verbose=False):
                 if not _r_pvar:
                     #print("H4")
                     _l._args[0] += _r
+                    ans = _l
+                #
+                # MultiSum + MultiSum
+                #
+                # Add the constant terms, and place the others
+                #
+                elif _r.__class__ == _MultiSumExpression:
+                    #print("H2")
+                    _l._args[0] += _r._args[0]
+                    _l._args += _r._args[1:]
                     ans = _l
                 #
                 # Multisum + expr
@@ -248,14 +227,42 @@ def compress_expression(expr, verbose=False):
                     ans = _l
 
             #
-            # * + expr
+            # 1 + *
+            # p + *
             #
-            elif _l.__class__ in native_numeric_types or not _l_pvar:
+            elif not _l_pvar:
+                if _r.__class__ == _MultiSumExpression:
+                    #
+                    # 1 + MultiSum
+                    # p + MultiSum
+                    #
+                    # Add the LHS to the first term of the multisum
+                    #
+                    _r._args[0] += _l
+                    ans = _r
+                else:
+                    #
+                    # 1 + expr
+                    # p + expr
+                    #
+                    ans = _MultiSumExpression([_l, _r])
+            #
+            # Augment the current multi-sum (RHS)
+            #
+            # WEH:  I'm not sure that this branch is possible with normal
+            #       iteratively created sums, but I still think it's 
+            #       technically possible to create an expression tree that 
+            #       has no sums on the LHS and sums on the RHS.
+            #
+            elif _r.__class__ == _MultiSumExpression:
                 #
-                # 1 + expr
-                # p + expr
+                # expr + MultiSum
                 #
-                ans = _MultiSumExpression([_l, _r])
+                # Insert the expression
+                #
+                #print(("H3",_r_clone))
+                _r._args.append(_l)
+                ans = _r
 
             elif not (_r.__class__ == _CompressedSumExpression or \
                       _l.__class__ == _CompressedSumExpression):
@@ -274,7 +281,7 @@ def compress_expression(expr, verbose=False):
                 #
                 # Add the LHS to the first term of the multisum
                 #
-                if _l.__class__ in native_numeric_types or not _l_pvar:
+                if not _l_pvar:
                     #print("H1-c")
                     ans = _MultiSumExpression([_r._args[0]+_l,] + list(_r._args[1:]))
                 #
@@ -556,10 +563,7 @@ class _ExpressionBase(NumericValue):
     __deepcopy__ = clone
 
     def _clone(self, args):
-        try:
-            return self.__class__(args)
-        except:
-            print(str(self.__class__))
+        return self.__class__(args)
 
     def getname(self, *args, **kwds):
         """The text name of this Expression function"""
@@ -1923,6 +1927,9 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._args = (arg,)
         self._fcn = fcn
         self._name = name
+
+    def _clone(self, args):
+        return self.__class__(args, self._fcn, self._name)
 
     def __getstate__(self):
         result = super(_UnaryFunctionExpression, self).__getstate__()
