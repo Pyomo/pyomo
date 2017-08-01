@@ -542,10 +542,18 @@ def split_terms(line):
         elif line[i] == ')':
             assert inparens > 0, "Unexpected close parenthesis ')'"
             inparens -= 1
-        elif not inparens and line[i] == ' ':
-            if i > begin:
-                terms.append(line[begin:i])
-            begin = i + 1
+        elif not inparens:
+            if line[i] == ' ':
+                if i > begin:
+                    terms.append(line[begin:i])
+                begin = i + 1
+            elif (line[i] in ('+', '-', '/') or
+                  line[i] == '*' and line[i-1] != '*' and line[i+1] != '*'):
+                # Keep power functions together
+                if i > begin:
+                    terms.append(line[begin:i])
+                terms.append(line[i])
+                begin = i + 1
     assert (begin == len(line) - 1) and (line[-1] == ';'), \
         "Line must end with ' ;'"
     terms.append(';')
