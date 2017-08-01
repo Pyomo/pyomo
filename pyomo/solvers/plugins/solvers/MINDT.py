@@ -24,10 +24,11 @@ from pyomo.core.base import expr as EXPR
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.environ import (Binary, Block, ComponentUID, Constraint,
-                           ConstraintList, Expression, NonNegativeReals,
-                           Objective, RangeSet, Reals, Set, Suffix, Var,
-                           maximize, minimize, value)
+from pyomo.core.kernel import Binary, Reals, NonNegativeReals
+from pyomo.core.base import (Block, ComponentUID, Constraint,
+                             ConstraintList, Expression,
+                             Objective, RangeSet, Set, Suffix, Var,
+                             maximize, minimize, value)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
