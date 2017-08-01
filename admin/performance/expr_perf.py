@@ -69,7 +69,7 @@ def measure(f, n=25):
 # Evaluate standard operations on an expression
 #
 def evaluate(expr, seconds):
-    if False:
+    if True:
         gc.collect()
         _clear_expression_pool()
         start = time.time()
@@ -137,6 +137,7 @@ def evaluate(expr, seconds):
         #
         stop = time.time()
         seconds['compress'] = stop-start
+        #print(("SECONDS",stop-start))
     except:
         seconds['compress'] = 0
 
@@ -206,10 +207,18 @@ def constant(N, flag):
             expr = summation(model.p, model.q, index=model.A)
         elif flag == 2:
             expr=sum(model.p[i]*model.q[i] for i in model.A)
-        else:
+        elif flag == 3:
             expr=0
             for i in model.A:
                 expr += model.p[i] * model.q[i]
+        elif flag == 4:
+            expr=0
+            for i in model.A:
+                expr = expr + model.p[i] * model.q[i]
+        else:
+            expr=0
+            for i in model.A:
+                expr = model.p[i] * model.q[i] + expr
         #print(expr)
         #
         stop = time.time()
@@ -420,6 +429,14 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(linear(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Linear','Loop 4'])
+        ans_ = res[factors_] = measure(linear(NTerms, 4), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Linear','Loop 5'])
+        ans_ = res[factors_] = measure(linear(NTerms, 5), n=N)
+        print_results(factors_, ans_, output)
+
 
     if True:
         factors_ = tuple(factors+['Bilinear','Loop 1'])
@@ -443,12 +460,12 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(nonlinear(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
-    if False:
+    if True:
         factors_ = tuple(factors+['Polynomial','Loop 3'])
         ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
-    if False:
+    if True:
         factors_ = tuple(factors+['Product','Loop 1'])
         ans_ = res[factors_] = measure(polynomial(NTerms, 1), n=N)
         print_results(factors_, ans_, output)
@@ -466,10 +483,10 @@ def remap_keys(mapping):
 #
 res = {}
 
-runall(["COOPR3"], res)
+#runall(["COOPR3"], res)
 
-EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
-runall(["PYOMO4"], res)
+#EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
+#runall(["PYOMO4"], res)
 
 EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
 runall(["PYOMO5"], res)
