@@ -530,10 +530,10 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 5)
         self.assertIs(_e._args[0], 0)
-        self.assertIs(_e._args[1], m.c)
-        self.assertIs(_e._args[2], m.d)
-        self.assertIs(_e._args[3], m.a)
-        self.assertIs(_e._args[4], m.b)
+        self.assertIs(_e._args[1], m.a)
+        self.assertIs(_e._args[2], m.b)
+        self.assertIs(_e._args[3], m.c)
+        self.assertIs(_e._args[4], m.d)
 
     def test_trivialSum(self):
         #
