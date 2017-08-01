@@ -1077,11 +1077,14 @@ class CPLEXDirect(OptSolver):
         if soln_status in [1, 101, 102]:
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        elif soln_status in [2, 4, 118, 119]:
-            # Note: soln_status of 4 means infeasible or unbounded
-            #       and 119 means MIP infeasible or unbounded
+        elif soln_status in [2, 118]:
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
+        elif soln_status in [4, 119]:
+            # Note: soln_status of 4 means infeasible or unbounded
+            #       and 119 means MIP infeasible or unbounded
+            results.solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
+            soln.status = SolutionStatus.unsure
         elif soln_status in [3, 103]:
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible

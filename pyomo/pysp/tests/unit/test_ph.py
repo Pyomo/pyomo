@@ -94,6 +94,8 @@ def filter_pyro(line):
        return True
     elif ("pyro_host: " in line) or ("pyro_port: " in line):
         return True
+    elif ("Timeout reached before " in line):
+        return True
     elif line.startswith('Client assigned dispatcher with URI'):
         return True
     elif line.startswith("Initializing PH"): # added to prevent diff'ing showing up a positive because of PH initialization order relative to the other pyro-based components

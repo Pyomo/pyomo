@@ -3,10 +3,10 @@
 #
 
 from pyomo.environ import *
+import pyomo.version
 from pyomo.core.base.expr_common import _clear_expression_pool
 from pyomo.core.base import expr 
 from pyomo.repn import generate_canonical_repn
-import pyomo.version
 
 import pprint as pp
 import gc
@@ -29,8 +29,8 @@ N = 5
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", "--output", help="Save results to the specified file", action="store", default=None)
-parser.add_argument("--nterms", help="The number of terms in test expressions", action="store", default=None)
-parser.add_argument("--ntrials", help="The number of test trials", action="store", default=None)
+parser.add_argument("--nterms", help="The number of terms in test expressions", action="store", type=int, default=NTerms)
+parser.add_argument("--ntrials", help="The number of test trials", action="store", type=int, default=N)
 args = parser.parse_args()
 
 if args.nterms:
@@ -400,10 +400,13 @@ def remap_keys(mapping):
 #
 res = {}
 
-runall(["COOPR3"], res)
+#runall(["COOPR3"], res)
+
+#expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
+#runall(["PYOMO4"], res)
 
 expr.set_expression_tree_format(expr.common.Mode.pyomo4_trees) 
-runall(["PYOMO4"], res)
+runall(["PYOMO5"], res)
 
 
 

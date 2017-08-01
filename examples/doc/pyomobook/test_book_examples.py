@@ -68,7 +68,7 @@ def check_skip(tfname_, name):
     # Skip if YAML isn't installed
     #
     if not yaml_available:
-        return True
+        return "YAML is not available"
     #
     # Initialize the availability data
     #
@@ -96,14 +96,22 @@ def check_skip(tfname_, name):
            not solver_available[solver_dependencies[tfname_][name]]:
             # Skip the test because a solver is not available
             # print('Skipping %s because of missing solver' %(name)) 
-            return True
+            return 'Solver "%s" is not available' % (
+                solver_dependencies[tfname_][name], )
     if tfname_ in package_dependencies:
         if name in package_dependencies[tfname_]:
             packages_ = package_dependencies[tfname_][name]
             if not all([package_available[i] for i in packages_]):
                 # Skip the test because a package is not available
                 # print('Skipping %s because of missing package' %(name))
-                return True
+                _missing = []
+                for i in packages_:
+                    if not package_available[i]:
+                        _missing.append(i)
+                return "Package%s %s %s not available" % (
+                    's' if len(_missing) > 1 else '',
+                    ", ".join(_missing),
+                    'are' if len(_missing) > 1 else 'is',)
     return False
 
 
