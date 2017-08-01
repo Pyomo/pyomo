@@ -13,6 +13,7 @@
 #
 
 from six import StringIO, string_types, iteritems
+from six.moves import xrange
 
 from pyutilib.misc import PauseGC
 
