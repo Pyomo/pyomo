@@ -534,8 +534,10 @@ def split_terms(line):
                 if i > begin:
                     terms.append(line[begin:i])
                 begin = i + 1
-            elif (line[i] in ('+', '-', '/') or
-                  line[i] == '*' and line[i-1] != '*' and line[i+1] != '*'):
+            elif (line[i] == '/' or
+                  (line[i] in ('+', '-') and not (line[i-1] == 'e' and
+                                                  line[i-2].isdigit())) or
+                  (line[i] == '*' and line[i-1] != '*' and line[i+1] != '*')):
                 # Keep power functions together
                 if i > begin:
                     terms.append(line[begin:i])
