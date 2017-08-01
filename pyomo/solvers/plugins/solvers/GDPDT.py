@@ -32,11 +32,13 @@ from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.environ import (Block, Constraint, ConstraintList,
-                           Expression, NonNegativeReals, Objective, RangeSet,
-                           Reals, Set, SolverFactory, Suffix,
-                           TransformationFactory, Var, maximize, minimize,
-                           value)
+from pyomo.core.kernel import Reals, NonNegativeReals
+from pyomo.core.base import (Block, Constraint, ConstraintList,
+                             Expression, Objective, RangeSet,
+                             Set, Suffix,
+                             TransformationFactory, Var, maximize, minimize,
+                             value)
+from pyomo.opt import SolverFactory
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverStatus
