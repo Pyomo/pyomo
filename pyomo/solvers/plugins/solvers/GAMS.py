@@ -46,7 +46,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             Requires installation, visit this url for help:
             https://www.gams.com/latest/docs/apis/examples_python/index.html
         solver_io='shell' or 'gms' to use command line to call gams
-            Requires the gams executable be on your system PATH
+            Requires the gams executable be on your system PATH.
     """
     pyomo.util.plugin.implements(IOptSolver)
     pyomo.util.plugin.alias('gams', doc='The GAMS modeling language')
@@ -86,7 +86,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-        self.options = Options()
+        self.options = Options() # ignored
 
         pyomo.util.plugin.Plugin.__init__(self, **kwds)
 
@@ -148,6 +148,8 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             A directory will be created if one of this name doesn't exist.
         io_options:
             Updated with additional keywords passed to solve()
+            warmstart=False:
+                Warmstart by initializing model's variables to their values.
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
                 shortened symbols (slower, but useful for debugging).
@@ -157,10 +159,22 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 If None, GAMS will use default solver for model type.
             mtype=None:
                 Model type. If None, will chose from lp, nlp, mip, and minlp.
-            add_options:
+            add_options=None:
                 List of additional lines to write directly
                 into model file before the solve statement.
-                For model attributes, <model name> = GAMS_MODEL
+                For model attributes, <model name> is GAMS_MODEL.
+            skip_trivial_constraints=False:
+                Skip writing constraints whose body section is fixed
+            file_determinism=1:
+                How much effort do we want to put into ensuring the
+                LP file is written deterministically for a Pyomo model:
+                   0 : None
+                   1 : sort keys of indexed components (default)
+                   2 : sort keys AND sort names (over declaration order)
+            put_results=None:
+                Filename for optionally writing solution values and
+                marginals to (put_results).dat, and solver statuses
+                to (put_results + 'stat').dat.
         """
 
         # Make sure available() doesn't crash
@@ -196,9 +210,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
             smap_id = model.write(filename=output_file,
-                                    format=ProblemFormat.gams,
-                                    _called_by_solver=True,
-                                    **io_options)
+                                  format=ProblemFormat.gams,
+                                  _called_by_solver=True,
+                                  **io_options)
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
             (_, smap_id) = model.write(filename=output_file,
@@ -365,8 +379,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
         if modelstat == 7:
-            # TerminationCondition.feasible
-            results.solver.termination_condition = TerminationCondition.optimal
+            results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
         if modelstat == 8:
             # 'Integer solution model found'
@@ -514,7 +527,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         self._capabilities.sos1 = False
         self._capabilities.sos2 = False
 
-        self.options = Options()
+        self.options = Options() # ignored
 
         pyomo.util.plugin.Plugin.__init__(self, **kwds)
 
@@ -575,7 +588,6 @@ class GAMSShell(pyomo.util.plugin.Plugin):
     def solve(self, *args, **kwds):
         """
         Uses command line to call GAMS.
-        Uses temp file GAMS_results.dat for parsing result data.
 
         tee=False:
             Output GAMS log to stdout.
@@ -588,19 +600,31 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             A directory will be created if one of this name doesn't exist.
         io_options:
             Updated with additional keywords passed to solve()
+            warmstart=False:
+                Warmstart by initializing model's variables to their values.
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
                 shortened symbols (slower, but useful for debugging).
             labeler=None:
-                Custom labeler option. Incompatible with symbolic_solver_labels.
+                Custom labeler. Incompatible with symbolic_solver_labels.
             solver=None:
                 If None, GAMS will use default solver for model type.
             mtype=None:
                 Model type. If None, will chose from lp, nlp, mip, and minlp.
-            add_options:
+            add_options=None:
                 List of additional lines to write directly
                 into model file before the solve statement.
-                For model attributes, <model name> = GAMS_MODEL
+                For model attributes, <model name> is GAMS_MODEL.
+            skip_trivial_constraints=False:
+                Skip writing constraints whose body section is fixed
+            file_determinism=1:
+                How much effort do we want to put into ensuring the
+                LP file is written deterministically for a Pyomo model:
+                   0 : None
+                   1 : sort keys of indexed components (default)
+                   2 : sort keys AND sort names (over declaration order)
+            put_results='results':
+                Not available for modification on GAMSShell solver.
         """
 
         # Make sure available() doesn't crash
@@ -654,9 +678,9 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
             smap_id = model.write(filename=output_filename,
-                                    format=ProblemFormat.gams,
-                                    _called_by_solver=True,
-                                    **io_options)
+                                  format=ProblemFormat.gams,
+                                  _called_by_solver=True,
+                                  **io_options)
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
             (_, smap_id) = model.write(filename=output_filename,
@@ -668,8 +692,8 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         # Apply solver
         ####################################################################
 
-        exe = pyutilib.services.registered_executable("gams")
-        command = [exe.get_path(), output_filename, 'o=' + lst_filename]
+        exe = self.executable()
+        command = [exe, output_filename, 'o=' + lst_filename]
         if not tee:
             command.append("lo=0")
 
@@ -820,8 +844,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
         if modelstat == 7:
-            # TerminationCondition.feasible
-            results.solver.termination_condition = TerminationCondition.optimal
+            results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
         if modelstat == 8:
             # 'Integer solution model found'
