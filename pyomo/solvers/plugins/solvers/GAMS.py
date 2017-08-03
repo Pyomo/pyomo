@@ -369,8 +369,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
         if modelstat == 2:
-            # TerminationCondition.locallyOptimal
-            results.solver.termination_condition = TerminationCondition.optimal
+            results.solver.termination_condition = TerminationCondition.locallyOptimal
             soln.status = SolutionStatus.locallyOptimal
         if modelstat in [3, 18]:
             results.solver.termination_condition = TerminationCondition.unbounded
@@ -405,8 +404,8 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         if modelstat in [15, 16, 17]:
             # Having to do with CNS models,
             # not sure what to make of status descriptions
-            results.solver.termination_condition = TerminationCondition.other
-            soln.status = SolutionStatus.other
+            results.solver.termination_condition = TerminationCondition.optimal
+            soln.status = SolutionStatus.unsure
         else:
             # This is just a backup catch, all cases are handled above
             soln.status = SolutionStatus.error
@@ -834,8 +833,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
         if modelstat == 2:
-            # TerminationCondition.locallyOptimal
-            results.solver.termination_condition = TerminationCondition.optimal
+            results.solver.termination_condition = TerminationCondition.locallyOptimal
             soln.status = SolutionStatus.locallyOptimal
         if modelstat in [3, 18]:
             results.solver.termination_condition = TerminationCondition.unbounded
@@ -870,8 +868,8 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         if modelstat in [15, 16, 17]:
             # Having to do with CNS models,
             # not sure what to make of status descriptions
-            results.solver.termination_condition = TerminationCondition.other
-            soln.status = SolutionStatus.other
+            results.solver.termination_condition = TerminationCondition.optimal
+            soln.status = SolutionStatus.unsure
         else:
             # This is just a backup catch, all cases are handled above
             soln.status = SolutionStatus.error
