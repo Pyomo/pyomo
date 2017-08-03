@@ -255,10 +255,10 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                            working_directory=tmpdir)
         print('GAMS.PY LINE 256')
 
-        t1 = ws.add_job_from_string(output_file.getvalue())
+        t1 = ws.add_job_from_string(output_file.getvalue()); print('GAMS.PY LINE 258')
 
         try:
-            t1.run(output=sys.stdout if tee else None)
+            print('GAMS.PY LINE 261'); t1.run(output=sys.stdout if tee else None)
             print('GAMS.PY LINE 262')
         except GamsExceptionExecution:
             try:
