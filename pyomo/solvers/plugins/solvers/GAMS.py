@@ -219,19 +219,29 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         ####################################################################
         print('GAMS.PY LINE 220')
 
+        newdir2 = False
+        if tmpdir is None:
+            tmpdir = mkdtemp()
+            newdir2 = True
+        elif not os.path.exists(tmpdir):
+            os.makedirs(tmpdir)
+            newdir2 = True
+
+        output_filename = os.path.join(tmpdir, 'model.gms')
+
         # Create StringIO stream to pass to gams_writer, on which the
         # model file will be written. The writer also passes this StringIO
         # back, but output_file is defined in advance for clarity.
         output_file = StringIO()
         if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
-            smap_id = model.write(filename=output_file,
+            smap_id = model.write(filename=output_filename,
                                   format=ProblemFormat.gams,
                                   _called_by_solver=True,
                                   **io_options)
             symbolMap = getattr(model, "._symbol_maps")[smap_id]
         else:
-            (_, smap_id) = model.write(filename=output_file,
+            (_, smap_id) = model.write(filename=output_filename,
                                        format=ProblemFormat.gams,
                                        io_options=io_options)
             symbolMap = model.solutions.symbol_map[smap_id]
@@ -255,7 +265,8 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                            working_directory=tmpdir)
         print('GAMS.PY LINE 256')
 
-        t1 = ws.add_job_from_string(output_file.getvalue()); print('GAMS.PY LINE 258')
+        # t1 = ws.add_job_from_string(output_file.getvalue()); print('GAMS.PY LINE 258')
+        t1 = ws.add_job_from_file(output_filename); print('GAMS.PY LINE 258')
 
         try:
             print('GAMS.PY LINE 261'); t1.run(output=sys.stdout if tee else None)
@@ -1097,7 +1108,7 @@ def file_removal_gams_direct(tmpdir, newdir):
     if newdir:
         shutil.rmtree(tmpdir)
     else:
-        os.remove(os.path.join(tmpdir, '_gams_py_gjo0.gms'))
+        # os.remove(os.path.join(tmpdir, '_gams_py_gjo0.gms'))
         os.remove(os.path.join(tmpdir, '_gams_py_gjo0.lst'))
         os.remove(os.path.join(tmpdir, '_gams_py_gdb0.gdx'))
         # .pf file is not made when DebugLevel is Off
