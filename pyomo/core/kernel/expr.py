@@ -61,6 +61,7 @@ _pyomo5_module_members = [
     '_NegationExpression',
     'EntangledExpressionError',
     '_MultiSumExpression',
+    '_StaticMultiSumExpression',
     '_CompressedSumExpression',
     'compress_expression',
 ]
