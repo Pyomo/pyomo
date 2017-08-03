@@ -108,6 +108,10 @@ def compress_expression(expr, verbose=False):
     #
     if expr.__class__ in native_numeric_types or not expr.is_expression():
         return expr
+    if expr.__class__ == _MultiSumExpression:
+        return _CompressedSumExpression(tuple(expr._args))
+    if isinstance(expr, _MultiSumExpression):
+        return expr
     #
     # The stack starts with the current expression
     #
@@ -157,6 +161,9 @@ def compress_expression(expr, verbose=False):
                 _result.append( _sub )
             elif not isinstance(_sub, _ExpressionBase):
             #elif not _sub.is_expression():
+                _potentially_variable.append( _sub._potentially_variable() )
+                _result.append( _sub )
+            elif isinstance(_sub, _MultiSumExpression):
                 _potentially_variable.append( _sub._potentially_variable() )
                 _result.append( _sub )
             else:
@@ -444,6 +451,87 @@ def clone_expression(expr, verbose=False):
             return ans
 
 
+def _expression_size(expr, verbose=False):
+    from pyomo.core.kernel.numvalue import native_numeric_types
+    #
+    # Note: This does not try to optimize the compression to recognize
+    #   subgraphs.
+    #
+    if expr.__class__ in native_numeric_types or not expr.is_expression():
+        return 1
+    #
+    # The stack starts with the current expression
+    #
+    _stack = [ (expr, expr._args, 0, len(expr._args), [])]
+    #
+    # Iterate until the stack is empty
+    #
+    # Note: 1 is faster than True for Python 2.x
+    #
+    while 1:
+        #
+        # Get the top of the stack
+        #   _obj        Current expression object
+        #   _argList    The arguments for this expression objet
+        #   _idx        The current argument being considered
+        #   _len        The number of arguments
+        #
+        _obj, _argList, _idx, _len, _result = _stack.pop()
+        if verbose: #pragma:nocover
+            print("*"*10 + " POP  " + "*"*10)
+        #
+        # Iterate through the arguments
+        #
+        while _idx < _len:
+            if verbose: #pragma:nocover
+                print("-"*30)
+                print(type(_obj))
+                print(_obj)
+                print(_argList)
+                print(_idx)
+                print(_len)
+                print(_result)
+
+            _sub = _argList[_idx]
+            _idx += 1
+            if _sub.__class__ in native_numeric_types or not _sub.is_expression():
+                #
+                # Store a native or numeric object
+                #
+                _result.append( 1 )
+            else:
+                #
+                # Push an expression onto the stack
+                #
+                if verbose: #pragma:nocover
+                    print("*"*10 + " PUSH " + "*"*10)
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
+                _obj     = _sub
+                _argList = _sub._args
+                _idx     = 0
+                _len     = len(_argList)
+                _result  = []
+    
+        if verbose: #pragma:nocover
+            print("="*30)
+            print(type(_obj))
+            print(_obj)
+            print(_argList)
+            print(_idx)
+            print(_len)
+            print(_result)
+            print("STACK LEN %d" % len(_stack))
+
+        ans = sum(_result)+1
+        if _stack:
+            #
+            # "return" the recursion by putting the return value on the end of the reults stack
+            #
+            _stack[-1][-1].append( ans )
+        else:
+            return ans
+
+
 def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
@@ -558,7 +646,10 @@ class _ExpressionBase(NumericValue):
                 return ans
 
     def clone(self, verbose=False):
-        return clone_expression(self, verbose=False)
+        return clone_expression(self, verbose=verbose)
+
+    def size(self, verbose=False):
+        return _expression_size(self, verbose=verbose)
 
     __deepcopy__ = clone
 
@@ -1116,6 +1207,10 @@ class _MultiSumExpression(_SumExpression):
     def getname(self, *args, **kwds):
         return 'multisum'
 
+
+class _StaticMultiSumExpression(_MultiSumExpression):
+    """A temporary object that defines a summation with 1 or more terms and a constant term."""
+    
 
 class _CompressedSumExpression(_MultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
