@@ -140,8 +140,8 @@ script:
 - export COVERAGE_PROCESS_START=${TRAVIS_BUILD_DIR}/.coveragerc
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
-- test.pyomo -v --help --cat=$CATEGORY --cov
-- test.pyomo -v -s --cat=$CATEGORY --cov
+- nosetests pyomo.solvers.tests.checks -v -s
+- test.pyomo -v --cat=$CATEGORY --cov
 #
 #
 #
