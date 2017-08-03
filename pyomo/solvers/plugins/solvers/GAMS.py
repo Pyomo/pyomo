@@ -48,10 +48,12 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         solver_io='shell' or 'gms' to use command line to call gams
             Requires the gams executable be on your system PATH.
     """
+    print('GAMS.PY LINE 51')
     pyomo.util.plugin.implements(IOptSolver)
     pyomo.util.plugin.alias('gams', doc='The GAMS modeling language')
 
     def __new__(cls, *args, **kwds):
+        print('GAMS.PY LINE 56')
         try:
             mode = kwds['solver_io']
             if mode is None:
@@ -59,6 +61,7 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
             del kwds['solver_io']
         except KeyError:
             mode = 'direct'
+        print('GAMS.PY LINE 64')
 
         if mode == 'direct' or mode == 'python':
             return SolverFactory('_gams_direct', **kwds)
@@ -75,6 +78,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
     pyomo.util.plugin.alias('_gams_direct', doc='The GAMS modeling language')
 
     def __init__(self, **kwds):
+        print('GAMS.PY LINE 81')
         self._version = None
         self._default_variable_value = None
 
@@ -89,11 +93,14 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         self.options = Options() # ignored
 
         pyomo.util.plugin.Plugin.__init__(self, **kwds)
+        print('GAMS.PY LINE 96')
 
     def available(self, exception_flag=True):
         """True if the solver is available"""
+        print('GAMS.PY LINE 100')
         try:
             from gams import GamsWorkspace, DebugLevel
+            print('GAMS.PY LINE 103')
             return True
         except ImportError as e:
             if exception_flag is False:
@@ -107,6 +114,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         """
         Returns a tuple describing the solver executable version.
         """
+        print('GAMS.PY LINE 117')
         if not self.available(exception_flag=False):
             return _extract_version('')
         from gams import GamsWorkspace
@@ -115,20 +123,25 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         while(len(version) < 4):
             version += (0,)
         version = version[:4]
+        print('GAMS.PY LINE 126')
         return version
 
     def version(self):
         """
         Returns a 4-tuple describing the solver executable version.
         """
+        print('GAMS.PY LINE 133')
         if self._version is None:
             self._version = self._get_version()
+        print('GAMS.PY LINE 136')
         return self._version
 
     def warm_start_capable(self):
+        print('GAMS.PY LINE 140')
         return True
 
     def default_variable_value(self):
+        print('GAMS.PY LINE 144')
         return self._default_variable_value
 
     def solve(self, *args, **kwds):
@@ -177,11 +190,13 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 to (put_results + 'stat').dat.
         """
 
+        print('GAMS.PY LINE 193')
         # Make sure available() doesn't crash
         self.available()
 
         from gams import GamsWorkspace, DebugLevel
         from gams.workspace import GamsExceptionExecution
+        print('GAMS.PY LINE 199')
 
         if len(args) != 1:
             raise ValueError('Exactly one model must be passed '
@@ -202,6 +217,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         ####################################################################
         # Presolve
         ####################################################################
+        print('GAMS.PY LINE 220')
 
         # Create StringIO stream to pass to gams_writer, on which the
         # model file will be written. The writer also passes this StringIO
@@ -219,6 +235,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                                        format=ProblemFormat.gams,
                                        io_options=io_options)
             symbolMap = model.solutions.symbol_map[smap_id]
+        print('GAMS.PY LINE 238')
 
         ####################################################################
         # Apply solver
@@ -236,13 +253,16 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         ws = GamsWorkspace(debug=DebugLevel.KeepFiles if keepfiles
                            else DebugLevel.Off,
                            working_directory=tmpdir)
-        
+        print('GAMS.PY LINE 256')
+
         t1 = ws.add_job_from_string(output_file.getvalue())
 
         try:
             t1.run(output=sys.stdout if tee else None)
+            print('GAMS.PY LINE 262')
         except GamsExceptionExecution:
             try:
+                print('GAMS.PY LINE 265')
                 check_expr_evaluation(model, symbolMap, 'direct')
             finally:
                 # Always name working directory or delete files,
@@ -270,6 +290,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         ####################################################################
         # Postsolve
         ####################################################################
+        print('GAMS.PY LINE 293')
 
         # import suffixes must be on the top-level model
         if isinstance(model, IBlockStorage):
@@ -283,12 +304,15 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             model_suffixes = list(name for (name,comp) \
                                   in pyomo.core.base.suffix.\
                                   active_import_suffix_generator(model))
+        print('GAMS.PY LINE 307')
         extract_dual = ('dual' in model_suffixes)
         extract_rc = ('rc' in model_suffixes)
 
         results = SolverResults()
+        print('GAMS.PY LINE 312')
         results.problem.name = t1.name
         results.problem.lower_bound = t1.out_db["OBJEST"].find_record().value
+        print('GAMS.PY LINE 315')
         results.problem.upper_bound = t1.out_db["OBJEST"].find_record().value
         results.problem.number_of_variables = \
             t1.out_db["NUMVAR"].find_record().value
@@ -314,8 +338,10 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         else:
             results.problem.sense = ProblemSense.maximize
             results.problem.lower_bound = objctvval
+        print('GAMS.PY LINE 341')
 
         results.solver.name = "GAMS " + str(self.version())
+        print('GAMS.PY LINE 344')
 
         # Init termination condition to None to give preference to this first
         # block of code, only set certain TC's below if it's still None
@@ -323,6 +349,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         results.solver.message = None
 
         solvestat = t1.out_db["SOLVESTAT"].find_record().value
+        print('GAMS.PY LINE 352')
         if solvestat == 1:
             results.solver.status = SolverStatus.ok
         elif solvestat == 2:
@@ -353,6 +380,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             results.solver.status = SolverStatus.error
         elif solvestat == 6:
             results.solver.status = SolverStatus.unknown
+        print('GAMS.PY LINE 383')
 
         results.solver.return_code = 0
         # Not sure if this value is actually user time
@@ -361,6 +389,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         results.solver.system_time = None
         results.solver.wallclock_time = None
         results.solver.termination_message = None
+        print('GAMS.PY LINE 392')
 
         soln = Solution()
 
@@ -409,12 +438,16 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         else:
             # This is just a backup catch, all cases are handled above
             soln.status = SolutionStatus.error
+        print('GAMS.PY LINE 441')
 
         soln.gap = abs(results.problem.upper_bound \
                        - results.problem.lower_bound)
+        print('GAMS.PY LINE 445')
 
         for sym, ref in iteritems(symbolMap.bySymbol):
+            print('GAMS.PY LINE 448', sym)
             obj = ref()
+            print('GAMS.PY LINE 450', obj, obj.name)
             if isinstance(model, IBlockStorage):
                 # Kernel variables have no 'parent_component'
                 if obj.ctype is Objective:
@@ -423,22 +456,30 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                     continue
             elif obj.parent_component().type() is not Var:
                 continue
+            print('GAMS.PY LINE 459')
             rec = t1.out_db[sym].find_record()
+            print('GAMS.PY LINE 461')
             # obj.value = rec.level
             soln.variable[sym] = {"Value": rec.level}
             if extract_rc and not math.isnan(rec.marginal):
                 # Do not set marginals to nan
                 # model.rc[obj] = rec.marginal
                 soln.variable[sym]['rc'] = rec.marginal
+        print('GAMS.PY LINE 468')
 
         if extract_dual:
+            print('GAMS.PY LINE 471')
             for c in model.component_data_objects(Constraint, active=True):
+                print('GAMS.PY LINE 473', c, c.name)
                 if c.body.is_fixed():
                     continue
                 sym = symbolMap.getSymbol(c)
+                print('GAMS.PY LINE 477')
                 if c.equality:
                     rec = t1.out_db[sym].find_record()
+                    print('GAMS.PY LINE 480')
                     if not math.isnan(rec.marginal):
+                        print('GAMS.PY LINE 482')
                         # model.dual[c] = rec.marginal
                         soln.constraint[sym] = {'dual': rec.marginal}
                     else:
@@ -449,6 +490,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                     # Inequality, assume if 2-sided that only
                     # one side's marginal is nonzero
                     # Negate marginal for _lo equations
+                    print('GAMS.PY LINE 493')
                     marg = 0
                     if c.lower is not None:
                         rec_lo = t1.out_db[sym + '_lo'].find_record()
@@ -463,24 +505,30 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                         # Solver didn't provide marginals,
                         # nothing else to do here
                         break
+        print('GAMS.PY LINE 508')
 
         results.solution.insert(soln)
+        print('GAMS.PY LINE 511')
 
         if keepfiles:
             print("\nGAMS WORKING DIRECTORY: %s\n" % ws.working_directory)
         elif tmpdir is not None:
+            print('GAMS.PY LINE 516')
             # Garbage collect all references to t1.out_db
             # So that .gdx file can be deleted
             t1 = rec = rec_lo = rec_hi = None
             file_removal_gams_direct(tmpdir, newdir)
+        print('GAMS.PY LINE 521')
 
         ####################################################################
         # Finish with results
         ####################################################################
 
         results._smap_id = smap_id
+        print('GAMS.PY LINE 528')
         results._smap = None
         if isinstance(model, IBlockStorage):
+            print('GAMS.PY LINE 531')
             if len(results.solution) == 1:
                 results.solution(0).symbol_map = \
                     getattr(model, "._symbol_maps")[results._smap_id]
@@ -499,12 +547,18 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
             del results._smap_id
         else:
             if load_solutions:
+                print('GAMS.PY LINE 550')
                 model.solutions.load_from(results)
+                print('GAMS.PY LINE 552')
                 results._smap_id = None
+                print('GAMS.PY LINE 554')
                 results.solution.clear()
             else:
+                print('GAMS.PY LINE 557')
                 results._smap = model.solutions.symbol_map[smap_id]
+                print('GAMS.PY LINE 559')
                 model.solutions.delete_symbol_map(smap_id)
+        print('GAMS.PY LINE 561')
 
         return results
 

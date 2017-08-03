@@ -36,10 +36,13 @@ logger = logging.getLogger('pyomo.core')
 
 
 class ProblemWriter_gams(AbstractProblemWriter):
+    print('GAMS_WRITER.PY LINE 39')
     pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
 
     def __init__(self):
+        print('GAMS_WRITER.PY LINE 43')
         AbstractProblemWriter.__init__(self, ProblemFormat.gams)
+        print('GAMS_WRITER.PY LINE 45')
 
     def __call__(self,
                  model,
@@ -79,6 +82,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 marginals to (put_results).dat, and solver statuses
                 to (put_results + 'stat').dat.
         """
+        print('GAMS_WRITER.PY LINE 85')
 
         # Make sure not to modify the user's dictionary,
         # they may be reusing it outside of this call
@@ -122,12 +126,14 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # Filename for optionally writing solution values and marginals
         # Set to True by GAMSSolver
         put_results = io_options.pop("put_results", None)
+        print('GAMS_WRITER.PY LINE 129')
 
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_gams passed unrecognized io_options:\n\t" +
                 "\n\t".join("%s = %s"
                             % (k,v) for k,v in iteritems(io_options)))
+        print('GAMS_WRITER.PY LINE 136')
 
         if solver is not None:
             if solver.upper() not in valid_solvers:
@@ -146,14 +152,17 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 raise ValueError("ProblemWriter_gams passed solver (%s) "
                                  "unsuitable for given model type (%s)"
                                  % (solver, mtype))
+        print('GAMS_WRITER.PY LINE 155')
 
         if output_filename is None:
             output_filename = model.name + ".gms"
+        print('GAMS_WRITER.PY LINE 159')
 
         if symbolic_solver_labels and (labeler is not None):
             raise ValueError("ProblemWriter_gams: Using both the "
                              "'symbolic_solver_labels' and 'labeler' "
                              "I/O options is forbidden")
+        print('GAMS_WRITER.PY LINE 165')
 
         if symbolic_solver_labels:
             var_labeler = con_labeler = AlphaNumericTextLabeler()
@@ -162,6 +171,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             con_labeler = NumericLabeler('c')
         else:
             var_labeler = con_labeler = labeler
+        print('GAMS_WRITER.PY LINE 174')
 
         var_list = []
         symbolMap = SymbolMap()
@@ -175,6 +185,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if obj.is_fixed():
                 return str(value(obj))
             return symbolMap.getSymbol(obj, var_recorder)
+        print('GAMS_WRITER.PY LINE 188')
 
         # when sorting, there are a non-trivial number of
         # temporary objects created. these all yield
@@ -183,13 +194,17 @@ class ProblemWriter_gams(AbstractProblemWriter):
         # are non-circular, everything will be collected
         # immediately anyway.
         with PauseGC() as pgc:
+            print('GAMS_WRITER.PY LINE 197')
             try:
                 if isinstance(output_filename, string_types):
+                    print('GAMS_WRITER.PY LINE 200')
                     output_file = open(output_filename, "w")
                 else:
+                    print('GAMS_WRITER.PY LINE 203')
                     # Support passing of stream such as a StringIO
                     # on which to write the model file
                     output_file = output_filename
+                print('GAMS_WRITER.PY LINE 207')
                 self._write_model(
                     model=model,
                     output_file=output_file,
@@ -206,9 +221,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     add_options=add_options,
                     put_results=put_results
                 )
+                print('GAMS_WRITER.PY LINE 224')
             finally:
+                print('GAMS_WRITER.PY LINE 226')
                 if isinstance(output_filename, string_types):
                     output_file.close()
+                print('GAMS_WRITER.PY LINE 229')
+        print('GAMS_WRITER.PY LINE 230')
 
         return output_filename, symbolMap
 
@@ -227,10 +246,12 @@ class ProblemWriter_gams(AbstractProblemWriter):
                      mtype,
                      add_options,
                      put_results):
+        print('GAMS_WRITER.PY LINE 249')
         constraint_names = []
         ConstraintIO = StringIO()
         linear = True
         linear_degree = set([0,1])
+        print('GAMS_WRITER.PY LINE 254')
 
         # Sanity check: all active components better be things we know
         # how to deal with, plus Suffix if solving
@@ -244,6 +265,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 "Unallowable component(s) %s.\nThe GAMS writer cannot "
                 "export models with this component type" %
                 ", ".join(invalids))
+        print('GAMS_WRITER.PY LINE 268')
 
         # Walk through the model and generate the constraint definition
         # for all active constraints.  Any Vars / Expressions that are
@@ -252,36 +274,50 @@ class ProblemWriter_gams(AbstractProblemWriter):
         for con in model.component_data_objects(Constraint,
                                                 active=True,
                                                 sort=sort):
+            print('GAMS_WRITER.PY LINE 277', con, con.name)
             if skip_trivial_constraints and con.body.is_fixed():
                 continue
             if linear:
                 if con.body.polynomial_degree() not in linear_degree:
                     linear = False
+            print('GAMS_WRITER.PY LINE 283')
             body = StringIO()
+            print('GAMS_WRITER.PY LINE 285')
             con.body.to_string(body, labeler=var_label)
+            print('GAMS_WRITER.PY LINE 287')
             cName = symbolMap.getSymbol(con, con_labeler)
+            print('GAMS_WRITER.PY LINE 289')
             if con.equality:
                 constraint_names.append('%s' % cName)
+                print('GAMS_WRITER.PY LINE 292')
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
                     body.getvalue(),
                     value(con.upper)
                 ))
+                print('GAMS_WRITER.PY LINE 298')
             else:
+                print('GAMS_WRITER.PY LINE 300')
                 if con.lower is not None:
+                    print('GAMS_WRITER.PY LINE 302')
                     constraint_names.append('%s_lo' % cName)
+                    print('GAMS_WRITER.PY LINE 304')
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         value(con.lower),
                         body.getvalue()
                     ))
+                    print('GAMS_WRITER.PY LINE 310')
                 if con.upper is not None:
+                    print('GAMS_WRITER.PY LINE 312')
                     constraint_names.append('%s_hi' % cName)
+                    print('GAMS_WRITER.PY LINE 314')
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         body.getvalue(),
                         value(con.upper)
                     ))
+                    print('GAMS_WRITER.PY LINE 320')
 
         obj = list(model.component_data_objects(Objective,
                                                 active=True,
@@ -291,17 +327,24 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 "GAMS writer requires exactly one active objective (found %s)"
                 % (len(obj)))
         obj = obj[0]
+        print('GAMS_WRITER.PY LINE 330')
         if linear:
             if obj.expr.polynomial_degree() not in linear_degree:
                 linear = False
+        print('GAMS_WRITER.PY LINE 334')
         oName = symbolMap.getSymbol(obj, con_labeler)
+        print('GAMS_WRITER.PY LINE 336')
         body = StringIO()
+        print('GAMS_WRITER.PY LINE 338')
         obj.expr.to_string(body, labeler=var_label)
+        print('GAMS_WRITER.PY LINE 340')
         constraint_names.append(oName)
+        print('GAMS_WRITER.PY LINE 342')
         ConstraintIO.write('%s.. GAMS_OBJECTIVE =e= %s ;\n' % (
             oName,
             body.getvalue()
         ))
+        print('GAMS_WRITER.PY LINE 347')
 
         # Categorize the variables that we found
         binary = []
@@ -311,6 +354,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
         i = 0
         numVar = len(var_list)
         while i < numVar:
+            print('GAMS_WRITER.PY LINE 357', i, var_list[i])
             var = var_list[i]
             i += 1
             v = symbolMap.getObject(var)
@@ -327,17 +371,23 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 else:
                     reals.append(var)
             else:
+                print('GAMS_WRITER.PY LINE 374')
                 body = StringIO()
+                print('GAMS_WRITER.PY LINE 376')
                 v.expr.to_string(body, labeler=var_label)
+                print('GAMS_WRITER.PY LINE 378')
                 if linear:
                     if v.expr.polynomial_degree() not in linear_degree:
                         linear = False
+                print('GAMS_WRITER.PY LINE 382')
                 constraint_names.append('%s_expr' % var)
+                print('GAMS_WRITER.PY LINE 384')
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
                     var,
                     body.getvalue()
                 ))
+                print('GAMS_WRITER.PY LINE 390')
                 reals.append(var)
                 # The Expression could have hit new variables (or other
                 # expressions) -- so update the length of the var_list
@@ -346,52 +396,74 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         # Write the GAMS model
         # $offdigit ignores extra precise digits instead of erroring
+        print('GAMS_WRITER.PY LINE 399')
         output_file.write("$offdigit\n\n")
+        print('GAMS_WRITER.PY LINE 401')
         output_file.write("EQUATIONS\n\t")
+        print('GAMS_WRITER.PY LINE 403')
         output_file.write("\n\t".join(constraint_names))
+        print('GAMS_WRITER.PY LINE 405')
         if binary:
             output_file.write(";\n\nBINARY VARIABLES\n\t")
             output_file.write("\n\t".join(binary))
+        print('GAMS_WRITER.PY LINE 409')
         if ints:
             output_file.write(";\n\nINTEGER VARIABLES")
             output_file.write("\n\t")
             output_file.write("\n\t".join(ints))
+        print('GAMS_WRITER.PY LINE 414')
         if positive:
             output_file.write(";\n\nPOSITIVE VARIABLES\n\t")
             output_file.write("\n\t".join(positive))
+        print('GAMS_WRITER.PY LINE 418')
         output_file.write(";\n\nVARIABLES\n\tGAMS_OBJECTIVE\n\t")
+        print('GAMS_WRITER.PY LINE 420')
         output_file.write("\n\t".join(reals))
+        print('GAMS_WRITER.PY LINE 422')
         output_file.write(";\n\n")
+        print('GAMS_WRITER.PY LINE 424')
 
         for line in ConstraintIO.getvalue().splitlines():
+            print('GAMS_WRITER.PY LINE 427', line)
             if '**' in line:
+                print('GAMS_WRITER.PY LINE 429')
                 # Investigate power functions for an integer exponent, in which
                 # case replace with power(x, int) function to improve domain
                 # issues. Skip first term since it's always "con_name.."
                 line = replace_power(line) + ';'
+                print('GAMS_WRITER.PY LINE 434')
             output_file.write(line + "\n")
+        print('GAMS_WRITER.PY LINE 436')
 
         output_file.write("\n")
+        print('GAMS_WRITER.PY LINE 439')
 
         warn_int_bounds = False
         for varName in var_list:
+            print('GAMS_WRITER.PY LINE 443', varName)
             var = symbolMap.getObject(varName)
+            print('GAMS_WRITER.PY LINE 445', var, var.name)
             if var.is_expression():
                 continue
             if varName in positive:
                 if var.ub is not None:
                     output_file.write("%s.up = %s;\n" %
                                       (varName, value(var.ub)))
+                    print('GAMS_WRITER.PY LINE 452')
+                print('GAMS_WRITER.PY LINE 453')
             elif varName in ints:
+                print('GAMS_WRITER.PY LINE 455')
                 if var.lb is None:
                     warn_int_bounds = True
                     # GAMS doesn't allow -INF lower bound for ints
                     logger.warning("Lower bound for integer variable %s set "
                                    "to -1.0E+100." % var.name)
                     output_file.write("%s.lo = -1.0E+100;\n" % (varName))
+                    print('GAMS_WRITER.PY LINE 462')
                 elif var.lb != 0:
                     output_file.write("%s.lo = %s;\n" %
                                       (varName, value(var.lb)))
+                    print('GAMS_WRITER.PY LINE 466')
                 if var.ub is None:
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
@@ -401,9 +473,11 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     logger.warning("Upper bound for integer variable %s set "
                                    "to +1.0E+100." % var.name)
                     output_file.write("%s.up = +1.0E+100;\n" % (varName))
+                    print('GAMS_WRITER.PY LINE 476')
                 else:
                     output_file.write("%s.up = %s;\n" %
                                       (varName, value(var.ub)))
+                    print('GAMS_WRITER.PY LINE 480')
             elif varName in binary:
                 if var.lb != 0:
                     output_file.write("%s.lo = %s;\n" %
@@ -411,21 +485,28 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 if var.ub != 1:
                     output_file.write("%s.up = %s;\n" %
                                       (varName, value(var.ub)))
+                print('GAMS_WRITER.PY LINE 488')
             elif varName in reals:
+                print('GAMS_WRITER.PY LINE 490')
                 if var.lb is not None:
                     output_file.write("%s.lo = %s;\n" %
                                       (varName, value(var.lb)))
                 if var.ub is not None:
                     output_file.write("%s.up = %s;\n" %
                                       (varName, value(var.ub)))
+                print('GAMS_WRITER.PY LINE 497')
             if warmstart and var.value is not None:
+                print('GAMS_WRITER.PY LINE 499')
                 output_file.write("%s.l = %s;\n" % (varName, var.value))
+                print('GAMS_WRITER.PY LINE 501')
             if var.is_fixed():
+                print('GAMS_WRITER.PY LINE 503')
                 # This probably doesn't run, since all fixed vars are by default
                 # replaced with their value and not assigned a symbol.
                 # But leave this here in case we change handling of fixed vars
                 assert var.value is not None, "Cannot fix variable at None"
                 output_file.write("%s.fx = %s;\n" % (varName, var.value))
+                print('GAMS_WRITER.PY LINE 509')
 
         if warn_int_bounds:
             logger.warning(
@@ -437,6 +518,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         model_name = "GAMS_MODEL"
         output_file.write("\nMODEL %s /all/ ;\n" % model_name)
+        print('GAMS_WRITER.PY LINE 521')
 
         if mtype is None:
             mtype =  ('lp','nlp','mip','minlp')[
@@ -449,18 +531,21 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                  "unsuitable for model type (%s)"
                                  % (solver, mtype))
             output_file.write("option %s=%s;\n" % (mtype, solver))
+        print('GAMS_WRITER.PY LINE 534')
 
         if add_options is not None:
             output_file.write("\n* START USER ADDITIONAL OPTIONS\n")
             for line in add_options:
                 output_file.write('\n' + line)
             output_file.write("\n\n* END USER ADDITIONAL OPTIONS\n\n")
+        print('GAMS_WRITER.PY LINE 541')
 
         output_file.write(
             "SOLVE %s USING %s %simizing GAMS_OBJECTIVE;\n\n"
             % ( model_name, 
                 mtype,
                 'min' if obj.sense == minimize else 'max'))
+        print('GAMS_WRITER.PY LINE 548')
 
         # Set variables to store certain statuses and attributes
         stat_vars = ['MODELSTAT', 'SOLVESTAT', 'OBJEST', 'OBJVAL', 'NUMVAR',
@@ -512,6 +597,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             output_file.write("\nput 'SYMBOL   :   VALUE' /;")
             for stat in stat_vars:
                 output_file.write("\nput '%s' %s /;\n" % (stat, stat))
+        print('GAMS_WRITER.PY LINE 600')
 
 
 def split_terms(line):
@@ -520,6 +606,7 @@ def split_terms(line):
     but grouping together parentheses-bound expressions. Assumes lines end
     with space followed by semicolon.
     """
+    print('GAMS_WRITER.PY LINE 609')
     terms = []
     begin = 0
     inparens = 0
@@ -555,6 +642,7 @@ def split_args(term):
     Split a term by the ** operator but keep parenthesis-bound
     expressions grouped togeter.
     """
+    print('GAMS_WRITER.PY LINE 645')
     args = []
     begin = 0
     inparens = 0
@@ -573,6 +661,7 @@ def split_args(term):
 
 
 def replace_power(line):
+    print('GAMS_WRITER.PY LINE 664')
     new_line = ''
     for term in split_terms(line):
         if '**' in term:
