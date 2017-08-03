@@ -18,6 +18,7 @@ import inspect
 from six.moves import xrange
 from functools import reduce
 import operator
+from pyomo.core.base import expr_common
 
 
 def prod(factors):
@@ -70,9 +71,26 @@ def summation(*args, **kwds):
                 raise ValueError("Error executing summation(): The last denom argument value must be a variable or expression object if no 'index' option is specified")
         index = iarg.index_set()
 
-    ans = 0
     num_index = range(0,len(args))
     denom_index = range(0,len(denom))
+
+    if expr_common.mode == expr_common.Mode.pyomo5_trees:
+        num_count = 0
+        denom_count = 0
+        for j in num_index:
+            if isinstance(args[j], pyomo.core.base.var.Var):
+                num_count += 1
+        for j in denom_index:
+            if isinstance(denom[j], pyomo.core.base.var.Var):
+                denom_count += 1
+        if denom_count == 0:
+            from pyomo.core.kernel.expr_pyomo5 import _StaticMultiSumExpression
+            if num_count > 0:
+                return _StaticMultiSumExpression( (0,) + tuple(prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index))
+            else:
+                return _StaticMultiSumExpression( (sum(prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), ) )
+
+    ans = 0
     #
     # Iterate through all indices
     #
