@@ -1380,16 +1380,16 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #   a   b
         # Python 2.7 supports better testing of exceptions
         if sys.hexversion >= 0x02070000:
-            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
+            self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
                                    "sub-expressions is a relational",
                                    e.__eq__, m.a)
-            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
+            self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
                                    "sub-expressions is a relational",
                                    m.a.__eq__, e)
 
             # NB: cannot test the reverse here: _VarArray (correctly)
             # does not define __eq__
-            self.assertRaisesRegex(TypeError, "Argument .*"
+            self.assertRaisesRegexp(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__eq__, m.x)
         else:
@@ -1737,33 +1737,33 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
             #
             # Check error with indexed variable
             #
-            self.assertRaisesRegex(TypeError, "Argument .*"
+            self.assertRaisesRegexp(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__lt__, m.x)
-            self.assertRaisesRegex(TypeError, "Argument .*"
+            self.assertRaisesRegexp(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__gt__, m.x)
 
             #
             # Check error with more than two inequalities
             #
-            self.assertRaisesRegex(ValueError, "InequalityExpression .*"
+            self.assertRaisesRegexp(ValueError, "InequalityExpression .*"
                                    "more than 3 terms",
                                    e.__lt__, m.c)
-            self.assertRaisesRegex(ValueError, "InequalityExpression .*"
+            self.assertRaisesRegexp(ValueError, "InequalityExpression .*"
                                    "more than 3 terms",
                                    e.__gt__, m.c)
 
             #
             # Check error when both expressions are relational
             #
-            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
                                    "both sub-expressions are also relational",
                                    e.__lt__, m.a < m.b)
-            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
                                    "sub-expressions is an equality",
                                    m.a.__lt__, e1)
-            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
                                    "sub-expressions is an equality",
                                    m.a.__gt__, e1)
         else:
