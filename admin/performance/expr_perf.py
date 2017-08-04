@@ -69,6 +69,8 @@ def measure(f, n=25):
 # Evaluate standard operations on an expression
 #
 def evaluate(expr, seconds):
+    seconds['size'] = expr.size()
+
     if True:
         gc.collect()
         _clear_expression_pool()
@@ -133,13 +135,15 @@ def evaluate(expr, seconds):
         _clear_expression_pool()
         start = time.time()
         #
-        s_ = EXPR.compress_expression(expr)
+        s_ = EXPR.compress_expression(expr, False)
         #
         stop = time.time()
         seconds['compress'] = stop-start
         #print(("SECONDS",stop-start))
+        seconds['compressed_size'] = s_.size()
     except:
         seconds['compress'] = 0
+        seconds['compressed_size'] = 0
 
     return seconds
 
@@ -169,18 +173,70 @@ def linear(N, flag):
             expr = summation(model.p, model.x)
         elif flag == 2:
             expr=sum(model.p[i]*model.x[i] for i in model.A)
-        else:
+        elif flag == 3:
             expr=0
             for i in model.A:
                 expr += model.p[i] * model.x[i]
-        #print(expr)
+        elif flag == 4:
+            expr=0
+            for i in model.A:
+                expr = expr + model.p[i] * model.x[i]
+        elif flag == 5:
+            expr=0
+            for i in model.A:
+                expr = model.p[i] * model.x[i] + expr
         #
         stop = time.time()
         seconds['construction'] = stop-start
-
-        #import pdb;  pdb.set_trace()
         seconds = evaluate(expr, seconds)
+        return seconds
 
+    return f
+
+#
+# Create a nested linear expression
+#
+def nested_linear(N, flag):
+
+    def f():
+        seconds = {}
+
+        model = ConcreteModel()
+        model.A = RangeSet(N)
+        model.p = Param(model.A, default=2)
+        model.x = Var(model.A, initialize=2)
+
+        for i in model.A:
+            if i != N:
+                model.x[i].fixed = True
+
+        gc.collect()
+        _clear_expression_pool()
+        start = time.time()
+        #
+        if flag == 1:
+            expr = 2* summation(model.p, model.x)
+        elif flag == 2:
+            expr= 2 * sum(model.p[i]*model.x[i] for i in model.A)
+        elif flag == 3:
+            expr=0
+            for i in model.A:
+                expr += model.p[i] * model.x[i]
+            expr *= 2
+        elif flag == 4:
+            expr=0
+            for i in model.A:
+                expr = expr + model.p[i] * model.x[i]
+            expr *= 2
+        elif flag == 5:
+            expr=0
+            for i in model.A:
+                expr = model.p[i] * model.x[i] + expr
+            expr *= 2
+        #
+        stop = time.time()
+        seconds['construction'] = stop-start
+        seconds = evaluate(expr, seconds)
         return seconds
 
     return f
@@ -437,6 +493,15 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(linear(NTerms, 5), n=N)
         print_results(factors_, ans_, output)
 
+
+    if True:
+        factors_ = tuple(factors+['NestedLinear','Loop 1'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 1), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['NestedLinear','Loop 2'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 2), n=N)
+        print_results(factors_, ans_, output)
 
     if True:
         factors_ = tuple(factors+['Bilinear','Loop 1'])
