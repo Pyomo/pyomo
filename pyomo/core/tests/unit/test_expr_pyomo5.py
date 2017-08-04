@@ -1064,20 +1064,14 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(_e), EXPR._ProductExpression)
         self.assertEqual(len(_e._args), 2)
 
-        self.assertIs(type(_e._args[0]), EXPR._MultiSumExpression)
-        self.assertIs(len(_e._args[0]._args), 4)
-        self.assertIs(_e._args[0]._args[0], 0)
-        self.assertIs(_e._args[0]._args[1], m.a)
-        self.assertIs(_e._args[0]._args[2], m.b)
-        self.assertIs(_e._args[0]._args[3], m.c)
+        self.assertIs(type(_e._args[0]), EXPR._SumExpression)
+        self.assertIs(len(_e._args[0]._args), 2)
+        self.assertIs(_e._args[0]._args[0], m.c)
         self.assertEqual(e.size(), 11)
 
-        self.assertIs(type(_e._args[1]), EXPR._MultiSumExpression)
-        self.assertIs(len(_e._args[1]._args), 4)
-        self.assertIs(_e._args[1]._args[0], 0)
-        self.assertIs(_e._args[1]._args[1], m.a)
-        self.assertIs(_e._args[1]._args[2], m.b)
-        self.assertIs(_e._args[1]._args[3], m.d)
+        self.assertIs(type(_e._args[1]), EXPR._SumExpression)
+        self.assertIs(len(_e._args[1]._args), 2)
+        self.assertIs(_e._args[1]._args[1], m.d)
         self.assertEqual(e.size(), 11)
 
         #
@@ -1105,22 +1099,20 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(len(_e._args[0]._args), 2)
         self.assertIs(_e._args[0]._args[0], m.c)
 
-        self.assertIs(type(_e._args[0]._args[1]), EXPR._MultiSumExpression)
-        self.assertIs(len(_e._args[0]._args[1]._args), 3)
-        self.assertIs(_e._args[0]._args[1]._args[0], 0)
-        self.assertIs(_e._args[0]._args[1]._args[1], m.a)
-        self.assertIs(_e._args[0]._args[1]._args[2], m.b)
+        self.assertIs(type(_e._args[0]._args[1]), EXPR._SumExpression)
+        self.assertIs(len(_e._args[0]._args[1]._args), 2)
+        self.assertIs(_e._args[0]._args[1]._args[0], m.a)
+        self.assertIs(_e._args[0]._args[1]._args[1], m.b)
 
         self.assertIs(type(_e._args[1]), EXPR._ProductExpression)
         self.assertIs(len(_e._args[1]._args), 2)
         self.assertIs(_e._args[1]._args[1], m.d)
 
-        self.assertIs(type(_e._args[1]._args[0]), EXPR._MultiSumExpression)
-        self.assertIs(len(_e._args[1]._args[0]._args), 3)
-        self.assertIs(_e._args[1]._args[0]._args[0], 0)
-        self.assertIs(_e._args[1]._args[0]._args[1], m.a)
-        self.assertIs(_e._args[1]._args[0]._args[2], m.b)
-        self.assertEqual(_e.size(), 13)
+        self.assertIs(type(_e._args[1]._args[0]), EXPR._SumExpression)
+        self.assertIs(len(_e._args[1]._args[0]._args), 2)
+        self.assertIs(_e._args[1]._args[0]._args[0], m.a)
+        self.assertIs(_e._args[1]._args[0]._args[1], m.b)
+        self.assertEqual(_e.size(), 11)
 
 
     def test_trivialProduct(self):
