@@ -113,6 +113,11 @@ def compress_expression(expr, verbose=False):
     if isinstance(expr, _MultiSumExpression):
         return expr
     #
+    # Only compress trees whos root is _SumExpression
+    #
+    if not expr.__class__ == _SumExpression:
+        return expr
+    #
     # The stack starts with the current expression
     #
     _stack = [ False, (expr, expr._args, 0, len(expr._args), [], [])]
@@ -159,11 +164,8 @@ def compress_expression(expr, verbose=False):
                 #
                 _potentially_variable.append( False )
                 _result.append( _sub )
-            elif not isinstance(_sub, _ExpressionBase):
-            #elif not _sub.is_expression():
-                _potentially_variable.append( _sub._potentially_variable() )
-                _result.append( _sub )
-            elif isinstance(_sub, _MultiSumExpression):
+            elif not isinstance(_sub, _ExpressionBase) or isinstance(_sub, _MultiSumExpression):
+                #elif not _sub.is_expression():
                 _potentially_variable.append( _sub._potentially_variable() )
                 _result.append( _sub )
             else:
@@ -676,11 +678,10 @@ class _ExpressionBase(NumericValue):
                 if _sub.__class__ in native_numeric_types:
                     _result.append( native_result )
                     continue
-                try:
-                    _isExpr = _sub.is_expression()
-                except AttributeError:
+                if not hasattr(_sub, "is_expression"):
                     _result.append( native_result )
                     continue
+                _isExpr = _sub.is_expression()
                 if _isExpr:
                     _stack.append( (_combiner, _argList, _idx, _len, _result) )
                     _combiner= getattr(_sub, combiner)()
