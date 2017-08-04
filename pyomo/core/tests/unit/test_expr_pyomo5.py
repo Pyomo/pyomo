@@ -380,12 +380,14 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
+        self.assertEqual(e.size(), 3)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 3)
         self.assertIs(_e._args[0], 0)
         self.assertIs(_e._args[1], m.a)
         self.assertIs(_e._args[2], m.b)
+        self.assertEqual(_e.size(), 4)
 
     def test_constSum(self):
         # a + 5
@@ -398,11 +400,13 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
+        self.assertEqual(e.size(), 3)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 2)
         self.assertIs(_e._args[0], 5)
         self.assertIs(_e._args[1], m.a)
+        self.assertEqual(_e.size(), 3)
 
         e = 5 + m.a
         _e = EXPR.compress_expression(e)
@@ -411,11 +415,13 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
+        self.assertEqual(e.size(), 3)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 2)
         self.assertIs(_e._args[0], 5)
         self.assertIs(_e._args[1], m.a)
+        self.assertEqual(_e.size(), 3)
 
     def test_nestedSum(self):
         #
@@ -442,12 +448,14 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], e1)
+        self.assertEqual(e.size(), 5)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 3)
         self.assertIs(_e._args[0], 5)
         self.assertIs(_e._args[1], m.a)
         self.assertIs(_e._args[2], m.b)
+        self.assertEqual(_e.size(), 4)
 
         #       + 
         #      / \ 
@@ -462,12 +470,14 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], e1)
+        self.assertEqual(e.size(), 5)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 3)
         self.assertIs(_e._args[0], 5)
         self.assertIs(_e._args[1], m.a)
         self.assertIs(_e._args[2], m.b)
+        self.assertEqual(_e.size(), 4)
 
         #           +
         #          / \
@@ -482,6 +492,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], e1)
         self.assertIs(e._args[1], m.c)
+        self.assertEqual(e.size(), 5)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 4)
@@ -489,6 +500,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(_e._args[1], m.a)
         self.assertIs(_e._args[2], m.b)
         self.assertIs(_e._args[3], m.c)
+        self.assertEqual(_e.size(), 5)
 
         #       + 
         #      / \ 
@@ -504,6 +516,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], m.c)
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 4)
@@ -511,6 +524,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(_e._args[1], m.a)
         self.assertIs(_e._args[2], m.b)
         self.assertIs(_e._args[3], m.c)
+        self.assertEqual(_e.size(), 5)
 
         #            +
         #          /   \
@@ -526,6 +540,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], e1)
         self.assertIs(e._args[1], e2)
+        self.assertEqual(e.size(), 7)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 5)
@@ -534,6 +549,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(_e._args[2], m.b)
         self.assertIs(_e._args[3], m.c)
         self.assertIs(_e._args[4], m.d)
+        self.assertEqual(_e.size(), 6)
 
     def test_trivialSum(self):
         #
@@ -572,6 +588,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[0], 5)
         self.assertIs(e._args[0]._args[1], m.a)
         self.assertIs(e._args[1], m.b)
+        self.assertEqual(e.size(), 5)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 3)
@@ -579,6 +596,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(_e._args[1]._args[0], 5)
         self.assertIs(_e._args[1]._args[1], m.a)
         self.assertIs(_e._args[2], m.b)
+        self.assertEqual(_e.size(), 6)
 
         #       +
         #      / \
@@ -593,6 +611,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], m.b)
         self.assertIs(e._args[1]._args[0], 5)
         self.assertIs(e._args[1]._args[1], m.a)
+        self.assertEqual(e.size(), 5)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 3)
@@ -600,6 +619,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(_e._args[1], m.b)
         self.assertIs(_e._args[2]._args[0], 5)
         self.assertIs(_e._args[2]._args[1], m.a)
+        self.assertEqual(_e.size(), 6)
 
         #            +
         #          /   \
@@ -618,6 +638,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[1], m.a)
         self.assertIs(e._args[1]._args[0], m.b)
         self.assertIs(e._args[1]._args[1], m.c)
+        self.assertEqual(e.size(), 7)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 4)
@@ -626,6 +647,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(_e._args[2], m.c)
         self.assertIs(_e._args[3]._args[0], 5)
         self.assertIs(_e._args[3]._args[1], m.a)
+        self.assertEqual(_e.size(), 7)
 
         #            +
         #          /   \
@@ -644,6 +666,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[1], m.c)
         self.assertIs(e._args[1]._args[0], 5)
         self.assertIs(e._args[1]._args[1], m.a)
+        self.assertEqual(e.size(), 7)
         #
         self.assertIs(type(_e), EXPR._CompressedSumExpression)
         self.assertEqual(len(_e._args), 4)
@@ -652,6 +675,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(_e._args[2], m.c)
         self.assertIs(_e._args[3]._args[0], 5)
         self.assertIs(_e._args[3]._args[1], m.a)
+        self.assertEqual(_e.size(), 7)
 
     def test_simpleDiff(self):
         #
@@ -686,6 +710,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertEqual(e._args[0], -5)
         self.assertIs(e._args[1], m.a)
+        self.assertEqual(e.size(), 3)
 
         #    -
         #   / \
@@ -696,6 +721,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], 5)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], m.a)
+        self.assertEqual(e.size(), 4)
 
     def test_nestedDiff(self):
         #
@@ -717,6 +743,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(type(e), EXPR._SumExpression)
         self.assertIs(e._args[0], -5)
         self.assertIs(e._args[1], e1)
+        self.assertEqual(e.size(), 6)
 
         #       -
         #      / \
@@ -729,6 +756,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], 5)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e1)
+        self.assertEqual(e.size(), 7)
 
         #       -
         #      / \
@@ -741,6 +769,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], e1)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], m.c)
+        self.assertEqual(e.size(), 7)
 
         #       -
         #      / \
@@ -754,6 +783,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], m.c)
         self.assertIs(e._args[1]._args[0]._args[0], m.a)
         self.assertIs(e._args[1]._args[0]._args[1]._args[0], m.b)
+        self.assertEqual(e.size(), 7)
 
         #            -
         #          /   \
@@ -767,6 +797,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], e1)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e2)
+        self.assertEqual(e.size(), 10)
 
         #            -
         #          /   \
@@ -780,6 +811,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], e2)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e1)
+        self.assertEqual(e.size(), 10)
 
     def test_trivialDiff(self):
         #
@@ -817,6 +849,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], e1)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], m.b)
+        self.assertEqual(e.size(), 6)
 
         #       -
         #      / \
@@ -829,6 +862,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.b)
         self.assertIs(e._args[1]._args[0], e1)
+        self.assertEqual(e.size(), 6)
 
         #            -
         #          /   \
@@ -842,6 +876,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], e1)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e2)
+        self.assertEqual(e.size(), 9)
 
         #            -
         #          /   \
@@ -855,6 +890,7 @@ class TestGenerate_SumExpression(unittest.TestCase):
         self.assertIs(e._args[0], e2)
         self.assertIs(type(e._args[1]), EXPR._NegationExpression)
         self.assertIs(e._args[1]._args[0], e1)
+        self.assertEqual(e.size(), 9)
 
 
 class TestGenerate_ProductExpression(unittest.TestCase):
@@ -882,6 +918,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
+        self.assertEqual(e.size(), 3)
 
     def test_constProduct(self):
         #
@@ -898,6 +935,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertEqual(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
+        self.assertEqual(e.size(), 3)
 
         #    *
         #   / \
@@ -907,6 +945,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
+        self.assertEqual(e.size(), 3)
 
     def test_nestedProduct(self):
         #
@@ -931,6 +970,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e._args[1]), EXPR._ProductExpression)
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
 
         #       *
         #      / \
@@ -945,6 +985,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e._args[1]), EXPR._ProductExpression)
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
 
         #       *
         #      / \
@@ -959,6 +1000,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e._args[0]), EXPR._ProductExpression)
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
 
         #       *
         #      / \
@@ -973,6 +1015,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e._args[1]), EXPR._ProductExpression)
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
 
         #            *
         #          /   \
@@ -990,6 +1033,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[1], m.b)
         self.assertIs(e._args[1]._args[0], m.c)
         self.assertIs(e._args[1]._args[1], m.d)
+        self.assertEqual(e.size(), 7)
 
     def test_nestedProduct2(self):
         #
@@ -1026,6 +1070,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(_e._args[0]._args[1], m.a)
         self.assertIs(_e._args[0]._args[2], m.b)
         self.assertIs(_e._args[0]._args[3], m.c)
+        self.assertEqual(e.size(), 11)
 
         self.assertIs(type(_e._args[1]), EXPR._MultiSumExpression)
         self.assertIs(len(_e._args[1]._args), 4)
@@ -1033,6 +1078,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(_e._args[1]._args[1], m.a)
         self.assertIs(_e._args[1]._args[2], m.b)
         self.assertIs(_e._args[1]._args[3], m.d)
+        self.assertEqual(e.size(), 11)
 
         #
         # Check the structure of nested products
@@ -1049,6 +1095,8 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e3 = e1 * m.d
         e = e2 * e3
         _e = EXPR.compress_expression(e)
+        #
+        self.assertEqual(e.size(), 11)
         #
         self.assertIs(type(_e), EXPR._ProductExpression)
         self.assertEqual(len(_e._args), 2)
@@ -1072,6 +1120,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(_e._args[1]._args[0]._args[0], 0)
         self.assertIs(_e._args[1]._args[0]._args[1], m.a)
         self.assertIs(_e._args[1]._args[0]._args[2], m.b)
+        self.assertEqual(_e.size(), 13)
 
 
     def test_trivialProduct(self):
@@ -1141,6 +1190,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertIs(e._args[0], m.a)
         self.assertIs(e._args[1], m.b)
+        self.assertEqual(e.size(), 3)
 
     def test_constDivision(self):
         #
@@ -1157,6 +1207,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertAlmostEqual(e._args[0], 0.2)
         self.assertIs(e._args[1], m.a)
+        self.assertEqual(e.size(), 3)
 
         #    /
         #   / \
@@ -1166,6 +1217,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertEqual(len(e._args), 2)
         self.assertEqual(e._args[0], 5)
         self.assertIs(e._args[1], m.a)
+        self.assertEqual(e.size(), 3)
 
     def test_nestedDivision(self):
         #
@@ -1190,6 +1242,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e._args[1]), EXPR._DivisionExpression)
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
 
         #       /
         #      / \
@@ -1204,6 +1257,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e._args[1]), EXPR._DivisionExpression)
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
 
         #       /
         #      / \
@@ -1218,6 +1272,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e._args[0]), EXPR._DivisionExpression)
         self.assertIs(e._args[0]._args[0], m.a)
         self.assertIs(e._args[0]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
 
         #       /
         #      / \
@@ -1232,6 +1287,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(e._args[1]), EXPR._DivisionExpression)
         self.assertIs(e._args[1]._args[0], m.a)
         self.assertIs(e._args[1]._args[1], m.b)
+        self.assertEqual(e.size(), 5)
 
         #            /
         #          /   \
@@ -1249,6 +1305,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(e._args[0]._args[1], m.b)
         self.assertIs(e._args[1]._args[0], m.c)
         self.assertIs(e._args[1]._args[1], m.d)
+        self.assertEqual(e.size(), 7)
 
     def test_trivialDivision(self):
         #
@@ -1331,16 +1388,16 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #   a   b
         # Python 2.7 supports better testing of exceptions
         if sys.hexversion >= 0x02070000:
-            self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
+            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
                                    "sub-expressions is a relational",
                                    e.__eq__, m.a)
-            self.assertRaisesRegexp(TypeError, "EqualityExpression .*"
+            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
                                    "sub-expressions is a relational",
                                    m.a.__eq__, e)
 
             # NB: cannot test the reverse here: _VarArray (correctly)
             # does not define __eq__
-            self.assertRaisesRegexp(TypeError, "Argument .*"
+            self.assertRaisesRegex(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__eq__, m.x)
         else:
@@ -1688,33 +1745,33 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
             #
             # Check error with indexed variable
             #
-            self.assertRaisesRegexp(TypeError, "Argument .*"
+            self.assertRaisesRegex(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__lt__, m.x)
-            self.assertRaisesRegexp(TypeError, "Argument .*"
+            self.assertRaisesRegex(TypeError, "Argument .*"
                                     "is an indexed numeric value",
                                     m.a.__gt__, m.x)
 
             #
             # Check error with more than two inequalities
             #
-            self.assertRaisesRegexp(ValueError, "InequalityExpression .*"
+            self.assertRaisesRegex(ValueError, "InequalityExpression .*"
                                    "more than 3 terms",
                                    e.__lt__, m.c)
-            self.assertRaisesRegexp(ValueError, "InequalityExpression .*"
+            self.assertRaisesRegex(ValueError, "InequalityExpression .*"
                                    "more than 3 terms",
                                    e.__gt__, m.c)
 
             #
             # Check error when both expressions are relational
             #
-            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
                                    "both sub-expressions are also relational",
                                    e.__lt__, m.a < m.b)
-            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
                                    "sub-expressions is an equality",
                                    m.a.__lt__, e1)
-            self.assertRaisesRegexp(TypeError, "InequalityExpression .*"
+            self.assertRaisesRegex(TypeError, "InequalityExpression .*"
                                    "sub-expressions is an equality",
                                    m.a.__gt__, e1)
         else:
@@ -3087,6 +3144,88 @@ class EntangledExpressionErrors(unittest.TestCase):
         self.assertEqual( len(e1_._args), 3)
         self.assertEqual( len(e2_._args), 4)
         self.assertEqual( len(e3_._args), 4)
+
+
+class TestSummationExpression(unittest.TestCase):
+
+    def setUp(self):
+        # This class tests the Pyomo 5.x expression trees
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
+
+        self.m = ConcreteModel()
+        self.m.I = RangeSet(5)
+        self.m.a = Var(self.m.I, initialize=5)
+        self.m.b = Var(self.m.I, initialize=10)
+        self.m.p = Param(self.m.I, initialize=1, mutable=True)
+        self.m.q = Param(self.m.I, initialize=3, mutable=False)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+        self.m = None
+
+    def test_summation1(self):
+        e = summation(self.m.a)
+        self.assertEqual( e(), 25 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]) )
+        self.assertEqual(e.size(), 7)
+
+    def test_summation2(self):
+        e = summation(self.m.p, self.m.a)
+        self.assertEqual( e(), 25 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[1]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[1]) )
+        self.assertEqual(e.size(), 17)
+
+    def test_summation3(self):
+        e = summation(self.m.q, self.m.a)
+        self.assertEqual( e(), 75 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[1]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[1]) )
+        self.assertEqual(e.size(), 17)
+
+    def test_summation4(self):
+        e = summation(self.m.a, self.m.b)
+        self.assertEqual( e(), 250 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[0]) )
+        self.assertEqual(e.size(), 17)
+
+    def test_summation5(self):
+        e = summation(self.m.b, denom=self.m.a)
+        self.assertEqual( e(), 10 )
+        self.assertIs(type(e), EXPR._SumExpression)
+        self.assertEqual(e.size(False), 19)
+
+    def test_summation6(self):
+        e = summation(self.m.a, denom=self.m.p)
+        self.assertEqual( e(), 25 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( id(self.m.a[1]), id(e._args[1]._args[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e._args[2]._args[0]) )
+        self.assertEqual(e.size(), 17)
+
+    def test_summation7(self):
+        e = summation(self.m.p, self.m.q, index=self.m.I)
+        self.assertEqual( e(), 15 )
+        self.assertIs(type(e), EXPR._StaticMultiSumExpression)
+        self.assertEqual( len(e._args), 1)
+        self.assertEqual(e.size(False), 20)
+
+    def test_summation_compression(self):
+        e1 = summation(self.m.a)
+        e2 = summation(self.m.b)
+        e = e1+e2
+        e_ = EXPR.compress_expression(e)
+        self.assertEqual( e_(), 75 )
+        self.assertIs(type(e_), EXPR._CompressedSumExpression)
+        self.assertEqual( len(e_._args), 3)
+        self.assertEqual(e_.size(False), 16)
+
 
 
 class TestCloneExpression(unittest.TestCase):
