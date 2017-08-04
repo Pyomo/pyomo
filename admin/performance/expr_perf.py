@@ -476,7 +476,6 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(linear(NTerms, 1), n=N)
         print_results(factors_, ans_, output)
 
-    if True:
         factors_ = tuple(factors+['Linear','Loop 2'])
         ans_ = res[factors_] = measure(linear(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
