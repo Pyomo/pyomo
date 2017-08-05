@@ -31,13 +31,13 @@ def normalize_index(index):
     return just the element.  If it has length > 1, then
     return a tuple.
     """
-    ndx = pyutilib.misc.flatten(index)
-    if type(ndx) is list:
-        if len(ndx) == 1:
-            ndx = ndx[0]
+    idx = pyutilib.misc.flatten(index)
+    if type(idx) is list:
+        if len(idx) == 1:
+            idx = idx[0]
         else:
-            ndx = tuple(ndx)
-    return ndx
+            idx = tuple(idx)
+    return idx
 normalize_index.flatten = True
 
 class _IndexedComponent_slicer(object):
@@ -323,9 +323,9 @@ class IndexedComponent(Component):
 
     def to_dense_data(self):
         """TODO"""
-        for ndx in self._index:
-            if ndx not in self._data:
-                self._default(ndx)
+        for idx in self._index:
+            if idx not in self._data:
+                self._default(idx)
 
     def clear(self):
         """Clear the data in this component"""
@@ -357,9 +357,9 @@ class IndexedComponent(Component):
         """
         return len(self._data)
 
-    def __contains__(self, ndx):
+    def __contains__(self, idx):
         """Return true if the index is in the dictionary"""
-        return ndx in self._data
+        return idx in self._data
 
     def __iter__(self):
         """Iterate over the keys in the dictionary"""
@@ -447,37 +447,37 @@ You can silence this warning by one of three ways:
         for key in self:
             yield key, self[key]
 
-    def __getitem__(self, ndx):
+    def __getitem__(self, idx):
         """
         This method returns the data corresponding to the given index.
         """
         if self._constructed is False:
-            self._not_constructed_error(ndx)
+            self._not_constructed_error(idx)
         try:
             # The vast majority of the time the index will be in the _data
             # dictionary, so just check and return it.  Note that this can
             # return a TypeError if there is a slice in the index.
-            if ndx in self._data:
-                return self._data[ndx]
-            ndx = self._validate_index(ndx)
+            if idx in self._data:
+                return self._data[idx]
+            idx = self._validate_index(idx)
         except TypeError:
             # Process alternatives
-            ndx = self._processUnhashableIndex(ndx, True)
+            idx = self._processUnhashableIndex(idx, True)
 
-        # At this point, ndx will have been flattened - so if it is defined,
+        # At this point, idx will have been flattened - so if it is defined,
         # it will be in _data
-        if ndx in self._data:
-            return self._data[ndx]
+        if idx in self._data:
+            return self._data[idx]
         #
         # The index is not in the _data dictionary.  If index generated a
         # slicer, return it
         #
-        if ndx.__class__ is _IndexedComponent_slicer:
-            return self._processUnhashableIndex(ndx)
+        if idx.__class__ is _IndexedComponent_slicer:
+            return self._processUnhashableIndex(idx)
         #
         # Call the _default helper to retrieve/return the default value
         #
-        return self._default( ndx )
+        return self._default( idx )
 
     def __setitem__(self, index, val):
         #
@@ -574,7 +574,7 @@ You can silence this warning by one of three ways:
             "\nIndex '%s' is not valid for indexed component '%s'"
             % ( idx, self.name, ))
 
-    def _processUnhashableIndex(self, ndx, _exception=None):
+    def _processUnhashableIndex(self, idx, _exception=None):
         """Process a call to __getitem__ with unhashable elements
 
         There are three basic ways to get here:
@@ -594,16 +594,16 @@ You can silence this warning by one of three ways:
         #
         # Setup the slice template (in fixed)
         #
-        if type(ndx) not in (tuple, list):
-            ndx = [ndx]
+        if type(idx) not in (tuple, list):
+            idx = [idx]
         else:
             # We would normally do "flatten()" here, but the current
             # (10/2016) implementation of flatten() is too aggressive:
             # it will attempt to expand *any* iterable, including
             # SimpleParam.
-            ndx = pyutilib.misc.flatten_tuple(tuple(ndx))
+            idx = pyutilib.misc.flatten_tuple(tuple(idx))
 
-        for i,val in enumerate(ndx):
+        for i,val in enumerate(idx):
             if type(val) is slice:
                 if val.start is not None or val.stop is not None:
                     raise IndexError(
@@ -619,7 +619,7 @@ You can silence this warning by one of three ways:
                     if ellipsis is None:
                         sliced[i] = val
                     else:
-                        sliced[i-len(ndx)] = val
+                        sliced[i-len(idx)] = val
                     continue
 
             if val is Ellipsis:
@@ -651,7 +651,7 @@ You can silence this warning by one of three ways:
                     # imports indexed_component, but we need expr
                     # here
                     from pyomo.core.base import expr as EXPR
-                    return EXPR._GetItemExpression(self, tuple(ndx))
+                    return EXPR._GetItemExpression(self, tuple(idx))
                 except:
                     # There are other ways we could get an exception
                     # that is not TemplateExpressionError; most notably,
@@ -686,12 +686,12 @@ the value() function.""" % ( self.name, i ))
             if ellipsis is None:
                 fixed[i] = val
             else:
-                fixed[i - len(ndx)] = val
+                fixed[i - len(idx)] = val
 
         if sliced or ellipsis is not None:
             return _IndexedComponent_slicer(self, fixed, sliced, ellipsis)
         elif _found_numeric:
-            return tuple( fixed[i] for i in range(len(ndx)) )
+            return tuple( fixed[i] for i in range(len(idx)) )
         elif _exception is not None:
             raise
         else:

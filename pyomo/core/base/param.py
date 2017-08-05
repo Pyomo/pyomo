@@ -194,14 +194,14 @@ class Param(IndexedComponent):
             return len(self._data)
         return len(self._index)
 
-    def __contains__(self, ndx):
+    def __contains__(self, idx):
         """
         Return true if the index is in the dictionary.  If the default value
         is specified, then all members of the component index are valid.
         """
         if self._default_val is None:
-            return ndx in self._data
-        return ndx in self._index
+            return idx in self._data
+        return idx in self._index
 
     def __iter__(self):
         """
@@ -470,7 +470,7 @@ class Param(IndexedComponent):
 
         return val
 
-    def _setitem(self, ndx, val, check_domain=True):
+    def _setitem(self, idx, val, check_domain=True):
         """
         The __setitem__ method performs significant
         validation around the input indices, particularly
@@ -506,33 +506,33 @@ class Param(IndexedComponent):
         try:
             _new = False
             if not self.is_indexed():
-                if ndx not in self._data:
+                if idx not in self._data:
                     _new = True
-                    self._data[ndx] = self
+                    self._data[idx] = self
                 self.set_value(val)
                 return self
             elif self._mutable:
                 # Mutable Params behave like normal components, so we can
                 # defer to the superclass (IndexedComponent) implementation
-                if ndx not in self._data:
+                if idx not in self._data:
                     _new = True
-                    self._data[ndx] = _ParamData(self)
-                obj = self._data[ndx]
-                obj.set_value(val, ndx, check_domain)
+                    self._data[idx] = _ParamData(self)
+                obj = self._data[idx]
+                obj.set_value(val, idx, check_domain)
                 return obj
             else:
-                _new = ndx in self._data
-                self._data[ndx] = val
+                _new = idx in self._data
+                self._data[idx] = val
                 # Because we do not have a _ParamData, we cannot rely on the
                 # validation that occurs in _ParamData.set_value()
-                self._validate_value(ndx, val, check_domain)
+                self._validate_value(idx, val, check_domain)
                 return val
         except:
             if _new:
-                del self._data[ndx]
+                del self._data[idx]
             raise
 
-    def _validate_value(self, ndx, val, validate_domain=True):
+    def _validate_value(self, idx, val, validate_domain=True):
         """
         Validate a given input/value pair.
         """
@@ -543,15 +543,15 @@ class Param(IndexedComponent):
             raise ValueError(
                 "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
                 "\tValue not in parameter domain %s" %
-                (self.name, ndx, val, type(val), self.domain.name))
+                (self.name, idx, val, type(val), self.domain.name))
         if self._validate:
             valid = apply_parameterized_indexed_rule(
-                self, self._validate, self.parent_block(), val, ndx )
+                self, self._validate, self.parent_block(), val, idx )
             if not valid:
                 raise ValueError(
                     "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
                     "\tValue failed parameter validation rule" %
-                    ( self.name, ndx, val, type(val) ) )
+                    ( self.name, idx, val, type(val) ) )
 
     def _initialize_from(self, _init):
         """
