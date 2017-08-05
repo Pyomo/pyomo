@@ -72,9 +72,10 @@ class TwoTermDisj(unittest.TestCase):
         for i in [0,1]:
             infodict = disjBlock[i]._gdp_transformation_info
             self.assertIsInstance(infodict, dict)
-            self.assertEqual(len(infodict), 2)
+            self.assertEqual(len(infodict), 3)
             self.assertIs(infodict['src'], m.d[i])
             self.assertIsInstance(infodict['srcConstraints'], ComponentMap)
+            self.assertIsInstance(infodict['srcVars'], ComponentMap)
 
             disjDict = m.d[i]._gdp_transformation_info
             self.assertIsInstance(disjDict, dict)
@@ -94,13 +95,34 @@ class TwoTermDisj(unittest.TestCase):
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
-        consdict = disjBlock[0]._gdp_transformation_info['srcConstraints']
-        
-        set_trace()
-        # TODO: Did I ever map back to the src constraints in bigm?
-        # The answer is no. So I should do that.
 
-        # TODO
+        # first disjunct
+        srcConsdict = disjBlock[0]._gdp_transformation_info['srcConstraints']
+        transConsdict = m.d[0]._gdp_transformation_info['relaxedConstraints']
+
+        self.assertEqual(len(srcConsdict), 1)
+        self.assertEqual(len(transConsdict), 1)
+        orig1 = m.d[0].c
+        trans1 = disjBlock[0].component("d[0].c")
+        self.assertIs(srcConsdict[trans1], orig1)
+        self.assertIs(transConsdict[orig1], trans1)
+        
+        # second disjunct
+        srcConsdict = disjBlock[1]._gdp_transformation_info['srcConstraints']
+        transConsdict = m.d[1]._gdp_transformation_info['relaxedConstraints']
+
+        self.assertEqual(len(srcConsdict), 2)
+        self.assertEqual(len(transConsdict), 2)
+        # first constraint
+        orig1 = m.d[1].c1
+        trans1 = disjBlock[1].component("d[1].c1")
+        self.assertIs(srcConsdict[trans1], orig1)
+        self.assertIs(transConsdict[orig1], trans1)
+        # second constraint
+        orig2 = m.d[1].c2
+        trans2 = disjBlock[1].component("d[1].c2")
+        self.assertIs(srcConsdict[trans2], orig2)
+        self.assertIs(transConsdict[orig2], trans2)
 
 
     def test_disaggregatedVar_mappings(self):
@@ -108,7 +130,23 @@ class TwoTermDisj(unittest.TestCase):
         TransformationFactory('gdp.chull').apply_to(m)
 
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts
-        # TODO
+
+        srcVars = disjBlock[0]._gdp_transformation_info['srcVars']
+        disVars = m.d[0]._gdp_transformation_info['disaggregatedVars']
+
+        for i in [0,1]:
+            srcVars = disjBlock[i]._gdp_transformation_info['srcVars']
+            disVars = m.d[i]._gdp_transformation_info['disaggregatedVars']
+            self.assertEqual(len(srcVars), 3)
+            self.assertEqual(len(disVars), 3)
+            # TODO: there has got to be better syntax for this??
+            mappings = ComponentMap()
+            mappings[m.w] = disjBlock[i].w
+            mappings[m.y] = disjBlock[i].y
+            mappings[m.x] = disjBlock[i].x
+            for orig, disagg in mappings.iteritems():
+                self.assertIs(srcVars[disagg], orig)
+                self.assertIs(disVars[orig], disagg)
 
 
     def test_bigMConstraint_mappings(self):

@@ -357,7 +357,8 @@ class ConvexHull_Transformation(Transformation):
         # add reference to original disjunct to info dict on transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
-        relaxationBlock._gdp_transformation_info = {'src': obj}
+        relaxationBlockInfo = relaxationBlock._gdp_transformation_info = \
+                              {'src': obj, 'srcVars': ComponentMap()}
         infodict['chull'] = relaxationBlock
 
         # if this is a disjunctData from an indexed disjunct, we are
@@ -376,11 +377,13 @@ class ConvexHull_Transformation(Transformation):
         for var in varSet:
             disaggregatedVar = Var(within=Reals)
             # naming conflicts are possible here since this is a bunch
-            # of variables from different blockscoming together, so we
+            # of variables from different blocks coming together, so we
             # get a unique name
             disaggregatedVarName = self._get_unique_name(obj, var.local_name)
             relaxationBlock.add_component(disaggregatedVarName, disaggregatedVar)
             infodict['disaggregatedVars'][var] = disaggregatedVar
+            relaxationBlockInfo['srcVars'][disaggregatedVar] = var
+            
             lb = var.lb
             ub = var.ub
             if lb is None or ub is None:
