@@ -404,10 +404,8 @@ class BigM_Transformation(Transformation):
         transBlock = relaxationBlock.parent_block()
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
-        # same block. So we get a unique name and we record the
-        # mapping.
+        # same block. So we get a unique name
         name = self._get_unique_name(relaxationBlock, obj.name)
-        infodict['relaxedConstraints'] = ComponentMap()
         
         if obj.is_indexed():
             newConstraint = Constraint(obj.index_set(), transBlock.lbub)
@@ -416,7 +414,13 @@ class BigM_Transformation(Transformation):
         relaxationBlock.add_component(name, newConstraint)
         # add mapping of original constraint to transformed constraint
         # in transformation info dictionary
-        infodict['relaxedConstraints'][obj] = newConstraint
+        infodict.setdefault('relaxedConstraints', ComponentMap())[
+            obj] = newConstraint
+        # add mapping of transformed constraint back to original constraint (we
+        # know that the info dict is already created because this only got
+        # called if we were transforming a disjunct...)
+        relaxationBlock._gdp_transformation_info.setdefault(
+            'srcConstraints', ComponentMap())[newConstraint] = obj
         
         for i in obj:
             c = obj[i]
