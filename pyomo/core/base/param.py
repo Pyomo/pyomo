@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -16,7 +16,8 @@ import logging
 from weakref import ref as weakref_ref
 
 from pyomo.core.base.component import ComponentData, register_component
-from pyomo.core.base.indexed_component import IndexedComponent, normalize_index, UnindexedComponent_set
+from pyomo.core.base.indexed_component import IndexedComponent, \
+    UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
 from pyomo.core.base.numvalue import NumericValue, native_types, value
 from pyomo.core.base.set_types import Any
@@ -38,9 +39,9 @@ class _ParamData(ComponentData, NumericValue):
         value       The numeric value of this variable.
     """
 
-    __slots__ = ('value',)
+    __slots__ = ('_value',)
 
-    def __init__(self, owner, value):
+    def __init__(self, owner):
         #
         # The following is equivalent to calling
         # the base ComponentData constructor.
@@ -50,7 +51,7 @@ class _ParamData(ComponentData, NumericValue):
         # The following is equivalent to calling the
         # base NumericValue constructor.
         #
-        self.value = value
+        self._value = None
 
     def __getstate__(self):
         """
@@ -66,21 +67,34 @@ class _ParamData(ComponentData, NumericValue):
 
     def clear(self):
         """Clear the data in this component"""
-        self.value = None
+        self._value = None
 
-    def set_value(self, value):
-        self.parent_component()[self.index()] = value
+    def set_value(self, value, idx=None, check_domain=True):
+        self._value = value
+        if idx is None:
+            idx = self.index()
+        self.parent_component()._validate_value(idx, value, check_domain)
 
     def __call__(self, exception=True):
         """
         Return the value of this object.
         """
-        if self.value is None:
+        if self._value is None:
             raise ValueError(
                 "Error evaluating Param value (%s):\n\tThe Param value is "
                 "undefined and no default value is specified"
                 % ( self.name, ))
-        return self.value
+        return self._value
+
+    @property
+    def value(self):
+        """Return the value for this variable."""
+        return self()
+    @value.setter
+    def value(self, val):
+        """Set the value for this variable."""
+        self.set_value(val)
+
 
     def is_fixed(self):
         """
@@ -108,9 +122,9 @@ class _ParamData(ComponentData, NumericValue):
 
     def __nonzero__(self):
         """Return True if the value is defined and non-zero."""
-        if self.value:
+        if self._value:
             return True
-        if self.value is None:
+        if self._value is None:
             raise ValueError(
                 "Error evaluating Param value (%s):\n\tThe Param value is "
                 "undefined and no default value is specified"
@@ -244,14 +258,14 @@ class Param(IndexedComponent):
             #
             ans = {}
             for key, param_value in self.iteritems():
-                ans[key] = param_value.value
+                ans[key] = param_value._value
             return ans
         elif not self.is_indexed():
             #
             # The parameter is a scalar, so we need to create a temporary
             # dictionary using the value for this parameter.
             #
-            return { None: self.value }
+            return { None: self._value }
         else:
             #
             # The parameter is not mutable, so iteritems() can be
@@ -276,14 +290,14 @@ class Param(IndexedComponent):
             #
             ans = {}
             for key, param_value in self.sparse_iteritems():
-                ans[key] = param_value.value
+                ans[key] = param_value._value
             return ans
         elif not self.is_indexed():
             #
             # The parameter is a scalar, so we need to create a temporary
             # dictionary using the value for this parameter.
             #
-            return { None: self.value }
+            return { None: self._value }
         else:
             #
             # The parameter is not mutable, so sparse_iteritems() can be
@@ -308,7 +322,7 @@ class Param(IndexedComponent):
             hasattr(_srcType, '__getitem__')
             and not isinstance(new_values, NumericValue) )
         #
-        if check is True:
+        if check:
             if _isDict:
                 for index, new_value in iteritems(new_values):
                     self[index] = new_value
@@ -327,25 +341,24 @@ class Param(IndexedComponent):
                 # cases are rare, we will recover from the exception
                 # instead of incurring the penalty of checking.
                 for index, new_value in iteritems(new_values):
-                    try:
-                        self._data[index].value = new_value
-                    except:
-                        self._data[index] = _ParamData(self, new_value)
+                    if index not in self._data:
+                        self._data[index] = _ParamData(self)
+                    self._data[index]._value = new_value
             else:
                 # For scalars, we will choose an approach based on
                 # how "dense" the Param is
                 if not self._data: # empty
                     for index in self._index:
-                        self._data[index] = _ParamData(self, new_values)
+                        p = self._data[index] = _ParamData(self)
+                        p._value = new_values
                 elif len(self._data) == len(self._index):
                     for index in self._index:
-                        self._data[index].value = new_values
+                        self._data[index]._value = new_values
                 else:
                     for index in self._index:
-                        if index in self._data:
-                            self._data[index].value = new_values
-                        else:
-                            self._data[index] = _ParamData(self, new_values)
+                        if index not in self._data:
+                            self._data[index] = _ParamData(self)
+                        self._data[index]._value = new_values
         else:
             #
             # Initialize a scalar
@@ -358,110 +371,7 @@ class Param(IndexedComponent):
                         % (self.name,))
                 new_values = new_values[None]
             # scalars have to be handled differently
-            self._data[None] = new_values
-
-    def _default(self, idx):
-        """
-        Returns the default component data value
-        """
-        #
-        # Local values
-        #
-        val = self._default_val
-        _default_type = type(val)
-        #
-        if not self._constructed:
-            if idx is None:
-                idx_str = '%s' % (self.local_name,)
-            else:
-                idx_str = '%s[%s]' % (self.local_name, idx,)
-            raise ValueError(
-                "Error retrieving Param value (%s):\n\tThis parameter has "
-                "not been constructed" % ( idx_str,) )
-        if val is None:
-            # If the Param is mutable, then it is OK to create a Param
-            # implicitly ... the error will be tossed later when someone
-            # attempts to evaluate the value of the Param
-            if self._mutable:
-                if self.is_indexed():
-                    self._data[idx] = _ParamData(self, val)
-                    #self._raw_setitem(idx, _ParamData(self, val), True)
-                else:
-                    self._raw_setitem(idx, val)
-                return self[idx]
-
-            if self.is_indexed():
-                idx_str = '%s[%s]' % (self.name, idx,)
-            else:
-                idx_str = '%s' % (self.name,)
-            raise ValueError(
-                    "Error retrieving Param value (%s):\n\tThe Param value is "
-                    "undefined and no default value is specified"
-                    % ( idx_str,) )
-        #
-        # Get the value of the default for this index
-        #
-        _check_value_domain = True
-        if _default_type in native_types:
-            #
-            # The set_default() method validates the domain of native types, so
-            # we can skip the check on the value domain.
-            #
-            _check_value_domain = False
-        elif _default_type is types.FunctionType:
-            val = apply_indexed_rule(self, val, self.parent_block(), idx)
-        elif hasattr(val, '__getitem__') and not isinstance(val, NumericValue):
-            val = val[idx]
-        else:
-            pass
-        if _check_value_domain:
-            #
-            # Get the value of a numeric value
-            #
-            if val.__class__ not in native_types:
-                if isinstance(val, NumericValue):
-                    val = val()
-            #
-            # Check the domain
-            #
-            if val not in self.domain:
-                raise ValueError(
-                    "Invalid default parameter value: %s[%s] = '%s';"
-                    " value type=%s.\n\tValue not in parameter domain %s" %
-                    (self.name, idx, val, type(val), self.domain.name) )
-        #
-        # Set the parameter
-        #
-        if self._mutable:
-            if self.is_indexed():
-                self._data[idx] = _ParamData(self, val)
-                #self._raw_setitem(idx, _ParamData(self, val), True)
-            else:
-                self._raw_setitem(idx, val)
-            return self[idx]
-        else:
-            #
-            # This is kludgy: If the user wants to validate the Param
-            # values, we need to validate the default value as well.
-            # For Mutable Params, this is easy: setitem will inject the
-            # value into _data and then call validate.  For immutable
-            # params, we never inject the default into the data
-            # dictionary.  This will break validation, as the validation
-            # rule is allowed to assume the data is already present
-            # (actually, it will die on infinite recursion, as
-            # Param.__getitem__() will re-call _default).
-            #
-            # So, we will do something very inefficient: if we are
-            # validating, we will inject the value into the dictionary,
-            # call validate, and remove it.
-            #
-            if self._validate:
-                try:
-                    self._data[idx] = val
-                    self._validateitem(idx, val)
-                finally:
-                    del self._data[idx]
-            return val
+            self._setitem(None, new_values)
 
     def set_default(self, val):
         """
@@ -491,15 +401,94 @@ class Param(IndexedComponent):
         """
         return self._default_val
 
-    def _raw_setitem(self, ndx, val):
+    def _default(self, idx):
+        """
+        Returns the default component data value
+        """
+        #
+        # Local values
+        #
+        val = self._default_val
+        _default_type = type(val)
+        _check_value_domain = True
+        #
+        if val is None:
+            # If the Param is mutable, then it is OK to create a Param
+            # implicitly ... the error will be tossed later when someone
+            # attempts to evaluate the value of the Param
+            if not self._mutable:
+                if self.is_indexed():
+                    idx_str = '%s[%s]' % (self.name, idx,)
+                else:
+                    idx_str = '%s' % (self.name,)
+                raise ValueError(
+                    "Error retrieving Param value (%s):\n\tThe Param value is "
+                    "undefined and no default value is specified"
+                    % ( idx_str,) )
+            _check_value_domain = False
+        elif _default_type in native_types:
+            #
+            # The set_default() method validates the domain of native types, so
+            # we can skip the check on the value domain.
+            #
+            _check_value_domain = False
+        elif _default_type is types.FunctionType:
+            val = apply_indexed_rule(self, val, self.parent_block(), idx)
+        elif hasattr(val, '__getitem__') and (
+                not isinstance(val, NumericValue) or val.is_indexed() ):
+            # Things that look like Dictionaries should be allowable.  This
+            # includes other IndexedComponent objects.
+            val = val[idx]
+        else:
+            # this is something simple like a non-indexed component
+            pass
+
+        #
+        # If the user wants tp validate values, we need to validate the
+        # default value as well. For Mutable Params, this is easy: _setitem
+        # will inject the value into _data and then call validate.
+        #
+        if self._mutable:
+            return self._setitem(idx, val)
+        #
+        # For immutable params, we never inject the default into the data
+        # dictionary.  This will break validation, as the validation rule is
+        # allowed to assume the data is already present (actually, it will
+        # die on infinite recursion, as Param.__getitem__() will re-call
+        # _default).
+        #
+        # So, we will do something very inefficient: if we are
+        # validating, we will inject the value into the dictionary,
+        # call validate, and remove it.
+        #
+        if _check_value_domain or self._validate:
+            try:
+                self._data[idx] = val
+                self._validate_value(idx, val, _check_value_domain)
+            finally:
+                del self._data[idx]
+
+        return val
+
+    def _setitem(self, ndx, val, check_domain=True):
         """
         The __setitem__ method performs significant
         validation around the input indices, particularly
         when the index value is new.  In various contexts,
         we don't need to incur this overhead (e.g. during
-        initialization).  The _raw_setitem assumes the input
+        initialization).  The _setitem assumes the input
         value is in the set native_types
         """
+        #
+        # We need to ensure that users don't override the value for immutable
+        # parameters.
+        #
+        if self._constructed and not self._mutable:
+            raise TypeError(
+                """Attempting to set the value of the immutable parameter %s after the
+                parameter has been constructed.  If you intend to change the value of
+                this parameter dynamically, please declare the parameter as mutable
+                [i.e., Param(mutable=True)]""" % (self.name,))
         #
         # Params should contain *values*.  Note that if we just call
         # value(), then that forces the value to be a numeric value.
@@ -512,84 +501,57 @@ class Param(IndexedComponent):
             if isinstance(val, NumericValue):
                 val = val()
         #
+        # Set the value depending on the type of param value.
+        #
+        try:
+            _new = False
+            if not self.is_indexed():
+                if ndx not in self._data:
+                    _new = True
+                    self._data[ndx] = self
+                self.set_value(val)
+                return self
+            elif self._mutable:
+                # Mutable Params behave like normal components, so we can
+                # defer to the superclass (IndexedComponent) implementation
+                if ndx not in self._data:
+                    _new = True
+                    self._data[ndx] = _ParamData(self)
+                obj = self._data[ndx]
+                obj.set_value(val, ndx, check_domain)
+                return obj
+            else:
+                _new = ndx in self._data
+                self._data[ndx] = val
+                # Because we do not have a _ParamData, we cannot rely on the
+                # validation that occurs in _ParamData.set_value()
+                self._validate_value(ndx, val, check_domain)
+                return val
+        except:
+            if _new:
+                del self._data[ndx]
+            raise
+
+    def _validate_value(self, ndx, val, validate_domain=True):
+        """
+        Validate a given input/value pair.
+        """
+        #
         # Check if the value is valid within the current domain
         #
-        if val not in self.domain:
+        if validate_domain and not val in self.domain:
             raise ValueError(
                 "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
                 "\tValue not in parameter domain %s" %
                 (self.name, ndx, val, type(val), self.domain.name))
-        #
-        # Set the value depending on the type of param value.
-        #
-        if not self.is_indexed():
-            self.value = val
-        elif self._mutable:
-            if ndx in self._data:
-                self._data[ndx].value = val
-            else:
-                self._data[ndx] = _ParamData(self, val)
-        else:
-            self._data[ndx] = val
-        #
-        # Execute a validation operation
-        #
         if self._validate:
-            self._validateitem(ndx, val)
-
-    def _validateitem(self, ndx, val):
-        """
-        Validate a given input/value pair.
-        """
-        if not apply_parameterized_indexed_rule(self, self._validate, self.parent_block(), val, ndx):
-            raise ValueError(
-                "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
-                "\tValue failed parameter validation rule" %
-                ( self.name, ndx, val, type(val) ) )
-
-    def __setitem__(self, ndx, val):
-        """
-        Add a parameter value to the index.
-        """
-        #
-        # TBD: Potential optimization: if we find that updating a Param is
-        # more common than setting it in the first place, then first
-        # checking the _data and then falling back on the _index *might*
-        # be more efficient.
-        #
-        if self._constructed and not self._mutable:
-            raise TypeError(
-"""Attempting to set the value of the immutable parameter %s after the
-parameter has been constructed.  If you intend to change the value of
-this parameter dynamically, please declare the parameter as mutable
-[i.e., Param(mutable=True)]""" % (self.name,))
-        #
-        # Check if we have a valid index.
-        # We assume that most calls to this method will send either a
-        # scalar or a valid tuple.  So, for efficiency, we will check the
-        # index *first*, and only go through the hassle of
-        # flattening things if the ndx is not found.
-        #
-        ndx_ = ()
-        if ndx in self._index:
-            ndx_ = ndx
-        elif normalize_index.flatten:
-            ndx = normalize_index(ndx)
-            if ndx in self._index:
-                ndx_ = ndx
-        if ndx_ == ():
-            if not self.is_indexed():
-                msg = "Error setting parameter value: " \
-                      "Cannot treat the scalar Param '%s' as an array" \
-                      % ( self.name, )
-            else:
-                msg = "Error setting parameter value: " \
-                      "Index '%s' is not valid for array Param '%s'" \
-                      % ( ndx, self.name, )
-            raise KeyError(msg)
-
-        # We have a valid index, so do the actual set operation.
-        self._raw_setitem(ndx_, val)
+            valid = apply_parameterized_indexed_rule(
+                self, self._validate, self.parent_block(), val, ndx )
+            if not valid:
+                raise ValueError(
+                    "Invalid parameter value: %s[%s] = '%s', value type=%s.\n"
+                    "\tValue failed parameter validation rule" %
+                    ( self.name, ndx, val, type(val) ) )
 
     def _initialize_from(self, _init):
         """
@@ -614,7 +576,7 @@ this parameter dynamically, please declare the parameter as mutable
                 # A scalar value has a single value.
                 # We call __setitem__, which does checks on the value.
                 #
-                self[None] = _init(self.parent_block())
+                self._setitem(None, _init(self.parent_block()))
                 return
             else:
                 #
@@ -647,8 +609,8 @@ this parameter dynamically, please declare the parameter as mutable
                     # function returns a scalar-like thing, use it to
                     # initialize this index and re-call the function for
                     # the next value.  However, if the function returns
-                    # somethign that is dict-like, then use the dict to
-                    # initialize everything and do not re-vall the
+                    # something that is dict-like, then use the dict to
+                    # initialize everything and do not re-call the
                     # initialize function.
                     #
                     # Note: while scalar components are technically
@@ -677,22 +639,22 @@ this parameter dynamically, please declare the parameter as mutable
                         # At this point, we know the value is specific to
                         # this index (i.e., not likely to be a dict-like
                         # thing), and that the index is valid; so, it is
-                        # safe to use _raw_setitem (which will perform all
+                        # safe to use _setitem (which will perform all
                         # the domain / validation checking)
                         #
-                        self._raw_setitem(idx, val)
+                        self._setitem(idx, val)
                         #
                         # Now iterate over the rest of the index set.
                         #
                         for idx in _iter:
-                            self._raw_setitem( idx,
-                                apply_indexed_rule( self, _init, self_parent, idx ) )
+                            self._setitem(idx, apply_indexed_rule(
+                                self, _init, self_parent, idx))
                         return
                 except StopIteration:
                     #
-                    # The index set was empty...
-                    # The parameter is indexed by an empty set, or an empty set tuple.
-                    # Rare, but it has happened.
+                    # The index set was empty... The parameter is indexed by
+                    # an empty set, or an empty set tuple. Rare, but it has
+                    # happened.
                     #
                     return
 
@@ -712,8 +674,7 @@ this parameter dynamically, please declare the parameter as mutable
             # will take the "less surprising" route of letting the
             # source become dense, so that we get the expected copy.
             #
-            # TODO: Establish use-cases where we can use default values
-            # for sparsity.
+            # TBD: Are there use-cases where we want to maintain sparsity?
             #
             _init_keys_len = sum(1 for _ in _init.keys())
             sparse_src = len(_init) != _init_keys_len
@@ -765,7 +726,7 @@ This has resulted in the conversion of the source to dense form.
                 #
                 _iter = self._index.__iter__()
                 idx = next(_iter)
-                self._raw_setitem(idx, _init)
+                self._setitem(idx, _init)
                 #
                 # Note: the following is safe for both indexed and
                 # non-indexed parameters: for non-indexed, the first
@@ -773,13 +734,13 @@ This has resulted in the conversion of the source to dense form.
                 # will NOT be called.
                 #
                 if self._mutable:
-                    _init = self[idx].value
+                    _init = self[idx]._value
                     for idx in _iter:
-                        self._raw_setitem( idx, _ParamData(self,_init) )
+                        self._setitem(idx, _init)
                 else:
                     _init = self[idx]
                     for idx in _iter:
-                        self._raw_setitem(idx, _init)
+                        self._setitem(idx, _init, False)
             except StopIteration:
                 #
                 # The index set was empty...
@@ -819,6 +780,10 @@ This has resulted in the conversion of the source to dense form.
                 "Default value (%s) is not valid for Param %s domain %s" %
                 (str(val), self.name, self.domain.name))
         #
+        # Flag that we are in the "during construction" phase
+        #
+        self._constructed = None
+        #
         # Step #1: initialize data from rule value
         #
         if self._rule is not None:
@@ -843,7 +808,10 @@ This has resulted in the conversion of the source to dense form.
                         "Failed to set value for param=%s, index=%s, value=%s."
                         "\n\tsource error message=%s"
                         % (self.name, str(key), str(val), str(msg)) )
-
+        #
+        # Flag that things are fully constructe not (and changing an
+        # inmutable Param is not an exception.
+        #
         self._constructed = True
 
         # populate all other indices with default data
@@ -891,8 +859,7 @@ class SimpleParam(_ParamData, Param):
 
     def __init__(self, *args, **kwds):
         Param.__init__(self, *args, **kwds)
-        _ParamData.__init__(self, self, kwds.get('default',None))
-        self._data[None] = self
+        _ParamData.__init__(self, self)
 
     #
     # Since this class derives from Component and Component.__getstate__
@@ -908,7 +875,12 @@ class SimpleParam(_ParamData, Param):
         Return the value of this parameter.
         """
         if self._constructed:
-            return _ParamData.__call__(self, exception=exception)
+            if not self._data:
+                # This will trigger populating the _data dict and setting the
+                # _default, if applicable
+                self[None]
+            return super(SimpleParam, self).__call__(exception=exception)
+            return obj
         if exception:
             raise ValueError(
                 "Evaluating the numeric value of parameter '%s' before\n\t"
@@ -922,11 +894,16 @@ class SimpleParam(_ParamData, Param):
 parameter has been constructed.  If you intend to change the value of
 this parameter dynamically, please declare the parameter as mutable
 [i.e., Param(mutable=True)]""" % (self.name,))
-        self[None] = value
+        if not self._data:
+            self._data[None] = self
+        super(SimpleParam, self).set_value(value)
 
     def is_constant(self):
-        """
-        Returns False because this is not a constant in an expression.
+        """Determine if this SimpleParam is constant (and can be eliminated)
+
+        Returns False if either unconstructed or mutable, as it must be kept
+        in expressions (as it either doesn't have a value yet or the value
+        can change later.
         """
         return self._constructed and not self._mutable
 

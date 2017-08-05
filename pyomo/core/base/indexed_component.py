@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -24,7 +24,6 @@ import logging
 logger = logging.getLogger('pyomo.core')
 
 UnindexedComponent_set = set([None])
-
 
 def normalize_index(index):
     """
@@ -442,7 +441,7 @@ You can silence this warning by one of three ways:
         """Return an iterator of the component data objects in the dictionary"""
         for key in self:
             yield self[key]
-    
+
     def iteritems(self):
         """Return an iterator of (index,data) tuples from the dictionary"""
         for key in self:
@@ -452,99 +451,130 @@ You can silence this warning by one of three ways:
         """
         This method returns the data corresponding to the given index.
         """
+        if self._constructed is False:
+            self._not_constructed_error(ndx)
         try:
-            _validIndex = ndx in self._data
+            # The vast majority of the time the index will be in the _data
+            # dictionary, so just check and return it.  Note that this can
+            # return a TypeError if there is a slice in the index.
+            if ndx in self._data:
+                return self._data[ndx]
+            ndx = self._validate_index(ndx)
         except TypeError:
             # Process alternatives
-            return self._processUnhashableIndex(ndx, sys.exc_info()[1])
+            ndx = self._processUnhashableIndex(ndx, True)
 
-        if _validIndex:
-            # Return the data from the dictionary
-            if ndx is None and not self.is_indexed():
-                return self
-            else:
-                return self._data[ndx]
-        if not self._constructed:
-            # Generate an error because the component is not constructed
-            if not self.is_indexed():
-                idx_str = ''
-            elif ndx.__class__ is tuple:
-                idx_str = "[" + ",".join(str(i) for i in ndx) + "]"
-            else:
-                idx_str = "[" + str(ndx) + "]"
-            raise ValueError(
-                "Error retrieving component %s%s: The component has "
-                "not been constructed." % ( self.name, idx_str,) )
-        if ndx is None and not self.is_indexed():
-            self._data[ndx] = self  # FIXME: should this be a weakref?!?
-            return self
-        if ndx is Ellipsis or ndx.__class__ is tuple and Ellipsis in ndx:
-            return self._processUnhashableIndex(ndx, sys.exc_info()[1])
+        # At this point, ndx will have been flattened - so if it is defined,
+        # it will be in _data
+        if ndx in self._data:
+            return self._data[ndx]
+        #
+        # The index is not in the _data dictionary.  If index generated a
+        # slicer, return it
+        #
+        if ndx.__class__ is _IndexedComponent_slicer:
+            return self._processUnhashableIndex(ndx)
+        #
+        # Call the _default helper to retrieve/return the default value
+        #
+        return self._default( ndx )
+
+    def __setitem__(self, index, val):
+        #
+        # Set the value: This relies on () to insert the correct
+        # ComponentData into the dictionary
+        #
+        # Note: it is important that we check _constructed is False and not
+        # just evaluates to false: when constructing immutable Params,
+        # _constructed will be None during the construction process when
+        # setting the value is valid.
+        #
+        if self._constructed is False:
+            self._not_constructed_error(index)
+        #
+        # Call the _default helper to retrieve/return the default value
+        #
+        index = self._validate_index(index)
+        if index.__class__ is _IndexedComponent_slicer:
+            # this supports "m.x[:,1] = 5" through a simple recursive call
+            for idx in index:
+                self._setitem(idx, val)
+        else:
+            return self._setitem(index, val)
+
+    def __delitem__(self, index):
+        if self._constructed is False:
+            self._not_constructed_error(index)
+        # find the index, and normalize if the simple match fails
+        try:
+            if index not in self._data:
+                index = self._validate_index(index)
+        except TypeError:
+            index = self._processUnhashableIndex(index)
+        # this supports "del m.x[:,1]" through a simple recursive call
+        if type(index) is _IndexedComponent_slicer:
+            for idx in index:
+                del self[idx]
+        else:
+            # Handle the normal deletion operation
+            if self.is_indexed():
+                # Remove reference to this object
+                self[index]._component = None
+            del self._data[index]
+
+    def _not_constructed_error(self, idx):
+        # Generate an error because the component is not constructed
+        if not self.is_indexed():
+            idx_str = ''
+        elif idx.__class__ is tuple:
+            idx_str = "[" + ",".join(str(i) for i in idx) + "]"
+        else:
+            idx_str = "[" + str(idx) + "]"
+        raise ValueError(
+            "Error retrieving component %s%s: The component has "
+            "not been constructed." % (self.name, idx_str,))
+
+    def _validate_index(self, idx):
         if not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-            # Return the default value if the global flag dictates
-            # that we should bypass all index checking and domain
-            # validation
-            return self._default(ndx)
-        if ndx in self._index:
-            # After checking that the index is valid, return the
-            # default value.
-            # Note: This check is potentially expensive (e.g., when
-            # the indexing set is a complex set operation)!
-            return self._default(ndx)
+            # Return whatever index was provided if the global flag dictates
+            # that we should bypass all index checking and domain validation
+            return idx
+        if idx in self._index:
+            # If the index is in the underlying index set, then return it
+            # Note: This check is potentially expensive (e.g., when the
+            # indexing set is a complex set operation)!
+            return idx
         if normalize_index.flatten:
             # Now we normalize the index and check again.  Usually,
             # indices will be already be normalized, so we defer the
             # "automatic" call to normalize_index until now for the
-            # sake of efficiency.  Also note that we cannot get here
-            # unless the component *is* indexed, so we do not need
-            # any special traps for None or is_indexed().
-            ndx = normalize_index(ndx)
-            if ndx in self._data:
-                # Note that ndx != None at this point
-                return self._data[ndx]
-            elif not IndexedComponent._DEFAULT_INDEX_CHECKING_ENABLED:
-                return self._default(ndx)
-            elif ndx in self._index:
-                return self._default(ndx)
-
+            # sake of efficiency.
+            idx = normalize_index(idx)
+            if idx in self._data:
+                return idx
+            elif idx in self._index:
+                return idx
+        # There is the chance that the index contains an Ellipsis,
+        # so we should generate a slicer
+        if idx is Ellipsis or idx.__class__ is tuple and Ellipsis in idx:
+            return self._processUnhashableIndex(idx)
         #
         # Generate different errors, depending on the state of the index.
         #
         if not self.is_indexed():
-            msg = "Error accessing indexed component: " \
-                  "Cannot treat the scalar component '%s' as an array" \
-                  % ( self.name, )
-            raise KeyError(msg)
+            raise KeyError(
+                "Error accessing indexed component value:\n"
+                "\tCannot treat the scalar component '%s'\n"
+                "\tas an indexed component" % ( self.name, ))
         #
         # Raise an exception
         #
-        msg = "Error accessing indexed component: " \
-                  "Index '%s' is not valid for array component '%s'" \
-                  % ( ndx, self.name, )
-        raise KeyError(msg)
+        raise KeyError(
+            "Error acccessing indexed component value:\n"
+            "\nIndex '%s' is not valid for indexed component '%s'"
+            % ( idx, self.name, ))
 
-    def __setitem__(self, ndx, val):
-        #
-        # Set the value: This relies on the __getitem__() / _default()
-        # logic to insert the correct _ComponentData into the dictionary
-        # if it is not there.
-        #
-        self[ndx].set_value(val)
-
-    def __delitem__(self, index):
-        # find the index, and normalize if the simple match fails
-        if index not in self._data:
-            if normalize_index.flatten:
-                index = normalize_index(index)
-            if index not in self._data:
-                raise KeyError(str(index))
-
-        if self.is_indexed():
-            # Remove reference to this object
-            self[index]._component = None
-        del self._data[index]
-
-    def _processUnhashableIndex(self, ndx, _exception):
+    def _processUnhashableIndex(self, ndx, _exception=None):
         """Process a call to __getitem__ with unhashable elements
 
         There are three basic ways to get here:
@@ -661,19 +691,53 @@ the value() function.""" % ( self.name, i ))
         if sliced or ellipsis is not None:
             return _IndexedComponent_slicer(self, fixed, sliced, ellipsis)
         elif _found_numeric:
-            new_ndx = tuple( fixed[i] for i in range(len(ndx)) )
-            return self[ new_ndx ]
+            return tuple( fixed[i] for i in range(len(ndx)) )
+        elif _exception is not None:
+            raise
         else:
-            raise TypeError(
-                "%s found when trying to retrieve index for component %s"
-                % (_exception, self.name) )
-
+            raise DeveloperError(
+                "Unknown problem encountered when trying to retrieve "
+                "index for component %s" % (self.name,) )
 
     def _default(self, index):
-        """Returns the default component data value"""
-        raise DeveloperError(
-            "Derived component %s failed to define _default()."
-            % (self.__class__.__name__,))
+        """Returns the default component data value for this Component.
+
+        Override this method if the component allows implicit member
+        construction.  For classes that do not support a 'default' (at this
+        point, everything except Param), requesting a _default will generate
+        a KeyError (just like a normal dict).
+
+        Implementations may assume that the index has already been validated
+        and is a legitimate entry in the _data dict. """
+        raise KeyError(str(index))
+
+    def _setitem(self, idx, val):
+        """Perform the fundamental component item creation and storage.
+
+        Components that want to implement a nonstandard storage mechanism
+        should override this method.
+
+        Implementations may assume that the index has already been validated
+        and is a legitimate entry in the _data dict. """
+        #
+        # If we are a scalar, then idx will be None (_validate_index ensures
+        # this)
+        if idx not in self._data:
+            _new = True
+            if self.is_indexed():
+                obj = self._data[idx] = self._ComponentDataType(self)
+            else:
+                obj = self._data[None] = self
+        else:
+            _new = False
+            obj = self[idx]
+        try:
+            obj.set_value(val)
+        except:
+            if _new:
+                del self._data[idx]
+            raise
+        return obj
 
     def set_value(self, value):
         """Set the value of a scalar component."""
