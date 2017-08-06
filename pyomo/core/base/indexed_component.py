@@ -539,11 +539,15 @@ You can silence this warning by one of three ways:
             # Return whatever index was provided if the global flag dictates
             # that we should bypass all index checking and domain validation
             return idx
-        if idx in self._index:
-            # If the index is in the underlying index set, then return it
-            # Note: This check is potentially expensive (e.g., when the
-            # indexing set is a complex set operation)!
-            return idx
+        try:
+            if idx in self._index:
+                # If the index is in the underlying index set, then return it
+                #  Note: This check is potentially expensive (e.g., when the
+                # indexing set is a complex set operation)!
+                return idx
+        except TypeError:
+            return self._processUnhashableIndex(idx)
+
         if normalize_index.flatten:
             # Now we normalize the index and check again.  Usually,
             # indices will be already be normalized, so we defer the
