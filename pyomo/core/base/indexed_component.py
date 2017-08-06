@@ -447,37 +447,37 @@ You can silence this warning by one of three ways:
         for key in self:
             yield key, self[key]
 
-    def __getitem__(self, idx):
+    def __getitem__(self, index):
         """
         This method returns the data corresponding to the given index.
         """
         if self._constructed is False:
-            self._not_constructed_error(idx)
+            self._not_constructed_error(index)
         try:
             # The vast majority of the time the index will be in the _data
             # dictionary, so just check and return it.  Note that this can
             # return a TypeError if there is a slice in the index.
-            if idx in self._data:
-                return self._data[idx]
-            idx = self._validate_index(idx)
+            if index in self._data:
+                return self._data[index]
+            index = self._validate_index(index)
         except TypeError:
             # Process alternatives
-            idx = self._processUnhashableIndex(idx, True)
+            index = self._processUnhashableIndex(index, True)
 
         # At this point, idx will have been flattened - so if it is defined,
         # it will be in _data
-        if idx in self._data:
-            return self._data[idx]
+        if index in self._data:
+            return self._data[index]
         #
         # The index is not in the _data dictionary.  If index generated a
         # slicer, return it
         #
-        if idx.__class__ is _IndexedComponent_slicer:
-            return self._processUnhashableIndex(idx)
+        if index.__class__ is _IndexedComponent_slicer:
+            return index
         #
         # Call the _default helper to retrieve/return the default value
         #
-        return self._default( idx )
+        return self._default(index)
 
     def __setitem__(self, index, val):
         #
