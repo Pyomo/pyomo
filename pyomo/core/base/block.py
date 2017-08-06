@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -671,6 +671,16 @@ class _BlockData(ActiveComponentData):
             # method.
             #
             super(_BlockData, self).__delattr__(name)
+
+    def set_value(self, val):
+        for k,v in iteritems(getattr(self, '_decl', {})):
+            super(_BlockData, self).__delattr__(name)
+        self._ctypes = {}
+        self._decl = {}
+        self._decl_order = []
+        if val:
+            for k in sorted(iterkeys(val)):
+                self.add_component(k,val[k])
 
     def _add_temporary_set(self,val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -1678,6 +1688,8 @@ class Block(ActiveIndexedComponent):
     is deferred.
     """
 
+    _ComponentDataType = _BlockData
+
     def __new__(cls, *args, **kwds):
         if cls != Block:
             return super(Block, cls).__new__(cls)
@@ -1701,7 +1713,7 @@ class Block(ActiveIndexedComponent):
             self.construct()
 
     def _default(self, idx):
-        return self._data.setdefault(idx, _BlockData(self))
+        return self._setitem(idx, None)
 
     def find_component(self, label_or_component):
         """
