@@ -646,7 +646,7 @@ You can silence this warning by one of three ways:
                 ellipsis = i
                 continue
 
-            try:
+            if hasattr(val, 'as_numeric'):
                 _num_val = val.as_numeric()
                 # Attempt to retrieve the numeric value .. if this
                 # is a template expression generation, then it
@@ -696,8 +696,6 @@ do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
 the value() function.""" % ( self.name, i ))
-            except AttributeError:
-                pass
             if ellipsis is None:
                 fixed[i] = val
             else:
