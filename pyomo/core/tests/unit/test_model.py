@@ -176,7 +176,7 @@ class Test(unittest.TestCase):
         model.x = 6
         self.assertEqual(value(model.x), 6)
         model.x = None
-        self.assertEqual(model.x.value, None)
+        self.assertEqual(model.x._value, None)
 
     def test_write(self):
         model = ConcreteModel()
