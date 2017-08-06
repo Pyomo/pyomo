@@ -876,11 +876,15 @@ class SimpleParam(_ParamData, Param):
         """
         if self._constructed:
             if not self._data:
-                # This will trigger populating the _data dict and setting the
-                # _default, if applicable
-                self[None]
+                if self._mutable:
+                    # This will trigger populating the _data dict and setting
+                    # the _default, if applicable
+                    self[None]
+                else:
+                    # Immutable Param defaults never get added to the
+                    # _data dict
+                    return self[None]
             return super(SimpleParam, self).__call__(exception=exception)
-            return obj
         if exception:
             raise ValueError(
                 "Evaluating the numeric value of parameter '%s' before\n\t"
