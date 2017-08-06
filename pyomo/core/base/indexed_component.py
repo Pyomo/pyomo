@@ -466,8 +466,19 @@ You can silence this warning by one of three ways:
 
         # At this point, idx will have been flattened - so if it is defined,
         # it will be in _data
-        if index in self._data:
-            return self._data[index]
+        try:
+            if index in self._data:
+                return self._data[index]
+        except TypeError:
+            # Not good: we have to defer this import to now
+            # due to circular imports (expr imports _VarData
+            # imports indexed_component, but we need expr
+            # here
+            from pyomo.core.base import expr as EXPR
+            if index.__class__ is EXPR._GetItemExpression:
+                return index
+            raise
+
         #
         # The index is not in the _data dictionary.  If index generated a
         # slicer, return it
