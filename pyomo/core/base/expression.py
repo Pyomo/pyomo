@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -270,6 +270,7 @@ class Expression(IndexedComponent):
         rule        A rule function used to initialize this object.
     """
 
+    _ComponentDataType = _GeneralExpressionData
     NoConstraint    = (1000,)
     Skip            = (1000,)
 
@@ -360,8 +361,7 @@ class Expression(IndexedComponent):
             self._data[index].set_value(new_value)
 
     def _default(self, index):
-        self._data[index] = cdata = _GeneralExpressionData(None, component=self)
-        return cdata
+        return self._setitem(index, None)
 
     def construct(self, data=None):
         """ Apply the rule to construct values in this set """
