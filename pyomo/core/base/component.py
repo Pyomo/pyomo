@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -541,7 +541,7 @@ class ComponentData(_ComponentBase):
     __pickle_slots__ = ('_component',)
     __slots__ = __pickle_slots__ + ('__weakref__',)
 
-    def __init__(self, owner):
+    def __init__(self, component):
         #
         # ComponentData objects are typically *private* objects for
         # indexed / sparse indexed components.  As such, the (derived)
@@ -549,7 +549,7 @@ class ComponentData(_ComponentBase):
         # passed as the owner (and that owner is never None).  Not validating
         # this assumption is significantly faster.
         #
-        self._component = weakref_ref(owner)
+        self._component = weakref_ref(component)
 
     def __getstate__(self):
         """Prepare a picklable state of this instance for pickling.
@@ -785,8 +785,8 @@ class ActiveComponentData(ComponentData):
 
     __slots__ = ( '_active', )
 
-    def __init__(self, owner):
-        super(ActiveComponentData, self).__init__(owner)
+    def __init__(self, component):
+        super(ActiveComponentData, self).__init__(component)
         self._active = True
 
     def __getstate__(self):

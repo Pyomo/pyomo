@@ -447,7 +447,7 @@ class _BlockData(ActiveComponentData):
         PseudoMap.items  = PseudoMap.iteritems
 
 
-    def __init__(self, owner):
+    def __init__(self, component):
         #
         # BLOCK DATA ELEMENTS
         #
@@ -481,7 +481,7 @@ class _BlockData(ActiveComponentData):
         # marking entries as None and just periodically rebuild the list
         # as opposed to maintaining the list without any holes).
         #
-        ActiveComponentData.__init__(self, owner)
+        ActiveComponentData.__init__(self, component)
         # Note: call super() here to bypass the Block __setattr__
         #   _ctypes:      { ctype -> [1st idx, last idx, count] }
         #   _decl:        { name -> idx }
@@ -1839,7 +1839,7 @@ class Block(ActiveIndexedComponent):
 class SimpleBlock(_BlockData, Block):
 
     def __init__(self, *args, **kwds):
-        _BlockData.__init__(self, self)
+        _BlockData.__init__(self, component=self)
         Block.__init__(self, *args, **kwds)
         self._data[None] = self
 

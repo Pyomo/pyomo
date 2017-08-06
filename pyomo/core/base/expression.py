@@ -172,7 +172,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     __slots__ = ()
 
-    def __init__(self, expr):
+    def __init__(self, expr=None):
         self._expr = as_numeric(expr) if (expr is not None) else None
         if safe_mode:
             self._parent_expr = None
@@ -253,7 +253,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
 
     __slots__ = _GeneralExpressionDataImpl.__expression_slots__
 
-    def __init__(self, expr, component=None):
+    def __init__(self, expr=None, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
         # Inlining ComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
@@ -416,7 +416,7 @@ class Expression(IndexedComponent):
 class SimpleExpression(_GeneralExpressionData, Expression):
 
     def __init__(self, *args, **kwds):
-        _GeneralExpressionData.__init__(self, None, component=self)
+        _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
 
     #

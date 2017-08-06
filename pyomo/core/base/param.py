@@ -41,12 +41,12 @@ class _ParamData(ComponentData, NumericValue):
 
     __slots__ = ('_value',)
 
-    def __init__(self, owner):
+    def __init__(self, component):
         #
         # The following is equivalent to calling
         # the base ComponentData constructor.
         #
-        self._component = weakref_ref(owner)
+        self._component = weakref_ref(component)
         #
         # The following is equivalent to calling the
         # base NumericValue constructor.
@@ -859,7 +859,7 @@ class SimpleParam(_ParamData, Param):
 
     def __init__(self, *args, **kwds):
         Param.__init__(self, *args, **kwds)
-        _ParamData.__init__(self, self)
+        _ParamData.__init__(self, component=self)
 
     #
     # Since this class derives from Component and Component.__getstate__

@@ -738,7 +738,7 @@ the value() function.""" % ( self.name, i ))
         if idx not in self._data:
             _new = True
             if self.is_indexed():
-                obj = self._data[idx] = self._ComponentDataType(self)
+                obj = self._data[idx] = self._ComponentDataType(component=self)
             else:
                 obj = self._data[None] = self
         else:
