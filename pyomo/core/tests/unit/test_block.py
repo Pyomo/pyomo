@@ -620,7 +620,7 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(value(self.block.x), 6)
         self.assertEqual(value(p), 6)
         self.block.x = None
-        self.assertEqual(self.block.x.value, None)
+        self.assertEqual(self.block.x._value, None)
 
     def test_iterate_hierarchy_defaults(self):
         self.assertIs( TraversalStrategy.BFS,
