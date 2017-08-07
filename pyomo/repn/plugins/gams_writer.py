@@ -51,33 +51,33 @@ class ProblemWriter_gams(AbstractProblemWriter):
             Name of file to write GAMS model to. Optionally pass a file-like
             stream and the model will be written to that instead.
         io_options:
+            warmstart=False:
+                Warmstart by initializing model's variables to their values.
             symbolic_solver_labels=False:
                 Use full Pyomo component names rather than
                 shortened symbols (slower, but useful for debugging).
             labeler=None:
-                Custom labeler option. Incompatible with symbolic_solver_labels.
+                Custom labeler. Incompatible with symbolic_solver_labels.
+            solver=None:
+                If None, GAMS will use default solver for model type.
+            mtype=None:
+                Model type. If None, will chose from lp, nlp, mip, and minlp.
+            add_options=None:
+                List of additional lines to write directly
+                into model file before the solve statement.
+                For model attributes, <model name> is GAMS_MODEL.
+            skip_trivial_constraints=False:
+                Skip writing constraints whose body section is fixed
             file_determinism=1:
                 How much effort do we want to put into ensuring the
                 LP file is written deterministically for a Pyomo model:
                    0 : None
                    1 : sort keys of indexed components (default)
                    2 : sort keys AND sort names (over declaration order)
-            skip_trivial_constraints=False:
-                Skip writing constraints whose body section is fixed
-            warmstart=False:
-                Warmstart by initializing model's variables to their values.
-            solver=None:
-                If None, GAMS will use default solver for model type.
-            mtype=None:
-                Model type. If None, will chose from lp, nlp, mip, and minlp.
-            add_options:
-                List of additional lines to write directly
-                into model file before the solve statement.
-                For model attributes, <model name> = GAMS_MODEL
-            put_results:
+            put_results=None:
                 Filename for optionally writing solution values and
                 marginals to (put_results).dat, and solver statuses
-                to (put_resultsstat).dat.
+                to (put_results + 'stat').dat.
         """
 
         # Make sure not to modify the user's dictionary,
