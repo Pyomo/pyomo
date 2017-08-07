@@ -141,7 +141,7 @@ def write_dataframes(model):
             data['Block'] = []
 
             for ind, dobj in sorted(obj.iteritems(), key=lambda item: item[0]):
-                for i in range(len(indices)):
+                for i in xrange(len(indices)):
                     data[indices[i]].append(ind if obj.dim() == 1 else ind[i])
                 data['Block'].append(dobj.name)
 
@@ -183,7 +183,7 @@ def write_dataframes(model):
             if obj.type() in (Var, Constraint):
                 for ind, dobj in sorted(obj.iteritems(),
                                         key=lambda item: item[0]):
-                    for i in range(len(indices)):
+                    for i in xrange(len(indices)):
                         data[indices[i]].append(ind if obj.dim() == 1 else
                                                 ind[i])
                     if obj.type() is Var:
@@ -208,7 +208,7 @@ def write_dataframes(model):
             elif obj.type() in (Param, Objective, Expression):
                 for ind, val in sorted(obj.iteritems(),
                                        key=lambda item: item[0]):
-                    for i in range(len(indices)):
+                    for i in xrange(len(indices)):
                         data[indices[i]].append(ind if obj.dim() == 1 else
                                                 ind[i])
                     data['Value'].append(val if obj.type() is Param else
@@ -335,26 +335,43 @@ def _write_excel(all_frames,
     scalar_startrow = 1
     scalar_name = 'Scalar' if parent is None else \
                   sheet_namer(toc_sheet_name + '.Scalar')
+    has_scalar = False
     for df in scalar_frames:
         if df.empty:
             continue
         df.to_excel(writer, sheet_name=scalar_name, startrow=scalar_startrow,
                     merge_cells=False)
+        if not has_scalar:
+            has_scalar = True
+            scalar_sheet = writer.sheets[scalar_name]
+            if writer.engine == 'xlsxwriter':
+                scalar_format = writer.book.add_format({'bold'  : 1,
+                                                        'align' : 'left'})
+        if writer.engine == 'xlsxwriter':
+            for i in xrange(len(df.index)):
+                scalar_sheet.write_string(row=scalar_startrow + i + 1, col=0,
+                                          string=df.index[i],
+                                          cell_format=scalar_format)
+        elif writer.engine[:8] == 'openpyxl':
+            for i in xrange(len(df.index)):
+                cell = scalar_sheet.cell(row=scalar_startrow + i + 2, column=1)
+                cell.alignment = cell.alignment.copy(horizontal='left')
         scalar_startrow += len(df.index) + 2
 
-    if scalar_name in writer.sheets:
+    if has_scalar:
         # If this block has a scalar sheet, record and map its name.
         objectMap[toc_name] = scalar_name
 
 
+    toc = writer.sheets[toc_sheet_name]
+
     if writer.engine == 'xlsxwriter':
         # Create link for each TOC entry to their respective sheet
-        toc = writer.sheets[toc_sheet_name]
         link_format = writer.book.add_format({'color'     : 'blue',
                                               'underline' : 1,
                                               'bold'      : 1,
                                               'align'     : 'left'})
-        for i in range(len(TOC.index)):
+        for i in xrange(len(TOC.index)):
             if TOC['Type'][i] in scalar_types and TOC['Dim'][i] == 0:
                 sheet = scalar_name
             else:
@@ -370,8 +387,7 @@ def _write_excel(all_frames,
         toc.autofilter(int(bool(parent)), 0, int(bool(parent)), 4)
 
         # Place 'TOC' link on the Scalar sheet
-        if scalar_startrow > 1:
-            scalar_sheet = writer.sheets[scalar_name]
+        if has_scalar:
             scalar_sheet.write_url('A1', "internal:'%s'!A1" % toc_sheet_name,
                                    string=toc_name)
 
@@ -396,11 +412,10 @@ def _write_excel(all_frames,
         from copy import copy
 
         # Create link for each TOC entry to their respective sheet
-        toc = writer.sheets[toc_sheet_name]
         # Use theme=10 to get color to change when link is clicked
         link_color = Color(theme=10)
         name_font = Font(bold=True, underline='single', color=link_color)
-        for i in range(len(TOC.index)):
+        for i in xrange(len(TOC.index)):
             if TOC['Type'][i] in scalar_types and TOC['Dim'][i] == 0:
                 sheet = scalar_name
             else:
@@ -418,8 +433,7 @@ def _write_excel(all_frames,
         # Place 'TOC' link on the Scalar sheet
         toc_font = copy(name_font)
         toc_font.bold = False
-        if scalar_startrow > 1:
-            scalar_sheet = writer.sheets[scalar_name]
+        if has_scalar:
             scalar_sheet['A1'].value = toc_name
             scalar_sheet['A1'].hyperlink = "#'%s'!A1" % toc_sheet_name
             scalar_sheet['A1'].font = toc_font
