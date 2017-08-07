@@ -15,8 +15,7 @@ from six.moves import xrange
 import pandas as pd
 
 from pyomo.core.base import (Constraint, Param, Set, RangeSet, Var, Objective,
-                             Block, Suffix, Expression, value, SortComponents,
-                             SymbolMap, NumericLabeler)
+                             Block, Suffix, Expression, value, SortComponents)
 from pyomo.gdp import Disjunct
 
 
@@ -251,7 +250,6 @@ def write_excel(all_frames, filename=None, engine=None):
 
     objectMap = dict()
     sheetNameMap = dict()
-    sheet_suffix = NumericLabeler('^')
     sheetmap_name = '^SheetMap^'
 
     def replace_brackets(s):
@@ -259,14 +257,21 @@ def write_excel(all_frames, filename=None, engine=None):
 
     def sheet_namer(orig_name):
         if orig_name in sheetNameMap:
-            # Only create this label once and store it, so that sheet_suffix
-            # does not return a different label for the same sheet
+            # Only create this label once and store it, so we
+            # do not return a different label for the same sheet
             return sheetNameMap[orig_name]
         name = replace_brackets(orig_name)
         if len(name) > 31 or name in ('History', sheetmap_name):
-            # History is reserved by Excel. ^SymbolMap^ is used below.
-            suffix = sheet_suffix()
-            name = name[:31 - len(suffix)] + suffix
+            # History is reserved by Excel. sheetmap_name is used below.
+            char = '^'
+            num = 1
+            suffix = char + str(num)
+            new_name = name[:31 - len(suffix)] + suffix
+            while new_name in sheetNameMap.values():
+                num += 1
+                suffix = char + str(num)
+                new_name = name[:31 - len(suffix)] + suffix
+            name = new_name
         sheetNameMap[orig_name] = name
         return name
 
@@ -361,6 +366,8 @@ def _write_excel(all_frames,
             toc.write_url(row=i + 1, col=0, url="internal:'%s'!A1" % sheet,
                           cell_format=link_format, string=name)
 
+        toc.autofilter(int(bool(parent)), 0, int(bool(parent)), 4)
+
         # Place 'TOC' link on the Scalar sheet
         if scalar_startrow > 1:
             scalar_sheet = writer.sheets[scalar_name]
@@ -377,7 +384,7 @@ def _write_excel(all_frames,
 
         # Set TOC column widths
         toc.set_column('A:A', 25)
-        toc.set_column('B:B', 10)
+        toc.set_column('B:D', 12)
         toc.set_column('E:E', 20)
 
     elif writer.engine[:8] == 'openpyxl':
@@ -401,6 +408,9 @@ def _write_excel(all_frames,
             i += int(bool(parent))
             toc.cell(row=i + 2, column=1).hyperlink = "#'%s'!A1" % sheet
             toc.cell(row=i + 2, column=1).font = name_font
+
+        toc.auto_filter.ref = "A%s:E%s" % (1 + int(bool(parent)),
+                                           1 + int(bool(parent)))
 
         # Place 'TOC' link on the Scalar sheet
         toc_font = copy(name_font)
@@ -426,7 +436,9 @@ def _write_excel(all_frames,
 
         # Set TOC column widths
         toc.column_dimensions['A'].width = 25
-        toc.column_dimensions['B'].width = 10
+        toc.column_dimensions['B'].width = \
+        toc.column_dimensions['C'].width = \
+        toc.column_dimensions['D'].width = 12
         toc.column_dimensions['E'].width = 20
 
 
