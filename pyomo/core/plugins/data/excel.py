@@ -1,7 +1,22 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+
+from six import iteritems, string_types
+from six.moves import xrange
+
 import pandas as pd
 
 from pyomo.core.base import (Constraint, Param, Set, RangeSet, Var, Objective,
-                             Block, Suffix, Expression, value, SortComponents)
+                             Block, Suffix, Expression, value, SortComponents,
+                             SymbolMap, NumericLabeler)
 from pyomo.gdp import Disjunct
 
 
@@ -18,6 +33,9 @@ def write_dataframes(model):
     for obj in model.component_objects(active=True, descend_into=False,
                                        sort=SortComponents.alphaOrder):
         if obj.type() in valid_ctypes:
+            if obj.name == 'TOC':
+                raise ValueError("Cannot have component named TOC. This fact "
+                                 "is subject to change.")
             objects.append(obj)
         if obj.type().__name__ in scalars and obj.dim() == 0:
             scalars[obj.type().__name__].append(obj)
@@ -220,33 +238,97 @@ def write_dataframes(model):
     return [TOC, scalar_frames, obj_frames]
 
 
-def write_excel(all_frames, filename=None, engine=None,
-                writer=None, parent=None, parent_row=None):
+def write_excel(all_frames, filename=None, engine=None):
+    TOC = all_frames[0]
+
+    if filename is None:
+        if not filename.endswith('.xlsx'):
+            raise ValueError("Pyomo excel writer only supports writing "
+                             "to a .xlsx file.")
+        # Default filename is model name, stored in top-level TOC.name
+        filename = TOC.name + '.xlsx'
+    writer = pd.ExcelWriter(filename, engine=engine)
+
+    objectMap = dict()
+    sheetNameMap = dict()
+    sheet_suffix = NumericLabeler('^')
+    sheetmap_name = '^SheetMap^'
+
+    def replace_brackets(s):
+        return s.replace('[', '-').replace(']', '')
+
+    def sheet_namer(orig_name):
+        if orig_name in sheetNameMap:
+            # Only create this label once and store it, so that sheet_suffix
+            # does not return a different label for the same sheet
+            return sheetNameMap[orig_name]
+        name = replace_brackets(orig_name)
+        if len(name) > 31 or name in ('History', sheetmap_name):
+            # History is reserved by Excel. ^SymbolMap^ is used below.
+            suffix = sheet_suffix()
+            name = name[:31 - len(suffix)] + suffix
+        sheetNameMap[orig_name] = name
+        return name
+
+    _write_excel(all_frames,
+                 writer=writer,
+                 objectMap=objectMap,
+                 sheet_namer=sheet_namer)
+
+    names = []
+    sheets = []
+    for obj, sheet_name in iteritems(objectMap):
+        if isinstance(obj, string_types):
+            # Record names of scalar sheets
+            names.append(obj)
+            sheets.append(sheet_name)
+        elif obj.type() is Var:
+            # Only Vars need to be loaded with a value after reading back in
+            names.append(obj.name)
+            sheets.append(sheet_name)
+
+    sheetmap_df = pd.DataFrame({'Name': names, 'Sheet': sheets})
+    sheetmap_df.to_excel(writer, sheet_name=sheetmap_name)
+    sheetmap_sheet = writer.sheets[sheetmap_name]
+
+    if writer.engine == 'xlsxwriter':
+        sheetmap_sheet.hide()
+
+    elif writer.engine[:8] == 'openpyxl':
+        sheetmap_sheet.sheet_state = 'hidden'
+
+    writer.save()
+
+    return filename
+
+
+def _write_excel(all_frames,
+                 writer,
+                 objectMap,
+                 sheet_namer,
+                 parent=None,
+                 parent_row=None):
+
     TOC, scalar_frames, obj_frames = all_frames
 
     if parent is not None:
-        parent_sheet = replace_brackets(parent)
+        parent_sheet = sheet_namer(parent)
 
     block = TOC.name
-
-    if writer is None:
-        if filename is None:
-            # Default filename is model name, stored in top-level TOC.name
-            filename = TOC.name + '.xlsx'
-        writer = pd.ExcelWriter(filename, engine=engine)
 
 
     # Table of Contents
     # One name is the block name, the other is a name safe for sheet naming
     # Different so that link titles show real name with brackets to look nicer
     toc_name = 'TOC' if parent is None else block
-    toc_sheet_name = replace_brackets(toc_name)
+    toc_sheet_name = sheet_namer(toc_name)
     TOC.to_excel(writer, sheet_name=toc_sheet_name,
                  startrow=0 if parent is None else 1)
 
     # Scalar Sheet
     scalar_startrow = 1
-    scalar_name = 'Scalar' if parent is None else toc_sheet_name + '.Scalar'
+    scalar_name = 'Scalar' if parent is None else \
+                  sheet_namer(toc_sheet_name + '.Scalar')
     for df in scalar_frames:
         if df.empty:
             continue
@@ -254,10 +336,14 @@ def write_excel(all_frames, filename=None, engine=None,
                     merge_cells=False)
         scalar_startrow += len(df.index) + 2
 
+    if scalar_name in writer.sheets:
+        # If this block has a scalar sheet, record and map its name.
+        objectMap[toc_name] = scalar_name
+
 
     if writer.engine == 'xlsxwriter':
         # Create link for each TOC entry to their respective sheet
-        toc = writer.book.get_worksheet_by_name(toc_sheet_name)
+        toc = writer.sheets[toc_sheet_name]
         link_format = writer.book.add_format({'color'     : 'blue',
                                               'underline' : 1,
                                               'bold'      : 1,
@@ -267,7 +353,7 @@ def write_excel(all_frames, filename=None, engine=None,
                 sheet = scalar_name
             else:
                 # Use TOC['Name'] -> TOC.index
-                sheet = replace_brackets(TOC.index[i])
+                sheet = sheet_namer(TOC.index[i])
             # name is what is already in the dataframe: obj.name
             name = TOC.index[i]
             # If there is a parent TOC, move the row down 1 for each entry
@@ -277,14 +363,22 @@ def write_excel(all_frames, filename=None, engine=None,
 
         # Place 'TOC' link on the Scalar sheet
         if scalar_startrow > 1:
-            scalar_sheet = writer.book.get_worksheet_by_name(scalar_name)
+            scalar_sheet = writer.sheets[scalar_name]
             scalar_sheet.write_url('A1', "internal:'%s'!A1" % toc_sheet_name,
                                    string=toc_name)
+
+            scalar_sheet.set_column('A:A', 25)
+            scalar_sheet.set_column('B:F', 10)
 
         # Place TOC link on child TOC page
         if parent is not None:
             toc.write_url('A1', string=parent,
                           url="internal:'%s'!A%s" % (parent_sheet, parent_row))
+
+        # Set TOC column widths
+        toc.set_column('A:A', 25)
+        toc.set_column('B:B', 10)
+        toc.set_column('E:E', 20)
 
     elif writer.engine[:8] == 'openpyxl':
         # Engine is actually 'openpyxl22', only check that it starts
@@ -294,7 +388,7 @@ def write_excel(all_frames, filename=None, engine=None,
         from copy import copy
 
         # Create link for each TOC entry to their respective sheet
-        toc = writer.book.get_sheet_by_name(toc_sheet_name)
+        toc = writer.sheets[toc_sheet_name]
         # Use theme=10 to get color to change when link is clicked
         link_color = Color(theme=10)
         name_font = Font(bold=True, underline='single', color=link_color)
@@ -302,7 +396,7 @@ def write_excel(all_frames, filename=None, engine=None,
             if TOC['Type'][i] in scalar_types and TOC['Dim'][i] == 0:
                 sheet = scalar_name
             else:
-                sheet = replace_brackets(TOC.index[i])
+                sheet = sheet_namer(TOC.index[i])
             # If there is a parent TOC, move the row down 1 for each entry
             i += int(bool(parent))
             toc.cell(row=i + 2, column=1).hyperlink = "#'%s'!A1" % sheet
@@ -312,16 +406,28 @@ def write_excel(all_frames, filename=None, engine=None,
         toc_font = copy(name_font)
         toc_font.bold = False
         if scalar_startrow > 1:
-            scalar_sheet = writer.book.get_sheet_by_name(scalar_name)
+            scalar_sheet = writer.sheets[scalar_name]
             scalar_sheet['A1'].value = toc_name
             scalar_sheet['A1'].hyperlink = "#'%s'!A1" % toc_sheet_name
             scalar_sheet['A1'].font = toc_font
+
+            scalar_sheet.column_dimensions['A'].width = 25
+            scalar_sheet.column_dimensions['B'].width = \
+            scalar_sheet.column_dimensions['C'].width = \
+            scalar_sheet.column_dimensions['D'].width = \
+            scalar_sheet.column_dimensions['E'].width = \
+            scalar_sheet.column_dimensions['F'].width = 12
 
         # Place TOC link on child TOC page
         if parent is not None:
             toc['A1'].value = parent
             toc['A1'].hyperlink = "#'%s'!A%s" % (parent_sheet, parent_row)
             toc['A1'].font = toc_font
+
+        # Set TOC column widths
+        toc.column_dimensions['A'].width = 25
+        toc.column_dimensions['B'].width = 10
+        toc.column_dimensions['E'].width = 20
 
 
     for item in obj_frames:
@@ -333,8 +439,9 @@ def write_excel(all_frames, filename=None, engine=None,
             # Pass row of this block's entry in this TOC so that the child
             # block's TOC can link back to its row in the parent TOC
             toc_row = TOC.index.get_loc(child_toc.name) + 2 + int(bool(parent))
-            write_excel(item, writer=writer, parent_row=toc_row,
-                        parent='TOC' if parent is None else block)
+            _write_excel(item, writer=writer, parent_row=toc_row,
+                         parent=toc_name, objectMap=objectMap,
+                         sheet_namer=sheet_namer)
             # This is the only case where the extra info at
             # the top of the sheet is not needed.
             continue
@@ -344,28 +451,35 @@ def write_excel(all_frames, filename=None, engine=None,
             # List items are: object, dataframe listing all subblocks,
             # and then each subblock in the form of a list.
             obj, df = item[0], item[1]
-            obj_name = replace_brackets(obj.name)
-            df.to_excel(writer, sheet_name=obj_name, startrow=2,
-                             merge_cells=False)
+            obj_sheet_name = sheet_namer(obj.name)
+
+            if obj_sheet_name in writer.sheets:
+                raise ValueError("Pyomo excel writer requires all components "
+                                 "have unique names. Found component: %s twice."
+                                 % obj.name)
+
+            df.to_excel(writer, sheet_name=obj_sheet_name, startrow=2,
+                        merge_cells=False)
 
             col = df.index.nlevels
             i = 0
             for blk in item[2:]:
                 child_toc = blk[0]
                 blk_name = child_toc.name
-                blk_sheet_name = replace_brackets(blk_name)
+                blk_sheet_name = sheet_namer(blk_name)
                 parent_row = i + 4 + int(bool(parent))
-                write_excel(blk, writer=writer, parent_row=parent_row,
-                            parent=obj.name)
+                _write_excel(blk, writer=writer, parent_row=parent_row,
+                             parent=obj.name, objectMap=objectMap,
+                             sheet_namer=sheet_namer)
 
                 # Create link for each subblock
                 if writer.engine == 'xlsxwriter':
-                    sheet = writer.book.get_worksheet_by_name(obj_name)
+                    sheet = writer.sheets[obj_sheet_name]
                     sheet.write_url(row=i + 3, col=col, string=blk_name,
                                     url="internal:'%s'!A1" % blk_sheet_name)
 
                 elif writer.engine[:8] == 'openpyxl':
-                    sheet = writer.book.get_sheet_by_name(obj_name)
+                    sheet = writer.sheets[obj_sheet_name]
                     cell = sheet.cell(row=i + 4, column=col + 1)
                     cell.hyperlink = "#'%s'!A1" % blk_sheet_name
                     cell.font = toc_font
@@ -374,19 +488,24 @@ def write_excel(all_frames, filename=None, engine=None,
         else:
             # type is tuple -> regular object and dataframe
             obj, df = item
-            obj_name = replace_brackets(obj.name)
+            obj_sheet_name = objectMap.setdefault(obj, sheet_namer(obj.name))
+
+            if obj_sheet_name in writer.sheets:
+                raise ValueError("Pyomo excel writer requires all components "
+                                 "have unique names. Found component: %s twice."
+                                 % obj.name)
 
             # When cells are merged, things like the autofilter do not
             # work. For example the autofilter only recognizes the first row
             # of the merged block when filtering.
-            df.to_excel(writer, sheet_name=obj_name, startrow=2,
+            df.to_excel(writer, sheet_name=obj_sheet_name, startrow=2,
                         merge_cells=False)
 
         cols = df.index.nlevels + len(df.columns)
         toc_row = TOC.index.get_loc(obj.name) + 2 + int(bool(parent))
 
         if writer.engine == 'xlsxwriter':
-            ws = writer.book.get_worksheet_by_name(obj_name)
+            ws = writer.sheets[obj_sheet_name]
 
             ws.write_url('A1', "internal:'%s'!A%s" % (toc_sheet_name, toc_row),
                          string=toc_name)
@@ -396,8 +515,11 @@ def write_excel(all_frames, filename=None, engine=None,
 
             ws.autofilter(2, 0, 2, cols - 1)
 
+            ws.set_column(0, df.index.nlevels, 18)
+            ws.set_column(df.index.nlevels, cols, 12)
+
         elif writer.engine[:8] == 'openpyxl':
-            ws = writer.book.get_sheet_by_name(obj_name)
+            ws = writer.sheets[obj_sheet_name]
 
             toc_row = TOC.index.get_loc(obj.name) + 2 + int(bool(parent))
 
@@ -411,15 +533,11 @@ def write_excel(all_frames, filename=None, engine=None,
 
             ws.auto_filter.ref = "A3:%s3" % get_column_letter(cols)
 
+            for i in xrange(df.index.nlevels):
+                ws.column_dimensions[get_column_letter(i + 1)].width = 18
+            for i in xrange(df.index.nlevels, cols):
+                ws.column_dimensions[get_column_letter(i + 1)].width = 12
 
-    if parent is None:
-        writer.save()
-
-    return filename
-
-
-def replace_brackets(s):
-    return s.replace('[', '-').replace(']', '')
 
 def try_val(expr):
     """
