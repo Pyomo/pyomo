@@ -540,6 +540,23 @@ class Simulator:
         list or map the profiles returned by the simulate function to
         the Pyomo variables.
 
+        Parameters
+        ----------
+        vartype : `string` or None
+            Optional argument for specifying the type of variables to return
+            the order for. The default behavior is to return the order of
+            the differential variables. 'time-varying' will return the order
+            of all the time-dependent algebraic variables identified in the
+            model. 'algebraic' will return the order of algebraic variables
+            used in the most recent call to the simulate function. 'input'
+            will return the order of the time-dependent algebraic variables
+            that were treated as inputs in the most recent call to the
+            simulate function.
+
+        Returns
+        -------
+        `list`
+
         """        
         if vartype == 'time-varying':
             return self._algvars
@@ -552,14 +569,42 @@ class Simulator:
         
     def simulate(self, **kwds):
         """
-        Simulate the model. The user may specify initial conditions using
-        a list. If no list is provided then the simulator will take
-        the current value of the differential variable at the lower
-        bound of the ContinuousSet. The user may also specify either
-        the time step or the number of points for the profiles
-        returned by simulator. Other integrator-specific options may
-        be specified as keyword arguments and will be passed on to the
-        integrator.
+        Simulate the model. Integrator-specific options may be specified as
+        keyword arguments and will be passed on to the integrator.
+
+        Parameters
+        ----------
+        numpoints : int
+            The number of points for the profiles returned by the simulator.
+            Default is 100
+
+        step : int or float
+            The time step to use in the profiles returned by the simulator.
+            This is not the time step used internally by the integrators.
+            This is an optional parameter that may be specified in place of
+            'numpoints'.
+
+        integrator : string
+            The string name of the integrator to use for simulation. The
+            default is 'lsoda' when using Scipy and 'idas' when using CasADi
+
+        varying_inputs : ``pyomo.environ.Suffix``
+            A :py:class:`Suffix<pyomo.environ.Suffix>` object containing the
+            piecewise constant profiles to be used for certain time-varying
+            algebraic variables.
+
+        initcon : list of floats
+            The initial conditions for the the differential variables. This
+            is an optional argument. If not specified then the simulator
+            will use the current value of the differential variables at the
+            lower bound of the ContinuousSet for the initial condition.
+
+        Returns
+        -------
+        numpy array, numpy array
+            The first return value is a 1D array of time points corresponding
+            to the second return value which is a 2D array of the profiles for
+            the simulated differential and algebraic variables.
         """
 
         if not numpy_available:
@@ -651,7 +696,7 @@ class Simulator:
             switchpts = list(set(switchpts)) 
             switchpts.sort()
 
-            # Make sure all the switchpts are within the bounds of 
+            # Make sure all the switchpts are within the bounds of
             # the ContinuousSet
             if switchpts[0] < self._contset.first() or \
                             switchpts[-1] > self._contset.last():
@@ -828,7 +873,7 @@ class Simulator:
     def initialize_model(self):
         """
         This function will initialize the model using the profile obtained
-        from the simulating the ODE system.
+        from simulating the dynamic model.
         """
         if self._tsim is None:
             raise DAE_Error(
@@ -851,4 +896,4 @@ class Simulator:
                        tuple(v._args[idx2 + 1:])
                 v._base[vidx] = valinit[i]
 
-register_component(Simulator, "Used to simulate a system of ODEs")
+register_component(Simulator, "Used to simulate a systems of ODEs and DAEs")

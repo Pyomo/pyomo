@@ -105,7 +105,7 @@ class ContinuousSet(OrderedSimpleSet):
 
         Returns
         -------
-        `list`
+        `list` of `floats`
         """
         return self._fe
 
@@ -153,7 +153,7 @@ class ContinuousSet(OrderedSimpleSet):
 
         Parameters
         ----------
-        point : `boolean`
+        point : `float`
 
         Returns
         -------
@@ -174,11 +174,11 @@ class ContinuousSet(OrderedSimpleSet):
 
     def get_lower_element_boundary(self, point):
         """ Returns the first finite element point that is less than or
-        equal 'point'
+        equal to 'point'
 
         Parameters
         ----------
-        point : `boolean`
+        point : `float`
 
         Returns
         -------

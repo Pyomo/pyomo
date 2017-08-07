@@ -263,7 +263,7 @@ be deactivated just before the model is sent to a solver as shown below.
 
 .. note::
    If you intend to use the pyomo.DAE
-   :py:class:`Simulator<pyomo.dae.simulator>` on your model then you
+   :py:class:`Simulator<pyomo.dae.Simulator>` on your model then you
    **must** use **constraint deactivation** instead of **constraint
    skipping** in the differential equation rule.
 
@@ -393,7 +393,7 @@ discretization equations for this method are shown below:
 .. math::
    \begin{array}{l}
    \mathrm{Given: } \\
-   {dx}/{dt} = f(t, x) , \quad x(t_0) = x_{0} \\
+   \frac{dx}{dt} = f(t, x) , \quad x(t_0) = x_{0} \\
    \text{discretize $t$ and $x$ such that } \\
    x(t_0 + kh) = x_{k} \\
    x_{k + 1} = x_{k} + h * f(t_{k + 1}, x_{k + 1}) \\
@@ -416,15 +416,18 @@ keywords are summarized below:
 
 Keyword arguments for applying a finite difference transformation:
 
-'nfe': The desired number of finite element points to be included in the
-discretization. The default value is 10.
+'nfe'
+    The desired number of finite element points to be included in the
+    discretization. The default value is 10.
 
-'wrt': Indicates which :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` the
+'wrt'
+    Indicates which :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` the
     transformation should be applied to. If this keyword argument is not
     specified then the same scheme will be applied to every
     :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` .
 
-'scheme': Indicates which finite difference method to apply. Options are
+'scheme'
+    Indicates which finite difference method to apply. Options are
     'BACKWARD', 'CENTRAL', or 'FORWARD'. The default scheme is the backward
     difference method.
 
@@ -481,10 +484,12 @@ with different available schemes and the addition of the 'ncp' option.
 
 Additional keyword arguments for collocation discretizations:
 
-'scheme': The desired collocation scheme, either 'LAGRANGE-RADAU' or
+'scheme'
+    The desired collocation scheme, either 'LAGRANGE-RADAU' or
     'LAGRANGE-LEGENDRE'. The default is 'LAGRANGE-RADAU'.
 
-'ncp': The number of collocation points within each finite element. The
+'ncp'
+    The number of collocation points within each finite element. The
     default value is 3.
 
 .. note::
@@ -524,10 +529,46 @@ function to a discretized model.
    solver = SolverFactory('ipopt')
    results = solver.solve(model)
 
-Piecewise Constant Optimal Control Profiles
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ 
-TODO: Describe the reduce_collocation_points method, include figures showing
-the difference in profiles
+Restricting Optimal Control Profiles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When solving an optimal control problem a user may want to restrict the
+number of degrees of freedom for the control input by forcing, for example,
+a piecewise constant profile. Pyomo.DAE provides the
+``reduce_collocation_points`` function to address this use-case. This function
+is used in conjunction with the ``dae.collocation`` discretization
+transformation to reduce the number of free collocation points within a finite
+element for a particular variable.
+
+.. autoclass:: pyomo.dae.plugins.colloc.Collocation_Discretization_Transformation
+   :members: reduce_collocation_points
+
+An example of using this function is shown below:
+
+.. code-block:: python
+
+    discretizer = TransformationFactory('dae.collocation')
+    discretizer.apply_to(model, nfe=10, ncp=6)
+    discretizer.reduce_collocation_points(model,
+                                          var=model.u,
+                                          ncp=1,
+                                          contset=model.t)
+
+In the above example, the ``reduce_collocation_points`` function restricts
+the variable ``model.u`` to have only **1** free collocation point per
+finite element, thereby enforcing a piecewise constant profile.
+:numref:`Fig. %s <reduce_points_fig>` shows the solution profile before and
+after appling
+the ``reduce_collocation_points`` function.
+
+.. _reduce_points_fig:
+.. figure:: reduce_points_demo.png
+   :scale: 100 %
+   :align: center
+
+   (left) Profile before applying the ``reduce_collocation_points``
+   function (right) Profile after applying the function, restricting
+   ``model.u`` to have a piecewise constant profile.
 
 
 Applying Multiple Discretization Transformations
@@ -540,9 +581,9 @@ numerical method can be applied with different resolutions:
 
 .. code-block:: python
 
-   discretizer = TransformationFactory('dae.finite_difference')
-   discretizer.apply_to(model,wrt=model.t1,nfe=10)
-   discretizer.apply_to(model,wrt=model.t2,nfe=100)
+    discretizer = TransformationFactory('dae.finite_difference')
+    discretizer.apply_to(model,wrt=model.t1,nfe=10)
+    discretizer.apply_to(model,wrt=model.t2,nfe=100)
 
 This also allows the user to combine different methods. For example, applying
 the forward difference method to one
@@ -624,20 +665,79 @@ desired collocation points are added to the ContinuousSet being discretized.
 
 Dynamic Model Simulation
 ------------------------
+
+The pyomo.dae Simulator class can be used to simulate systems of ODEs and
+DAEs. It provides an interface to integrators available in other Python
+packages.
+
+.. note::
+   The pyomo.dae Simulator does not include integrators directly. The user
+   must have at least one of the supported Python packages installed in
+   order to use this class.
+
 .. autoclass:: pyomo.dae.Simulator
    :members:
 
-Available Simulators
-********************
+.. note::
+   Any keyword options supported by the integrator may be specified as
+   keyword options to the simulate function and will be passed to the
+   integrator.
+
+Supported Simulator Packages
+****************************
+
+The Simulator currently includes interfaces to SciPy and CasADi. ODE
+simulation is supported in both packages however, DAE simulation is only
+supported by CasADi. A list of available integrators for each package is
+given below. Please refer to the `SciPy<https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html>`_ and `CasADi
+<http://casadi.sourceforge.net/api/html/db/d3d/classcasadi_1_1Integrator.html>`_ documentation directly for the most up-to-date information about
+these packages and for more information about the various integrators and
+options.
+
+SciPy Integrators:
+
+    - **'vode'** :  Real-valued Variable-coefficient ODE solver, options for
+      non-stiff and stiff systems
+    - **'zvode'** : Complex-values Variable-coefficient ODE solver, options for
+      non-stiff and stiff systems
+    - **'lsoda'** : Real-values Variable-coefficient ODE solver, automatic
+      switching of algorithms for non-stiff or stiff systems
+    - **'dopri5'** : Explicit runge-kutta  method of order (4)5 ODE solver
+    - **'dop853'** : Explicit runge-kutta method of order 8(5,3) ODE solver
+
+CasADi Integrators:
+
+    - **'cvodes'** : CVodes from the Sundials suite, solver for stiff or
+      non-stiff ODE systems
+    - **'idas'** : IDAS from the Sundials suite, DAE solver
+    - **'collocation'** : Fixed-step implicit runge-kutta method, ODE/DAE
+      solver
+    - **'rk'** : Fixed-step explicit runge-kutta method, ODE solver
+
+Using the Simulator
+*******************
+
+Things to note:
+- Can't simulate constraints with if-statements in them
+- Need to provide initial conditions for dynamic states by setting the value or  using fix()
+- differential equations must be separable
+- Using suffixes to provide input profile
+- doesn't support multi-indexed control/input vars
+- Support for blocked/hierarchical models
+- initializing discretized step profile (subtlety with using initialize vs.
+ default and compatibility with discretization transformation)
+
+
 
 Specifying Time-Varing Inputs
 *****************************
+Control profile
+
 
 Dynamic Model Initialization
 ----------------------------
 
+
 From Simulation
 ***************
 
-Examples
---------

@@ -148,10 +148,9 @@ class DerivativeVar(Var):
     sVar : ``pyomo.environ.Var``
         The variable being differentiated
 
-    wrt, withrespectto : ``pyomo.dae.ContinuousSet`` or tuple of
-    ``pyomo.dae.ContinuousSet``
-
-        The :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that the
+    wrt : ``pyomo.dae.ContinuousSet`` or tuple
+        Equivalent to `withrespectto` keyword argument. The
+        :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` that the
         derivative is being taken with respect to. Higher order derivatives
         are represented by including the
         :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` multiple times in
