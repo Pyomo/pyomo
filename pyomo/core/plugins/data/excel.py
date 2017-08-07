@@ -327,8 +327,9 @@ def _write_excel(all_frames,
     # Different so that link titles show real name with brackets to look nicer
     toc_name = 'TOC' if parent is None else block
     toc_sheet_name = sheet_namer(toc_name)
-    TOC.to_excel(writer, sheet_name=toc_sheet_name,
-                 startrow=0 if parent is None else 1)
+    TOC.to_excel(writer, sheet_name=toc_sheet_name, merge_cells=False,
+                 startrow=0 if parent is None else 1,
+                 freeze_panes=(1 + int(bool(parent)), 0))
 
     # Scalar Sheet
     scalar_startrow = 1
@@ -352,7 +353,7 @@ def _write_excel(all_frames,
         link_format = writer.book.add_format({'color'     : 'blue',
                                               'underline' : 1,
                                               'bold'      : 1,
-                                              'align'     : 'center'})
+                                              'align'     : 'left'})
         for i in range(len(TOC.index)):
             if TOC['Type'][i] in scalar_types and TOC['Dim'][i] == 0:
                 sheet = scalar_name
@@ -406,8 +407,10 @@ def _write_excel(all_frames,
                 sheet = sheet_namer(TOC.index[i])
             # If there is a parent TOC, move the row down 1 for each entry
             i += int(bool(parent))
-            toc.cell(row=i + 2, column=1).hyperlink = "#'%s'!A1" % sheet
-            toc.cell(row=i + 2, column=1).font = name_font
+            cell = toc.cell(row=i + 2, column=1)
+            cell.hyperlink = "#'%s'!A1" % sheet
+            cell.font = name_font
+            cell.alignment = cell.alignment.copy(horizontal='left')
 
         toc.auto_filter.ref = "A%s:E%s" % (1 + int(bool(parent)),
                                            1 + int(bool(parent)))
@@ -471,7 +474,8 @@ def _write_excel(all_frames,
                                  % obj.name)
 
             df.to_excel(writer, sheet_name=obj_sheet_name, startrow=2,
-                        merge_cells=False)
+                        merge_cells=False,
+                        freeze_panes=(3, 0))
 
             col = df.index.nlevels
             i = 0
@@ -511,7 +515,8 @@ def _write_excel(all_frames,
             # work. For example the autofilter only recognizes the first row
             # of the merged block when filtering.
             df.to_excel(writer, sheet_name=obj_sheet_name, startrow=2,
-                        merge_cells=False)
+                        merge_cells=False,
+                        freeze_panes=(3, 0))
 
         cols = df.index.nlevels + len(df.columns)
         toc_row = TOC.index.get_loc(obj.name) + 2 + int(bool(parent))
