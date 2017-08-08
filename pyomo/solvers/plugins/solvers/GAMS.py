@@ -236,7 +236,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         ws = GamsWorkspace(debug=DebugLevel.KeepFiles if keepfiles
                            else DebugLevel.Off,
                            working_directory=tmpdir)
-        
+
         t1 = ws.add_job_from_string(output_file.getvalue())
 
         try:
@@ -368,40 +368,40 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         if modelstat == 1:
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        if modelstat == 2:
+        elif modelstat == 2:
             results.solver.termination_condition = TerminationCondition.locallyOptimal
             soln.status = SolutionStatus.locallyOptimal
-        if modelstat in [3, 18]:
+        elif modelstat in [3, 18]:
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        if modelstat in [4, 5, 6, 10, 19]:
+        elif modelstat in [4, 5, 6, 10, 19]:
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        if modelstat == 7:
+        elif modelstat == 7:
             results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
-        if modelstat == 8:
+        elif modelstat == 8:
             # 'Integer solution model found'
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        if modelstat == 9:
+        elif modelstat == 9:
             results.solver.termination_condition = TerminationCondition.intermediateNonInteger
             soln.status = SolutionStatus.other
-        if modelstat == 11:
+        elif modelstat == 11:
             # Should be handled above, if modelstat and solvestat both
             # indicate a licensing problem
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.licensingProblems
             soln.status = SolutionStatus.error
-        if modelstat in [12, 13]:
+        elif modelstat in [12, 13]:
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
-        if modelstat == 14:
+        elif modelstat == 14:
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.noSolution
             soln.status = SolutionStatus.unknown
-        if modelstat in [15, 16, 17]:
+        elif modelstat in [15, 16, 17]:
             # Having to do with CNS models,
             # not sure what to make of status descriptions
             results.solver.termination_condition = TerminationCondition.optimal
@@ -421,8 +421,11 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                     soln.objective[sym] = {'Value': objctvval}
                 if obj.ctype is not Var:
                     continue
-            elif obj.parent_component().type() is not Var:
-                continue
+            else:
+                if obj.parent_component().type() is Objective:
+                    soln.objective[sym] = {'Value': objctvval}
+                if obj.parent_component().type() is not Var:
+                    continue
             rec = t1.out_db[sym].find_record()
             # obj.value = rec.level
             soln.variable[sym] = {"Value": rec.level}
@@ -725,6 +728,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                     os.remove(output_filename)
                     os.remove(lst_filename)
                     os.remove(results_filename)
+                    os.remove(statresults_filename)
 
         ####################################################################
         # Postsolve
@@ -832,40 +836,40 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         if modelstat == 1:
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        if modelstat == 2:
+        elif modelstat == 2:
             results.solver.termination_condition = TerminationCondition.locallyOptimal
             soln.status = SolutionStatus.locallyOptimal
-        if modelstat in [3, 18]:
+        elif modelstat in [3, 18]:
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        if modelstat in [4, 5, 6, 10, 19]:
+        elif modelstat in [4, 5, 6, 10, 19]:
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        if modelstat == 7:
+        elif modelstat == 7:
             results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
-        if modelstat == 8:
+        elif modelstat == 8:
             # 'Integer solution model found'
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        if modelstat == 9:
+        elif modelstat == 9:
             results.solver.termination_condition = TerminationCondition.intermediateNonInteger
             soln.status = SolutionStatus.other
-        if modelstat == 11:
+        elif modelstat == 11:
             # Should be handled above, if modelstat and solvestat both
             # indicate a licensing problem
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.licensingProblems
             soln.status = SolutionStatus.error
-        if modelstat in [12, 13]:
+        elif modelstat in [12, 13]:
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
-        if modelstat == 14:
+        elif modelstat == 14:
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.noSolution
             soln.status = SolutionStatus.unknown
-        if modelstat in [15, 16, 17]:
+        elif modelstat in [15, 16, 17]:
             # Having to do with CNS models,
             # not sure what to make of status descriptions
             results.solver.termination_condition = TerminationCondition.optimal
@@ -892,8 +896,11 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                     soln.objective[sym] = {'Value': objctvval}
                 if obj.ctype is not Var:
                     continue
-            elif obj.parent_component().type() is not Var:
-                continue
+            else:
+                if obj.parent_component().type() is Objective:
+                    soln.objective[sym] = {'Value': objctvval}
+                if obj.parent_component().type() is not Var:
+                    continue
             rec = model_soln[sym]
             # obj.value = float(rec[0])
             soln.variable[sym] = {"Value": float(rec[0])}
