@@ -89,8 +89,8 @@ class FixedVarPropagator(IsomorphicTransformation):
         var_to_id = self.var_to_id = generate_cuid_names(
             instance.model(), ctype=Var, descend_into=True)
         #: dict: Mapping of UIDs to variables
-        id_to_var = self.id_to_var = {
-            cuid: obj for obj, cuid in iteritems(var_to_id)}
+        id_to_var = self.id_to_var = dict(
+            cuid: obj for obj, cuid in iteritems(var_to_id))
         eq_var_map = _build_equality_set(instance, var_to_id, id_to_var)
         #: set of UIDs: The set of all fixed variables
         fixed_vars = set(vID for vID in eq_var_map
@@ -167,8 +167,8 @@ class VarBoundPropagator(IsomorphicTransformation):
         var_to_id = self.var_to_id = generate_cuid_names(
             instance.model(), ctype=Var, descend_into=True)
         #: dict: Mapping of UIDs to variables
-        id_to_var = self.id_to_var = {
-            cuid: obj for obj, cuid in iteritems(var_to_id)}
+        id_to_var = self.id_to_var = dict(
+            cuid: obj for obj, cuid in iteritems(var_to_id))
         eq_var_map = _build_equality_set(instance, var_to_id, id_to_var)
         processed = set()
         # Go through each variable in an equality set to propagate the variable
