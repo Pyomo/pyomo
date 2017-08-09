@@ -64,6 +64,7 @@ _pyomo5_module_members = [
     '_StaticMultiSumExpression',
     '_CompressedSumExpression',
     'compress_expression',
+    'sum',
 ]
 
 def set_expression_tree_format(mode):
