@@ -1930,25 +1930,48 @@ def generate_cuid_names(block,
                                 cuid_names_=cuid_names_)
 
     return cuid_names_
+
+
 #
 # Deprecated functions.
 #
 def active_components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    logger.warning("DEPRECATED: The active_components function is deprecated.  Use the Block.component_objects() method.")
+    """DEPRECATED: The active_components function is deprecated.
+
+    Use the Block.component_objects() method.
+    """
+    logger.warning(active_components.__doc__)
     return block.component_objects(ctype, active=True, sort=sort_by_names)
 
+
 def components(block, ctype, sort_by_names=False, sort_by_keys=False):
-    logger.warning("DEPRECATED: The components function is deprecated.  Use the Block.component_objects() method.")
+    """DEPRECATED: The components function is deprecated.
+
+    Use the Block.component_objects() method.
+    """
+    logger.warning(components.__doc__)
     return block.component_objects(ctype, active=False, sort=sort_by_names)
+
 
 def active_components_data(block, ctype,
                            sort=None, sort_by_keys=False, sort_by_names=False):
-    logger.warning("DEPRECATED: The active_components_data function is deprecated.  Use the Block.component_data_objects() method.")
+    """DEPRECATED: The active_components_data function is deprecated.
+
+    Use the Block.component_data_objects() method.
+    """
+    logger.warning(active_components_data.__doc__)
     return block.component_data_objects(ctype=ctype, active=True, sort=sort)
 
-def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=False ):
-    logger.warning("DEPRECATED: The components_data function is deprecated.  Use the Block.component_data_objects() method.")
+
+def components_data(block, ctype,
+                    sort=None, sort_by_keys=False, sort_by_names=False):
+    """DEPRECATED: The components_data function is deprecated.
+
+    Use the Block.component_data_objects() method.
+    """
+    logger.warning(components_data.__doc__)
     return block.component_data_objects(ctype=ctype, active=False, sort=sort)
+
 
 #
 # Create a Block and record all the default attributes, methods, etc.
@@ -1957,4 +1980,4 @@ def components_data( block, ctype, sort=None, sort_by_keys=False, sort_by_names=
 _BlockData._Block_reserved_words = set(dir(Block()))
 
 register_component(
-    Block, "A component that contains one or more model components." )
+    Block, "A component that contains one or more model components.")
