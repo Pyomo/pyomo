@@ -38,6 +38,7 @@ from pyomo.core.kernel.expr_common import \
 from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
 
+sum = builtins.sum
 _getrefcount_available = False
 
 UNREFERENCED_EXPR_COUNT = 11
@@ -94,7 +95,6 @@ class Timer:
 _compressed_expressions = set()
 
 
-#@profile
 def compress_expression(expr, verbose=False):
     #
     # Only compress a true expression DAG
@@ -366,7 +366,7 @@ def compress_expression(expr, verbose=False):
             return ans
 
 
-def clone_expression(expr, verbose=False):
+def clone_expression(expr, substitute=None, verbose=False):
     from pyomo.core.kernel.numvalue import native_numeric_types
     #
     # Note: This does not try to optimize the compression to recognize
@@ -406,7 +406,6 @@ def clone_expression(expr, verbose=False):
                 print(_idx)
                 print(_len)
                 print(_result)
-                print(_clone)
 
             _sub = _argList[_idx]
             _idx += 1
@@ -427,7 +426,6 @@ def clone_expression(expr, verbose=False):
                 _idx     = 0
                 _len     = len(_argList)
                 _result  = []
-                _clone   = False
     
         if verbose: #pragma:nocover
             print("="*30)
@@ -437,7 +435,6 @@ def clone_expression(expr, verbose=False):
             print(_idx)
             print(_len)
             print(_result)
-            print(_clone)
         #
         # Now replace the current expression object
         #
@@ -647,8 +644,8 @@ class _ExpressionBase(NumericValue):
             else:
                 return ans
 
-    def clone(self, verbose=False):
-        return clone_expression(self, verbose=verbose)
+    def clone(self, substitute=None, verbose=False):
+        return clone_expression(self, substitute=None, verbose=verbose)
 
     def size(self, verbose=False):
         return _expression_size(self, verbose=verbose)
