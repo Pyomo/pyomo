@@ -1918,18 +1918,13 @@ def generate_cuid_names(block,
 
     # Now recurse into subblocks
     if descend_into:
-        for key, block_ in block.component_map(ctype=descend_ctype).items():
-            if block_.is_indexed():
-                for block_data in block_.values():
-                    generate_cuid_names(block_data,
-                                        ctype=ctype,
-                                        descend_into=descend_into,
-                                        cuid_names_=cuid_names_)
-            else:
-                generate_cuid_names(block_,
-                                    ctype=ctype,
-                                    descend_into=descend_into,
-                                    cuid_names_=cuid_names_)
+        sub_blocks = block.component_data_objects( descend_ctype,
+                                                   descend_into=descend_into )
+        for block_ in sub_blocks:
+            generate_cuid_names(block_,
+                                ctype=ctypes,
+                                descend_into=False,
+                                cuid_names_=cuid_names_)
 
     return cuid_names_
 #
