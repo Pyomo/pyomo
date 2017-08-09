@@ -22,6 +22,7 @@ import pyomo.opt
 from pyomo.util.plugin import Plugin
 from pyomo.environ import *
 
+
 solvers = pyomo.opt.check_available_solvers('glpk')
 
 

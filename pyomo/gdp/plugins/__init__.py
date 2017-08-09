@@ -13,4 +13,4 @@ def load():
     import pyomo.gdp.plugins.chull
     import pyomo.gdp.plugins.bilinear
     import pyomo.gdp.plugins.gdp_var_mover
-
+    import pyomo.gdp.plugins.cuttingplane

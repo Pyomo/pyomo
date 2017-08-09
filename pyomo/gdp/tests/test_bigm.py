@@ -2344,8 +2344,10 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[1].component_map()), 3)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c_4"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.anotherblock.c"),
+        self.assertIsInstance(
+            disjBlock[1].component("evil[1].b.c_4"), Constraint)
+        self.assertIsInstance(
+            disjBlock[1].component("evil[1].b.anotherblock.c"),
                                                      Constraint)
 
     def test_do_not_transform_deactivated_constraint(self):
@@ -2363,7 +2365,8 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[1].component_map()), 2)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c_4"), Constraint)
+        self.assertIsInstance(
+            disjBlock[1].component("evil[1].b.c_4"), Constraint)
 
     def test_do_not_transform_deactivated_block(self):
         m = self.makeModel()
@@ -2380,7 +2383,8 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[1].component_map()), 2)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c_4"), Constraint)
+        self.assertIsInstance(
+            disjBlock[1].component("evil[1].b.c_4"), Constraint)
 
 
 class InnerDisjunctionSharedDisjuncts(unittest.TestCase):
