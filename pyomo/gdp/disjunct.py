@@ -13,7 +13,8 @@ from six import iteritems
 from weakref import ref as weakref_ref
 
 #from pyomo.core import *
-from pyomo.core import register_component, Binary, Block, Var
+from pyomo.util.modeling import unique_component_name
+from pyomo.core import register_component, Binary, Block, Var, Constraint, Any
 from pyomo.core.base.component import ( ActiveComponentData, )
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
@@ -128,12 +129,38 @@ class _DisjunctionData(ActiveComponentData):
         return self._set_value_impl(expr)
 
     def _set_value_impl(self, expr, idx=_NoArgument):
-        for d in expr:
-            if isinstance(d, _DisjunctData):
-                self.disjuncts.append(d)
-            else:
-                # TODO: better error here, handle expressions
-                raise ValueError("Expected a Disjunct object")
+        for e in expr:
+            # The user gave us a proper Disjunct block
+            if isinstance(e, _DisjunctData):
+                self.disjuncts.append(e)
+                continue
+            # The user was lazy and gave us a single constraint expression
+            try:
+                isexpr = e.is_expression()
+            except AttribureError:
+                isexpr = False
+            if isexpr and e.is_relational():
+                comp = self.parent_component()
+                if comp._autodisjuncts is None:
+                    b = self.parent_block()
+                    comp._autodisjuncts = Disjunct(Any)
+                    b.add_component(
+                        unique_component_name(b, comp.local_name),
+                        comp._autodisjuncts )
+                    # TODO: I am not at all sure why we need to
+                    # explicitly construct this block - that should
+                    # happen automatically.
+                    comp._autodisjuncts.construct()
+                disjunct = comp._autodisjuncts[len(comp._autodisjuncts)]
+                disjunct.constraint = Constraint(expr=e)
+                self.disjuncts.append(disjunct)
+                continue
+            #
+            # Anything else is an error
+            raise ValueError(
+                "Unexpected term for Disjunction %s.\n"
+                "\tExpected a Disjunct object or relational expression, "
+                "but got %s" % (self.name, type(e)) )
 
 
 class Disjunction(ActiveIndexedComponent):
@@ -151,6 +178,7 @@ class Disjunction(ActiveIndexedComponent):
         self._init_rule = kwargs.pop('rule', None)
         self._init_expr = kwargs.pop('expr', None)
         self.xor = kwargs.pop('xor', True)
+        self._autodisjuncts = None
         kwargs.setdefault('ctype', Disjunction)
         super(Disjunction, self).__init__(*args, **kwargs)
 

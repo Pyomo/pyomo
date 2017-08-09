@@ -11,6 +11,7 @@
 from six.moves import xrange as range
 from six import iteritems, iterkeys
 
+from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
 from pyomo.core import *
 from pyomo.repn import *
@@ -19,8 +20,6 @@ from pyomo.core.base.block import SortComponents, _BlockData
 from pyomo.repn import LinearCanonicalRepn
 from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.gdp import *
-
-from random import randint
 
 import logging
 logger = logging.getLogger('pyomo.core')
@@ -44,18 +43,6 @@ class BigM_Transformation(Transformation):
             Disjunct:   self._warn_for_active_disjunct,
             Block:      self._transform_block_on_disjunct,
             }
-
-
-    # QUESTION: I copied and pasted this from add slacks for now, but is there 
-    # somehwere it can live so that code isn't duplicated?
-    def _get_unique_name(self, instance, name):
-        # test if this name already exists in model. If not, we're good. 
-        # Else, we add random numbers until it doesn't
-        while True:
-            if instance.component(name) is None:
-                return name
-            else:
-                name += str(randint(0,9))
 
 
     def get_bigm_suffix_list(self, block):
@@ -97,7 +84,7 @@ class BigM_Transformation(Transformation):
                         % ( '\n'.join(iterkeys(options)), ))
 
         # make a transformation block to put transformed disjuncts on
-        transBlockName = self._get_unique_name(
+        transBlockName = unique_component_name(
             instance, 
             '_pyomo_gdp_bigm_relaxation')
         transBlock = Block()
@@ -195,7 +182,7 @@ class BigM_Transformation(Transformation):
               disjunction.is_indexed() else Constraint()
         xor = disjunction.xor
         nm = '_xor' if xor else '_or'
-        orCname = self._get_unique_name(parent, '_gdp_bigm_relaxation_' + \
+        orCname = unique_component_name(parent, '_gdp_bigm_relaxation_' + \
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
         infodict.setdefault('disjunction_or_constraint',{})[
@@ -405,7 +392,7 @@ class BigM_Transformation(Transformation):
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
-        name = self._get_unique_name(relaxationBlock, obj.name)
+        name = unique_component_name(relaxationBlock, obj.name)
         
         if obj.is_indexed():
             newConstraint = Constraint(obj.index_set(), transBlock.lbub)
