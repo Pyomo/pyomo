@@ -1887,49 +1887,47 @@ def generate_cuid_names(block,
 
     # determine if we need to generate labels on
     # subblocks
-    if (ctype is not None) and \
-       (ctype is not Block) and \
-       descend_into:
-        ctypes = (Block, ctype)
+    if descend_into is True:
+        descend_ctype = (Block,)
+    elif type(ctype) in (tuple, list, set):
+        descend_ctype = tuple(ctype)
+    elif descend_into:
+        descend_ctype = descend_into
+
+    if type(ctype) in (tuple, list, set):
+        ctypes = tuple(ctype)
+    elif ctype is None:
+        ctypes = None
     else:
         ctypes = (ctype,)
 
-    for ctype_ in ctypes:
-        for key, obj in block.component_map(ctype=ctype_).items():
-            obj_cuid = block_prefix+key
-            if obj.is_indexed():
-                for data_key, obj_data in obj.items():
-                    if data_key.__class__ is tuple:
-                        key_cuid = ','.join(
-                            ComponentUID.tDict.get(type(x), '?') + str(x)
-                            for x in data_key)
-                    else:
-                        key_cuid = ComponentUID.tDict.get(type(data_key), '?') + \
-                                   str(data_key)
-                    cuid_names_[obj_data] = \
-                        obj_cuid + ":" + key_cuid
-                obj_cuid += ":**"
-            cuid_names_[obj] = obj_cuid
+    if descend_into and ctype is not None:
+        ctypes = tuple( set(descend_ctype) | set(ctypes) )
 
-    if descend_into is True:
-        descend_ctype = Block
-    else:
-        descend_ctype = descend_into
+    for key, obj in block.component_map(ctype=ctypes).items():
+        obj_cuid = block_prefix+key
+        if obj.is_indexed():
+            for data_key, obj_data in obj.items():
+                if data_key.__class__ is tuple:
+                    key_cuid = ','.join(
+                        ComponentUID.tDict.get(type(x), '?') + str(x)
+                        for x in data_key)
+                else:
+                    key_cuid = ComponentUID.tDict.get(type(data_key), '?') + \
+                               str(data_key)
+                cuid_names_[obj_data] = obj_cuid + ":" + key_cuid
+            obj_cuid += ":**"
+        cuid_names_[obj] = obj_cuid
 
     # Now recurse into subblocks
     if descend_into:
-        for key, block_ in block.component_map(ctype=descend_ctype).items():
-            if block_.is_indexed():
-                for block_data in block_.values():
-                    generate_cuid_names(block_data,
-                                        ctype=ctype,
-                                        descend_into=descend_into,
-                                        cuid_names_=cuid_names_)
-            else:
-                generate_cuid_names(block_,
-                                    ctype=ctype,
-                                    descend_into=descend_into,
-                                    cuid_names_=cuid_names_)
+        sub_blocks = block.component_data_objects( descend_ctype,
+                                                   descend_into=descend_into )
+        for block_ in sub_blocks:
+            generate_cuid_names(block_,
+                                ctype=ctypes,
+                                descend_into=False,
+                                cuid_names_=cuid_names_)
 
     return cuid_names_
 #
