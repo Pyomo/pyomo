@@ -323,43 +323,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
         ints = []
         positive = []
         reals = []
-        i = 0
-        numVar = len(var_list)
-        while i < numVar:
-            var = var_list[i]
-            i += 1
+        for var in var_list:
             v = symbolMap.getObject(var)
-            if not v.is_expression():
-                if v.is_binary():
+            if v.is_binary():
+                binary.append(var)
+            elif v.is_integer():
+                if (v.has_lb() and (value(v.lb) >= 0)) and \
+                   (v.has_ub() and (value(v.ub) <= 1)):
                     binary.append(var)
-                elif v.is_integer():
-                    if (v.has_lb() and (value(v.lb) >= 0)) and \
-                       (v.has_ub() and (value(v.ub) <= 1)):
-                        binary.append(var)
-                    else:
-                        ints.append(var)
-                elif value(v.lb) == 0:
-                    positive.append(var)
                 else:
-                    reals.append(var)
+                    ints.append(var)
+            elif value(v.lb) == 0:
+                positive.append(var)
             else:
-                # GH: doesn't seem like this block is ever hit
-                body = StringIO()
-                v.expr.to_string(body, labeler=var_label)
-                if linear:
-                    if v.expr.polynomial_degree() not in linear_degree:
-                        linear = False
-                constraint_names.append('%s_expr' % var)
-                ConstraintIO.write('%s.. %s =e= %s ;\n' % (
-                    constraint_names[-1],
-                    var,
-                    body.getvalue()
-                ))
                 reals.append(var)
-                # The Expression could have hit new variables (or other
-                # expressions) -- so update the length of the var_list
-                # so that we process / categorize these new symbols
-                numVar = len(var_list)
 
         # Write the GAMS model
         # $offdigit ignores extra precise digits instead of erroring
