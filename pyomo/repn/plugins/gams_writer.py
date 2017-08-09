@@ -252,13 +252,21 @@ class ProblemWriter_gams(AbstractProblemWriter):
         for con in model.component_data_objects(Constraint,
                                                 active=True,
                                                 sort=sort):
-            if skip_trivial_constraints and con.body.is_fixed():
+
+            if (not con.has_lb()) and \
+               (not con.has_ub()):
+                assert not con.equality
+                continue # non-binding, so skip
+
+            con_body = as_numeric(con.body)
+            if skip_trivial_constraints and con_body.is_fixed():
                 continue
             if linear:
-                if con.body.polynomial_degree() not in linear_degree:
+                if con_body.polynomial_degree() not in linear_degree:
                     linear = False
+
             body = StringIO()
-            con.body.to_string(body, labeler=var_label)
+            con_body.to_string(body, labeler=var_label)
             cName = symbolMap.getSymbol(con, con_labeler)
             if con.equality:
                 constraint_names.append('%s' % cName)
