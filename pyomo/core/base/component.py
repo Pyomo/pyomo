@@ -678,10 +678,7 @@ class ComponentData(_ComponentBase):
         return None
 
     def __str__(self):
-        """
-        Return a string with the component name and index,
-        applying ComponentData.labeler if present
-        """
+        """Return a string with the component name and index"""
         return self.name
 
     def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
