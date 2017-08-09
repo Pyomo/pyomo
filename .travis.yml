@@ -70,17 +70,6 @@ install:
 - pip install --quiet xlrd
 - pip install --quiet openpyxl
 #
-- if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
-- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-     if [ -n "${EXTRAS}" ]; then
-        pip install scipy;
-     fi
-  fi
-- conda install -q -y --channel conda-forge glpk
-- glpsol -v
-- conda install -q -y --channel cachemeorg ipopt_bin
-- ipopt -v
-#
 # Install free version of GAMS: executable and API bindings
 # No explicit API version for python 3.5, use 3.4
 #
@@ -88,7 +77,7 @@ install:
 - chmod u+x linux_x64_64_sfx.exe
 - ./linux_x64_64_sfx.exe > /dev/null
 - PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx
-# Change default NLP solver to baron for testing
+# Change default NLP solver to baron for testing, performs better than CONOPT
 - pushd $PWD/gams24.8_linux_x64_64_sfx
 - sed -i 's/NLP CONOPT/NLP BARON/g' gmscmpun.txt
 - popd
@@ -117,6 +106,17 @@ install:
      python setup.py install;
      popd;
   fi
+#
+- if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
+- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+     if [ -n "${EXTRAS}" ]; then
+        pip install scipy;
+     fi
+  fi
+- conda install -q -y --channel conda-forge glpk
+- glpsol -v
+- conda install -q -y --channel cachemeorg ipopt_bin
+- ipopt -v
 #
 # Clone but don't install pyomo-model-libraries
 #
