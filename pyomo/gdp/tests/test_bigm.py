@@ -173,7 +173,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = self.makeModel()
         m._pyomo_gdp_bigm_relaxation = Block(Any)
         TransformationFactory('gdp.bigm').apply_to(m)
-        gdpblock = m.component("_pyomo_gdp_bigm_relaxation4")
+        gdpblock = m.component("_pyomo_gdp_bigm_relaxation_4")
         self.assertIsInstance(gdpblock, Block)
 
         disjBlock = gdpblock.relaxedDisjuncts
@@ -2344,7 +2344,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[1].component_map()), 3)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c4"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c_4"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.anotherblock.c"),
                                                      Constraint)
 
@@ -2363,7 +2363,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[1].component_map()), 2)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c4"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c_4"), Constraint)
 
     def test_do_not_transform_deactivated_block(self):
         m = self.makeModel()
@@ -2380,7 +2380,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(disjBlock[1].component_map()), 2)
         self.assertIsInstance(disjBlock[0].component("evil[0].c"), Constraint)
         self.assertIsInstance(disjBlock[1].component("evil[1].b.c"), Constraint)
-        self.assertIsInstance(disjBlock[1].component("evil[1].b.c4"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("evil[1].b.c_4"), Constraint)
 
 
 class InnerDisjunctionSharedDisjuncts(unittest.TestCase):

@@ -11,6 +11,7 @@
 import weakref
 import logging
 
+from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
 from pyomo.core import *
 from pyomo.core.base import expr as EXPR, Transformation
@@ -103,18 +104,6 @@ class ConvexHull_Transformation(Transformation):
         self._mode = NL_Mode_FurmanSawayaGrossmann
 
 
-    # ESJ: TODO: this is copied and pasted for now but going somewhere else
-    # later.
-    def _get_unique_name(self, instance, name):
-        # test if this name already exists in model. If not, we're good. 
-        # Else, we add random numbers until it doesn't
-        while True:
-            if instance.component(name) is None:
-                return name
-            else:
-                name += str(randint(0,9))
-
-
     def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
         targets = kwds.pop('targets', None)
@@ -129,7 +118,7 @@ class ConvexHull_Transformation(Transformation):
                         % ( '\n'.join(iterkeys(options)), ))
 
         # make a transformation block
-        transBlockName = self._get_unique_name(
+        transBlockName = unique_component_name(
             instance,
             '_pyomo_gdp_chull_relaxation')
         transBlock = Block()
@@ -220,7 +209,7 @@ class ConvexHull_Transformation(Transformation):
         # add the disaggregation constraint
         disaggregationConstraint = Constraint(Any)
         parent.add_component(
-            self._get_unique_name(parent, '_gdp_chull_relaxation_' + \
+            unique_component_name(parent, '_gdp_chull_relaxation_' + \
                                   disjunction.name + '_disaggregation'), 
             disaggregationConstraint)
 
@@ -236,7 +225,7 @@ class ConvexHull_Transformation(Transformation):
                             "disjunction %s with or constraint. Must be an xor!"
                             % disjunction.name)
         nm = '_xor'
-        orCname = self._get_unique_name(parent, '_gdp_chull_relaxation_' + \
+        orCname = unique_component_name(parent, '_gdp_chull_relaxation_' + \
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
         infodict.setdefault('disjunction_or_constraint', {})[
@@ -321,7 +310,7 @@ class ConvexHull_Transformation(Transformation):
                 disaggregatedVar = disjunct._gdp_transformation_info[
                     'disaggregatedVars'][var]
                 disaggregatedExpr += disaggregatedVar
-            consName = self._get_unique_name(disjunct, var.name)
+            consName = unique_component_name(disjunct, var.name)
             consIdx = index + (consName,) if index is not None else consName
             disaggregationConstraint.add(
                 consIdx,
@@ -379,7 +368,7 @@ class ConvexHull_Transformation(Transformation):
             # naming conflicts are possible here since this is a bunch
             # of variables from different blocks coming together, so we
             # get a unique name
-            disaggregatedVarName = self._get_unique_name(obj, var.local_name)
+            disaggregatedVarName = unique_component_name(obj, var.local_name)
             relaxationBlock.add_component(disaggregatedVarName, disaggregatedVar)
             infodict['disaggregatedVars'][var] = disaggregatedVar
             relaxationBlockInfo['srcVars'][disaggregatedVar] = var
@@ -516,7 +505,7 @@ class ConvexHull_Transformation(Transformation):
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
-        name = self._get_unique_name(relaxationBlock, obj.name)
+        name = unique_component_name(relaxationBlock, obj.name)
         
         if obj.is_indexed():
             newConstraint = Constraint(obj.index_set(), transBlock.lbub)
