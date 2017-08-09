@@ -18,9 +18,9 @@ from six.moves import xrange
 from pyutilib.misc import PauseGC
 
 from pyomo.core.base import (
-    SymbolMap, AlphaNumericTextLabeler, NumericLabeler, 
+    SymbolMap, AlphaNumericTextLabeler, NumericLabeler,
     Block, Constraint, Expression, Objective, Var, Set, RangeSet, Param,
-    value, minimize, Suffix, SortComponents)
+    minimize, Suffix, SortComponents)
 
 from pyomo.core.base.component import ComponentData
 from pyomo.opt import ProblemFormat
@@ -29,11 +29,18 @@ import pyomo.util.plugin
 
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.kernel.component_interface import ICategorizedObject
+from pyomo.core.kernel.numvalue import is_fixed, value, as_numeric
 
 import logging
 
 logger = logging.getLogger('pyomo.core')
 
+def _get_bound(exp):
+    if exp is None:
+        return None
+    if is_fixed(exp):
+        return value(exp)
+    raise ValueError("non-fixed bound or weight: " + str(exp))
 
 class ProblemWriter_gams(AbstractProblemWriter):
     pyomo.util.plugin.alias('gams', 'Generate the corresponding GAMS file')
@@ -273,22 +280,22 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 ConstraintIO.write('%s.. %s =e= %s ;\n' % (
                     constraint_names[-1],
                     body.getvalue(),
-                    value(con.upper)
+                    _get_bound(con.upper)
                 ))
             else:
-                if con.lower is not None:
+                if con.has_lb():
                     constraint_names.append('%s_lo' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
-                        value(con.lower),
+                        _get_bound(con.lower),
                         body.getvalue()
                     ))
-                if con.upper is not None:
+                if con.has_ub():
                     constraint_names.append('%s_hi' % cName)
                     ConstraintIO.write('%s.. %s =l= %s ;\n' % (
                         constraint_names[-1],
                         body.getvalue(),
-                        value(con.upper)
+                        _get_bound(con.upper)
                     ))
 
         obj = list(model.component_data_objects(Objective,
@@ -326,15 +333,17 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 if v.is_binary():
                     binary.append(var)
                 elif v.is_integer():
-                    if v.bounds == (0,1):
+                    if (v.has_lb() and (value(v.lb) >= 0)) and \
+                       (v.has_ub() and (value(v.ub) <= 1)):
                         binary.append(var)
                     else:
                         ints.append(var)
-                elif v.lb == 0:
+                elif value(v.lb) == 0:
                     positive.append(var)
                 else:
                     reals.append(var)
             else:
+                # GH: doesn't seem like this block is ever hit
                 body = StringIO()
                 v.expr.to_string(body, labeler=var_label)
                 if linear:
@@ -387,20 +396,20 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if var.is_expression():
                 continue
             if varName in positive:
-                if var.ub is not None:
+                if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (varName, value(var.ub)))
+                                      (varName, _get_bound(var.ub)))
             elif varName in ints:
-                if var.lb is None:
+                if not var.has_lb():
                     warn_int_bounds = True
                     # GAMS doesn't allow -INF lower bound for ints
                     logger.warning("Lower bound for integer variable %s set "
                                    "to -1.0E+100." % var.name)
                     output_file.write("%s.lo = -1.0E+100;\n" % (varName))
-                elif var.lb != 0:
+                elif value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (varName, value(var.lb)))
-                if var.ub is None:
+                                      (varName, _get_bound(var.lb)))
+                if not var.has_ub():
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
                     # default upper integer bound, which it applies if the
@@ -411,21 +420,21 @@ class ProblemWriter_gams(AbstractProblemWriter):
                     output_file.write("%s.up = +1.0E+100;\n" % (varName))
                 else:
                     output_file.write("%s.up = %s;\n" %
-                                      (varName, value(var.ub)))
+                                      (varName, _get_bound(var.ub)))
             elif varName in binary:
-                if var.lb != 0:
+                if var.has_lb() and value(var.lb) != 0:
                     output_file.write("%s.lo = %s;\n" %
-                                      (varName, value(var.lb)))
-                if var.ub != 1:
+                                      (varName, _get_bound(var.lb)))
+                if var.has_ub() and value(var.ub) != 1:
                     output_file.write("%s.up = %s;\n" %
-                                      (varName, value(var.ub)))
+                                      (varName, _get_bound(var.ub)))
             elif varName in reals:
-                if var.lb is not None:
+                if var.has_lb():
                     output_file.write("%s.lo = %s;\n" %
-                                      (varName, value(var.lb)))
-                if var.ub is not None:
+                                      (varName, _get_bound(var.lb)))
+                if var.has_ub():
                     output_file.write("%s.up = %s;\n" %
-                                      (varName, value(var.ub)))
+                                      (varName, _get_bound(var.ub)))
             if warmstart and var.value is not None:
                 output_file.write("%s.l = %s;\n" % (varName, var.value))
             if var.is_fixed():
