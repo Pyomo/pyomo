@@ -67,7 +67,7 @@ NL_Mode_GrossmannLee = 2
 #
 #     x_k = sum( nu_ik )
 #     ((1-eps)*y_ik + eps) * h_ik( nu_ik/((1-eps)*y_ik + eps) ) \
-#        - eps * r_ki(0) * ( 1-y_ik ) <= 0
+#        - eps * h_ki(0) * ( 1-y_ik ) <= 0
 #
 # [3] Furman, K., Sawaya, N., and Grossmann, I.  A computationally
 # useful algebraic representation of nonlinear disjunctive convex sets
@@ -118,6 +118,7 @@ class ConvexHull_Transformation(Transformation):
     def _apply_to(self, instance, **kwds):
         options = kwds.pop('options', {})
         targets = kwds.pop('targets', None)
+        self._mode = kwds.pop('nl_mode', NL_Mode_FurmanSawayaGrossmann)
 
         if kwds:
             logger.warning("GDP(CHull): unrecognized keyword arguments:\n\t%s"
@@ -239,6 +240,7 @@ class ConvexHull_Transformation(Transformation):
         orCname = self._get_unique_name(parent, '_gdp_chull_relaxation_' + \
                                         disjunction.name + nm)
         parent.add_component(orCname, orC)
+        # TODO: map the other way also
         infodict.setdefault('disjunction_or_constraint', {})[
             disjunction.local_name] = orC
         infodict.setdefault('disjunction_disaggregation_constraints', {})[
@@ -302,8 +304,6 @@ class ConvexHull_Transformation(Transformation):
                 # we aren't going to disaggregate fixed
                 # variables. This means there is trouble if they are
                 # unfixed later...  
-                # TODO: we need a way to identify
-                # Expressions and throw an error if they are there.
                 vars = identify_variables(cons.body, include_fixed=False)
                 varSet.update(vars)
 
@@ -358,7 +358,9 @@ class ConvexHull_Transformation(Transformation):
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
         relaxationBlockInfo = relaxationBlock._gdp_transformation_info = \
-                              {'src': obj, 'srcVars': ComponentMap()}
+                              {'src': obj, 
+                               'srcVars': ComponentMap(),
+                               'boundConstraintToSrcVar': ComponentMap()}
         infodict['chull'] = relaxationBlock
 
         # if this is a disjunctData from an indexed disjunct, we are
@@ -395,8 +397,9 @@ class ConvexHull_Transformation(Transformation):
             bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
             bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)
             relaxationBlock.add_component(
-                '_bounds_' + disaggregatedVarName, bigmConstraint)
+                disaggregatedVarName + "_bounds", bigmConstraint)
             infodict['bigmConstraints'][var] = bigmConstraint
+            relaxationBlockInfo['boundConstraintToSrcVar'][bigmConstraint] = var
 
         var_substitute_map = dict((id(v), newV) for v, newV in 
                                   iteritems(infodict['disaggregatedVars']))
@@ -546,20 +549,36 @@ class ConvexHull_Transformation(Transformation):
             # disaggregated variables
             if not NL or self._mode == NL_Mode_FurmanSawayaGrossmann:
                 h_0 = clone_expression(c.body, substitute=zero_substitute_map)
-
+                
             expr = clone_expression(c.body, substitute=var_substitute_map)
             y = disjunct.indicator_var
             if NL:
                 if self._mode == NL_Mode_LeeGrossmann:
-                    expr = expr * y
+                    sub_expr = clone_expression(
+                        c.body,
+                        substitute={var: subs/y for var, subs in 
+                                    var_substitute_map.iteritems()})
+                    expr = sub_expr * y
                 elif self._mode == NL_Mode_GrossmannLee:
-                    expr = (y + EPS) * expr
+                    sub_expr = clone_expression(
+                        c.body,
+                        substitute={var: subs/(y + EPS) for var, subs in 
+                                    var_substitute_map.iteritems()})
+                    expr = (y + EPS) * sub_expr
                 elif self._mode == NL_Mode_FurmanSawayaGrossmann:
-                    expr = ((1-EPS)*y + EPS)*expr - EPS*h_0*(1-y)
+                    sub_expr = clone_expression(
+                        c.body, 
+                        substitute={
+                            var : subs/((1 - EPS)*y + EPS) for var, subs 
+                            in var_substitute_map.iteritems()})
+                    expr = ((1-EPS)*y + EPS)*sub_expr - EPS*h_0*(1-y)
                 else:
                     raise RuntimeError("Unknown NL CHull mode")
 
             if c.lower is not None:
+                # TODO: At the moment there is no reason for this to be in both
+                # lower and upper... I think there could be though if I say what
+                # the new constraint is going to be or something.
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
                     logger.debug("GDP(cHull): Transforming constraint " +
                                  "'%s'", c.name)
