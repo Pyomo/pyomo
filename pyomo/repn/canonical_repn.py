@@ -1071,6 +1071,8 @@ def generate_canonical_repn(exp, idMap=None, compute_values=True):
     elif common.mode is common.Mode.pyomo4_trees:
         globals()['CompiledLinearCanonicalRepn'] = pyomo4_CompiledLinearCanonicalRepn
         return pyomo4_generate_canonical_repn(exp, idMap, compute_values)
+    elif common.mode is common.Mode.pyomo5_trees:
+        return None
     else:
         raise RuntimeError("Unrecognized expression tree mode")
 
@@ -1078,5 +1080,7 @@ if common.mode is common.Mode.coopr3_trees:
     CompiledLinearCanonicalRepn = coopr3_CompiledLinearCanonicalRepn
 elif common.mode is common.Mode.pyomo4_trees:
     CompiledLinearCanonicalRepn = pyomo4_CompiledLinearCanonicalRepn
+elif common.mode is common.Mode.pyomo5_trees:
+    CompiledLinearCanonicalRepn = None
 else:
     raise RuntimeError("Unrecognized expression tree mode")
