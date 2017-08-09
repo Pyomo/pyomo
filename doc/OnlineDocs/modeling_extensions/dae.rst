@@ -689,13 +689,14 @@ Supported Simulator Packages
 The Simulator currently includes interfaces to SciPy and CasADi. ODE
 simulation is supported in both packages however, DAE simulation is only
 supported by CasADi. A list of available integrators for each package is
-given below. Please refer to the `SciPy<https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html>`_ and `CasADi
+given below. Please refer to the `SciPy
+<https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.ode.html>`_
+and `CasADi
 <http://casadi.sourceforge.net/api/html/db/d3d/classcasadi_1_1Integrator.html>`_ documentation directly for the most up-to-date information about
 these packages and for more information about the various integrators and
 options.
 
 SciPy Integrators:
-
     - **'vode'** :  Real-valued Variable-coefficient ODE solver, options for
       non-stiff and stiff systems
     - **'zvode'** : Complex-values Variable-coefficient ODE solver, options for
@@ -706,7 +707,6 @@ SciPy Integrators:
     - **'dop853'** : Explicit runge-kutta method of order 8(5,3) ODE solver
 
 CasADi Integrators:
-
     - **'cvodes'** : CVodes from the Sundials suite, solver for stiff or
       non-stiff ODE systems
     - **'idas'** : IDAS from the Sundials suite, DAE solver
@@ -717,27 +717,170 @@ CasADi Integrators:
 Using the Simulator
 *******************
 
-Things to note:
-- Can't simulate constraints with if-statements in them
-- Need to provide initial conditions for dynamic states by setting the value or  using fix()
-- differential equations must be separable
-- Using suffixes to provide input profile
-- doesn't support multi-indexed control/input vars
-- Support for blocked/hierarchical models
-- initializing discretized step profile (subtlety with using initialize vs.
- default and compatibility with discretization transformation)
+We now show how to use the Simulator to simulate the following system of ODEs:
 
+.. math::
+   \begin{array}{l}
+   \frac{d\theta}{dt} = \omega \\
+   \frac{d\omega}{dt} = -b*\omega -c*sin(\theta)
+   \end{array}
 
+We begin by formulating the model using pyomo.DAE
+
+.. code-block:: python
+
+    m = ConcreteModel()
+
+    m.t = ContinuousSet(bounds=(0.0, 10.0))
+
+    m.b = Param(initialize=0.25)
+    m.c = Param(initialize=5.0)
+
+    m.omega = Var(m.t)
+    m.theta = Var(m.t)
+
+    m.domegadt = DerivativeVar(m.omega, wrt=m.t)
+    m.dthetadt = DerivativeVar(m.theta, wrt=m.t)
+
+    # Setting the initial conditions
+    m.omega[0].fix(0.0)
+    m.theta[0].fix(3.14 - 0.1)
+
+    def _diffeq1(m, t):
+        return m.domegadt[t] == -m.b * m.omega[t] - m.c * sin(m.theta[t])
+    m.diffeq1 = Constraint(m.t, rule=_diffeq1)
+
+    def _diffeq2(m, t):
+        return m.dthetadt[t] == m.omega[t]
+    m.diffeq2 = Constraint(m.t, rule=_diffeq2)
+
+Notice that the initial conditions are set by `fixing` the values of
+``m.omega`` and ``m.theta`` at t=0 instead of being specified as extra
+equality constraints. Also notice that the differential equations are
+specified without using ``Constraint.Skip`` to skip enforcement at t=0. The
+Simulator cannot simulate any constraints that contain if-statements in
+their construction rules.
+
+To simulate the model you must first create a Simulator object. Building
+this object prepares the Pyomo model for simulation with a particular Python
+package and performs several checks on the model to ensure compatibility
+with the Simulator. Be sure to read through the list of limitations at the
+end of this section to understand the types of models supported by the
+Simulator.
+
+.. code-block:: python
+
+    sim = Simulator(m, package='scipy')
+
+After creating a Simulator object, the model can be simulated by calling the
+simulate function. Please see the API documentation for the
+:py:class:`Simulator<pyomo.dae.Simulator>` for more information about the
+valid keyword arguments for this function.
+
+.. code-block:: python
+
+    tsim, profiles = sim.simulate(numpoints=100, integrator='vode')
+
+The ``simulate`` function returns numpy arrays containing time points and
+the corresponding values for the dynamic variable profiles.
+
+`Simulator Limitations`:
+    - Differential equations must be first-order and separable
+    - Model can only contain a single ContinuousSet
+    - Can't simulate constraints with if-statements in the construction rules
+    - Need to provide initial conditions for dynamic states by setting the
+      value or using fix()
 
 Specifying Time-Varing Inputs
 *****************************
-Control profile
+The :py:class:`Simulator<pyomo.dae.Simulator>` supports simulation of a system
+of ODE's or DAE's with time-varying parameters or control inputs. Time-varying
+inputs can be specified using a Pyomo ``Suffix``. We currently only support
+piecewise constant profiles. For more complex inputs defined by a continuous
+function of time we recommend adding an algebraic variable and constraint to
+your model.
 
+The profile for a time-varying input should be specified
+using a Python dictionary where the keys correspond to the switching times
+and the values correspond to the value of the input at a time point. A
+``Suffix`` is then used to associate this dictionary with the appropriate
+``Var`` or ``Param`` and pass the information to the
+:py:class:`Simulator<pyomo.dae.Simulator>`. The code snippet below shows an
+example.
+
+.. code-block:: python
+
+    m = ConcreteModel()
+
+    m.t = ContinuousSet(bounds=(0.0, 20.0))
+
+    # Time-varying inputs
+    m.b = Var(m.t)
+    m.c = Param(m.t, default=5.0)
+
+    m.omega = Var(m.t)
+    m.theta = Var(m.t)
+
+    m.domegadt = DerivativeVar(m.omega, wrt=m.t)
+    m.dthetadt = DerivativeVar(m.theta, wrt=m.t)
+
+    # Setting the initial conditions
+    m.omega[0] = 0.0
+    m.theta[0] = 3.14 - 0.1
+
+    def _diffeq1(m, t):
+        return m.domegadt[t] == -m.b[t] * m.omega[t] - \
+                                m.c[t] * sin(m.theta[t])
+    m.diffeq1 = Constraint(m.t, rule=_diffeq1)
+
+    def _diffeq2(m, t):
+        return m.dthetadt[t] == m.omega[t]
+    m.diffeq2 = Constraint(m.t, rule=_diffeq2)
+
+    # Specifying the piecewise constant inputs
+    b_profile = {0: 0.25, 15: 0.025}
+    c_profile = {0: 5.0, 7: 50}
+
+    # Declaring a Pyomo Suffix to pass the time-varying inputs to the Simulator
+    m.var_input = Suffix(direction=Suffix.LOCAL)
+    m.var_input[m.b] = b_profile
+    m.var_input[m.c] = c_profile
+
+    # Simulate the model using scipy
+    sim = Simulator(m, package='scipy')
+    tsim, profiles = sim.simulate(numpoints=100,
+                                  integrator='vode',
+                                  varying_inputs=m.var_input)
+
+.. note::
+    The Simulator does not support multi-indexed inputs (i.e. if ``m.b`` in
+    the above example was indexed by another set besides ``m.t``)
 
 Dynamic Model Initialization
 ----------------------------
-
+Providing a good initial guess is an important factor in solving dynamic
+optimization problems. There are several model initialization tools under
+development in pyomo.DAE to help users initialize their models. These tools
+will be documented here as they become available.
 
 From Simulation
 ***************
+The :py:class:`Simulator<pyomo.dae.Simulator>` includes a function for
+initializing discretized dynamic optimization models using the profiles
+returned from the simulator. An example using this function is shown below
 
+.. code-block:: python
+
+    # Simulate the model using scipy
+    sim = Simulator(m, package='scipy')
+    tsim, profiles = sim.simulate(numpoints=100, integrator='vode')
+
+    # Discretize model using Orthogonal Collocation
+    discretizer = TransformationFactory('dae.collocation')
+    discretizer.apply_to(m, nfe=10, ncp=3)
+
+    # Initialize the discretized model using the simulator profiles
+    sim.initialize_model()
+
+.. note::
+    A model must be simulated before it can be initialized using this function
