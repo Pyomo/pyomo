@@ -1849,13 +1849,13 @@ class IndexedBlock(Block):
     def __init__(self, *args, **kwds):
         Block.__init__(self, *args, **kwds)
 
+
 def generate_cuid_names(block,
                         ctype=None,
                         descend_into=True,
                         cuid_names_=None):
     """
-    Bulk generation of CUID strings for all components
-    stored on a block.
+    Bulk generation of CUID strings for all components stored on a block.
 
     Args:
         block: The block to generate CUID strings for.
@@ -1876,8 +1876,8 @@ def generate_cuid_names(block,
     Returns:
         A dictionary-like object that maps model components
         to their CUID string.
-    """
 
+    """
     # get the current blocks label, if it has one
     if cuid_names_ is None:
         cuid_names_ = ComponentMap()
@@ -1889,8 +1889,8 @@ def generate_cuid_names(block,
     # subblocks
     if descend_into is True:
         descend_ctype = (Block,)
-    elif type(ctype) in (tuple, list, set):
-        descend_ctype = tuple(ctype)
+    elif type(descend_into) in (tuple, list, set):
+        descend_ctype = tuple(descend_into)
     elif descend_into:
         descend_ctype = descend_into
 
@@ -1902,7 +1902,7 @@ def generate_cuid_names(block,
         ctypes = (ctype,)
 
     if descend_into and ctype is not None:
-        ctypes = tuple( set(descend_ctype) | set(ctypes) )
+        ctypes = tuple(set(descend_ctype) | set(ctypes))
 
     for key, obj in block.component_map(ctype=ctypes).items():
         obj_cuid = block_prefix+key
@@ -1921,8 +1921,8 @@ def generate_cuid_names(block,
 
     # Now recurse into subblocks
     if descend_into:
-        sub_blocks = block.component_data_objects( descend_ctype,
-                                                   descend_into=descend_into )
+        sub_blocks = block.component_data_objects(descend_ctype,
+                                                  descend_into=descend_into)
         for block_ in sub_blocks:
             generate_cuid_names(block_,
                                 ctype=ctypes,
