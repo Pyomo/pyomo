@@ -41,14 +41,13 @@ class AddSlackVariables(NonIsomorphicTransformation):
 
         if targets is None:
             constraintDatas = instance.component_data_objects(
-                Constraint, 
-                descend_into=(Block, Disjunct))
+                Constraint, descend_into=True)
         else:
             constraintDatas = []
             for cuid in targets:
                 cons = cuid.find_component(instance)
                 if cons.is_indexed():
-                    for i in cons.index_set():
+                    for i in cons:
                         constraintDatas.append(cons[i])
                 else:
                     constraintDatas.append(cons)
