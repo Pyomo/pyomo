@@ -370,8 +370,6 @@ class ProblemWriter_gams(AbstractProblemWriter):
         warn_int_bounds = False
         for varName in var_list:
             var = symbolMap.getObject(varName)
-            if var.is_expression():
-                continue
             if varName in positive:
                 if var.has_ub():
                     output_file.write("%s.up = %s;\n" %

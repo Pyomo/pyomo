@@ -671,11 +671,10 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         output_filename = os.path.join(tmpdir, 'model.gms')
         lst_filename = os.path.join(tmpdir, 'output.lst')
-        results_filename = os.path.join(tmpdir, 'results')
         statresults_filename = os.path.join(tmpdir, 'resultsstat.dat')
 
-        io_options['put_results'] = results_filename
-        results_filename += '.dat'
+        io_options['put_results'] = os.path.join(tmpdir, 'results')
+        results_filename = os.path.join(tmpdir, 'results.dat')
 
         if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
@@ -1011,18 +1010,6 @@ def check_expr_evaluation(model, symbolMap, solver_io):
         assert len(obj) == 1, "GAMS writer can only take 1 active objective"
         obj = obj[0]
         check_expr(obj.expr, obj.name, solver_io)
-
-        # Expressions
-        # Iterate through symbolMap in case for some reason model has
-        # Expressions that do not appear in any constraints or the objective,
-        # since GAMS never sees those anyway so they should be skipped
-        for ref in itervalues(symbolMap.bySymbol):
-            obj = ref()
-            if isinstance(model, IBlockStorage):
-                if obj.ctype is Expression:
-                    check_expr(obj.expr, obj.name, solver_io)
-            elif obj.parent_component().type() is Expression:
-                check_expr(obj.expr, obj.name, solver_io)
     finally:
         # Return uninitialized variables to None
         for var in uninit_vars:
@@ -1035,11 +1022,11 @@ def check_expr(expr, name, solver_io):
     try:
         value(expr)
     except ValueError:
-        logger.warning("While evaluating value(%s), GAMS solver encountered "
-                       "an error.\nGAMS requires that all equations and "
-                       "expressions evaluate at initial values.\n"
-                       "Ensure variable values do not violate any domains "
-                       "(are you using log or log10?)" % name)
+        logger.warning("While evaluating model.%s's expression, GAMS solver "
+                       "encountered an error.\nGAMS requires that all "
+                       "equations and expressions evaluate at initial values.\n"
+                       "Ensure variable values do not violate any domains, "
+                       "and use the warmstart=True keyword to solve()." % name)
         if solver_io == 'shell':
             # For shell, there is no previous exception to worry about
             # overwriting, so raise the ValueError.
