@@ -185,6 +185,8 @@ def linear(N, flag):
             expr=0
             for i in model.A:
                 expr = model.p[i] * model.x[i] + expr
+        elif flag == 6:
+            expr=Sum(model.p[i]*model.x[i] for i in model.A)
         #
         stop = time.time()
         seconds['construction'] = stop-start
@@ -233,6 +235,8 @@ def nested_linear(N, flag):
             for i in model.A:
                 expr = model.p[i] * model.x[i] + expr
             expr *= 2
+        elif flag == 6:
+            expr= 2 * Sum(model.p[i]*model.x[i] for i in model.A)
         #
         stop = time.time()
         seconds['construction'] = stop-start
@@ -268,13 +272,7 @@ def constant(N, flag):
             for i in model.A:
                 expr += model.p[i] * model.q[i]
         elif flag == 4:
-            expr=0
-            for i in model.A:
-                expr = expr + model.p[i] * model.q[i]
-        else:
-            expr=0
-            for i in model.A:
-                expr = model.p[i] * model.q[i] + expr
+            expr=Sum(model.p[i]*model.q[i] for i in model.A)
         #print(expr)
         #
         stop = time.time()
@@ -314,10 +312,12 @@ def bilinear(N, flag):
             expr = summation(model.p, model.x, model.y)
         elif flag == 2:
             expr=sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
-        else:
+        elif flag == 3:
             expr=0
             for i in model.A:
                 expr += model.p[i] * model.x[i] * model.y[i]
+        elif flag == 4:
+            expr=Sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
         #
         stop = time.time()
         seconds['construction'] = stop-start
@@ -352,10 +352,12 @@ def nonlinear(N, flag):
         #
         if flag == 2:
             expr=sum(model.p[i]*tan(model.x[i]) for i in model.A)
-        else:
+        elif flag == 3:
             expr=0
             for i in model.A:
                 expr += model.p[i] * tan(model.x[i])
+        elif flag == 4:
+            expr=Sum(model.p[i]*tan(model.x[i]) for i in model.A)
         #
         stop = time.time()
         seconds['construction'] = stop-start
@@ -424,10 +426,12 @@ def product(N, flag):
             expr=model.x+model.x
             for i in model.A:
                 expr = model.p[i]*expr
-        else:
+        elif flag == 2:
             expr=model.x+model.x
             for i in model.A:
                 expr *= model.p[i]
+        elif flag == 3:
+            expr=(model.x+model.x) * prod(model.p[i] for i in model.A)
        #
         stop = time.time()
         seconds['construction'] = stop-start
@@ -470,6 +474,10 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(constant(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
+    if True:
+        factors_ = tuple(factors+['Constant','Loop 4'])
+        ans_ = res[factors_] = measure(constant(NTerms, 4), n=N)
+        print_results(factors_, ans_, output)
 
     if True:
         factors_ = tuple(factors+['Linear','Loop 1'])
@@ -492,6 +500,10 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(linear(NTerms, 5), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Linear','Loop 6'])
+        ans_ = res[factors_] = measure(linear(NTerms, 6), n=N)
+        print_results(factors_, ans_, output)
+
 
     if True:
         factors_ = tuple(factors+['NestedLinear','Loop 1'])
@@ -501,6 +513,23 @@ def runall(factors, res, output=True):
         factors_ = tuple(factors+['NestedLinear','Loop 2'])
         ans_ = res[factors_] = measure(nested_linear(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['NestedLinear','Loop 3'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['NestedLinear','Loop 4'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 4), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['NestedLinear','Loop 5'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 5), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['NestedLinear','Loop 6'])
+        ans_ = res[factors_] = measure(nested_linear(NTerms, 6), n=N)
+        print_results(factors_, ans_, output)
+
 
     if True:
         factors_ = tuple(factors+['Bilinear','Loop 1'])
@@ -515,7 +544,12 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(bilinear(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Bilinear','Loop 4'])
+        ans_ = res[factors_] = measure(bilinear(NTerms, 4), n=N)
+        print_results(factors_, ans_, output)
 
+
+    if True:
         factors_ = tuple(factors+['Nonlinear','Loop 2'])
         ans_ = res[factors_] = measure(nonlinear(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
@@ -524,10 +558,16 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(nonlinear(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Nonlinear','Loop 4'])
+        ans_ = res[factors_] = measure(nonlinear(NTerms, 4), n=N)
+        print_results(factors_, ans_, output)
+
+
     if True:
         factors_ = tuple(factors+['Polynomial','Loop 3'])
         ans_ = res[factors_] = measure(polynomial(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
+
 
     if True:
         factors_ = tuple(factors+['Product','Loop 1'])
