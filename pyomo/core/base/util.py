@@ -12,7 +12,7 @@
 # Utility functions
 #
 
-__all__ = ['summation', 'dot_product', 'sequence', 'prod']
+__all__ = ['summation', 'dot_product', 'sequence', 'prod', 'Prod', 'Sum']
 
 import inspect
 from six.moves import xrange
@@ -26,6 +26,32 @@ def prod(factors):
     A utility function to compute the product of a list of factors.
     """
     return reduce(operator.mul, factors, 1)
+
+Prod = prod
+
+
+def Sum(*args, start=0):
+    """
+    A utility function to compute a sum of Pyomo expressions.  The behavior is similar to the
+    builtin 'sum' function, but this generates a compact expression.
+    """
+    if expr_common.mode == expr_common.Mode.pyomo5_trees:
+        ans = [start]
+        for arg in args:
+            if inspect.isgenerator(arg):
+                for term in arg:
+                    if not term._potentially_variable():
+                        ans[0] += term
+                    else:
+                        ans.append(term)
+            elif not arg._potentially_variable():
+                ans[0] += arg
+            else:
+                ans.append(arg)
+        from pyomo.core.kernel.expr_pyomo5 import _StaticMultiSumExpression
+        return _StaticMultiSumExpression( tuple(ans) )
+    else:
+        return sum(*args, start=start)
 
 
 def summation(*args, **kwds):
