@@ -24,7 +24,7 @@ opt_gms = SolverFactory('gams', solver_io='gms')
 gamsgms_available = opt_gms.available(exception_flag=False)
 
 
-class CPLEXDirectTests(unittest.TestCase):
+class GAMSTests(unittest.TestCase):
 
     @unittest.skipIf(not gamspy_available,
                      "The 'gams' python bindings are not available")
