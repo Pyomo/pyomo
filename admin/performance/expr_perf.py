@@ -474,10 +474,10 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(constant(NTerms, 3), n=N)
         print_results(factors_, ans_, output)
 
-    if True:
         factors_ = tuple(factors+['Constant','Loop 4'])
         ans_ = res[factors_] = measure(constant(NTerms, 4), n=N)
         print_results(factors_, ans_, output)
+
 
     if True:
         factors_ = tuple(factors+['Linear','Loop 1'])
