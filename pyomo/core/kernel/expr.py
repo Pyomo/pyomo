@@ -65,6 +65,14 @@ _pyomo5_module_members = [
     '_CompressedSumExpression',
     'compress_expression',
     'sum',
+    '_NPV_NegationExpression',
+    '_NPV_ExternalFunctionExpression',
+    '_NPV_PowExpression',
+    '_NPV_ProductExpression',
+    '_NPV_DivisionExpression',
+    '_NPV_SumExpression',
+    '_NPV_UnaryFunctionExpression',
+    '_NPV_AbsExpression',
 ]
 
 def set_expression_tree_format(mode):
