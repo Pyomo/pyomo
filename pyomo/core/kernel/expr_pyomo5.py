@@ -113,14 +113,18 @@ def compress_expression(expr, verbose=False):
     if isinstance(expr, _MultiSumExpression):
         return expr
     #
-    # Only compress trees whos root is _SumExpression
+    # Only compress trees whose root is _SumExpression
+    #
+    # Note: This tacitly avoids compressing all trees
+    # that are not potentially variable, since they have a
+    # different class.
     #
     if not expr.__class__ == _SumExpression:
         return expr
     #
     # The stack starts with the current expression
     #
-    _stack = [ False, (expr, expr._args, 0, len(expr._args), [], [])]
+    _stack = [ False, (expr, expr._args, 0, len(expr._args), [])]
     #
     # Iterate until the stack is empty
     #
@@ -134,7 +138,7 @@ def compress_expression(expr, verbose=False):
         #   _idx        The current argument being considered
         #   _len        The number of arguments
         #
-        _obj, _argList, _idx, _len, _potentially_variable, _result = _stack.pop()
+        _obj, _argList, _idx, _len, _result = _stack.pop()
         _clone = _stack.pop()
         if _clone and _stack:
             _stack[-2] = True
@@ -151,7 +155,6 @@ def compress_expression(expr, verbose=False):
                 print(_argList)
                 print(_idx)
                 print(_len)
-                print(_potentially_variable)
                 print(_result)
                 print(_clone)
                 print("-"*30)
@@ -162,11 +165,9 @@ def compress_expression(expr, verbose=False):
                 #
                 # Store a native or numeric object
                 #
-                _potentially_variable.append( False )
                 _result.append( _sub )
             elif not isinstance(_sub, _ExpressionBase) or isinstance(_sub, _MultiSumExpression):
                 #elif not _sub.is_expression():
-                _potentially_variable.append( _sub._potentially_variable() )
                 _result.append( _sub )
             else:
                 #
@@ -175,12 +176,11 @@ def compress_expression(expr, verbose=False):
                 if verbose: #pragma:nocover
                     print("*"*10 + " PUSH " + "*"*10)
                 _stack.append( False )
-                _stack.append( (_obj, _argList, _idx, _len, _potentially_variable, _result) )
+                _stack.append( (_obj, _argList, _idx, _len, _result) )
                 _obj                    = _sub
                 _argList                = _sub._args
                 _idx                    = 0
                 _len                    = len(_argList)
-                _potentially_variable   = []
                 _result                 = []
                 _clone                  = False
     
@@ -191,7 +191,6 @@ def compress_expression(expr, verbose=False):
             print(_argList)
             print(_idx)
             print(_len)
-            print(_potentially_variable)
             print(_result)
             print(_clone)
             print("="*30)
@@ -199,7 +198,6 @@ def compress_expression(expr, verbose=False):
         # Now replace the current expression object if it's a sum
         #
         if _obj.__class__ == _SumExpression:
-            _l_pvar, _r_pvar = _potentially_variable
             _l, _r = _result
             #
             # Augment the current multi-sum (LHS)
@@ -211,7 +209,7 @@ def compress_expression(expr, verbose=False):
                 #
                 # Add the RHS to the first term of the multisum
                 #
-                if not _r_pvar:
+                if not _r._potentially_variable():
                     #print("H4")
                     _l._args[0] += _r
                     ans = _l
@@ -239,7 +237,7 @@ def compress_expression(expr, verbose=False):
             # 1 + *
             # p + *
             #
-            elif not _l_pvar:
+            elif not _l._potentially_variable():
                 if _r.__class__ == _MultiSumExpression:
                     #
                     # 1 + MultiSum
@@ -290,7 +288,7 @@ def compress_expression(expr, verbose=False):
                 #
                 # Add the LHS to the first term of the multisum
                 #
-                if not _l_pvar:
+                if not _l._potentially_variable():
                     #print("H1-c")
                     ans = _MultiSumExpression([_r._args[0]+_l,] + list(_r._args[1:]))
                 #
@@ -328,7 +326,7 @@ def compress_expression(expr, verbose=False):
                 #
                 # Add the RHS to the first term of the multisum
                 #
-                if not _r_pvar:
+                if not _r._potentially_variable():
                     #print("H4-c")
                     ans = _MultiSumExpression([_l._args[0]+_r,] + list(_l._args[1:]))
                 #
@@ -358,7 +356,6 @@ def compress_expression(expr, verbose=False):
             #
             # "return" the recursion by putting the return value on the end of the results stack
             #
-            _stack[-1][-2].append( any(_potentially_variable) )
             _stack[-1][-1].append( ans )
         else:
             if ans.__class__ == _MultiSumExpression:
