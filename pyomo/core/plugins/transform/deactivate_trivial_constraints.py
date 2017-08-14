@@ -28,12 +28,14 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
                 ctype=Constraint, active=True, descend_into=True):
             if constr.body.polynomial_degree() == 0:
                 # Check to make sure constraint not violated.
-                if value(constr.body) < value(constr.lower):
+                if (constr.has_lb() and
+                        value(constr.body) < value(constr.lower)):
                     raise ValueError('Trivial constraint {} violates {} ≤ {}'
                                      .format(constr.name,
                                              value(constr.lower),
                                              value(constr.body)))
-                if value(constr.body) > value(constr.upper):
+                if (constr.has_ub() and
+                        value(constr.body) > value(constr.upper)):
                     raise ValueError('Trivial constraint {} violates {} ≤ {}'
                                      .format(constr.name,
                                              value(constr.body),
