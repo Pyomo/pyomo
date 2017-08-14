@@ -50,11 +50,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
 
     def test_trivial_constraints_lb_conflict(self):
         """Test for violated trivial constraint lower bound."""
-        with self.assertRaises(ValueError) as context:
-            self._trivial_constraints_lb_conflict()
-
-        self.assertIn('Trivial constraint c violates ',
-                      str(context.exception))
+        self.assertRaises(ValueError, self._trivial_constraints_lb_conflict)
 
     def _trivial_constraints_lb_conflict(self):
         m = ConcreteModel()
@@ -66,11 +62,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
 
     def test_trivial_constraints_ub_conflict(self):
         """Test for violated trivial constraint upper bound."""
-        with self.assertRaises(ValueError) as context:
-            self._trivial_constraints_ub_conflict()
-
-        self.assertIn('Trivial constraint c violates ',
-                      str(context.exception))
+        self.assertRaises(ValueError, self._trivial_constraints_ub_conflict)
 
     def _trivial_constraints_ub_conflict(self):
         m = ConcreteModel()
