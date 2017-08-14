@@ -10,7 +10,7 @@ __author__ = "Qi Chen <qichen at andrew.cmu.edu>"
 class TestTrivialConstraintDeactivator(unittest.TestCase):
     """Tests deactivation of trivial constraints."""
 
-    def test_fixed_var_propagate(self):
+    def test_deactivate_trivial_constraints(self):
         """Test for deactivation of trivial constraints."""
         m = ConcreteModel()
         m.v1 = Var(initialize=1)
@@ -27,7 +27,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         self.assertTrue(m.c2.active)
         self.assertFalse(m.c3.active)
 
-    def test_fixed_var_revert(self):
+    def test_deactivate_trivial_constraints_revert(self):
         """Test for reversion of trivial constraint deactivation."""
         m = ConcreteModel()
         m.v1 = Var(initialize=1)
@@ -48,15 +48,15 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         xfrm.revert()
         self.assertTrue(m.c3.active)
 
-    def test_fix_var_lb_conflict(self):
+    def test_trivial_constraints_lb_conflict(self):
         """Test for violated trivial constraint lower bound."""
         with self.assertRaises(ValueError) as context:
-            self._fix_var_lb_conflict()
+            self._trivial_constraints_lb_conflict()
 
         self.assertIn('Trivial constraint c violates ',
                       str(context.exception))
 
-    def _fix_var_lb_conflict(self):
+    def _trivial_constraints_lb_conflict(self):
         m = ConcreteModel()
         m.v1 = Var(initialize=1)
         m.c = Constraint(expr=m.v1 >= 2)
@@ -64,15 +64,15 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         TransformationFactory(
             'core.deactivate_trivial_constraints').apply_to(m)
 
-    def test_fix_var_ub_conflict(self):
+    def test_trivial_constraints_ub_conflict(self):
         """Test for violated trivial constraint upper bound."""
         with self.assertRaises(ValueError) as context:
-            self._fix_var_ub_conflict()
+            self._trivial_constraints_ub_conflict()
 
         self.assertIn('Trivial constraint c violates ',
                       str(context.exception))
 
-    def _fix_var_ub_conflict(self):
+    def _trivial_constraints_ub_conflict(self):
         m = ConcreteModel()
         m.v1 = Var(initialize=1)
         m.c = Constraint(expr=m.v1 <= 0)
