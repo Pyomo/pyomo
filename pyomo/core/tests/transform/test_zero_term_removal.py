@@ -10,7 +10,7 @@ __author__ = "Qi Chen <qichen at andrew.cmu.edu>"
 class TestRemoveZeroTerms(unittest.TestCase):
     """Tests removal of zero terms."""
 
-    def test_fixed_var_propagate(self):
+    def test_zero_term_removal(self):
         """Test for removing zero terms from linear constraints."""
         m = ConcreteModel()
         m.v0 = Var()
