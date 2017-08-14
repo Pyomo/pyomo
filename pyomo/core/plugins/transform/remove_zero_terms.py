@@ -13,6 +13,8 @@ class RemoveZeroTerms(IsomorphicTransformation):
     Currently limited to processing linear constraints of the form x1 = 0 *
     x3, occurring as a result of x2.fix(0).
 
+    TODO: support nonlinear expressions
+
     """
 
     alias('core.remove_zero_terms', doc=__doc__)
