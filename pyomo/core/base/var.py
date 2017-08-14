@@ -15,7 +15,8 @@ from weakref import ref as weakref_ref
 
 from pyomo.core.base.numvalue import NumericValue, value, is_fixed
 from pyomo.core.base.set_types import BooleanSet, IntegerSet, RealSet, Reals
-from pyomo.core.base.component import ComponentData, register_component
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import ComponentData
 from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.sets import Set

@@ -22,8 +22,8 @@ from weakref import ref as weakref_ref
 import inspect
 
 from pyomo.core.base.numvalue import as_numeric, value
-from pyomo.core.base.component import (ActiveComponentData,
-                                       register_component)
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
                                                UnindexedComponent_set)
 from pyomo.core.base.expression import (_ExpressionData,

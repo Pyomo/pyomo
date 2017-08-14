@@ -14,6 +14,7 @@ from six import iteritems
 from collections import namedtuple
 
 from pyomo.core import *
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.numvalue import ZeroConstant, _sub
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import _BlockData

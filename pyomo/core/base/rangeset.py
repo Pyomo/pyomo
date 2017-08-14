@@ -19,7 +19,7 @@ from pyomo.core.base.expr import _ExpressionBase
 from pyomo.core.base.set_types import Integers, Reals
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.numvalue import value
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 
 logger = logging.getLogger('pyomo.core')
 

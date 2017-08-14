@@ -13,7 +13,7 @@ __all__ = ['BuildAction']
 import logging
 import types
 
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 

@@ -47,7 +47,7 @@ import types
 from pyutilib.enum import Enum
 from pyutilib.misc import flatten_tuple
 
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.block import Block, _BlockData
 from pyomo.core.base.constraint import Constraint, ConstraintList
 from pyomo.core.base.sos import SOSConstraint

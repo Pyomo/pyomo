@@ -16,7 +16,8 @@ import six
 from six.moves import zip, xrange
 
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.component import ActiveComponentData, register_component
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import ActiveIndexedComponent, UnindexedComponent_set
 from pyomo.core.base.set_types import PositiveIntegers
 from pyomo.core.base.sets import Set, _IndexedOrderedSetData

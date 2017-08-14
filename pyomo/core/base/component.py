@@ -17,7 +17,6 @@ import sys
 from copy import deepcopy
 
 import pyomo.util
-from pyomo.core.base.plugin import register_component
 from pyomo.core.base.misc import tabular_writer
 
 from six import iteritems, string_types
@@ -536,7 +535,7 @@ class ComponentData(_ComponentBase):
 
     Private class attributes:
         _component      A weakref to the component that owns this data object
-    """
+        """
 
     __pickle_slots__ = ('_component',)
     __slots__ = __pickle_slots__ + ('__weakref__',)

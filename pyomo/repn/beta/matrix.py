@@ -24,7 +24,7 @@ from pyomo.core.base import (SortComponents,
 from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.constraint import (IndexedConstraint,
                                         SimpleConstraint,
                                         _ConstraintData)

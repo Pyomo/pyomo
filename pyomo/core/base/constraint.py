@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -18,13 +18,13 @@ from weakref import ref as weakref_ref
 
 import pyutilib.math
 from pyomo.core.base import expr as EXPR
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.numvalue import (ZeroConstant,
                                       value,
                                       as_numeric,
                                       is_constant,
                                       _sub)
-from pyomo.core.base.component import (ActiveComponentData,
-                                       register_component)
+from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
     (ActiveIndexedComponent,
      UnindexedComponent_set)

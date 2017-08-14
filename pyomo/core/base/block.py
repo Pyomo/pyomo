@@ -23,7 +23,7 @@ from six import iteritems, itervalues, StringIO, string_types, \
 
 from pyomo.core.base.plugin import * # register_component, ModelComponentFactory
 from pyomo.core.base.component import Component, ActiveComponentData, \
-    ComponentUID, register_component
+    ComponentUID
 from pyomo.core.base.sets import Set,  _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.misc import apply_indexed_rule

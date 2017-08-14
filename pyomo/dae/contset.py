@@ -13,6 +13,7 @@ __all__ = ['ContinuousSet']
 import logging
 
 from pyomo.core import *
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.sets import OrderedSimpleSet
 from pyomo.core.base.numvalue import native_numeric_types
 

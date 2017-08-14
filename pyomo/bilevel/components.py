@@ -10,7 +10,8 @@
 
 __all__ = ['SubModel']
 
-from pyomo.core.base.component import Component, register_component
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import Component
 from pyomo.core.base.block import SimpleBlock
 
 # TODO: Do we need to have SimpleSubModel and IndexedSubModel classes?

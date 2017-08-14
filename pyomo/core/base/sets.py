@@ -23,9 +23,12 @@ from weakref import ref as weakref_ref
 
 from pyutilib.misc import flatten_tuple as pyutilib_misc_flatten_tuple
 
-from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed_rule
-from pyomo.core.base.component import Component, register_component, ComponentData
-from pyomo.core.base.indexed_component import IndexedComponent, UnindexedComponent_set
+from pyomo.core.base.misc import apply_indexed_rule, \
+    apply_parameterized_indexed_rule
+from pyomo.core.base.plugin import register_component
+from pyomo.core.base.component import Component, ComponentData
+from pyomo.core.base.indexed_component import IndexedComponent, \
+    UnindexedComponent_set
 from pyomo.core.base.numvalue import native_numeric_types
 
 from six import itervalues, iteritems

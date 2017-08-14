@@ -50,8 +50,8 @@ from pyomo.core.base.plugin import *
 from pyomo.core.base.numvalue import *
 from pyomo.core.base.block import SimpleBlock
 from pyomo.core.base.sets import Set
-from pyomo.core.base.component import register_component, Component, ComponentUID
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.component import Component, ComponentUID
+from pyomo.core.base.plugin import register_component, TransformationFactory
 from pyomo.core.base.label import CNameLabeler, CuidLabeler
 import pyomo.opt
 from pyomo.opt.results import SolverResults, Solution, SolutionStatus, UndefinedData

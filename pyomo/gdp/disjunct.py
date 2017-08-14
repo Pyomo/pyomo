@@ -11,6 +11,7 @@
 from pyutilib.misc.indent_io import StreamIndenter
 
 from pyomo.core import *
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base.constraint import (SimpleConstraint,
                                         IndexedConstraint,
                                         _GeneralConstraintData)
