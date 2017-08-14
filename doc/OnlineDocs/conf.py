@@ -42,7 +42,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.napoleon',
               'sphinx.ext.ifconfig',
               'sphinx.ext.inheritance_diagram',
-              'sphinx.ext.autosummary']
+              'sphinx.ext.autosummary',
+              'sphinx.ext.doctest']
     #'sphinx.ext.githubpages']
 
 viewcode_import = True

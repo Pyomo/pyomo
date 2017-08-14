@@ -884,3 +884,9 @@ returned from the simulator. An example using this function is shown below
 
 .. note::
     A model must be simulated before it can be initialized using this function
+
+.. doctest::
+
+    >>> print('Hello World')
+    Hello World
+
