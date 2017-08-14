@@ -6,8 +6,7 @@
 #  the U.S. Government retains certain rights in this software.
 #  This software is distributed under the BSD License.
 #  _________________________________________________________________________
-
-from pyomo.core.base import Constraint, Param, value, Suffix
+from pyomo.core.base import Constraint, Param, value, Suffix, Block
 
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
@@ -34,7 +33,7 @@ logger = logging.getLogger('pyomo.core')
 numpy_available = True
 try:
     import numpy as np
-except:
+except ImportError:
     numpy_available = True
 
 # Check integrator availability
@@ -228,11 +227,11 @@ def substitute_intrinsic_function(expr, substituter, *args):
             if _subType is EXPR._IntrinsicFunctionExpression:
                 if type(_ptr[0]) is tuple:
                     _list = list(_ptr[0])
-                    _list[_ptr[1]-1] = substituter(_obj, *args)
+                    _list[_ptr[1] - 1] = substituter(_obj, *args)
                     _ptr[0] = tuple(_list)
                     _ptr[3]._args = _list
                 else:
-                    _ptr[0][_ptr[1]-1] = substituter(_obj, *args)
+                    _ptr[0][_ptr[1] - 1] = substituter(_obj, *args)
             elif _subType in native_numeric_types or \
                     type(_obj) is casadi.SX or not _obj.is_expression():
                 continue
@@ -273,14 +272,17 @@ class Simulator:
 
     Parameters
     ----------
+    m : Pyomo Model
+        The Pyomo model to be simulated should be passed as the first argument
+
     package : `string`
         The Python simulator package to use. Currently 'scipy' and 'casadi' are
         the only supported packages
     """
 
-    def __init__(self, m, **kwds):
+    def __init__(self, m, package='scipy'):
         
-        self._intpackage = kwds.pop('package', 'scipy')
+        self._intpackage = package
         if self._intpackage not in ['scipy', 'casadi']:
             raise DAE_Error(
                 "Unrecognized simulator package %s. Please select from "
@@ -299,9 +301,15 @@ class Simulator:
                 # Initializing the simulator for use with casadi requires
                 # access to casadi objects. Therefore, we must throw an error
                 # here instead of a warning. 
-                raise ImportError("The casadi module is not available. "
+                raise ValueError("The casadi module is not available. "
                                   "Cannot simulate model.")
             substituter = substitute_getitem_with_casadi_sym
+
+        # Check for active Blocks and throw error if any are found
+        if len(list(m.component_data_objects(Block, active=True,
+                                             descend_into=False))):
+            raise DAE_Error("The Simulator cannot handle hierarchical models "
+                            "at the moment.")
 
         temp = m.component_map(ContinuousSet)
         if len(temp) != 1:
@@ -327,8 +335,7 @@ class Simulator:
 
         # Loop over constraints to find differential equations with separable
         # RHS. Must find a RHS for every derivative var otherwise ERROR. Build
-        # dictionary of DerivativeVar:RHS equation. 
-
+        # dictionary of DerivativeVar:RHS equation.
         for con in m.component_objects(Constraint, active=True):
             
             # Skip the discretization equations if model is discretized
@@ -338,7 +345,6 @@ class Simulator:
             # Check dimension of the Constraint. Check if the
             # Constraint is indexed by the continuous set and
             # determine its order in the indexing sets
-            allkeys = []
             if con.dim() == 0:
                 continue
             elif con._implicit_subsets is None:
@@ -567,7 +573,8 @@ class Simulator:
         else:
             return self._diffvars
         
-    def simulate(self, **kwds):
+    def simulate(self, numpoints=None, tstep=None, integrator=None,
+                 varying_inputs=None, initcon=None, integrator_options=None):
         """
         Simulate the model. Integrator-specific options may be specified as
         keyword arguments and will be passed on to the integrator.
@@ -578,7 +585,7 @@ class Simulator:
             The number of points for the profiles returned by the simulator.
             Default is 100
 
-        step : int or float
+        tstep : int or float
             The time step to use in the profiles returned by the simulator.
             This is not the time step used internally by the integrators.
             This is an optional parameter that may be specified in place of
@@ -599,6 +606,11 @@ class Simulator:
             will use the current value of the differential variables at the
             lower bound of the ContinuousSet for the initial condition.
 
+        integrator_options : dict
+            Dictionary containing options that should be passed to the
+            integrator. See the documentation for a specific integrator for a
+            list of valid options.
+
         Returns
         -------
         numpy array, numpy array
@@ -608,21 +620,26 @@ class Simulator:
         """
 
         if not numpy_available:
-            raise ImportError("The numpy module is not available. "
+            raise ValueError("The numpy module is not available. "
                               "Cannot simulate the model.")
+
+        if integrator_options is None:
+            integrator_options = {}
 
         if self._intpackage == 'scipy':
             # Specify the scipy integrator to use for simulation
             valid_integrators = ['vode', 'zvode', 'lsoda', 'dopri5', 'dop853']
-            integrator = kwds.pop('integrator', 'lsoda')
-            if integrator is 'odeint':
+            if integrator is None:
+                integrator = 'lsoda'
+            elif integrator is 'odeint':
                 integrator = 'lsoda'
         else:
             # Specify the casadi integrator to use for simulation.
             # Only a subset of these integrators may be used for 
             # DAE simulation. We defer this check to CasADi.
             valid_integrators = ['cvodes', 'idas', 'collocation', 'rk']
-            integrator = kwds.pop('integrator', 'idas')
+            if integrator is None:
+                integrator = 'idas'
 
         if integrator not in valid_integrators:
             raise DAE_Error("Unrecognized %s integrator \'%s\'. Please select"
@@ -632,14 +649,11 @@ class Simulator:
 
         # Set the time step or the number of points for the lists
         # returned by the integrator
-        tstep = kwds.pop('step', None)
         if tstep is not None and \
            tstep > (self._contset.last() - self._contset.first()):
             raise ValueError(
                 "The step size %6.2f is larger than the span of the "
                 "ContinuousSet %s" % (tstep, self._contset.name()))
-            
-        numpoints = kwds.pop('numpoints', None)
         
         if tstep is not None and numpoints is not None:
             raise ValueError(
@@ -649,7 +663,6 @@ class Simulator:
             # Use 100 points by default
             numpoints = 100
 
-        tsim = []
         if tstep is None:
             tsim = np.linspace(
                 self._contset.first(), self._contset.last(), num=numpoints)
@@ -664,7 +677,6 @@ class Simulator:
             tsim = np.arange(
                 self._contset.first(), self._contset.last(), tstep)
 
-        varying_inputs = kwds.pop('varying_inputs', None)
         switchpts = []
         self._siminputvars = {}
         self._simalgvars = []
@@ -712,7 +724,6 @@ class Simulator:
 
         # Check if initial conditions were provided, otherwise obtain
         # them from the current variable values
-        initcon = kwds.pop('initcon', None)
         if initcon is not None:
             if len(initcon) > len(self._diffvars):
                 raise ValueError(
@@ -735,139 +746,158 @@ class Simulator:
                        tuple(v._args[idx + 1:])
                 # This line will raise an error if no value was set
                 initcon.append(value(v._base[vidx]))
-        
+
+        # Call the integrator
         if self._intpackage is 'scipy':
             if not scipy_available:
-                raise ImportError("The scipy module is not available. "
+                raise ValueError("The scipy module is not available. "
                                   "Cannot simulate the model.")
-
-            scipyint = scipy.ode(self._rhsfun).set_integrator(integrator,
-                                                              **kwds)
-            scipyint.set_initial_value(initcon, tsim[0])
-
-            profile = np.array(initcon)
-            i = 1
-            while scipyint.successful() and scipyint.t < tsim[-1]:
-                
-                # check if tsim[i-1] is a switching time and update value
-                if tsim[i - 1] in switchpts:
-                    for v in self._siminputvars.keys():
-                        if tsim[i - 1] in varying_inputs[v]:
-                            p = self._templatemap[self._siminputvars[v]]
-                            p.set_value(varying_inputs[v][tsim[i - 1]])
-
-                profilestep = scipyint.integrate(tsim[i])
-                profile = np.vstack([profile, profilestep])
-                i += 1
-                   
-            if not scipyint.successful():
-                raise DAE_Error("The Scipy integrator %s did not terminate "
-                                "successfully." % integrator)
+            tsim, profile = self._simulate_with_scipy(initcon, tsim, switchpts,
+                                                      varying_inputs,
+                                                      integrator,
+                                                      integrator_options)
         else:
 
             if len(switchpts) != 0:
-                # New way with mapaccum
-                xalltemp = [self._templatemap[i] for i in self._diffvars]
-                xall = casadi.vertcat(*xalltemp)
-                
-                time = casadi.SX.sym('time')
-              
-                odealltemp = [time * value(self._rhsdict[i])
-                              for i in self._derivlist]
-                odeall = casadi.vertcat(*odealltemp)
-
-                # Time-varying inputs
-                ptemp = [self._templatemap[i]
-                         for i in self._siminputvars.values()]
-                pall = casadi.vertcat(time, *ptemp)
-
-                dae = {'x': xall, 'p': pall, 'ode': odeall}
-
-                if len(self._algvars) != 0:
-                    zalltemp = [self._templatemap[i] for i in self._simalgvars]
-                    zall = casadi.vertcat(*zalltemp)
-                    # Need to do anything special with time scaling??
-                    algalltemp = [value(i) for i in self._alglist]
-                    algall = casadi.vertcat(*algalltemp)
-                    dae['z'] = zall
-                    dae['alg'] = algall
-
-                opts = {'tf': 1.0}
-                F = casadi.integrator('F', integrator, dae, opts)
-                N = len(tsim)
-
-                # This approach removes the time scaling from tsim so must
-                # create an array with the time step between consecutive
-                # time points
-                tsimtemp = np.hstack([0, tsim[1:] - tsim[0:-1]])
-                tsimtemp.shape = (1, len(tsimtemp))
-                
-                # Need a similar np array for each time-varying input
-                def _build_step_input(profile):
-                    tswitch = list(profile.keys())
-                    tswitch.sort()
-                    tidx = [tsim.searchsorted(i) for i in tswitch] + \
-                           [len(tsim) - 1]
-                    ptemp = [profile[0]] + \
-                            [casadi.repmat(profile[tswitch[i]], 1,
-                                           tidx[i + 1] - tidx[i])
-                             for i in range(len(tswitch))]
-                    return casadi.horzcat(*ptemp)
-
-                palltemp = [casadi.DM(tsimtemp)]
-
-                for p in self._siminputvars.keys():
-                    profile = varying_inputs[p]
-                    tswitch = list(profile.keys())
-                    tswitch.sort()
-                    tidx = [tsim.searchsorted(i) for i in tswitch] + \
-                           [len(tsim) - 1]
-                    ptemp = [profile[0]] + \
-                            [casadi.repmat(profile[tswitch[i]], 1,
-                                           tidx[i + 1] - tidx[i])
-                             for i in range(len(tswitch))]
-                    temp = casadi.horzcat(*ptemp)
-                    palltemp.append(temp)
-                # self._palltemp = palltemp
-                I = F.mapaccum('simulator', N)
-                sol = I(x0=initcon, p=casadi.vertcat(*palltemp))
-                profile = sol['xf'].full().T
-
-                if len(self._algvars) != 0:
-                    algprofile = sol['zf'].full().T
-                    profile = np.concatenate((profile, algprofile), axis=1)
-
+                tsim, profile = \
+                    self._simulate_with_casadi_with_inputs(initcon, tsim,
+                                                           varying_inputs,
+                                                           integrator,
+                                                           integrator_options)
             else:
-                # Old way (10 times faster, but can't incorporate time
-                # varying parameters/controls)
-                xalltemp = [self._templatemap[i] for i in self._diffvars]
-                xall = casadi.vertcat(*xalltemp)
-
-                odealltemp = [value(self._rhsdict[i]) for i in self._derivlist]
-                odeall = casadi.vertcat(*odealltemp)
-                dae = {'x': xall, 'ode': odeall}
-
-                if len(self._algvars) != 0:
-                    zalltemp = [self._templatemap[i] for i in self._simalgvars]
-                    zall = casadi.vertcat(*zalltemp)
-
-                    algalltemp = [value(i) for i in self._alglist]
-                    algall = casadi.vertcat(*algalltemp)
-                    dae['z'] = zall
-                    dae['alg'] = algall
-
-                opts = {'grid': tsim, 'output_t0': True}
-                F = casadi.integrator('F', integrator, dae, opts)
-                sol = F(x0=initcon)
-                profile = sol['xf'].full().T
-
-                if len(self._algvars) != 0:
-                    algprofile = sol['zf'].full().T
-                    profile = np.concatenate((profile, algprofile), axis=1)
+                tsim, profile = \
+                    self._simulate_with_casadi_no_inputs(initcon, tsim,
+                                                         integrator,
+                                                         integrator_options)
 
         self._tsim = tsim
         self._simsolution = profile
             
+        return [tsim, profile]
+
+    def _simulate_with_scipy(self, initcon, tsim, switchpts,
+                             varying_inputs, integrator,
+                             integrator_options):
+
+        scipyint = \
+            scipy.ode(self._rhsfun).set_integrator(integrator,
+                                                   **integrator_options)
+        scipyint.set_initial_value(initcon, tsim[0])
+
+        profile = np.array(initcon)
+        i = 1
+        while scipyint.successful() and scipyint.t < tsim[-1]:
+
+            # check if tsim[i-1] is a switching time and update value
+            if tsim[i - 1] in switchpts:
+                for v in self._siminputvars.keys():
+                    if tsim[i - 1] in varying_inputs[v]:
+                        p = self._templatemap[self._siminputvars[v]]
+                        p.set_value(varying_inputs[v][tsim[i - 1]])
+
+            profilestep = scipyint.integrate(tsim[i])
+            profile = np.vstack([profile, profilestep])
+            i += 1
+
+        if not scipyint.successful():
+            raise DAE_Error("The Scipy integrator %s did not terminate "
+                            "successfully." % integrator)
+        return [tsim, profile]
+
+    def _simulate_with_casadi_no_inputs(self, initcon, tsim, integrator,
+                                        integrator_options):
+        # Old way (10 times faster, but can't incorporate time
+        # varying parameters/controls)
+        xalltemp = [self._templatemap[i] for i in self._diffvars]
+        xall = casadi.vertcat(*xalltemp)
+
+        odealltemp = [value(self._rhsdict[i]) for i in self._derivlist]
+        odeall = casadi.vertcat(*odealltemp)
+        dae = {'x': xall, 'ode': odeall}
+
+        if len(self._algvars) != 0:
+            zalltemp = [self._templatemap[i] for i in self._simalgvars]
+            zall = casadi.vertcat(*zalltemp)
+
+            algalltemp = [value(i) for i in self._alglist]
+            algall = casadi.vertcat(*algalltemp)
+            dae['z'] = zall
+            dae['alg'] = algall
+
+        integrator_options['grid'] = tsim
+        integrator_options['output_t0'] = True
+        F = casadi.integrator('F', integrator, dae, integrator_options)
+        sol = F(x0=initcon)
+        profile = sol['xf'].full().T
+
+        if len(self._algvars) != 0:
+            algprofile = sol['zf'].full().T
+            profile = np.concatenate((profile, algprofile), axis=1)
+
+        return [tsim, profile]
+
+    def _simulate_with_casadi_with_inputs(self, initcon, tsim, varying_inputs,
+                                          integrator, integrator_options):
+
+        xalltemp = [self._templatemap[i] for i in self._diffvars]
+        xall = casadi.vertcat(*xalltemp)
+
+        time = casadi.SX.sym('time')
+
+        odealltemp = [time * value(self._rhsdict[i])
+                      for i in self._derivlist]
+        odeall = casadi.vertcat(*odealltemp)
+
+        # Time-varying inputs
+        ptemp = [self._templatemap[i]
+                 for i in self._siminputvars.values()]
+        pall = casadi.vertcat(time, *ptemp)
+
+        dae = {'x': xall, 'p': pall, 'ode': odeall}
+
+        if len(self._algvars) != 0:
+            zalltemp = [self._templatemap[i] for i in self._simalgvars]
+            zall = casadi.vertcat(*zalltemp)
+            # Need to do anything special with time scaling??
+            algalltemp = [value(i) for i in self._alglist]
+            algall = casadi.vertcat(*algalltemp)
+            dae['z'] = zall
+            dae['alg'] = algall
+
+        integrator_options['tf'] = 1.0
+        F = casadi.integrator('F', integrator, dae, integrator_options)
+        N = len(tsim)
+
+        # This approach removes the time scaling from tsim so must
+        # create an array with the time step between consecutive
+        # time points
+        tsimtemp = np.hstack([0, tsim[1:] - tsim[0:-1]])
+        tsimtemp.shape = (1, len(tsimtemp))
+
+        palltemp = [casadi.DM(tsimtemp)]
+
+        # Need a similar np array for each time-varying input
+        for p in self._siminputvars.keys():
+            profile = varying_inputs[p]
+            tswitch = list(profile.keys())
+            tswitch.sort()
+            tidx = [tsim.searchsorted(i) for i in tswitch] + \
+                   [len(tsim) - 1]
+            ptemp = [profile[0]] + \
+                    [casadi.repmat(profile[tswitch[i]], 1,
+                                   tidx[i + 1] - tidx[i])
+                     for i in range(len(tswitch))]
+            temp = casadi.horzcat(*ptemp)
+            palltemp.append(temp)
+
+        I = F.mapaccum('simulator', N)
+        sol = I(x0=initcon, p=casadi.vertcat(*palltemp))
+        profile = sol['xf'].full().T
+
+        if len(self._algvars) != 0:
+            algprofile = sol['zf'].full().T
+            profile = np.concatenate((profile, algprofile), axis=1)
+
         return [tsim, profile]
 
     def initialize_model(self):
@@ -895,5 +925,3 @@ class Simulator:
                 vidx = tuple(v._args[0:idx2]) + (t,) + \
                        tuple(v._args[idx2 + 1:])
                 v._base[vidx] = valinit[i]
-
-register_component(Simulator, "Used to simulate a systems of ODEs and DAEs")
