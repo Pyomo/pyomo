@@ -27,7 +27,7 @@ class InitMidpoint(IsomorphicTransformation):
                 continue
             if var.lb is None and var.ub is None:
                 # If LB and UB do not exist, set variable value to 0
-                var = 0
+                var.set_value(0)
             elif var.lb is None:
                 # if one bound does not exist, set variable value to the other
                 var.set_value(value(var.ub))
@@ -39,7 +39,7 @@ class InitMidpoint(IsomorphicTransformation):
 
 
 class InitZero(IsomorphicTransformation):
-    """Initializes variables to the midpoint of their bounds."""
+    """Initializes variables to zeros."""
 
     alias('core.init_vars_zero', doc=__doc__)
 
