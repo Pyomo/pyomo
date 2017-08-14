@@ -2,7 +2,7 @@
 """Tests deactivation of trivial constraints."""
 import pyutilib.th as unittest
 from pyomo.environ import (Constraint, ConcreteModel, TransformationFactory,
-                           value, Var)
+                           Var)
 
 __author__ = "Qi Chen <qichen at andrew.cmu.edu>"
 
