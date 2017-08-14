@@ -339,7 +339,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             raise ValueError('Model has multiple active objectives.')
 
         # Move the objective to the constraints
-        GDPDT.objective_value = Var(domain=Reals)
+        GDPDT.objective_value = Var(domain=Reals, initialize=0)
         if main_obj.sense == minimize:
             GDPDT.objective_expr = Constraint(
                 expr=GDPDT.objective_value >= main_obj.expr)
@@ -981,10 +981,14 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Propagate variable bounds
         TransformationFactory('core.propagate_eq_var_bounds').apply_to(m)
-
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
         # Propagate fixed variables
         TransformationFactory('core.propagate_fixed_vars').apply_to(m)
-
+        # Remove zero terms in linear expressions
+        TransformationFactory('core.remove_zero_terms').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
         # Transform bound constraints
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
 
