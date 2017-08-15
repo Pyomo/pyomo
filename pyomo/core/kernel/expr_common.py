@@ -25,20 +25,17 @@ except ImportError:
     getrefcount = None
     _getrefcount_available = False
 
+
 class Mode(object):
     coopr3_trees = (1,)
     pyomo4_trees = (2,)
     pyomo5_trees = (3,)
-if _getrefcount_available:
-    mode = _default_mode = Mode.coopr3_trees
-else:
-    mode = _default_mode = Mode.pyomo4_trees
+mode = _default_mode = Mode.pyomo5_trees
+#if _getrefcount_available:
+#    mode = _default_mode = Mode.coopr3_trees
+#else:
+#    mode = _default_mode = Mode.pyomo4_trees
 
-#def clone_expression(exp, substitute=None):
-#    memo = {'__block_scope__': { id(None): False }}
-#    if substitute:
-#        memo.update(substitute)
-#    return deepcopy(exp, memo)
 
 def _clear_expression_pool():
     from pyomo.core.base.expr_coopr3 import _clear_expression_pool as \
@@ -54,6 +51,7 @@ def _clear_expression_pool():
     else:
         assert mode == Mode.coopr3_trees
         _clear_expression_pool_coopr3()
+
 
 def chainedInequalityErrorMessage(gre, msg=None):
     if msg is None:
