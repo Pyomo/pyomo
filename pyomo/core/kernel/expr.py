@@ -11,7 +11,7 @@
 from __future__ import division
 import math
 
-__all__ = ('log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
+__all__ = ('fabs', 'log', 'log10', 'sin', 'cos', 'tan', 'cosh', 'sinh', 'tanh',
            'asin', 'acos', 'atan', 'exp', 'sqrt', 'asinh', 'acosh',
            'atanh', 'ceil', 'floor', 'sum')
 
@@ -57,19 +57,20 @@ _pyomo4_module_members = [
 ]
 _pyomo5_module_members = [
     '_LinearExpression',
-    '_DivisionExpression',
+    '_ReciprocalExpression',
     '_NegationExpression',
     'EntangledExpressionError',
     '_MultiSumExpression',
     '_StaticMultiSumExpression',
     '_CompressedSumExpression',
+    '_UnaryFunctionExpression',
     'compress_expression',
     'sum',
     '_NPV_NegationExpression',
     '_NPV_ExternalFunctionExpression',
     '_NPV_PowExpression',
     '_NPV_ProductExpression',
-    '_NPV_DivisionExpression',
+    '_NPV_ReciprocalExpression',
     '_NPV_SumExpression',
     '_NPV_UnaryFunctionExpression',
     '_NPV_AbsExpression',
