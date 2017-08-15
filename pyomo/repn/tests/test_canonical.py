@@ -18,9 +18,10 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyutilib.th as unittest
 import pyutilib.services
 
-from pyomo.core.base.expr import Expr_if
+from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.repn import *
 from pyomo.environ import *
+#from pyomo.core.base.expr import Expr_if
 
 from six import iteritems
 from six.moves import range
@@ -536,7 +537,7 @@ class Test(unittest.TestCase):
         model.x = Var()
         model.x.fix(2.0)
 
-        rep = generate_canonical_repn(Expr_if(IF=model.x, THEN=1, ELSE=-1))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=model.x, THEN=1, ELSE=-1))
         self.assertTrue(isinstance(rep, LinearCanonicalRepn) == True)
         self.assertTrue(rep.linear == None)
         self.assertTrue(rep.constant != None)
@@ -544,7 +545,7 @@ class Test(unittest.TestCase):
         baseline = {  None        : 1}
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
-        rep = generate_canonical_repn(Expr_if(IF=model.x**2, THEN=1, ELSE=-1))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=model.x**2, THEN=1, ELSE=-1))
         self.assertTrue(isinstance(rep, LinearCanonicalRepn) == True)
         self.assertTrue(rep.linear == None)
         self.assertTrue(rep.constant != None)
@@ -552,7 +553,7 @@ class Test(unittest.TestCase):
         baseline = {  None        : 1}
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
-        rep = generate_canonical_repn(Expr_if(IF=(1-cos(model.x-1)) > 0.5, THEN=1, ELSE=-1))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=(1-cos(model.x-1)) > 0.5, THEN=1, ELSE=-1))
         self.assertTrue(isinstance(rep, LinearCanonicalRepn) == True)
         self.assertTrue(rep.linear == None)
         self.assertTrue(rep.constant != None)
@@ -560,7 +561,7 @@ class Test(unittest.TestCase):
         baseline = {  None        : -1}
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
-        rep = generate_canonical_repn(Expr_if(IF=1, THEN=model.x, ELSE=-1))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=1, THEN=model.x, ELSE=-1))
         self.assertTrue(isinstance(rep, LinearCanonicalRepn) == True)
         self.assertTrue(rep.linear == None)
         self.assertTrue(rep.constant != None)
@@ -568,7 +569,7 @@ class Test(unittest.TestCase):
         baseline = {  None        : value(model.x)}
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
-        rep = generate_canonical_repn(Expr_if(IF=0, THEN=1, ELSE=model.x))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=0, THEN=1, ELSE=model.x))
         self.assertTrue(isinstance(rep, LinearCanonicalRepn) == True)
         self.assertTrue(rep.linear == None)
         self.assertTrue(rep.constant != None)
@@ -582,7 +583,7 @@ class Test(unittest.TestCase):
         model.x = Var()
         model.y = Var()
 
-        rep = generate_canonical_repn(Expr_if(IF=1, THEN=model.x+3*model.y+10, ELSE=-1))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=1, THEN=model.x+3*model.y+10, ELSE=-1))
         self.assertTrue(isinstance(rep, LinearCanonicalRepn) == True)
         self.assertTrue(rep.linear != None)
         self.assertTrue(rep.constant != None)
@@ -593,7 +594,7 @@ class Test(unittest.TestCase):
         self.assertEqual(baseline,
                          linear_repn_to_dict(rep))
 
-        rep = generate_canonical_repn(Expr_if(IF=0.0, THEN=1.0, ELSE=-model.x))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=0.0, THEN=1.0, ELSE=-model.x))
         self.assertTrue(isinstance(rep, LinearCanonicalRepn) == True)
         self.assertTrue(rep.linear != None)
         self.assertTrue(rep.constant == None)
@@ -607,10 +608,10 @@ class Test(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var()
 
-        rep = generate_canonical_repn(Expr_if(IF=1.0, THEN=model.x**2, ELSE=-1.0))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=1.0, THEN=model.x**2, ELSE=-1.0))
         self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
         self.assertEqual(canonical_degree(rep), 2)
-        rep = generate_canonical_repn(Expr_if(IF=0.0, THEN=1.0, ELSE=-model.x**2))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=0.0, THEN=1.0, ELSE=-model.x**2))
         self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
         self.assertEqual(canonical_degree(rep), 2)
 
@@ -618,17 +619,53 @@ class Test(unittest.TestCase):
         model = ConcreteModel()
         model.x = Var()
 
-        rep = generate_canonical_repn(Expr_if(IF=model.x, THEN=1.0, ELSE=-1.0))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=model.x, THEN=1.0, ELSE=-1.0))
         self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
         self.assertEqual(canonical_degree(rep), None)
-        rep = generate_canonical_repn(Expr_if(IF=1.0,
-                                              THEN=Expr_if(IF=model.x**2, THEN=1.0, ELSE=-1.0),
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=1.0,
+                                              THEN=EXPR.Expr_if(IF=model.x**2, THEN=1.0, ELSE=-1.0),
                                               ELSE=-1.0))
         self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
         self.assertEqual(canonical_degree(rep), None)
-        rep = generate_canonical_repn(Expr_if(IF=model.x**2, THEN=1.0, ELSE=-1.0))
+        rep = generate_canonical_repn(EXPR.Expr_if(IF=model.x**2, THEN=1.0, ELSE=-1.0))
         self.assertTrue(isinstance(rep, GeneralCanonicalRepn) == True)
         self.assertEqual(canonical_degree(rep), None)
+
+
+class Test_pyomo5(Test):
+
+    def setUp(self):
+        # This class tests the Pyomo 5.x expression trees
+        Test.setUp(self)
+        EXPR.set_expression_tree_format(expr_common.Mode.pyomo5_trees)
+
+    def tearDown(self):
+        EXPR.set_expression_tree_format(expr_common._default_mode)
+        Test.tearDown(self)
+
+    @unittest.skipIf(True, "Pyomo5 does not recognize rational expressions.")
+    def test_expr_rational(self):
+        pass
+
+    @unittest.skipIf(True, "Pyomo5 does not recognize rational expressions.")
+    def test_expr_rational_summation(self):
+        pass
+
+    @unittest.skipIf(True, "Pyomo5 does not recognize rational expressions.")
+    def test_expr_rational_fixed(self):
+        pass
+
+    @unittest.skipIf(True, "Pyomo5 does not recognize polynomial expressions.")
+    def test_polynomial_expression(self):
+        pass
+
+    @unittest.skipIf(True, "Pyomo5 does not recognize polynomial expressions.")
+    def test_polynomial_expression_with_fixed(self):
+        pass
+
+    @unittest.skipIf(True, "Pyomo5 does not recognize polynomial expressions.")
+    def test_Expr_if_quadratic(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()

@@ -1023,6 +1023,40 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
             { None: exp, -1 : collect_variables(exp, idMap) } )
 
 
+def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
+    from pyomo.repn.standard_repn import generate_standard_repn
+
+    srepn = generate_standard_repn(exp, idMap=idMap, compute_values=compute_values)
+    if srepn._nonlinear_expr is None:
+        #
+        # Construct linear canonical repn
+        #
+        rep = CompiledLinearCanonicalRepn()
+        if srepn._constant != 0.0:
+            rep.constant = srepn._constant
+        if len(srepn._linear_vars) > 0:
+            rep.linear = []
+            rep.variables = []
+            for i in srepn._linear_vars:
+                rep.variables.append(srepn._linear_vars[i])
+                rep.linear.append(srepn._linear_coefs[i])
+    else:
+        #
+        # Construct nonlinear canonical repn
+        #
+        ans = {}
+        ans[None] = srepn._nonlinear_expr
+        if srepn._constant != 0.0:
+            ans[0] = srepn._constant
+        if len(srepn._linear_vars) > 0:
+            tmp = {}
+            for i in srepn._linear_vars:
+                tmp[id(srepn._linear_vars[i])] = srepn._linear_coefs[i]
+            ans[1] = tmp
+        rep = GeneralCanonicalRepn(ans)
+    return rep
+
+
 def canonical_is_constant(repn):
     """Return True if the canonical representation is a constant expression"""
     if isinstance(repn, dict):
@@ -1072,7 +1106,7 @@ def generate_canonical_repn(exp, idMap=None, compute_values=True):
         globals()['CompiledLinearCanonicalRepn'] = pyomo4_CompiledLinearCanonicalRepn
         return pyomo4_generate_canonical_repn(exp, idMap, compute_values)
     elif common.mode is common.Mode.pyomo5_trees:
-        return None
+        return pyomo5_generate_canonical_repn(exp, idMap, compute_values)
     else:
         raise RuntimeError("Unrecognized expression tree mode")
 
@@ -1081,6 +1115,6 @@ if common.mode is common.Mode.coopr3_trees:
 elif common.mode is common.Mode.pyomo4_trees:
     CompiledLinearCanonicalRepn = pyomo4_CompiledLinearCanonicalRepn
 elif common.mode is common.Mode.pyomo5_trees:
-    CompiledLinearCanonicalRepn = None
+    CompiledLinearCanonicalRepn = pyomo4_CompiledLinearCanonicalRepn
 else:
     raise RuntimeError("Unrecognized expression tree mode")
