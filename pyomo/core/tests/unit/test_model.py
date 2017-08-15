@@ -204,11 +204,11 @@ class Test(unittest.TestCase):
         model = ConcreteModel()
         model.J = RangeSet(1,4)
         model.w=Param(model.J, default=4)
-        model.x=Var(model.J)
+        model.x=Var(model.J, initialize=3)
         def obj_rule(instance):
             return summation(instance.w, instance.x)
         model.obj = Objective(rule=obj_rule)
-        self.assertEqual(len(model.obj[None].expr._args), 4)
+        self.assertEqual( value(model.obj), 48 )
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve1(self):
