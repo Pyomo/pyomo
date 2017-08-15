@@ -602,7 +602,10 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             repn._linear_vars[i] = idMap[i]
             repn._linear_coefs[i] = ans[1][i]
     repn._nonlinear_expr = ans.get(None,None)
-    repn._nonlinear_vars = {}                   # TODO
+    repn._nonlinear_vars = {}
+    if not repn._nonlinear_expr is None:
+        for v_ in EXPR.identify_variables(repn._nonlinear_expr, include_fixed=True, include_potentially_variable=True):
+            repn._nonlinear_vars[id(v_)] = v_
 
     if compress:
         repn.compress()
