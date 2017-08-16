@@ -40,8 +40,8 @@ class frozendict(dict):
 def linear_repn_to_dict(repn):
     result = {}
     for i in repn._linear_vars:
-        result[id(repn._linear_vars[i])] = repn._linear_coefs[i]
-    if not (type(repn._constant) in native_numeric_types and repn._constant == 0):
+        result[id(repn._linear_vars[i])] = repn._linear_terms_coef[i]
+    if not (repn._constant is None or (type(repn._constant) in native_numeric_types and repn._constant == 0)):
         result[None] = repn._constant
     return result
 
@@ -64,7 +64,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None : 1 }
@@ -79,7 +79,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1 }
@@ -96,7 +96,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e, compute_values=False)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None : m.p }
@@ -112,7 +112,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : 1 }
@@ -127,7 +127,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1 }
@@ -141,7 +141,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1 }
@@ -151,7 +151,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e_)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1 }
@@ -180,7 +180,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1, id(m.b) : 1 }
@@ -201,7 +201,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1, id(m.b) : 1 }
@@ -222,7 +222,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 3)
-        self.assertTrue(len(rep._linear_coefs) == 3)
+        self.assertTrue(len(rep._linear_terms_coef) == 3)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : 1, id(m.c) : 1 }
@@ -243,7 +243,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 3)
-        self.assertTrue(len(rep._linear_coefs) == 3)
+        self.assertTrue(len(rep._linear_terms_coef) == 3)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : 1, id(m.c) : 1 }
@@ -265,7 +265,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 4)
-        self.assertTrue(len(rep._linear_coefs) == 4)
+        self.assertTrue(len(rep._linear_terms_coef) == 4)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : 1, id(m.c) : 1, id(m.d) : 1 }
@@ -295,7 +295,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 1 }
@@ -315,7 +315,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 1 }
@@ -336,7 +336,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 3)
-        self.assertTrue(len(rep._linear_coefs) == 3)
+        self.assertTrue(len(rep._linear_terms_coef) == 3)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 1, id(m.c) : 1 }
@@ -357,7 +357,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 3)
-        self.assertTrue(len(rep._linear_coefs) == 3)
+        self.assertTrue(len(rep._linear_terms_coef) == 3)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 1, id(m.c) : 1 }
@@ -378,7 +378,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 5 }
@@ -399,7 +399,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : -1 }
@@ -421,7 +421,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : -1 }
@@ -442,7 +442,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:-5, id(m.a) : 1 }
@@ -460,7 +460,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : -1 }
@@ -491,7 +491,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:-5, id(m.a):1, id(m.b):-1 }
@@ -512,7 +512,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a):-1, id(m.b):1 }
@@ -533,7 +533,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 3)
-        self.assertTrue(len(rep._linear_coefs) == 3)
+        self.assertTrue(len(rep._linear_terms_coef) == 3)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1, id(m.b):-1, id(m.c):-1 }
@@ -554,7 +554,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 3)
-        self.assertTrue(len(rep._linear_coefs) == 3)
+        self.assertTrue(len(rep._linear_terms_coef) == 3)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):-1, id(m.b):1, id(m.c):1 }
@@ -576,7 +576,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 4)
-        self.assertTrue(len(rep._linear_coefs) == 4)
+        self.assertTrue(len(rep._linear_terms_coef) == 4)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1, id(m.b):-1, id(m.c):-1, id(m.d):1 }
@@ -598,7 +598,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 4)
-        self.assertTrue(len(rep._linear_coefs) == 4)
+        self.assertTrue(len(rep._linear_terms_coef) == 4)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):-1, id(m.b):1, id(m.c):1, id(m.d):-1 }
@@ -628,7 +628,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5, id(m.b):-1 }
@@ -649,7 +649,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):-5, id(m.b):1 }
@@ -671,7 +671,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 3)
-        self.assertTrue(len(rep._linear_coefs) == 3)
+        self.assertTrue(len(rep._linear_terms_coef) == 3)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5, id(m.b):-1, id(m.c):1 }
@@ -693,7 +693,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 3)
-        self.assertTrue(len(rep._linear_coefs) == 3)
+        self.assertTrue(len(rep._linear_terms_coef) == 3)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):-5, id(m.b):1, id(m.c):-1 }
@@ -715,7 +715,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):2 }
@@ -736,7 +736,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5 }
@@ -754,7 +754,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5 }
@@ -782,7 +782,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):10 }
@@ -803,7 +803,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):10 }
@@ -825,7 +825,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):42 }
@@ -862,7 +862,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:50, id(m.d):10 }
@@ -890,7 +890,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.d):125 }
@@ -918,7 +918,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):0.5, id(m.b):0.5 }
@@ -938,7 +938,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):0.5, id(m.b):0.5 }
@@ -958,7 +958,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):0.25, id(m.b):0.25 }
@@ -986,7 +986,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5, id(m.b):5 }
@@ -1007,7 +1007,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5, id(m.b):5 }
@@ -1030,7 +1030,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):10, id(m.b):10 }
@@ -1046,7 +1046,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
-        self.assertTrue(len(rep._linear_coefs) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):15, id(m.b):10 }
@@ -1071,7 +1071,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:1 }
@@ -1089,7 +1089,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1 }
@@ -1107,7 +1107,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
@@ -1125,7 +1125,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
@@ -1143,7 +1143,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1 }
@@ -1166,7 +1166,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
@@ -1178,13 +1178,33 @@ class TestSimple(unittest.TestCase):
 
         #      fabs
         #      / 
+        #     a   
+        e = fabs(m.a)
+        m.a.set_value(-1)
+        m.a.fixed = True
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { None:1 }
+        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        ##
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, linear_repn_to_dict(rep))
+
+        #      fabs
+        #      / 
         #     q   
         e = fabs(m.q)
 
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:1 }
@@ -1207,7 +1227,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
@@ -1219,13 +1239,33 @@ class TestSimple(unittest.TestCase):
 
         #      cos
         #      / 
+        #     a   
+        e = cos(m.a)
+        m.a.set_value(0)
+        m.a.fixed = True
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { None:1.0 }
+        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        ##
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, linear_repn_to_dict(rep))
+
+        #      cos
+        #      / 
         #     q   
         e = cos(m.q)
 
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:1.0 }
@@ -1242,6 +1282,7 @@ class TestSimple(unittest.TestCase):
         m = AbstractModel()
         m.a = Var()
         m.b = Var()
+        m.c = Var()
         m.q = Param(default=1)
 
         e = EXPR.Expr_if(IF=True, THEN=m.a, ELSE=m.b)
@@ -1249,7 +1290,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1 }
@@ -1267,7 +1308,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
-        self.assertTrue(len(rep._linear_coefs) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.b):1 }
@@ -1285,7 +1326,7 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
-        self.assertTrue(len(rep._linear_coefs) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 2)
         baseline = set([ id(m.a), id(m.b) ])
@@ -1294,6 +1335,50 @@ class TestSimple(unittest.TestCase):
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
+
+        m = ConcreteModel()
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        m.q = Param(default=1)
+
+        #       ExprIf
+        #      /  |   \
+        #  bool  a    b
+        e = EXPR.Expr_if(IF=m.q, THEN=m.a, ELSE=m.b)
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { id(m.a):1 }
+        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, linear_repn_to_dict(rep))
+
+        #       ExprIf
+        #      /  |   \
+        #     c   a    b
+        e = EXPR.Expr_if(IF=m.c, THEN=m.a, ELSE=m.b)
+        m.c.fixed = True
+        m.c.set_value(0)
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { id(m.b):1 }
+        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, linear_repn_to_dict(rep))
 
 
 if __name__ == "__main__":
