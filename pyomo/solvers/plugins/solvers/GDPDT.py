@@ -121,6 +121,16 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             print("Unrecognized arguments passed to GDPDT solver:")
             pprint(kwds)
 
+        # Verify that decomposition strategy chosen is one of the supported
+        # strategies
+        valid_strategies = [
+                'LOA', 'hPSC', 'PSC', 'GBD', 'hGBD']
+        if self.decomposition_strategy not in valid_strategies:
+            raise ValueError('Unrecognized decomposition strategy {}. '
+                             'Valid strategies include: {}'.format(
+                                 self.decomposition_strategy,
+                                 valid_strategies))
+
         # If decomposition strategy is a hybrid, set the initial strategy
         if self.decomposition_strategy == 'hPSC':
             self._decomposition_strategy = 'PSC'
