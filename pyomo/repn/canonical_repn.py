@@ -1032,26 +1032,28 @@ def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
         # Construct linear canonical repn
         #
         rep = CompiledLinearCanonicalRepn()
-        if srepn._constant != 0.0:
-            rep.constant = srepn._constant
+        rep.constant = srepn._constant
         if len(srepn._linear_vars) > 0:
             rep.linear = []
             rep.variables = []
             for i in srepn._linear_vars:
                 rep.variables.append(srepn._linear_vars[i])
-                rep.linear.append(srepn._linear_coefs[i])
+                rep.linear.append(srepn._linear_terms_coef[i])
+        else:
+            rep.linear = None
+            rep.variables = None
     else:
         #
         # Construct nonlinear canonical repn
         #
         ans = {}
         ans[None] = srepn._nonlinear_expr
-        if srepn._constant != 0.0:
+        if srepn._constant != None:
             ans[0] = srepn._constant
         if len(srepn._linear_vars) > 0:
             tmp = {}
             for i in srepn._linear_vars:
-                tmp[id(srepn._linear_vars[i])] = srepn._linear_coefs[i]
+                tmp[id(srepn._linear_vars[i])] = srepn._linear_terms_coef[i]
             ans[1] = tmp
         rep = GeneralCanonicalRepn(ans)
     return rep
