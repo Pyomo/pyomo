@@ -1014,7 +1014,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                     if old_value is not None:
                         if v.has_lb() and old_value < v.lb:
                             old_value = v.lb
-                        if v.has_ub() is not None and old_value > v.ub:
+                        if v.has_ub() and old_value > v.ub:
                             old_value = v.ub
                         # Set the value
                         v.set_value(old_value)
