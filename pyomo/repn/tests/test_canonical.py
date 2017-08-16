@@ -40,24 +40,23 @@ def linear_repn_to_dict(repn):
     if repn.variables is not None:
         for i in range(len(repn.variables)):
             result[id(repn.variables[i])] = repn.linear[i]
-    if repn.constant != None:
+    if repn.constant != None and repn.constant != 0:
         result[None] = repn.constant
     return result
 
 class Test(unittest.TestCase):
 
-    #def setUp(self):
+    def setUp(self):
         #
         # Create Model
         #
-        #self.plugin = SimplePreprocessor()
-        #self.plugin.deactivate_action("compute_canonical_repn")
+        EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
 
     def tearDown(self):
         if os.path.exists("unknown.lp"):
             os.unlink("unknown.lp")
         pyutilib.services.TempfileManager.clear_tempfiles()
-        #self.plugin.activate_action("compute_canonical_repn")
+        EXPR.set_expression_tree_format(expr_common._default_mode)
 
     def test_abstract_linear_expression(self):
         m = AbstractModel()
@@ -380,7 +379,7 @@ class Test(unittest.TestCase):
         x[2].fixed = True
 
         rep = generate_canonical_repn(expr)
-        # rep should only have variables, a constsant, and linear terms
+        # rep should only have variables, a constants, and linear terms
         self.assertTrue(isinstance(rep, LinearCanonicalRepn) == True)
         self.assertTrue(rep.variables != None)
         self.assertTrue(rep.linear != None)
