@@ -130,15 +130,14 @@ class GurobiDirect(DirectSolver):
             raise DegreeError('GurobiDirect does not support expressions of degree {0}.'.format(degree))
 
         if isinstance(repn, LinearCanonicalRepn):
-            new_expr = 0
+            if (repn.linear is not None) and (len(repn.linear) > 0):
+                list(map(referenced_vars.add, repn.variables))
+                new_expr = self._gurobipy.LinExpr(repn.linear, [self._pyomo_var_to_solver_var_map[i] for i in repn.variables])
+            else:
+                new_expr = 0
 
             if repn.constant is not None:
                 new_expr += repn.constant
-
-            if (repn.linear is not None) and (len(repn.linear) > 0):
-                list(map(referenced_vars.add, repn.variables))
-                new_expr += sum(coeff*self._pyomo_var_to_solver_var_map[repn.variables[i]]
-                                for i, coeff in enumerate(repn.linear))
 
         else:
             new_expr = 0
