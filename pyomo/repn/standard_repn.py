@@ -57,15 +57,15 @@ class StandardRepn(object):
     """
 
     __slots__ = ('_constant',           # The constant term
-                 '_linear_coefs',       # Linear coefficients
+                 '_linear_terms_coef',  # Linear coefficients
                  '_linear_vars',        # Linear variables
                  '_nonlinear_expr',     # TODO
                  '_nonlinear_vars')     # TODO
 
     def __init__(self):
-        self._constant = 0
+        self._constant = None
         self._linear_vars = {}
-        self._linear_coefs = {}
+        self._linear_terms_coef = {}
         self._nonlinear_expr = None
         self._nonlinear_vars = {}
 
@@ -74,7 +74,7 @@ class StandardRepn(object):
         This method is required because this class uses slots.
         """
         return  (self._constant,
-                 self._linear_coefs,
+                 self._linear_terms_coef,
                  self._linear_vars,
                  self._nonlinear_expr,
                  self._nonlinear_vars)
@@ -84,7 +84,7 @@ class StandardRepn(object):
         This method is required because this class uses slots.
         """
         self._constant, \
-        self._linear_coefs, \
+        self._linear_terms_coef, \
         self._linear_vars, \
         self._nonlinear_expr, \
         self._nonlinear_vars = state
@@ -98,10 +98,10 @@ class StandardRepn(object):
     def _compress(self):
         if  self._linear_vars.__class__ is dict:
             linear_keys = self._linear_vars.keys()
-            self._linear_vars = tuple(self._linear_vars[key]
-                                      for key in linear_keys)
-            self._linear_coefs = tuple(self._linear_coefs[key]
-                                            for key in linear_keys)
+            self._linear_vars = tuple(self._linear_vars[key] for key in linear_keys)
+            self._linear_terms_coef = tuple(self._linear_terms_coef[key] for key in linear_keys)
+        else:
+            self._linear_terms_coef = tuple()
         if self._nonlinear_vars.__class__ is dict:
             self._nonlinear_vars = tuple(itervalues(self._nonlinear_vars))
 
@@ -112,8 +112,14 @@ class StandardRepn(object):
         output = StringIO()
         output.write("\n")
         output.write("constant:       "+str(self._constant)+"\n")
-        output.write("linear vars:    "+str([v_.name for _,v_ in sorted(self._linear_vars.items(), key=lambda x: x[0])])+"\n")
-        output.write("linear coef:    "+str([c_ for _,c_ in sorted(self._linear_coefs.items(), key=lambda x: x[0])])+"\n")
+        if  self._linear_vars.__class__ is dict:
+            output.write("linear vars:    "+str([v_.name for _,v_ in sorted(self._linear_vars.items(), key=lambda x: x[0])])+"\n")
+            output.write("linear var ids: "+str([id(v_) for _,v_ in sorted(self._linear_vars.items(), key=lambda x: x[0])])+"\n")
+            output.write("linear coef:    "+str([c_ for _,c_ in sorted(self._linear_terms_coef.items(), key=lambda x: x[0])])+"\n")
+        else:
+            output.write("linear vars:    "+str([v_.name for v_ in self._linear_vars])+"\n")
+            output.write("linear var ids: "+str([id(v_) for v_ in self._linear_vars])+"\n")
+            output.write("linear coef:    "+str(list(self._linear_terms_coef))+"\n")
         if self._nonlinear_expr is None:
             output.write("nonlinear expr: None\n")
         else:
@@ -123,7 +129,10 @@ class StandardRepn(object):
                 output.write("\n")
             except AttributeError:
                 output.write(str([(i,str(e)) for i,e in self._nonlinear_expr])+"\n")
-        output.write("nonlinear vars: "+str([v_.name for _,v_ in sorted(self._nonlinear_vars.items(), key=lambda x: x[0])])+"\n")
+        if  self._nonlinear_vars.__class__ is dict:
+            output.write("nonlinear vars: "+str([v_.name for _,v_ in sorted(self._nonlinear_vars.items(), key=lambda x: x[0])])+"\n")
+        else:
+            output.write("nonlinear vars: "+str([v_.name for v_ in self._nonlinear_vars])+"\n")
         output.write("\n")
         ret_str = output.getvalue()
         output.close()
@@ -147,21 +156,21 @@ class StandardRepn(object):
 
         if self._linear_vars.__class__ is dict:
             self_linear_vars = list(itervalues(self._linear_vars))
-            self_linear_terms = self._linear_coefs
+            self_linear_terms = self._linear_terms_coef
         else:
             self_linear_vars = self._linear_vars
             self_linear_terms = dict((id(var),coef)
                                      for var,coef in zip(self._linear_vars,
-                                                         self._linear_coefs))
+                                                         self._linear_terms_coef))
 
         if other._linear_vars.__class__ is dict:
             other_linear_vars = list(itervalues(other._linear_vars))
-            other_linear_terms = other._linear_coefs
+            other_linear_terms = other._linear_terms_coef
         else:
             other_linear_vars = other._linear_vars
             other_linear_terms = dict((id(var),coef)
                                       for var,coef in zip(other._linear_vars,
-                                                          other._linear_coefs))
+                                                          other._linear_terms_coef))
 
         # Establish a mapping between self's linear terms and other's
         found_match = []
@@ -252,6 +261,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             repn._constant = _multiplier*value(expr)
         else:
             repn._constant = _multiplier*expr
+        if compress:
+            repn._compress()
         return repn
     #
     # The expression is a variable
@@ -259,10 +270,14 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     if isinstance(expr, (_VarData, IVariable)):
         if expr.fixed:
             repn._constant = value(expr)
-            return ampl_repn
+            if compress:
+                repn._compress()
+            return repn
         var_ID = id(expr)
-        repn._linear_coefs[var_ID] = _multiplier
+        repn._linear_terms_coef[var_ID] = _multiplier
         repn._linear_vars[var_ID] = expr
+        if compress:
+            repn._compress()
         return repn
     #
     # Unknown expression object
@@ -359,10 +374,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             #
                             _result = [{None:_obj}]
                             break
-
-            elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
-                _result = [{None:_obj}]
-                break
 
             elif _obj.__class__ == EXPR.Expr_if:
                 if _idx == 0:
@@ -558,8 +569,11 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         elif _obj.__class__ == EXPR._ReciprocalExpression:
             ans = {0:1.0/_result[0][0]}
 
-        elif _obj.__class__ == EXPR._NPV_AbsExpression or _obj.__class__ == EXPR._NPV_UnaryFunctionExpression:
-            ans = {0:value(_obj)}
+        elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
+            if None in _result[0] or 1 in _result[0]:
+                ans = {None:_obj}
+            else:
+                ans = {0:_obj(_result[0][0])}
 
         elif _obj.__class__ == EXPR.Expr_if:
             ans = _result[0]
@@ -596,11 +610,13 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     #
     # Create the final object here from 'ans'
     #
-    repn._constant = ans.get(0,0)
+    repn._constant = ans.get(0,None)
+    if type(repn._constant) in native_numeric_types and repn._constant == 0:
+        repn._constant = None
     if 1 in ans:
         for i in ans[1]:
             repn._linear_vars[i] = idMap[i]
-            repn._linear_coefs[i] = ans[1][i]
+            repn._linear_terms_coef[i] = ans[1][i]
     repn._nonlinear_expr = ans.get(None,None)
     repn._nonlinear_vars = {}
     if not repn._nonlinear_expr is None:
@@ -608,7 +624,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             repn._nonlinear_vars[id(v_)] = v_
 
     if compress:
-        repn.compress()
+        repn._compress()
     return repn
 
 
