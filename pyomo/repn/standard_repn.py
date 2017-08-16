@@ -63,7 +63,7 @@ class StandardRepn(object):
                  '_nonlinear_vars')     # TODO
 
     def __init__(self):
-        self._constant = None
+        self._constant = 0
         self._linear_vars = {}
         self._linear_terms_coef = {}
         self._nonlinear_expr = None
@@ -610,9 +610,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     #
     # Create the final object here from 'ans'
     #
-    repn._constant = ans.get(0,None)
-    if type(repn._constant) in native_numeric_types and repn._constant == 0:
-        repn._constant = None
+    repn._constant = ans.get(0,0)
     if 1 in ans:
         for i in ans[1]:
             repn._linear_vars[i] = idMap[i]

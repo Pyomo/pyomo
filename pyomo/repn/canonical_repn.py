@@ -1032,7 +1032,8 @@ def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
         # Construct linear canonical repn
         #
         rep = CompiledLinearCanonicalRepn()
-        rep.constant = srepn._constant
+        if not (type(srepn._constant) in native_numeric_types and srepn._constant == 0):
+            rep.constant = srepn._constant
         if len(srepn._linear_vars) > 0:
             rep.linear = []
             rep.variables = []
@@ -1048,7 +1049,7 @@ def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
         #
         ans = {}
         ans[None] = srepn._nonlinear_expr
-        if srepn._constant != None:
+        if not (type(srepn._constant) in native_numeric_types and srepn._constant == 0):
             ans[0] = srepn._constant
         if len(srepn._linear_vars) > 0:
             tmp = {}
