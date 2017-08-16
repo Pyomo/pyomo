@@ -1011,12 +1011,13 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 try:
                     old_value = self.initial_variable_values[obj_to_cuid[v]]
                     # Ensure that the value is within the bounds
-                    if v.lb is not None and old_value < v.lb:
-                        old_value = v.lb
-                    if v.ub is not None and old_value > v.ub:
-                        old_value = v.ub
-                    # Set the value
-                    v.set_value(old_value)
+                    if old_value is not None:
+                        if v.has_lb() and old_value < v.lb:
+                            old_value = v.lb
+                        if v.has_ub() is not None and old_value > v.ub:
+                            old_value = v.ub
+                        # Set the value
+                        v.set_value(old_value)
                 except KeyError as e:
                     continue
 
