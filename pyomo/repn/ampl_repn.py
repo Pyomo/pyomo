@@ -796,9 +796,14 @@ def generate_ampl_repn(exp, idMap=None):
     # We need to do this not at the global scope in case someone changed
     # the mode after importing the environment.
     _using_pyomo4_trees = expr_common.mode == expr_common.Mode.pyomo4_trees
+    _using_pyomo5_trees = expr_common.mode == expr_common.Mode.pyomo5_trees
 
     if idMap is None:
         idMap = {}
+    if _using_pyomo5_trees:
+        from pyomo.repn.standard_repn import generate_standard_repn
+        return generate_standard_repn(exp, compress=True)
+
     degree = exp.polynomial_degree()
     if (degree is None) or (degree > 1):
         repn = _generate_ampl_repn(exp)
