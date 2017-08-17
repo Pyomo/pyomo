@@ -1797,20 +1797,28 @@ class Block(ActiveIndexedComponent):
             return
         if ostream is None:
             ostream = sys.stdout
-        subblock = self._parent is not None and self.parent_block() is not None
 
+        subblock = self._parent is not None and self.parent_block() is not None
         if subblock:
+            # Print out the block header information
             super(Block, self).pprint( ostream=ostream, verbose=verbose,
                                        prefix=prefix )
 
         if not len(self):
             return
+        if not self.is_indexed():
+            _BlockData.pprint(self, ostream=ostream, verbose=verbose,
+                              prefix=prefix+'    ' if subblock else prefix)
+            return
 
+        # Note: all indexed blocks must be sub-blocks (if they aren't
+        # then you will run into problems constructing them as there is
+        # nowhere to put (or find) the indexing set!).
+        prefix += '    '
         for key in sorted(self):
             b = self[key]
-            if subblock and self.is_indexed():
-                ostream.write("%s%s : Active=%s\n" %
-                              (prefix, b.name, b.active))
+            ostream.write("%s%s : Active=%s\n" %
+                          (prefix, b.name, b.active))
             _BlockData.pprint(b, ostream=ostream, verbose=verbose,
                               prefix=prefix+'    ' if subblock else prefix)
 
