@@ -197,286 +197,18 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
         # Now replace the current expression object if it's a sum
         #
         if _obj.__class__ == _SumExpression or _obj.__class__ == _NPV_SumExpression:
-            _l, _r = _result
-            #
-            # Augment the current multi-sum (LHS)
-            #
-            if _l.__class__ == _MultiSumExpression:
-                #
-                # Multisum + 1
-                # MultiSum + p
-                #
-                # Add the RHS to the first term of the multisum
-                #
-                if not _r._potentially_variable():
-                    #print("H4")
-                    _l._args[0] += _r
-                    ans = _l
-                #
-                # MultiSum + MultiSum
-                #
-                # Add the constant terms, and place the others
-                #
-                elif _r.__class__ == _MultiSumExpression:
-                    #print("H2")
-                    _l._args[0] += _r._args[0]
-                    _l._args += _r._args[1:]
-                    ans = _l
-                #
-                # Multisum + expr
-                #
-                # Insert the expression
-                #
-                else:
-                    #print("H5")
-                    _l._args.append(_r)
-                    ans = _l
-
-            #
-            # 1 + *
-            # p + *
-            #
-            elif _l.__class__ in native_numeric_types or not _l._potentially_variable():
-                if _r.__class__ == _MultiSumExpression:
-                    #
-                    # 1 + MultiSum
-                    # p + MultiSum
-                    #
-                    # Add the LHS to the first term of the multisum
-                    #
-                    _r._args[0] += _l
-                    ans = _r
-                else:
-                    #
-                    # 1 + expr
-                    # p + expr
-                    #
-                    ans = _MultiSumExpression([_l, _r])
-            #
-            # Augment the current multi-sum (RHS)
-            #
-            # WEH:  I'm not sure that this branch is possible with normal
-            #       iteratively created sums, but I still think it's 
-            #       technically possible to create an expression tree that 
-            #       has no sums on the LHS and sums on the RHS.
-            #
-            elif _r.__class__ == _MultiSumExpression:
-                #
-                # expr + MultiSum
-                #
-                # Insert the expression
-                #
-                #print(("H3",_r_clone))
-                _r._args.append(_l)
-                ans = _r
-
-            elif not (_r.__class__ == _CompressedSumExpression or \
-                      _l.__class__ == _CompressedSumExpression):
-                #
-                # expr + expr
-                #
-                ans = _MultiSumExpression([0, _l, _r])
-
-            #
-            # RHS needs to be cloned
-            #
-            elif _r.__class__ == _CompressedSumExpression:
-                #
-                # 1 + CompressedMultiSum
-                # p + CompressedMultiSum
-                #
-                # Add the LHS to the first term of the multisum
-                #
-                if _l.__class__ in native_numeric_types or not _l._potentially_variable():
-                    #print("H1-c")
-                    ans = _MultiSumExpression([_r._args[0]+_l,] + list(_r._args[1:]))
-                #
-                # MultiSum + CompressedMultiSum
-                #
-                # Add the constant terms, and place the others
-                #
-                elif _l.__class__ == _MultiSumExpression:
-                    #print("H2-c")
-                    _l._args[0] += _r._args[0]
-                    _l._args += list(_r._args[1:])
-                    ans = _l
-                #
-                # CompressedMultiSum + CompressedMultiSum
-                #
-                # Add the constant terms, and place the others
-                #
-                elif _l.__class__ == _CompressedSumExpression:
-                    ans = _MultiSumExpression([_r._args[0]+_l._args[0],] + list(_r._args[1:]) + list(_l._args[1:]))
-                #
-                # expr + MultiSum
-                #
-                # Insert the expression
-                #
-                else:
-                    #print("H3-c")
-                    ans = _MultiSumExpression(list(_r._args) + [_l,])
-
-            #
-            # LHS needs to be cloned
-            #
-            else:   # _l.__class__ == _CompressedSumExpression
-                #
-                # CompressedMultiSum + p
-                #
-                # Add the RHS to the first term of the multisum
-                #
-                if not _r._potentially_variable():
-                    #print("H4-c")
-                    ans = _MultiSumExpression([_l._args[0]+_r,] + list(_l._args[1:]))
-                #
-                # CompressedMultisum + expr
-                #
-                # Insert the expression
-                #
-                else:
-                    #print("H5-c")
-                    ans = _MultiSumExpression(list(_l._args) + [_r,])
-
+            ans = _obj._combine_expr(_result)
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
                 # ensure that it is cloned.
                 #
                 _stack[-2] = True
-
         #
         # Now replace the current expression object if it's a product or reciprocal
         #
         elif multiprod and (isinstance(_obj, (_ProductExpression, _ReciprocalExpression))):
-            if isinstance(_obj, _ProductExpression):
-                _l, _r = _result
-            else:
-                _l = 1.0
-                _r = _result[0]
-            #
-            # p * X or 1 / X
-            #
-            if _l.__class__ in native_numeric_types:
-                if isinstance(_obj, _ProductExpression):
-                    if _r.__class__ == _MultiProdExpression:
-                        #
-                        # p * MultiProd
-                        #
-                        # Multiply the LHS to the first term of the multiprod
-                        #
-                        _r._args[0] *= _l
-                        ans = _r
-                    else:
-                        #
-                        # p * expr
-                        #
-                        ans = _MultiProdExpression([_l, _r], nnum=2)
-                else:
-                    if _r.__class__ == _MultiProdExpression:
-                        #
-                        # 1 / MultiProd
-                        #
-                        # Reciprocate the MultiProd
-                        #
-                        _tmp = [1.0/_r._args[0]] + _r._args[_r._nnum:]
-                        for i in range(1,_r._nnum):
-                            _tmp.append( _r._args[i])
-                        _r._args = _tmp
-                        _r._nnum = len(_tmp)-_r._nnum+1
-                        ans = _r
-                    else:
-                        #
-                        # 1 / expr
-                        #
-                        ans = _MultiProdExpression([_l, _r], nnum=1)
-            #
-            # Augment the current multiprod (LHS)
-            #
-            elif _l.__class__ == _MultiProdExpression:
-                #
-                # MultiProd * 1
-                # MultiProd * p
-                #
-                # Multiply the RHS to the first term of the multiprod
-                #
-                if not _r._potentially_variable():
-                    #print("H4")
-                    _l._args[0] *= _r
-                    ans = _l
-                #
-                # MultiProd * MultiProd
-                #
-                # Multiply the constant terms, and place the others
-                #
-                elif _r.__class__ == _MultiProdExpression:
-                    tmp = []
-                    tmp.append(_l._args[0] * _r._args[0])
-                    for i in range(1,_l._nnum):
-                        tmp.append(_l._args[i])
-                    for i in range(1,_r._nnum):
-                        tmp.append(_r._args[i])
-                    tmp += _l._args[_l._nnum:]
-                    tmp += _r._args[_r._nnum:]
-                    _l._args = tmp
-                    _l._nnum += _r._nnum-1
-                    ans = _l
-                #
-                # MultiProd * expr
-                #
-                # Insert the expression
-                #
-                else:
-                    #print("H5")
-                    if len(_l._args) == _l._nnum:
-                        _l._args.append(_r)
-                        _l._nnum += 1
-                        ans = _l
-                    else:
-                        tmp = _l._args[:_l._nnum]
-                        tmp.append(_r)
-                        tmp += _l._args[_l._nnum:]
-                        _l._args = tmp
-                        _l._nnum += 1
-                        ans = _l
-            #
-            # p * X
-            #
-            elif not _l._potentially_variable():
-                if _r.__class__ == _MultiProdExpression:
-                    #
-                    # p * MultiProd
-                    #
-                    # Multiply the LHS to the first term of the multiprod
-                    #
-                    _r._args[0] *= _l
-                    ans = _r
-                else:
-                    #
-                    # p * expr
-                    #
-                    ans = _MultiProdExpression([_l, _r], nnum=2)
-            #
-            # Augment the current multiprod (RHS)
-            #
-            # WEH:  I'm not sure that this branch is possible with normal
-            #       iteratively created products, but I still think it's 
-            #       technically possible to create an expression tree that 
-            #       has no products on the LHS and products on the RHS.
-            #
-            elif _r.__class__ == _MultiProdExpression:
-                #
-                # expr * MultiProd
-                #
-                # Insert the expression
-                #
-                #print(("H3",_r_clone))
-                _r._args = [_r._args[0]] + [_l] + _r._args[1:]
-                _r._nnum += 1
-                ans = _r
-
-            else:
-                ans = _MultiProdExpression([1.0, _l, _r], nnum=3)
-
+            ans = _obj._combine_expr(_result)
             if _stack:
                 #
                 # We've replaced a node, so set the context for the parent's search to
@@ -1298,6 +1030,115 @@ class _ProductExpression(_ExpressionBase):
         _l, _r = result
         return _l * _r
 
+    def _combine_expr(self, _result):
+        _l, _r = _result
+        #
+        # p * X
+        #
+        if _l.__class__ in native_numeric_types:
+            if _r.__class__ == _MultiProdExpression:
+                #
+                # p * MultiProd
+                #
+                # Multiply the LHS to the first term of the multiprod
+                #
+                _r._args[0] *= _l
+                ans = _r
+            else:
+                #
+                # p * expr
+                #
+                ans = _MultiProdExpression([_l, _r], nnum=2)
+        #
+        # Augment the current multiprod (LHS)
+        #
+        elif _l.__class__ == _MultiProdExpression:
+            #
+            # MultiProd * 1
+            # MultiProd * p
+            #
+            # Multiply the RHS to the first term of the multiprod
+            #
+            if not _r._potentially_variable():
+                #print("H4")
+                _l._args[0] *= _r
+                ans = _l
+            #
+            # MultiProd * MultiProd
+            #
+            # Multiply the constant terms, and place the others
+            #
+            elif _r.__class__ == _MultiProdExpression:
+                tmp = []
+                tmp.append(_l._args[0] * _r._args[0])
+                for i in range(1,_l._nnum):
+                    tmp.append(_l._args[i])
+                for i in range(1,_r._nnum):
+                    tmp.append(_r._args[i])
+                tmp += _l._args[_l._nnum:]
+                tmp += _r._args[_r._nnum:]
+                _l._args = tmp
+                _l._nnum += _r._nnum-1
+                ans = _l
+            #
+            # MultiProd * expr
+            #
+            # Insert the expression
+            #
+            else:
+                #print("H5")
+                if len(_l._args) == _l._nnum:
+                    _l._args.append(_r)
+                    _l._nnum += 1
+                    ans = _l
+                else:
+                    tmp = _l._args[:_l._nnum]
+                    tmp.append(_r)
+                    tmp += _l._args[_l._nnum:]
+                    _l._args = tmp
+                    _l._nnum += 1
+                    ans = _l
+        #
+        # p * X
+        #
+        elif not _l._potentially_variable():
+            if _r.__class__ == _MultiProdExpression:
+                #
+                # p * MultiProd
+                #
+                # Multiply the LHS to the first term of the multiprod
+                #
+                _r._args[0] *= _l
+                ans = _r
+            else:
+                #
+                # p * expr
+                #
+                ans = _MultiProdExpression([_l, _r], nnum=2)
+        #
+        # Augment the current multiprod (RHS)
+        #
+        # WEH:  I'm not sure that this branch is possible with normal
+        #       iteratively created products, but I still think it's 
+        #       technically possible to create an expression tree that 
+        #       has no products on the LHS and products on the RHS.
+        #
+        elif _r.__class__ == _MultiProdExpression:
+            #
+            # expr * MultiProd
+            #
+            # Insert the expression
+            #
+            #print(("H3",_r_clone))
+            _r._args = [_r._args[0]] + [_l] + _r._args[1:]
+            _r._nnum += 1
+            ans = _r
+
+        else:
+            ans = _MultiProdExpression([1.0, _l, _r], nnum=3)
+        return ans
+
+
 
 class _NPV_ProductExpression(_ProductExpression):
     __slots__ = ()
@@ -1368,6 +1209,30 @@ class _ReciprocalExpression(_ExpressionBase):
     def _apply_operation(self, result):
         return 1.0 / result[0]
 
+    def _combine_expr(self, _result):
+        _l = 1.0
+        _r = _result[0]
+        #
+        # 1 / X
+        #
+        if _r.__class__ == _MultiProdExpression:
+            #
+            # 1 / MultiProd
+            #
+            # Reciprocate the MultiProd
+            #
+            _tmp = [1.0/_r._args[0]] + _r._args[_r._nnum:]
+            for i in range(1,_r._nnum):
+                _tmp.append( _r._args[i])
+            _r._args = _tmp
+            _r._nnum = len(_tmp)-_r._nnum+1
+            ans = _r
+        else:
+            #
+            # 1 / expr
+            #
+            ans = _MultiProdExpression([_l, _r], nnum=1)
+        return ans
 
 class _NPV_ReciprocalExpression(_ReciprocalExpression):
     __slots__ = ()
@@ -1402,6 +1267,149 @@ class _SumExpression(_LinearOperatorExpression):
     def getname(self, *args, **kwds):
         return 'sum'
 
+    def _combine_expr(self, _result):
+        _l, _r = _result
+        #
+        # Augment the current multi-sum (LHS)
+        #
+        if _l.__class__ == _MultiSumExpression:
+            #
+            # Multisum + 1
+            # MultiSum + p
+            #
+            # Add the RHS to the first term of the multisum
+            #
+            if not _r._potentially_variable():
+                #print("H4")
+                _l._args[0] += _r
+                ans = _l
+            #
+            # MultiSum + MultiSum
+            #
+            # Add the constant terms, and place the others
+            #
+            elif _r.__class__ == _MultiSumExpression:
+                #print("H2")
+                _l._args[0] += _r._args[0]
+                _l._args += _r._args[1:]
+                ans = _l
+            #
+            # Multisum + expr
+            #
+            # Insert the expression
+            #
+            else:
+                #print("H5")
+                _l._args.append(_r)
+                ans = _l
+
+        #
+        # 1 + *
+        # p + *
+        #
+        elif _l.__class__ in native_numeric_types or not _l._potentially_variable():
+            if _r.__class__ == _MultiSumExpression:
+                #
+                # 1 + MultiSum
+                # p + MultiSum
+                #
+                # Add the LHS to the first term of the multisum
+                #
+                _r._args[0] += _l
+                ans = _r
+            else:
+                #
+                # 1 + expr
+                # p + expr
+                #
+                ans = _MultiSumExpression([_l, _r])
+        #
+        # Augment the current multi-sum (RHS)
+        #
+        # WEH:  I'm not sure that this branch is possible with normal
+        #       iteratively created sums, but I still think it's 
+        #       technically possible to create an expression tree that 
+        #       has no sums on the LHS and sums on the RHS.
+        #
+        elif _r.__class__ == _MultiSumExpression:
+            #
+            # expr + MultiSum
+            #
+            # Insert the expression
+            #
+            #print(("H3",_r_clone))
+            _r._args.append(_l)
+            ans = _r
+
+        elif not (_r.__class__ == _CompressedSumExpression or \
+                  _l.__class__ == _CompressedSumExpression):
+            #
+            # expr + expr
+            #
+            ans = _MultiSumExpression([0, _l, _r])
+
+        #
+        # RHS needs to be cloned
+        #
+        elif _r.__class__ == _CompressedSumExpression:
+            #
+            # 1 + CompressedMultiSum
+            # p + CompressedMultiSum
+            #
+            # Add the LHS to the first term of the multisum
+            #
+            if _l.__class__ in native_numeric_types or not _l._potentially_variable():
+                #print("H1-c")
+                ans = _MultiSumExpression([_r._args[0]+_l,] + list(_r._args[1:]))
+            #
+            # MultiSum + CompressedMultiSum
+            #
+            # Add the constant terms, and place the others
+            #
+            elif _l.__class__ == _MultiSumExpression:
+                #print("H2-c")
+                _l._args[0] += _r._args[0]
+                _l._args += list(_r._args[1:])
+                ans = _l
+            #
+            # CompressedMultiSum + CompressedMultiSum
+            #
+            # Add the constant terms, and place the others
+            #
+            elif _l.__class__ == _CompressedSumExpression:
+                ans = _MultiSumExpression([_r._args[0]+_l._args[0],] + list(_r._args[1:]) + list(_l._args[1:]))
+            #
+            # expr + MultiSum
+            #
+            # Insert the expression
+            #
+            else:
+                #print("H3-c")
+                ans = _MultiSumExpression(list(_r._args) + [_l,])
+
+        #
+        # LHS needs to be cloned
+        #
+        else:   # _l.__class__ == _CompressedSumExpression
+            #
+            # CompressedMultiSum + p
+            #
+            # Add the RHS to the first term of the multisum
+            #
+            if not _r._potentially_variable():
+                #print("H4-c")
+                ans = _MultiSumExpression([_l._args[0]+_r,] + list(_l._args[1:]))
+            #
+            # CompressedMultisum + expr
+            #
+            # Insert the expression
+            #
+            else:
+                #print("H5-c")
+                ans = _MultiSumExpression(list(_l._args) + [_r,])
+
+        return ans
+
 
 class _NPV_SumExpression(_SumExpression):
     __slots__ = ()
@@ -1430,6 +1438,7 @@ class _MultiSumExpression(_SumExpression):
 
     def _to_string_skip(self, _idx):
         return _idx == 0
+
 
 
 class _StaticMultiSumExpression(_MultiSumExpression):
