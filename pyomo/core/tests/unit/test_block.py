@@ -1885,6 +1885,54 @@ class TestBlock(unittest.TestCase):
             sorted(id(x) for x in (n.x, n.y[1], n.b.x, n.b.y[1])),
         )
 
+    def test_pprint(self):
+        m = HierarchicalModel().model
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        ref = """3 Set Declarations
+    a1_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(4, 5)
+        [5, 4]
+    a3_IDX : Dim=0, Dimen=1, Size=2, Domain=None, Ordered=Insertion, Bounds=(6, 7)
+        [6, 7]
+    a_index : Dim=0, Dimen=1, Size=3, Domain=None, Ordered=False, Bounds=(1, 3)
+        [1, 2, 3]
+
+3 Block Declarations
+    a : Size=3, Index=a_index, Active=True
+        a[1] : Active=True
+            2 Block Declarations
+                c : Size=2, Index=a1_IDX, Active=True
+                    a[1].c[4] : Active=True
+                        0 Declarations: 
+                    a[1].c[5] : Active=True
+                        0 Declarations: 
+                d : Size=1, Index=None, Active=True
+                    0 Declarations: 
+
+            2 Declarations: d c
+        a[2] : Active=True
+            0 Declarations: 
+        a[3] : Active=True
+            2 Block Declarations
+                e : Size=1, Index=None, Active=True
+                    0 Declarations: 
+                f : Size=2, Index=a3_IDX, Active=True
+                    a[3].f[6] : Active=True
+                        0 Declarations: 
+                    a[3].f[7] : Active=True
+                        0 Declarations: 
+
+            2 Declarations: e f
+    b : Size=1, Index=None, Active=True
+        0 Declarations: 
+    c : Size=1, Index=None, Active=True
+        0 Declarations: 
+
+6 Declarations: a1_IDX a3_IDX c a_index a b
+"""
+        print buf.getvalue()
+        self.assertEqual(ref, buf.getvalue())
+
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
     def test_solve1(self):
         model = Block(concrete=True)
