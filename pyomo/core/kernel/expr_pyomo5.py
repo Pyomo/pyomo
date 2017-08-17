@@ -95,7 +95,7 @@ class Timer:
 _compressed_expressions = set()
 
 
-def compress_expression(expr, verbose=False):
+def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
     # Only compress a true expression DAG
     #
@@ -119,7 +119,7 @@ def compress_expression(expr, verbose=False):
     # that are not potentially variable, since they have a
     # different class.
     #
-    if not expr.__class__ == _SumExpression:
+    if not dive and not (expr.__class__ == _SumExpression or expr.__class__ == _NPV_SumExpression):
         return expr
     #
     # The stack starts with the current expression
@@ -166,8 +166,7 @@ def compress_expression(expr, verbose=False):
                 # Store a native or numeric object
                 #
                 _result.append( _sub )
-            elif not isinstance(_sub, _ExpressionBase) or isinstance(_sub, _MultiSumExpression):
-                #elif not _sub.is_expression():
+            elif not isinstance(_sub, _ExpressionBase) or isinstance(_sub, _MultiSumExpression) or isinstance(_sub, _MultiProdExpression):
                 _result.append( _sub )
             else:
                 #
@@ -197,7 +196,7 @@ def compress_expression(expr, verbose=False):
         #
         # Now replace the current expression object if it's a sum
         #
-        if _obj.__class__ == _SumExpression:
+        if _obj.__class__ == _SumExpression or _obj.__class__ == _NPV_SumExpression:
             _l, _r = _result
             #
             # Augment the current multi-sum (LHS)
@@ -344,12 +343,157 @@ def compress_expression(expr, verbose=False):
                 # ensure that it is cloned.
                 #
                 _stack[-2] = True
+
+        #
+        # Now replace the current expression object if it's a product or reciprocal
+        #
+        elif multiprod and (isinstance(_obj, (_ProductExpression, _ReciprocalExpression))):
+            if isinstance(_obj, _ProductExpression):
+                _l, _r = _result
+            else:
+                _l = 1.0
+                _r = _result[0]
+            #
+            # p * X or 1 / X
+            #
+            if _l.__class__ in native_numeric_types:
+                if isinstance(_obj, _ProductExpression):
+                    if _r.__class__ == _MultiProdExpression:
+                        #
+                        # p * MultiProd
+                        #
+                        # Multiply the LHS to the first term of the multiprod
+                        #
+                        _r._args[0] *= _l
+                        ans = _r
+                    else:
+                        #
+                        # p * expr
+                        #
+                        ans = _MultiProdExpression([_l, _r], nnum=2)
+                else:
+                    if _r.__class__ == _MultiProdExpression:
+                        #
+                        # 1 / MultiProd
+                        #
+                        # Reciprocate the MultiProd
+                        #
+                        _tmp = [1.0/_r._args[0]] + _r._args[_r._nnum:]
+                        for i in range(1,_r._nnum):
+                            _tmp.append( _r._args[i])
+                        _r._args = _tmp
+                        _r._nnum = len(_tmp)-_r._nnum+1
+                        ans = _r
+                    else:
+                        #
+                        # 1 / expr
+                        #
+                        ans = _MultiProdExpression([_l, _r], nnum=1)
+            #
+            # Augment the current multiprod (LHS)
+            #
+            elif _l.__class__ == _MultiProdExpression:
+                #
+                # MultiProd * 1
+                # MultiProd * p
+                #
+                # Multiply the RHS to the first term of the multiprod
+                #
+                if not _r._potentially_variable():
+                    #print("H4")
+                    _l._args[0] *= _r
+                    ans = _l
+                #
+                # MultiProd * MultiProd
+                #
+                # Multiply the constant terms, and place the others
+                #
+                elif _r.__class__ == _MultiProdExpression:
+                    tmp = []
+                    tmp.append(_l._args[0] * _r._args[0])
+                    for i in range(1,_l._nnum):
+                        tmp.append(_l._args[i])
+                    for i in range(1,_r._nnum):
+                        tmp.append(_r._args[i])
+                    tmp += _l._args[_l._nnum:]
+                    tmp += _r._args[_r._nnum:]
+                    _l._args = tmp
+                    _l._nnum += _r._nnum-1
+                    ans = _l
+                #
+                # MultiProd * expr
+                #
+                # Insert the expression
+                #
+                else:
+                    #print("H5")
+                    if len(_l._args) == _l._nnum:
+                        _l._args.append(_r)
+                        _l._nnum += 1
+                        ans = _l
+                    else:
+                        tmp = _l._args[:_l._nnum]
+                        tmp.append(_r)
+                        tmp += _l._args[_l._nnum:]
+                        _l._args = tmp
+                        _l._nnum += 1
+                        ans = _l
+            #
+            # p * X
+            #
+            elif not _l._potentially_variable():
+                if _r.__class__ == _MultiProdExpression:
+                    #
+                    # p * MultiProd
+                    #
+                    # Multiply the LHS to the first term of the multiprod
+                    #
+                    _r._args[0] *= _l
+                    ans = _r
+                else:
+                    #
+                    # p * expr
+                    #
+                    ans = _MultiProdExpression([_l, _r], nnum=2)
+            #
+            # Augment the current multiprod (RHS)
+            #
+            # WEH:  I'm not sure that this branch is possible with normal
+            #       iteratively created products, but I still think it's 
+            #       technically possible to create an expression tree that 
+            #       has no products on the LHS and products on the RHS.
+            #
+            elif _r.__class__ == _MultiProdExpression:
+                #
+                # expr * MultiProd
+                #
+                # Insert the expression
+                #
+                #print(("H3",_r_clone))
+                _r._args = [_r._args[0]] + [_l] + _r._args[1:]
+                _r._nnum += 1
+                ans = _r
+
+            else:
+                ans = _MultiProdExpression([1.0, _l, _r], nnum=3)
+
+            if _stack:
+                #
+                # We've replaced a node, so set the context for the parent's search to
+                # ensure that it is cloned.
+                #
+                _stack[-2] = True
+
         elif _clone:
             ans = _obj.__class__( tuple(_result) )
             if _stack:
                 _stack[-2] = True
+
         else:
             ans = _obj
+
+        #print(ans)
+        #print(ans._args)
         if verbose: #pragma:nocover
             print("STACK LEN %d" % len(_stack))
         if _stack:
@@ -1151,6 +1295,42 @@ class _NPV_ProductExpression(_ProductExpression):
 
     def _potentially_variable(self):
         return False
+
+
+class _MultiProdExpression(_ProductExpression):
+    """An object that defines a product with 1 or more terms, including denominators."""
+
+    __slots__ = ('_nnum')
+    PRECEDENCE = 4
+
+    def __init__(self, args, nnum=None):
+        if type(args) is tuple and nnum==None:
+            args, nnum = base
+        self._args = args
+        self._nnum = nnum
+
+    def _precedence(self):
+        return _MultiProdExpression.PRECEDENCE
+
+    def _apply_operation(self, result):
+        return prod(result)
+
+    def getname(self, *args, **kwds):
+        return 'multiprod'
+
+    def _potentially_variable(self):
+        return len(self._args) > 1
+
+    def _apply_operation(self, result):
+        ans = 1.0
+        i = 0
+        n_ = len(self._args)
+        for j in xargs(0,nnum):
+            ans *= result[i]
+            i += 1
+        while i < n_:
+            ans /= result[i]
+            i += 1
 
 
 class _ReciprocalExpression(_ExpressionBase):

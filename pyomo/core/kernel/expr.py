@@ -62,6 +62,7 @@ _pyomo5_module_members = [
     '_MultiSumExpression',
     '_StaticMultiSumExpression',
     '_CompressedSumExpression',
+    '_MultiProdExpression',
     '_UnaryFunctionExpression',
     'compress_expression',
     'sum',
