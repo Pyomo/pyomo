@@ -960,6 +960,8 @@ class _ExpressionBase(NumericValue):
             if _idx < _len:
                 _sub = _args[_idx]
                 _stack[-1][2] += 1
+                if _parent._to_string_skip(_idx):
+                    continue
                 if _infix:
                     _bypass_prefix = _parent._to_string_infix(ostream, _idx, verbose)
                 else:
@@ -980,12 +982,16 @@ class _ExpressionBase(NumericValue):
                 else:
                     self._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
             else:
+                _parent._to_string_suffix(ostream, verbose)
                 _stack.pop()
                 if (_my_precedence > _prec) or not _my_precedence or verbose:
                     ostream.write(" )")
 
     def _precedence(self):
         return _ExpressionBase.PRECEDENCE
+
+    def _to_string_skip(self, _idx):
+        return False
 
     def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
         if _sub.__class__ in native_numeric_types:
@@ -1006,6 +1012,9 @@ class _ExpressionBase(NumericValue):
             ostream.write(" , ")
         else:
             ostream.write(self._inline_operator())
+
+    def _to_string_suffix(self, ostream, verbose):
+        pass
 
 
 class _NegationExpression(_ExpressionBase):
@@ -1337,7 +1346,7 @@ class _ReciprocalExpression(_ExpressionBase):
     """An object that defines a division expression"""
 
     __slots__ = ()
-    PRECEDENCE = 3
+    PRECEDENCE = 3.5
 
     def _precedence(self):
         return _ReciprocalExpression.PRECEDENCE
@@ -1350,8 +1359,11 @@ class _ReciprocalExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return 'recip'
 
-    def _inline_operator(self):
-        return ' 1/'
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write("(1/")
+
+    def _to_string_suffix(self, ostream, verbose):
+        ostream.write(")")
 
     def _apply_operation(self, result):
         return 1.0 / result[0]
@@ -1415,6 +1427,9 @@ class _MultiSumExpression(_SumExpression):
 
     def _potentially_variable(self):
         return len(self._args) > 1
+
+    def _to_string_skip(self, _idx):
+        return _idx == 0
 
 
 class _StaticMultiSumExpression(_MultiSumExpression):
@@ -1571,231 +1586,6 @@ class Expr_if(_ExpressionBase):
         _if, _then, _else = result
         return _then if _if else _else
 
-
-#
-# NOTE: The list self._args may contain expressions and not just variables
-#
-class X_LinearExpression(_ExpressionBase):
-    __slots__ = ('_const', '_coef')
-
-    def __init__(self, var, coef=None, sum_=False):
-        self._const = 0
-        if sum_:
-            self._args = var
-            self._coef = {id(var[0]): 1, id(var[1]): 1}
-        else:
-            self._args = [var]
-            self._coef = {id(var): coef}
-
-    def __getstate__(self):
-        state = super(_LinearExpression, self).__getstate__()
-        for i in _LinearExpression.__slots__:
-           state[i] = getattr(self,i)
-        # ID's do not persist from instance to instance (they are pointers!)
-        # ...so we will convert them to a (temporary, but portable) index
-        state['_coef'] = tuple(self._coef[id(v)] for v in self._args)
-        return state
-
-    def __setstate__(self, state):
-        super(_LinearExpression, self).__setstate__(state)
-        # ID's do not persist from instance to instance (they are pointers!)
-        self._coef = dict((id(v), self._coef[i])
-                          for i, v in enumerate(self._args))
-
-    def _precedence(self):
-        if len(self._args) > 1:
-            return _SumExpression.PRECEDENCE
-        elif len(self._args) and not (
-                self._const.__class__ in native_numeric_types
-                and self._const == 0 ):
-            return _SumExpression.PRECEDENCE
-        else:
-            return _ProductExpression.PRECEDENCE
-
-    def getname(self, *args, **kwds):
-        return 'linear'
-
-    def _is_constant_combiner(self):
-        def impl(args):
-            # To be constant, the _const must be constant, PLUS either
-            # the coef AND the var are constant (how can the Var be
-            # constant??), OR the coef is constant AND ==0.
-            if self._const.__class__ not in native_numeric_types \
-               and not self._const.is_constant():
-                return False
-            for i, v in enumerate(self._args):
-                coef = self._coef[id(v)]
-                if coef.__class__ not in native_numeric_types:
-                    if not coef.is_constant():
-                        return False
-                elif coef and not args[i]:
-                    return False
-            return True
-        return impl
-
-    def _is_fixed_combiner(self):
-        def impl(args):
-            # By definition, the const and all coef must be fixed.  The
-            # linear expression *might* be fixed if the variables are
-            # fixed, OR if the coefficient on a non-fixed variabel is 0.
-            return all( a or not value(self._coef[id(self._args[i])])
-                        for i,a in enumerate(args) )
-        return impl
-
-    def _inline_operator(self):
-        return ' + '
-
-    def _to_string_term(self, ostream, _idx, _sub, _name_buffer, verbose):
-        if _idx == 0 and self._const != 0:
-            ostream.write("%s" % (self._const, ))
-            self._to_string_infix(ostream, _idx, verbose)
-
-        coef = self._coef[id(_sub)]
-        _coeftype = coef.__class__
-        if _idx and _coeftype is _NegationExpression:
-            coef = coef._args[0]
-            _coeftype = coef.__class__
-        if _coeftype in native_numeric_types:
-            if _idx and not verbose:
-                coef = abs(coef)
-            if coef == 1:
-                ostream.write(_sub.getname(True, _name_buffer))
-                return
-            ostream.write(str(coef))
-        elif coef.is_expression():
-            coef.to_string( ostream=ostream, verbose=verbose,
-                            precedence=_ProductExpression.PRECEDENCE )
-        else:
-            ostream.write(str(coef))
-        ostream.write("*%s" % (_sub.getname(True, _name_buffer)))
-
-    def _to_string_infix(self, ostream, idx, verbose):
-        if verbose:
-            ostream.write(" , ")
-        else:
-            _l = self._coef[id(self._args[idx])]
-            _lt = _l.__class__
-            if _lt is _NegationExpression or (
-                    _lt in native_numeric_types and _l < 0 ):
-                ostream.write(' - ')
-            else:
-                ostream.write(' + ')
-
-    def _polynomial_degree(self, result):
-        ans = 0
-        for x in result:
-            if x is None:
-                return None
-            elif ans < x:
-                ans = x
-        return ans
-
-    def _apply_operation(self, result):
-        assert( len(result) == len(self._args) )
-        ans = value(self._const)
-        for i,v in enumerate(self._args):
-            ans += value(self._coef[id(v)]) * result[i]
-        return ans
-
-    def iadd__(self, other, _TODO_IGNORE=None):
-        if other.__class__ in native_numeric_types:
-            self._const += other
-            return self
-
-        if other.is_expression():
-            if other.__class__ is _LinearExpression:
-                self._const += other._const
-                for v in other._args:
-                    _id = id(v)
-                    if _id in self._coef:
-                        self._coef[_id] += other._coef[_id]
-                    else:
-                        self._args.append(v)
-                        self._coef[_id] = other._coef[_id]
-                return self
-            if other._potentially_variable():
-                return generate_expression(_add, self, other, None)
-            self._const += other
-            return self
-
-        elif other._potentially_variable():
-            _id = id(other)
-            if _id in self._coef:
-                self._coef[_id] += 1
-            else:
-                self._args.append(other)
-                self._coef[_id] = 1
-            return self
-
-        else:
-            self._const += other
-            return self
-
-    def isub__(self, other, _TODO_IGNORE=None):
-        if other.__class__ in native_numeric_types:
-            self._const -= other
-            return self
-
-        if other.is_expression():
-            if other.__class__ is _LinearExpression:
-                self._const -= other._const
-                for v in other._args:
-                    _id = id(v)
-                    if _id in self._coef:
-                        self._coef[_id] -= other._coef[_id]
-                    else:
-                        self._args.append(v)
-                        self._coef[_id] = -other._coef.pop(_id)
-                return self
-            if other._potentially_variable():
-                other = other.__neg__(None)
-                return generate_expression(_add, self, other, None)
-            # Then this is NOT potentially variable
-            self._const -= other
-            return self
-        elif other._potentially_variable():
-            _id = id(other)
-            if _id in self._coef:
-                self._coef[_id] -= 1
-            else:
-                self._args.append(other)
-                self._coef[_id] = -1
-            return self
-        else:
-            self._const -= other
-            return self
-
-    def imul__(self, other, divide=False):
-        if other.__class__ in native_numeric_types:
-            if not other:
-                if divide:
-                    raise ZeroDivisionError()
-                return other
-            not_var = True
-        else:
-            not_var = not other._potentially_variable()
-
-        if not_var:
-            if divide:
-                self._const /= other
-                for i in self._coef:
-                    self._coef[i] /= other
-            else:
-                self._const *= other
-                for i in self._coef:
-                    self._coef[i] *= other
-            return self
-        else:
-            return generate_expression(
-                _div if divide else _mul, self, other, None )
-
-    def idiv__(self, other, targetRefs=-2):
-        #if targetRefs is not None:
-            #self, other = _generate_expression__clone_if_needed(
-                #targetRefs, True, self, other )
-        return self.imul__(other, divide=True, targetRefs=None)
-
-Xzero_or_one = set([0,1])
 
 
 def generate_expression(etype, _self, _other, _process=0):
@@ -2171,9 +1961,6 @@ class _NPV_UnaryFunctionExpression(_UnaryFunctionExpression):
     def _potentially_variable(self):
         return False
 
-
-# Backwards compatibility: Coopr 3.x expected a slightly less informative name
-_IntrinsicFunctionExpression =  _UnaryFunctionExpression
 
 
 # TODO: Should this actually be a special class, or just an instance of

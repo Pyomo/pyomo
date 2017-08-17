@@ -43,16 +43,19 @@ _common_module_members = [
     '_AbsExpression',
     '_PowExpression',
     '_ExternalFunctionExpression',
-    '_IntrinsicFunctionExpression',
     '_GetItemExpression',
     'Expr_if',
 ]
-_coopr3_module_members = ['sum']
+_coopr3_module_members = [
+    '_IntrinsicFunctionExpression',
+    'sum',
+]
 _pyomo4_module_members = [
     '_LinearExpression',
     '_DivisionExpression',
     '_NegationExpression',
     'EntangledExpressionError',
+    '_IntrinsicFunctionExpression',
     'sum',
 ]
 _pyomo5_module_members = [
