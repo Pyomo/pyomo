@@ -1930,7 +1930,7 @@ class TestBlock(unittest.TestCase):
 
 6 Declarations: a1_IDX a3_IDX c a_index a b
 """
-        print buf.getvalue()
+        print(buf.getvalue())
         self.assertEqual(ref, buf.getvalue())
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")
