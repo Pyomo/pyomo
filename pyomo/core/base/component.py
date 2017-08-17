@@ -150,7 +150,7 @@ class _ComponentBase(object):
         # attribute to prevent infinite recursion.
         state = self.__getstate__()
         try:
-            ans.__setstate__(deepcopy(state, memo))
+            new_state = deepcopy(state, memo)
         except:
             new_state = {}
             for k,v in iteritems(state):
@@ -161,7 +161,7 @@ class _ComponentBase(object):
                         "Unable to clone Pyomo component attribute.\n"
                         "Component '%s' contains an uncopyable field '%s' (%s)"
                         % ( self.name, k, type(v) ))
-            ans.__setstate__(new_state)
+        ans.__setstate__(new_state)
         return ans
 
     def cname(self, *args, **kwds):
