@@ -15,6 +15,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+from pyomo.core.kernel import expr_common
 import pyutilib.th as unittest
 
 from pyomo.environ import *
@@ -24,6 +25,7 @@ def obj_rule(model):
 def constr_rule(model,a):
     return model.x[a] >= model.y[a]
 
+_using_pyomo5_trees = expr_common.mode == expr_common.Mode.pyomo5_trees
 
 class Test(unittest.TestCase):
 
@@ -35,9 +37,11 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEqual(
-            str(expr),
-            "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
+        if _using_pyomo5_trees:
+            baseline = "B[1] * x[1] * y[1] + B[2] * x[2] * y[2] + B[3] * x[3] * y[3]"
+        else:
+            baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
+        self.assertEqual( str(expr), baseline )
 
     def test_expr2(self):
         model = AbstractModel()
@@ -47,9 +51,11 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y, index=[1,3])
-        self.assertEqual(
-            str(expr),
-            "x[1] * B[1] * y[1] + x[3] * B[3] * y[3]" )
+        if _using_pyomo5_trees:
+            baseline = "B[1] * x[1] * y[1] + B[3] * x[3] * y[3]"
+        else:
+            baseline = "x[1] * B[1] * y[1] + x[3] * B[3] * y[3]"
+        self.assertEqual( str(expr), baseline )
 
     def test_expr3(self):
         model = AbstractModel()
@@ -59,9 +65,11 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(instance.x,instance.B,denom=instance.y, index=[1,3])
-        self.assertEqual(
-            str(expr),
-            "x[1] * B[1] / y[1] + x[3] * B[3] / y[3]" )
+        if _using_pyomo5_trees:
+            baseline = "B[1] * x[1] * (1/y[1]) + B[3] * x[3] * (1/y[3])"
+        else:
+            baseline = "x[1] * B[1] / y[1] + x[3] * B[3] / y[3]"
+        self.assertEqual( str(expr), baseline )
 
     def test_expr4(self):
         model = AbstractModel()
@@ -71,9 +79,11 @@ class Test(unittest.TestCase):
         model.y = Var(model.A)
         instance=model.create_instance()
         expr = dot_product(denom=[instance.y,instance.x])
-        self.assertEqual(
-            str(expr),
-            "1 / ( y[1] * x[1] ) + 1 / ( y[2] * x[2] ) + 1 / ( y[3] * x[3] )" )
+        if _using_pyomo5_trees:
+            baseline = "(1/y[1]) * (1/x[1]) + (1/y[2]) * (1/x[2]) + (1/y[3]) * (1/x[3])"
+        else:
+            baseline = "1 / ( y[1] * x[1] ) + 1 / ( y[2] * x[2] ) + 1 / ( y[3] * x[3] )"
+        self.assertEqual( str(expr), baseline )
 
     def test_expr5(self):
         model = ConcreteModel()

@@ -12,16 +12,19 @@
 #
 
 import pickle
+import six
 import os
 import sys
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
-
 from pyomo.environ import *
+from pyomo.core.kernel import expr_common
 
-import six
+
+_using_pyomo5_trees = expr_common.mode == expr_common.Mode.pyomo5_trees
+
 
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)
@@ -260,9 +263,11 @@ class Test(unittest.TestCase):
         tmodel = pickle.loads(pickle_str)
         instance=tmodel.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals(
-            str(expr),
-            "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
+        if _using_pyomo5_trees:
+            baseline = "B[1] * x[1] * y[1] + B[2] * x[2] * y[2] + B[3] * x[3] * y[3]"
+        else:
+            baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
+        self.assertEquals( str(expr), baseline )
 
     # same as above, but pickles the constructed AbstractModel and
     # then operates on the unpickled instance.
@@ -278,9 +283,11 @@ class Test(unittest.TestCase):
         pickle_str = pickle.dumps(tmp)
         instance = pickle.loads(pickle_str)
         expr = dot_product(instance.x,instance.B,instance.y)
-        self.assertEquals(
-            str(expr),
-            "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]" )
+        if _using_pyomo5_trees:
+            baseline = "B[1] * x[1] * y[1] + B[2] * x[2] * y[2] + B[3] * x[3] * y[3]"
+        else:
+            baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
+        self.assertEquals( str(expr), baseline )
 
     # verifies that the use of lambda expressions as rules yields model instances
     # that are not pickle'able.

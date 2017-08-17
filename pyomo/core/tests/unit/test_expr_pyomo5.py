@@ -2627,7 +2627,7 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
         e1 = sin(m.a)
         e = -e1
         self.assertIs(type(e), EXPR._NegationExpression)
-        self.assertIs(type(e._args[0]), EXPR._IntrinsicFunctionExpression)
+        self.assertIs(type(e._args[0]), EXPR._UnaryFunctionExpression)
 
 
 class TestExprConditionalContext(unittest.TestCase):
