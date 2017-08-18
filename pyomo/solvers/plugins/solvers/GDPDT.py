@@ -1001,6 +1001,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         TransformationFactory('core.propagate_zero_sum').apply_to(m)
         # Transform bound constraints
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        # Remove trivial constraints
+        TransformationFactory(
+            'core.deactivate_trivial_constraints').apply_to(m)
 
         # restore original variable values
         obj_to_cuid = generate_cuid_names(m, ctype=(Var, Constraint, Disjunct),
@@ -1102,7 +1105,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         else:
             raise ValueError(
                 'GDPDT unable to handle NLP subproblem termination '
-                'condition of {}'.format(subprob_terminate_cond))
+                'condition of {}. Results: {}'.format(
+                    subprob_terminate_cond, results))
 
         # Call the NLP post-solve callback
         self.subproblem_postsolve(m, self)
