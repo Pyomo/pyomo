@@ -115,7 +115,7 @@ script:
 - test.pyomo -v --cat=$CATEGORY --cov
 
 # Run documentation tests
-- nosetests -v --with-doctest --doctest-extension=.rst pyomo/doc/OnlineDocs
+- nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 #
 #
 #
