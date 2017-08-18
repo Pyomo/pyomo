@@ -72,6 +72,8 @@ def runPyomoTests():
         if not os.path.exists(docdir):
             raise ValueError("Invalid documentation directory, "
                              "path does not exist")
+    elif _options.doctests:
+        docdir = os.path.join('pyomo','doc','OnlineDocs')
     else:
         docdir = None
 
