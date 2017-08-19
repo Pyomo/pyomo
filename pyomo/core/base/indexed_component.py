@@ -142,7 +142,7 @@ class _IndexedComponent_slicer(object):
                             break
                 elif _call[0] == _IndexedComponent_slicer.call:
                     try:
-                        _comp = _comp( *(_call[1]) )
+                        _comp = _comp( *(_call[1]), **(_call[2]) )
                     except:
                         # Since we are slicing, we may only be
                         # interested in things that match.  We will
@@ -217,7 +217,7 @@ class _IndexedComponent_slicer(object):
             _IndexedComponent_slicer.getitem, idx ) )
         return self
 
-    def __call__(self, *idx):
+    def __call__(self, *idx, **kwds):
         """Override the "()" operator to defer resolution until iteration.
 
         Creating a slice of a component returns a
@@ -228,8 +228,11 @@ class _IndexedComponent_slicer(object):
         """
         self._iter_stack.append(None)
         self._call_stack.append( (
-            _IndexedComponent_slicer.call, idx ) )
-        return self
+            _IndexedComponent_slicer.call, idx, kwds ) )
+        if self._call_stack[-2][1] == 'component':
+            return self
+        else:
+            return list( self )
 
 
 class IndexedComponent(Component):
