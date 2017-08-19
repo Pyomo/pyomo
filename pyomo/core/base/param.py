@@ -796,7 +796,8 @@ This has resulted in the conversion of the source to dense form.
         if data is not None:
             try:
                 for key, val in iteritems(data):
-                    self[key] = val
+                    #self[key] = val
+                    self._setitem(self._validate_index(key), val)
             except Exception:
                 msg = sys.exc_info()[1]
                 if type(data) is not dict:
