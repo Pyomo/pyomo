@@ -583,7 +583,7 @@ You can silence this warning by one of three ways:
             idx = normalize_index(idx)
             if idx in self._data:
                 return idx
-            elif idx in self._index:
+            if idx in self._index:
                 return idx
         # There is the chance that the index contains an Ellipsis,
         # so we should generate a slicer
