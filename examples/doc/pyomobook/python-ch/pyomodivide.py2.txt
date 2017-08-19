@@ -1,10 +1,8 @@
 2 Param Declarations
     pParm : Size=1, Index=None, Domain=Integers, Default=2, Mutable=False
-        Key  : Value
-        None :     2
+        Key : Value
     wParm : Size=1, Index=None, Domain=PositiveIntegers, Default=4, Mutable=False
-        Key  : Value
-        None :     4
+        Key : Value
 
 1 Var Declarations
     aVar : Size=1, Index=None
