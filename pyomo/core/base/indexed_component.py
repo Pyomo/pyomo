@@ -456,46 +456,38 @@ You can silence this warning by one of three ways:
         """
         if self._constructed is False:
             self._not_constructed_error(index)
-        try:
-            # The vast majority of the time the index will be in the _data
-            # dictionary, so just check and return it.  Note that this can
-            # return a TypeError if there is a slice in the index.
-            if index in self._data:
-                return self._data[index]
-            index = self._validate_index(index)
-        except TypeError:
-            # Process alternatives
-            index = self._processUnhashableIndex(index, True)
 
-        # At this point, idx will have been flattened - so if it is defined,
-        # it will be in _data
         try:
-            if index in self._data:
-                return self._data[index]
+            obj = self._data.get(index, None)
         except TypeError:
+            obj = None
+            index = self._processUnhashableIndex(index)
+
+        if obj is None:
             # Not good: we have to defer this import to now
             # due to circular imports (expr imports _VarData
             # imports indexed_component, but we need expr
             # here
             from pyomo.core.base import expr as EXPR
-            if index.__class__ is EXPR._GetItemExpression:
+            if index.__class__ is EXPR._GetItemExpression or \
+                    index.__class__ is _IndexedComponent_slicer:
                 return index
-            raise
+            index = self._validate_index(index)
+            # _validate could have found an Ellipsis and returned a slicer
+            if index.__class__ is _IndexedComponent_slicer:
+                return index
+            obj = self._data.get(index, None)
+            #
+            # Call the _default helper to retrieve/return the default value
+            #
+            if obj is None:
+                return self._default(index)
 
-        #
-        # The index is not in the _data dictionary.  If index generated a
-        # slicer, return it
-        #
-        if index.__class__ is _IndexedComponent_slicer:
-            return index
-        #
-        # Call the _default helper to retrieve/return the default value
-        #
-        return self._default(index)
+        return obj
 
     def __setitem__(self, index, val):
         #
-        # Set the value: This relies on () to insert the correct
+        # Set the value: This relies on _setitem() to insert the correct
         # ComponentData into the dictionary
         #
         # Note: it is important that we check _constructed is False and not
@@ -505,35 +497,57 @@ You can silence this warning by one of three ways:
         #
         if self._constructed is False:
             self._not_constructed_error(index)
+
+        try:
+            obj = self._data.get(index, None)
+        except TypeError:
+            obj = None
+            index = self._processUnhashableIndex(index)
+
+        # If we didn't find the index in the data, then we need to validate
+        # it against the underlying set (as long as _processUnhashableIndex
+        # didn't return a slicer)
+        if obj is None and index.__class__ is not _IndexedComponent_slicer:
+            index = self._validate_index(index)
         #
-        # Call the _default helper to retrieve/return the default value
+        # Call the _setitem helper to populate the _data
+        # dictionary and set the value
         #
-        index = self._validate_index(index)
         if index.__class__ is _IndexedComponent_slicer:
             # this supports "m.x[:,1] = 5" through a simple recursive call
+            #
+            # Note that we need to RECHECK the class against
+            # _IndexedComponent_slicer, as _validate_index could have found
+            # an Ellipsis (which is hashable) and returned a slicer
             for idx in index:
-                self._setitem(idx, val)
+                self._setitem(idx.index(), val)
         else:
+            if obj is None :
+                index = self._validate_index(index)
             return self._setitem(index, val)
 
     def __delitem__(self, index):
         if self._constructed is False:
             self._not_constructed_error(index)
-        # find the index, and normalize if the simple match fails
         try:
-            if index not in self._data:
-                index = self._validate_index(index)
+            obj = self._data.get(index, None)
         except TypeError:
+            obj = None
             index = self._processUnhashableIndex(index)
+
+        if obj is None and index.__class__ is not _IndexedComponent_slicer:
+            index = self._validate_index(index)
+            obj = self._data.get(index, None)
+
         # this supports "del m.x[:,1]" through a simple recursive call
         if type(index) is _IndexedComponent_slicer:
-            for idx in index:
-                del self[idx]
+            for idx in list(index):
+                del self[idx.index()]
         else:
             # Handle the normal deletion operation
             if self.is_indexed():
                 # Remove reference to this object
-                self[index]._component = None
+                self._data[index]._component = None
             del self._data[index]
 
     def _not_constructed_error(self, idx):
@@ -553,14 +567,13 @@ You can silence this warning by one of three ways:
             # Return whatever index was provided if the global flag dictates
             # that we should bypass all index checking and domain validation
             return idx
-        try:
-            if idx in self._index:
-                # If the index is in the underlying index set, then return it
-                #  Note: This check is potentially expensive (e.g., when the
-                # indexing set is a complex set operation)!
-                return idx
-        except TypeError:
-            return self._processUnhashableIndex(idx)
+        # This is only called through __{get,set,del}item__, whichnhas
+        # already trapped unhashable objects.
+        if idx in self._index:
+            # If the index is in the underlying index set, then return it
+            #  Note: This check is potentially expensive (e.g., when the
+            # indexing set is a complex set operation)!
+            return idx
 
         if normalize_index.flatten:
             # Now we normalize the index and check again.  Usually,
@@ -612,14 +625,16 @@ You can silence this warning by one of three ways:
         #
         # Setup the slice template (in fixed)
         #
-        if type(idx) not in (tuple, list):
-            idx = [idx]
-        else:
+        if type(idx) is tuple:
             # We would normally do "flatten()" here, but the current
             # (10/2016) implementation of flatten() is too aggressive:
             # it will attempt to expand *any* iterable, including
             # SimpleParam.
+            idx = pyutilib.misc.flatten_tuple(idx)
+        elif type(idx) is list:
             idx = pyutilib.misc.flatten_tuple(tuple(idx))
+        else:
+            idx = (idx,)
 
         for i,val in enumerate(idx):
             if type(val) is slice:
@@ -669,7 +684,7 @@ You can silence this warning by one of three ways:
                     # imports indexed_component, but we need expr
                     # here
                     from pyomo.core.base import expr as EXPR
-                    return EXPR._GetItemExpression(self, tuple(idx))
+                    return EXPR._GetItemExpression(self, idx)
                 except:
                     # There are other ways we could get an exception
                     # that is not TemplateExpressionError; most notably,
@@ -699,6 +714,8 @@ do, as if you later change the fixed value of the object this lookup
 will not change.  If you understand the implications of using
 non-constant values, you can get the current value of the object using
 the value() function.""" % ( self.name, i ))
+            # verify that the value is hashable
+            hash(val)
             if ellipsis is None:
                 fixed[i] = val
             else:
@@ -707,7 +724,10 @@ the value() function.""" % ( self.name, i ))
         if sliced or ellipsis is not None:
             return _IndexedComponent_slicer(self, fixed, sliced, ellipsis)
         elif _found_numeric:
-            return tuple( fixed[i] for i in range(len(idx)) )
+            if len(idx) == 1:
+                return fixed[0]
+            else:
+                return tuple( fixed[i] for i in range(len(idx)) )
         elif _exception is not None:
             raise
         else:
