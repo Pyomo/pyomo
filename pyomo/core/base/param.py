@@ -513,12 +513,12 @@ class Param(IndexedComponent):
                 self.set_value(val)
                 return self
             elif self._mutable:
-                # Mutable Params behave like normal components, so we can
-                # defer to the superclass (IndexedComponent) implementation
-                if idx not in self._data:
+                # Mutable Params behave like normal components
+                if idx in self._data:
+                    obj = self._data[idx]
+                else:
                     _new = True
-                    self._data[idx] = _ParamData(self)
-                obj = self._data[idx]
+                    obj = self._data[idx] = _ParamData(self)
                 obj.set_value(val, idx, check_domain)
                 return obj
             else:
