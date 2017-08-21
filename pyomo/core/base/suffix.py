@@ -35,7 +35,8 @@ logger = logging.getLogger('pyomo.core')
 #   - active_suffix_generator
 #   - suffix_generator
 
-def active_export_suffix_generator(a_block,datatype=False):
+
+def active_export_suffix_generator(a_block, datatype=False):
     if (datatype is False):
         for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if suffix.export_enabled() is True:
@@ -46,7 +47,8 @@ def active_export_suffix_generator(a_block,datatype=False):
                (suffix.get_datatype() is datatype):
                 yield name, suffix
 
-def export_suffix_generator(a_block,datatype=False):
+
+def export_suffix_generator(a_block, datatype=False):
     if (datatype is False):
         for name, suffix in iteritems(a_block.component_map(Suffix)):
             if suffix.export_enabled() is True:
@@ -57,7 +59,8 @@ def export_suffix_generator(a_block,datatype=False):
                (suffix.get_datatype() is datatype):
                 yield name, suffix
 
-def active_import_suffix_generator(a_block,datatype=False):
+
+def active_import_suffix_generator(a_block, datatype=False):
     if (datatype is False):
         for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if suffix.import_enabled() is True:
@@ -68,7 +71,8 @@ def active_import_suffix_generator(a_block,datatype=False):
                (suffix.get_datatype() is datatype):
                 yield name, suffix
 
-def import_suffix_generator(a_block,datatype=False):
+
+def import_suffix_generator(a_block, datatype=False):
     if (datatype is False):
         for name, suffix in iteritems(a_block.component_map(Suffix)):
             if suffix.import_enabled() is True:
@@ -79,7 +83,8 @@ def import_suffix_generator(a_block,datatype=False):
                (suffix.get_datatype() is datatype):
                 yield name, suffix
 
-def active_local_suffix_generator(a_block,datatype=False):
+
+def active_local_suffix_generator(a_block, datatype=False):
     if (datatype is False):
         for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             if suffix.get_direction() is Suffix.LOCAL:
@@ -90,7 +95,8 @@ def active_local_suffix_generator(a_block,datatype=False):
                (suffix.get_datatype() is datatype):
                 yield name, suffix
 
-def local_suffix_generator(a_block,datatype=False):
+
+def local_suffix_generator(a_block, datatype=False):
     if (datatype is False):
         for name, suffix in iteritems(a_block.component_map(Suffix)):
             if suffix.get_direction() is Suffix.LOCAL:
@@ -101,7 +107,8 @@ def local_suffix_generator(a_block,datatype=False):
                (suffix.get_datatype() is datatype):
                 yield name, suffix
 
-def active_suffix_generator(a_block,datatype=False):
+
+def active_suffix_generator(a_block, datatype=False):
     if (datatype is False):
         for name, suffix in iteritems(a_block.component_map(Suffix, active=True)):
             yield name, suffix
@@ -110,7 +117,8 @@ def active_suffix_generator(a_block,datatype=False):
             if suffix.get_datatype() is datatype:
                 yield name, suffix
 
-def suffix_generator(a_block,datatype=False):
+
+def suffix_generator(a_block, datatype=False):
     if (datatype is False):
         for name, suffix in iteritems(a_block.component_map(Suffix)):
             yield name, suffix
@@ -121,6 +129,8 @@ def suffix_generator(a_block,datatype=False):
 
 # Note: The order of inheritance here is important so that
 #       __setstate__ works correctly on the ActiveComponent base class.
+
+
 class Suffix(ComponentMap, ActiveComponent):
     """A model suffix, representing extraneous model data"""
 
@@ -137,25 +147,25 @@ class Suffix(ComponentMap, ActiveComponent):
     # If more directions are added be sure to update the error message
     # in the setDirection method
     # neither sent to solver or received from solver
-    LOCAL  = 0
+    LOCAL = 0
     # sent to solver or other external location
     EXPORT = 1
     # obtained from solver or other external source
     IMPORT = 2
-    IMPORT_EXPORT = 3 # both
+    IMPORT_EXPORT = 3  # both
 
-    SuffixDirections = (LOCAL,EXPORT,IMPORT,IMPORT_EXPORT)
-    SuffixDirectionToStr = {LOCAL:'Suffix.LOCAL',
-                            EXPORT:'Suffix.EXPORT',
-                            IMPORT:'Suffix.IMPORT',
-                            IMPORT_EXPORT:'Suffix.IMPORT_EXPORT'}
+    SuffixDirections = (LOCAL, EXPORT, IMPORT, IMPORT_EXPORT)
+    SuffixDirectionToStr = {LOCAL: 'Suffix.LOCAL',
+                            EXPORT: 'Suffix.EXPORT',
+                            IMPORT: 'Suffix.IMPORT',
+                            IMPORT_EXPORT: 'Suffix.IMPORT_EXPORT'}
     # Suffix Datatypes
     FLOAT = 4
     INT = 0
-    SuffixDatatypes = (FLOAT,INT,None)
-    SuffixDatatypeToStr = {FLOAT:'Suffix.FLOAT',
-                           INT:'Suffix.INT',
-                           None:str(None)}
+    SuffixDatatypes = (FLOAT, INT, None)
+    SuffixDatatypeToStr = {FLOAT: 'Suffix.FLOAT',
+                           INT: 'Suffix.INT',
+                           None: str(None)}
 
     def __init__(self, **kwds):
 
@@ -165,15 +175,15 @@ class Suffix(ComponentMap, ActiveComponent):
         self._rule = None
 
         # The suffix direction
-        direction = kwds.pop('direction',Suffix.LOCAL)
+        direction = kwds.pop('direction', Suffix.LOCAL)
 
         # The suffix datatype
-        datatype = kwds.pop('datatype',Suffix.FLOAT)
+        datatype = kwds.pop('datatype', Suffix.FLOAT)
 
         # The suffix construction rule
         # TODO: deprecate the use of 'rule'
-        self._rule = kwds.pop('rule',None)
-        self._rule = kwds.pop('initialize',self._rule)
+        self._rule = kwds.pop('rule', None)
+        self._rule = kwds.pop('initialize', self._rule)
 
         # Check that keyword values make sense (these function have
         # internal error checking).
@@ -193,15 +203,15 @@ class Suffix(ComponentMap, ActiveComponent):
         This method must be defined for deepcopy/pickling because this
         class relies on component ids.
         """
-        ActiveComponent.__setstate__(self,state)
-        ComponentMap.__setstate__(self,state)
+        ActiveComponent.__setstate__(self, state)
+        ComponentMap.__setstate__(self, state)
 
     def construct(self, data=None):
         """
         Constructs this component, applying rule if it exists.
         """
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Constructing suffix %s",self.name)
+            logger.debug("Constructing suffix %s", self.name)
 
         if self._constructed is True:
             return
@@ -212,8 +222,9 @@ class Suffix(ComponentMap, ActiveComponent):
             self.update_values(self._rule(self._parent()))
 
     def exportEnabled(self):
-        logger.warning("DEPRECATION WARNING: Suffix.exportEnabled is replaced "
-                       " with Suffix.export_enabled.")
+        """DEPRECATION WARNING: Suffix.exportEnabled is replaced with
+        Suffix.export_enabled."""
+        logger.warning(self.exportEnabled.__doc__)
         return self.export_enabled()
 
     def export_enabled(self):
@@ -224,8 +235,9 @@ class Suffix(ComponentMap, ActiveComponent):
         return bool(self._direction & Suffix.EXPORT)
 
     def importEnabled(self):
-        logger.warning("DEPRECATION WARNING: Suffix.importEnabled is replaced "
-                       " with Suffix.import_enabled.")
+        """DEPRECATION WARNING: Suffix.importEnabled is replaced with
+        Suffix.import_enabled."""
+        logger.warning(self.importEnabled.__doc__)
         return self.import_enabled()
 
     def import_enabled(self):
@@ -236,9 +248,11 @@ class Suffix(ComponentMap, ActiveComponent):
         return bool(self._direction & Suffix.IMPORT)
 
     def updateValues(self, data, expand=True):
+        """DEPRECATION WARNING: Suffix.updateValues is replaced with
+        Suffix.update_values."""
         logger.warning("DEPRECATION WARNING: Suffix.updateValues is replaced "
                        " with Suffix.update_values.")
-        return self.update_values(data,expand)
+        return self.update_values(data, expand)
 
     def update_values(self, data, expand=True):
         """
@@ -262,6 +276,8 @@ class Suffix(ComponentMap, ActiveComponent):
             self.update(data)
 
     def setValue(self, component, value, expand=True):
+        """DEPRECATION WARNING: Suffix.setValue is replaced with
+        Suffix.set_value."""
         logger.warning("DEPRECATION WARNING: Suffix.setValue is replaced "
                        " with Suffix.set_value.")
         return self.set_value(component, value, expand)
@@ -284,6 +300,8 @@ class Suffix(ComponentMap, ActiveComponent):
             self[component] = value
 
     def setAllValues(self, value):
+        """DEPRECATION WARNING: Suffix.setAllValues is replaced with
+        Suffix.set_all_values."""
         logger.warning("DEPRECATION WARNING: Suffix.setAllValues is replaced "
                        " with Suffix.set_all_values.")
         return self.set_all_values(value)
@@ -296,6 +314,8 @@ class Suffix(ComponentMap, ActiveComponent):
             self[ndx] = value
 
     def clearValue(self, component, expand=True):
+        """DEPRECATION WARNING: Suffix.clearValue is replaced with
+        Suffix.clear_value."""
         logger.warning("DEPRECATION WARNING: Suffix.clearValue is replaced "
                        " with Suffix.clear_value.")
         return self.clear_value(component, expand)
@@ -317,6 +337,8 @@ class Suffix(ComponentMap, ActiveComponent):
                 pass
 
     def clearAllValues(self):
+        """DEPRECATION WARNING: Suffix.clearAllValues is replaced with
+        Suffix.clear_all_values."""
         logger.warning("DEPRECATION WARNING: Suffix.clearAllValues is replaced "
                        " with Suffix.clear_all_values.")
         return self.clear_all_values()
@@ -328,6 +350,8 @@ class Suffix(ComponentMap, ActiveComponent):
         self.clear()
 
     def setDatatype(self, datatype):
+        """DEPRECATION WARNING: Suffix.setDatatype is replaced with
+        Suffix.set_datatype."""
         logger.warning("DEPRECATION WARNING: Suffix.setDatatype is replaced "
                        " with Suffix.set_datatype.")
         return self.set_datatype(datatype)
@@ -338,12 +362,14 @@ class Suffix(ComponentMap, ActiveComponent):
         """
         if datatype not in self.SuffixDatatypes:
             raise ValueError("Suffix datatype must be one of: %s. \n"
-                              "Value given: %s"
+                             "Value given: %s"
                              % (list(Suffix.SuffixDatatypeToStr.values()),
                                 datatype))
         self._datatype = datatype
 
     def getDatatype(self):
+        """DEPRECATION WARNING: Suffix.getDatatype is replaced with
+        Suffix.get_datatype."""
         logger.warning("DEPRECATION WARNING: Suffix.getDatatype is replaced "
                        " with Suffix.get_datatype.")
         return self.get_datatype()
@@ -355,6 +381,8 @@ class Suffix(ComponentMap, ActiveComponent):
         return self._datatype
 
     def setDirection(self, direction):
+        """DEPRECATION WARNING: Suffix.setDirection is replaced with
+        Suffix.set_direction."""
         logger.warning("DEPRECATION WARNING: Suffix.setDirection is replaced "
                        " with Suffix.set_direction.")
         return self.set_direction(direction)
@@ -363,14 +391,16 @@ class Suffix(ComponentMap, ActiveComponent):
         """
         Set the suffix direction.
         """
-        if not direction in self.SuffixDirections:
+        if direction not in self.SuffixDirections:
             raise ValueError("Suffix direction must be one of: %s. \n"
-                              "Value given: %s"
+                             "Value given: %s"
                              % (list(self.SuffixDirectionToStr.values()),
                                 direction))
         self._direction = direction
 
     def getDirection(self):
+        """DEPRECATION WARNING: Suffix.getDirection is replaced with
+        Suffix.get_direction."""
         logger.warning("DEPRECATION WARNING: Suffix.getDirection is replaced "
                        " with Suffix.get_direction.")
         return self.get_direction()
@@ -396,14 +426,17 @@ class Suffix(ComponentMap, ActiveComponent):
             [('Direction', self.SuffixDirectionToStr[self._direction]),
              ('Datatype', self.SuffixDatatypeToStr[self._datatype]),
              ],
-            ( (str(k),v) for k,v in itervalues(self._dict) ),
+            ((str(k), v) for k, v in itervalues(self._dict)),
             ("Value",),
-            lambda k,v: [ v ]
-            )
+            lambda k, v: [v]
+        )
 
     # TODO: delete
     def getValue(self, component, *args):
         """
+        DEPRECATION WARNING: Suffix.getValue is replaced with
+        the dict-interface method Suffix.get.
+
         Returns the current value of this suffix for the specified
         component.
         """
@@ -415,6 +448,9 @@ class Suffix(ComponentMap, ActiveComponent):
     # TODO: delete
     def extractValues(self):
         """
+        DEPRECATION WARNING: Suffix.extractValues() is replaced with
+        the dict-interface method Suffix.items().
+
         Extract all data stored on this Suffix into a list of
         component, value tuples.
         """
@@ -440,9 +476,11 @@ class Suffix(ComponentMap, ActiveComponent):
     #
 
     def __eq__(self, other):
+        """Not implemented."""
         raise NotImplementedError("Suffix components are not comparable")
 
     def __ne__(self, other):
+        """Not implemented."""
         raise NotImplementedError("Suffix components are not comparable")
 
 
