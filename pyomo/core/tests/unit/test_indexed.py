@@ -133,9 +133,7 @@ class TestIndexedComponent(unittest.TestCase):
 
     def test_index_by_unhashable_type(self):
         m = ConcreteModel()
-        m.i = Var(initialize=2)
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
-        self.assertEqual(m.x[2], 4)
         self.assertRaisesRegexp(
             TypeError, 'unhashable type',
             m.x.__getitem__, {})
