@@ -2,12 +2,12 @@
 from __future__ import division
 
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.var import Var
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
-import pyomo.core.base.expr as EXPR
 from pyomo.repn.canonical_repn import generate_canonical_repn
+
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
@@ -44,7 +44,7 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
                 if repn.variables is not None and len(repn.variables) == 1:
                     var = repn.variables[0]
                     const = repn.constant if repn.constant is not None else 0
-                    coef = repn.linear[0]
+                    coef = float(repn.linear[0])
                     if constr.upper is not None:
                         newbound = (value(constr.upper) - const) / coef
                         if coef > 0:

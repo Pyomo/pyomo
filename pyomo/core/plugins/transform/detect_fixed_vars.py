@@ -6,7 +6,7 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
 from six import iteritems
 
-__author__ = "Qi Chen <qichen at andrew.cmu.edu>"
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class FixedVarDetector(IsomorphicTransformation):
@@ -34,8 +34,8 @@ class FixedVarDetector(IsomorphicTransformation):
         var_to_id = self.var_to_id = generate_cuid_names(
             instance.model(), ctype=Var, descend_into=True)
         #: dict: Mapping of UIDs to variables
-        self.id_to_var = {
-            cuid: obj for obj, cuid in iteritems(var_to_id)}
+        self.id_to_var = dict(
+            (cuid, obj) for obj, cuid in iteritems(var_to_id))
 
         for var in instance.component_data_objects(
                 ctype=Var, descend_into=True):

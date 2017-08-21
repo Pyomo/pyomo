@@ -5,7 +5,7 @@ from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
 
-__author__ = "Qi Chen <qichen at andrew.cmu.edu>"
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class InitMidpoint(IsomorphicTransformation):
@@ -27,7 +27,7 @@ class InitMidpoint(IsomorphicTransformation):
                 continue
             if var.lb is None and var.ub is None:
                 # If LB and UB do not exist, set variable value to 0
-                var = 0
+                var.set_value(0)
             elif var.lb is None:
                 # if one bound does not exist, set variable value to the other
                 var.set_value(value(var.ub))
@@ -35,11 +35,11 @@ class InitMidpoint(IsomorphicTransformation):
                 # if one bound does not exist, set variable value to the other
                 var.set_value(value(var.lb))
             else:
-                var.set_value((value(var.lb) + value(var.ub)) / 2)
+                var.set_value((value(var.lb) + value(var.ub)) / 2.)
 
 
 class InitZero(IsomorphicTransformation):
-    """Initializes variables to the midpoint of their bounds."""
+    """Initializes variables to zeros."""
 
     alias('core.init_vars_zero', doc=__doc__)
 

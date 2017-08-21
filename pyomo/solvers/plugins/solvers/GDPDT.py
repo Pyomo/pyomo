@@ -17,8 +17,8 @@ research group of Ignacio Grossmann.
 
 For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
 
-Questions: Please make a post at StackOverflow and email the link to Qi Chen
-<qichen at andrew.cmu.edu>.
+Questions: Please make a post at StackOverflow and/or contact Qi Chen
+<https://github.com/qtothec>.
 
 """
 import logging
@@ -120,6 +120,16 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         if kwds:
             print("Unrecognized arguments passed to GDPDT solver:")
             pprint(kwds)
+
+        # Verify that decomposition strategy chosen is one of the supported
+        # strategies
+        valid_strategies = [
+                'LOA', 'hPSC', 'PSC', 'GBD', 'hGBD']
+        if self.decomposition_strategy not in valid_strategies:
+            raise ValueError('Unrecognized decomposition strategy {}. '
+                             'Valid strategies include: {}'.format(
+                                 self.decomposition_strategy,
+                                 valid_strategies))
 
         # If decomposition strategy is a hybrid, set the initial strategy
         if self.decomposition_strategy == 'hPSC':
@@ -339,7 +349,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             raise ValueError('Model has multiple active objectives.')
 
         # Move the objective to the constraints
-        GDPDT.objective_value = Var(domain=Reals)
+        GDPDT.objective_value = Var(domain=Reals, initialize=0)
         if main_obj.sense == minimize:
             GDPDT.objective_expr = Constraint(
                 expr=GDPDT.objective_value >= main_obj.expr)
@@ -981,12 +991,19 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Propagate variable bounds
         TransformationFactory('core.propagate_eq_var_bounds').apply_to(m)
-
+        # Detect fixed variables
+        TransformationFactory('core.detect_fixed_vars').apply_to(m)
         # Propagate fixed variables
         TransformationFactory('core.propagate_fixed_vars').apply_to(m)
-
+        # Remove zero terms in linear expressions
+        TransformationFactory('core.remove_zero_terms').apply_to(m)
+        # Remove terms in equal to zero summations
+        TransformationFactory('core.propagate_zero_sum').apply_to(m)
         # Transform bound constraints
         TransformationFactory('core.constraints_to_var_bounds').apply_to(m)
+        # Remove trivial constraints
+        TransformationFactory(
+            'core.deactivate_trivial_constraints').apply_to(m)
 
         # restore original variable values
         obj_to_cuid = generate_cuid_names(m, ctype=(Var, Constraint, Disjunct),
@@ -997,12 +1014,13 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 try:
                     old_value = self.initial_variable_values[obj_to_cuid[v]]
                     # Ensure that the value is within the bounds
-                    if v.lb is not None and old_value < v.lb:
-                        old_value = v.lb
-                    if v.ub is not None and old_value > v.ub:
-                        old_value = v.ub
-                    # Set the value
-                    v.set_value(old_value)
+                    if old_value is not None:
+                        if v.has_lb() and old_value < v.lb:
+                            old_value = v.lb
+                        if v.has_ub() and old_value > v.ub:
+                            old_value = v.ub
+                        # Set the value
+                        v.set_value(old_value)
                 except KeyError as e:
                     continue
 
@@ -1087,7 +1105,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         else:
             raise ValueError(
                 'GDPDT unable to handle NLP subproblem termination '
-                'condition of {}'.format(subprob_terminate_cond))
+                'condition of {}. Results: {}'.format(
+                    subprob_terminate_cond, results))
 
         # Call the NLP post-solve callback
         self.subproblem_postsolve(m, self)

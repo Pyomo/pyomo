@@ -12,6 +12,8 @@ else:
 
 diff_tol = 1e-4
 
+__author__ = "Qi Chen <https://github.com/qtothec>"
+
 
 class TestMINDT(unittest.TestCase):
     """Tests for the MINDT solver plugin."""

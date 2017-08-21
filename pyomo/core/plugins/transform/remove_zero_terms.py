@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 """Transformation to remove zero terms from constraints."""
 from __future__ import division
 
@@ -6,12 +7,16 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
 from pyomo.repn.canonical_repn import generate_canonical_repn
 
+__author__ = "Qi Chen <https://github.com/qtothec>"
+
 
 class RemoveZeroTerms(IsomorphicTransformation):
     """Looks for 0 * var in a constraint and removes it.
 
     Currently limited to processing linear constraints of the form x1 = 0 *
     x3, occurring as a result of x2.fix(0).
+
+    TODO: support nonlinear expressions
 
     """
 
@@ -39,11 +44,18 @@ class RemoveZeroTerms(IsomorphicTransformation):
                 constr.set_value(sum(repn.linear[i] * repn.variables[i]
                                      for i in nonzero_vars_indx) + const ==
                                  constr.upper)
-            elif constr.lower is not None:
+            elif constr.has_lb() and not constr.has_ub():
                 constr.set_value(sum(repn.linear[i] * repn.variables[i]
                                      for i in nonzero_vars_indx) + const >=
                                  constr.lower)
-            elif constr.upper is not None:
+            elif constr.has_ub() and not constr.has_lb():
                 constr.set_value(sum(repn.linear[i] * repn.variables[i]
+                                     for i in nonzero_vars_indx) + const <=
+                                 constr.upper)
+            else:
+                # constraint is a bounded inequality of form a <= x <= b.
+                # I don't think this is a great idea, but ¯\_(ツ)_/¯
+                constr.set_value(constr.lower <=
+                                 sum(repn.linear[i] * repn.variables[i]
                                      for i in nonzero_vars_indx) + const <=
                                  constr.upper)

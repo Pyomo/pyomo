@@ -3,7 +3,7 @@ import pyutilib.th as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var, value)
 
-__author__ = "Qi Chen <qichen at andrew.cmu.edu>"
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class TestEqualityPropagate(unittest.TestCase):
@@ -27,6 +27,7 @@ class TestEqualityPropagate(unittest.TestCase):
         self.assertTrue(m.v2.fixed)
         self.assertTrue(m.v3.fixed)
         self.assertTrue(m.v4.fixed)
+        self.assertEquals(value(m.v4), 2)
         # m.display()
 
     def test_var_fix_revert(self):
@@ -46,7 +47,7 @@ class TestEqualityPropagate(unittest.TestCase):
         self.assertTrue(m.v2.fixed)
         self.assertTrue(m.v3.fixed)
         self.assertTrue(m.v4.fixed)
-        fvp.revert()
+        fvp.revert(m)
         self.assertFalse(m.v1.fixed)
         self.assertTrue(m.v2.fixed)
         self.assertFalse(m.v3.fixed)
@@ -92,7 +93,7 @@ class TestEqualityPropagate(unittest.TestCase):
         self.assertEquals(value(m.v1.ub), value(m.v2.ub))
         self.assertEquals(value(m.v1.ub), value(m.v3.ub))
         self.assertEquals(value(m.v1.ub), value(m.v4.ub))
-        xfrm.revert()
+        xfrm.revert(m)
         self.assertEquals(value(m.v1.lb), 1)
         self.assertEquals(value(m.v2.lb), 0)
         self.assertEquals(value(m.v3.lb), 2)
