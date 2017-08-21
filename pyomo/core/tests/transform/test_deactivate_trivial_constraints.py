@@ -45,7 +45,7 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
         self.assertTrue(m.c2.active)
         self.assertFalse(m.c3.active)
 
-        xfrm.revert()
+        xfrm.revert(m)
         self.assertTrue(m.c3.active)
 
     def test_trivial_constraints_lb_conflict(self):

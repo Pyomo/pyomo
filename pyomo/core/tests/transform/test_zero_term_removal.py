@@ -20,6 +20,7 @@ class TestRemoveZeroTerms(unittest.TestCase):
         m.c = Constraint(expr=m.v0 == m.v1 * m.v2 + m.v3)
         m.c2 = Constraint(expr=m.v1 * m.v2 + m.v3 <= m.v0)
         m.c3 = Constraint(expr=m.v0 <= m.v1 * m.v2 + m.v3)
+        m.c4 = Constraint(expr=1 <= m.v1 * m.v2 + m.v3 <= 3)
         m.v1.fix(0)
 
         TransformationFactory('core.remove_zero_terms').apply_to(m)
@@ -31,6 +32,8 @@ class TestRemoveZeroTerms(unittest.TestCase):
                              for v in identify_variables(m.c2.body)))
         self.assertFalse(any(id(m.v1) == id(v)
                              for v in identify_variables(m.c3.body)))
+        self.assertFalse(any(id(m.v1) == id(v)
+                             for v in identify_variables(m.c4.body)))
 
 
 if __name__ == '__main__':

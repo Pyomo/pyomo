@@ -35,7 +35,7 @@ class InitMidpoint(IsomorphicTransformation):
                 # if one bound does not exist, set variable value to the other
                 var.set_value(value(var.lb))
             else:
-                var.set_value((value(var.lb) + value(var.ub)) / 2)
+                var.set_value((value(var.lb) + value(var.ub)) / 2.)
 
 
 class InitZero(IsomorphicTransformation):
