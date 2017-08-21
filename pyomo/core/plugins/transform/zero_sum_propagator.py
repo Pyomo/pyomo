@@ -7,7 +7,7 @@ from pyomo.util.plugin import alias
 
 from six.moves import range
 
-__author__ = "Qi Chen <qichen at andrew.cmu.edu>"
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class ZeroSumPropagator(IsomorphicTransformation):
@@ -47,7 +47,7 @@ class ZeroSumPropagator(IsomorphicTransformation):
             if (constr.has_ub() and (
                 (repn.constant is None and value(constr.upper) == 0) or
                     repn.constant == value(constr.upper))):
-                # vars <= 0
+                # term1 + term2 + term3 + ... <= 0
                 # all var terms need to be non-negative
                 if all(
                     # variable has 0 coefficient
@@ -60,13 +60,14 @@ class ZeroSumPropagator(IsomorphicTransformation):
                     (repn.variables[i].has_ub() and
                      value(repn.variables[i].ub) <= 0 and
                      repn.linear[i] <= 0) for i in range(len(repn.linear))):
-                    for var in repn.variables:
-                        var.fix(0)
+                    for i in range(len(repn.linear)):
+                        if not repn.linear[i] == 0:
+                            repn.variables[i].fix(0)
                     continue
             if (constr.has_lb() and (
                 (repn.constant is None and value(constr.lower) == 0)) or
                     (repn.constant == value(constr.lower))):
-                # vars >= 0
+                # term1 + term2 + term3 + ... >= 0
                 # all var terms need to be non-positive
                 if all(
                     # variable has 0 coefficient
@@ -77,5 +78,6 @@ class ZeroSumPropagator(IsomorphicTransformation):
                     (repn.variables[i].has_ub() and
                      value(repn.variables[i].ub) <= 0 and
                      repn.linear[i] >= 0) for i in range(len(repn.linear))):
-                    for var in repn.variables:
-                        var.fix(0)
+                    for i in range(len(repn.linear)):
+                        if not repn.linear[i] == 0:
+                            repn.variables[i].fix(0)
