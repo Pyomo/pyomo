@@ -4,6 +4,8 @@ from pyomo.environ import *
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.gdp import *
 
+import random
+
 # DEBUG
 from nose.tools import set_trace
 
@@ -13,6 +15,8 @@ class TwoTermDisj(unittest.TestCase):
     # make sure that we are using coopr3 expressions...
     def setUp(self):
         EXPR.set_expression_tree_format(expr_common.Mode.coopr3_trees)
+        # set seed to test unique namer
+        random.seed(666)
 
     def tearDown(self):
         EXPR.set_expression_tree_format(expr_common._default_mode)
@@ -50,6 +54,54 @@ class TwoTermDisj(unittest.TestCase):
         disjBlock = transBlock.relaxedDisjuncts
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
+
+
+    def test_transformation_block_name_collision(self):
+        m = self.makeModel()
+        # add block with the name we are about to try to use
+        m._pyomo_gdp_chull_relaxation = Block(Any)
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        # check that we got a uniquely named block
+        transBlock = m.component("_pyomo_gdp_chull_relaxation_4")
+        self.assertIsInstance(transBlock, Block)
+
+        # check that the relaxed disjuncts really are here.
+        disjBlock = transBlock.relaxedDisjuncts
+        self.assertIsInstance(disjBlock, Block)
+        self.assertEqual(len(disjBlock), 2)
+        self.assertIsInstance(disjBlock[0].component("d[0].c"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("d[1].c1"), Constraint)
+        self.assertIsInstance(disjBlock[1].component("d[1].c2"), Constraint)
+        
+        # we didn't add to the block that wasn't ours
+        self.assertEqual(len(m._pyomo_gdp_chull_relaxation), 0)
+
+    
+    def test_info_dict_name_collision(self):
+        m = self.makeModel()
+        # we never have a way to know if the dictionary we made was ours. But we
+        # should yell if there is a non-dictionary component of the same name.
+        m._gdp_transformation_info = Block()
+        self.assertRaisesRegexp(
+            GDP_Error, 
+            "Component unknown contains an attribute named "
+            "_gdp_transformation_info. The transformation requires that it can "
+            "create this attribute!*", 
+            TransformationFactory('gdp.chull').apply_to,
+            m)
+       
+
+    def test_indicator_vars_still_active(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        self.assertIsInstance(m.d[0].indicator_var, Var)
+        self.assertTrue(m.d[0].indicator_var.active)
+        self.assertTrue(m.d[0].indicator_var.is_binary())
+        self.assertIsInstance(m.d[1].indicator_var, Var)
+        self.assertTrue(m.d[1].indicator_var.active)
+        self.assertTrue(m.d[1].indicator_var.is_binary())
 
 
     def test_disaggregated_vars(self):
@@ -109,7 +161,6 @@ class TwoTermDisj(unittest.TestCase):
         firstterm = cons.body._args[0]
         self.assertEqual(len(firstterm._numerator), 2)
         self.assertEqual(len(firstterm._denominator), 0)
-        # QUESTION: what would args be in a ProductExpression??
         self.check_furman_et_al_denominator(firstterm._numerator[0],
                                        m.d[0].indicator_var)
         sub_part = firstterm._numerator[1]
@@ -132,6 +183,8 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(len(y_frac._denominator), 1)
         self.check_furman_et_al_denominator(y_frac._denominator[0],
                                             m.d[0].indicator_var)
+
+        self.assertEqual(cons.body._coef[1], -1)
         secondterm = cons.body._args[1]
         self.assertEqual(len(secondterm._numerator), 2)
         self.assertEqual(len(secondterm._denominator), 0)
@@ -141,12 +194,15 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(len(h0._coef), 2)
         self.assertEqual(h0._const, 0)
         self.assertEqual(len(h0._args[1]._args), 2)
-        #set_trace()
         self.assertEqual(h0._args[0], 0)
         self.assertEqual(h0._args[1]._args[0], 0)
         self.assertEqual(h0._args[1]._args[1], 2)
         self.assertEqual(h0._coef[0], 1)
         self.assertEqual(h0._coef[1], 1)
+
+        self.assertEqual(cons.body._coef[2], -14)
+        thirdterm = cons.body._args[2]
+        self.assertIs(thirdterm, m.d[0].indicator_var)
         
 
     def test_transformed_constraints_linear(self):
@@ -250,7 +306,19 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(xorC.body._coef[0], 1)
         self.assertEqual(xorC.body._coef[1], 1)
 
-    
+        
+    def test_error_for_or(self):
+        m = self.makeModel()
+        m.disjunction.xor = False
+
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Cannot do convex hull transformation for disjunction disjunction "
+            "with or constraint. Must be an xor!*",
+            TransformationFactory('gdp.chull').apply_to,
+            m)
+
+
     def check_disaggregation_constraint(self, cons, var, disvar1, disvar2):
         self.assertEqual(cons.lower, 0)
         self.assertEqual(cons.upper, 0)
@@ -281,6 +349,18 @@ class TwoTermDisj(unittest.TestCase):
                                              disjBlock[1].y)
 
 
+    def test_original_disjuncts_deactivated(self):
+        m = self.makeModel()
+        TransformationFactory('gdp.chull').apply_to(m)
+
+        self.assertFalse(m.d.active)
+        self.assertFalse(m.d[0].active)
+        self.assertFalse(m.d[1].active)
+        self.assertFalse(m.d[0].c.active)
+        self.assertFalse(m.d[1].c1.active)
+        self.assertFalse(m.d[1].c2.active)
+
+
     def test_transformed_disjunct_mappings(self):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
@@ -296,7 +376,8 @@ class TwoTermDisj(unittest.TestCase):
             self.assertIs(infodict['src'], m.d[i])
             self.assertIsInstance(infodict['srcConstraints'], ComponentMap)
             self.assertIsInstance(infodict['srcVars'], ComponentMap)
-            self.assertIsInstance(infodict['boundConstraintToSrcVar'], ComponentMap)
+            self.assertIsInstance(
+                infodict['boundConstraintToSrcVar'], ComponentMap)
 
             disjDict = m.d[i]._gdp_transformation_info
             self.assertIsInstance(disjDict, dict)
@@ -374,7 +455,8 @@ class TwoTermDisj(unittest.TestCase):
         disjBlock = m._pyomo_gdp_chull_relaxation.relaxedDisjuncts   
 
         for i in [0,1]:
-            srcBigm = disjBlock[i]._gdp_transformation_info['boundConstraintToSrcVar']
+            srcBigm = disjBlock[i]._gdp_transformation_info[
+                'boundConstraintToSrcVar']
             bigm = m.d[i]._gdp_transformation_info['bigmConstraints']
             self.assertEqual(len(srcBigm), 3)
             self.assertEqual(len(bigm), 3)
@@ -386,6 +468,19 @@ class TwoTermDisj(unittest.TestCase):
             for var, cons in mappings.iteritems():
                 self.assertIs(srcBigm[cons], var)
                 self.assertIs(bigm[var], cons)
+
+
+    def test_do_not_transform_user_deactivated_disjuncts(self):
+        # TODO
+        pass
+
+
+
+class IndexedDisjunction(unittest.TestCase):
+    @staticmethod
+    def makeModel(self):
+        pass
+
 
 # class NestedDisjunction(unittest.TestCase):
 #     @staticmethod

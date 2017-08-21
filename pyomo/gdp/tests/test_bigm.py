@@ -215,10 +215,13 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m = self.makeModel()
         TransformationFactory('gdp.bigm').apply_to(m)
         oldblock = m.component("d")
-        # have indicator variables on original disjuncts
+        # have indicator variables on original disjuncts and they are still
+        # active.
         self.assertIsInstance(oldblock[0].indicator_var, Var)
+        self.assertTrue(oldblock[0].indicator_var.active)
         self.assertTrue(oldblock[0].indicator_var.is_binary())
         self.assertIsInstance(oldblock[1].indicator_var, Var)
+        self.assertTrue(oldblock[1].indicator_var.active)
         self.assertTrue(oldblock[1].indicator_var.is_binary())
 
     def test_xor_constraints(self):
@@ -236,20 +239,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(xor.upper, 1)
 
     def test_or_constraints(self):
-        m = ConcreteModel()
-        m.a = Var(bounds=(2,7))
-        def d_rule(disjunct, flag):
-            m = disjunct.model()
-            if flag:
-                disjunct.c = Constraint(expr=m.a == 0)
-            else:
-                disjunct.c = Constraint(expr=m.a >= 5)
-        m.d = Disjunct([0,1], rule=d_rule)
-        def disj_rule(m):
-            return [m.d[0], m.d[1]]
-        # ask for an or constraint instead of xor
-        m.disjunction = Disjunction(rule=disj_rule, xor=False)
+        m = self.makeModel()
+        m.disjunction.xor = False
         TransformationFactory('gdp.bigm').apply_to(m)
+
         # check or constraint is an or (upper bound is None)
         orcons = m.component("_gdp_bigm_relaxation_disjunction_or")
         self.assertIsInstance(orcons, Constraint) 
