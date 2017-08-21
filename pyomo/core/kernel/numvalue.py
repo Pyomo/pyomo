@@ -609,7 +609,7 @@ functions.""" % (self.name,))
         """
         if ostream is None:
             ostream = sys.stdout
-        if labeler is not None and not self.is_constant():
+        if (labeler is not None) and (not self.is_constant()):
             # Do not label constant objects, direct them to their own __str__
             ostream.write(labeler(self))
         else:

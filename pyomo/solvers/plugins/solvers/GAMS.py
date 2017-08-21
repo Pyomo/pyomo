@@ -236,7 +236,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         ws = GamsWorkspace(debug=DebugLevel.KeepFiles if keepfiles
                            else DebugLevel.Off,
                            working_directory=tmpdir)
-        
+
         t1 = ws.add_job_from_string(output_file.getvalue())
 
         try:
@@ -368,40 +368,40 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         if modelstat == 1:
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        if modelstat == 2:
+        elif modelstat == 2:
             results.solver.termination_condition = TerminationCondition.locallyOptimal
             soln.status = SolutionStatus.locallyOptimal
-        if modelstat in [3, 18]:
+        elif modelstat in [3, 18]:
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        if modelstat in [4, 5, 6, 10, 19]:
+        elif modelstat in [4, 5, 6, 10, 19]:
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        if modelstat == 7:
+        elif modelstat == 7:
             results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
-        if modelstat == 8:
+        elif modelstat == 8:
             # 'Integer solution model found'
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        if modelstat == 9:
+        elif modelstat == 9:
             results.solver.termination_condition = TerminationCondition.intermediateNonInteger
             soln.status = SolutionStatus.other
-        if modelstat == 11:
+        elif modelstat == 11:
             # Should be handled above, if modelstat and solvestat both
             # indicate a licensing problem
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.licensingProblems
             soln.status = SolutionStatus.error
-        if modelstat in [12, 13]:
+        elif modelstat in [12, 13]:
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
-        if modelstat == 14:
+        elif modelstat == 14:
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.noSolution
             soln.status = SolutionStatus.unknown
-        if modelstat in [15, 16, 17]:
+        elif modelstat in [15, 16, 17]:
             # Having to do with CNS models,
             # not sure what to make of status descriptions
             results.solver.termination_condition = TerminationCondition.optimal
@@ -421,8 +421,11 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                     soln.objective[sym] = {'Value': objctvval}
                 if obj.ctype is not Var:
                     continue
-            elif obj.parent_component().type() is not Var:
-                continue
+            else:
+                if obj.parent_component().type() is Objective:
+                    soln.objective[sym] = {'Value': objctvval}
+                if obj.parent_component().type() is not Var:
+                    continue
             rec = t1.out_db[sym].find_record()
             # obj.value = rec.level
             soln.variable[sym] = {"Value": rec.level}
@@ -668,11 +671,10 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         output_filename = os.path.join(tmpdir, 'model.gms')
         lst_filename = os.path.join(tmpdir, 'output.lst')
-        results_filename = os.path.join(tmpdir, 'results')
         statresults_filename = os.path.join(tmpdir, 'resultsstat.dat')
 
-        io_options['put_results'] = results_filename
-        results_filename += '.dat'
+        io_options['put_results'] = os.path.join(tmpdir, 'results')
+        results_filename = os.path.join(tmpdir, 'results.dat')
 
         if isinstance(model, IBlockStorage):
             # Kernel blocks have slightly different write method
@@ -725,6 +727,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                     os.remove(output_filename)
                     os.remove(lst_filename)
                     os.remove(results_filename)
+                    os.remove(statresults_filename)
 
         ####################################################################
         # Postsolve
@@ -832,40 +835,40 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         if modelstat == 1:
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        if modelstat == 2:
+        elif modelstat == 2:
             results.solver.termination_condition = TerminationCondition.locallyOptimal
             soln.status = SolutionStatus.locallyOptimal
-        if modelstat in [3, 18]:
+        elif modelstat in [3, 18]:
             results.solver.termination_condition = TerminationCondition.unbounded
             soln.status = SolutionStatus.unbounded
-        if modelstat in [4, 5, 6, 10, 19]:
+        elif modelstat in [4, 5, 6, 10, 19]:
             results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
-        if modelstat == 7:
+        elif modelstat == 7:
             results.solver.termination_condition = TerminationCondition.feasible
             soln.status = SolutionStatus.feasible
-        if modelstat == 8:
+        elif modelstat == 8:
             # 'Integer solution model found'
             results.solver.termination_condition = TerminationCondition.optimal
             soln.status = SolutionStatus.optimal
-        if modelstat == 9:
+        elif modelstat == 9:
             results.solver.termination_condition = TerminationCondition.intermediateNonInteger
             soln.status = SolutionStatus.other
-        if modelstat == 11:
+        elif modelstat == 11:
             # Should be handled above, if modelstat and solvestat both
             # indicate a licensing problem
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.licensingProblems
             soln.status = SolutionStatus.error
-        if modelstat in [12, 13]:
+        elif modelstat in [12, 13]:
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.error
             soln.status = SolutionStatus.error
-        if modelstat == 14:
+        elif modelstat == 14:
             if results.solver.termination_condition is None:
                 results.solver.termination_condition = TerminationCondition.noSolution
             soln.status = SolutionStatus.unknown
-        if modelstat in [15, 16, 17]:
+        elif modelstat in [15, 16, 17]:
             # Having to do with CNS models,
             # not sure what to make of status descriptions
             results.solver.termination_condition = TerminationCondition.optimal
@@ -892,8 +895,11 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                     soln.objective[sym] = {'Value': objctvval}
                 if obj.ctype is not Var:
                     continue
-            elif obj.parent_component().type() is not Var:
-                continue
+            else:
+                if obj.parent_component().type() is Objective:
+                    soln.objective[sym] = {'Value': objctvval}
+                if obj.parent_component().type() is not Var:
+                    continue
             rec = model_soln[sym]
             # obj.value = float(rec[0])
             soln.variable[sym] = {"Value": float(rec[0])}
@@ -1004,18 +1010,6 @@ def check_expr_evaluation(model, symbolMap, solver_io):
         assert len(obj) == 1, "GAMS writer can only take 1 active objective"
         obj = obj[0]
         check_expr(obj.expr, obj.name, solver_io)
-
-        # Expressions
-        # Iterate through symbolMap in case for some reason model has
-        # Expressions that do not appear in any constraints or the objective,
-        # since GAMS never sees those anyway so they should be skipped
-        for ref in itervalues(symbolMap.bySymbol):
-            obj = ref()
-            if isinstance(model, IBlockStorage):
-                if obj.ctype is Expression:
-                    check_expr(obj.expr, obj.name, solver_io)
-            elif obj.parent_component().type() is Expression:
-                check_expr(obj.expr, obj.name, solver_io)
     finally:
         # Return uninitialized variables to None
         for var in uninit_vars:
@@ -1028,11 +1022,11 @@ def check_expr(expr, name, solver_io):
     try:
         value(expr)
     except ValueError:
-        logger.warning("While evaluating value(%s), GAMS solver encountered "
-                       "an error.\nGAMS requires that all equations and "
-                       "expressions evaluate at initial values.\n"
-                       "Ensure variable values do not violate any domains "
-                       "(are you using log or log10?)" % name)
+        logger.warning("While evaluating model.%s's expression, GAMS solver "
+                       "encountered an error.\nGAMS requires that all "
+                       "equations and expressions evaluate at initial values.\n"
+                       "Ensure variable values do not violate any domains, "
+                       "and use the warmstart=True keyword to solve()." % name)
         if solver_io == 'shell':
             # For shell, there is no previous exception to worry about
             # overwriting, so raise the ValueError.
