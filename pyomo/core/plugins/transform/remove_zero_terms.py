@@ -6,6 +6,8 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
 from pyomo.repn.canonical_repn import generate_canonical_repn
 
+__author__ = "Qi Chen <https://github.com/qtothec>"
+
 
 class RemoveZeroTerms(IsomorphicTransformation):
     """Looks for 0 * var in a constraint and removes it.

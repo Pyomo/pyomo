@@ -4,7 +4,7 @@ from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var)
 from pyomo.core.base.expr import identify_variables
 
-__author__ = "Qi Chen <qichen at andrew.cmu.edu>"
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class TestRemoveZeroTerms(unittest.TestCase):
