@@ -10,7 +10,7 @@ from pyomo.repn.canonical_repn import generate_canonical_repn
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.base.suffix import Suffix
 
-__author__ = "Qi Chen <qichen at andrew.cmu.edu>"
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 def _build_equality_set(m):
