@@ -331,7 +331,7 @@ class _GeneralConstraintData(_ConstraintData):
 
     __slots__ = ('_body', '_lower', '_upper', '_equality')
 
-    def __init__(self,  expr, component=None):
+    def __init__(self,  expr=None, component=None):
         #
         # These lines represent in-lining of the
         # following constructors:
@@ -702,6 +702,7 @@ class Constraint(ActiveIndexedComponent):
         _type               The class type for the derived subclass
     """
 
+    _ComponentDataType = _GeneralConstraintData
     NoConstraint    = (1000,)
     Skip            = (1000,)
     Infeasible      = (1001,)
