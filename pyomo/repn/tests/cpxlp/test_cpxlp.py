@@ -169,6 +169,19 @@ class TestCPXLPOrdering(unittest.TestCase):
         row_order[model.con4[2]] = -1
         self._check_baseline(model, row_order=row_order)
 
+class TestCPXLP_writer(unittest.TestCase):
+
+    def _cleanup(self, fname):
+        try:
+            os.remove(fname)
+        except OSError:
+            pass
+
+    def _get_fnames(self):
+        class_name, test_name = self.id().split('.')[-2:]
+        prefix = os.path.join(thisdir, test_name.replace("test_", "", 1))
+        return prefix+".lp.baseline", prefix+".lp.out"
+
     def test_var_on_other_model(self):
         other = ConcreteModel()
         other.a = Var()
