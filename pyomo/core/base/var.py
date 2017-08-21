@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -446,6 +446,8 @@ class Var(IndexedComponent):
         dense       An option to specify that the variables are declared densely.
     """
 
+    _ComponentDataType = _GeneralVarData
+
     def __new__(cls, *args, **kwds):
         if cls != Var:
             return super(Var, cls).__new__(cls)
@@ -559,17 +561,15 @@ class Var(IndexedComponent):
             # 30% slower
             self_weakref = weakref_ref(self)
             for ndx in self._index:
-                cdata = _GeneralVarData(domain=self._domain_init_value,
-                                        component=None)
+                cdata = self._ComponentDataType(
+                    domain=self._domain_init_value, component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
             self._initialize_members(self._index)
 
     def add(self, index):
         """Add a variable with a particular index."""
-        if not index in self._index:
-            raise KeyError("Cannot add variable with index %s" % str(index))
-        return self._default(index)
+        return self[index]
 
     #
     # This method must be defined on subclasses of
@@ -577,10 +577,40 @@ class Var(IndexedComponent):
     #
     def _default(self, idx):
         """Returns the default component data value."""
-        vardata = self._data[idx] = _GeneralVarData(self._domain_init_value,
-                                                    component=self)
+        vardata = self._data[idx] = self._ComponentDataType(
+            self._domain_init_value, component=self)
         self._initialize_members([idx])
         return vardata
+
+    def _setitem(self, idx, val):
+        """Perform the fundamental component item creation and storage.
+
+        Components that want to implement a nonstandard storage mechanism
+        should override this method.
+
+        Implementations may assume that the index has already been validated
+        and is a legitimate entry in the _data dict. """
+        #
+        # If we are a scalar, then idx will be None (_validate_index ensures
+        # this)
+        if idx not in self._data:
+            _new = True
+            if self.is_indexed():
+                obj = self._data[idx] = self._ComponentDataType(
+                    self._domain_init_value, component=self)
+            else:
+                obj = self._data[None] = self
+            self._initialize_members([idx])
+        else:
+            _new = False
+            obj = self[idx]
+        try:
+            obj.set_value(val)
+        except:
+            if _new:
+                del self._data[idx]
+            raise
+        return obj
 
     def _initialize_members(self, init_set):
         """Initialize variable data for all indices in a set."""
@@ -888,26 +918,38 @@ class VarList(IndexedVar):
     """
 
     def __init__(self, **kwds):
-        kwds['dense'] = False
+        #kwds['dense'] = False
         args = (Set(),)
-        self._nvars = 0
         IndexedVar.__init__(self, *args, **kwds)
 
     def construct(self, data=None):
         """Construct this component."""
         if __debug__ and logger.isEnabledFor(logging.DEBUG):
             logger.debug("Constructing variable list %s", self.name)
-        IndexedVar.construct(self, data)
+
+        # We need to ensure that the indices needed for initialization are
+        # added to the underlying implicit set.  We *could* verify that the
+        # indices in the initialization dict are all sequential integers,
+        # OR we can just add the correct number of sequential integers and
+        # then let _validate_index complain when we set the value.
+        if self._value_init_value.__class__ is dict:
+            for i in xrange(len(self._value_init_value)):
+                self._index.add(i+1)
+        super(VarList,self).construct(data)
+        # Note that the current Var initializer silently ignores
+        # initialization data that is not in the underlying index set.  To
+        # ensure that at least here all initialization data is added to the
+        # VarList (so we get potential domain errors), we will re-set
+        # everything.
+        if self._value_init_value.__class__ is dict:
+            for k,v in iteritems(self._value_init_value):
+                self[k] = v
 
     def add(self):
         """Add a variable to this list."""
-        self._nvars += 1
-        self._index.add(self._nvars)
-        vardata = self._data[self._nvars] = \
-            _GeneralVarData(domain=self._domain_init_value,
-                            component=self)
-        self._initialize_members([self._nvars])
-        return vardata
+        next_idx = len(self._index) + 1
+        self._index.add(next_idx)
+        return self[next_idx]
 
 register_component(Var, "Decision variables.")
 register_component(VarList, "List of decision variables.")
