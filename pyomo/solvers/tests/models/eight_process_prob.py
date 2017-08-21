@@ -1,7 +1,7 @@
 """Re-implementation of eight-process problem.
 
 Re-implementation of Duran example 3 superstructure synthesis problem in Pyomo
-by Qi Chen <qichen at andrew.cmu.edu>.
+by Qi Chen <https://github.com/qtothec>.
 
 Ref:
     SELECT OPTIMAL PROCESS FROM WITHIN GIVEN SUPERSTRUCTURE.
