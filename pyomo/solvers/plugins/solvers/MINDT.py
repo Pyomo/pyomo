@@ -13,7 +13,7 @@ research group of Ignacio Grossmann.
 
 For nonconvex problems, the bounds self.LB and self.UB may not be rigorous.
 
-Questions: Qi Chen <qichen at andrew.cmu.edu>
+Questions: Qi Chen <https://github.com/qtothec>
 
 """
 from math import copysign
