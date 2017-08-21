@@ -180,6 +180,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         return output_filename, symbol_map
 
     def _print_expr_canonical(self,
+                              model,
                               x,
                               output_file,
                               object_symbol_dictionary,
@@ -241,18 +242,42 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             (variable_symbol_dictionary[id(var)], coef)
                             for var, coef in sorted_names]
                 except KeyError as err:
-                    unmatched_var = next(
-                        (variables[i] for i in xrange(0, len(coefficients))
-                         if id(variables[i]) not in
-                         variable_symbol_dictionary),
-                        None)
-                    if unmatched_var is not None:
-                        err.args = err.args + (
-                            "You may have added a variable "
-                            "from a different model or a deactivated block "
-                            "in your model. "
-                            "Please check model variable named {}."
-                            .format(unmatched_var.name),)
+                    _errors = []
+                    for v in variables:
+                        if id(v) in variable_symbol_dictionary:
+                            continue
+                        if v.model() is not model.model():
+                            _errors.append(
+                                "Variable '%s' is not part of the model "
+                                "being written out, but appears in an "
+                                "expression used on this model." % (v.name,))
+                        else:
+                            _parent = v.parent_block()
+                            while _parent is not None and _parent is not model:
+                                if _parent.type() is not model.type():
+                                    _errors.append(
+                                        "Variable '%s' exists within %s '%s', "
+                                        "but is used by an active "
+                                        "expression.  Currently variables "
+                                        "must be reachable through a tree "
+                                        "of active Blocks."
+                                        % (v.name, _parent.type().__name__,
+                                           _parent.name))
+                                if not _parent.active:
+                                    _errors.append(
+                                        "Variable '%s' exists within "
+                                        "deactivated %s '%s', but is used by "
+                                        "an active expression.  Currently "
+                                        "variables must be reachable through "
+                                        "a tree of active Blocks."
+                                        % (v.name, _parent.type().__name__,
+                                           _parent.name))
+                                _parent = _parent.parent_block()
+
+                    if _errors:
+                        for e in _errors:
+                            logger.error(e)
+                        err.args = err.args + tuple(_errors)
                     raise
 
                 for name, coef in sorted_names:
@@ -597,6 +622,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     object_symbol_dictionary[id(objective_data)] + ':\n')
 
                 offset = print_expr_canonical(
+                    model,
                     canonical_repn,
                     output_file,
                     object_symbol_dictionary,
@@ -712,7 +738,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 label = 'c_e_' + con_symbol + '_'
                 alias_symbol_func(symbol_map, constraint_data, label)
                 output_file.write(label + ':\n')
-                offset = print_expr_canonical(canonical_repn,
+                offset = print_expr_canonical(model,
+                                              canonical_repn,
                                               output_file,
                                               object_symbol_dictionary,
                                               variable_symbol_dictionary,
@@ -731,7 +758,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         label = 'c_l_' + con_symbol + '_'
                     alias_symbol_func(symbol_map, constraint_data, label)
                     output_file.write(label + ':\n')
-                    offset = print_expr_canonical(canonical_repn,
+                    offset = print_expr_canonical(model,
+                                                  canonical_repn,
                                                   output_file,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
@@ -751,7 +779,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         label = 'c_u_' + con_symbol + '_'
                     alias_symbol_func(symbol_map, constraint_data, label)
                     output_file.write(label + ':\n')
-                    offset = print_expr_canonical(canonical_repn,
+                    offset = print_expr_canonical(model,
+                                                  canonical_repn,
                                                   output_file,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
