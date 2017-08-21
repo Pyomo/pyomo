@@ -4,7 +4,7 @@ import pyutilib.th as unittest
 from pyomo.environ import (Constraint, ConcreteModel, TransformationFactory,
                            Var)
 
-__author__ = "Qi Chen <qichen at andrew.cmu.edu>"
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class TestTrivialConstraintDeactivator(unittest.TestCase):
