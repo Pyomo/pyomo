@@ -3,7 +3,7 @@ import pyutilib.th as unittest
 from pyomo.environ import (ConcreteModel, Constraint, TransformationFactory,
                            Var, value)
 
-__author__ = "Qi Chen <qichen at andrew.cmu.edu>"
+__author__ = "Qi Chen <https://github.com/qtothec>"
 
 
 class TestConstraintToVarBoundTransform(unittest.TestCase):

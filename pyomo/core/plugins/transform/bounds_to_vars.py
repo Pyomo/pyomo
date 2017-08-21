@@ -7,6 +7,8 @@ from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
 from pyomo.repn.canonical_repn import generate_canonical_repn
 
+__author__ = "Qi Chen <https://github.com/qtothec>"
+
 
 class ConstraintToVarBoundTransform(IsomorphicTransformation):
     """Change constraints to be a bound on the variable.
