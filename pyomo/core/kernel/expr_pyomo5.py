@@ -288,6 +288,11 @@ def clone_expression(expr, substitute=None, verbose=False):
                 # Store a native or numeric object
                 #
                 _result.append( _sub )
+            elif not isinstance(_sub, _ExpressionBase):
+                #
+                # Store a kernel object that is cloned
+                #
+                _result.append( _sub )
             else:
                 #
                 # Push an expression onto the stack
@@ -565,18 +570,7 @@ class _ExpressionBase(NumericValue):
                 if _sub.__class__ in native_numeric_types:
                     _result.append( native_result )
                     continue
-                if not hasattr(_sub, "is_expression"):
-                    _result.append( native_result )
-                    continue
-                _isExpr = _sub.is_expression()
-                if _isExpr:
-                    _stack.append( (_combiner, _argList, _idx, _len, _result) )
-                    _combiner= getattr(_sub, combiner)()
-                    _argList = _sub._args
-                    _idx     = 0
-                    _len     = len(_argList)
-                    _result  = []
-                else:
+                elif not isinstance(_sub, _ExpressionBase):
                     _result.append( getattr(_sub, test)() )
                     if _combiner is all:
                         if not _result[-1]:
@@ -584,6 +578,13 @@ class _ExpressionBase(NumericValue):
                     elif _combiner is any:
                         if _result[-1]:
                             _idx = _len
+                else:
+                    _stack.append( (_combiner, _argList, _idx, _len, _result) )
+                    _combiner= getattr(_sub, combiner)()
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = len(_argList)
+                    _result  = []
 
             ans = _combiner(_result)
             if _stack:
@@ -735,7 +736,11 @@ class _ExpressionBase(NumericValue):
         elif _sub.__class__ is NumericConstant:
             ostream.write(str(_sub()))
         elif hasattr(_sub, 'getname'):
-            ostream.write(_sub.getname(True, _name_buffer))
+            # BUG?  The kernel may return None from getname()
+            _s = _sub.getname(True, _name_buffer)
+            if _s is None:
+                _s = str(_sub)
+            ostream.write(_s)
         else:
             ostream.write(str(_sub))
 
@@ -1175,7 +1180,7 @@ class _ProductExpression(_ExpressionBase):
             ans = _r
 
         else:
-            ans = _MultiProdExpression([1.0, _l, _r], nnum=3)
+            ans = _MultiProdExpression([1, _l, _r], nnum=3)
         return ans
 
 
@@ -1221,7 +1226,7 @@ class _MultiProdExpression(_ProductExpression):
         return len(self._args) > 1
 
     def _apply_operation(self, result):
-        ans = 1.0
+        ans = 1
         i = 0
         n_ = len(self._args)
         for j in xargs(0,nnum):
@@ -1256,7 +1261,7 @@ class _ReciprocalExpression(_ExpressionBase):
         ostream.write(")")
 
     def _apply_operation(self, result):
-        return 1.0 / result[0]
+        return 1 / result[0]
 
     def _combine_expr(self, _result):
         _l = 1.0
