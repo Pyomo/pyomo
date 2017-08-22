@@ -9,25 +9,27 @@ import copy
 import json
 import pandas as pd
 import numpy as np
+import scipy.integrate
+import scipy.optimize
 import scipy.stats as sp
+
+import cutpoint_set
 
 class Distribution:
     """ Required services common to all distributions.
     """
-    def __init__(self, name = None,
-                 dimension = 0):
-        self.name = name
-        self.dimension = dimension
 
-    def pdf(self):
+    def pdf(self, x):
         pass
     
     def plot_pdf(self):
         pass
-    def cdf(self):
-        pass
-    def cdf_inverse(self):
-        pass
+
+    def cdf(self, x):
+        return scipy.integrate.quad(self.pdf, -np.inf, x) # For univariate only
+
+    def cdf_inverse(self, y):
+        return scipy.optimize.newton(lambda x: (y - self.cdf(x)) ** 2, 0) # Bad implementation, just an idea
 
     def seed_reset(self, seed=None):
         # reset the random number seed for sampling
@@ -40,10 +42,11 @@ class Distribution:
     def mean(self):
         pass
 
-    def region_expectation(self, region):
-        pass
-    def region_probability(self, region):
-        pass
+    def region_expectation(self, a, b):
+        return scipy.integrate.quad(lambda x: x * self.pdf(x), a, b)
+
+    def region_probability(self, a, b):
+        return scipy.integrate.quad(self.pdf, a, b)
 
 #==================================================
 class ScipyDistr(Distribution):
@@ -58,6 +61,18 @@ class ScipyDistr(Distribution):
 
     def sample_one(self):
         return self.scipydistr.rvs()
+
+    def cdf(self, x):
+        return self.scipydistr.cdf(x)
+
+    def cdf_inverse(self, y):
+        return self.scipydistr.ppf(y)
+
+    def region_expectation(self, a, b):
+        return self.scipydistr.expect(lb=a, ub=b)
+
+    def region_probability(self, a, b):
+        return self.scipydistr.expect(func=lambda x: 1, lb=a, ub=b)
 
     def seed_reset(self,seed):
         self.scipydistr.random_state = seed
@@ -82,6 +97,19 @@ class DictDistr:
         # Draw a random sample and fill in the values into the fillin_dict
         # that should have indexes matching the dict used for construction.
         pass
+
+    def pick_representative_points(self, fillin_dict, rectangle_dict):
+        source = self.dict  # typing aid
+        dest = fillin_dict  # typing aid
+
+        for pname in dest:
+            if isinstance(dest[pname], dict):
+                for pindex in dest[pname]:
+                    a, b = rectangle_dict[pname][pindex]
+                    dest[pname][pindex] = source[pname][pindex].region_expectation(a, b)
+            else:
+                a, b = rectangle_dict[pname]
+                dest[pname] =  source[pname].region_expectation(a, b)
 
 #==================================================
 class IndepScipys(DictDistr):
@@ -124,23 +152,25 @@ class IndepScipys(DictDistr):
             else:
                 dest[pname] =  source[pname].sample_one()
 
+
 #===============================================================================
 # out-of-the-box utility functions
 #===============================================================================
 import basicclasses as bc
 
-def dict_sampler2PySP(distrdict, \
+def dict_sampler2PySP(distrdict,
                       TreeTemplateFileName,
                       NumScen,
                       OutDir,
                       Seed = None,
-                      ScenTemplateFileName = None):
+                      ScenTemplateFileName = None,
+                      Abstract = False):
     """
     Once you have a distrdict that has the usual d2p dictionary
     indexes and values that are inputs needed to create
     scipy distribution objects (see class IndepScipys) that are
-    used to draw SumScen samples (independent across params) and
-    uses the TreeTemplateFilame to create a ScenarioStructure.dat
+    used to draw NumScen samples (independent across params) and
+    uses the TreeTemplateFilename to create a ScenarioStructure.dat
     for PySP, which is written to OutDir. A random number seed
     and the scenario template is optional.
     """
@@ -151,11 +181,11 @@ def dict_sampler2PySP(distrdict, \
     
     if ScenTemplateFileName is not None:
         scentemp = bc.PySP_Scenario_Template()
-        scentemp.read_JSON_template(ScenTemplateFileName)
+        scentemp.read_AMPL_template_with_tokens(ScenTemplateFileName)
     else:
         scentemp = None
 
-    # we know we are using scipy distrubutions, so reseed accordingly
+    # we know we are using scipy distributions, so reseed accordingly
     if Seed is not None:
          np.random.seed(Seed)
 
@@ -178,17 +208,111 @@ def dict_sampler2PySP(distrdict, \
         # it would not be hard to go multistage, given branching factors
         nodelistforscen = []
         nodelistforscen.append(rawnode) # single for two-stage problem
-        PySPScen = bc.PySP_Scenario(bc.Raw_Scenario_Data(nodelistforscen), \
+        PySPScen = bc.PySP_Scenario(bc.Raw_Scenario_Data(nodelistforscen),
                                     scentemp)
         pyspscenlist.append(PySPScen)
         rawnodelist.append(rawnode)  # needed for the tree
         # To use an standard (AMPL format) ScenarioStructure.dat the
         # name has to be the PySPScen name because the tree constructor
         # expects that.
-        fname = os.path.join(OutDir, PySPScen.name + ".json")
-        with open(fname, "w") as f:
-            json.dump(rawnode.valdict, f)
+        if not Abstract:
+            fname = os.path.join(OutDir, PySPScen.name + ".json")
+            with open(fname, "w") as f:
+                json.dump(rawnode.valdict, f)
+        else:
+            fname = os.path.join(OutDir, PySPScen.name + ".dat")
+            with open(fname, "wt") as f:
+                for line in PySPScen.scenariodata:
+                    f.write(line)
         
     # we have everything we need
     tree = bc.PySP_Tree(treetemp, pyspscenlist, rawnodelist)
     tree.Write_ScenarioStructure_dat_file(os.path.join(OutDir,'ScenarioStructure.dat'))
+
+
+def dict_representative_points_scenarios(distrdict,
+                      TreeTemplateFileName,
+                      CutPointFileName,
+                      NumScen,
+                      OutDir,
+                      Seed=None,
+                      ScenTemplateFileName=None,
+                      Abstract=False):
+    """
+    Once you have a distrdict that has the usual d2p dictionary
+    indexes and values that are inputs needed to create
+    scipy distribution objects (see class IndepScipys) that are
+    used to draw NumScen samples (independent across params) and
+    uses the TreeTemplateFilename to create a ScenarioStructure.dat
+    for PySP, which is written to OutDir. A random number seed
+    and the scenario template is optional.
+    """
+    dict_distr = IndepScipys(distrdict)
+
+    treetemp = bc.PySP_Tree_Template()
+    treetemp.read_AMPL_template(TreeTemplateFileName)
+
+    cutpoint_sets = cutpoint_set.parse_cutpoint_file(CutPointFileName)
+
+    if ScenTemplateFileName is not None:
+        scentemp = bc.PySP_Scenario_Template()
+        scentemp.read_AMPL_template_with_tokens(ScenTemplateFileName)
+    else:
+        scentemp = None
+
+    # we know we are using scipy distributions, so reseed accordingly
+    if Seed is not None:
+        np.random.seed(Seed)
+
+    pyspscenlist = []
+    rawnodelist = []  # all nodes created
+    ### we should copy distrdict so it doesn't get clobbered
+    localdict = copy.deepcopy(distrdict)
+    rectangledict = copy.deepcopy(distrdict)
+
+    interval_count = sum(len(cpt_set.intervals) for cpt_set in cutpoint_sets)
+
+    for cpt_set in cutpoint_sets:
+        for name in cpt_set.cutpoint_names:
+            # distrdict has the correct indexes, of course.
+            # So now it will get the sample values, but
+            # they will be overwritten next time through the loop
+            # so all processing needs to be done in the loop.
+            # Note: dict_distr has the distributions.
+            interval = cpt_set.get(name)
+            for pname in rectangledict:
+                if isinstance(rectangledict[pname], dict):
+                    for pindex in rectangledict[pname]:
+                        rectangledict[pname][pindex] = interval
+                else:
+                    rectangledict[pname] = interval
+
+            dict_distr.pick_representative_points(localdict, rectangledict)
+            rawnode = bc.Raw_Node_Data(filespec=None,
+                                       dictin=localdict,
+                                       name=name,
+                                       parentname='ROOT',
+                                       prob=1. / interval_count)
+            # it would not be hard to go multistage, given branching factors
+            nodelistforscen = []
+            nodelistforscen.append(rawnode)  # single for two-stage problem
+            PySPScen = bc.PySP_Scenario(bc.Raw_Scenario_Data(nodelistforscen),
+                                        scentemp)
+            pyspscenlist.append(PySPScen)
+            rawnodelist.append(rawnode)  # needed for the tree
+            # To use an standard (AMPL format) ScenarioStructure.dat the
+            # name has to be the PySPScen name because the tree constructor
+            # expects that.
+            if not Abstract:
+                fname = os.path.join(OutDir, PySPScen.name + ".json")
+                with open(fname, "w") as f:
+                    json.dump(rawnode.valdict, f)
+            else:
+                fname = os.path.join(OutDir, PySPScen.name + ".dat")
+                with open(fname, "wt") as f:
+                    for line in PySPScen.scenariodata:
+                        f.write(line)
+
+    # we have everything we need
+    tree = bc.PySP_Tree(treetemp, pyspscenlist, rawnodelist)
+    tree.Write_ScenarioStructure_dat_file(os.path.join(OutDir, 'ScenarioStructure.dat'))
