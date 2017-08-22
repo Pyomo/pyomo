@@ -10,6 +10,7 @@ from pyomo.core.tests.unit.test_component_tuple import \
     _TestActiveComponentTupleBase
 from pyomo.core.tests.unit.test_component_list import \
     _TestActiveComponentListBase
+from pyomo.core.kernel.numvalue import native_numeric_types
 from pyomo.core.kernel.component_interface import (ICategorizedObject,
                                                  IActiveObject,
                                                  IComponent,
@@ -75,6 +76,8 @@ def _collect_expr_components(exp):
     ans = {}
     if isinstance(exp, IComponent):
         ans[id(exp)] = exp
+    if exp.__class__ in native_numeric_types:
+        return ans
     if exp.is_expression():
         if exp.__class__ is pyomo.core.base.expr._ProductExpression:
             for subexp in exp._numerator:
