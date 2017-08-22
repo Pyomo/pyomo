@@ -77,6 +77,14 @@ _pyomo5_module_members = [
     '_NPV_SumExpression',
     '_NPV_UnaryFunctionExpression',
     '_NPV_AbsExpression',
+    '_Constant_NegationExpression',
+    '_Constant_ExternalFunctionExpression',
+    '_Constant_PowExpression',
+    '_Constant_ProductExpression',
+    '_Constant_ReciprocalExpression',
+    '_Constant_SumExpression',
+    '_Constant_UnaryFunctionExpression',
+    '_Constant_AbsExpression',
 ]
 
 def set_expression_tree_format(mode):
