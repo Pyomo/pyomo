@@ -19,14 +19,14 @@ def deprecated(msg='This function has been deprecated and may be removed '
     def wrap(func):
         @functools.wraps(func, assigned=('__module__', '__name__'))
         def wrapper(*args, **kwargs):
-            logging.getLogger(logger).warning('DEPRECATED: {}'.format(msg))
+            logging.getLogger(logger).warning('DEPRECATED: {0}'.format(msg))
             return func(*args, **kwargs)
         if func.__doc__ is None:
             wrapper.__doc__ = textwrap.fill(
-                'DEPRECATION WARNING: {}'.format(msg), width=70)
+                'DEPRECATION WARNING: {0}'.format(msg), width=70)
         else:
             wrapper.__doc__ = textwrap.fill(
-                'DEPRECATION WARNING: {}'.format(msg), width=70) + '\n\n' + \
+                'DEPRECATION WARNING: {0}'.format(msg), width=70) + '\n\n' + \
                 textwrap.fill(textwrap.dedent(func.__doc__.strip()))
         return wrapper
     return wrap
