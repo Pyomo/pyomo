@@ -98,7 +98,7 @@ class IIdentityExpression(NumericValue):
             return 0
         return self._expr.polynomial_degree()
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=None):
         """Convert this expression into a string."""
         if ostream is None:
             ostream = sys.stdout
@@ -125,6 +125,9 @@ class IIdentityExpression(NumericValue):
 
     def _to_string_label(self):
         raise NotImplementedError     #pragma:nocover
+
+    def _apply_operation(self, result):
+        return result[0]
 
 class noclone(IIdentityExpression):
     """
