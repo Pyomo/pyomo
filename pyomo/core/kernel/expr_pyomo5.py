@@ -1551,6 +1551,9 @@ class _GetItemExpression(_ExpressionBase):
         self._args = args
         self._base = base
 
+    def _clone(self, args):
+        return self.__class__(self._base, args)
+
     def __getstate__(self):
         result = super(_GetItemExpression, self).__getstate__()
         for i in _GetItemExpression.__slots__:
@@ -1560,13 +1563,13 @@ class _GetItemExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return self._base.getname(*args, **kwds)
 
-    def _is_constant_combiner(self):
+    def X_is_constant_combiner(self):
         # This must be false to prevent automatic expression simplification
         def impl(args):
             return False
         return impl
 
-    def _is_fixed_combiner(self):
+    def X_is_fixed_combiner(self):
         # FIXME: This is tricky.  I think the correct answer is that we
         # should iterate over the members of the args and make sure all
         # are fixed
