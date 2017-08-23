@@ -58,7 +58,8 @@ if False:
                         original = getattr(base, key, None)
                         if original is not None:
                             copy = copyfunc(original)
-                            copy.__doc__ = attrs[key].__doc__ + " (%s)" % copy.__name__
+                            copy.__doc__ = attrs[key].__doc__ + \
+                                           " (%s)" % copy.__name__
                             attrs[key] = copy
                             break
             for base in bases:
@@ -90,8 +91,14 @@ class CommonTests:
             pp = kwds['preprocess']
             if pp == 'bigm':
                 args.append('--transform=gdp.bigm')
+                # ESJ: HACK for now: also apply the varmover
+                # transformation in this case
+                args.append('--transform=gdp.varmover')
             elif pp == 'chull':
                 args.append('--transform=gdp.chull')
+                # ESJ: HACK for now: also apply the varmover
+                # transformation in this case
+                args.append('--transform=gdp.varmover')
         args.append('-c')
         args.append('--symbolic-solver-labels')
         os.chdir(currdir)
@@ -135,14 +142,19 @@ class CommonTests:
         # Run the small jobshop example using the BigM transformation
         self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop-small.dat'),
                     preprocess='bigm' )
-        self.check( 'jobshop_small', 'bigm' )
+        # ESJ: TODO: Right now the indicator variables have names they won't
+        # have when they don't have to be moved. So I think this LP file will
+        # need to change again.
+        self.check( 'jobshop_small_varmover', 'bigm' )
 
     def test_bigm_jobshop_large(self):
         self.problem='test_bigm_jobshop_large'
         # Run the large jobshop example using the BigM transformation
         self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop.dat'),
                     preprocess='bigm')
-        self.check( 'jobshop_large', 'bigm' )
+        # ESJ: TODO: this LP file also will need to change with the
+        # indicator variable change.
+        self.check( 'jobshop_large_varmover', 'bigm' )
 
     def test_chull_jobshop_small(self):
         self.problem='test_chull_jobshop_small'
@@ -206,7 +218,8 @@ class Solve_GLPK(Solver, CommonTests):
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
-@unittest.skipIf(not 'cplex' in solvers, "The 'cplex' executable is not available")
+@unittest.skipIf(not 'cplex' in solvers, 
+                 "The 'cplex' executable is not available")
 class Solve_CPLEX(Solver, CommonTests):
 
     def pyomo(self,  *args, **kwds):
