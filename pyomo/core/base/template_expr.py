@@ -146,7 +146,7 @@ def substitute_template_expression(expr, substituter, *args):
                     _ptr[0][_ptr[1]-1] = substituter(_obj, *args)
             elif _subType in native_numeric_types or not _obj.is_expression():
                 continue
-            elif _subType is EXPR._ProductExpression:
+            elif not common.mode is common.Mode.pyomo5_trees and _subType is EXPR._ProductExpression:
                 # _ProductExpression is fundamentally different in
                 # Coopr3 / Pyomo4 expression systems and must be handled
                 # specially.
