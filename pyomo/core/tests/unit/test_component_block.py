@@ -79,14 +79,8 @@ def _collect_expr_components(exp):
     if exp.__class__ in native_numeric_types:
         return ans
     if exp.is_expression():
-        if exp.__class__ is pyomo.core.base.expr._ProductExpression:
-            for subexp in exp._numerator:
-                ans.update(_collect_expr_components(subexp))
-            for subexp in exp._denominator:
-                ans.update(_collect_expr_components(subexp))
-        else:
-            for subexp in exp._args:
-                ans.update(_collect_expr_components(subexp))
+        for subexp in exp._args:
+            ans.update(_collect_expr_components(subexp))
     return ans
 
 class TestMisc(unittest.TestCase):
