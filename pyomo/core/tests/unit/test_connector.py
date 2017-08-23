@@ -194,7 +194,7 @@ class TestConnector(unittest.TestCase):
     Key  : Name        : Size : Variable
     None :      comp_a :    1 : composition[a]
          : composition :    3 : composition
-         :        flow :    1 : -1 * flow
+         :        flow :    1 : - flow
          :    pressure :    1 : pIn
 """)
 
@@ -353,9 +353,9 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
-    Key : Lower : Body   : Upper : Active
-      1 :   1.0 : -1 * x :   1.0 :   True
-      2 :   1.0 :  1 + y :   1.0 :   True
+    Key : Lower : Body  : Upper : Active
+      1 :   1.0 :   - x :   1.0 :   True
+      2 :   1.0 : 1 + y :   1.0 :   True
 """)
 
 
@@ -466,9 +466,9 @@ class TestConnector(unittest.TestCase):
         m.component('c.expanded').pprint(ostream=os)
         self.assertEqual(os.getvalue(),
 """c.expanded : Size=2, Index=c.expanded_index, Active=True
-    Key : Lower : Body                 : Upper : Active
-      1 :   0.0 : -1 * x - ECON.auto.x :   0.0 :   True
-      2 :   0.0 :  1 + y - ECON.auto.y :   0.0 :   True
+    Key : Lower : Body                : Upper : Active
+      1 :   0.0 :   - x - ECON.auto.x :   0.0 :   True
+      2 :   0.0 : 1 + y - ECON.auto.y :   0.0 :   True
 """)
 
 
