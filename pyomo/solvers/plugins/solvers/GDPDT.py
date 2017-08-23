@@ -436,7 +436,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
         TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)
+        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
         # TODO: chull too?
         results = self.mip_solver.solve(m, **self.mip_solver_kwargs)
         # m.display()
@@ -534,7 +534,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Transform disjunctions
         TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)
+        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
 
         # Deactivate extraneous IMPORT/EXPORT suffixes
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -695,7 +695,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Transform disjunctions
         TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)
+        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
 
         # Deactivate extraneous IMPORT/EXPORT suffixes
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -799,7 +799,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         # Transform disjunctions
         TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)
+        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
 
         getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
         getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
@@ -1352,7 +1352,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         GDPDT.slack_vars.fix(0)
         # Transform the model
         TransformationFactory('gdp.bigm').apply_to(m)
-        TransformationFactory('gdp.reclassify').apply_to(m)
+        TransformationFactory('gdp.reclassify').apply_to(m)  # HACK
 
         # Identify transformed OA constraints
         m.display()
