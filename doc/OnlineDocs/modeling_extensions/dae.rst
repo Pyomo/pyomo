@@ -236,6 +236,8 @@ be deactivated just before the model is sent to a solver as shown below.
    :hide:
    >>> model.del_component('ode_index')
    >>> model.del_component('pde_index')
+   >>> model.del_component('ode')
+   >>> model.del_component('pde')
 
 .. doctest::
 

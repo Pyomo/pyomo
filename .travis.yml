@@ -70,20 +70,7 @@ install:
 - pip install --quiet xlrd
 - pip install --quiet openpyxl
 - pip install --quiet sphinx_rtd_theme
-#
-- if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
-- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-     if [ -n "${EXTRAS}" ]; then
-        pip install scipy;
-     fi
-  fi
-
-- if [[ "$TRAVIS_PYTHON_VERSION" == "3.5" ]]; then
-     if [ -n "${EXTRAS}" ]; then
-        conda install -y scipy;
-        python -c'import scipy; print(scipy)';
-     fi
-  fi
+- pip install scipy
 
 - conda install -q -y --channel conda-forge glpk
 - glpsol -v
