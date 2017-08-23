@@ -549,7 +549,8 @@ class _ExpressionBase(NumericValue):
     def size(self, verbose=False):
         return _expression_size(self, verbose=verbose)
 
-    __deepcopy__ = clone
+    def __deepcopy__(self, memo):
+        return clone_expression(self, substitute=memo)
 
     def _clone(self, args):
         return self.__class__(args)
@@ -739,6 +740,12 @@ class _ExpressionBase(NumericValue):
             ostream.write(str(_sub))
         elif _sub.__class__ is NumericConstant:
             ostream.write(str(_sub()))
+        elif hasattr(_sub, 'to_string'):
+             #
+             # Generate strings from components that contain expressions, but
+             # don't just generate the component name.
+             #
+            _sub.to_string(ostream=ostream, verbose=verbose)
         elif hasattr(_sub, 'getname'):
             # BUG?  The kernel may return None from getname()
             _s = _sub.getname(True, _name_buffer)
