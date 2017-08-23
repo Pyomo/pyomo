@@ -806,7 +806,7 @@ end of this section to understand the types of models supported by the
 Simulator.
 
 .. doctest::
-
+    :pyversion: >= 2.7
     >>> sim = Simulator(m, package='scipy')
 
 After creating a Simulator object, the model can be simulated by calling the
@@ -815,7 +815,7 @@ simulate function. Please see the API documentation for the
 valid keyword arguments for this function.
 
 .. doctest::
-
+    :pyversion: >= 2.7
     >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode')
 
 The ``simulate`` function returns numpy arrays containing time points and
@@ -846,7 +846,7 @@ and the values correspond to the value of the input at a time point. A
 example.
 
 .. doctest::
-
+    :pyversion: >= 2.7
     >>> m = ConcreteModel()
 
     >>> m.t = ContinuousSet(bounds=(0.0, 20.0))
@@ -907,7 +907,7 @@ initializing discretized dynamic optimization models using the profiles
 returned from the simulator. An example using this function is shown below
 
 .. doctest::
-
+    :pyversion: >= 2.7
     Simulate the model using scipy
     >>> sim = Simulator(m, package='scipy')
     >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode',

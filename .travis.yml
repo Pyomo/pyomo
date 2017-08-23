@@ -57,7 +57,7 @@ install:
 # Install supporting packages
 #
 - conda install -q -y --channel conda-forge setuptools
-- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then
      pip install --quiet ordereddict;
   fi
 - pip install --quiet coverage
@@ -70,7 +70,10 @@ install:
 - pip install --quiet xlrd
 - pip install --quiet openpyxl
 - pip install --quiet sphinx_rtd_theme
-- pip install scipy
+
+- if ["${TRAVIS_PYTHON_VERSION}" != "2.6" ]; then
+     pip install scipy
+  fi
 
 - conda install -q -y --channel conda-forge glpk
 - glpsol -v
