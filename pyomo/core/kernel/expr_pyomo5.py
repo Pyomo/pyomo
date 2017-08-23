@@ -13,6 +13,7 @@ from __future__ import division
 import logging
 import sys
 import traceback
+from copy import deepcopy
 
 logger = logging.getLogger('pyomo.core')
 
@@ -243,11 +244,14 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
 def clone_expression(expr, substitute=None, verbose=False):
     from pyomo.core.kernel.numvalue import native_numeric_types
     #
-    # Note: This does not try to optimize the compression to recognize
-    #   subgraphs.
+    memo = {'__block_scope__': { id(None): False }}
+    if substitute:
+        memo.update(substitute)
     #
-    if expr.__class__ in native_numeric_types or not expr.is_expression():
+    if expr.__class__ in native_numeric_types:
         return expr
+    if not expr.is_expression():
+        return deepcopy(expr, memo)
     #
     # The stack starts with the current expression
     #
@@ -287,12 +291,12 @@ def clone_expression(expr, substitute=None, verbose=False):
                 #
                 # Store a native or numeric object
                 #
-                _result.append( _sub )
+                _result.append( deepcopy(_sub, memo) )
             elif not isinstance(_sub, _ExpressionBase):
                 #
                 # Store a kernel object that is cloned
                 #
-                _result.append( _sub )
+                _result.append( deepcopy(_sub, memo) )
             else:
                 #
                 # Push an expression onto the stack
