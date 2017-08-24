@@ -726,14 +726,13 @@ class Constraint(ActiveIndexedComponent):
         kwargs.setdefault('ctype', Constraint)
         ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
-    #
-    # This method must be defined on subclasses of IndexedComponent
-    #
-    def _default(self, idx):
-        """Returns the default component data value."""
-        cdata = self._data[idx] = _GeneralConstraintData(None, component=self)
-        return cdata
-
+    def _setitem(self, idx, val, new=False):
+        if self._check_skip_add(idx, val) is None:
+            if not new and idx in self._data:
+                del self[idx]
+            return None
+        else:
+            return super(Constraint, self)._setitem(idx=idx, val=val, new=new)
 
     def construct(self, data=None):
         """
@@ -779,20 +778,9 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-
-            assert None not in self._data
-            cdata = self._check_skip_add(None, tmp, condata=self)
-            if cdata is not None:
-                # this happens as a side-effect of set_value on
-                # SimpleConstraint (normally _check_skip_add does not
-                # add anything to the _data dict but it does call
-                # set_value on the condata object we pass in)
-                assert None in self._data
-            else:
-                assert None not in self._data
+            self._setitem(None, tmp, True)
 
         else:
-
             if _init_expr is not None:
                 raise IndexError(
                     "Constraint '%s': Cannot initialize multiple indices "
@@ -815,7 +803,7 @@ class Constraint(ActiveIndexedComponent):
                            type(err).__name__,
                            err))
                     raise
-                self._check_skip_add(ndx, tmp)
+                self._setitem(ndx, tmp, True)
 
     def _pprint(self):
         """
@@ -859,14 +847,12 @@ class Constraint(ActiveIndexedComponent):
                                        ] )
 
     #
-    # Checks flags like Constraint.Skip, etc. before
-    # actually creating a constraint object. Optionally
-    # pass in the _ConstraintData object to set the value
-    # on. Only returns the _ConstraintData object when it
-    # should be added to the _data dict; otherwise, None
-    # is returned or an exception is raised.
+    # Checks flags like Constraint.Skip, etc. before actually creating a
+    # constraint object. Returns the _ConstraintData object when it should be
+    #  added to the _data dict; otherwise, None is returned or an exception
+    # is raised.
     #
-    def _check_skip_add(self, index, expr, condata=None):
+    def _check_skip_add(self, index, expr):
         _expr_type = expr.__class__
         #
         # Convert deprecated expression values
@@ -934,12 +920,8 @@ class Constraint(ActiveIndexedComponent):
                     "Constraint '%s' is always infeasible"
                     % (_get_constraint_data_name(self,index),) )
 
-        if condata is None:
-            condata = self._default(index)
-        condata.set_value(expr)
-        assert condata.parent_component() is self
+        return expr
 
-        return condata
 
 class SimpleConstraint(_GeneralConstraintData, Constraint):
     """
@@ -1083,15 +1065,19 @@ class SimpleConstraint(_GeneralConstraintData, Constraint):
 
     def set_value(self, expr):
         """Set the expression on this constraint."""
-        if self._constructed:
-            if len(self._data) == 0:
-                self._data[None] = self
-            return _GeneralConstraintData.set_value(self, expr)
-        raise ValueError(
-            "Setting the value of constraint '%s' "
-            "before the Constraint has been constructed (there "
-            "is currently no object to set)."
-            % (self.name))
+        if not self._constructed:
+            raise ValueError(
+                "Setting the value of constraint '%s' "
+                "before the Constraint has been constructed (there "
+                "is currently no object to set)."
+                % (self.name))
+
+        if len(self._data) == 0:
+            self._data[None] = self
+        if self._check_skip_add(None, expr) is None:
+            del self[None]
+            return None
+        return _GeneralConstraintData.set_value(self, expr)
 
     #
     # Leaving this method for backward compatibility reasons.
@@ -1118,7 +1104,7 @@ class IndexedConstraint(Constraint):
     #
     def add(self, index, expr):
         """Add a constraint with a given index."""
-        return self._check_skip_add(index, expr)
+        return self.__setitem__(index, expr)
 
 
 class ConstraintList(IndexedConstraint):
@@ -1133,7 +1119,6 @@ class ConstraintList(IndexedConstraint):
     def __init__(self, **kwargs):
         """Constructor"""
         args = (Set(),)
-        self._nconstraints = 0
         if 'expr' in kwargs:
             raise ValueError(
                 "ConstraintList does not accept the 'expr' keyword")
@@ -1174,7 +1159,7 @@ class ConstraintList(IndexedConstraint):
             _generator = _init_rule
         if _generator is None:
             while True:
-                val = self._nconstraints + 1
+                val = len(self._index) + 1
                 if generate_debug_messages:
                     logger.debug(
                         "   Constructing constraint index "+str(val))
@@ -1205,9 +1190,9 @@ class ConstraintList(IndexedConstraint):
 
     def add(self, expr):
         """Add a constraint with an implicit index."""
-        self._nconstraints += 1
-        self._index.add(self._nconstraints)
-        return self._check_skip_add(self._nconstraints, expr)
+        next_idx = len(self._index) + 1
+        self._index.add(next_idx)
+        return self.__setitem__(next_idx, expr)
 
 register_component(Constraint, "General constraint expressions.")
 register_component(ConstraintList, "A list of constraint expressions.")

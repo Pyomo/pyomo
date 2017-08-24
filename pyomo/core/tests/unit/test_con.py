@@ -22,7 +22,10 @@ currdir = dirname(abspath(__file__))+os.sep
 
 import pyutilib.th as unittest
 
-from pyomo.environ import *
+from pyomo.environ import ConcreteModel, AbstractModel, Var, Constraint, \
+    ConstraintList, Param, RangeSet, Set, Expression, value, \
+    simple_constraintlist_rule, simple_constraint_rule
+from pyomo.core.base.constraint import _GeneralConstraintData
 
 from six import StringIO
 
@@ -782,6 +785,20 @@ class TestSimpleCon(unittest.TestCase):
         inst = model.create_instance()
         self.assertEqual(len(inst.c),1)
 
+    def test_setitem(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint()
+        self.assertEqual(len(m.c), 0)
+
+        m.c = m.x**2 <= 4
+        self.assertEqual(len(m.c), 1)
+        self.assertEqual(list(m.c.keys()), [None])
+        self.assertEqual(m.c.upper, 4)
+
+        m.c = Constraint.Skip
+        self.assertEqual(len(m.c), 0)
+
 class TestArrayCon(unittest.TestCase):
 
     def create_model(self):
@@ -935,6 +952,28 @@ class TestArrayCon(unittest.TestCase):
 
         self.assertEqual(len(model.c),1)
 
+    def test_setitem(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c = Constraint(range(5))
+        self.assertEqual(len(m.c), 0)
+
+        m.c[2] = m.x**2 <= 4
+        self.assertEqual(len(m.c), 1)
+        self.assertEqual(list(m.c.keys()), [2])
+        self.assertIsInstance(m.c[2], _GeneralConstraintData)
+        self.assertEqual(m.c[2].upper, 4)
+
+        m.c[3] = Constraint.Skip
+        self.assertEqual(len(m.c), 1)
+        self.assertRaisesRegexp( KeyError, "'3'", m.c.__getitem__, 3)
+
+        self.assertRaisesRegexp( ValueError, "'c\[3\]': rule returned None",
+                                 m.c.__setitem__, 3, None)
+        self.assertEqual(len(m.c), 1)
+
+        m.c[2] = Constraint.Skip
+        self.assertEqual(len(m.c), 0)
 
 class TestConList(unittest.TestCase):
 
