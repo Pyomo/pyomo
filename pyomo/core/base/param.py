@@ -445,12 +445,12 @@ class Param(IndexedComponent):
             pass
 
         #
-        # If the user wants tp validate values, we need to validate the
+        # If the user wants to validate values, we need to validate the
         # default value as well. For Mutable Params, this is easy: _setitem
         # will inject the value into _data and then call validate.
         #
         if self._mutable:
-            return self._setitem(idx, val)
+            return self._setitem(idx, val, new=True)
         #
         # For immutable params, we never inject the default into the data
         # dictionary.  This will break validation, as the validation rule is
@@ -471,7 +471,7 @@ class Param(IndexedComponent):
 
         return val
 
-    def _setitem(self, idx, val, check_domain=True):
+    def _setitem(self, idx, val, new=False, _check_domain=True):
         """
         The __setitem__ method performs significant
         validation around the input indices, particularly
@@ -505,31 +505,31 @@ class Param(IndexedComponent):
         # Set the value depending on the type of param value.
         #
         try:
-            _new = False
             if not self.is_indexed():
-                if idx not in self._data:
-                    _new = True
+                if new or idx not in self._data:
+                    new = True
                     self._data[idx] = self
                 self.set_value(val)
                 return self
             elif self._mutable:
                 # Mutable Params behave like normal components
-                if idx in self._data:
-                    obj = self._data[idx]
-                else:
-                    _new = True
+                if new or idx not in self._data:
+                    new = True
                     obj = self._data[idx] = _ParamData(self)
-                obj.set_value(val, idx, check_domain)
+                else:
+                    obj = self._data[idx]
+                obj.set_value(val, idx, _check_domain)
                 return obj
             else:
-                _new = idx in self._data
+                if not new:
+                    new = idx in self._data
                 self._data[idx] = val
                 # Because we do not have a _ParamData, we cannot rely on the
                 # validation that occurs in _ParamData.set_value()
-                self._validate_value(idx, val, check_domain)
+                self._validate_value(idx, val, _check_domain)
                 return val
         except:
-            if _new:
+            if new:
                 del self._data[idx]
             raise
 
@@ -577,7 +577,7 @@ class Param(IndexedComponent):
                 # A scalar value has a single value.
                 # We call __setitem__, which does checks on the value.
                 #
-                self._setitem(None, _init(self.parent_block()))
+                self._setitem(None, _init(self.parent_block()), new=True)
                 return
             else:
                 #
@@ -643,13 +643,13 @@ class Param(IndexedComponent):
                         # safe to use _setitem (which will perform all
                         # the domain / validation checking)
                         #
-                        self._setitem(idx, val)
+                        self._setitem(idx, val, new=True)
                         #
                         # Now iterate over the rest of the index set.
                         #
                         for idx in _iter:
                             self._setitem(idx, apply_indexed_rule(
-                                self, _init, self_parent, idx))
+                                self, _init, self_parent, idx), new=True)
                         return
                 except StopIteration:
                     #
@@ -727,7 +727,7 @@ This has resulted in the conversion of the source to dense form.
                 #
                 _iter = self._index.__iter__()
                 idx = next(_iter)
-                self._setitem(idx, _init)
+                self._setitem(idx, _init, new=True)
                 #
                 # Note: the following is safe for both indexed and
                 # non-indexed parameters: for non-indexed, the first
@@ -737,11 +737,12 @@ This has resulted in the conversion of the source to dense form.
                 if self._mutable:
                     _init = self[idx]._value
                     for idx in _iter:
-                        self._setitem(idx, _init)
+                        self._setitem(idx, _init, new=True)
                 else:
                     _init = self[idx]
                     for idx in _iter:
-                        self._setitem(idx, _init, False)
+                        self._setitem(
+                            idx, _init, new=True, _check_domain=False )
             except StopIteration:
                 #
                 # The index set was empty...

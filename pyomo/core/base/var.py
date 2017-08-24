@@ -582,7 +582,7 @@ class Var(IndexedComponent):
         self._initialize_members([idx])
         return vardata
 
-    def _setitem(self, idx, val):
+    def _setitem(self, idx, val, new=False):
         """Perform the fundamental component item creation and storage.
 
         Components that want to implement a nonstandard storage mechanism
@@ -593,21 +593,20 @@ class Var(IndexedComponent):
         #
         # If we are a scalar, then idx will be None (_validate_index ensures
         # this)
-        if idx not in self._data:
-            _new = True
-            if self.is_indexed():
+        if new or idx not in self._data:
+            new = True
+            if idx is not None or self.is_indexed():
                 obj = self._data[idx] = self._ComponentDataType(
                     self._domain_init_value, component=self)
             else:
                 obj = self._data[None] = self
             self._initialize_members([idx])
         else:
-            _new = False
             obj = self[idx]
         try:
             obj.set_value(val)
         except:
-            if _new:
+            if new:
                 del self._data[idx]
             raise
         return obj

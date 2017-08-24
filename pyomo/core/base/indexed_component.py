@@ -513,18 +513,18 @@ You can silence this warning by one of three ways:
         # Call the _setitem helper to populate the _data
         # dictionary and set the value
         #
+        # Note that we need to RECHECK the class against
+        # _IndexedComponent_slicer, as _validate_index could have found
+        # an Ellipsis (which is hashable) and returned a slicer
+        #
         if index.__class__ is _IndexedComponent_slicer:
             # this supports "m.x[:,1] = 5" through a simple recursive call
-            #
-            # Note that we need to RECHECK the class against
-            # _IndexedComponent_slicer, as _validate_index could have found
-            # an Ellipsis (which is hashable) and returned a slicer
             for idx in index:
-                self._setitem(idx.index(), val)
+                self._setitem(idx.index(), val, new=False)
         else:
             if obj is None :
                 index = self._validate_index(index)
-            return self._setitem(index, val)
+            return self._setitem(index, val, new=False)
 
     def __delitem__(self, index):
         if self._constructed is False:
@@ -747,7 +747,7 @@ the value() function.""" % ( self.name, i ))
         and is a legitimate entry in the _data dict. """
         raise KeyError(str(index))
 
-    def _setitem(self, idx, val):
+    def _setitem(self, idx, val, new=False):
         """Perform the fundamental component item creation and storage.
 
         Components that want to implement a nonstandard storage mechanism
@@ -758,19 +758,18 @@ the value() function.""" % ( self.name, i ))
         #
         # If we are a scalar, then idx will be None (_validate_index ensures
         # this)
-        if idx not in self._data:
-            _new = True
-            if self.is_indexed():
+        if new or idx not in self._data:
+            new = True
+            if idx is not None or self.is_indexed():
                 obj = self._data[idx] = self._ComponentDataType(component=self)
             else:
                 obj = self._data[None] = self
         else:
-            _new = False
             obj = self[idx]
         try:
             obj.set_value(val)
         except:
-            if _new:
+            if new:
                 del self._data[idx]
             raise
         return obj

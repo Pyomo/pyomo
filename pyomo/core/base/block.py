@@ -1713,7 +1713,7 @@ class Block(ActiveIndexedComponent):
             self.construct()
 
     def _default(self, idx):
-        return self._setitem(idx, None)
+        return self._setitem(idx, None, new=True)
 
     def find_component(self, label_or_component):
         """
