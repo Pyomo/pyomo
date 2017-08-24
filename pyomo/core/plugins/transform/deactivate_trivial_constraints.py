@@ -1,10 +1,12 @@
 # -*- coding: UTF-8 -*-
 """Transformation to deactivate trivial constraints."""
+import textwrap
+
 from pyomo.core.base.constraint import Constraint
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.util.plugin import alias
-from pyomo.core.kernel.component_set import ComponentSet
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
 
@@ -12,7 +14,8 @@ __author__ = "Qi Chen <https://github.com/qtothec>"
 class TrivialConstraintDeactivator(IsomorphicTransformation):
     """Deactivates trivial constraints of form constant = constant."""
 
-    alias('core.deactivate_trivial_constraints', doc=__doc__)
+    alias('core.deactivate_trivial_constraints',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
         """Initialize the transformation."""
