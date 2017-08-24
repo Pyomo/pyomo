@@ -1,11 +1,11 @@
 """Transformation to propagate a zero value to terms of a sum."""
+import textwrap
+
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from pyomo.util.plugin import alias
-
-from six.moves import range
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
 
@@ -19,7 +19,8 @@ class ZeroSumPropagator(IsomorphicTransformation):
 
     """
 
-    alias('core.propagate_zero_sum', doc=__doc__)
+    alias('core.propagate_zero_sum',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
         """Initialize the transformation."""
@@ -51,17 +52,17 @@ class ZeroSumPropagator(IsomorphicTransformation):
                 # all var terms need to be non-negative
                 if all(
                     # variable has 0 coefficient
-                    repn.linear[i] == 0 or
+                    coef == 0 or
                     # variable is non-negative and has non-negative coefficient
                     (repn.variables[i].has_lb() and
                      value(repn.variables[i].lb) >= 0 and
-                     repn.linear[i] >= 0) or
+                     coef >= 0) or
                     # variable is non-positive and has non-positive coefficient
                     (repn.variables[i].has_ub() and
                      value(repn.variables[i].ub) <= 0 and
-                     repn.linear[i] <= 0) for i in range(len(repn.linear))):
-                    for i in range(len(repn.linear)):
-                        if not repn.linear[i] == 0:
+                     coef <= 0) for i, coef in enumerate(repn.linear)):
+                    for i, coef in enumerate(repn.linear):
+                        if not coef == 0:
                             repn.variables[i].fix(0)
                     continue
             if (constr.has_lb() and (
@@ -71,13 +72,15 @@ class ZeroSumPropagator(IsomorphicTransformation):
                 # all var terms need to be non-positive
                 if all(
                     # variable has 0 coefficient
-                    repn.linear[i] == 0 or
+                    coef == 0 or
+                    # variable is non-negative and has non-positive coefficient
                     (repn.variables[i].has_lb() and
                      value(repn.variables[i].lb) >= 0 and
-                     repn.linear[i] <= 0) or
+                     coef <= 0) or
+                    # variable is non-positive and has non-negative coefficient
                     (repn.variables[i].has_ub() and
                      value(repn.variables[i].ub) <= 0 and
-                     repn.linear[i] >= 0) for i in range(len(repn.linear))):
-                    for i in range(len(repn.linear)):
-                        if not repn.linear[i] == 0:
+                     coef >= 0) for i, coef in enumerate(repn.linear)):
+                    for i, coef in enumerate(repn.linear):
+                        if not coef == 0:
                             repn.variables[i].fix(0)

@@ -2,10 +2,12 @@
 """Transformation to remove zero terms from constraints."""
 from __future__ import division
 
+import textwrap
+
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
 from pyomo.repn.canonical_repn import generate_canonical_repn
+from pyomo.util.plugin import alias
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
 
@@ -20,7 +22,8 @@ class RemoveZeroTerms(IsomorphicTransformation):
 
     """
 
-    alias('core.remove_zero_terms', doc=__doc__)
+    alias('core.remove_zero_terms',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self, *args, **kwargs):
         """Initialize the transformation."""

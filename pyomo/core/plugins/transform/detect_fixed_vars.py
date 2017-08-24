@@ -1,4 +1,5 @@
 """Transformation to detect variables fixed by bounds and fix them."""
+import textwrap
 from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.var import Var
 from pyomo.core.kernel.numvalue import value
@@ -17,7 +18,8 @@ class FixedVarDetector(IsomorphicTransformation):
 
     """
 
-    alias('core.detect_fixed_vars', doc=__doc__)
+    alias('core.detect_fixed_vars',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
         """Initialize the transformation."""
