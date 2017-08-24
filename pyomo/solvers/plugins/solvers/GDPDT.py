@@ -97,8 +97,6 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 nonlinear subproblem
             subprob_postfeas (func): callback hook after feasible solution of
                 the nonlinear subproblem
-            load_solutions (bool): if True, load solutions back into the model.
-                This is only relevant if solve_in_place is not True.
 
         """
         self.bound_tolerance = kwds.pop('tol', 1E-6)
@@ -116,7 +114,6 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         self.subproblem_postsolve = kwds.pop('subprob_postsolve', _DoNothing())
         self.subproblem_postfeasible = kwds.pop('subprob_postfeas',
                                                 _DoNothing())
-        self.load_solutions = kwds.pop('load_solutions', True)
         if kwds:
             print("Unrecognized arguments passed to GDPDT solver:")
             pprint(kwds)
@@ -256,9 +253,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         self._GDPDT_iteration_loop()
 
         # Update values in original model
-        if self.load_solutions:
-            self._copy_values(self.best_solution_found, model,
-                              to_map=model_cuid_to_obj)
+        self._copy_values(self.best_solution_found, model,
+                          to_map=model_cuid_to_obj)
 
     def _copy_values(self, from_model, to_model, from_map=None, to_map=None):
         """Copy variable values from one model to another.
