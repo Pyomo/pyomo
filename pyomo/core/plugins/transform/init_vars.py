@@ -1,5 +1,8 @@
 """Automatically initialize variables."""
 from __future__ import division
+
+import textwrap
+
 from pyomo.core.base.var import Var
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
@@ -11,7 +14,8 @@ __author__ = "Qi Chen <https://github.com/qtothec>"
 class InitMidpoint(IsomorphicTransformation):
     """Initializes variables to the midpoint of their bounds."""
 
-    alias('core.init_vars_midpoint', doc=__doc__)
+    alias('core.init_vars_midpoint',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
         """Initialize the transformation."""
@@ -41,7 +45,8 @@ class InitMidpoint(IsomorphicTransformation):
 class InitZero(IsomorphicTransformation):
     """Initializes variables to zeros."""
 
-    alias('core.init_vars_zero', doc=__doc__)
+    alias('core.init_vars_zero',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
         """Initialize the transformation."""

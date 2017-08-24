@@ -1,14 +1,13 @@
 """Transformation to propagate state through an equality set."""
-from pyomo.core.base.block import generate_cuid_names
+import textwrap
+
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.var import Var
+from pyomo.core.base.suffix import Suffix
+from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.core.kernel.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
-from pyomo.util.plugin import alias
-from six import iteritems
 from pyomo.repn.canonical_repn import generate_canonical_repn
-from pyomo.core.kernel.component_set import ComponentSet
-from pyomo.core.base.suffix import Suffix
+from pyomo.util.plugin import alias
 
 __author__ = "Qi Chen <https://github.com/qtothec>"
 
@@ -77,7 +76,8 @@ class FixedVarPropagator(IsomorphicTransformation):
 
     """
 
-    alias('core.propagate_fixed_vars', doc=__doc__)
+    alias('core.propagate_fixed_vars',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
         """Initialize the transformation."""
@@ -152,7 +152,8 @@ class VarBoundPropagator(IsomorphicTransformation):
 
     """
 
-    alias('core.propagate_eq_var_bounds', doc=__doc__)
+    alias('core.propagate_eq_var_bounds',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self):
         """Initialize the transformation."""
