@@ -554,7 +554,7 @@ class Var(IndexedComponent):
         #
         if not self.is_indexed():
             self._data[None] = self
-            self._initialize_members([None])
+            self._initialize_members((None,))
         elif self._dense:
             # This loop is optimized for speed with pypy.
             # Calling dict.update((...) for ...) is roughly
@@ -565,6 +565,7 @@ class Var(IndexedComponent):
                     domain=self._domain_init_value, component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
+                #self._initialize_members((ndx,))
             self._initialize_members(self._index)
 
     def add(self, index):
@@ -573,13 +574,13 @@ class Var(IndexedComponent):
 
     #
     # This method must be defined on subclasses of
-    # IndexedComponent
+    # IndexedComponent that support implicit definition
     #
     def _default(self, idx):
         """Returns the default component data value."""
         vardata = self._data[idx] = self._ComponentDataType(
             self._domain_init_value, component=self)
-        self._initialize_members([idx])
+        self._initialize_members((idx,))
         return vardata
 
     def _setitem(self, idx, val, new=False):
@@ -600,7 +601,7 @@ class Var(IndexedComponent):
                     self._domain_init_value, component=self)
             else:
                 obj = self._data[None] = self
-            self._initialize_members([idx])
+            self._initialize_members((idx,))
         else:
             obj = self[idx]
         try:
@@ -613,6 +614,11 @@ class Var(IndexedComponent):
 
     def _initialize_members(self, init_set):
         """Initialize variable data for all indices in a set."""
+        # TODO: determine if there is any advantage to supporting init_set.
+        # Preliminary tests indicate that there isn't a significant speed
+        # difference to using the set form (used in dense vector
+        # construction).  Getting rid of it could simplify the _setitem and
+        # this method.
         #
         # Initialize domains
         #
