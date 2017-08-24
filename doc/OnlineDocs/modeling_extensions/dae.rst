@@ -233,11 +233,12 @@ domain. This may be addressed explicitly in the
 be deactivated just before the model is sent to a solver as shown below.
 
 .. doctest::
-   :hide:
-   >>> model.del_component('ode_index')
-   >>> model.del_component('pde_index')
-   >>> model.del_component('ode')
-   >>> model.del_component('pde')
+    :hide:
+
+    >>> model.del_component('ode_index')
+    >>> model.del_component('pde_index')
+    >>> model.del_component('ode')
+    >>> model.del_component('pde')
 
 .. doctest::
 
@@ -341,29 +342,29 @@ showing a double integral over the
 and implementation in Pyomo are shown below:
 
 .. math::
-   \sum_{s} \int_{t_2} \int_{t_1} \! X(t_1, t_2, s) \, dt_1 \, dt_2
+    \sum_{s} \int_{t_2} \int_{t_1} \! X(t_1, t_2, s) \, dt_1 \, dt_2
 
 .. doctest::
 
-   >>> model = ConcreteModel()
-   >>> model.t1 = ContinuousSet(bounds=(0, 10))
-   >>> model.t2 = ContinuousSet(bounds=(-1, 1))
-   >>> model.s = Set(initialize=['A', 'B', 'C'])
+    >>> model = ConcreteModel()
+    >>> model.t1 = ContinuousSet(bounds=(0, 10))
+    >>> model.t2 = ContinuousSet(bounds=(-1, 1))
+    >>> model.s = Set(initialize=['A', 'B', 'C'])
 
-   >>> model.X = Var(model.t1, model.t2, model.s)
+    >>> model.X = Var(model.t1, model.t2, model.s)
 
-   >>> def _intX1(m, t1, t2, s):
-   ...    return m.X[t1, t2, s]
-   >>> model.intX1 = Integral(model.t1, model.t2, model.s, wrt=model.t1,
-   ...                        rule=_intX1)
+    >>> def _intX1(m, t1, t2, s):
+    ...    return m.X[t1, t2, s]
+    >>> model.intX1 = Integral(model.t1, model.t2, model.s, wrt=model.t1,
+    ...                        rule=_intX1)
 
-   >>> def _intX2(m, t2, s):
-   ...    return m.intX1[t2, s]
-   >>> model.intX2 = Integral(model.t2, model.s, wrt=model.t2, rule=_intX2)
+    >>> def _intX2(m, t2, s):
+    ...    return m.intX1[t2, s]
+    >>> model.intX2 = Integral(model.t2, model.s, wrt=model.t2, rule=_intX2)
 
-   >>> def _obj(m):
-   ...    return sum(m.intX2[k] for k in m.s)
-   >>> model.obj = Objective(rule=_obj)
+    >>> def _obj(m):
+    ...    return sum(m.intX2[k] for k in m.s)
+    >>> model.obj = Objective(rule=_obj)
 
 Discretization Transformations
 ------------------------------
@@ -380,8 +381,8 @@ implemented in pyomo.DAE, Finite Difference and Collocation. These schemes are
 described in more detail below.
 
 .. note:: 
-   The schemes described here are for derivatives only. All integrals will
-   be transformed using the trapezoid rule.
+    The schemes described here are for derivatives only. All integrals will
+    be transformed using the trapezoid rule.
 
 The user must write a Python script in order to use these discretizations,
 they have not been tested on the pyomo command line. Example scripts are
@@ -398,14 +399,14 @@ called Implicit or Backward Euler) has been implemented. The
 discretization equations for this method are shown below:
 
 .. math::
-   \begin{array}{l}
-   \mathrm{Given: } \\
-   \frac{dx}{dt} = f(t, x) , \quad x(t_0) = x_{0} \\
-   \text{discretize $t$ and $x$ such that } \\
-   x(t_0 + kh) = x_{k} \\
-   x_{k + 1} = x_{k} + h * f(t_{k + 1}, x_{k + 1}) \\
-   t_{k + 1} = t_{k} + h
-   \end{array}
+    \begin{array}{l}
+    \mathrm{Given: } \\
+    \frac{dx}{dt} = f(t, x) , \quad x(t_0) = x_{0} \\
+    \text{discretize $t$ and $x$ such that } \\
+    x(t_0 + kh) = x_{k} \\
+    x_{k + 1} = x_{k} + h * f(t_{k + 1}, x_{k + 1}) \\
+    t_{k + 1} = t_{k} + h
+    \end{array}
 
 where :math:`h` is the step size between discretization points or the size of
 each finite element. These equations are generated automatically as
@@ -451,26 +452,27 @@ The following code is a Python script applying the backward difference
 method. The code also shows how to add a constraint to a discretized model.
 
 .. doctest::
-   :hide:
-   >>> model = ConcreteModel()
-   >>> model.time = ContinuousSet(bounds=(0, 10))
-   >>> model.x1 = Var(model.time, bounds=(-10, 10))
-   >>> model.dx1 = DerivativeVar(model.x1)
+    :hide:
+
+    >>> model = ConcreteModel()
+    >>> model.time = ContinuousSet(bounds=(0, 10))
+    >>> model.x1 = Var(model.time, bounds=(-10, 10))
+    >>> model.dx1 = DerivativeVar(model.x1)
 
 .. doctest::
 
-   Discretize model using Backward Difference method
-   >>> discretizer = TransformationFactory('dae.finite_difference')
-   >>> discretizer.apply_to(model,nfe=20,wrt=model.time,scheme='BACKWARD')
+    Discretize model using Backward Difference method
+    >>> discretizer = TransformationFactory('dae.finite_difference')
+    >>> discretizer.apply_to(model,nfe=20,wrt=model.time,scheme='BACKWARD')
 
-   Add another constraint to discretized model
-   >>> def _sum_limit(m):
-   ...    return sum(m.x1[i] for i in m.time) <= 50
-   >>> model.con_sum_limit = Constraint(rule=_sum_limit)
+    Add another constraint to discretized model
+    >>> def _sum_limit(m):
+    ...    return sum(m.x1[i] for i in m.time) <= 50
+    >>> model.con_sum_limit = Constraint(rule=_sum_limit)
 
-   Solve discretized model
-   >>> solver = SolverFactory('ipopt')
-   >>> results = solver.solve(model)
+    Solve discretized model
+    >>> solver = SolverFactory('ipopt')
+    >>> results = solver.solve(model)
 
 Collocation Transformation
 **************************
@@ -517,27 +519,28 @@ polynomials and Radau roots. The code also shows how to add an objective
 function to a discretized model.
 
 .. doctest::
-   :hide:
-   >>> model = ConcreteModel()
-   >>> model.time = ContinuousSet(bounds=(0, 10))
-   >>> model.x = Var(model.time, bounds=(-10, 10))
-   >>> model.dx = DerivativeVar(model.x)
-   >>> model.x_ref = Param(initialize=5)
+    :hide:
+
+    >>> model = ConcreteModel()
+    >>> model.time = ContinuousSet(bounds=(0, 10))
+    >>> model.x = Var(model.time, bounds=(-10, 10))
+    >>> model.dx = DerivativeVar(model.x)
+    >>> model.x_ref = Param(initialize=5)
 
 .. doctest::
 
-   Discretize model using Radau Collocation
-   >>> discretizer = TransformationFactory('dae.collocation')
-   >>> discretizer.apply_to(model,nfe=20,ncp=6,scheme='LAGRANGE-RADAU')
+    Discretize model using Radau Collocation
+    >>> discretizer = TransformationFactory('dae.collocation')
+    >>> discretizer.apply_to(model,nfe=20,ncp=6,scheme='LAGRANGE-RADAU')
 
-   Add objective function after model has been discretized
-   >>> def obj_rule(m):
-   ...    return sum((m.x[i]-m.x_ref)**2 for i in m.time)
-   >>> model.obj = Objective(rule=obj_rule)
+    Add objective function after model has been discretized
+    >>> def obj_rule(m):
+    ...    return sum((m.x[i]-m.x_ref)**2 for i in m.time)
+    >>> model.obj = Objective(rule=obj_rule)
 
-   Solve discretized model
-   >>> solver = SolverFactory('ipopt')
-   >>> results = solver.solve(model)
+    Solve discretized model
+    >>> solver = SolverFactory('ipopt')
+    >>> results = solver.solve(model)
 
 Restricting Optimal Control Profiles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -551,18 +554,19 @@ transformation to reduce the number of free collocation points within a finite
 element for a particular variable.
 
 .. autoclass:: pyomo.dae.plugins.colloc.Collocation_Discretization_Transformation
-   :members: reduce_collocation_points
+    :members: reduce_collocation_points
 
 An example of using this function is shown below:
 
 .. doctest::
-   :hide:
-   >>> model = ConcreteModel()
-   >>> model.time = ContinuousSet(bounds=(0, 10))
-   >>> model.x = Var(model.time, bounds=(-10, 10))
-   >>> model.dx = DerivativeVar(model.x)
-   >>> model.x_ref = Param(initialize=5)
-   >>> model.u = Var(model.time)
+    :hide:
+
+    >>> model = ConcreteModel()
+    >>> model.time = ContinuousSet(bounds=(0, 10))
+    >>> model.x = Var(model.time, bounds=(-10, 10))
+    >>> model.dx = DerivativeVar(model.x)
+    >>> model.x_ref = Param(initialize=5)
+    >>> model.u = Var(model.time)
 
 .. doctest::
 
@@ -582,12 +586,12 @@ the ``reduce_collocation_points`` function.
 
 .. _reduce_points_fig:
 .. figure:: reduce_points_demo.png
-   :scale: 100 %
-   :align: center
+    :scale: 100 %
+    :align: center
 
-   (left) Profile before applying the ``reduce_collocation_points``
-   function (right) Profile after applying the function, restricting
-   ``model.u`` to have a piecewise constant profile.
+    (left) Profile before applying the ``reduce_collocation_points``
+    function (right) Profile after applying the function, restricting
+    ``model.u`` to have a piecewise constant profile.
 
 
 Applying Multiple Discretization Transformations
@@ -599,10 +603,11 @@ user great flexibility in discretizing their model. For example the same
 numerical method can be applied with different resolutions:
 
 .. doctest::
-   :hide:
-   >>> model = ConcreteModel()
-   >>> model.t1 = ContinuousSet(bounds=(0, 10))
-   >>> model.t2 = ContinuousSet(bounds=(-2, 2))
+    :hide:
+
+    >>> model = ConcreteModel()
+    >>> model.t1 = ContinuousSet(bounds=(0, 10))
+    >>> model.t2 = ContinuousSet(bounds=(-2, 2))
 
 .. doctest::
 
@@ -617,32 +622,34 @@ difference method to another
 :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`:
 
 .. doctest::
-   :hide:
-   >>> model = ConcreteModel()
-   >>> model.t1 = ContinuousSet(bounds=(0, 10))
-   >>> model.t2 = ContinuousSet(bounds=(-2, 2))
+    :hide:
+
+    >>> model = ConcreteModel()
+    >>> model.t1 = ContinuousSet(bounds=(0, 10))
+    >>> model.t2 = ContinuousSet(bounds=(-2, 2))
 
 .. doctest::
 
-   >>> discretizer = TransformationFactory('dae.finite_difference')
-   >>> discretizer.apply_to(model,wrt=model.t1,scheme='FORWARD')
-   >>> discretizer.apply_to(model,wrt=model.t2,scheme='CENTRAL')
+    >>> discretizer = TransformationFactory('dae.finite_difference')
+    >>> discretizer.apply_to(model,wrt=model.t1,scheme='FORWARD')
+    >>> discretizer.apply_to(model,wrt=model.t2,scheme='CENTRAL')
 
 In addition, the user may combine finite difference and collocation
 discretizations. For example:
 
 .. doctest::
-   :hide:
-   >>> model = ConcreteModel()
-   >>> model.t1 = ContinuousSet(bounds=(0, 10))
-   >>> model.t2 = ContinuousSet(bounds=(-2, 2))
+    :hide:
+
+    >>> model = ConcreteModel()
+    >>> model.t1 = ContinuousSet(bounds=(0, 10))
+    >>> model.t2 = ContinuousSet(bounds=(-2, 2))
 
 .. doctest::
 
-   >>> disc_fe = TransformationFactory('dae.finite_difference')
-   >>> disc_fe.apply_to(model,wrt=model.t1,nfe=10)
-   >>> disc_col = TransformationFactory('dae.collocation')
-   >>> disc_col.apply_to(model,wrt=model.t2,nfe=10,ncp=5)
+    >>> disc_fe = TransformationFactory('dae.finite_difference')
+    >>> disc_fe.apply_to(model,wrt=model.t1,nfe=10)
+    >>> disc_col = TransformationFactory('dae.collocation')
+    >>> disc_col.apply_to(model,wrt=model.t2,nfe=10,ncp=5)
 
 If the user would like to apply the same discretization to all
 :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` components in a model, just
@@ -658,11 +665,11 @@ created so that advanced users may easily implement custom discretization
 schemes other than those listed above. The transformation framework consists of
 the following steps:
 
-   1. Specify Discretization Options
-   2. Discretize the ContinuousSet(s)
-   3. Update Model Components
-   4. Add Discretization Equations
-   5. Return Discretized Model
+    1. Specify Discretization Options
+    2. Discretize the ContinuousSet(s)
+    3. Update Model Components
+    4. Add Discretization Equations
+    5. Return Discretized Model
 
 If a user would like to create a custom finite difference scheme then they only
 have to worry about step (4) in the framework. The discretization equations for
@@ -674,15 +681,15 @@ difference method:
 
 .. code-block:: python
 
-   def _forward_transform(v,s):
-   """
-   Applies the Forward Difference formula of order O(h) for first derivatives
-   """
-      def _fwd_fun(i):
-         tmp = sorted(s)
-         idx = tmp.index(i)
-         return 1/(tmp[idx+1]-tmp[idx])*(v(tmp[idx+1])-v(tmp[idx]))
-      return _fwd_fun
+    def _forward_transform(v,s):
+    """
+    Applies the Forward Difference formula of order O(h) for first derivatives
+    """
+        def _fwd_fun(i):
+            tmp = sorted(s)
+            idx = tmp.index(i)
+            return 1/(tmp[idx+1]-tmp[idx])*(v(tmp[idx+1])-v(tmp[idx]))
+        return _fwd_fun
 
 In this function, 'v' represents the continuous variable or function that the
 method is being applied to. 's' represents the set of discrete points in the
@@ -708,17 +715,17 @@ DAEs. It provides an interface to integrators available in other Python
 packages.
 
 .. note::
-   The pyomo.dae Simulator does not include integrators directly. The user
-   must have at least one of the supported Python packages installed in
-   order to use this class.
+    The pyomo.dae Simulator does not include integrators directly. The user
+    must have at least one of the supported Python packages installed in
+    order to use this class.
 
 .. autoclass:: pyomo.dae.Simulator
-   :members:
+    :members:
 
 .. note::
-   Any keyword options supported by the integrator may be specified as
-   keyword options to the simulate function and will be passed to the
-   integrator.
+    Any keyword options supported by the integrator may be specified as
+    keyword options to the simulate function and will be passed to the
+    integrator.
 
 Supported Simulator Packages
 ****************************
@@ -757,10 +764,10 @@ Using the Simulator
 We now show how to use the Simulator to simulate the following system of ODEs:
 
 .. math::
-   \begin{array}{l}
-   \frac{d\theta}{dt} = \omega \\
-   \frac{d\omega}{dt} = -b*\omega -c*sin(\theta)
-   \end{array}
+    \begin{array}{l}
+    \frac{d\theta}{dt} = \omega \\
+    \frac{d\omega}{dt} = -b*\omega -c*sin(\theta)
+    \end{array}
 
 We begin by formulating the model using pyomo.DAE
 
@@ -806,7 +813,7 @@ end of this section to understand the types of models supported by the
 Simulator.
 
 .. doctest::
-    :pyversion: >= 2.7
+
     >>> sim = Simulator(m, package='scipy')
 
 After creating a Simulator object, the model can be simulated by calling the
@@ -815,8 +822,8 @@ simulate function. Please see the API documentation for the
 valid keyword arguments for this function.
 
 .. doctest::
-    :pyversion: >= 2.7
-    >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode')
+
+    >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode') # doctest: +SKIP
 
 The ``simulate`` function returns numpy arrays containing time points and
 the corresponding values for the dynamic variable profiles.
@@ -846,7 +853,7 @@ and the values correspond to the value of the input at a time point. A
 example.
 
 .. doctest::
-    :pyversion: >= 2.7
+
     >>> m = ConcreteModel()
 
     >>> m.t = ContinuousSet(bounds=(0.0, 20.0))
@@ -887,7 +894,7 @@ example.
     >>> sim = Simulator(m, package='scipy')
     >>> tsim, profiles = sim.simulate(numpoints=100,
     ...                               integrator='vode',
-    ...                               varying_inputs=m.var_input)
+    ...                               varying_inputs=m.var_input) # doctest: +SKIP
 
 .. note::
     The Simulator does not support multi-indexed inputs (i.e. if ``m.b`` in
@@ -907,18 +914,19 @@ initializing discretized dynamic optimization models using the profiles
 returned from the simulator. An example using this function is shown below
 
 .. doctest::
-    :pyversion: >= 2.7
+    :pyversion: > 2.6
+
     Simulate the model using scipy
     >>> sim = Simulator(m, package='scipy')
     >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode',
-    ...                               varying_inputs=m.var_input)
+    ...                               varying_inputs=m.var_input) # doctest: +SKIP
 
     Discretize model using Orthogonal Collocation
     >>> discretizer = TransformationFactory('dae.collocation')
     >>> discretizer.apply_to(m, nfe=10, ncp=3)
 
     Initialize the discretized model using the simulator profiles
-    >>> sim.initialize_model()
+    >>> sim.initialize_model() # doctest: +SKIP
 
 .. note::
     A model must be simulated before it can be initialized using this function
