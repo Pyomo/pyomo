@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -790,7 +790,6 @@ class TestArrayCon(unittest.TestCase):
         return model
 
     def test_rule_option1(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -809,7 +808,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 4)
 
     def test_old_rule_option1(self):
-        """Test rule option"""
         model = self.create_model()
         buffer = LogBuffer('pyomo.core', logging.WARNING)
         model.B = RangeSet(1,4)
@@ -829,7 +827,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 4)
 
     def test_rule_option2(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -849,7 +846,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option3(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -869,7 +865,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option2a(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         @simple_constraint_rule
@@ -890,7 +885,6 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option3a(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         @simple_constraint_rule
@@ -911,21 +905,18 @@ class TestArrayCon(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_dim(self):
-        """Test dim method"""
         model = self.create_model()
         model.c = Constraint(model.A)
 
         self.assertEqual(model.c.dim(),1)
 
     def test_keys(self):
-        """Test keys method"""
         model = self.create_model()
         model.c = Constraint(model.A)
 
         self.assertEqual(len(list(model.c.keys())),0)
 
     def test_len(self):
-        """Test len method"""
         model = self.create_model()
         model.c = Constraint(model.A)
         self.assertEqual(len(model.c),0)
@@ -971,7 +962,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 1)
 
     def test_rule_option1(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -992,7 +982,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 4)
 
     def test_rule_option2(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         def f(model, i):
@@ -1013,7 +1002,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option1a(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         @simple_constraintlist_rule
@@ -1035,7 +1023,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 4)
 
     def test_rule_option2a(self):
-        """Test rule option"""
         model = self.create_model()
         model.B = RangeSet(1,4)
         @simple_constraintlist_rule
@@ -1057,7 +1044,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(len(model.c), 2)
 
     def test_rule_option3(self):
-        """Test rule option"""
         model = self.create_model()
         model.y = Var(initialize=2)
         def f(model):
@@ -1073,7 +1059,6 @@ class TestConList(unittest.TestCase):
         self.assertEqual(model.d[1](), 2)
 
     def test_rule_option4(self):
-        """Test rule option"""
         model = self.create_model()
         model.y = Var(initialize=2)
         model.c = ConstraintList(rule=((i+1)*model.y >= 0 for i in range(3)))
@@ -1081,21 +1066,18 @@ class TestConList(unittest.TestCase):
         self.assertEqual(model.c[1](), 2)
 
     def test_dim(self):
-        """Test dim method"""
         model = self.create_model()
         model.c = ConstraintList()
 
         self.assertEqual(model.c.dim(),1)
 
     def test_keys(self):
-        """Test keys method"""
         model = self.create_model()
         model.c = ConstraintList()
 
         self.assertEqual(len(list(model.c.keys())),0)
 
     def test_len(self):
-        """Test len method"""
         model = self.create_model()
         model.c = ConstraintList()
 
