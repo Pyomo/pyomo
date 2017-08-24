@@ -814,7 +814,7 @@ Simulator.
 
 .. doctest::
 
-    >>> sim = Simulator(m, package='scipy')
+    >>> sim = Simulator(m, package='scipy') # doctest: +SKIP
 
 After creating a Simulator object, the model can be simulated by calling the
 simulate function. Please see the API documentation for the
@@ -891,7 +891,7 @@ example.
     >>> m.var_input[m.c] = c_profile
 
     Simulate the model using scipy
-    >>> sim = Simulator(m, package='scipy')
+    >>> sim = Simulator(m, package='scipy') # doctest: +SKIP
     >>> tsim, profiles = sim.simulate(numpoints=100,
     ...                               integrator='vode',
     ...                               varying_inputs=m.var_input) # doctest: +SKIP
@@ -917,7 +917,7 @@ returned from the simulator. An example using this function is shown below
     :pyversion: > 2.6
 
     Simulate the model using scipy
-    >>> sim = Simulator(m, package='scipy')
+    >>> sim = Simulator(m, package='scipy') # doctest: +SKIP
     >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode',
     ...                               varying_inputs=m.var_input) # doctest: +SKIP
 
