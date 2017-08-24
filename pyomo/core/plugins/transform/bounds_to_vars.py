@@ -1,5 +1,6 @@
 """Transformation to convert explicit bounds to variable bounds."""
 from __future__ import division
+import textwrap
 
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.kernel.numvalue import value
@@ -19,7 +20,8 @@ class ConstraintToVarBoundTransform(IsomorphicTransformation):
 
     """
 
-    alias('core.constraints_to_var_bounds', doc=__doc__)
+    alias('core.constraints_to_var_bounds',
+          doc=textwrap.fill(textwrap.dedent(__doc__.strip())))
 
     def __init__(self, *args, **kwargs):
         """Initialize the transformation."""
