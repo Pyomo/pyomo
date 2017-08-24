@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -36,11 +36,13 @@ from pyomo.repn import (generate_canonical_repn,
 
 logger = logging.getLogger('pyomo.core')
 
+
 def _no_negative_zero(val):
     """Make sure -0 is never output. Makes diff tests easier."""
     if val == 0:
         return 0
     return val
+
 
 def _get_bound(exp):
     if exp is None:
@@ -49,9 +51,12 @@ def _get_bound(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
 
-class ProblemWriter_cpxlp(AbstractProblemWriter):
 
-    pyomo.util.plugin.alias('cpxlp', 'Generate the corresponding CPLEX LP file')
+class ProblemWriter_cpxlp(AbstractProblemWriter):
+    """Generate the corresponding CPLEX LP file."""
+
+    pyomo.util.plugin.alias('cpxlp',
+                            'Generate the corresponding CPLEX LP file')
     pyomo.util.plugin.alias('lp', 'Generate the corresponding CPLEX LP file')
 
     def __init__(self):
@@ -130,7 +135,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_cpxlp passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
+                "\n\t".join("%s = %s" % (k, v)
+                            for k, v in iteritems(io_options)))
 
         if symbolic_solver_labels and (labeler is not None):
             raise ValueError("ProblemWriter_cpxlp: Using both the "
@@ -174,6 +180,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         return output_filename, symbol_map
 
     def _print_expr_canonical(self,
+                              model,
                               x,
                               output_file,
                               object_symbol_dictionary,
@@ -181,7 +188,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                               is_objective,
                               column_order,
                               force_objective_constant=False):
-
         """
         Return a expression as a string in LP format.
 
@@ -196,7 +202,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
         # cache - this is referenced numerous times.
         if not isinstance(x, GeneralCanonicalRepn):
-            var_hashes = None # not needed
+            var_hashes = None  # not needed
             linear_canonical = True
         else:
             var_hashes = x[-1]
@@ -205,7 +211,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # Linear
         #
-        linear_coef_string_template = '%+'+self._precision_string+' %s\n'
+        linear_coef_string_template = '%+' + self._precision_string + ' %s\n'
         if linear_canonical:
 
             #
@@ -221,17 +227,58 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 for vardata in variables:
                     self._referenced_variable_ids[id(vardata)] = vardata
 
-                if column_order is None:
-                    sorted_names = [(variable_symbol_dictionary[id(variables[i])],
-                                     coefficients[i])
-                                    for i in xrange(0,len(coefficients))]
-                    sorted_names.sort()
-                else:
-                    sorted_names = [(variables[i], coefficients[i])
-                                    for i in xrange(0,len(coefficients))]
-                    sorted_names.sort(key=lambda _x: column_order[_x[0]])
-                    sorted_names = [(variable_symbol_dictionary[id(var)], coef)
-                                    for var, coef in sorted_names]
+                try:
+                    if column_order is None:
+                        sorted_names = [
+                            (variable_symbol_dictionary[id(variables[i])],
+                             coefficients[i])
+                            for i in xrange(0, len(coefficients))]
+                        sorted_names.sort()
+                    else:
+                        sorted_names = [(variables[i], coefficients[i])
+                                        for i in xrange(0, len(coefficients))]
+                        sorted_names.sort(key=lambda _x: column_order[_x[0]])
+                        sorted_names = [
+                            (variable_symbol_dictionary[id(var)], coef)
+                            for var, coef in sorted_names]
+                except KeyError as err:
+                    _errors = []
+                    for v in variables:
+                        if id(v) in variable_symbol_dictionary:
+                            continue
+                        if v.model() is not model.model():
+                            _errors.append(
+                                "Variable '%s' is not part of the model "
+                                "being written out, but appears in an "
+                                "expression used on this model." % (v.name,))
+                        else:
+                            _parent = v.parent_block()
+                            while _parent is not None and _parent is not model:
+                                if _parent.type() is not model.type():
+                                    _errors.append(
+                                        "Variable '%s' exists within %s '%s', "
+                                        "but is used by an active "
+                                        "expression.  Currently variables "
+                                        "must be reachable through a tree "
+                                        "of active Blocks."
+                                        % (v.name, _parent.type().__name__,
+                                           _parent.name))
+                                if not _parent.active:
+                                    _errors.append(
+                                        "Variable '%s' exists within "
+                                        "deactivated %s '%s', but is used by "
+                                        "an active expression.  Currently "
+                                        "variables must be reachable through "
+                                        "a tree of active Blocks."
+                                        % (v.name, _parent.type().__name__,
+                                           _parent.name))
+                                _parent = _parent.parent_block()
+
+                    if _errors:
+                        for e in _errors:
+                            logger.error(e)
+                        err.args = err.args + tuple(_errors)
+                    raise
 
                 for name, coef in sorted_names:
                     output_file.write(linear_coef_string_template % (coef, name))
@@ -270,7 +317,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         #
         # Quadratic
         #
-        quad_coef_string_template = '%+'+self._precision_string+' '
+        quad_coef_string_template = '%+' + self._precision_string + ' '
         if canonical_degree(x) == 2:
 
             # first, make sure there is something to output
@@ -281,7 +328,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             # NOTE: if the coefficient is really 0.0, it
             #       should be preprocessed out by the
             #       canonial expression generator!
-            found_nonzero_term = False # until proven otherwise
+            found_nonzero_term = False  # until proven otherwise
             for var_hash, var_coefficient in iteritems(x[2]):
                 for var in var_hash:
                     vardata = var_hashes[var]
@@ -301,9 +348,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 # for the variables appearing in the term
                 if column_order is None:
                     var_hashes_order.sort(
-                        key=lambda term: \
-                          sorted(variable_symbol_dictionary[id(var_hashes[vh])]
-                                 for vh in term))
+                        key=lambda term:
+                        sorted(variable_symbol_dictionary[id(var_hashes[vh])]
+                               for vh in term))
                 else:
                     var_hashes_order.sort(
                         key=lambda term: sorted(column_order[var_hashes[vh]]
@@ -328,8 +375,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     # sort by symbols (or column assignments)
                     if column_order is None:
                         var_hash_order.sort(
-                            key=lambda vh: \
-                              variable_symbol_dictionary[id(var_hashes[vh])])
+                            key=lambda vh:
+                            variable_symbol_dictionary[id(var_hashes[vh])])
                     else:
                         var_hash_order.sort(
                             key=lambda vh: column_order[var_hashes[vh]])
@@ -371,11 +418,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         if constant is not None:
             offset = constant
         else:
-            offset=0.0
+            offset = 0.0
 
         # Currently, it appears that we only need to print
         # the constant offset term for objectives.
-        obj_string_template = '%+'+self._precision_string+' %s\n'
+        obj_string_template = '%+' + self._precision_string + ' %s\n'
         if is_objective and (force_objective_constant or (offset != 0.0)):
             output_file.write(obj_string_template
                               % (offset, 'ONE_VAR_CONSTANT'))
@@ -406,9 +453,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         level = soscondata.level
 
         output_file.write('%s: S%s::\n'
-                          % (symbol_map.getSymbol(soscondata,labeler), level))
+                          % (symbol_map.getSymbol(soscondata, labeler), level))
 
-        sos_template_string = "%s:%"+self._precision_string+"\n"
+        sos_template_string = "%s:%" + self._precision_string + "\n"
         for vardata, weight in sos_items:
             weight = _get_bound(weight)
             if weight < 0:
@@ -481,9 +528,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
                 variable_list.append(vardata)
                 variable_label_pairs.append(
-                    (vardata,create_symbol_func(symbol_map,
-                                                vardata,
-                                                labeler)))
+                    (vardata, create_symbol_func(symbol_map,
+                                                 vardata,
+                                                 labeler)))
 
         variable_symbol_map.addSymbols(variable_label_pairs)
 
@@ -500,7 +547,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # NOTE: this *must* use the "\* ... *\" comment format: the GLPK
         # LP parser does not correctly handle other formats (notably, "%").
         output_file.write(
-            "\\* Source Pyomo model name=%s *\\\n\n" % (model.name,) )
+            "\\* Source Pyomo model name=%s *\\\n\n" % (model.name,))
 
         #
         # Objective
@@ -517,7 +564,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 getattr(block, "_gen_obj_canonical_repn", True)
 
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_canonical_repn'):
+            if not hasattr(block, '_canonical_repn'):
                 block._canonical_repn = ComponentMap()
             block_canonical_repn = block._canonical_repn
 
@@ -556,7 +603,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
 
                 if degree == 0:
                     logger.warning("Constant objective detected, replacing "
-                          "with a placeholder to prevent solver failure.")
+                                   "with a placeholder to prevent solver failure.")
                     force_objective_constant = True
                 elif degree == 2:
                     if not supports_quadratic_objective:
@@ -572,9 +619,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         % objective_data.name)
 
                 output_file.write(
-                    object_symbol_dictionary[id(objective_data)]+':\n')
+                    object_symbol_dictionary[id(objective_data)] + ':\n')
 
                 offset = print_expr_canonical(
+                    model,
                     canonical_repn,
                     output_file,
                     object_symbol_dictionary,
@@ -611,7 +659,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     getattr(block, "_gen_con_canonical_repn", True)
 
                 # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_canonical_repn'):
+                if not hasattr(block, '_canonical_repn'):
                     block._canonical_repn = ComponentMap()
                 block_canonical_repn = block._canonical_repn
 
@@ -624,7 +672,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     if (not constraint_data.has_lb()) and \
                        (not constraint_data.has_ub()):
                         assert not constraint_data.equality
-                        continue # non-binding, so skip
+                        continue  # non-binding, so skip
 
                     if constraint_data._linear_canonical_form:
                         canonical_repn = constraint_data.canonical_form()
@@ -642,6 +690,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         if row_order is not None:
             sorted_constraint_list = list(constraint_generator())
             sorted_constraint_list.sort(key=lambda x: row_order[x[0]])
+
             def yield_all_constraints():
                 for constraint_data, canonical_repn in sorted_constraint_list:
                     yield constraint_data, canonical_repn
@@ -649,9 +698,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             yield_all_constraints = constraint_generator
 
         # FIXME: This is a hack to get nested blocks working...
-        eq_string_template = "= %"+self._precision_string+'\n'
-        geq_string_template = ">= %"+self._precision_string+'\n\n'
-        leq_string_template = "<= %"+self._precision_string+'\n\n'
+        eq_string_template = "= %" + self._precision_string + '\n'
+        geq_string_template = ">= %" + self._precision_string + '\n\n'
+        leq_string_template = "<= %" + self._precision_string + '\n\n'
         for constraint_data, canonical_repn in yield_all_constraints():
             have_nontrivial = True
 
@@ -688,8 +737,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     value(constraint_data.upper)
                 label = 'c_e_' + con_symbol + '_'
                 alias_symbol_func(symbol_map, constraint_data, label)
-                output_file.write(label+':\n')
-                offset = print_expr_canonical(canonical_repn,
+                output_file.write(label + ':\n')
+                offset = print_expr_canonical(model,
+                                              canonical_repn,
                                               output_file,
                                               object_symbol_dictionary,
                                               variable_symbol_dictionary,
@@ -707,8 +757,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     else:
                         label = 'c_l_' + con_symbol + '_'
                     alias_symbol_func(symbol_map, constraint_data, label)
-                    output_file.write(label+':\n')
-                    offset = print_expr_canonical(canonical_repn,
+                    output_file.write(label + ':\n')
+                    offset = print_expr_canonical(model,
+                                                  canonical_repn,
                                                   output_file,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
@@ -727,8 +778,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     else:
                         label = 'c_u_' + con_symbol + '_'
                     alias_symbol_func(symbol_map, constraint_data, label)
-                    output_file.write(label+':\n')
-                    offset = print_expr_canonical(canonical_repn,
+                    output_file.write(label + ':\n')
+                    offset = print_expr_canonical(model,
+                                                  canonical_repn,
                                                   output_file,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
@@ -742,8 +794,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     assert constraint_data.has_lb()
 
         if not have_nontrivial:
-            logger.warning('Empty constraint block written in LP format '  \
-                  '- solver may error')
+            logger.warning('Empty constraint block written in LP format '
+                           '- solver may error')
 
         # the CPLEX LP format doesn't allow constants in the objective (or
         # constraint body), which is a bit silly.  To avoid painful
@@ -813,8 +865,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # required because we don't store maps by variable type currently.
 
         # FIXME: This is a hack to get nested blocks working...
-        lb_string_template = "%"+self._precision_string+" <= "
-        ub_string_template = " <= %"+self._precision_string+"\n"
+        lb_string_template = "%" + self._precision_string + " <= "
+        ub_string_template = " <= %" + self._precision_string + "\n"
         # Track the number of integer and binary variables, so you can
         # output their status later.
         integer_vars = []
@@ -895,7 +947,6 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             for var_name in binary_vars:
                 output_file.write('  %s\n' % var_name)
 
-
         # Write the SOS section
         output_file.write(SOSlines.getvalue())
 
@@ -909,7 +960,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # rely on this for choosing the set of potential warm start
         # variables
         vars_to_delete = set(variable_symbol_map.byObject.keys()) - \
-                         set(self._referenced_variable_ids.keys())
+            set(self._referenced_variable_ids.keys())
         sm_byObject = symbol_map.byObject
         sm_bySymbol = symbol_map.bySymbol
         var_sm_byObject = variable_symbol_map.byObject

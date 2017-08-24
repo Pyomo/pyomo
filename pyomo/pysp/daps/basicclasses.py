@@ -1,35 +1,49 @@
 # Started by DLW, December 2016
+"""The prime directive: write the code and its comments as if the code
+were intended for a real user. Researchers can script from "outside."
+If researchers need the code to be factored differently, that is OK,
+but do not violate the prime directive by putting in code that only
+supports research other than in research scripts!!!!
 
-# The prime directive: write the code and its comments as
-# if it were intended for a real user. Researchers
-# can script from "outside." If researchers need the
-# code to be factored differently, that is OK, but
-# do not violate the prime directive by putting code
-# that only supports research in the code other than
-# in research scripts!!!!
+These are mostly base classes (some are glorified functions, but that
+can remember some things) and functions for out-of-the-box use.  I am
+trying to keep a few use cases in mind: time series and non-time
+series.  I think we need to be multi-stage and multi-variate from the
+start.  However, it might be reasonable to start by treating two-stage
+as a special case. I am trying to put in a little "sample code" for
+both abstract and concrete models.
 
-# These are mostly base classes (some are glorified functions, but that
-#  can remember some things) and functions for out-of-the-box use.
-# I am trying to keep a few use cases in mind: time series and non-time series.
-# I think we need to be multi-stage and multi-variate from the start.
-# However, it might be reasonable to start by treaing two-stage as a special
-# case. I am trying to put in a little "sample code" for both abstract
-# and concrete models.
+The *big* thing at this point is that raw scenario data needs to be
+find its way into a dictionary (perhaps of dictionaries). For concrete
+models, that will generally be whatever it needs to be and the
+scenario creation callback will deal with it when it gets it. For
+abstract models (and some concrete models), the outer index is a Param
+name and the inner indexes (if present) are full param index strings.
 
-# The *big* thing at this point is that raw scenario data needs to be
-# find its way into a dictionary (perhaps of dictionaries). For concrete models,
-# that will generally be whatever it needs to be and the scenario creation callback will
-# deal with it when it gets it. For abstract models, the
-# outer index is a Param name and the inner indexes (if present)
-# are full param index strings.
+"""
 
 import os
+import sys
 import shutil
 import copy
 import json
 import networkx
 import pyomo.pysp.scenariotree.tree_structure_model as ptm
+from collections import OrderedDict
 
+#==============================================================================
+def daps_data_dir():
+    """ Somehow return the path to the node, tree and scenario data.
+    This is intended for optional use by programmers of daps and optiona
+    use by programmers of PySP callbacks.
+    """
+    if "DAPS_DATA_DIR" not in os.environ:
+        print ("Warning: DAPS_DATA_DIR enviornment variable not defined.")
+        print ("Defulting to 'stoch_dir'")
+        return 'stoch_dir'
+    else:
+        return os.environ["DAPS_DATA_DIR"]
+    
 #==============================================================================
 class Raw_Node_Data:
     """ The raw data for one node of the scenario tree.
@@ -61,7 +75,7 @@ class Raw_Node_Data:
             if prob is None or prob < 0 or prob > 1.0:
                 raise RuntimeError('Internal error: Raw_Node_Data; ' +
                                    "bad prob="+str(prob))
-            self.valdict = {}
+            self.valdict = OrderedDict()
             for pname in dictin:
                 if isinstance(dictin[pname], dict):
                     if pname not in self.valdict:
@@ -69,11 +83,12 @@ class Raw_Node_Data:
                     for pindex in dictin[pname]:
                         self.valdict[pname][pindex] = dictin[pname][pindex]
                 else:
-                    self.dict[pname] =  dictin[pname][pindex]
+                    self.valdict[pname] =  dictin[pname][pindex]
             self.name = name
             self.parent_name = parentname
             self.prob = prob
-                        
+            
+            
         #==========
         def from_file(self, filespec):
             """
@@ -742,6 +757,7 @@ def Tree_2Stage_json_dir(DirName,
         # Do the "side effect" file copy
         sourcename = os.path.join(DirName, rawfilelist[i])
         targetname = os.path.join(DirName, PySPScen.name + ".json")
+        #print ('Debug: copy',sourcename, targetname)
         shutil.copy(sourcename, targetname)
 
     # Note that there was no need to keep the raw scenario for
