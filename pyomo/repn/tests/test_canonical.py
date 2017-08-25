@@ -180,19 +180,21 @@ class Test(unittest.TestCase):
         x = [Var(bounds=(-1,1)) for i in I]
         expr = x[1]*(x[1]+x[2]) + x[2]*(x[1]+3.0*x[3]*x[3])
         rep = generate_canonical_repn(expr)
-        # rep should only have [-1,2,3]
+        # rep should only have [None,-1,2]
         self.assertEqual(len(rep), 3)
         self.assertTrue(2 in rep)
-        self.assertTrue(3 in rep)
         self.assertTrue(-1 in rep)
+        if expr_common.mode == expr_common.Mode.pyomo5_trees:
+            self.assertTrue(None in rep)
+        else:
+            self.assertTrue(3 in rep)
+        # check the expression encoding
+        self.assertEqual(rep[2], {frozendict({0:2}):1.0,
+                                  frozendict({0:1, 1:1}):2.0})
         # rep[-1] should have the 3 of the 4 variables...
         self.assertEqual(rep[-1], { 0: x[1],
                                     1: x[2],
                                     2: x[3] })
-        # check the expression encoding
-        self.assertEqual(rep[2], {frozendict({0:2}):1.0,
-                                  frozendict({0:1, 1:1}):2.0})
-        self.assertEqual(rep[3], {frozendict({1:1, 2:2}):3.0})
 
 
     def test_polynomial_expression_with_fixed(self):
@@ -204,19 +206,21 @@ class Test(unittest.TestCase):
         x[1].set_value(5)
         x[1].fixed = True
         rep = generate_canonical_repn(expr)
-        # rep should only have [-1,0,1,3]
+        # rep should only have [None,-1,0,1]
         self.assertEqual(len(rep), 4)
         self.assertTrue(0 in rep)
         self.assertTrue(1 in rep)
-        self.assertTrue(3 in rep)
         self.assertTrue(-1 in rep)
+        if expr_common.mode == expr_common.Mode.pyomo5_trees:
+            self.assertTrue(None in rep)
+        else:
+            self.assertTrue(3 in rep)
         # rep[-1] should have the 2 of the 4 variables...
         self.assertEqual(rep[-1], { 0: x[2],
                                     1: x[3] })
         # check the expression encoding
         self.assertEqual(rep[0], {None: 25.0})
         self.assertEqual(rep[1], {0: 10.0})
-        self.assertEqual(rep[3], {frozendict({0:1, 1:2}):3.0})
 
 
     def test_linear_expression_with_constant_division(self):
@@ -252,7 +256,7 @@ class Test(unittest.TestCase):
         expr = summation(m.p, m.x)/m.y
         rep = generate_canonical_repn(expr)
 
-        # rep should only have variables and linearm terms
+        # rep should only have variables and linear terms
         self.assertTrue(rep.linear != None)
         self.assertTrue(rep.constant == None)
         self.assertTrue(rep.variables != None)
@@ -359,15 +363,22 @@ class Test(unittest.TestCase):
         expr = x[1] + 5*cos(x[2])
 
         rep = generate_canonical_repn(expr)
-        # rep should only have [-1,None]
-        self.assertEqual(len(rep), 2)
+
         self.assertTrue(None in rep)
         self.assertTrue(-1 in rep)
+        if expr_common.mode == expr_common.Mode.pyomo5_trees:
+            # rep should only have [-1,None,1]
+            self.assertEqual(len(rep), 3)
+            self.assertTrue(1 in rep)
+            self.assertEqual(rep[1], { 0: 1})
+        else:
+            # rep should only have [-1,None]
+            self.assertEqual(len(rep), 2)
+            self.assertIs(rep[None], expr)
         # rep[-1] should have 2 variables...
         self.assertEqual(rep[-1], { 0: x[1],
                                     1: x[2] })
         # check the expression encoding
-        self.assertIs(rep[None], expr)
 
     def test_general_nonlinear_fixed(self):
         I = range(3)
@@ -652,18 +663,6 @@ class Test_pyomo5(Test):
 
     @unittest.skipIf(True, "Pyomo5 does not recognize rational expressions.")
     def test_expr_rational_fixed(self):
-        pass
-
-    @unittest.skipIf(True, "Pyomo5 does not recognize polynomial expressions.")
-    def test_polynomial_expression(self):
-        pass
-
-    @unittest.skipIf(True, "Pyomo5 does not recognize polynomial expressions.")
-    def test_polynomial_expression_with_fixed(self):
-        pass
-
-    @unittest.skipIf(True, "Pyomo5 does not recognize polynomial expressions.")
-    def test_Expr_if_quadratic(self):
         pass
 
 if __name__ == "__main__":
