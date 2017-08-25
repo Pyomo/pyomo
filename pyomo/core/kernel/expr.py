@@ -23,6 +23,8 @@ def generate_relational_expression(etype, lhs, rhs):
     raise RuntimeError("incomplete import of Pyomo expression system")
 def generate_intrinsic_function_expression(arg, name, fcn):
     raise RuntimeError("incomplete import of Pyomo expression system")
+def compress_expression():
+    raise RuntimeError("incomplete import of Pyomo expression system")
 
 from pyomo.core.kernel import numvalue
 
@@ -59,6 +61,7 @@ _pyomo4_module_members = [
     'sum',
 ]
 _pyomo5_module_members = [
+    'compress_expression',
     '_ReciprocalExpression',
     '_NegationExpression',
     'EntangledExpressionError',
