@@ -691,7 +691,10 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     ans[2][i] *= -1
 
         elif _obj.__class__ == EXPR._ReciprocalExpression:
-            ans = {0:1.0/_result[0][0]}
+            if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
+                ans = {None:_obj}
+            else:
+                ans = {0:1.0/_result[0][0]}
 
         elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
             if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
