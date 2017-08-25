@@ -56,16 +56,20 @@ class StandardRepn(object):
     TODO: define what "efficient" means to us.
     """
 
-    __slots__ = ('_constant',           # The constant term
-                 '_linear_terms_coef',  # Linear coefficients
-                 '_linear_vars',        # Linear variables
-                 '_nonlinear_expr',     # TODO
-                 '_nonlinear_vars')     # TODO
+    __slots__ = ('_constant',               # The constant term
+                 '_linear_terms_coef',      # Linear coefficients
+                 '_linear_vars',            # Linear variables
+                 '_quadratic_terms_coef',   # Quadratic coefficients
+                 '_quadratic_vars',         # Quadratic variables
+                 '_nonlinear_expr',         # TODO
+                 '_nonlinear_vars')         # TODO
 
     def __init__(self):
         self._constant = 0
         self._linear_vars = {}
         self._linear_terms_coef = {}
+        self._quadratic_vars = {}
+        self._quadratic_terms_coef = {}
         self._nonlinear_expr = None
         self._nonlinear_vars = {}
 
@@ -76,6 +80,8 @@ class StandardRepn(object):
         return  (self._constant,
                  self._linear_terms_coef,
                  self._linear_vars,
+                 self._quadratic_terms_coef,
+                 self._quadratic_vars,
                  self._nonlinear_expr,
                  self._nonlinear_vars)
 
@@ -86,6 +92,8 @@ class StandardRepn(object):
         self._constant, \
         self._linear_terms_coef, \
         self._linear_vars, \
+        self._quadratic_terms_coef, \
+        self._quadratic_vars, \
         self._nonlinear_expr, \
         self._nonlinear_vars = state
 
@@ -102,6 +110,10 @@ class StandardRepn(object):
             self._linear_terms_coef = tuple(self._linear_terms_coef[key] for key in linear_keys)
         else:
             self._linear_terms_coef = tuple()
+        if  self._quadratic_vars.__class__ is dict:
+            quadratic_keys = self._quadratic_vars.keys()
+            self._quadratic_vars = tuple(self._quadratic_vars[key] for key in quadratic_keys)
+            self._quadratic_terms_coef = tuple(self._quadratic_terms_coef[key] for key in quadratic_keys)
         if self._nonlinear_vars.__class__ is dict:
             self._nonlinear_vars = tuple(itervalues(self._nonlinear_vars))
 
@@ -120,6 +132,14 @@ class StandardRepn(object):
             output.write("linear vars:    "+str([v_.name for v_ in self._linear_vars])+"\n")
             output.write("linear var ids: "+str([id(v_) for v_ in self._linear_vars])+"\n")
             output.write("linear coef:    "+str(list(self._linear_terms_coef))+"\n")
+        if  self._quadratic_vars.__class__ is dict:
+            output.write("quadratic vars:    "+str([(v_[0].name,v_[1].name) for _,v_ in sorted(self._quadratic_vars.items(), key=lambda x: x[0])])+"\n")
+            output.write("quadratic var ids: "+str([(id(v_[0]),id(v_[1])) for _,v_ in sorted(self._quadratic_vars.items(), key=lambda x: x[0])])+"\n")
+            output.write("quadratic coef:    "+str([c_ for _,c_ in sorted(self._quadratic_terms_coef.items(), key=lambda x: x[0])])+"\n")
+        else:
+            output.write("quadratic vars:    "+str([v_.name for v_ in self._quadratic_vars])+"\n")
+            output.write("quadratic var ids: "+str([id(v_) for v_ in self._quadratic_vars])+"\n")
+            output.write("quadratic coef:    "+str(list(self._quadratic_terms_coef))+"\n")
         if self._nonlinear_expr is None:
             output.write("nonlinear expr: None\n")
         else:
@@ -222,17 +242,20 @@ class StandardRepn(object):
         return not self.__eq__(other)
 
     def is_fixed(self):
-        if len(self._linear_vars) == 0 and len(self._nonlinear_vars) == 0:
+        if len(self._linear_vars) == 0 and len(self._nonlinear_vars) == 0 and len(self._quadratic_vars) == 0:
             return True
         return False
 
     def is_linear(self):
-        if self._nonlinear_expr is None:
+        if self._nonlinear_expr is None and len(self._quadratic_terms_coef) == 0:
             return True
         return False
 
+    def is_quadratic(self):
+        return len(self._quadratic_terms_coef) > 0
+
     def is_nonlinear(self):
-        if self._nonlinear_expr is None:
+        if self._nonlinear_expr is None or len(self._quadratic_terms_coef) == 0:
             return False
         return True
 
@@ -368,6 +391,12 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             # the value of the LHS (_args[0])
                             #
                             _result = []
+                        elif val == 2:
+                            #
+                            # If the exponent is two, then set the value of the exponent and continue
+                            # processing the value of the LHS (_args[0])
+                            #
+                            _result = [{0:2}]
                         else:
                             #
                             # Otherwise, we treat this as a nonlinear expression
@@ -519,31 +548,97 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             ans[1][key] += res[1][key]
                         else:
                             ans[1][key] = res[1][key]
+                # Add quadratic terms
+                if 2 in res:
+                    if not 2 in ans:
+                        ans[2] = {}
+                    for key in res[2]:
+                        if key in ans[2]:
+                            ans[2][key] += res[2][key]
+                        else:
+                            ans[2][key] = res[2][key]
 
-        elif _obj.__class__ == EXPR._ProductExpression:
-            _l, _r = _result
+        elif _obj.__class__ == EXPR._ProductExpression or (_obj.__class__ == EXPR._PowExpression and len(_result) == 2):
+            #
+            # The POW expression is a special case.  This the length==2 indicates that this is a quadratic.
+            #
+            if _obj.__class__ == EXPR._PowExpression:
+                _tmp, _l = _result
+                _r = _l
+            else:
+                _l, _r = _result
+            #print("_l")
+            #print(_l)
+            #print("_r")
+            #print(_r)
             ans = {}
+            #
+            # Compute the product
+            #
+            # l\r   None    0       1       2
+            # None  None    None    None    None
+            # 0     None    0       1       2
+            # 1     None    1       2       None
+            # 2     None    2       None    None
+            #
 
-            if None in _l or None in _r or (1 in _l and 1 in _r):
-                ans[None] = 0
+            #
+            # GENERATING A NONLINEAR TERM
+            #
+            # Products that include a nonlinear term
+            nonl = 0
             if None in _l:
                 if None in _r:
-                    ans[None] += _l[None]*_r[None]
+                    nonl += _l[None]*_r[None]
                 if 0 in _r:
-                    ans[None] += _l[None]*_r[0]
+                    nonl += _l[None]*_r[0]
                 if 1 in _r:
                     for key in _r[1]:
-                        ans[None] += _l[None]*_r[1][key]
+                        nonl += _l[None]*_r[1][key]*idMap[key]
+                if 2 in _r:
+                    for key in _r[2]:
+                        v1_, v2_ = key
+                        nonl += _l[None]*_r[2][key]*idMap[v1_]*idMap[v2_]
             if None in _r:
                 if 0 in _l:
-                    ans[None] += _l[0]*_r[None]
+                    nonl += _l[0]*_r[None]
                 if 1 in _l:
                     for key in _l[1]:
-                        ans[None] += _l[1][key]*_r[None]
+                        nonl += _l[1][key]*_r[None]*idMap[key]
+                if 2 in _l:
+                    for key in _l[2]:
+                        v1_, v2_ = key
+                        nonl += _r[None]*_l[2][key]*idMap[v1_]*idMap[v2_]
+            # Products that generate term with degree > 2
+            if 2 in _l:
+                if 1 in _r:
+                    for lkey in _l[2]:
+                        v1_, v2_ = lkey
+                        for rkey in _r[1]:
+                            nonl += _l[2][lkey]*_r[1][rkey]*idMap[v1_]*idMap[v2_]*idMap[rkey]
+                if 2 in _r:
+                    for lkey in _l[2]:
+                        lv1_, lv2_ = lkey
+                        for rkey in _r[2]:
+                            rv1_, rv2_ = rkey
+                            nonl += _l[2][lkey]*_r[2][rkey]*idMap[lv1_]*idMap[lv2_]*idMap[rv1_]*idMap[rv2_]
+            if 1 in _l and 2 in _r:
+                    for lkey in _l[1]:
+                        for rkey in _r[2]:
+                            v1_, v2_ = rkey
+                            nonl += _l[1][lkey]*_r[2][rkey]*idMap[lkey]*idMap[v1_]*idMap[v2_]
+            if not nonl is 0:
+                ans[None] = nonl
 
+            #
+            # GENERATING A CONSTANT TERM
+            #
             if 0 in _l and 0 in _r:
                 ans[0] = _l[0]*_r[0]
 
+            #
+            # GENERATING LINEAR TERMS
+            #
             if (0 in _l and 1 in _r) or (1 in _l and 0 in _r):
                 ans[1] = {}
             if 0 in _l and 1 in _r:
@@ -556,6 +651,32 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     else:
                         ans[1][key] = _l[1][key]*_r[0]
 
+            #
+            # GENERATING QUADRATIC TERMS
+            #
+            if (0 in _l and 2 in _r) or (2 in _l and 0 in _r) or (1 in _l and 1 in _r):
+                ans[2] = {}
+            if 0 in _l and 2 in _r:
+                for key in _r[2]:
+                    ans[2][key] = _l[0]*_r[2][key]
+            if 2 in _l and 0 in _r:
+                for key in _l[2]:
+                    if key in ans[2]:
+                        ans[2][key] += _l[2][key]*_r[0]
+                    else:
+                        ans[2][key] = _l[2][key]*_r[0]
+            if 1 in _l and 1 in _r:
+                for lkey in _l[1]:
+                    for rkey in _r[1]:
+                        if id(idMap[lkey]) <= id(idMap[rkey]):
+                            key_ = (lkey,rkey)
+                        else:
+                            key_ = (rkey,lkey)
+                        if key_ in ans[2]:
+                            ans[2][key_] += _l[1][lkey]*_r[1][rkey]
+                        else:
+                            ans[2][key_] = _l[1][lkey]*_r[1][rkey]
+
         elif _obj.__class__ == EXPR._NegationExpression:
             ans = _result[0]
             if None in ans:
@@ -565,12 +686,15 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             if 1 in ans:
                 for i in ans[1]:
                     ans[1][i] *= -1
+            if 2 in ans:
+                for i in ans[2]:
+                    ans[2][i] *= -1
 
         elif _obj.__class__ == EXPR._ReciprocalExpression:
             ans = {0:1.0/_result[0][0]}
 
         elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
-            if None in _result[0] or 1 in _result[0]:
+            if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
                 ans = {None:_obj}
             else:
                 ans = {0:_obj(_result[0][0])}
@@ -615,11 +739,26 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         for i in ans[1]:
             repn._linear_vars[i] = idMap[i]
             repn._linear_terms_coef[i] = ans[1][i]
+    if 2 in ans:
+        for i in ans[2]:
+            v1_, v2_ = i
+            repn._quadratic_vars[i] = (idMap[v1_],idMap[v2_])
+            repn._quadratic_terms_coef[i] = ans[2][i]
     repn._nonlinear_expr = ans.get(None,None)
     repn._nonlinear_vars = {}
     if not repn._nonlinear_expr is None:
         for v_ in EXPR.identify_variables(repn._nonlinear_expr, include_fixed=True, include_potentially_variable=True):
             repn._nonlinear_vars[id(v_)] = v_
+            #
+            # Update idMap in case we skipped nonlinear sub-expressions
+            #
+            # Q: Should we skip nonlinear sub-expressions?
+            #
+            id_ = id(v_)
+            if not id_ in idMap[None]:
+                key = len(idMap) - 1
+                idMap[None][id_] = key
+                idMap[key] = v_
 
     if compress:
         repn._compress()
