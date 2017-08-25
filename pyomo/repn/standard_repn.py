@@ -260,7 +260,7 @@ class StandardRepn(object):
         return True
 
 
-def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, compress=False):
+def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, compress=False, quadratic=True):
     if idMap is None:
         idMap = {}
     idMap.setdefault(None, {})
@@ -391,7 +391,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             # the value of the LHS (_args[0])
                             #
                             _result = []
-                        elif val == 2:
+                        elif val == 2 and quadratic:
                             #
                             # If the exponent is two, then set the value of the exponent and continue
                             # processing the value of the LHS (_args[0])
@@ -549,7 +549,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         else:
                             ans[1][key] = res[1][key]
                 # Add quadratic terms
-                if 2 in res:
+                if quadratic and 2 in res:
                     if not 2 in ans:
                         ans[2] = {}
                     for key in res[2]:
@@ -609,24 +609,35 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     for key in _l[2]:
                         v1_, v2_ = key
                         nonl += _r[None]*_l[2][key]*idMap[v1_]*idMap[v2_]
-            # Products that generate term with degree > 2
-            if 2 in _l:
-                if 1 in _r:
-                    for lkey in _l[2]:
-                        v1_, v2_ = lkey
-                        for rkey in _r[1]:
-                            nonl += _l[2][lkey]*_r[1][rkey]*idMap[v1_]*idMap[v2_]*idMap[rkey]
-                if 2 in _r:
-                    for lkey in _l[2]:
-                        lv1_, lv2_ = lkey
-                        for rkey in _r[2]:
-                            rv1_, rv2_ = rkey
-                            nonl += _l[2][lkey]*_r[2][rkey]*idMap[lv1_]*idMap[lv2_]*idMap[rv1_]*idMap[rv2_]
-            if 1 in _l and 2 in _r:
+            if quadratic:
+                # Products that generate term with degree > 2
+                if 2 in _l:
+                    if 1 in _r:
+                        for lkey in _l[2]:
+                            v1_, v2_ = lkey
+                            for rkey in _r[1]:
+                                nonl += _l[2][lkey]*_r[1][rkey]*idMap[v1_]*idMap[v2_]*idMap[rkey]
+                    if 2 in _r:
+                        for lkey in _l[2]:
+                            lv1_, lv2_ = lkey
+                            for rkey in _r[2]:
+                                rv1_, rv2_ = rkey
+                                nonl += _l[2][lkey]*_r[2][rkey]*idMap[lv1_]*idMap[lv2_]*idMap[rv1_]*idMap[rv2_]
+                if 1 in _l and 2 in _r:
+                        for lkey in _l[1]:
+                            for rkey in _r[2]:
+                                v1_, v2_ = rkey
+                                nonl += _l[1][lkey]*_r[2][rkey]*idMap[lkey]*idMap[v1_]*idMap[v2_]
+            else:
+                # Products that generate term with degree = 2
+                if 1 in _l and 1 in _r:
                     for lkey in _l[1]:
-                        for rkey in _r[2]:
-                            v1_, v2_ = rkey
-                            nonl += _l[1][lkey]*_r[2][rkey]*idMap[lkey]*idMap[v1_]*idMap[v2_]
+                        for rkey in _r[1]:
+                            if id(idMap[lkey]) <= id(idMap[rkey]):
+                                key_ = (lkey,rkey)
+                            else:
+                                key_ = (rkey,lkey)
+                            nonl += _l[1][lkey]*_r[1][rkey]*idMap[lkey]*idMap[rkey]
             if not nonl is 0:
                 ans[None] = nonl
 
@@ -654,28 +665,29 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             #
             # GENERATING QUADRATIC TERMS
             #
-            if (0 in _l and 2 in _r) or (2 in _l and 0 in _r) or (1 in _l and 1 in _r):
-                ans[2] = {}
-            if 0 in _l and 2 in _r:
-                for key in _r[2]:
-                    ans[2][key] = _l[0]*_r[2][key]
-            if 2 in _l and 0 in _r:
-                for key in _l[2]:
-                    if key in ans[2]:
-                        ans[2][key] += _l[2][key]*_r[0]
-                    else:
-                        ans[2][key] = _l[2][key]*_r[0]
-            if 1 in _l and 1 in _r:
-                for lkey in _l[1]:
-                    for rkey in _r[1]:
-                        if id(idMap[lkey]) <= id(idMap[rkey]):
-                            key_ = (lkey,rkey)
+            if quadratic:
+                if (0 in _l and 2 in _r) or (2 in _l and 0 in _r) or (1 in _l and 1 in _r):
+                    ans[2] = {}
+                if 0 in _l and 2 in _r:
+                    for key in _r[2]:
+                        ans[2][key] = _l[0]*_r[2][key]
+                if 2 in _l and 0 in _r:
+                    for key in _l[2]:
+                        if key in ans[2]:
+                            ans[2][key] += _l[2][key]*_r[0]
                         else:
-                            key_ = (rkey,lkey)
-                        if key_ in ans[2]:
-                            ans[2][key_] += _l[1][lkey]*_r[1][rkey]
-                        else:
-                            ans[2][key_] = _l[1][lkey]*_r[1][rkey]
+                            ans[2][key] = _l[2][key]*_r[0]
+                if 1 in _l and 1 in _r:
+                    for lkey in _l[1]:
+                        for rkey in _r[1]:
+                            if id(idMap[lkey]) <= id(idMap[rkey]):
+                                key_ = (lkey,rkey)
+                            else:
+                                key_ = (rkey,lkey)
+                            if key_ in ans[2]:
+                                ans[2][key_] += _l[1][lkey]*_r[1][rkey]
+                            else:
+                                ans[2][key_] = _l[1][lkey]*_r[1][rkey]
 
         elif _obj.__class__ == EXPR._NegationExpression:
             ans = _result[0]
@@ -713,6 +725,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 raise
             ans = _result[0]
 
+        #print("ans")
+        #print(ans)
         if verbose: #pragma:nocover
             print("*"*10 + " RETURN  " + "*"*10)
             print("."*30)

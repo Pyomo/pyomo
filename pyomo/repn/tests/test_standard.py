@@ -1272,6 +1272,7 @@ class TestSimple(unittest.TestCase):
         e1 = m.a + 5
         e = e1 * m.b
 
+        # Collect quadratics
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
@@ -1286,6 +1287,25 @@ class TestSimple(unittest.TestCase):
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
+
+        # Do not collect quadratics
+        rep = generate_standard_repn(e, quadratic=False)
+        #
+        self.assertTrue(len(rep._linear_vars) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertEqual(len(rep._nonlinear_vars), 2)
+        baseline1 = { id(m.b):5 }
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        baseline2 = set([ id(m.a), id(m.b) ])
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_, quadratic=False)
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
 
         #       *
         #      / \
@@ -1295,6 +1315,7 @@ class TestSimple(unittest.TestCase):
         e1 = m.a + 5
         e = m.b * e1
 
+        # Collect quadratics
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
@@ -1310,6 +1331,25 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
 
+        # Do not collect quadratics
+        rep = generate_standard_repn(e, quadratic=False)
+        #
+        self.assertTrue(len(rep._linear_vars) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertEqual(len(rep._nonlinear_vars), 2)
+        baseline1 = { id(m.b):5 }
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        baseline2 = set([ id(m.a), id(m.b) ])
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_, quadratic=False)
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
+
         #       *
         #     /   \
         #    +     +
@@ -1317,6 +1357,7 @@ class TestSimple(unittest.TestCase):
         #  c   b a   5
         e = (m.c + m.b) * (m.a + 5)
 
+        # Collect quadratics
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
@@ -1339,6 +1380,7 @@ class TestSimple(unittest.TestCase):
         #  a   5 b   c
         e = (m.a + 5) * (m.b + m.c)
 
+        # Collect quadratics
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 2)
@@ -1354,6 +1396,25 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
 
+        # Do not collect quadratics
+        rep = generate_standard_repn(e, quadratic=False)
+        #
+        self.assertTrue(len(rep._linear_vars) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertEqual(len(rep._nonlinear_vars), 3)
+        baseline1 = { id(m.b):5, id(m.c):5 }
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        baseline2 = set([ id(m.a), id(m.b), id(m.c) ])
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_, quadratic=False)
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
+
         #       *
         #     /   \
         #    *     +
@@ -1361,6 +1422,7 @@ class TestSimple(unittest.TestCase):
         #  a   5 b   c
         e = (m.a * 5) * (m.b + m.c)
 
+        # Collect quadratics
         rep = generate_standard_repn(e)
         #
         self.assertTrue(len(rep._linear_vars) == 0)
@@ -1375,6 +1437,25 @@ class TestSimple(unittest.TestCase):
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
+
+        # Do not collect quadratics
+        rep = generate_standard_repn(e, quadratic=False)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertEqual(len(rep._nonlinear_vars), 3)
+        baseline1 = { }
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        baseline2 = set([ id(m.a), id(m.b), id(m.c) ])
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_, quadratic=False)
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
 
         #       *
         #     /   \
@@ -1398,6 +1479,25 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
 
+        # Do not collect quadratics
+        rep = generate_standard_repn(e, quadratic=False)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertEqual(len(rep._nonlinear_vars), 3)
+        baseline1 = { }
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        baseline2 = set([ id(m.a), id(m.b), id(m.c) ])
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_, quadratic=False)
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
+
         #       *
         #     /   \
         #    +     *
@@ -1419,6 +1519,25 @@ class TestSimple(unittest.TestCase):
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
+
+        # Do not collect quadratics
+        rep = generate_standard_repn(e, quadratic=False)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertEqual(len(rep._nonlinear_vars), 3)
+        baseline1 = { }
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        baseline2 = set([ id(m.a), id(m.b), id(m.c) ])
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_, quadratic=False)
+        self.assertEqual(baseline1, repn_to_dict(rep))
+        self.assertEqual(baseline2, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,                 include_potentially_variable=True)))
 
     def test_pow(self):
         #       ^
@@ -1507,6 +1626,46 @@ class TestSimple(unittest.TestCase):
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       ^
+        #      / \
+        #     a   2
+        e = m.a ** 2
+
+        rep = generate_standard_repn(e, quadratic=False)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 1)
+        baseline = set([ id(m.a) ])
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_, quadratic=False)
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
+
+        #       ^
+        #      / \
+        #     a   m.r 
+        e = m.a ** m.r
+
+        rep = generate_standard_repn(e, quadratic=False)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 1)
+        baseline = set([ id(m.a) ])
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_, quadratic=False)
+        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
 
         #       ^
         #      / \
