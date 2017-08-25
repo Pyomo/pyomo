@@ -12,6 +12,9 @@ These approaches include:
 - Partial surrogate cuts [pending]
 - Generalized Bender decomposition [pending]
 
+TODO: figure out how to use logger appropriately instead of dumping everything
+to console
+
 This solver implementation was developed by Carnegie Mellon University in the
 research group of Ignacio Grossmann.
 
@@ -32,12 +35,13 @@ from pyomo.core.base.block import generate_cuid_names
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.core.kernel import Reals, NonNegativeReals
+from pyomo.core.kernel import Reals, NonNegativeReals, ComponentSet
 from pyomo.core.base import (Block, Constraint, ConstraintList,
                              Expression, Objective, RangeSet,
                              Set, Suffix,
                              TransformationFactory, Var, maximize, minimize,
                              value)
+from pyomo.core.base.expr import identify_variables
 from pyomo.opt import SolverFactory
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
@@ -45,8 +49,11 @@ from pyomo.opt import SolutionStatus, SolverStatus
 from pyomo.opt.base import IOptSolver
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from six import iteritems
+from pyomo.opt.results import (SolverResults, ProblemSense)
 
 logger = logging.getLogger('pyomo.solvers')
+
+__version__ = (0, 0, 1)
 
 
 class GDPDTSolver(pyomo.util.plugin.Plugin):
@@ -64,6 +71,10 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         """
         return True
+
+    def version(self):
+        """Return a 3-tuple describing the solver version."""
+        return __version__
 
     def solve(self, model, **kwds):
         """Solve the model.
@@ -171,6 +182,20 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         # modeling objects.
         GDPDT = m.GDPDT_utils = Block()
 
+        # Create the solver results object
+        res = self.results = SolverResults()
+        res.problem.name = m.name
+        res.problem.number_of_nonzeros = float('inf')  # TODO
+        res.solver.name = 'GDPDT ' + str(self.version())
+        # TODO work on termination condition and message
+        res.solver.termination_condition = None
+        res.solver.message = None
+        # TODO add some kind of timing
+        res.solver.user_time = None
+        res.solver.system_time = None
+        res.solver.wallclock_time = None
+        res.solver.termination_message = None
+
         # Validate the model to ensure that GDPDT is able to solve it.
         #
         # This needs to take place before the detection of nonlinear
@@ -256,6 +281,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         self._copy_values(self.best_solution_found, model,
                           to_map=model_cuid_to_obj)
 
+        self.results.problem.lower_bound = self.LB
+        self.results.problem.upper_bound = self.UB
+
     def _copy_values(self, from_model, to_model, from_map=None, to_map=None):
         """Copy variable values from one model to another.
 
@@ -323,7 +351,40 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             to_suffix[to_model_obj] = from_suffix[model_obj]
 
     def _validate_model(self):
+        """Validate that the model is solveable by GDPDT.
+
+        Also populates results object with problem information.
+
+        """
         m, GDPDT = self.working_model, self.working_model.GDPDT_utils
+
+        # Get count of constraints and variables
+        self.results.problem.number_of_constraints = 0
+        var_set = ComponentSet()
+        binary_var_set = ComponentSet()
+        integer_var_set = ComponentSet()
+        continuous_var_set = ComponentSet()
+        for constr in m.component_data_objects(ctype=Constraint, active=True,
+                                               descend_into=(Disjunct, Block)):
+            self.results.problem.number_of_constraints += 1
+            for v in identify_variables(constr.body):
+                var_set.add(v)
+                if v.is_binary():
+                    binary_var_set.add(v)
+                elif v.is_integer():
+                    integer_var_set.add(v)
+                elif v.is_continuous():
+                    continuous_var_set.add(v)
+                else:
+                    raise TypeError('Variable {0} has unknown domain of {1}'.
+                                    format(v.name, v.domain))
+
+        self.results.problem.number_of_variables = len(var_set)
+        self.results.problem.number_of_binary_variables = len(binary_var_set)
+        self.results.problem.number_of_integer_variables = len(integer_var_set)
+        self.results.problem.number_of_continuous_variables = \
+            len(continuous_var_set)
+
         # Check for any integer variables
         if any(True for v in m.component_data_objects(
                 ctype=Var, descend_into=True)
@@ -332,26 +393,30 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                              'GDPDT does not currently support solution of '
                              'such problems.')
             # TODO add in the reformulation using base 2
+            # TODO need to look inside of disjuncts for integer variables too
 
         # Handle missing or multiple objectives
-        objs = m.component_data_objects(
-            ctype=Objective, active=True, descend_into=True)
-        # Fetch the first active objective in the model
-        main_obj = next(objs, None)
-        if main_obj is None:
+        objs = list(m.component_data_objects(
+            ctype=Objective, active=True, descend_into=True))
+        num_objs = len(objs)
+        self.results.problem.number_of_objectives = num_objs
+        if num_objs == 0:
             raise ValueError('Model has no active objectives.')
-        # Fetch the next active objective in the model
-        if next(objs, None) is not None:
+        elif num_objs > 1:
             raise ValueError('Model has multiple active objectives.')
+        else:
+            main_obj = objs[0]
 
         # Move the objective to the constraints
         GDPDT.objective_value = Var(domain=Reals, initialize=0)
         if main_obj.sense == minimize:
             GDPDT.objective_expr = Constraint(
                 expr=GDPDT.objective_value >= main_obj.expr)
+            self.results.problem.sense = ProblemSense.minimize
         else:
             GDPDT.objective_expr = Constraint(
                 expr=GDPDT.objective_value <= main_obj.expr)
+            self.results.problem.sense = ProblemSense.maximize
         main_obj.deactivate()
         GDPDT.objective = Objective(
             expr=GDPDT.objective_value, sense=main_obj.sense)
