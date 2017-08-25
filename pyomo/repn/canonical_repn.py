@@ -1026,14 +1026,19 @@ def pyomo4_generate_canonical_repn(exp, idMap=None, compute_values=True):
 def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
     from pyomo.repn.standard_repn import generate_standard_repn
 
+    if idMap is None:
+        idMap = {}
     srepn = generate_standard_repn(exp, idMap=idMap, compute_values=compute_values)
-    if srepn._nonlinear_expr is None:
+
+    if srepn._nonlinear_expr is None and len(srepn._quadratic_terms_coef) == 0:
         #
         # Construct linear canonical repn
         #
         rep = CompiledLinearCanonicalRepn()
         if not (type(srepn._constant) in native_numeric_types and srepn._constant == 0):
             rep.constant = srepn._constant
+        else:
+            rep.constant = None
         if len(srepn._linear_vars) > 0:
             rep.linear = []
             rep.variables = []
@@ -1048,14 +1053,44 @@ def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
         # Construct nonlinear canonical repn
         #
         ans = {}
-        ans[None] = srepn._nonlinear_expr
+        if not srepn._nonlinear_expr is None:
+            ans[None] = srepn._nonlinear_expr
+
+        #print(srepn)
+        #print(idMap)
+        ans[-1] = {}
+        for i in srepn._nonlinear_vars:
+            v_ = srepn._nonlinear_vars[i]
+            ans[-1][idMap[None][id(v_)]] = v_
+        for i in srepn._linear_vars:
+            v_ = srepn._linear_vars[i]
+            ans[-1][idMap[None][id(v_)]] = v_
+        for i in srepn._quadratic_vars:
+            v1_,v2_ = srepn._quadratic_vars[i]
+            ans[-1][idMap[None][id(v1_)]] = v1_
+            ans[-1][idMap[None][id(v2_)]] = v2_
+
         if not (type(srepn._constant) in native_numeric_types and srepn._constant == 0):
-            ans[0] = srepn._constant
+            ans[0] = GeneralCanonicalRepn({None:srepn._constant})
+
         if len(srepn._linear_vars) > 0:
             tmp = {}
             for i in srepn._linear_vars:
-                tmp[id(srepn._linear_vars[i])] = srepn._linear_terms_coef[i]
+                v_ = srepn._linear_vars[i]
+                tmp[ idMap[None][id(v_)] ] = srepn._linear_terms_coef[i]
             ans[1] = tmp
+
+        if len(srepn._quadratic_vars) > 0:
+            tmp = {}
+            for i in srepn._quadratic_vars:
+                v1_,v2_ = srepn._quadratic_vars[i]
+                if id(v1_) == id(v2_):
+                    terms = GeneralCanonicalRepn({idMap[None][id(v1_)]:2})
+                else:
+                    terms = GeneralCanonicalRepn({idMap[None][id(v1_)]:1, idMap[None][id(v2_)]:1})
+                tmp[terms] = srepn._quadratic_terms_coef[i]
+            ans[2] = tmp
+
         rep = GeneralCanonicalRepn(ans)
     return rep
 
