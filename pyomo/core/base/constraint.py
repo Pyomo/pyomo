@@ -639,6 +639,12 @@ class _GeneralConstraintData(_ConstraintData):
                     "non-finite term." % (self.name))
             assert self._lower is self._upper
 
+        #
+        # Compress the body expression
+        #
+        self._body = EXPR.compress_expression(self._body)
+
+
     def get_value(self):
         """Get the expression on this constraint."""
         if self._equality:

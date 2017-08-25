@@ -30,7 +30,8 @@ from pyomo.core.base.expression import (_ExpressionData,
                                         _GeneralExpressionDataImpl)
 from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
 from pyomo.core.base.sets import Set
-from pyomo.core.kernel import minimize, maximize
+from pyomo.core.base import minimize, maximize
+from pyomo.core.base import expr as EXPR
 
 from six import iteritems
 
@@ -546,7 +547,7 @@ class SimpleObjective(_GeneralObjectiveData, Objective):
         if self._constructed:
             if len(self._data) == 0:
                 self._data[None] = self
-            return _GeneralObjectiveData.set_value(self, expr)
+            return _GeneralObjectiveData.set_value(self, EXPR.compress_expression(expr))
         raise ValueError(
             "Setting the value of objective '%s' "
             "before the Objective has been constructed (there "

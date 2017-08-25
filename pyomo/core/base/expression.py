@@ -24,7 +24,9 @@ from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.numvalue import (NumericValue,
                                       as_numeric)
-import pyomo.core.base.expr
+
+import pyomo.core.base.expr_common
+from pyomo.core.base import expr as EXPR
 from pyomo.core.base.expr_common import \
     ensure_independent_trees as safe_mode
 from pyomo.core.base.util import is_functor
@@ -224,7 +226,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def set_value(self, expr):
         """Set the expression on this expression."""
-        self._expr = as_numeric(expr) if (expr is not None) else None
+        self._expr = EXPR.compress_expression(as_numeric(expr)) if (expr is not None) else None
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""
