@@ -631,13 +631,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             else:
                 # Products that generate term with degree = 2
                 if 1 in _l and 1 in _r:
-                    for lkey in _l[1]:
-                        for rkey in _r[1]:
-                            if id(idMap[lkey]) <= id(idMap[rkey]):
-                                key_ = (lkey,rkey)
-                            else:
-                                key_ = (rkey,lkey)
-                            nonl += _l[1][lkey]*_r[1][rkey]*idMap[lkey]*idMap[rkey]
+                    # TODO: Consider creating Multsum objects here with the Sum() function
+                    nonl += sum(_l[1][i]*idMap[i] for i in _l[1]) * sum(_r[1][i]*idMap[i] for i in _r[1])
             if not nonl is 0:
                 ans[None] = nonl
 
