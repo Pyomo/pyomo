@@ -37,10 +37,13 @@ class frozendict(dict):
 
 
 # A utility to facilitate comparison of tuples where we don't care about ordering
-def linear_repn_to_dict(repn):
+def repn_to_dict(repn):
     result = {}
     for i in repn._linear_vars:
         result[id(repn._linear_vars[i])] = repn._linear_terms_coef[i]
+    for i in repn._quadratic_vars:
+        v1_, v2_ = repn._quadratic_vars[i]
+        result[id(v1_), id(v2_)] = repn._quadratic_terms_coef[i]
     if not (repn._constant is None or (type(repn._constant) in native_numeric_types and repn._constant == 0)):
         result[None] = repn._constant
     return result
@@ -65,10 +68,12 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         
     def test_var(self):
         # a
@@ -80,10 +85,12 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         
     def test_param(self):
         # p
@@ -97,10 +104,12 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None : m.p }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_simplesum(self):
         # a + b
@@ -113,10 +122,12 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_constsum(self):
         # a + 5
@@ -128,10 +139,12 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         # 5 + a
         m = AbstractModel()
@@ -142,20 +155,24 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_nestedSum(self):
         #
@@ -181,14 +198,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1, id(m.b) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       + 
         #      / \ 
@@ -202,14 +221,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : 1, id(m.b) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #           +
         #          / \
@@ -223,14 +244,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 3)
         self.assertTrue(len(rep._linear_terms_coef) == 3)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : 1, id(m.c) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       + 
         #      / \ 
@@ -244,14 +267,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 3)
         self.assertTrue(len(rep._linear_terms_coef) == 3)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : 1, id(m.c) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            +
         #          /   \
@@ -266,14 +291,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 4)
         self.assertTrue(len(rep._linear_terms_coef) == 4)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : 1, id(m.c) : 1, id(m.d) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_sumOf_nestedTrivialProduct(self):
         #
@@ -296,14 +323,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       +
         #      / \
@@ -316,14 +345,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            +
         #          /   \
@@ -337,14 +368,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 3)
         self.assertTrue(len(rep._linear_terms_coef) == 3)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 1, id(m.c) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            +
         #          /   \
@@ -358,14 +391,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 3)
         self.assertTrue(len(rep._linear_terms_coef) == 3)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 1, id(m.c) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            +
         #          /   \
@@ -379,14 +414,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 5, id(m.b) : 5 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_negation(self):
         #    -
@@ -400,14 +437,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : -1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_simpleDiff(self):
         #    -
@@ -422,14 +461,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a) : 1, id(m.b) : -1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_constDiff(self):
         #    -
@@ -443,14 +484,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:-5, id(m.a) : 1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #    -
         #   / \
@@ -461,14 +504,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a) : -1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_nestedDiff(self):
         #
@@ -492,14 +537,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:-5, id(m.a):1, id(m.b):-1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       -
         #      / \
@@ -513,14 +560,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:5, id(m.a):-1, id(m.b):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       -
         #      / \
@@ -534,14 +583,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 3)
         self.assertTrue(len(rep._linear_terms_coef) == 3)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1, id(m.b):-1, id(m.c):-1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       -
         #      / \
@@ -555,14 +606,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 3)
         self.assertTrue(len(rep._linear_terms_coef) == 3)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):-1, id(m.b):1, id(m.c):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            -
         #          /   \
@@ -577,14 +630,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 4)
         self.assertTrue(len(rep._linear_terms_coef) == 4)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1, id(m.b):-1, id(m.c):-1, id(m.d):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            -
         #          /   \
@@ -599,14 +654,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 4)
         self.assertTrue(len(rep._linear_terms_coef) == 4)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):-1, id(m.b):1, id(m.c):1, id(m.d):-1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_sumOf_nestedTrivialProduct2(self):
         #
@@ -629,14 +686,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5, id(m.b):-1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       -
         #      / \
@@ -650,14 +709,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):-5, id(m.b):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            -
         #          /   \
@@ -672,14 +733,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 3)
         self.assertTrue(len(rep._linear_terms_coef) == 3)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5, id(m.b):-1, id(m.c):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            -
         #          /   \
@@ -694,14 +757,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 3)
         self.assertTrue(len(rep._linear_terms_coef) == 3)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):-5, id(m.b):1, id(m.c):-1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_simpleProduct(self):
         #    *
@@ -716,14 +781,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):2 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_simpleProduct(self):
         #    *
@@ -737,14 +804,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #    *
         #   / \
@@ -755,14 +824,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_nestedProduct(self):
         #       *
@@ -783,14 +854,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):10 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       *
         #      / \
@@ -804,14 +877,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):10 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            *
         #          /   \
@@ -826,14 +901,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):42 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_nestedProduct2(self):
         #
@@ -863,14 +940,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:50, id(m.d):10 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #
         # Check the structure of nested products
@@ -891,14 +970,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.d):125 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_division(self):
         #
@@ -919,14 +1000,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):0.5, id(m.b):0.5 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #           /
         #          / \
@@ -939,14 +1022,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):0.5, id(m.b):0.5 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #            /
         #          /   \
@@ -959,14 +1044,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):0.25, id(m.b):0.25 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_weighted_sum1(self):
         #       *
@@ -987,14 +1074,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5, id(m.b):5 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       *
         #      / \
@@ -1008,14 +1097,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):5, id(m.b):5 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       *
         #      / \
@@ -1031,14 +1122,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):10, id(m.b):10 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       5(a+2(a+b))
         e = 5*(m.a+2*(m.a+m.b))
@@ -1047,14 +1140,285 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 2)
         self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):15, id(m.b):10 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+    def test_quadratic1(self):
+        m = AbstractModel()
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        m.d = Var()
+
+        ab_key = (id(m.a),id(m.b)) if id(m.a) <= id(m.b) else (id(m.b),id(m.a))
+
+        #       *
+        #      / \
+        #     *   b
+        #    / \
+        #   a   5
+        e1 = m.a * 5
+        e = e1 * m.b
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #      / \
+        #     *   5
+        #    / \
+        #   a   b
+        e1 = m.a * m.b
+        e = e1 * 5
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #      / \
+        #     5   *
+        #        / \
+        #       a   b
+        e1 = m.a * m.b
+        e = 5*e1
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #      / \
+        #     b   *
+        #        / \
+        #       a   5
+        e1 = m.a * 5
+        e = m.b*e1
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+
+    def test_quadratic2(self):
+        m = AbstractModel()
+        m.a = Var()
+        m.b = Var()
+        m.c = Var()
+        m.d = Var()
+
+        ab_key = (id(m.a),id(m.b)) if id(m.a) <= id(m.b) else (id(m.b),id(m.a))
+        ac_key = (id(m.a),id(m.c)) if id(m.a) <= id(m.c) else (id(m.c),id(m.a))
+        bc_key = (id(m.b),id(m.c)) if id(m.b) <= id(m.c) else (id(m.c),id(m.b))
+
+        #       *
+        #      / \
+        #     +   b
+        #    / \
+        #   a   5
+        e1 = m.a + 5
+        e = e1 * m.b
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:1, id(m.b):5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #      / \
+        #     b   +
+        #        / \
+        #       a   5
+        e1 = m.a + 5
+        e = m.b * e1
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 1)
+        self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:1, id(m.b):5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #     /   \
+        #    +     +
+        #   / \   / \
+        #  c   b a   5
+        e = (m.c + m.b) * (m.a + 5)
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 2)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 2)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:1, ac_key:1, id(m.b):5, id(m.c):5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #     /   \
+        #    +     +
+        #   / \   / \
+        #  a   5 b   c
+        e = (m.a + 5) * (m.b + m.c)
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 2)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 2)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:1, ac_key:1, id(m.b):5, id(m.c):5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #     /   \
+        #    *     +
+        #   / \   / \
+        #  a   5 b   c
+        e = (m.a * 5) * (m.b + m.c)
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 2)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 2)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:5, ac_key:5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #     /   \
+        #    +     *
+        #   / \   / \
+        #  b   c a   5
+        e = (m.b + m.c) * (m.a * 5)
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 2)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 2)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { ab_key:5, ac_key:5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       *
+        #     /   \
+        #    +     *
+        #   / \   / \
+        #  a   5 b   c
+        e = (m.a + 5) * (m.b * m.c)
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertFalse(rep._nonlinear_expr is None)
+        self.assertEqual(len(rep._nonlinear_vars), 3)
+        baseline = { bc_key:5 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_pow(self):
         #       ^
@@ -1065,6 +1429,7 @@ class TestSimple(unittest.TestCase):
         m.b = Var()
         m.p = Param()
         m.q = Param(default=1)
+        m.r = Param(default=2)
 
         e = m.a ** 0
 
@@ -1072,14 +1437,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       ^
         #      / \
@@ -1090,14 +1457,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       ^
         #      / \
@@ -1108,14 +1477,36 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
-        self.assertFalse(rep._nonlinear_expr is None)
-        self.assertTrue(len(rep._nonlinear_vars) == 1)
-        baseline = set([ id(m.a) ])
-        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { (id(m.a),id(m.a)):1 }
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+        #       ^
+        #      / \
+        #     a   r
+        e = m.a ** m.r
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 1)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 1)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { (id(m.a),id(m.a)):1 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       ^
         #      / \
@@ -1126,6 +1517,8 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
@@ -1144,14 +1537,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_fabs(self):
         #      fabs
@@ -1167,6 +1562,8 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
@@ -1187,14 +1584,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         ##
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #      fabs
         #      / 
@@ -1205,14 +1604,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         ##
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_cos(self):
         #      cos
@@ -1228,6 +1629,8 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 1)
         baseline = set([ id(m.a) ])
@@ -1248,14 +1651,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:1.0 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         ##
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #      cos
         #      / 
@@ -1266,14 +1671,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { None:1.0 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         ##
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_ExprIf(self):
         #       ExprIf
@@ -1291,14 +1698,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       ExprIf
         #      /  |   \
@@ -1309,14 +1718,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.b):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       ExprIf
         #      /  |   \
@@ -1327,6 +1738,8 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 0)
         self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 2)
         baseline = set([ id(m.a), id(m.b) ])
@@ -1351,14 +1764,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.a):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
         #       ExprIf
         #      /  |   \
@@ -1371,14 +1786,16 @@ class TestSimple(unittest.TestCase):
         #
         self.assertTrue(len(rep._linear_vars) == 1)
         self.assertTrue(len(rep._linear_terms_coef) == 1)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertTrue(rep._nonlinear_expr is None)
         self.assertTrue(len(rep._nonlinear_vars) == 0)
         baseline = { id(m.b):1 }
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
         #
         e_ = EXPR.compress_expression(e)
         rep = generate_standard_repn(e_)
-        self.assertEqual(baseline, linear_repn_to_dict(rep))
+        self.assertEqual(baseline, repn_to_dict(rep))
 
 
 if __name__ == "__main__":
