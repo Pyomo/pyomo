@@ -260,6 +260,18 @@ class StandardRepn(object):
         return True
 
 
+"""
+
+Note:  This function separates linear terms from nonlinear terms.
+Along the way, fixed variable and mutable paramter values *may* be
+replaced with constants.  However, that is not guaranteed.  Thus,
+the nonlinear expression may contain subexpressions whose value is
+constant.  This was done to avoid additional work when a subexpression
+is clearly nonlinear.  However, this requires that standard
+representations be temporary.  They should be used to interface
+to a solver and then be deleted.
+
+"""
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, compress=False, quadratic=True):
     if idMap is None:
         idMap = {}
@@ -759,7 +771,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     repn._nonlinear_expr = ans.get(None,None)
     repn._nonlinear_vars = {}
     if not repn._nonlinear_expr is None:
-        for v_ in EXPR.identify_variables(repn._nonlinear_expr, include_fixed=True, include_potentially_variable=True):
+        for v_ in EXPR.identify_variables(repn._nonlinear_expr, include_fixed=False, include_potentially_variable=False):
             repn._nonlinear_vars[id(v_)] = v_
             #
             # Update idMap in case we skipped nonlinear sub-expressions
