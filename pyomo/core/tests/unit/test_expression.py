@@ -632,14 +632,14 @@ class TestExpression(unittest.TestCase):
 #sum( prod( num=( e{sum( 2 , x )} , pow( x , 2 ) ) ) , E[1]{sum( 1 , pow( x , 2 ) )} )
         output = \
 """\
-sum( prod( e{sum( 2 , x )} , pow( x , 2 ) ) , E[1]{sum( 1 , pow( x , 2 ) )} )
+sum( prod( e{multisum( 2 , x )} , pow( x , 2 ) ) , E[1]{multisum( 1 , pow( x , 2 ) )} )
 e : Size=1, Index=None
     Key  : Expression
-    None : sum( 2 , x )
+    None : multisum( 2 , x )
 E : Size=2, Index=E_index
     Key : Expression
-      1 : sum( 1 , pow( x , 2 ) )
-      2 : sum( 1 , pow( x , 2 ) )
+      1 : multisum( 1 , pow( x , 2 ) )
+      2 : multisum( 1 , pow( x , 2 ) )
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -659,7 +659,7 @@ e : Size=1, Index=None
 E : Size=2, Index=E_index
     Key : Expression
       1 : 2.0
-      2 : sum( 1 , pow( x , 2 ) )
+      2 : multisum( 1 , pow( x , 2 ) )
 """
         out = StringIO()
         out.write(str(expr)+"\n")
@@ -680,7 +680,7 @@ e : Size=1, Index=None
 E : Size=2, Index=E_index
     Key : Expression
       1 : Undefined
-      2 : sum( 1 , pow( x , 2 ) )
+      2 : multisum( 1 , pow( x , 2 ) )
 """
         out = StringIO()
         out.write(str(expr)+"\n")
