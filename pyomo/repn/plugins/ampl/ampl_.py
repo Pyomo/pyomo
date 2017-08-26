@@ -41,8 +41,8 @@ from pyomo.core.base.numvalue import (NumericConstant,
 from pyomo.core.base import var
 from pyomo.core.base import param
 import pyomo.core.base.suffix
-from pyomo.repn.ampl_repn import (generate_ampl_repn,
-                                  AmplRepn)
+from pyomo.repn.ampl_repn import generate_ampl_repn
+from pyomo.repn.standard_repn import StandardRepn as AmplRepn
 
 import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
@@ -448,6 +448,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
             # Pyomo5
             #
             if _using_pyomo5_trees:
+                #print(exp.to_string())
+                #print(exp.to_string(verbose=True))
+                #print("")
+                #
+                # We are assuming that _Constant_* expression objects
+                # have been preprocessed to form constant values.
+                #
                 if isinstance(exp_type, expr._MultiSumExpression):
                     nary_sum_str, binary_sum_str, coef_term_str = \
                         self._op_string[expr._SumExpression]
@@ -472,23 +479,23 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 elif exp_type is expr._SumExpression or \
                      exp_type is expr._NPV_SumExpression:
                     nary_sum_str, binary_sum_str, coef_term_str = self._op_string[expr._SumExpression]
-                    self._print_nonlinear_terms_NL(exp._args[0])
                     OUTPUT.write(binary_sum_str)
+                    self._print_nonlinear_terms_NL(exp._args[0])
                     self._print_nonlinear_terms_NL(exp._args[1])
 
                 elif exp_type is expr._ProductExpression or \
                      exp_type is expr._NPV_ProductExpression:
                     prod_str = self._op_string[expr._ProductExpression]
-                    self._print_nonlinear_terms_NL(exp._args[0])
                     OUTPUT.write(prod_str)
+                    self._print_nonlinear_terms_NL(exp._args[0])
                     self._print_nonlinear_terms_NL(exp._args[1])
 
                 elif exp_type is expr._ReciprocalExpression or \
                      exp_type is expr._NPV_ReciprocalExpression:
                     assert len(exp._args) == 1
                     div_str = self._op_string[expr._ReciprocalExpression]
-                    self._print_nonlinear_terms_NL(1.0)
                     OUTPUT.write(div_str)
+                    self._print_nonlinear_terms_NL(1.0)
                     self._print_nonlinear_terms_NL(exp._args[0])
 
                 elif exp_type is expr._NegationExpression or \
@@ -1085,6 +1092,9 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     ampl_repn._constant = canonical_repn.constant
                 else:
                     if gen_con_ampl_repn:
+                        #print(constraint_data.body.to_string())
+                        #print(constraint_data.body.to_string(verbose=True))
+                        #print("X")
                         ampl_repn = generate_ampl_repn(constraint_data.body)
                         block_ampl_repn[constraint_data] = ampl_repn
                     else:
