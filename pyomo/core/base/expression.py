@@ -176,7 +176,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
     __slots__ = ()
 
     def __init__(self, expr):
-        self._expr = as_numeric(expr) if (expr is not None) else None
+        self._expr = EXPR.compress_expression(as_numeric(expr)) if (expr is not None) else None
         if safe_mode:
             self._parent_expr = None
 
