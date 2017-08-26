@@ -255,7 +255,7 @@ class StandardRepn(object):
         return len(self._quadratic_terms_coef) > 0
 
     def is_nonlinear(self):
-        if self._nonlinear_expr is None or len(self._quadratic_terms_coef) == 0:
+        if self._nonlinear_expr is None and len(self._quadratic_terms_coef) == 0:
             return False
         return True
 
