@@ -78,6 +78,9 @@ def _sum_with_iadd(iterable):
 sum = builtins.sum if _getrefcount_available else _sum_with_iadd
 
 
+def compress_expression(exp):
+    return exp
+
 def clone_expression(exp, substitute=None):
     memo = {'__block_scope__': { id(None): False }}
     if substitute:

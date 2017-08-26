@@ -50,6 +50,9 @@ chainedInequalityErrorMessage \
 sum = builtins.sum
 
 
+def compress_expression(exp):
+    return exp
+
 def clone_expression(exp, substitute=None):
     memo = {'__block_scope__': { id(None): False }}
     if substitute:
