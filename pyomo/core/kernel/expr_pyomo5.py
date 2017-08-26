@@ -1523,7 +1523,9 @@ class _MultiSumExpression(_SumExpression):
         return len(self._args) > 1
 
     def _to_string_skip(self, _idx):
-        return _idx == 0
+        return  _idx == 0 and \
+                self._args[0].__class__ in native_numeric_types and \
+                self._args[0] == 0
 
 
 
