@@ -49,6 +49,10 @@ def Sum(*args, start=0):
             else:
                 ans.append(arg)
         from pyomo.core.kernel.expr_pyomo5 import _StaticMultiSumExpression
+        if len(ans) == 0:
+            return 0
+        elif len(ans) == 1:
+            return ans[0]
         return _StaticMultiSumExpression( tuple(ans) )
     else:
         return sum(*args, start=start)
