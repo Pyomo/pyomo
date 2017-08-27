@@ -701,7 +701,7 @@ E : Size=2, Index=E_index
 
         output = \
 """\
-( 2 + x ) * x**2 + ( 1 + x**2 )
+( 2 + x )*x**2 + ( 1 + x**2 )
 e : Size=1, Index=None
     Key  : Expression
     None : 2 + x
@@ -721,7 +721,7 @@ E : Size=2, Index=E_index
         model.E[1].set_value(2.0)
         output = \
 """\
-1.0 * x**2 + 2.0
+1.0*x**2 + 2.0
 e : Size=1, Index=None
     Key  : Expression
     None :        1.0
@@ -742,7 +742,7 @@ E : Size=2, Index=E_index
         model.E[1].set_value(None)
         output = \
 """\
-Undefined * x**2 + Undefined
+Undefined*x**2 + Undefined
 e : Size=1, Index=None
     Key  : Expression
     None :  Undefined

@@ -208,12 +208,12 @@ class TestConnector(unittest.TestCase):
         self.assertEqual(os.getvalue(),
 """IN : Size=3, Index=SPECIES
     Key : Name     : Size : Variable
-      a :     flow :    1 : composition[a] * flow
-        : pressure :    1 : pIn
-      b :     flow :    1 : composition[b] * flow
-        : pressure :    1 : pIn
-      c :     flow :    1 : composition[c] * flow
-        : pressure :    1 : pIn
+      a :     flow :    1 : composition[a]*flow
+        : pressure :    1 :                 pIn
+      b :     flow :    1 : composition[b]*flow
+        : pressure :    1 :                 pIn
+      c :     flow :    1 : composition[c]*flow
+        : pressure :    1 :                 pIn
 """)
         
     def test_display(self):

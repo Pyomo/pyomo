@@ -264,7 +264,7 @@ class Test(unittest.TestCase):
         instance=tmodel.create_instance()
         expr = dot_product(instance.x,instance.B,instance.y)
         if _using_pyomo5_trees:
-            baseline = "B[1] * x[1] * y[1] + B[2] * x[2] * y[2] + B[3] * x[3] * y[3]"
+            baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
         else:
             baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
         self.assertEquals( str(expr), baseline )
@@ -284,7 +284,7 @@ class Test(unittest.TestCase):
         instance = pickle.loads(pickle_str)
         expr = dot_product(instance.x,instance.B,instance.y)
         if _using_pyomo5_trees:
-            baseline = "B[1] * x[1] * y[1] + B[2] * x[2] * y[2] + B[3] * x[3] * y[3]"
+            baseline = "B[1]*x[1]*y[1] + B[2]*x[2]*y[2] + B[3]*x[3]*y[3]"
         else:
             baseline = "x[1] * B[1] * y[1] + x[2] * B[2] * y[2] + x[3] * B[3] * y[3]"
         self.assertEquals( str(expr), baseline )
