@@ -31,7 +31,7 @@ from pyomo.core.base.numvalue import (NumericConstant,
                                       is_fixed)
 from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
                                        generate_canonical_repn)
-from pyomo.core.base import expr_common
+from pyomo.core.base import expr_common, Sum
 from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
 
@@ -253,12 +253,20 @@ class StandardRepn(object):
         return False
 
     def is_quadratic(self):
-        return len(self._quadratic_terms_coef) > 0
+        return len(self._quadratic_terms_coef) > 0 and self._nonlinear_expr is None
 
     def is_nonlinear(self):
         if self._nonlinear_expr is None and len(self._quadratic_terms_coef) == 0:
             return False
         return True
+
+    def to_expression(self):
+        expr = self._constant + \
+            Sum(self._linear_terms_coef[i]*self._linear_vars[i] for i in sorted(self._linear_vars.keys())) + \
+            Sum(self._quadratic_terms_coef[i]*self._quadratic_vars[i] for i in sorted(self._quadratic_vars.keys()))
+        if not self._nonlinear_expr is None:
+            expr += self._nonlinear_expr
+        return expr
 
 
 """
@@ -318,6 +326,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         if compress:
             repn._compress()
         return repn
+
     #
     # Unknown expression object
     #
@@ -565,7 +574,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     for key in res[1]:
                         if key in ans[1]:
                             coef = ans[1][key] + res[1][key]
-                            if not math.isclose(coef, 0.0):     # coef != 0.0
+                            if not (coef.__class__ in native_numeric_types and math.isclose(coef, 0.0)):     # coef != 0.0
                                 ans[1][key] = coef
                             else:
                                 del ans[1][key]
@@ -578,7 +587,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     for key in res[2]:
                         if key in ans[2]:
                             coef = ans[2][key] + res[2][key]
-                            if not math.isclose(coef, 0.0):     # coef != 0.0
+                            if not (coef.__class__ in native_numeric_types and math.isclose(coef, 0.0)):     # coef != 0.0
                                 ans[2][key] = coef
                             else:
                                 del ans[2][key]
@@ -617,25 +626,21 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             if None in _l:
                 if None in _r:
                     nonl += _l[None]*_r[None]
-                if 0 in _r and not math.isclose(_r[0], 0.0):    # _r[0] != 0.0
+                if 0 in _r and \
+                   not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
                     nonl += _l[None]*_r[0]
                 if 1 in _r:
-                    for key in _r[1]:
-                        nonl += _l[None]*_r[1][key]*idMap[key]
+                    nonl += _l[None]*Sum(_r[1][key]*idMap[key] for key in _r[1])
                 if 2 in _r:
-                    for key in _r[2]:
-                        v1_, v2_ = key
-                        nonl += _l[None]*_r[2][key]*idMap[v1_]*idMap[v2_]
+                    nonl += _l[None]*Sum(_r[2][key]*idMap[key[0]]*idMap[key[1]] for key in _r[2])
             if None in _r:
-                if 0 in _l and not math.isclose(_l[0], 0.0):        # _l[0] != 0.0
+                if 0 in _l and \
+                   not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):        # _l[0] != 0.0
                     nonl += _l[0]*_r[None]
                 if 1 in _l:
-                    for key in _l[1]:
-                        nonl += _l[1][key]*_r[None]*idMap[key]
+                    nonl += Sum(_l[1][key]*idMap[key] for key in _l[1])*_r[None]
                 if 2 in _l:
-                    for key in _l[2]:
-                        v1_, v2_ = key
-                        nonl += _r[None]*_l[2][key]*idMap[v1_]*idMap[v2_]
+                    nonl += Sum(_l[2][key]*idMap[key[0]]*idMap[key[1]] for key in _l[2])*_r[None]
             if quadratic:
                 # Products that generate term with degree > 2
                 if 2 in _l:
@@ -659,7 +664,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 # Products that generate term with degree = 2
                 if 1 in _l and 1 in _r:
                     # TODO: Consider creating Multsum objects here with the Sum() function
-                    nonl += sum(_l[1][i]*idMap[i] for i in _l[1]) * sum(_r[1][i]*idMap[i] for i in _r[1])
+                    nonl += Sum(_l[1][i]*idMap[i] for i in _l[1]) * Sum(_r[1][i]*idMap[i] for i in _r[1])
             if not nonl is 0:
                 ans[None] = nonl
 
@@ -674,10 +679,12 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             #
             if (0 in _l and 1 in _r) or (1 in _l and 0 in _r):
                 ans[1] = {}
-            if 0 in _l and 1 in _r and not math.isclose(_l[0], 0.0):    # _l[0] != 0.0
+            if 0 in _l and 1 in _r and \
+               not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):    # _l[0] != 0.0
                 for key in _r[1]:
                     ans[1][key] = _l[0]*_r[1][key]
-            if 1 in _l and 0 in _r and not math.isclose(_r[0], 0.0):    # _r[0] != 0.0
+            if 1 in _l and 0 in _r and \
+               not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
                 for key in _l[1]:
                     if key in ans[1]:
                         ans[1][key] += _l[1][key]*_r[0]
@@ -690,10 +697,12 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             if quadratic:
                 if (0 in _l and 2 in _r) or (2 in _l and 0 in _r) or (1 in _l and 1 in _r):
                     ans[2] = {}
-                if 0 in _l and 2 in _r and not math.isclose(_l[0], 0.0):
+                if 0 in _l and 2 in _r and \
+                   not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):
                     for key in _r[2]:
                         ans[2][key] = _l[0]*_r[2][key]
-                if 2 in _l and 0 in _r and not math.isclose(_r[0], 0.0):
+                if 2 in _l and 0 in _r and \
+                   not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):
                     for key in _l[2]:
                         if key in ans[2]:
                             ans[2][key] += _l[2][key]*_r[0]
