@@ -25,31 +25,29 @@ Questions: Please make a post at StackOverflow and/or contact Qi Chen
 
 """
 import logging
+import sys
 from copy import deepcopy
 from math import copysign, fabs
-from pprint import pprint
 
 import pyomo.util.plugin
 from pyomo.core.base import expr as EXPR
+from pyomo.core.base import (Block, Constraint, ConstraintList, Expression,
+                             Objective, RangeSet, Set, Suffix,
+                             TransformationFactory, Var, maximize, minimize,
+                             value)
 from pyomo.core.base.block import generate_cuid_names
+from pyomo.core.base.expr import identify_variables
 from pyomo.core.base.expr_common import clone_expression
 from pyomo.core.base.numvalue import NumericConstant
 from pyomo.core.base.symbolic import differentiate
-from pyomo.core.kernel import Reals, NonNegativeReals, ComponentSet
-from pyomo.core.base import (Block, Constraint, ConstraintList,
-                             Expression, Objective, RangeSet,
-                             Set, Suffix,
-                             TransformationFactory, Var, maximize, minimize,
-                             value)
-from pyomo.core.base.expr import identify_variables
-from pyomo.opt import SolverFactory
+from pyomo.core.kernel import ComponentSet, NonNegativeReals, Reals
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
-from pyomo.opt import SolutionStatus, SolverStatus
+from pyomo.opt import SolutionStatus, SolverFactory, SolverStatus
 from pyomo.opt.base import IOptSolver
+from pyomo.opt.results import ProblemSense, SolverResults
 from pyomo.repn.canonical_repn import generate_canonical_repn
 from six import iteritems
-from pyomo.opt.results import (SolverResults, ProblemSense)
 
 logger = logging.getLogger('pyomo.solvers')
 
@@ -125,14 +123,25 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         self.subproblem_postsolve = kwds.pop('subprob_postsolve', _DoNothing())
         self.subproblem_postfeasible = kwds.pop('subprob_postfeas',
                                                 _DoNothing())
+        self.tee = kwds.pop('tee', False)
+
+        if self.tee:
+            ch = logging.StreamHandler(stream=sys.stdout)
+            ch.setFormatter(logging.Formatter('%(message)s'))
+            existing_handlers = list(logger.handlers)
+            logger.setLevel(logging.INFO)
+            logger.addHandler(ch)
+            for handle in existing_handlers:
+                logger.removeHandler(handle)
+
         if kwds:
-            print("Unrecognized arguments passed to GDPDT solver:")
-            pprint(kwds)
+            logger.warn("Unrecognized arguments passed to GDPDT solver: {}"
+                        .format(kwds))
 
         # Verify that decomposition strategy chosen is one of the supported
         # strategies
         valid_strategies = [
-                'LOA', 'hPSC', 'PSC', 'GBD', 'hGBD']
+            'LOA', 'hPSC', 'PSC', 'GBD', 'hGBD']
         if self.decomposition_strategy not in valid_strategies:
             raise ValueError('Unrecognized decomposition strategy {}. '
                              'Valid strategies include: {}'.format(
@@ -185,7 +194,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         # Create the solver results object
         res = self.results = SolverResults()
         res.problem.name = m.name
-        res.problem.number_of_nonzeros = float('inf')  # TODO
+        res.problem.number_of_nonzeros = None  # TODO
         res.solver.name = 'GDPDT ' + str(self.version())
         # TODO work on termination condition and message
         res.solver.termination_condition = None
@@ -283,6 +292,11 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
 
         self.results.problem.lower_bound = self.LB
         self.results.problem.upper_bound = self.UB
+
+        if self.tee:
+            logger.removeHandler(ch)
+            for handle in existing_handlers:
+                logger.addHandler(handle)
 
     def _copy_values(self, from_model, to_model, from_map=None, to_map=None):
         """Copy variable values from one model to another.
@@ -479,7 +493,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         """
         self.mip_subiter += 1
         m = self.working_model.clone()
-        print("MILP {}.{}: maximize value of binaries".format(
+        logger.info("MIP {}.{}: maximize value of binaries".format(
             self.mip_iter, self.mip_subiter))
         nonlinear_constraints = (
             c for c in m.component_data_objects(
@@ -556,7 +570,8 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         if not_covered_disjuncts:
             # Iteration limit was hit without a full covering of all nonlinear
             # disjuncts
-            print('Iteration limit reached for set covering initialization.')
+            logger.warn('Iteration limit reached for set covering '
+                        'initialization.')
             return False
         return True
 
@@ -619,14 +634,16 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         if terminate_cond is tc.optimal:
             m.solutions.load_from(results)
             self._copy_values(m, self.working_model)
-            print('Solved set covering MIP')
+            logger.info('Solved set covering MIP')
             return True
         elif terminate_cond is tc.infeasible:
-            print('Set covering problem is infeasible. '
-                  'Problem may have no more feasible binary configurations.')
+            logger.info('Set covering problem is infeasible. '
+                        'Problem may have no more feasible '
+                        'binary configurations.')
             if self.mip_iter <= 1:
-                print('Check your linear and logical constraints '
-                      'for contradictions.')
+                logger.warn('Problem was infeasible. '
+                            'Check your linear and logical constraints '
+                            'for contradictions.')
             if GDPDT.objective.sense == minimize:
                 self.LB = float('inf')
             else:
@@ -646,20 +663,21 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         backup_max_iter = max(1000, self.iteration_limit)
         backup_iter = 0
         while backup_iter < backup_max_iter:
-            print('\n')  # print blank lines for visual display
+            logger.info('')  # print blank lines for visual display
             backup_iter += 1
             # Check bound convergence
             if self.LB + self.bound_tolerance >= self.UB:
-                print('GDPDT exiting on bound convergence. '
-                      'LB: {} + (tol {}) >= UB: {}'.format(
-                          self.LB, self.bound_tolerance, self.UB))
+                logger.info('GDPDT exiting on bound convergence. '
+                            'LB: {} + (tol {}) >= UB: {}'.format(
+                                self.LB, self.bound_tolerance, self.UB))
                 break
             # Check iteration limit
             if self.mip_iter >= self.iteration_limit:
-                print('GDPDT unable to converge bounds '
-                      'after {} master iterations.'.format(self.mip_iter))
-                print('Final bound values: LB: {}  UB: {}'.
-                      format(self.LB, self.UB))
+                logger.info('GDPDT unable to converge bounds '
+                            'after {} master iterations.'
+                            .format(self.mip_iter))
+                logger.info('Final bound values: LB: {}  UB: {}'.
+                            format(self.LB, self.UB))
                 break
             self.mip_subiter = 0
             # solve MILP master problem
@@ -671,9 +689,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 self._solve_GBD_master()
             # Check bound convergence
             if self.LB + self.bound_tolerance >= self.UB:
-                print('GDPDT exiting on bound convergence. '
-                      'LB: {} + (tol {}) >= UB: {}'.format(
-                          self.LB, self.bound_tolerance, self.UB))
+                logger.info('GDPDT exiting on bound convergence. '
+                            'LB: {} + (tol {}) >= UB: {}'.format(
+                                self.LB, self.bound_tolerance, self.UB))
                 break
             # Solve NLP subproblem
             self._solve_NLP_subproblem()
@@ -698,9 +716,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                     + required_relax_prog))):
                 if (self.decomposition_strategy == 'hPSC' and
                         self._decomposition_strategy == 'PSC'):
-                    print('Relaxation not making enough progress '
-                          'for {} iterations. '
-                          'Switching to OA.'.format(LB_stall_after))
+                    logger.info('Relaxation not making enough progress '
+                                'for {} iterations. '
+                                'Switching to OA.'.format(LB_stall_after))
                     self._decomposition_strategy = 'LOA'
 
             # Max number of iterations in which upper (feasible) bound does not
@@ -711,9 +729,10 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                     feas_prog_log[-1 - no_backtrack_after]
                     + required_feas_prog))):
                 if not GDPDT.feasible_integer_cuts.active:
-                    print('Feasible solutions not making enough progress '
-                          'for {} iterations. Turning on no-backtracking '
-                          'integer cuts.'.format(no_backtrack_after))
+                    logger.info('Feasible solutions not making enough '
+                                'progress for {} iterations. '
+                                'Turning on no-backtracking '
+                                'integer cuts.'.format(no_backtrack_after))
                     GDPDT.feasible_integer_cuts.activate()
 
             # Maximum number of iterations in which feasible bound does not
@@ -723,18 +742,18 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 (sign_adjust * feas_prog_log[-1] <= sign_adjust * (
                     feas_prog_log[-1 - algorithm_stall_after]
                     + required_feas_prog))):
-                print('Feasible solutions not making enough progress '
-                      'for {} iterations. Algorithm stalled. Exiting.\n'
-                      'To continue, increase value of parameter '
-                      'algorithm_stall_after.'
-                      .format(algorithm_stall_after))
+                logger.info('Feasible solutions not making enough progress '
+                            'for {} iterations. Algorithm stalled. Exiting.\n'
+                            'To continue, increase value of parameter '
+                            'algorithm_stall_after.'
+                            .format(algorithm_stall_after))
                 break
 
     def _solve_OA_master(self):
         self.mip_iter += 1
         m = self.working_model.clone()
         GDPDT = m.GDPDT_utils
-        print('MILP {}: Solve master problem.'.format(self.mip_iter))
+        logger.info('MIP {}: Solve master problem.'.format(self.mip_iter))
 
         # Deactivate nonlinear constraints
         nonlinear_constraints = (
@@ -789,13 +808,14 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             else:
                 self.UB = min(value(GDPDT.oa_obj.expr), self.UB)
                 self.UB_progress.append(self.UB)
-            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(GDPDT.oa_obj.expr), self.LB,
-                          self.UB))
+            logger.info('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                        .format(self.mip_iter, value(GDPDT.oa_obj.expr),
+                                self.LB, self.UB))
         elif master_terminate_cond is tc.maxTimeLimit:
             # TODO check that status is actually ok and everything is feasible
-            print('Unable to optimize MILP master problem within time limit. '
-                  'Using current solver feasible solution.')
+            logger.info('Unable to optimize MILP master problem '
+                        'within time limit. '
+                        'Using current solver feasible solution.')
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             self._copy_values(m, self.working_model)
@@ -805,9 +825,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             else:
                 self.UB = min(value(GDPDT.objective.expr), self.UB)
                 self.UB_progress.append(self.UB)
-            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(GDPDT.objective.expr), self.LB,
-                          self.UB))
+            logger.info('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                        .format(self.mip_iter, value(GDPDT.objective.expr),
+                                self.LB, self.UB))
         elif (master_terminate_cond is tc.other and
                 results.solution.status is SolutionStatus.feasible):
             # load the solution and suppress the warning message by setting
@@ -821,15 +841,16 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             else:
                 self.UB = min(value(GDPDT.oa_obj.expr), self.UB)
                 self.UB_progress.append(self.UB)
-            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(GDPDT.oa_obj.expr), self.LB,
-                          self.UB))
+            logger.info('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                        .format(self.mip_iter, value(GDPDT.oa_obj.expr),
+                                self.LB, self.UB))
         elif master_terminate_cond is tc.infeasible:
-            print('MILP master problem is infeasible. '
-                  'Problem may have no more feasible binary configurations.')
+            logger.info('MILP master problem is infeasible. '
+                        'Problem may have no more feasible '
+                        'binary configurations.')
             if self.mip_iter == 1:
-                print('GDPDT initialization may have generated poor '
-                      'quality cuts.')
+                logger.warn('GDPDT initialization may have generated poor '
+                            'quality cuts.')
             # set optimistic bound to infinity
             if GDPDT.objective.sense == minimize:
                 self.LB = float('inf')
@@ -848,7 +869,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         self.mip_iter += 1
         m = self.working_model.clone()
         GDPDT = m.GDPDT_utils
-        print('MILP {}: Solve master problem.'.format(self.mip_iter))
+        logger.info('MIP {}: Solve master problem.'.format(self.mip_iter))
 
         # Deactivate nonlinear constraints
         nonlinear_constraints = (
@@ -881,27 +902,29 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             else:
                 self.UB = min(value(GDPDT.objective.expr), self.UB)
                 self.UB_progress.append(self.UB)
-            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(GDPDT.objective.expr), self.LB,
-                          self.UB))
+            logger.info('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                        .format(self.mip_iter, value(GDPDT.objective.expr),
+                                self.LB, self.UB))
         elif master_terminate_cond is tc.infeasible:
-            print('MILP master problem is infeasible. '
-                  'Problem may have no more feasible binary configurations.')
+            logger.info('MILP master problem is infeasible. '
+                        'Problem may have no more feasible '
+                        'binary configurations.')
             if self.mip_iter == 1:
-                print('GDPDT initialization may have generated poor '
-                      'quality cuts.')
+                logger.warn('GDPDT initialization may have generated poor '
+                            'quality cuts.')
             # set optimistic bound to infinity
             if GDPDT.objective.sense == minimize:
                 self.LB = float('inf')
             else:
                 self.UB = float('-inf')
         elif master_terminate_cond is tc.unbounded:
-            print('MILP master problem is unbounded. ')
+            logger.info('MILP master problem is unbounded. ')
             m.solutions.load_from(results)
         elif master_terminate_cond is tc.maxTimeLimit:
             # TODO check that status is actually ok and everything is feasible
-            print('Unable to optimize MILP master problem within time limit. '
-                  'Using current solver feasible solution.')
+            logger.info('Unable to optimize MILP master problem '
+                        'within time limit. '
+                        'Using current solver feasible solution.')
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             self._copy_values(m, self.working_model)
@@ -911,9 +934,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             else:
                 self.UB = min(value(GDPDT.objective.expr), self.UB)
                 self.UB_progress.append(self.UB)
-            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(GDPDT.objective.expr), self.LB,
-                          self.UB))
+            logger.info('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                        .format(self.mip_iter, value(GDPDT.objective.expr),
+                                self.LB, self.UB))
         else:
             raise ValueError(
                 'GDPDT unable to handle MILP master termination condition '
@@ -927,7 +950,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         m = self.working_model
         GDPDT = m.GDPDT_utils
         self.mip_iter += 1
-        print('MILP {}: Solve master problem.'.format(self.mip_iter))
+        logger.info('MIP {}: Solve master problem.'.format(self.mip_iter))
         if not leave_linear_active:
             # Deactivate all constraints except those in GDPDT_linear_cuts
             _GDPDT_linear_cuts = set(
@@ -979,22 +1002,23 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             else:
                 self.UB = min(value(GDPDT.objective.expr), self.UB)
                 self.UB_progress.append(self.UB)
-            print('MIP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.mip_iter, value(GDPDT.objective.expr), self.LB,
-                          self.UB))
+            logger.info('MIP {}: OBJ: {}  LB: {}  UB: {}'
+                        .format(self.mip_iter, value(GDPDT.objective.expr),
+                                self.LB, self.UB))
         elif master_terminate_cond is tc.infeasible:
-            print('MILP master problem is infeasible. '
-                  'Problem may have no more feasible binary configurations.')
+            logger.info('MILP master problem is infeasible. '
+                        'Problem may have no more feasible '
+                        'binary configurations.')
             if self.mip_iter == 1:
-                print('GDPDT initialization may have generated poor '
-                      'quality cuts.')
+                logger.warn('GDPDT initialization may have generated poor '
+                            'quality cuts.')
             # set optimistic bound to infinity
             if GDPDT.objective.sense == minimize:
                 self.LB = float('inf')
             else:
                 self.UB = float('-inf')
         elif master_terminate_cond is tc.unbounded:
-            print('MILP master problem is unbounded. ')
+            logger.info('MILP master problem is unbounded. ')
             # Change the integer values to something new, re-solve.
             m.GDPDT_linear_cuts.activate()
             m.GDPDT_feasible_integer_cuts.activate()
@@ -1014,9 +1038,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         m = self.working_model.clone()
         GDPDT = m.GDPDT_utils
         self.nlp_iter += 1
-        print('NLP {}: Solve subproblem for fixed binaries and '
-              'logical realizations.'
-              .format(self.nlp_iter))
+        logger.info('NLP {}: Solve subproblem for fixed binaries and '
+                    'logical realizations.'
+                    .format(self.nlp_iter))
         # Fix binary variables
         binary_vars = [
             v for v in m.component_data_objects(
@@ -1086,7 +1110,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                             old_value = v.ub
                         # Set the value
                         v.set_value(old_value)
-                except KeyError as e:
+                except KeyError:
                     continue
 
         # Solve the NLP
@@ -1107,9 +1131,9 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 self.LB = max(value(GDPDT.objective.expr), self.LB)
                 self.solution_improved = self.LB > self.LB_progress[-1]
                 self.LB_progress.append(self.LB)
-            print('NLP {}: OBJ: {}  LB: {}  UB: {}'
-                  .format(self.nlp_iter, value(GDPDT.objective.expr), self.LB,
-                          self.UB))
+            logger.info('NLP {}: OBJ: {}  LB: {}  UB: {}'
+                        .format(self.nlp_iter, value(GDPDT.objective.expr),
+                                self.LB, self.UB))
             if self.solution_improved:
                 self.best_solution_found = m.clone()
 
@@ -1137,7 +1161,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         elif subprob_terminate_cond is tc.infeasible:
             # TODO try something else? Reinitialize with different initial
             # value?
-            print('NLP subproblem was locally infeasible.')
+            logger.info('NLP subproblem was locally infeasible.')
             # load the solution and suppress the warning message by setting
             # solver status to ok.
             results.solver.status = SolverStatus.ok
@@ -1146,22 +1170,23 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             self._copy_dual_suffixes(m, self.working_model,
                                      from_map=obj_to_cuid)
             if self._decomposition_strategy == 'PSC':
-                print('Adding PSC feasibility cut.')
+                logger.info('Adding PSC feasibility cut.')
                 self._add_psc_cut(nlp_feasible=False)
             elif self._decomposition_strategy == 'GBD':
-                print('Adding GBD feasibility cut.')
+                logger.info('Adding GBD feasibility cut.')
                 self._add_gbd_cut(nlp_feasible=False)
             # Add an integer cut to exclude this discrete option
             self._add_int_cut()
         elif subprob_terminate_cond is tc.maxIterations:
             # TODO try something else? Reinitialize with different initial
             # value?
-            print('NLP subproblem failed to converge within iteration limit.')
+            logger.info('NLP subproblem failed to converge '
+                        'within iteration limit.')
             results.solver.status = SolverStatus.ok
             m.solutions.load_from(results)
             if self._is_feasible(m):
-                print('NLP solution is still feasible. '
-                      'Using potentially suboptimal feasible solution.')
+                logger.info('NLP solution is still feasible. '
+                            'Using potentially suboptimal feasible solution.')
                 process_feasible_solution()
                 solnFeasible = True
             else:
@@ -1183,29 +1208,29 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             # constraint is an equality
             if constr.equality:
                 if abs(value(constr.lower) - value(constr.body)) >= constr_tol:
-                    print('{}: {} ≠ {}'.format(
+                    logger.info('{}: {} ≠ {}'.format(
                         constr.name, value(constr.body), value(constr.lower)))
                     return False
             if constr.lower is not None:
                 if value(constr.lower) - value(constr.body) >= constr_tol:
-                    print('{}: {} < {}'.format(
+                    logger.info('{}: {} < {}'.format(
                         constr.name, value(constr.body), value(constr.lower)))
                     return False
             if constr.upper is not None:
                 if value(constr.body) - value(constr.upper) >= constr_tol:
-                    print('{}: {} > {}'.format(
+                    logger.info('{}: {} > {}'.format(
                         constr.name, value(constr.body), value(constr.upper)))
                     return False
         for var in m.component_data_objects(
                 ctype=Var, descend_into=(Block, Disjunct)):
             if var.lb is not None:
                 if value(var.lb) - value(var) >= var_tol:
-                    print('{}: {} < {}'.format(
+                    logger.info('{}: {} < {}'.format(
                         var.name, value(var), value(var.lb)))
                     return False
             if var.ub is not None:
                 if value(var) - value(var.ub) >= var_tol:
-                    print('{}: {} > {}'.format(
+                    logger.info('{}: {} > {}'.format(
                         var.name, value(var), value(var.ub)))
                     return False
         return True
