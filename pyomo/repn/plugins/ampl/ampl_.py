@@ -24,6 +24,7 @@ import logging
 import operator
 import os
 import time
+import math
 
 from pyutilib.misc import PauseGC
 
@@ -455,21 +456,21 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 # We are assuming that _Constant_* expression objects
                 # have been preprocessed to form constant values.
                 #
-                if isinstance(exp_type, expr._MultiSumExpression):
+                if isinstance(exp, expr._MultiSumExpression):
                     nary_sum_str, binary_sum_str, coef_term_str = \
                         self._op_string[expr._SumExpression]
                     n = len(exp._args)
-                    if expr._args[0] == 0.0:
+                    if exp._args[0].__class__ in native_numeric_types and math.isclose(exp._args[0], 0.0):
                         if n == 2:
                             self._print_nonlinear_terms_NL(exp._args[1])
                         else:
-                            OUTPUT.write(nary_sum_str % (n))
+                            OUTPUT.write(nary_sum_str % (n-1))
                             for i in xrange(1,n-1):
                                 self._print_nonlinear_terms_NL(exp._args[i])
                     else:
                         if n == 2:
-                            self._print_nonlinear_terms_NL(exp._args[0])
                             OUTPUT.write(binary_sum_str)
+                            self._print_nonlinear_terms_NL(exp._args[0])
                             self._print_nonlinear_terms_NL(exp._args[1])
                         else:
                             OUTPUT.write(nary_sum_str % (n))
@@ -1099,6 +1100,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         block_ampl_repn[constraint_data] = ampl_repn
                     else:
                         ampl_repn = block_ampl_repn[constraint_data]
+
+                #print("HERE")
+                #print((str(constraint_data.lower), str(constraint_data.body), str(constraint_data.upper)))
+                #print(ampl_repn)
+                #print(ampl_repn.is_fixed())
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
