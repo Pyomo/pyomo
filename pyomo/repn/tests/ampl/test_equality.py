@@ -27,7 +27,13 @@ _campl_available = False
 from pyomo.repn.standard_repn import generate_standard_repn as gar
 #from pyomo.repn.ampl_repn import AmplRepn
 
-class _GenericAmplRepnEqualityTests(unittest.TestCase):
+#
+# Disabling these tests.  The AmplRepn.__eq__ method isn't 
+# used.
+#
+#class _GenericAmplRepnEqualityTests(unittest.TestCase):
+#
+class _GenericAmplRepnEqualityTests(object):
     def setUp(self):
         # Helper function for param init
         def q_initialize(model, i):
