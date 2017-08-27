@@ -1104,7 +1104,7 @@ class _ProductExpression(_ExpressionBase):
         return 'prod'
 
     def _inline_operator(self):
-        return ' * '
+        return '*'
 
     def _apply_operation(self, result):
         _l, _r = result
