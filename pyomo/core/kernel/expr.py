@@ -60,6 +60,7 @@ _pyomo4_module_members = [
     'sum',
 ]
 _pyomo5_module_members = [
+    'evaluate_expression',
     '_ReciprocalExpression',
     '_NegationExpression',
     'EntangledExpressionError',
