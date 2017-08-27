@@ -472,6 +472,26 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
 
+        #    -
+        #   / \
+        #  a   a
+        e = m.a - m.a
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = {  }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
     def test_constDiff(self):
         #    -
         #   / \
@@ -768,13 +788,13 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
 
-    def test_simpleProduct(self):
+    def test_simpleProduct1(self):
+        m = ConcreteModel()
+        m.a = Var()
+        m.p = Param(default=2)
         #    *
         #   / \
         #  a   p
-        m = AbstractModel()
-        m.a = Var()
-        m.p = Param(default=2)
         e = m.a * m.p
 
         rep = generate_standard_repn(e)
@@ -792,7 +812,27 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
 
-    def test_simpleProduct(self):
+        #    *
+        #   / \
+        #  a   0
+        e = m.a * 0
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 0)
+        self.assertTrue(len(rep._linear_terms_coef) == 0)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
+    def test_simpleProduct2(self):
         #    *
         #   / \
         #  a   5
