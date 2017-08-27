@@ -14,6 +14,7 @@ __all__ = ['StandardRepn', 'generate_standard_repn']
 
 
 import logging
+import math
 
 from pyutilib.misc import Bunch
 
@@ -304,7 +305,10 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     #
     if isinstance(expr, (_VarData, IVariable)):
         if expr.fixed:
-            repn._constant = value(expr)
+            if compute_values:
+                repn._constant = _multiplier*value(expr)
+            else:
+                repn._constant = _multiplier*expr
             if compress:
                 repn._compress()
             return repn
@@ -460,7 +464,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             elif _compute_value:
                 try:
                     # TODO: disable ERROR logging message
-                    _result.append( {0:value(_sub)} )
+                    _result.append( {0:EXPR.evaluate_expression(_sub, only_fixed_vars=True)} )
                 except Exception as e:
                     _result = [{-999: "Error evaluating expression: %s" % str(e)}] 
 
@@ -491,7 +495,10 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
 
                     _result.append( {1:{key:1.0}} )
                 else:
-                    _result.append( {0:value(_sub)} )
+                    if compute_values:
+                        _result.append( {0:value(_sub)} )
+                    else:
+                        _result.append( {0:_sub} )
 
             else:
                 assert(_sub.is_expression())
@@ -557,18 +564,26 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         ans[1] = {}
                     for key in res[1]:
                         if key in ans[1]:
-                            ans[1][key] += res[1][key]
+                            coef = ans[1][key] + res[1][key]
+                            if not math.isclose(coef, 0.0):     # coef != 0.0
+                                ans[1][key] = coef
+                            else:
+                                del ans[1][key]
                         else:
-                            ans[1][key] = res[1][key]
+                            ans[1][key] = res[1][key]           # We shouldn't need to check if this is zero
                 # Add quadratic terms
                 if quadratic and 2 in res:
                     if not 2 in ans:
                         ans[2] = {}
                     for key in res[2]:
                         if key in ans[2]:
-                            ans[2][key] += res[2][key]
+                            coef = ans[2][key] + res[2][key]
+                            if not math.isclose(coef, 0.0):     # coef != 0.0
+                                ans[2][key] = coef
+                            else:
+                                del ans[2][key]
                         else:
-                            ans[2][key] = res[2][key]
+                            ans[2][key] = res[2][key]           # We shouldn't need to check if this is zero
 
         elif _obj.__class__ == EXPR._ProductExpression or (_obj.__class__ == EXPR._PowExpression and len(_result) == 2):
             #
@@ -602,7 +617,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             if None in _l:
                 if None in _r:
                     nonl += _l[None]*_r[None]
-                if 0 in _r:
+                if 0 in _r and not math.isclose(_r[0], 0.0):    # _r[0] != 0.0
                     nonl += _l[None]*_r[0]
                 if 1 in _r:
                     for key in _r[1]:
@@ -612,7 +627,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         v1_, v2_ = key
                         nonl += _l[None]*_r[2][key]*idMap[v1_]*idMap[v2_]
             if None in _r:
-                if 0 in _l:
+                if 0 in _l and not math.isclose(_l[0], 0.0):        # _l[0] != 0.0
                     nonl += _l[0]*_r[None]
                 if 1 in _l:
                     for key in _l[1]:
@@ -659,10 +674,10 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             #
             if (0 in _l and 1 in _r) or (1 in _l and 0 in _r):
                 ans[1] = {}
-            if 0 in _l and 1 in _r:
+            if 0 in _l and 1 in _r and not math.isclose(_l[0], 0.0):    # _l[0] != 0.0
                 for key in _r[1]:
                     ans[1][key] = _l[0]*_r[1][key]
-            if 1 in _l and 0 in _r:
+            if 1 in _l and 0 in _r and not math.isclose(_r[0], 0.0):    # _r[0] != 0.0
                 for key in _l[1]:
                     if key in ans[1]:
                         ans[1][key] += _l[1][key]*_r[0]
@@ -675,10 +690,10 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             if quadratic:
                 if (0 in _l and 2 in _r) or (2 in _l and 0 in _r) or (1 in _l and 1 in _r):
                     ans[2] = {}
-                if 0 in _l and 2 in _r:
+                if 0 in _l and 2 in _r and not math.isclose(_l[0], 0.0):
                     for key in _r[2]:
                         ans[2][key] = _l[0]*_r[2][key]
-                if 2 in _l and 0 in _r:
+                if 2 in _l and 0 in _r and not math.isclose(_r[0], 0.0):
                     for key in _l[2]:
                         if key in ans[2]:
                             ans[2][key] += _l[2][key]*_r[0]
