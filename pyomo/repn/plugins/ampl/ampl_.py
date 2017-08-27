@@ -580,7 +580,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     self._print_nonlinear_terms_NL(exp._args[0])
                     self._print_nonlinear_terms_NL(exp._args[1])
 
-                elif isinstance(exp, _ExpressionData):
+                elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
                     self._print_nonlinear_terms_NL(exp.expr)
 
                 else:
