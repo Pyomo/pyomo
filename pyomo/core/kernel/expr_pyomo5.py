@@ -525,6 +525,7 @@ def process_arg(obj):
     return obj
 
 
+
 class _ExpressionBase(NumericValue):
     """
     An object that defines a mathematical expression that can be evaluated
@@ -560,8 +561,36 @@ class _ExpressionBase(NumericValue):
     __bool__ = __nonzero__
 
     def __str__(self):
+        from pyomo.repn import generate_standard_repn
+        try:
+            #
+            # Try to factor the constant and linear terms when printing NONVERBOSE
+            #
+            if common.TO_STRING_VERBOSE:
+                expr = self
+            elif self.__class__ is EXPR._InequalityExpression:
+                # NOTE: this might not worked with chained inqualities ... but I want to get rid of those
+                repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
+                repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
+                expr = EXPR._InequalityExpression( (repn0.to_expression(), repn1.to_expression()), self._string, self._cloned_from)
+            elif self.__class__ is EXPR._EqualityExpression:
+                repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
+                repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
+                expr = EXPR._EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
+            else:
+                repn = generate_standard_repn(self, compress=False, quadratic=False, compute_values=False)
+                expr = repn.to_expression()
+        except:
+            #
+            # Fall back to simply printing the expression in an
+            # unfactored form.
+            #
+            expr = self
+        #
+        # Output the string
+        #
         buf = StringIO()
-        self.to_string(buf)
+        self.to_string(buf, expr=expr)
         return buf.getvalue()
 
     def __call__(self, exception=None):
@@ -709,17 +738,19 @@ class _ExpressionBase(NumericValue):
         raise NotImplementedError("Derived expression (%s) failed to "\
             "implement _polynomial_degree()" % ( str(self.__class__), ))
 
-    def to_string(self, ostream=None, verbose=None, precedence=None):
+    def to_string(self, ostream=None, verbose=None, precedence=None, expr=None):
         _name_buffer = {}
         if ostream is None:
             ostream = sys.stdout
         verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
 
+        if expr is None:
+            expr = self
         _infix = False
         _bypass_prefix = False
-        argList = self._args
-        _stack = [ [ self, argList, 0, len(argList),
-                     precedence if precedence is not None else self._precedence() ] ]
+        argList = expr._args
+        _stack = [ [ expr, argList, 0, len(argList),
+                     precedence if precedence is not None else expr._precedence() ] ]
         while _stack:
             _parent, _args, _idx, _len, _prec = _stack[-1]
             _my_precedence = _parent._precedence()
@@ -746,7 +777,7 @@ class _ExpressionBase(NumericValue):
                 elif hasattr(_parent, '_to_string_term'):
                     _parent._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
                 else:
-                    self._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
+                    expr._to_string_term(ostream, _idx, _sub, _name_buffer, verbose)
             else:
                 _parent._to_string_suffix(ostream, verbose)
                 _stack.pop()
