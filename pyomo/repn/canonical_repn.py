@@ -1034,7 +1034,7 @@ def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
         #
         # Construct linear canonical repn
         #
-        rep = CompiledLinearCanonicalRepn()
+        rep = pyomo4_CompiledLinearCanonicalRepn()
         if not (type(srepn._constant) in native_numeric_types and srepn._constant == 0):
             rep.constant = srepn._constant
         else:
