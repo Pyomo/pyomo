@@ -262,16 +262,16 @@ class StandardRepn(object):
 
     def to_expression(self):
         expr = self._constant
-        tmp = []
         for i in sorted(self._linear_vars.keys()):
             if math.isclose(self._linear_terms_coef[i], 1.0):
-                tmp.append(self._linear_vars[i])
+                expr += self._linear_vars[i]
             elif math.isclose(self._linear_terms_coef[i], -1.0):
-                tmp.append(- self._linear_vars[i])
+                expr -= self._linear_vars[i]
+            elif self._linear_terms_coef[i] < 0.0:
+                expr -= - self._linear_terms_coef[i]*self._linear_vars[i]
             else:
-                tmp.append( self._linear_terms_coef[i]*self._linear_vars[i])
-        expr += Sum(term for term in tmp) + \
-            Sum(self._quadratic_terms_coef[i]*self._quadratic_vars[i] for i in sorted(self._quadratic_vars.keys()))
+                expr += self._linear_terms_coef[i]*self._linear_vars[i]
+        expr += Sum(self._quadratic_terms_coef[i]*self._quadratic_vars[i] for i in sorted(self._quadratic_vars.keys()))
         if not self._nonlinear_expr is None:
             expr += self._nonlinear_expr
         return expr
@@ -297,7 +297,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     #
     # Eliminate top-level negations
     #
-    _multiplier = 1.0
+    _multiplier = 1
     while expr.__class__ == EXPR._NegationExpression:
         #
         # Replace a negation sub-expression
@@ -510,7 +510,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         idMap[None][id_] = key
                         idMap[key] = _sub
 
-                    _result.append( {1:{key:1.0}} )
+                    _result.append( {1:{key:1}} )
                 else:
                     if compute_values:
                         _result.append( {0:value(_sub)} )
@@ -749,7 +749,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
                 ans = {None:_obj}
             else:
-                ans = {0:1.0/_result[0][0]}
+                ans = {0:1/_result[0][0]}
 
         elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
             if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
