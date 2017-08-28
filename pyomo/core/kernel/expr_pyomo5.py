@@ -1358,7 +1358,7 @@ class _ReciprocalExpression(_ExpressionBase):
         return 1 / result[0]
 
     def _combine_expr(self, _result):
-        _l = 1.0
+        _l = 1
         _r = _result[0]
         #
         # 1 / X
@@ -1369,7 +1369,7 @@ class _ReciprocalExpression(_ExpressionBase):
             #
             # Reciprocate the MultiProd
             #
-            _tmp = [1.0/_r._args[0]] + _r._args[_r._nnum:]
+            _tmp = [1/_r._args[0]] + _r._args[_r._nnum:]
             for i in range(1,_r._nnum):
                 _tmp.append( _r._args[i])
             _r._args = _tmp
@@ -1956,10 +1956,10 @@ def generate_expression(etype, _self, _other, _process=0):
             elif _self.__class__ in native_numeric_types:
                 return _self / _other
             elif _self.is_constant():
-                return _Constant_ProductExpression((1./_other, _self))
+                return _Constant_ProductExpression((1/_other, _self))
             elif _self._potentially_variable():
-                return _ProductExpression((1./_other, _self))
-            return _NPV_ProductExpression((1./_other, _self))
+                return _ProductExpression((1/_other, _self))
+            return _NPV_ProductExpression((1/_other, _self))
         elif _self.__class__ in native_numeric_types:
             if math.isclose(_self, 0):
                 return 0
