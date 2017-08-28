@@ -261,8 +261,16 @@ class StandardRepn(object):
         return True
 
     def to_expression(self):
-        expr = self._constant + \
-            Sum(self._linear_terms_coef[i]*self._linear_vars[i] for i in sorted(self._linear_vars.keys())) + \
+        expr = self._constant
+        tmp = []
+        for i in sorted(self._linear_vars.keys()):
+            if math.isclose(self._linear_terms_coef[i], 1.0):
+                tmp.append(self._linear_vars[i])
+            elif math.isclose(self._linear_terms_coef[i], -1.0):
+                tmp.append(- self._linear_vars[i])
+            else:
+                tmp.append( self._linear_terms_coef[i]*self._linear_vars[i])
+        expr += Sum(term for term in tmp) + \
             Sum(self._quadratic_terms_coef[i]*self._quadratic_vars[i] for i in sorted(self._quadratic_vars.keys()))
         if not self._nonlinear_expr is None:
             expr += self._nonlinear_expr
@@ -624,23 +632,27 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             # Products that include a nonlinear term
             nonl = 0
             if None in _l:
+                rhs = 0
                 if None in _r:
-                    nonl += _l[None]*_r[None]
+                    rhs += _r[None]
                 if 0 in _r and \
                    not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
-                    nonl += _l[None]*_r[0]
+                    rhs += _r[0]
                 if 1 in _r:
-                    nonl += _l[None]*Sum(_r[1][key]*idMap[key] for key in _r[1])
+                    rhs += Sum(_r[1][key]*idMap[key] for key in _r[1])
                 if 2 in _r:
-                    nonl += _l[None]*Sum(_r[2][key]*idMap[key[0]]*idMap[key[1]] for key in _r[2])
+                    rhs += Sum(_r[2][key]*idMap[key[0]]*idMap[key[1]] for key in _r[2])
+                nonl += _l[None]*rhs
             if None in _r:
+                lhs = 0
                 if 0 in _l and \
                    not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):        # _l[0] != 0.0
-                    nonl += _l[0]*_r[None]
+                    lhs += _l[0]
                 if 1 in _l:
-                    nonl += Sum(_l[1][key]*idMap[key] for key in _l[1])*_r[None]
+                    lhs += Sum(_l[1][key]*idMap[key] for key in _l[1])
                 if 2 in _l:
-                    nonl += Sum(_l[2][key]*idMap[key[0]]*idMap[key[1]] for key in _l[2])*_r[None]
+                    lhs += Sum(_l[2][key]*idMap[key[0]]*idMap[key[1]] for key in _l[2])
+                nonl += lhs*_r[None]
             if quadratic:
                 # Products that generate term with degree > 2
                 if 2 in _l:
