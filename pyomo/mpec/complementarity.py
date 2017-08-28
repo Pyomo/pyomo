@@ -211,7 +211,7 @@ class Complementarity(Block):
             # The ComplementarityTuple has a fixed length, so we initialize
             # the _args component and return
             #
-            self[index]._args = ( as_numeric(cc.arg0), as_numeric(cc.arg1) )
+            self[index]._args = ( EXPR.compress_expression(as_numeric(cc.arg0)), EXPR.compress_expression(as_numeric(cc.arg1)) )
             return self[index]
         #
         if cc.__class__ is tuple:
@@ -240,7 +240,7 @@ Error thrown for Complementarity "%s"
                 "Unexpected argument declaring Complementarity %s:\n\t%s"
                 % (self.name, cc) )
         #
-        self[index]._args = tuple( as_numeric(x) for x in cc )
+        self[index]._args = tuple( EXPR.compress_expression(as_numeric(x)) for x in cc )
         return self[index]
 
     def pprint(self, **kwargs):
