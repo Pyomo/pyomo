@@ -109,7 +109,7 @@ class _ExpressionBase(NumericValue):
             result[i] = getattr(self, i)
         return result
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
@@ -126,7 +126,7 @@ class _ExpressionBase(NumericValue):
                 ostream.write(", ")
             try:
                 arg.to_string( ostream=ostream, precedence=self._precedence(),
-                               verbose=verbose )
+                               verbose=verbose, labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
         ostream.write(" )")
@@ -364,7 +364,7 @@ class _PowExpression(_IntrinsicFunctionExpression):
     def _precedence(self):
         return _PowExpression.PRECEDENCE
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         # For verbose mode, rely on the underlying base expression
         # (prefix) expression printer
@@ -372,7 +372,7 @@ class _PowExpression(_IntrinsicFunctionExpression):
                    if verbose is None else verbose
         if _verbose:
             return super(_PowExpression, self).to_string(
-                ostream, verbose, precedence)
+                ostream, verbose, precedence, labeler)
 
         if ostream is None:
             ostream = sys.stdout
@@ -387,7 +387,7 @@ class _PowExpression(_IntrinsicFunctionExpression):
                 ostream.write("**")
             try:
                 arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=self._precedence() )
+                               precedence=self._precedence(), labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
@@ -470,7 +470,7 @@ class _InequalityExpression(_LinearExpression):
             arg1 = arg2
         return True
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
@@ -481,7 +481,7 @@ class _InequalityExpression(_LinearExpression):
             arg = self._args[i]
             try:
                 arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_my_precedence )
+                               precedence=_my_precedence, labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
             if strict:
@@ -491,7 +491,7 @@ class _InequalityExpression(_LinearExpression):
         arg = self._args[-1]
         try:
             arg.to_string( ostream=ostream, verbose=verbose,
-                           precedence=_my_precedence )
+                           precedence=_my_precedence, labeler=labeler )
         except AttributeError:
             ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
@@ -528,7 +528,7 @@ class _EqualityExpression(_LinearExpression):
         """Method that defines the equal-to operation"""
         return next(values) == next(values)
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
@@ -543,7 +543,7 @@ class _EqualityExpression(_LinearExpression):
                 ostream.write("  ==  ")
             try:
                 arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_my_precedence)
+                               precedence=_my_precedence, labeler=labeler)
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
         if precedence and _my_precedence > precedence:
@@ -625,7 +625,8 @@ class _ProductExpression(_ExpressionBase):
         self._numerator = tmp
         self._coef = 1.0/self._coef
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None,
+                  bind_neg_coef=False):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
@@ -638,7 +639,10 @@ class _ProductExpression(_ExpressionBase):
             ostream.write("( ")
         first = True
         if self._coef != 1:
-            ostream.write(str(self._coef))
+            if bind_neg_coef and self._coef < 0:
+                ostream.write("(%s)" % str(self._coef))
+            else:
+                ostream.write(str(self._coef))
             first = False
         for arg in self._numerator:
             if first:
@@ -649,7 +653,7 @@ class _ProductExpression(_ExpressionBase):
                 ostream.write(" * ")
             try:
                 arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_my_precedence )
+                               precedence=_my_precedence, labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % (arg,))
         if first:
@@ -671,7 +675,7 @@ class _ProductExpression(_ExpressionBase):
                     ostream.write(" * ")
                 try:
                     arg.to_string( ostream=ostream, verbose=verbose,
-                                   precedence=_my_precedence )
+                                   precedence=_my_precedence, labeler=labeler )
                 except AttributeError:
                     ostream.write("(%s)" % (arg,))
             if len(self._denominator) > 1 and not _verbose:
@@ -737,7 +741,7 @@ class _SumExpression(_LinearExpression):
     def negate(self):
         self.scale(-1)
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
@@ -754,7 +758,6 @@ class _SumExpression(_LinearExpression):
             first = False
         for i, arg in enumerate(self._args):
             if first:
-                first = False
                 if self._coef[i] < 0:
                     ostream.write(" - ")
             elif _verbose:
@@ -774,8 +777,14 @@ class _SumExpression(_LinearExpression):
                 ostream.write(str(abs(self._coef[i]))+"*")
                 _sub_precedence = _ProductExpression.PRECEDENCE
             try:
-                arg.to_string( ostream=ostream, verbose=verbose,
-                               precedence=_sub_precedence )
+                if not first and isinstance(arg, _ProductExpression):
+                    # Use bind_neg_coef flag to prevent double operators
+                    arg.to_string( ostream=ostream, verbose=verbose,
+                                   precedence=_sub_precedence, labeler=labeler,
+                                   bind_neg_coef=True )
+                else:
+                    arg.to_string( ostream=ostream, verbose=verbose,
+                                   precedence=_sub_precedence, labeler=labeler )
             except AttributeError:
                 ostream.write("(%s)" % arg)
             first=False
@@ -877,20 +886,20 @@ class Expr_if(_ExpressionBase):
         else:
             return None
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Print this expression"""
         if ostream is None:
             ostream = sys.stdout
         _my_precedence = self._precedence()
         ostream.write("Expr_if( if=( ")
         self._if.to_string( ostream=ostream, verbose=verbose,
-                            precedence=self._precedence() )
+                            precedence=self._precedence(), labeler=labeler )
         ostream.write(" ), then=( ")
         self._then.to_string( ostream=ostream, verbose=verbose,
-                              precedence=self._precedence() )
+                              precedence=self._precedence(), labeler=labeler )
         ostream.write(" ), else=( ")
         self._else.to_string( ostream=ostream, verbose=verbose,
-                              precedence=self._precedence())
+                              precedence=self._precedence(), labeler=labeler )
         ostream.write(" ) )")
 
     def __call__(self, exception=True):
