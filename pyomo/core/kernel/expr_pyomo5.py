@@ -10,6 +10,7 @@
 
 from __future__ import division
 
+import math
 import logging
 import sys
 import traceback
@@ -568,19 +569,35 @@ class _ExpressionBase(NumericValue):
             #
             if common.TO_STRING_VERBOSE:
                 expr = self
-            elif self.__class__ is EXPR._InequalityExpression:
-                # NOTE: this might not worked with chained inqualities ... but I want to get rid of those
+            elif self.__class__ is _InequalityExpression:
+                expr = self
+                # TODO: chained inequalities
+                #if self._args[0].__class__ is _InequalityExpression:
+                #    repn0a = generate_standard_repn(self._args[0]._args[0], compress=False, quadratic=False, compute_values=False)
+                #    repn0b = generate_standard_repn(self._args[0]._args[1], compress=False, quadratic=False, compute_values=False)
+                #    lhs = _InequalityExpression( (repn0a.to_expression(), repn0b.to_expression()), self._args[0]._strict, self._args[0]._cloned_from)
+                #    repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
+                #    expr = _InequalityExpression( (lhs, repn1.to_expression()), self._strict, self._cloned_from)
+                #elif self._args[0].__class__ is _InequalityExpression:
+                #    repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
+                #    repn1a = generate_standard_repn(self._args[1]._args[0], compress=False, quadratic=False, compute_values=False)
+                #    repn1b = generate_standard_repn(self._args[1]._args[1], compress=False, quadratic=False, compute_values=False)
+                #    rhs = _InequalityExpression( (repn1a.to_expression(), repn1b.to_expression()), self._args[1]._strict, self._args[1]._cloned_from)
+                #    expr = _InequalityExpression( (repn0.to_expression(), rhs), self._strict, self._cloned_from)
+                #else:
+                #    repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
+                #    repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
+                #    expr = _InequalityExpression( (repn0.to_expression(), repn1.to_expression()), self._strict, self._cloned_from)
+            elif self.__class__ is _EqualityExpression:
                 repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
                 repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
-                expr = EXPR._InequalityExpression( (repn0.to_expression(), repn1.to_expression()), self._string, self._cloned_from)
-            elif self.__class__ is EXPR._EqualityExpression:
-                repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
-                repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
-                expr = EXPR._EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
+                expr = _EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
             else:
                 repn = generate_standard_repn(self, compress=False, quadratic=False, compute_values=False)
+                #print(repn)
                 expr = repn.to_expression()
-        except:
+        except Exception as e:
+            print(str(e))
             #
             # Fall back to simply printing the expression in an
             # unfactored form.
@@ -766,8 +783,19 @@ class _ExpressionBase(NumericValue):
                         _parent._to_string_prefix(ostream, verbose)
                     else:
                         _bypass_prefix = False
-                    if _my_precedence > _prec or not _my_precedence or verbose:
+                    if ((_len-_parent._to_string_skip(0) > 1) and _my_precedence > _prec) or not _my_precedence or verbose:
                         ostream.write("( ")
+                        #ostream.write("%s %s %s %s %s %s( " % (str(_len), str(_idx), str(_my_precedence), str(_prec), str(verbose), str(type(_parent))))
+                        #if _len == 2 and skip == 0:
+                        #    ostream.write(" % ")
+                        #    ostream.write(" %s " % str(_parent._to_string_skip(0)))
+                        #    ostream.write(" % ")
+                        #    ostream.write(str(_args[0]))
+                        #    ostream.write(str(type(_args[0])))
+                        #    ostream.write(" % ")
+                        #    ostream.write(str(_args[1]))
+                        #    ostream.write(str(type(_args[1])))
+                        #    ostream.write(" % ")
                     _infix = True
                 if isinstance(_sub, _ExpressionBase):
                 #if hasattr(_sub, '_args'): # _args is a proxy for Expression
@@ -781,7 +809,7 @@ class _ExpressionBase(NumericValue):
             else:
                 _parent._to_string_suffix(ostream, verbose)
                 _stack.pop()
-                if (_my_precedence > _prec) or not _my_precedence or verbose:
+                if ((_len-_parent._to_string_skip(0) > 1) and _my_precedence > _prec) or not _my_precedence or verbose:
                     ostream.write(" )")
 
     def _precedence(self):
@@ -888,7 +916,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
-        if result[0] == 0:
+        if math.isclose(result[0], 0):
             return 0
         else:
             return None
@@ -931,8 +959,8 @@ class _PowExpression(_ExpressionBase):
         # call this a non-polynomial expression, these exceptions occur
         # too frequently (and in particular, a**2)
         l,r = result
-        if r == 0:
-            if l == 0:
+        if math.isclose(r, 0):
+            if math.isclose(l, 0):
                 return 0
             try:
                 # NOTE: use value before int() so that we don't
@@ -952,7 +980,7 @@ class _PowExpression(_ExpressionBase):
         def impl(args):
             if not args[1]:
                 return False
-            return args[0] or value(self._args[1]) == 0
+            return args[0] or math.isclose(value(self._args[1]), 0)
         return impl
 
     # the local _is_fixed_combiner override is identical to
@@ -1313,7 +1341,7 @@ class _ReciprocalExpression(_ExpressionBase):
         return _ReciprocalExpression.PRECEDENCE
 
     def _polynomial_degree(self, result):
-        if result[0] == 0:
+        if math.isclose(result[0], 0):
             return 0
         return None
 
@@ -1580,7 +1608,17 @@ class _MultiSumExpression(_SumExpression):
     def _to_string_skip(self, _idx):
         return  _idx == 0 and \
                 self._args[0].__class__ in native_numeric_types and \
-                self._args[0] == 0
+                math.isclose(self._args[0], 0)
+
+    def X_to_string_infix(self, ostream, idx, verbose):
+        if verbose:
+            ostream.write(" , ")
+        else:
+            if self._args[idx].__class__ is _NegationExpression:
+                ostream.write(' - ')
+                return True
+            else:
+                ostream.write(' + ')
 
 
 
@@ -1808,7 +1846,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self * _other
-            elif _other == 0:
+            elif math.isclose(_other, 0):
                 return 0
             elif _other == 1:
                 return _self
@@ -1818,7 +1856,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _ProductExpression((_other, _self))
             return _NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if _self == 0:
+            if math.isclose(_self, 0):
                 return 0
             elif _self == 1:
                 return _other
@@ -1844,7 +1882,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self + _other
-            elif _other == 0:
+            elif math.isclose(_other, 0):
                 return _self
             if _self.is_constant():
                 return _Constant_SumExpression((_self, _other))
@@ -1852,7 +1890,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _SumExpression((_other, _self))
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if _self == 0:
+            if math.isclose(_self, 0):
                 return _other
             if _other.is_constant():
                 return _Constant_SumExpression((_self, _other))
@@ -1876,7 +1914,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self - _other
-            elif _other == 0:
+            elif math.isclose(_other, 0):
                 return _self
             if _self.is_constant():
                 return _Constant_SumExpression((-_other, _self))
@@ -1884,7 +1922,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _SumExpression((-_other, _self))
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
-            if _self == 0:
+            if math.isclose(_self, 0):
                 if _other.is_constant():
                     return _Constant_NegationExpression((_other,))
                 elif _other._potentially_variable():
@@ -1923,7 +1961,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _ProductExpression((1./_other, _self))
             return _NPV_ProductExpression((1./_other, _self))
         elif _self.__class__ in native_numeric_types:
-            if _self == 0:
+            if math.isclose(_self, 0):
                 return 0
             elif _self == 1:
                 if _other.is_constant():
@@ -2158,7 +2196,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
         ostream.write(self.getname())
 
     def _polynomial_degree(self, result):
-        if result[0] == 0:
+        if math.isclose(result[0], 0):
             return 0
         else:
             return None
