@@ -594,7 +594,6 @@ class _ExpressionBase(NumericValue):
                 expr = _EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
             else:
                 repn = generate_standard_repn(self, compress=False, quadratic=False, compute_values=False)
-                #print(repn)
                 expr = repn.to_expression()
         except Exception as e:
             print(str(e))
