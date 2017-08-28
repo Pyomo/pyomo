@@ -263,6 +263,7 @@ class StandardRepn(object):
     def to_expression(self):
         expr = self._constant
         for i in sorted(self._linear_vars.keys()):
+            #print((self._linear_vars[i].name, self._linear_terms_coef[i]))
             if math.isclose(self._linear_terms_coef[i], 1.0):
                 expr += self._linear_vars[i]
             elif math.isclose(self._linear_terms_coef[i], -1.0):
@@ -347,7 +348,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     #
     # The stack starts with the current expression
     #
-    _stack = [ (expr, expr._args, 0, len(expr._args), _multiplier, False, [])]
+    _stack = [ (expr, expr._args, 0, len(expr._args), False, [])]
     #
     # Iterate until the stack is empty
     #
@@ -364,7 +365,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         # Note: expressions pushed onto the stack are guaranteed to 
         # be potentially variable.
         #
-        _obj, _argList, _idx, _len, _multiplier, _compute_value, _result = _stack.pop()
+        _obj, _argList, _idx, _len, _compute_value, _result = _stack.pop()
         if verbose: #pragma:nocover
             print("*"*10 + " POP  " + "*"*10)
 
@@ -379,7 +380,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 print(_argList)
                 print(_idx)
                 print(_len)
-                print(_multiplier)
                 print(_compute_value)
                 print(_result)
 
@@ -391,10 +391,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
 
             # No special processing for _ProductExpression
 
-            if _obj.__class__ == EXPR._NegationExpression:
-                _multiplier *= -1
-
-            elif _obj.__class__ == EXPR._PowExpression:
+            if _obj.__class__ == EXPR._PowExpression:
                 if _idx == 0:
                     #
                     # Evaluate the RHS (_args[1]) first, and compute its value
@@ -525,7 +522,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 if verbose: #pragma:nocover
                     print("*"*10 + " PUSH " + "*"*10)
 
-                _stack.append( (_obj, _argList, _idx, _len, _multiplier, _compute_value, _result) )
+                _stack.append( (_obj, _argList, _idx, _len, _compute_value, _result) )
 
                 _obj     = _sub
                 _argList = _sub._args
@@ -545,7 +542,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             print(_argList)
             print(_idx)
             print(_len)
-            print(_multiplier)
             print(_compute_value)
             print(_result)
             print("STACK LEN %d" % len(_stack))
@@ -778,7 +774,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             print(_argList)
             print(_idx)
             print(_len)
-            print(_multiplier)
             print(_compute_value)
             print(_result)
             print("STACK LEN %d" % len(_stack))
@@ -794,17 +789,19 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
     #
     # Create the final object here from 'ans'
     #
-    repn._constant = ans.get(0,0)
+    repn._constant = _multiplier*ans.get(0,0)
     if 1 in ans:
         for i in ans[1]:
             repn._linear_vars[i] = idMap[i]
-            repn._linear_terms_coef[i] = ans[1][i]
+            repn._linear_terms_coef[i] = _multiplier*ans[1][i]
     if 2 in ans:
         for i in ans[2]:
             v1_, v2_ = i
             repn._quadratic_vars[i] = (idMap[v1_],idMap[v2_])
-            repn._quadratic_terms_coef[i] = ans[2][i]
+            repn._quadratic_terms_coef[i] = _multiplier*ans[2][i]
     repn._nonlinear_expr = ans.get(None,None)
+    if not repn._nonlinear_expr is None:
+        repn._nonlinear_expr *= _multiplier
     repn._nonlinear_vars = {}
     if not repn._nonlinear_expr is None:
         for v_ in EXPR.identify_variables(repn._nonlinear_expr, include_fixed=False, include_potentially_variable=False):
