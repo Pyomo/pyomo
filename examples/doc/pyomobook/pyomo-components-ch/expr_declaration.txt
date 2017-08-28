@@ -34,8 +34,8 @@
 1 Expression Declarations
     e : Size=2, Index=e_index
         Key : Expression
-          2 :  x[2]**2.0
-          3 :  x[3]**2.0
+          2 :    x[2]**2
+          3 :    x[3]**2
 
 4 Declarations: x_index x e_index e
 1 Var Declarations
@@ -46,12 +46,12 @@
 1 Expression Declarations
     e : Size=1, Index=None
         Key  : Expression
-        None : ( -1.0 + x )**2.0
+        None : ( -1.0 + x )**2
 
 1 Objective Declarations
     o : Size=1, Index=None, Active=True
         Key  : Active : Sense    : Expression
-        None :   True : minimize : 0.1*( -1.0 + x )**2.0 + x
+        None :   True : minimize : x + 0.1*( -1.0 + x )**2
 
 1 Constraint Declarations
     c : Size=1, Index=None, Active=True
@@ -73,12 +73,12 @@
 1 Expression Declarations
     e : Size=1, Index=None
         Key  : Expression
-        None : ( -2.0 + x )**2.0
+        None : ( -2.0 + x )**2
 
 1 Objective Declarations
     o : Size=1, Index=None, Active=True
         Key  : Active : Sense    : Expression
-        None :   True : minimize : 0.1*( -2.0 + x )**2.0 + x
+        None :   True : minimize : x + 0.1*( -2.0 + x )**2
 
 1 Constraint Declarations
     c : Size=1, Index=None, Active=True
