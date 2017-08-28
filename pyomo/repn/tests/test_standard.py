@@ -788,6 +788,28 @@ class TestSimple(unittest.TestCase):
         rep = generate_standard_repn(e_)
         self.assertEqual(baseline, repn_to_dict(rep))
 
+        #       -
+        #        \
+        #         -
+        #        / \
+        #       a   b
+        e = - (m.a - m.b)
+
+        rep = generate_standard_repn(e)
+        #
+        self.assertTrue(len(rep._linear_vars) == 2)
+        self.assertTrue(len(rep._linear_terms_coef) == 2)
+        self.assertTrue(len(rep._quadratic_vars) == 0)
+        self.assertTrue(len(rep._quadratic_terms_coef) == 0)
+        self.assertTrue(rep._nonlinear_expr is None)
+        self.assertTrue(len(rep._nonlinear_vars) == 0)
+        baseline = { id(m.a):-1, id(m.b):1 }
+        self.assertEqual(baseline, repn_to_dict(rep))
+        #
+        e_ = EXPR.compress_expression(e)
+        rep = generate_standard_repn(e_)
+        self.assertEqual(baseline, repn_to_dict(rep))
+
     def test_simpleProduct1(self):
         m = ConcreteModel()
         m.a = Var()
