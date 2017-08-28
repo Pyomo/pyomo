@@ -14,6 +14,7 @@ import logging
 from pyomo.util.plugin import alias
 from pyomo.core import *
 from pyomo.core.base import expr as EXPR, Transformation
+from pyomo.core.kernel.numvalue import native_numeric_types
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
@@ -360,6 +361,9 @@ class ConvexHull_Transformation(Transformation):
         #
         # Expression
         #
+        # WEH - This probably needs to be updated to support all pyomo5 expression terms.
+        #       I edited this to work for pyomo5, but it's not backwards compatible.
+        #
         if isinstance(expr,EXPR._ExpressionBase):
             if isinstance(expr,EXPR._ProductExpression):
                 expr._numerator = [self._var_subst(NL, e, y, varMap) for e in expr._numerator]
@@ -367,15 +371,15 @@ class ConvexHull_Transformation(Transformation):
             elif isinstance(expr, _ExpressionData) or \
                      isinstance(expr,EXPR._SumExpression) or \
                      isinstance(expr,EXPR._AbsExpression) or \
-                     isinstance(expr,EXPR._IntrinsicFunctionExpression) or \
+                     isinstance(expr,EXPR._NegationExpression) or \
                      isinstance(expr,EXPR._PowExpression):
                 expr._args = [self._var_subst(NL, e, y, varMap) for e in expr._args]
             else:
-                raise ValueError("Unsupported expression type: "+str(expr))
+                raise ValueError("Unsupported expression type: "+str(type(expr)))
         #
         # Constant
         #
-        elif expr.is_fixed():
+        elif expr.__class__ in native_numeric_types or expr.is_fixed():
             pass
         #
         # Variable
