@@ -20,17 +20,17 @@
 
         4 Constraint Declarations
             c1 : Size=1, Index=None, Active=False
-                Key  : Lower : Body     : Upper : Active
-                None :  -Inf :  - x - y :  -3.0 :  False
+                Key  : Lower : Body    : Upper : Active
+                None :  -Inf : - x - y :  -3.0 :  False
             c2 : Size=1, Index=None, Active=False
-                Key  : Lower : Body       : Upper : Active
-                None :  -Inf :  - 2*x + y :   0.0 :  False
+                Key  : Lower : Body      : Upper : Active
+                None :  -Inf : - 2*x + y :   0.0 :  False
             c3 : Size=1, Index=None, Active=False
                 Key  : Lower : Body    : Upper : Active
                 None :  -Inf : 2*x + y :  12.0 :  False
             c4 : Size=1, Index=None, Active=False
-                Key  : Lower : Body         : Upper : Active
-                None :  -Inf :  - 3*x + 2*y :  -4.0 :  False
+                Key  : Lower : Body        : Upper : Active
+                None :  -Inf : - 3*x + 2*y :  -4.0 :  False
 
         5 Declarations: o c1 c2 c3 c4
     sub_kkt : Size=1, Index=None, Active=True
@@ -64,11 +64,11 @@
 
         2 Complementarity Declarations
             c2 : Size=4, Index=sub_kkt.c2_index, Active=True
-                Key : Arg0                   : Arg1                  : Active
-                  1 :      - x - y  <=  -3.0 : 0.0  <=  sub_kkt.u[1] :   True
-                  2 :     - 2*x + y  <=  0.0 : 0.0  <=  sub_kkt.u[2] :   True
-                  3 :      2*x + y  <=  12.0 : 0.0  <=  sub_kkt.u[3] :   True
-                  4 :  - 3*x + 2*y  <=  -4.0 : 0.0  <=  sub_kkt.u[4] :   True
+                Key : Arg0                 : Arg1                  : Active
+                  1 :    - x - y  <=  -3.0 : 0.0  <=  sub_kkt.u[1] :   True
+                  2 :    -2*x + y  <=  0.0 : 0.0  <=  sub_kkt.u[2] :   True
+                  3 :    2*x + y  <=  12.0 : 0.0  <=  sub_kkt.u[3] :   True
+                  4 : -3*x + 2*y  <=  -4.0 : 0.0  <=  sub_kkt.u[4] :   True
             c3 : Size=1, Index=sub_kkt.c3_index, Active=True
                 Key : Arg0       : Arg1                  : Active
                   1 : 0.0  <=  y : 0.0  <=  sub_kkt.v[1] :   True
