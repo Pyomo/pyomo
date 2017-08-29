@@ -32,3 +32,8 @@ Modeling Components
 
 Pyomo Command
 -------------
+
+.. doctest::
+
+    >>> print('Hello World')
+    Hello World
