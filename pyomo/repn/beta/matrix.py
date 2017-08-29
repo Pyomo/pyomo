@@ -245,7 +245,7 @@ def compile_block_linear_constraints(parent_block,
     for constraint, index in constraint_data_to_remove:
         # Note that this del is not needed: assigning Constraint.Skip
         # above removes the _ConstraintData from the _data dict.
-        del constraint[index]
+        #del constraint[index]
         constraints_removed += 1
     for block, constraint in constraint_containers_to_remove:
         block.del_component(constraint)
