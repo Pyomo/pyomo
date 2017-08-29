@@ -10,6 +10,7 @@
 
 import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals, Binary
+from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -44,6 +45,16 @@ class MIQP_simple(_BaseTestModel):
         model = self.model
         model.x.value = 1
         model.y.value = 1
+
+    def post_solve_test_validation(self, tester, results):
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] in \
+                (TerminationCondition.optimal,
+                 TerminationCondition.locallyOptimal)
+        else:
+            tester.assertIn(results['Solver'][0]['termination condition'],
+                            (TerminationCondition.optimal,
+                             TerminationCondition.locallyOptimal))
 
 @register_model
 class MIQP_simple_kernel(MIQP_simple):
