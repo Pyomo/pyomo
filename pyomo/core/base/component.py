@@ -384,7 +384,7 @@ class Component(_ComponentBase):
         """Return the component name"""
         return self.name
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
         """Write the component name to a buffer"""
         if ostream is None:
             ostream = sys.stdout
@@ -680,11 +680,17 @@ class ComponentData(_ComponentBase):
         """Return a string with the component name and index"""
         return self.name
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
-        """Write the component name and index to a buffer"""
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
+        """
+        Write the component name and index to a buffer,
+        applying the labeler if passed one.
+        """
         if ostream is None:
             ostream = sys.stdout
-        ostream.write(self.__str__())
+        if labeler is not None:
+            ostream.write(labeler(self))
+        else:
+            ostream.write(self.__str__())
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """Return a string with the component name and index"""

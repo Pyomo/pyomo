@@ -232,7 +232,9 @@ class _IndexedComponent_slicer(object):
         if self._call_stack[-2][1] == 'component':
             return self
         else:
-            return list( self )
+            # Note: simply calling "list(self)" results in infinite
+            # recursion in python2.6
+            return list( i for i in self )
 
 
 class IndexedComponent(Component):
