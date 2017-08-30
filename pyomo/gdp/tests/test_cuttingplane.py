@@ -24,8 +24,8 @@ class TwoTermDisj(unittest.TestCase):
     @staticmethod
     def makeModel():
         m = ConcreteModel()
-        m.x = Var(bounds=(0,5))
-        m.y = Var(bounds=(0,5))
+        m.x = Var(bounds=(1,4))
+        m.y = Var(bounds=(1,4))
         def d_rule(disjunct, flag):
             m = disjunct.model()
             if flag:
