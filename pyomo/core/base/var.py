@@ -23,6 +23,7 @@ from pyomo.core.base.sets import Set
 from pyomo.core.base.util import is_functor
 
 from six import iteritems, itervalues
+from six.moves import xrange
 
 logger = logging.getLogger('pyomo.core')
 
