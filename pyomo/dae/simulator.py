@@ -11,7 +11,7 @@ from pyomo.core.base import Constraint, Param, value, Suffix, Block
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.dae.diffvar import DAE_Error
 
-from pyomo.core.base.component import register_component
+from pyomo.core.base.plugin import register_component
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base import expr_common as common
 from pyomo.core.base.template_expr import (
