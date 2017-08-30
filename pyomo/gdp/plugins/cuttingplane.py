@@ -17,7 +17,7 @@ from nose.tools import set_trace
 # TODO: this should be an option probably, right?
 # do I have other options that won't be mad about the quadratic objective in the
 # separation problem?
-SOLVER = 'ipopt'
+SOLVER = 'gurobi'
 stream_solvers = False
 
 class CuttingPlane_Transformation(Transformation):

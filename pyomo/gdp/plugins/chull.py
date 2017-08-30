@@ -380,8 +380,8 @@ class ConvexHull_Transformation(Transformation):
             if lb is None or ub is None:
                 raise GDP_Error("Variables that appear in disjuncts must be "
                                 "bounded in order to use the chull "
-                                "transfromation! Missing bound for %s on "
-                                "disjunct %s." % (var.name, disjunct.name))
+                                "transformation! Missing bound for %s."
+                                % (var.name))
             bigmConstraint = Constraint(transBlock.lbub)
             bigmConstraint.add('lb', obj.indicator_var*lb <= disaggregatedVar)
             bigmConstraint.add('ub', disaggregatedVar <= obj.indicator_var*ub)

@@ -40,7 +40,6 @@ class TwoTermDisj(unittest.TestCase):
         m.disjunction = Disjunction(rule=disj_rule)
         return m
 
-
     def test_transformation_block(self):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
@@ -54,7 +53,6 @@ class TwoTermDisj(unittest.TestCase):
         disjBlock = transBlock.relaxedDisjuncts
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
-
 
     def test_transformation_block_name_collision(self):
         m = self.makeModel()
@@ -77,7 +75,6 @@ class TwoTermDisj(unittest.TestCase):
         # we didn't add to the block that wasn't ours
         self.assertEqual(len(m._pyomo_gdp_chull_relaxation), 0)
 
-    
     def test_info_dict_name_collision(self):
         m = self.makeModel()
         # we never have a way to know if the dictionary we made was ours. But we
@@ -90,7 +87,6 @@ class TwoTermDisj(unittest.TestCase):
             "create this attribute!*", 
             TransformationFactory('gdp.chull').apply_to,
             m)
-       
 
     def test_indicator_vars_still_active(self):
         m = self.makeModel()
@@ -102,7 +98,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIsInstance(m.d[1].indicator_var, Var)
         self.assertTrue(m.d[1].indicator_var.active)
         self.assertTrue(m.d[1].indicator_var.is_binary())
-
 
     def test_disaggregated_vars(self):
         m = self.makeModel()
@@ -131,14 +126,12 @@ class TwoTermDisj(unittest.TestCase):
             self.assertIsNone(y.lb)
             self.assertIsNone(y.ub)
 
-
     def check_furman_et_al_denominator(self, expr, ind_var):
         self.assertEqual(expr._const, EPS)
         self.assertEqual(len(expr._args), 1)
         self.assertEqual(len(expr._coef), 1)
         self.assertEqual(expr._coef[0], 1 - EPS)
         self.assertIs(expr._args[0], ind_var)
-
 
     def test_transformed_constraint_nonlinear(self):
         m = self.makeModel()
@@ -203,7 +196,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(cons.body._coef[2], -14)
         thirdterm = cons.body._args[2]
         self.assertIs(thirdterm, m.d[0].indicator_var)
-        
 
     def test_transformed_constraints_linear(self):
         m = self.makeModel()
@@ -247,7 +239,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(consub.body._coef[1], -3)
         self.assertIs(consub.body._args[1], m.d[1].indicator_var)
 
-
     def check_bound_constraints(self, cons, disvar, indvar, lb, ub):
         self.assertIsInstance(cons, Constraint)
         # both lb and ub
@@ -271,7 +262,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertEqual(varub.body._coef[1], -1*ub)
         self.assertIs(varub.body._args[1], indvar)
 
-
     def test_disaggregatedVar_bounds(self):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
@@ -286,7 +276,6 @@ class TwoTermDisj(unittest.TestCase):
                                          m.d[i].indicator_var, 1, 8)
             self.check_bound_constraints(disjBlock[i].y_bounds, disjBlock[i].y,
                                          m.d[i].indicator_var, 3, 10)
-    
 
     def test_xor_constraint(self):
         m = self.makeModel()
@@ -305,7 +294,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(xorC.body._args[1], m.d[1].indicator_var)
         self.assertEqual(xorC.body._coef[0], 1)
         self.assertEqual(xorC.body._coef[1], 1)
-
         
     def test_error_for_or(self):
         m = self.makeModel()
@@ -318,7 +306,6 @@ class TwoTermDisj(unittest.TestCase):
             TransformationFactory('gdp.chull').apply_to,
             m)
 
-
     def check_disaggregation_constraint(self, cons, var, disvar1, disvar2):
         self.assertEqual(cons.lower, 0)
         self.assertEqual(cons.upper, 0)
@@ -330,7 +317,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(cons.body._args[1], disvar1)
         self.assertEqual(cons.body._coef[2], -1)
         self.assertIs(cons.body._args[2], disvar2)
-
 
     def test_disaggregation_constraint(self):
         m = self.makeModel()
@@ -348,7 +334,6 @@ class TwoTermDisj(unittest.TestCase):
         self.check_disaggregation_constraint(disCons['y'], m.y, disjBlock[0].y,
                                              disjBlock[1].y)
 
-
     def test_original_disjuncts_deactivated(self):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
@@ -359,7 +344,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertFalse(m.d[0].c.active)
         self.assertFalse(m.d[1].c1.active)
         self.assertFalse(m.d[1].c2.active)
-
 
     def test_transformed_disjunct_mappings(self):
         m = self.makeModel()
@@ -390,7 +374,6 @@ class TwoTermDisj(unittest.TestCase):
             self.assertIsInstance(bigmConstraints, ComponentMap)
             relaxedConstraints = disjDict['relaxedConstraints']
             self.assertIsInstance(relaxedConstraints, ComponentMap)
-
 
     def test_transformed_constraint_mappings(self):
         m = self.makeModel()
@@ -426,7 +409,6 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIs(srcConsdict[trans2], orig2)
         self.assertIs(transConsdict[orig2], trans2)
 
-
     def test_disaggregatedVar_mappings(self):
         m = self.makeModel()
         TransformationFactory('gdp.chull').apply_to(m)
@@ -446,7 +428,6 @@ class TwoTermDisj(unittest.TestCase):
             for orig, disagg in mappings.iteritems():
                 self.assertIs(srcVars[disagg], orig)
                 self.assertIs(disVars[orig], disagg)
-
 
     def test_bigMConstraint_mappings(self):
         m = self.makeModel()
@@ -469,11 +450,22 @@ class TwoTermDisj(unittest.TestCase):
                 self.assertIs(srcBigm[cons], var)
                 self.assertIs(bigm[var], cons)
 
-
     def test_do_not_transform_user_deactivated_disjuncts(self):
         # TODO
         pass
 
+    def test_unbounded_var_error(self):
+        m = self.makeModel()
+        # no bounds
+        m.w.setlb(None)
+        m.w.setub(None)
+        self.assertRaisesRegexp(
+            GDP_Error,
+            "Variables that appear in disjuncts must be "
+            "bounded in order to use the chull "
+            "transformation! Missing bound for w.*",
+            TransformationFactory('gdp.chull').apply_to,
+            m)
 
 
 class IndexedDisjunction(unittest.TestCase):
