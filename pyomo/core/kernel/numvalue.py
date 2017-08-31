@@ -603,10 +603,17 @@ functions.""" % (self.name,))
         """
         return generate_expression(_abs,self, None)
 
-    def to_string(self, ostream=None, verbose=None, precedence=0):
+    def to_string(self, ostream=None, verbose=None, precedence=0, labeler=None):
+        """
+        Write the object name to a buffer, applying the labeler if passed one.
+        """
         if ostream is None:
             ostream = sys.stdout
-        ostream.write(self.__str__())
+        if (labeler is not None) and (not self.is_constant()):
+            # Do not label constant objects, direct them to their own __str__
+            ostream.write(labeler(self))
+        else:
+            ostream.write(self.__str__())
 
 class NumericConstant(NumericValue):
     """An object that contains a constant numeric value.

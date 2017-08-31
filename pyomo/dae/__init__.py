@@ -16,5 +16,6 @@ PluginGlobals.add_env("pyomo")
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error, DerivativeVar
 from pyomo.dae.integral import Integral
+from pyomo.dae.simulator import Simulator
 
 PluginGlobals.pop_env()
