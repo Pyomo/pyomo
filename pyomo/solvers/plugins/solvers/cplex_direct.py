@@ -376,7 +376,7 @@ class CPLEXDirect(DirectSolver):
                 self._referenced_variables[var] -= 1
             self._vars_referenced_by_obj = ComponentSet()
             self._labeler.remove_obj(self._objective)
-            self._symbol_map.removeSymbol(self._bjective)
+            self._symbol_map.removeSymbol(self._objective)
             self._objective_label = None
             self._objective = None
 
