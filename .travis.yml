@@ -57,7 +57,7 @@ install:
 # Install supporting packages
 #
 - conda install -q -y --channel conda-forge setuptools
-- if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then
+- if [ "${TRAVIS_PYTHON_VERSION}" == "2.6" ]; then
      pip install --quiet ordereddict;
   fi
 - pip install --quiet coverage
@@ -69,13 +69,29 @@ install:
   fi
 - pip install --quiet xlrd
 - pip install --quiet openpyxl
-#
-- if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
-- if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-     if [ -n "${EXTRAS}" ]; then
-        pip install scipy;
+- pip install --quiet sphinx_rtd_theme
+
+- if ["${TRAVIS_PYTHON_VERSION}" != "2.6" ]; then
+     pip install scipy;
+  fi
+
+# Install GAMS and GAMS Python API
+# But only if EXTRAS is not being installed, since those tests segfault on
+# travis for an unknown reason, despite running fine locally.
+- if [ -z "${EXTRAS}" ]; then
+     bash ./.travis_install_gams.sh;
+     PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
+  fi
+# However, for some reason python 3.4 works fine, so go ahead and install
+- if [ -n "${EXTRAS}" ]; then
+     if [ "${TRAVIS_PYTHON_VERSION}" = "3.4" ]; then
+        bash ./.travis_install_gams.sh;
+        PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
      fi
   fi
+#
+- if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
+
 - conda install -q -y --channel conda-forge glpk
 - glpsol -v
 - conda install -q -y --channel cachemeorg ipopt_bin
@@ -104,6 +120,9 @@ script:
 - SITE_PACKAGES=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
 - echo "import coverage; coverage.process_startup()" > ${SITE_PACKAGES}/run_coverage_at_startup.pth
 - test.pyomo -v --cat=$CATEGORY --cov
+
+# Run documentation tests
+- nosetests -v --with-doctest --doctest-extension=.rst doc/OnlineDocs
 #
 #
 #

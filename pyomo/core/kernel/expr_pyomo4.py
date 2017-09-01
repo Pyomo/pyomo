@@ -496,7 +496,7 @@ class _ExpressionBase(NumericValue):
             "implement _polynomial_degree()" % ( str(self.__class__), ))
 
 
-    def to_string(self, ostream=None, verbose=None, precedence=None):
+    def to_string(self, ostream=None, verbose=None, precedence=None, labeler=None):
         _name_buffer = {}
         if ostream is None:
             ostream = sys.stdout
