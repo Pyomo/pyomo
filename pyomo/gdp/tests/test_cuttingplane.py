@@ -64,4 +64,4 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIsNone(cut.upper)
 
         # test body
-        set_trace()
+        #set_trace()
