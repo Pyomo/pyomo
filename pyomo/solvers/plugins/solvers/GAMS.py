@@ -138,14 +138,13 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         tee=False:
             Output GAMS log to stdout.
-        load_solutions=True:
-            Does not support load_solutions=False.
         keepfiles=False:
             Keep temporary files. Equivalent of DebugLevel.KeepFiles.
             Summary of temp files can be found in _gams_py_gjo0.pf
         tmpdir=None:
             Specify directory path for storing temporary files.
             A directory will be created if one of this name doesn't exist.
+            None (default) uses the system default temporary path.
         io_options:
             Updated with additional keywords passed to solve()
             warmstart=False:
@@ -167,7 +166,7 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 Skip writing constraints whose body section is fixed
             file_determinism=1:
                 How much effort do we want to put into ensuring the
-                LP file is written deterministically for a Pyomo model:
+                GAMS file is written deterministically for a Pyomo model:
                    0 : None
                    1 : sort keys of indexed components (default)
                    2 : sort keys AND sort names (over declaration order)
@@ -593,13 +592,12 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         tee=False:
             Output GAMS log to stdout.
-        load_solutions=True:
-            Does not support load_solutions=False.
         keepfiles=False:
             Keep temporary files.
         tmpdir=None:
             Specify directory path for storing temporary files.
             A directory will be created if one of this name doesn't exist.
+            None (default) uses the system default temporary path.
         io_options:
             Updated with additional keywords passed to solve()
             warmstart=False:
@@ -621,7 +619,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 Skip writing constraints whose body section is fixed
             file_determinism=1:
                 How much effort do we want to put into ensuring the
-                LP file is written deterministically for a Pyomo model:
+                GAMS file is written deterministically for a Pyomo model:
                    0 : None
                    1 : sort keys of indexed components (default)
                    2 : sort keys AND sort names (over declaration order)
