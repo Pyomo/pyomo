@@ -213,6 +213,10 @@ class _GetItemIndexer(object):
         else:
             return False
 
+    def __str__(self):
+        return "%s[%s]" % (
+            self._base.name, ','.join(str(x) for x in self._args) )
+
 def substitute_getitem_with_param(expr, _map):
     """A simple substituter to replace _GetItem nodes with mutable Params.
 
