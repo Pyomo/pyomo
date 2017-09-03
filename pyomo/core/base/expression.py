@@ -27,8 +27,6 @@ from pyomo.core.base.numvalue import (NumericValue,
 
 import pyomo.core.base.expr_common
 from pyomo.core.base import expr as EXPR
-from pyomo.core.base.expr_common import \
-    ensure_independent_trees as safe_mode
 from pyomo.core.base.util import is_functor
 
 from six import iteritems
@@ -167,36 +165,26 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         expr       The expression owned by this data.
     """
 
-    __pickle_slots__ = ('_expr',)
+    __pickle_slots__ = ('_expr', '_owned')
 
     # any derived classes need to declare these as their slots,
     # but ignore them in their __getstate__ implementation
-    __expression_slots__ = __pickle_slots__ + (('_parent_expr',) if safe_mode else ())
+    __expression_slots__ = __pickle_slots__
 
     __slots__ = ()
 
     def __init__(self, expr):
         self._expr = EXPR.compress_expression(as_numeric(expr)) if (expr is not None) else None
-        if safe_mode:
-            self._parent_expr = None
+        self._owned = True
 
     def __getstate__(self):
         state = super(_GeneralExpressionDataImpl, self).__getstate__()
         for i in _GeneralExpressionDataImpl.__expression_slots__:
             state[i] = getattr(self, i)
-        if safe_mode:
-            state['_parent_expr'] = None
-            if self._parent_expr is not None:
-                _parent_expr = self._parent_expr()
-                if _parent_expr is not None:
-                    state['_parent_expr'] = _parent_expr
         return state
 
     def __setstate__(self, state):
         super(_GeneralExpressionDataImpl, self).__setstate__(state)
-        if safe_mode:
-            if self._parent_expr is not None:
-                self._parent_expr = weakref_ref(self._parent_expr)
 
     #
     # Abstract Interface
