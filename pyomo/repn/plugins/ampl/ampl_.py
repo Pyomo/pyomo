@@ -538,11 +538,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if intr_expr_str is not None:
                         OUTPUT.write(intr_expr_str)
                     else:
-                        logger.error("Unsupported unary function ({0})",
-                                     exp.name)
+                        logger.error("Unsupported unary function ({0})", exp.name)
                         raise TypeError("ASL writer does not support '%s' expressions"
                                         % (exp.name))
-                    self._print_nonlinear_terms_NL(child_exp._args[0])
+                    self._print_nonlinear_terms_NL(exp._args[0])
 
                 elif exp_type is expr.Expr_if:
                     OUTPUT.write(self._op_string[expr.Expr_if])
