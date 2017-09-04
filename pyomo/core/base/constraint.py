@@ -389,12 +389,6 @@ class _GeneralConstraintData(_ConstraintData):
             self._equality = False
             return
 
-        #
-        # We do some manipulation of the expression, so we disable
-        # detangling logic.
-        #
-        EXPR.detangle_default(False)
-
         _expr_type = expr.__class__
         if _expr_type is tuple: # or expr_type is list:
             #
@@ -416,12 +410,10 @@ class _GeneralConstraintData(_ConstraintData):
                     self._lower = self._upper = arg0
                     self._body = arg1
                 else:
-                    with EXPR.bypass_clone_check():
+                    with EXPR.ignore_entangled_expressions():
                         self._lower = self._upper = ZeroConstant
                         self._body = arg0
                         self._body -= arg1
-                    #self._body = EXPR.generate_expression_bypassCloneCheck(
-                    #    _sub, arg0, arg1)
             #
             # Form inequality expression
             #
@@ -524,12 +516,10 @@ class _GeneralConstraintData(_ConstraintData):
                     self._lower = self._upper = _args[0]
                     self._body = _args[1]
                 else:
-                    with EXPR.bypass_clone_check():
+                    with EXPR.ignore_entangled_expressions():
                         self._lower = self._upper = ZeroConstant
                         self._body = _args[0]
                         self._body -= _args[1]
-                    #self._body = EXPR.generate_expression_bypassCloneCheck(
-                    #    _sub, _args[0], _args[1] )
             else:
                 # Inequality expression: 2 or 3 arguments
                 if expr._strict:
@@ -593,13 +583,11 @@ class _GeneralConstraintData(_ConstraintData):
                         self._body  = _args[1]
                         self._upper = None
                     else:
-                        with EXPR.bypass_clone_check():
+                        with EXPR.ignore_entangled_expressions():
                             self._lower = None
                             self._body = _args[0]
                             self._body -= _args[1]
                             self._upper = ZeroConstant
-                        #self._body  = EXPR.generate_expression_bypassCloneCheck(
-                        #    _sub, _args[0], _args[1])
 
         #
         # Replace numeric bound values with a NumericConstant object,
@@ -649,8 +637,6 @@ class _GeneralConstraintData(_ConstraintData):
         # Compress the body expression
         #
         self._body = EXPR.compress_expression(self._body)
-
-        EXPR.detangle_default(False)
 
 
     def get_value(self):

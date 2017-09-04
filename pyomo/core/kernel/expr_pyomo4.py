@@ -254,6 +254,9 @@ class bypass_clone_check(object):
               _generate_expression__noCloneCheck
         bypass_clone_check.currently_bypassing = False
 
+ignore_entangled_expressions = bypass_clone_check
+
+
 class _ExpressionBase(NumericValue):
     """An object that defines a mathematical expression that can be evaluated"""
 

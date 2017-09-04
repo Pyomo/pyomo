@@ -962,6 +962,7 @@ class bypass_clone_check(object):
               _generate_expression__noCloneCheck
         bypass_clone_check.currently_bypassing = False
 
+ignore_entangled_expressions = bypass_clone_check
 
 
 _old_relational_strings = {

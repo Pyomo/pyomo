@@ -34,7 +34,6 @@ _common_module_members = [
     'generate_expression',
     'generate_intrinsic_function_expression',
     'generate_relational_expression',
-    'bypass_clone_check',
     'chainedInequalityErrorMessage',
     '_ExpressionBase',
     '_EqualityExpression',
@@ -49,9 +48,11 @@ _common_module_members = [
 ]
 _coopr3_module_members = [
     '_IntrinsicFunctionExpression',
+    'ignore_entangled_expressions',
     'sum',
 ]
 _pyomo4_module_members = [
+    'ignore_entangled_expressions',
     '_LinearExpression',
     '_DivisionExpression',
     '_NegationExpression',
@@ -60,6 +61,7 @@ _pyomo4_module_members = [
     'sum',
 ]
 _pyomo5_module_members = [
+    'ignore_entangled_expressions',
     'evaluate_expression',
     '_ReciprocalExpression',
     '_NegationExpression',
@@ -86,7 +88,6 @@ _pyomo5_module_members = [
     '_Constant_SumExpression',
     '_Constant_UnaryFunctionExpression',
     '_Constant_AbsExpression',
-    'detangle_default',
 ]
 
 def set_expression_tree_format(mode):

@@ -295,103 +295,260 @@ to a solver and then be deleted.
 
 """
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, compress=False, quadratic=True):
-    #
-    # Disable implicit cloning while creating a standard representation.
-    # We allow the representation to be entangled with the original expression.
-    #
-    from pyomo.core.kernel.expr_pyomo5 import detangle_default
-    detangle_default(False)
-    #
-    # Setup
-    #
-    if idMap is None:
-        idMap = {}
-    idMap.setdefault(None, {})
-    repn = StandardRepn()
-    #
-    # Eliminate top-level negations
-    #
-    _multiplier = 1
-    while expr.__class__ == EXPR._NegationExpression:
+    with EXPR.ignore_entangled_expressions():
         #
-        # Replace a negation sub-expression
+        # Disable implicit cloning while creating a standard representation.
+        # We allow the representation to be entangled with the original expression.
         #
-        _multiplier *= -1
-        expr = expr._args[0]
-    #
-    # The expression is a number or a non-variable constant
-    # expression.
-    #
-    if type(expr) in native_numeric_types or not expr._potentially_variable():
-        if compute_values:
-            repn._constant = _multiplier*value(expr)
-        else:
-            repn._constant = _multiplier*expr
-        if compress:
-            repn._compress()
-        ensure_independent_trees = False
-        detangle_default(True)
-        return repn
-    #
-    # The expression is a variable
-    #
-    if isinstance(expr, (_VarData, IVariable)):
-        if expr.fixed:
+        #
+        # Setup
+        #
+        if idMap is None:
+            idMap = {}
+        idMap.setdefault(None, {})
+        repn = StandardRepn()
+        #
+        # Eliminate top-level negations
+        #
+        _multiplier = 1
+        while expr.__class__ == EXPR._NegationExpression:
+            #
+            # Replace a negation sub-expression
+            #
+            _multiplier *= -1
+            expr = expr._args[0]
+        #
+        # The expression is a number or a non-variable constant
+        # expression.
+        #
+        if type(expr) in native_numeric_types or not expr._potentially_variable():
             if compute_values:
                 repn._constant = _multiplier*value(expr)
             else:
                 repn._constant = _multiplier*expr
             if compress:
                 repn._compress()
-            detangle_default(True)
             return repn
-        var_ID = id(expr)
-        repn._linear_terms_coef[var_ID] = _multiplier
-        repn._linear_vars[var_ID] = expr
-        if compress:
-            repn._compress()
-        detangle_default(True)
-        return repn
-
-    #
-    # Unknown expression object
-    #
-    if not expr.is_expression():
-        raise ValueError("Unexpected expression type: "+str(expr))
-
-    ##
-    ## Recurse through the expression tree, collecting variables and linear terms, etc
-    ##
-    #
-    # The stack starts with the current expression
-    #
-    _stack = [ (expr, expr._args, 0, len(expr._args), False, [])]
-    #
-    # Iterate until the stack is empty
-    #
-    # Note: 1 is faster than True for Python 2.x
-    #
-    while 1:
         #
-        # Get the top of the stack
-        #   _obj        Current expression object
-        #   _argList    The arguments for this expression objet
-        #   _idx        The current argument being considered
-        #   _len        The number of arguments
+        # The expression is a variable
         #
-        # Note: expressions pushed onto the stack are guaranteed to 
-        # be potentially variable.
-        #
-        _obj, _argList, _idx, _len, _compute_value, _result = _stack.pop()
-        if verbose: #pragma:nocover
-            print("*"*10 + " POP  " + "*"*10)
+        if isinstance(expr, (_VarData, IVariable)):
+            if expr.fixed:
+                if compute_values:
+                    repn._constant = _multiplier*value(expr)
+                else:
+                    repn._constant = _multiplier*expr
+                if compress:
+                    repn._compress()
+                return repn
+            var_ID = id(expr)
+            repn._linear_terms_coef[var_ID] = _multiplier
+            repn._linear_vars[var_ID] = expr
+            if compress:
+                repn._compress()
+            return repn
 
         #
-        # Iterate through the arguments
+        # Unknown expression object
         #
-        while _idx < _len:
+        if not expr.is_expression():
+            raise ValueError("Unexpected expression type: "+str(expr))
+
+        ##
+        ## Recurse through the expression tree, collecting variables and linear terms, etc
+        ##
+        #
+        # The stack starts with the current expression
+        #
+        _stack = [ (expr, expr._args, 0, len(expr._args), False, [])]
+        #
+        # Iterate until the stack is empty
+        #
+        # Note: 1 is faster than True for Python 2.x
+        #
+        while 1:
+            #
+            # Get the top of the stack
+            #   _obj        Current expression object
+            #   _argList    The arguments for this expression objet
+            #   _idx        The current argument being considered
+            #   _len        The number of arguments
+            #
+            # Note: expressions pushed onto the stack are guaranteed to 
+            # be potentially variable.
+            #
+            _obj, _argList, _idx, _len, _compute_value, _result = _stack.pop()
             if verbose: #pragma:nocover
-                print("-"*30)
+                print("*"*10 + " POP  " + "*"*10)
+
+            #
+            # Iterate through the arguments
+            #
+            while _idx < _len:
+                if verbose: #pragma:nocover
+                    print("-"*30)
+                    print(type(_obj))
+                    print(_obj)
+                    print(_argList)
+                    print(_idx)
+                    print(_len)
+                    print(_compute_value)
+                    print(_result)
+
+                ##
+                ## Process context based on _obj type
+                ##
+
+                # No special processing for *Sum* objects
+
+                # No special processing for _ProductExpression
+
+                if _obj.__class__ == EXPR._PowExpression:
+                    if _idx == 0:
+                        #
+                        # Evaluate the RHS (_args[1]) first, and compute its value
+                        #
+                        _argList = (_argList[1], _argList[0])
+                        _compute_value = True
+                    elif _idx == 1:
+                        _compute_value = False
+                        if -999 in _result[0]:
+                            #
+                            # If the RHS (_args[1]) is variable, then
+                            # treat the entire subexpression as a nonlinear expression
+                            #
+                            _result = [{None:_obj}]
+                            break
+                        else:
+                            val = _result[0][0]
+                            if val == 0:
+                                #
+                                # If the exponent is zero, then the value of this expression is 1
+                                #
+                                _result = [{0:1}]
+                                break
+                            elif val == 1:
+                                #
+                                # If the exponent is one, then simply return 
+                                # the value of the LHS (_args[0])
+                                #
+                                _result = []
+                            elif val == 2 and quadratic:
+                                #
+                                # If the exponent is two, then set the value of the exponent and continue
+                                # processing the value of the LHS (_args[0])
+                                #
+                                _result = [{0:2}]
+                            else:
+                                #
+                                # Otherwise, we treat this as a nonlinear expression
+                                #
+                                _result = [{None:_obj}]
+                                break
+
+                elif _obj.__class__ == EXPR.Expr_if:
+                    if _idx == 0:
+                        #
+                        # Compute the value of the condition argument
+                        #
+                        _compute_value = True
+                    elif _idx == 1:
+                        _compute_value = False
+                        if -999 in _result[0]:
+                            #
+                            # If the condition argument is variable, then
+                            # treat the entire subexpression as a nonlinear expression
+                            #
+                            _result = [{None:_obj}]
+                            break
+                        else:
+                            val = _result[0][0]
+                            _idx = 0
+                            _len = 1
+                            _result = []
+                            if val:
+                                _argList = [_argList[1]]
+                            else:
+                                _argList = [_argList[2]]
+                
+                if -999 in _result:
+                    break
+
+                ##
+                ## Process the next current _obj object
+                ##
+
+                _sub = _argList[_idx]
+                _idx += 1
+
+                if _sub.__class__ in native_numeric_types:
+                    #
+                    # Store a native object
+                    #
+                    _result.append( {0:_sub} )
+
+                elif _compute_value:
+                    try:
+                        # TODO: disable ERROR logging message
+                        _result.append( {0:EXPR.evaluate_expression(_sub, only_fixed_vars=True)} )
+                    except Exception as e:
+                        _result = [{-999: "Error evaluating expression: %s" % str(e)}] 
+
+                elif not _sub._potentially_variable():
+                    #
+                    # Store a non-variable expression
+                    #
+                    if compute_values:
+                        _result.append( {0:value(_sub)} )
+                    else:
+                        _result.append( {0:_sub} )
+
+                elif (_sub.__class__ is _GeneralVarData) or isinstance(_sub, (_VarData, IVariable)):
+                    #
+                    # Process a single variable
+                    #
+                    if not _sub.fixed:
+                        #
+                        # Store a variable 
+                        #
+                        id_ = id(_sub)
+                        if id_ in idMap[None]:
+                            key = idMap[None][id_]
+                        else:
+                            key = len(idMap) - 1
+                            idMap[None][id_] = key
+                            idMap[key] = _sub
+
+                        _result.append( {1:{key:1}} )
+                    else:
+                        if compute_values:
+                            _result.append( {0:value(_sub)} )
+                        else:
+                            _result.append( {0:_sub} )
+
+                else:
+                    assert(_sub.is_expression())
+                    #
+                    # Push an expression onto the stack
+                    #
+                    if verbose: #pragma:nocover
+                        print("*"*10 + " PUSH " + "*"*10)
+
+                    _stack.append( (_obj, _argList, _idx, _len, _compute_value, _result) )
+
+                    _obj     = _sub
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = len(_argList)
+                    _result  = []
+
+
+
+            #
+            # POST-DIVE
+            #
+            if verbose: #pragma:nocover
+                print("="*30)
                 print(type(_obj))
                 print(_obj)
                 print(_argList)
@@ -399,444 +556,281 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 print(_len)
                 print(_compute_value)
                 print(_result)
+                print("STACK LEN %d" % len(_stack))
 
-            ##
-            ## Process context based on _obj type
-            ##
+            if -999 in _result[-1]:
+                #
+                # "return" the recursion by putting the return value on the end of the results stack
+                #
+                if _stack:
+                    _stack[-1][-1].append( {-999:_result[-1][-999]} )
+                    continue
+                else:
+                    break
 
-            # No special processing for *Sum* objects
-
-            # No special processing for _ProductExpression
-
-            if _obj.__class__ == EXPR._PowExpression:
-                if _idx == 0:
-                    #
-                    # Evaluate the RHS (_args[1]) first, and compute its value
-                    #
-                    _argList = (_argList[1], _argList[0])
-                    _compute_value = True
-                elif _idx == 1:
-                    _compute_value = False
-                    if -999 in _result[0]:
-                        #
-                        # If the RHS (_args[1]) is variable, then
-                        # treat the entire subexpression as a nonlinear expression
-                        #
-                        _result = [{None:_obj}]
-                        break
-                    else:
-                        val = _result[0][0]
-                        if val == 0:
-                            #
-                            # If the exponent is zero, then the value of this expression is 1
-                            #
-                            _result = [{0:1}]
-                            break
-                        elif val == 1:
-                            #
-                            # If the exponent is one, then simply return 
-                            # the value of the LHS (_args[0])
-                            #
-                            _result = []
-                        elif val == 2 and quadratic:
-                            #
-                            # If the exponent is two, then set the value of the exponent and continue
-                            # processing the value of the LHS (_args[0])
-                            #
-                            _result = [{0:2}]
+            if _obj.__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR._StaticMultiSumExpression):
+                ans = {}
+                for res in _result:
+                    # Add nonlinear terms
+                    if None in res:
+                        if None in ans:
+                            ans[None] += res[None]
                         else:
-                            #
-                            # Otherwise, we treat this as a nonlinear expression
-                            #
-                            _result = [{None:_obj}]
-                            break
+                            ans[None] = res[None]
+                    # Add constant terms
+                    if 0 in res:
+                        if 0 in ans:
+                            ans[0] += res[0]
+                        else:
+                            ans[0] = res[0]
+                    # Add linear terms
+                    if 1 in res:
+                        if not 1 in ans:
+                            ans[1] = {}
+                        for key in res[1]:
+                            if key in ans[1]:
+                                coef = ans[1][key] + res[1][key]
+                                if not (coef.__class__ in native_numeric_types and math.isclose(coef, 0.0)):     # coef != 0.0
+                                    ans[1][key] = coef
+                                else:
+                                    del ans[1][key]
+                            else:
+                                ans[1][key] = res[1][key]           # We shouldn't need to check if this is zero
+                    # Add quadratic terms
+                    if quadratic and 2 in res:
+                        if not 2 in ans:
+                            ans[2] = {}
+                        for key in res[2]:
+                            if key in ans[2]:
+                                coef = ans[2][key] + res[2][key]
+                                if not (coef.__class__ in native_numeric_types and math.isclose(coef, 0.0)):     # coef != 0.0
+                                    ans[2][key] = coef
+                                else:
+                                    del ans[2][key]
+                            else:
+                                ans[2][key] = res[2][key]           # We shouldn't need to check if this is zero
+
+            elif _obj.__class__ == EXPR._ProductExpression or (_obj.__class__ == EXPR._PowExpression and len(_result) == 2):
+                #
+                # The POW expression is a special case.  This the length==2 indicates that this is a quadratic.
+                #
+                if _obj.__class__ == EXPR._PowExpression:
+                    _tmp, _l = _result
+                    _r = _l
+                else:
+                    _l, _r = _result
+                #print("_l")
+                #print(_l)
+                #print("_r")
+                #print(_r)
+                ans = {}
+                #
+                # Compute the product
+                #
+                # l\r   None    0       1       2
+                # None  None    None    None    None
+                # 0     None    0       1       2
+                # 1     None    1       2       None
+                # 2     None    2       None    None
+                #
+
+                #
+                # GENERATING A NONLINEAR TERM
+                #
+                # Products that include a nonlinear term
+                nonl = 0
+                if None in _l:
+                    rhs = 0
+                    if None in _r:
+                        rhs += _r[None]
+                    if 0 in _r and \
+                       not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
+                        rhs += _r[0]
+                    if 1 in _r:
+                        rhs += Sum(_r[1][key]*idMap[key] for key in _r[1])
+                    if 2 in _r:
+                        rhs += Sum(_r[2][key]*idMap[key[0]]*idMap[key[1]] for key in _r[2])
+                    nonl += _l[None]*rhs
+                if None in _r:
+                    lhs = 0
+                    if 0 in _l and \
+                       not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):        # _l[0] != 0.0
+                        lhs += _l[0]
+                    if 1 in _l:
+                        lhs += Sum(_l[1][key]*idMap[key] for key in _l[1])
+                    if 2 in _l:
+                        lhs += Sum(_l[2][key]*idMap[key[0]]*idMap[key[1]] for key in _l[2])
+                    nonl += lhs*_r[None]
+                if quadratic:
+                    # Products that generate term with degree > 2
+                    if 2 in _l:
+                        if 1 in _r:
+                            for lkey in _l[2]:
+                                v1_, v2_ = lkey
+                                for rkey in _r[1]:
+                                    nonl += _l[2][lkey]*_r[1][rkey]*idMap[v1_]*idMap[v2_]*idMap[rkey]
+                        if 2 in _r:
+                            for lkey in _l[2]:
+                                lv1_, lv2_ = lkey
+                                for rkey in _r[2]:
+                                    rv1_, rv2_ = rkey
+                                    nonl += _l[2][lkey]*_r[2][rkey]*idMap[lv1_]*idMap[lv2_]*idMap[rv1_]*idMap[rv2_]
+                    if 1 in _l and 2 in _r:
+                            for lkey in _l[1]:
+                                for rkey in _r[2]:
+                                    v1_, v2_ = rkey
+                                    nonl += _l[1][lkey]*_r[2][rkey]*idMap[lkey]*idMap[v1_]*idMap[v2_]
+                else:
+                    # Products that generate term with degree = 2
+                    if 1 in _l and 1 in _r:
+                        # TODO: Consider creating Multsum objects here with the Sum() function
+                        nonl += Sum(_l[1][i]*idMap[i] for i in _l[1]) * Sum(_r[1][i]*idMap[i] for i in _r[1])
+                if not nonl is 0:
+                    ans[None] = nonl
+
+                #
+                # GENERATING A CONSTANT TERM
+                #
+                if 0 in _l and 0 in _r:
+                    ans[0] = _l[0]*_r[0]
+
+                #
+                # GENERATING LINEAR TERMS
+                #
+                if (0 in _l and 1 in _r) or (1 in _l and 0 in _r):
+                    ans[1] = {}
+                if 0 in _l and 1 in _r and \
+                   not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):    # _l[0] != 0.0
+                    for key in _r[1]:
+                        ans[1][key] = _l[0]*_r[1][key]
+                if 1 in _l and 0 in _r and \
+                   not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
+                    for key in _l[1]:
+                        if key in ans[1]:
+                            ans[1][key] += _l[1][key]*_r[0]
+                        else:
+                            ans[1][key] = _l[1][key]*_r[0]
+
+                #
+                # GENERATING QUADRATIC TERMS
+                #
+                if quadratic:
+                    if (0 in _l and 2 in _r) or (2 in _l and 0 in _r) or (1 in _l and 1 in _r):
+                        ans[2] = {}
+                    if 0 in _l and 2 in _r and \
+                       not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):
+                        for key in _r[2]:
+                            ans[2][key] = _l[0]*_r[2][key]
+                    if 2 in _l and 0 in _r and \
+                       not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):
+                        for key in _l[2]:
+                            if key in ans[2]:
+                                ans[2][key] += _l[2][key]*_r[0]
+                            else:
+                                ans[2][key] = _l[2][key]*_r[0]
+                    if 1 in _l and 1 in _r:
+                        for lkey in _l[1]:
+                            for rkey in _r[1]:
+                                if id(idMap[lkey]) <= id(idMap[rkey]):
+                                    key_ = (lkey,rkey)
+                                else:
+                                    key_ = (rkey,lkey)
+                                if key_ in ans[2]:
+                                    ans[2][key_] += _l[1][lkey]*_r[1][rkey]
+                                else:
+                                    ans[2][key_] = _l[1][lkey]*_r[1][rkey]
+
+            elif _obj.__class__ == EXPR._NegationExpression:
+                ans = _result[0]
+                if None in ans:
+                    ans[None] *= -1
+                if 0 in ans:
+                    ans[0] *= -1
+                if 1 in ans:
+                    for i in ans[1]:
+                        ans[1][i] *= -1
+                if 2 in ans:
+                    for i in ans[2]:
+                        ans[2][i] *= -1
+
+            elif _obj.__class__ == EXPR._ReciprocalExpression:
+                if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
+                    ans = {None:_obj}
+                else:
+                    ans = {0:1/_result[0][0]}
+
+            elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
+                if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
+                    ans = {None:_obj}
+                else:
+                    ans = {0:_obj(_result[0][0])}
 
             elif _obj.__class__ == EXPR.Expr_if:
-                if _idx == 0:
-                    #
-                    # Compute the value of the condition argument
-                    #
-                    _compute_value = True
-                elif _idx == 1:
-                    _compute_value = False
-                    if -999 in _result[0]:
-                        #
-                        # If the condition argument is variable, then
-                        # treat the entire subexpression as a nonlinear expression
-                        #
-                        _result = [{None:_obj}]
-                        break
-                    else:
-                        val = _result[0][0]
-                        _idx = 0
-                        _len = 1
-                        _result = []
-                        if val:
-                            _argList = [_argList[1]]
-                        else:
-                            _argList = [_argList[2]]
-            
-            if -999 in _result:
-                break
+                ans = _result[0]
 
-            ##
-            ## Process the next current _obj object
-            ##
-
-            _sub = _argList[_idx]
-            _idx += 1
-
-            if _sub.__class__ in native_numeric_types:
-                #
-                # Store a native object
-                #
-                _result.append( {0:_sub} )
-
-            elif _compute_value:
+            else:
                 try:
-                    # TODO: disable ERROR logging message
-                    _result.append( {0:EXPR.evaluate_expression(_sub, only_fixed_vars=True)} )
+                    assert(len(_result) == 1)
                 except Exception as e:
-                    _result = [{-999: "Error evaluating expression: %s" % str(e)}] 
+                    print("ERROR: "+str(type(_obj)))
+                    raise
+                ans = _result[0]
 
-            elif not _sub._potentially_variable():
-                #
-                # Store a non-variable expression
-                #
-                if compute_values:
-                    _result.append( {0:value(_sub)} )
-                else:
-                    _result.append( {0:_sub} )
+            #print("ans")
+            #print(ans)
+            if verbose: #pragma:nocover
+                print("*"*10 + " RETURN  " + "*"*10)
+                print("."*30)
+                print(type(_obj))
+                print(_obj)
+                print(_argList)
+                print(_idx)
+                print(_len)
+                print(_compute_value)
+                print(_result)
+                print("STACK LEN %d" % len(_stack))
 
-            elif (_sub.__class__ is _GeneralVarData) or isinstance(_sub, (_VarData, IVariable)):
-                #
-                # Process a single variable
-                #
-                if not _sub.fixed:
-                    #
-                    # Store a variable 
-                    #
-                    id_ = id(_sub)
-                    if id_ in idMap[None]:
-                        key = idMap[None][id_]
-                    else:
-                        key = len(idMap) - 1
-                        idMap[None][id_] = key
-                        idMap[key] = _sub
-
-                    _result.append( {1:{key:1}} )
-                else:
-                    if compute_values:
-                        _result.append( {0:value(_sub)} )
-                    else:
-                        _result.append( {0:_sub} )
-
-            else:
-                assert(_sub.is_expression())
-                #
-                # Push an expression onto the stack
-                #
-                if verbose: #pragma:nocover
-                    print("*"*10 + " PUSH " + "*"*10)
-
-                _stack.append( (_obj, _argList, _idx, _len, _compute_value, _result) )
-
-                _obj     = _sub
-                _argList = _sub._args
-                _idx     = 0
-                _len     = len(_argList)
-                _result  = []
-
-
-
-        #
-        # POST-DIVE
-        #
-        if verbose: #pragma:nocover
-            print("="*30)
-            print(type(_obj))
-            print(_obj)
-            print(_argList)
-            print(_idx)
-            print(_len)
-            print(_compute_value)
-            print(_result)
-            print("STACK LEN %d" % len(_stack))
-
-        if -999 in _result[-1]:
-            #
-            # "return" the recursion by putting the return value on the end of the results stack
-            #
             if _stack:
-                _stack[-1][-1].append( {-999:_result[-1][-999]} )
-                continue
+                #
+                # "return" the recursion by putting the return value on the end of the results stack
+                #
+                _stack[-1][-1].append( ans )
             else:
                 break
 
-        if _obj.__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR._StaticMultiSumExpression):
-            ans = {}
-            for res in _result:
-                # Add nonlinear terms
-                if None in res:
-                    if None in ans:
-                        ans[None] += res[None]
-                    else:
-                        ans[None] = res[None]
-                # Add constant terms
-                if 0 in res:
-                    if 0 in ans:
-                        ans[0] += res[0]
-                    else:
-                        ans[0] = res[0]
-                # Add linear terms
-                if 1 in res:
-                    if not 1 in ans:
-                        ans[1] = {}
-                    for key in res[1]:
-                        if key in ans[1]:
-                            coef = ans[1][key] + res[1][key]
-                            if not (coef.__class__ in native_numeric_types and math.isclose(coef, 0.0)):     # coef != 0.0
-                                ans[1][key] = coef
-                            else:
-                                del ans[1][key]
-                        else:
-                            ans[1][key] = res[1][key]           # We shouldn't need to check if this is zero
-                # Add quadratic terms
-                if quadratic and 2 in res:
-                    if not 2 in ans:
-                        ans[2] = {}
-                    for key in res[2]:
-                        if key in ans[2]:
-                            coef = ans[2][key] + res[2][key]
-                            if not (coef.__class__ in native_numeric_types and math.isclose(coef, 0.0)):     # coef != 0.0
-                                ans[2][key] = coef
-                            else:
-                                del ans[2][key]
-                        else:
-                            ans[2][key] = res[2][key]           # We shouldn't need to check if this is zero
+        #
+        # Create the final object here from 'ans'
+        #
+        repn._constant = _multiplier*ans.get(0,0)
+        if 1 in ans:
+            for i in ans[1]:
+                repn._linear_vars[i] = idMap[i]
+                repn._linear_terms_coef[i] = _multiplier*ans[1][i]
+        if 2 in ans:
+            for i in ans[2]:
+                v1_, v2_ = i
+                repn._quadratic_vars[i] = (idMap[v1_],idMap[v2_])
+                repn._quadratic_terms_coef[i] = _multiplier*ans[2][i]
+        repn._nonlinear_expr = ans.get(None,None)
+        if not repn._nonlinear_expr is None:
+            repn._nonlinear_expr *= _multiplier
+        repn._nonlinear_vars = {}
+        if not repn._nonlinear_expr is None:
+            for v_ in EXPR.identify_variables(repn._nonlinear_expr, include_fixed=False, include_potentially_variable=False):
+                repn._nonlinear_vars[id(v_)] = v_
+                #
+                # Update idMap in case we skipped nonlinear sub-expressions
+                #
+                # Q: Should we skip nonlinear sub-expressions?
+                #
+                id_ = id(v_)
+                if not id_ in idMap[None]:
+                    key = len(idMap) - 1
+                    idMap[None][id_] = key
+                    idMap[key] = v_
 
-        elif _obj.__class__ == EXPR._ProductExpression or (_obj.__class__ == EXPR._PowExpression and len(_result) == 2):
-            #
-            # The POW expression is a special case.  This the length==2 indicates that this is a quadratic.
-            #
-            if _obj.__class__ == EXPR._PowExpression:
-                _tmp, _l = _result
-                _r = _l
-            else:
-                _l, _r = _result
-            #print("_l")
-            #print(_l)
-            #print("_r")
-            #print(_r)
-            ans = {}
-            #
-            # Compute the product
-            #
-            # l\r   None    0       1       2
-            # None  None    None    None    None
-            # 0     None    0       1       2
-            # 1     None    1       2       None
-            # 2     None    2       None    None
-            #
-
-            #
-            # GENERATING A NONLINEAR TERM
-            #
-            # Products that include a nonlinear term
-            nonl = 0
-            if None in _l:
-                rhs = 0
-                if None in _r:
-                    rhs += _r[None]
-                if 0 in _r and \
-                   not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
-                    rhs += _r[0]
-                if 1 in _r:
-                    rhs += Sum(_r[1][key]*idMap[key] for key in _r[1])
-                if 2 in _r:
-                    rhs += Sum(_r[2][key]*idMap[key[0]]*idMap[key[1]] for key in _r[2])
-                nonl += _l[None]*rhs
-            if None in _r:
-                lhs = 0
-                if 0 in _l and \
-                   not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):        # _l[0] != 0.0
-                    lhs += _l[0]
-                if 1 in _l:
-                    lhs += Sum(_l[1][key]*idMap[key] for key in _l[1])
-                if 2 in _l:
-                    lhs += Sum(_l[2][key]*idMap[key[0]]*idMap[key[1]] for key in _l[2])
-                nonl += lhs*_r[None]
-            if quadratic:
-                # Products that generate term with degree > 2
-                if 2 in _l:
-                    if 1 in _r:
-                        for lkey in _l[2]:
-                            v1_, v2_ = lkey
-                            for rkey in _r[1]:
-                                nonl += _l[2][lkey]*_r[1][rkey]*idMap[v1_]*idMap[v2_]*idMap[rkey]
-                    if 2 in _r:
-                        for lkey in _l[2]:
-                            lv1_, lv2_ = lkey
-                            for rkey in _r[2]:
-                                rv1_, rv2_ = rkey
-                                nonl += _l[2][lkey]*_r[2][rkey]*idMap[lv1_]*idMap[lv2_]*idMap[rv1_]*idMap[rv2_]
-                if 1 in _l and 2 in _r:
-                        for lkey in _l[1]:
-                            for rkey in _r[2]:
-                                v1_, v2_ = rkey
-                                nonl += _l[1][lkey]*_r[2][rkey]*idMap[lkey]*idMap[v1_]*idMap[v2_]
-            else:
-                # Products that generate term with degree = 2
-                if 1 in _l and 1 in _r:
-                    # TODO: Consider creating Multsum objects here with the Sum() function
-                    nonl += Sum(_l[1][i]*idMap[i] for i in _l[1]) * Sum(_r[1][i]*idMap[i] for i in _r[1])
-            if not nonl is 0:
-                ans[None] = nonl
-
-            #
-            # GENERATING A CONSTANT TERM
-            #
-            if 0 in _l and 0 in _r:
-                ans[0] = _l[0]*_r[0]
-
-            #
-            # GENERATING LINEAR TERMS
-            #
-            if (0 in _l and 1 in _r) or (1 in _l and 0 in _r):
-                ans[1] = {}
-            if 0 in _l and 1 in _r and \
-               not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):    # _l[0] != 0.0
-                for key in _r[1]:
-                    ans[1][key] = _l[0]*_r[1][key]
-            if 1 in _l and 0 in _r and \
-               not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
-                for key in _l[1]:
-                    if key in ans[1]:
-                        ans[1][key] += _l[1][key]*_r[0]
-                    else:
-                        ans[1][key] = _l[1][key]*_r[0]
-
-            #
-            # GENERATING QUADRATIC TERMS
-            #
-            if quadratic:
-                if (0 in _l and 2 in _r) or (2 in _l and 0 in _r) or (1 in _l and 1 in _r):
-                    ans[2] = {}
-                if 0 in _l and 2 in _r and \
-                   not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):
-                    for key in _r[2]:
-                        ans[2][key] = _l[0]*_r[2][key]
-                if 2 in _l and 0 in _r and \
-                   not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):
-                    for key in _l[2]:
-                        if key in ans[2]:
-                            ans[2][key] += _l[2][key]*_r[0]
-                        else:
-                            ans[2][key] = _l[2][key]*_r[0]
-                if 1 in _l and 1 in _r:
-                    for lkey in _l[1]:
-                        for rkey in _r[1]:
-                            if id(idMap[lkey]) <= id(idMap[rkey]):
-                                key_ = (lkey,rkey)
-                            else:
-                                key_ = (rkey,lkey)
-                            if key_ in ans[2]:
-                                ans[2][key_] += _l[1][lkey]*_r[1][rkey]
-                            else:
-                                ans[2][key_] = _l[1][lkey]*_r[1][rkey]
-
-        elif _obj.__class__ == EXPR._NegationExpression:
-            ans = _result[0]
-            if None in ans:
-                ans[None] *= -1
-            if 0 in ans:
-                ans[0] *= -1
-            if 1 in ans:
-                for i in ans[1]:
-                    ans[1][i] *= -1
-            if 2 in ans:
-                for i in ans[2]:
-                    ans[2][i] *= -1
-
-        elif _obj.__class__ == EXPR._ReciprocalExpression:
-            if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
-                ans = {None:_obj}
-            else:
-                ans = {0:1/_result[0][0]}
-
-        elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
-            if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
-                ans = {None:_obj}
-            else:
-                ans = {0:_obj(_result[0][0])}
-
-        elif _obj.__class__ == EXPR.Expr_if:
-            ans = _result[0]
-
-        else:
-            try:
-                assert(len(_result) == 1)
-            except Exception as e:
-                print("ERROR: "+str(type(_obj)))
-                raise
-            ans = _result[0]
-
-        #print("ans")
-        #print(ans)
-        if verbose: #pragma:nocover
-            print("*"*10 + " RETURN  " + "*"*10)
-            print("."*30)
-            print(type(_obj))
-            print(_obj)
-            print(_argList)
-            print(_idx)
-            print(_len)
-            print(_compute_value)
-            print(_result)
-            print("STACK LEN %d" % len(_stack))
-
-        if _stack:
-            #
-            # "return" the recursion by putting the return value on the end of the results stack
-            #
-            _stack[-1][-1].append( ans )
-        else:
-            break
-
-    #
-    # Create the final object here from 'ans'
-    #
-    repn._constant = _multiplier*ans.get(0,0)
-    if 1 in ans:
-        for i in ans[1]:
-            repn._linear_vars[i] = idMap[i]
-            repn._linear_terms_coef[i] = _multiplier*ans[1][i]
-    if 2 in ans:
-        for i in ans[2]:
-            v1_, v2_ = i
-            repn._quadratic_vars[i] = (idMap[v1_],idMap[v2_])
-            repn._quadratic_terms_coef[i] = _multiplier*ans[2][i]
-    repn._nonlinear_expr = ans.get(None,None)
-    if not repn._nonlinear_expr is None:
-        repn._nonlinear_expr *= _multiplier
-    repn._nonlinear_vars = {}
-    if not repn._nonlinear_expr is None:
-        for v_ in EXPR.identify_variables(repn._nonlinear_expr, include_fixed=False, include_potentially_variable=False):
-            repn._nonlinear_vars[id(v_)] = v_
-            #
-            # Update idMap in case we skipped nonlinear sub-expressions
-            #
-            # Q: Should we skip nonlinear sub-expressions?
-            #
-            id_ = id(v_)
-            if not id_ in idMap[None]:
-                key = len(idMap) - 1
-                idMap[None][id_] = key
-                idMap[key] = v_
-
-    if compress:
-        repn._compress()
-    detangle_default(True)
-    return repn
+        if compress:
+            repn._compress()
+        return repn
 
 

@@ -41,6 +41,13 @@ from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.expression import _ExpressionData
 
+##
+## NEEDS TO BE REMOVED
+##
+
+def _clear_expression_pool():
+    pass
+
 sum = builtins.sum
 _getrefcount_available = False
 
@@ -71,32 +78,27 @@ component to store the subexpression and use the subexpression in each
 expression.  Common subexpression:\n\t%s""" % (str(sub_expr),)
         super(EntangledExpressionError, self).__init__(msg)
 
+#-------------------------------------------------------
+#
+# Global Data
+#
+#-------------------------------------------------------
 
-class bypass_clone_check(object):
-
-    def __init__(self):
-        pass
+class ignore_entangled_expressions(object):
+    detangle = True
 
     def __enter__(self):
-        pass
+        ignore_entangled_expressions.detangle = False
 
     def __exit__(self, *args):
-        pass
+        ignore_entangled_expressions.detangle = True
 
 
-import time
-class Timer:    
-    def __enter__(self):
-        self.start = time.time()
-        return self
-
-    def __exit__(self, *args):
-        self.end = time.time()
-        self.interval = self.end - self.start
-
-
-_compressed_expressions = set()
-
+#-------------------------------------------------------
+#
+# Functions used to process expression trees
+#
+#-------------------------------------------------------
 
 def compress_expression(expr, verbose=False, dive=False, multiprod=False):
     #
@@ -469,6 +471,7 @@ def evaluate_expression(exp, exception=None, only_fixed_vars=False):
         else:
             return ans
 
+
 def identify_variables(expr,
                        include_fixed=True,
                        allow_duplicates=False,
@@ -507,56 +510,11 @@ def identify_variables(expr,
                 yield _sub
 
 
-_detangle = True
-
-def detangle_default(flag):
-    """
-    Set the global flag that controls whether cloning is used
-    to detangle expressions.
-    """
-    global _detangle
-    _detangle = flag
-
-
-def process_arg(obj):
-    if obj.__class__ in native_types:
-        return obj
-    elif obj.__class__ == NumericConstant:
-        return value(obj)
-    elif (obj.__class__ == _ParamData or obj.__class__ == SimpleParam) and not obj._component()._mutable:
-        if not obj._constructed:
-            return obj
-        if obj.value is None:
-            return obj
-        return obj.value
-
-    try:
-        obj_expr = obj.is_expression()
-    except AttributeError:
-        try:
-            if obj.is_indexed():
-                raise TypeError(
-                    "Argument for expression is an indexed numeric "
-                    "value\nspecified without an index:\n\t%s\nIs this "
-                    "value defined over an index that you did not specify?"
-                    % (obj.name, ) )
-        except AttributeError:
-            pass
-
-    if _detangle and obj_expr and isinstance(obj, _ExpressionBase) and obj._owned:
-        #
-        # If the expression is owned, then we need to
-        # clone it to avoid creating an entangled expression.
-        #
-        # But we don't have to worry about entanglement amongst non-expression
-        # objects.
-        #
-        # Compress the expression before cloning, which 
-        # should make cloning less expensive.
-        #
-        return clone_expression( compress_expression( obj ), clone_leaves=False )
-
-    return obj
+#-------------------------------------------------------
+#
+# Expression classes
+#
+#-------------------------------------------------------
 
 
 class _ExpressionBase(NumericValue):
@@ -1668,7 +1626,6 @@ class _MultiSumExpression(_SumExpression):
                 ostream.write(' + ')
 
 
-
 class _StaticMultiSumExpression(_MultiSumExpression):
     """A temporary object that defines a summation with 1 or more terms and a constant term."""
     
@@ -1847,10 +1804,146 @@ class Expr_if(_ExpressionBase):
         return _then if _if else _else
 
 
+class _UnaryFunctionExpression(_ExpressionBase):
+    """An object that defines a mathematical expression that can be evaluated"""
+
+    # TODO: Unary functions should define their own subclasses so as to
+    # eliminate the need for the fcn and name slots
+    __slots__ = ('_fcn', '_name')
+
+    def __init__(self, arg, name=None, fcn=None):
+        """Construct an expression with an operation and a set of arguments"""
+        if type(arg) is tuple and name==None and fcn==None:
+            arg, name, fcn = arg
+        self._args = (arg,)
+        self._name = name
+        self._fcn = fcn
+        self._owned = False
+        if isinstance(arg, _ExpressionBase):
+            arg._owned = True
+
+    def _clone(self, args):
+        return self.__class__(args[0], self._name, self._fcn)
+
+    def __getstate__(self):
+        result = super(_UnaryFunctionExpression, self).__getstate__()
+        for i in _UnaryFunctionExpression.__slots__:
+            result[i] = getattr(self, i)
+        return result
+
+    def getname(self, *args, **kwds):
+        return self._name
+
+    def _to_string_prefix(self, ostream, verbose):
+        ostream.write(self.getname())
+
+    def _polynomial_degree(self, result):
+        if math.isclose(result[0], 0):
+            return 0
+        else:
+            return None
+
+    def _apply_operation(self, result):
+        return self._fcn(result[0])
+
+
+class _Constant_UnaryFunctionExpression(_UnaryFunctionExpression):
+    __slots__ = ()
+
+    def is_constant(self):
+        return True
+
+    def _potentially_variable(self):
+        return False
+
+
+class _NPV_UnaryFunctionExpression(_UnaryFunctionExpression):
+    __slots__ = ()
+
+    def _potentially_variable(self):
+        return False
+
+
+
+# TODO: Should this actually be a special class, or just an instance of
+#       _UnaryFunctionExpression (like sin, cos, etc)?
+class _AbsExpression(_UnaryFunctionExpression):
+
+    __slots__ = ()
+
+    def __init__(self, arg):
+        super(_AbsExpression, self).__init__(arg, 'abs', abs)
+
+
+class _Constant_AbsExpression(_AbsExpression):
+    __slots__ = ()
+
+    def is_constant(self):
+        return True
+
+    def _potentially_variable(self):
+        return False
+
+
+class _NPV_AbsExpression(_AbsExpression):
+    __slots__ = ()
+
+    def _potentially_variable(self):
+        return False
+
+
+
+#-------------------------------------------------------
+#
+# Functions used to generate expressions
+#
+#-------------------------------------------------------
+
+def _process_arg(obj):
+    if obj.__class__ in native_types:
+        return obj
+    elif obj.__class__ == NumericConstant:
+        return value(obj)
+    elif (obj.__class__ == _ParamData or obj.__class__ == SimpleParam) and not obj._component()._mutable:
+        if not obj._constructed:
+            return obj
+        if obj.value is None:
+            return obj
+        return obj.value
+
+    try:
+        obj_expr = obj.is_expression()
+    except AttributeError:
+        try:
+            if obj.is_indexed():
+                raise TypeError(
+                    "Argument for expression is an indexed numeric "
+                    "value\nspecified without an index:\n\t%s\nIs this "
+                    "value defined over an index that you did not specify?"
+                    % (obj.name, ) )
+        except AttributeError:
+            pass
+
+    if ignore_entangled_expressions.detangle and \
+       obj_expr and isinstance(obj, _ExpressionBase) and obj._owned:
+        #
+        # If the expression is owned, then we need to
+        # clone it to avoid creating an entangled expression.
+        #
+        # But we don't have to worry about entanglement amongst non-expression
+        # objects.
+        #
+        # Compress the expression before cloning, which 
+        # should make cloning less expensive.
+        #
+        return clone_expression( compress_expression( obj ), clone_leaves=False )
+
+    return obj
+
 
 def generate_expression(etype, _self, _other, _process=0):
 
-    _self = process_arg(_self)
+    _self = _process_arg(_self)
 
     if etype > _inplace:
         etype -= _inplace
@@ -1885,7 +1978,7 @@ def generate_expression(etype, _self, _other, _process=0):
             raise DeveloperError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
-    _other = process_arg(_other)
+    _other = _process_arg(_other)
 
     if etype < 0:
         #
@@ -2092,8 +2185,8 @@ def generate_relational_expression(etype, lhs, rhs):
     # arguments in the relational Expression's _args will be guaranteed
     # to be NumericValues (just as they are for all other Expressions).
     #
-    lhs = process_arg(lhs)
-    rhs = process_arg(rhs)
+    lhs = _process_arg(lhs)
+    rhs = _process_arg(rhs)
 
     if lhs.__class__ in native_numeric_types:
         lhs = as_numeric(lhs)
@@ -2219,108 +2312,13 @@ def generate_relational_expression(etype, lhs, rhs):
 generate_relational_expression.chainedInequality = None
 
 
-# ---------------------------------------------------------------------------
-#  Expressions for unary/intrinsic functions
-# ---------------------------------------------------------------------------
-
-class _UnaryFunctionExpression(_ExpressionBase):
-    """An object that defines a mathematical expression that can be evaluated"""
-
-    # TODO: Unary functions should define their own subclasses so as to
-    # eliminate the need for the fcn and name slots
-    __slots__ = ('_fcn', '_name')
-
-    def __init__(self, arg, name=None, fcn=None):
-        """Construct an expression with an operation and a set of arguments"""
-        if type(arg) is tuple and name==None and fcn==None:
-            arg, name, fcn = arg
-        self._args = (arg,)
-        self._name = name
-        self._fcn = fcn
-        self._owned = False
-        if isinstance(arg, _ExpressionBase):
-            arg._owned = True
-
-    def _clone(self, args):
-        return self.__class__(args[0], self._name, self._fcn)
-
-    def __getstate__(self):
-        result = super(_UnaryFunctionExpression, self).__getstate__()
-        for i in _UnaryFunctionExpression.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    def getname(self, *args, **kwds):
-        return self._name
-
-    def _to_string_prefix(self, ostream, verbose):
-        ostream.write(self.getname())
-
-    def _polynomial_degree(self, result):
-        if math.isclose(result[0], 0):
-            return 0
-        else:
-            return None
-
-    def _apply_operation(self, result):
-        return self._fcn(result[0])
-
-
-class _Constant_UnaryFunctionExpression(_UnaryFunctionExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
-
-
-class _NPV_UnaryFunctionExpression(_UnaryFunctionExpression):
-    __slots__ = ()
-
-    def _potentially_variable(self):
-        return False
-
-
-
-# TODO: Should this actually be a special class, or just an instance of
-#       _UnaryFunctionExpression (like sin, cos, etc)?
-class _AbsExpression(_UnaryFunctionExpression):
-
-    __slots__ = ()
-
-    def __init__(self, arg):
-        super(_AbsExpression, self).__init__(arg, 'abs', abs)
-
-
-class _Constant_AbsExpression(_AbsExpression):
-    __slots__ = ()
-
-    def is_constant(self):
-        return True
-
-    def _potentially_variable(self):
-        return False
-
-
-class _NPV_AbsExpression(_AbsExpression):
-    __slots__ = ()
-
-    def _potentially_variable(self):
-        return False
-
-
 def generate_intrinsic_function_expression(arg, name, fcn):
     if arg.__class__ in native_types:
         return fcn(arg)
 
-    process_arg(arg)
+    _process_arg(arg)
     if arg._potentially_variable():
         return _UnaryFunctionExpression(arg, name, fcn)
     return _NPV_UnaryFunctionExpression(arg, name, fcn)
 
-
-def _clear_expression_pool():
-    pass
 

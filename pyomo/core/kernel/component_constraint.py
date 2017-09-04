@@ -445,7 +445,7 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.rhs = arg0
                     self.body = arg1
                 else:
-                    with EXPR.bypass_clone_check():
+                    with EXPR.ignore_entangled_expressions():
                         self.rhs = ZeroConstant
                         self.body = arg0
                         self.body -= arg1
@@ -552,7 +552,7 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.rhs = _args[0]
                     self.body = _args[1]
                 else:
-                    with EXPR.bypass_clone_check():
+                    with EXPR.ignore_entangled_expressions():
                         self.rhs = ZeroConstant
                         self.body = _args[0]
                         self.body -= _args[1]
@@ -619,7 +619,7 @@ class constraint(_MutableBoundsConstraintMixin,
                         self.body  = _args[1]
                         self.ub = None
                     else:
-                        with EXPR.bypass_clone_check():
+                        with EXPR.ignore_entangled_expressions():
                             self.lb = None
                             self.body  = _args[0]
                             self.body -= _args[1]
