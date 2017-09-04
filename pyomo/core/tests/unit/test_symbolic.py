@@ -18,7 +18,7 @@ from pyomo.core.base.symbolic import (
 )
 
 def s(e):
-    return str(e).replace(' ','')
+    return str(e).replace(' ','').replace('1.0','1').replace('2.0','2')
 
 @unittest.skipIf( not _sympy_available,
                   "Symbolic derivatives require the sympy package" )
@@ -50,7 +50,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
         e = differentiate(m.x**2*m.y, wrt=m.x)
         self.assertTrue(e.is_expression())
-        self.assertEqual(s(e), s(2.*m.y*m.x))
+        self.assertEqual(s(e), s(2.*m.x*m.y))
 
         e = differentiate(m.x**2/m.y, wrt=m.x)
         self.assertTrue(e.is_expression())
@@ -101,7 +101,7 @@ class SymbolicDerivatives(unittest.TestCase):
         self.assertEqual(len(e), 1)
         e = e[0]
         self.assertTrue(e.is_expression())
-        self.assertEqual(s(e), s(2.*m.y*m.x))
+        self.assertEqual(s(e), s(2.*m.x*m.y))
 
         e = differentiate(m.x**2/m.y, wrt_list=[m.x])
         self.assertIs(type(e), list)
@@ -137,16 +137,16 @@ class SymbolicDerivatives(unittest.TestCase):
 
         e = differentiate(tanh(m.x), wrt=m.x)
         self.assertTrue(e.is_expression())
-        self.assertEqual(s(e), s(1.-tanh(m.x)**2.))
+        self.assertEqual(s(e), s(1.0-1.0*tanh(m.x)**2.0))
 
 
         e = differentiate(asin(m.x), wrt=m.x)
         self.assertTrue(e.is_expression())
-        self.assertEqual(s(e), s((1.-m.x**2.)**-0.5))
+        self.assertEqual(s(e), s((1.0 + (-1.0)*m.x**2.)**-0.5))
 
         e = differentiate(acos(m.x), wrt=m.x)
         self.assertTrue(e.is_expression())
-        self.assertEqual(s(e), s(-1.*(1.-m.x**2.)**-0.5))
+        self.assertEqual(s(e), s(-1.*(1.+ (-1.0)*m.x**2.)**-0.5))
 
         e = differentiate(atan(m.x), wrt=m.x)
         self.assertTrue(e.is_expression())
@@ -162,7 +162,7 @@ class SymbolicDerivatives(unittest.TestCase):
 
         e = differentiate(atanh(m.x), wrt=m.x)
         self.assertTrue(e.is_expression())
-        self.assertEqual(s(e), s((1.-m.x**2.)**-1.))
+        self.assertEqual(s(e), s((1.+(-1.0)*m.x**2.)**-1.))
 
 
     def test_intrinsic_fuctions(self):
