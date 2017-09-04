@@ -86,6 +86,7 @@ _pyomo5_module_members = [
     '_Constant_SumExpression',
     '_Constant_UnaryFunctionExpression',
     '_Constant_AbsExpression',
+    'detangle_default',
 ]
 
 def set_expression_tree_format(mode):
