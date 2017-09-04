@@ -39,6 +39,7 @@ from pyomo.core.kernel.expr_common import \
      chainedInequalityErrorMessage as cIEM)
 from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
+from pyomo.core.base.expression import _ExpressionData
 
 sum = builtins.sum
 _getrefcount_available = False
@@ -242,7 +243,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
             return ans
 
 
-def clone_expression(expr, substitute=None, verbose=False):
+def clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
     from pyomo.core.kernel.numvalue import native_numeric_types
     #
     memo = {'__block_scope__': { id(None): False }}
@@ -288,16 +289,24 @@ def clone_expression(expr, substitute=None, verbose=False):
 
             _sub = _argList[_idx]
             _idx += 1
-            if _sub.__class__ in native_numeric_types or not _sub.is_expression():
+            if _sub.__class__ in native_numeric_types:
                 #
                 # Store a native or numeric object
                 #
                 _result.append( deepcopy(_sub, memo) )
+            #elif clone_leaves and not _sub.is_expression():
+                #
+                # Store a native or numeric object
+                #
+                #_result.append( deepcopy(_sub, memo) )
             elif not isinstance(_sub, _ExpressionBase):
                 #
                 # Store a kernel object that is cloned
                 #
-                _result.append( deepcopy(_sub, memo) )
+                if clone_leaves:
+                    _result.append( deepcopy(_sub, memo) )
+                else:
+                    _result.append( _sub )
             else:
                 #
                 # Push an expression onto the stack
@@ -498,6 +507,17 @@ def identify_variables(expr,
                 yield _sub
 
 
+_detangle = True
+
+def detangle_default(flag):
+    """
+    Set the global flag that controls whether cloning is used
+    to detangle expressions.
+    """
+    global _detangle
+    _detangle = flag
+
+
 def process_arg(obj):
     if obj.__class__ in native_types:
         return obj
@@ -523,8 +543,20 @@ def process_arg(obj):
         except AttributeError:
             pass
 
-    return obj
+    if _detangle and obj_expr and isinstance(obj, _ExpressionBase) and obj._owned:
+        #
+        # If the expression is owned, then we need to
+        # clone it to avoid creating an entangled expression.
+        #
+        # But we don't have to worry about entanglement amongst non-expression
+        # objects.
+        #
+        # Compress the expression before cloning, which 
+        # should make cloning less expensive.
+        #
+        return clone_expression( compress_expression( obj ), clone_leaves=False )
 
+    return obj
 
 
 class _ExpressionBase(NumericValue):
@@ -544,11 +576,15 @@ class _ExpressionBase(NumericValue):
     fixed                   T       T       F       T
     """
 
-    __slots__ =  ('_args',)
+    __slots__ =  ('_args','_owned')
     PRECEDENCE = 0
 
     def __init__(self, args):
         self._args = args
+        self._owned = False
+        for arg in args:
+            if isinstance(arg, _ExpressionBase):
+                arg._owned = True
 
     def __getstate__(self):
         state = super(_ExpressionBase, self).__getstate__()
@@ -904,6 +940,10 @@ class _ExternalFunctionExpression(_ExpressionBase):
             fcn, args = fcn
         self._fcn = fcn
         self._args = args
+        self._owned = False
+        for arg in args:
+            if isinstance(arg, _ExpressionBase):
+                arg._owned = True
 
     def __getstate__(self):
         result = super(_ExternalFunctionExpression, self).__getstate__()
@@ -1048,6 +1088,10 @@ class _InequalityExpression(_LinearOperatorExpression):
         super(_InequalityExpression,self).__init__(args)
         self._strict = strict
         self._cloned_from = cloned_from
+        self._owned = False
+        for arg in args:
+            if isinstance(arg, _ExpressionBase):
+                arg._owned = True
 
     def __getstate__(self):
         result = super(_InequalityExpression, self).__getstate__()
@@ -1305,6 +1349,10 @@ class _MultiProdExpression(_ProductExpression):
             args, nnum = base
         self._args = args
         self._nnum = nnum
+        self._owned = False
+        for arg in args:
+            if isinstance(arg, _ExpressionBase):
+                arg._owned = True
 
     def _precedence(self):
         return _MultiProdExpression.PRECEDENCE
@@ -1644,6 +1692,10 @@ class _GetItemExpression(_ExpressionBase):
             base, args = base
         self._args = args
         self._base = base
+        self._owned = False
+        for arg in args:
+            if isinstance(arg, _ExpressionBase):
+                arg._owned = True
 
     def _clone(self, args):
         return self.__class__(self._base, args)
@@ -1723,6 +1775,13 @@ class Expr_if(_ExpressionBase):
         self._else = ELSE
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)
+        self._owned = False
+        if isinstance(IF, _ExpressionBase):
+            IF._owned = True
+        if isinstance(THEN, _ExpressionBase):
+            THEN._owned = True
+        if isinstance(ELSE, _ExpressionBase):
+            ELSE._owned = True
 
     def __getstate__(self):
         state = super(Expr_if, self).__getstate__()
@@ -1826,6 +1885,8 @@ def generate_expression(etype, _self, _other, _process=0):
             raise DeveloperError(
                 "Unexpected unary operator id (%s)" % ( etype, ))
 
+    _other = process_arg(_other)
+
     if etype < 0:
         #
         # This may seem obvious, but if we are performing an
@@ -1835,8 +1896,6 @@ def generate_expression(etype, _self, _other, _process=0):
         #
         etype *= -1
         _self, _other = _other, _self
-
-    _other = process_arg(_other)
 
     if etype == _mul:
         #
@@ -2176,11 +2235,14 @@ class _UnaryFunctionExpression(_ExpressionBase):
         if type(arg) is tuple and name==None and fcn==None:
             arg, name, fcn = arg
         self._args = (arg,)
-        self._fcn = fcn
         self._name = name
+        self._fcn = fcn
+        self._owned = False
+        if isinstance(arg, _ExpressionBase):
+            arg._owned = True
 
     def _clone(self, args):
-        return self.__class__(args, self._fcn, self._name)
+        return self.__class__(args[0], self._name, self._fcn)
 
     def __getstate__(self):
         result = super(_UnaryFunctionExpression, self).__getstate__()
@@ -2253,6 +2315,7 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     if arg.__class__ in native_types:
         return fcn(arg)
 
+    process_arg(arg)
     if arg._potentially_variable():
         return _UnaryFunctionExpression(arg, name, fcn)
     return _NPV_UnaryFunctionExpression(arg, name, fcn)
