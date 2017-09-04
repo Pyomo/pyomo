@@ -1190,6 +1190,8 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e2 = m.c + e1
         e3 = e1 + m.d
         e = e2 * e3
+
+        self.assertEqual(e.size(), 12)
         _e = EXPR.compress_expression(e)
         #
         self.assertIs(type(_e), EXPR._ProductExpression)
@@ -1198,12 +1200,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(type(_e._args[0]), EXPR._SumExpression)
         self.assertIs(len(_e._args[0]._args), 2)
         self.assertIs(_e._args[0]._args[0], m.c)
-        self.assertEqual(e.size(), 11)
 
         self.assertIs(type(_e._args[1]), EXPR._SumExpression)
         self.assertIs(len(_e._args[1]._args), 2)
         self.assertIs(_e._args[1]._args[1], m.d)
-        self.assertEqual(e.size(), 11)
+        self.assertEqual(_e.size(), 12)
 
         #
         # Check the structure of nested products
@@ -1221,7 +1222,7 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         e = e2 * e3
         _e = EXPR.compress_expression(e)
         #
-        self.assertEqual(e.size(), 11)
+        self.assertEqual(e.size(), 12)
         #
         self.assertIs(type(_e), EXPR._ProductExpression)
         self.assertEqual(len(_e._args), 2)
@@ -1239,11 +1240,11 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         self.assertIs(len(_e._args[1]._args), 2)
         self.assertIs(_e._args[1]._args[1], m.d)
 
-        self.assertIs(type(_e._args[1]._args[0]), EXPR._SumExpression)
-        self.assertIs(len(_e._args[1]._args[0]._args), 2)
-        self.assertIs(_e._args[1]._args[0]._args[0], m.a)
-        self.assertIs(_e._args[1]._args[0]._args[1], m.b)
-        self.assertEqual(_e.size(), 11)
+        self.assertIs(type(_e._args[1]._args[0]), EXPR._CompressedSumExpression)
+        self.assertIs(len(_e._args[1]._args[0]._args), 3)
+        self.assertIs(_e._args[1]._args[0]._args[1], m.a)
+        self.assertIs(_e._args[1]._args[0]._args[2], m.b)
+        self.assertEqual(_e.size(), 12)
 
 
     def test_trivialProduct(self):
@@ -3328,7 +3329,7 @@ class EntangledExpressionErrors(unittest.TestCase):
         #print(e1_)
         #print("--")
         e2 = self.m.c + e1_
-        e2_ = EXPR.compress_expression(e2)
+        #e2_ = EXPR.compress_expression(e2)
 
         #print(e1)
         #print(e1_)
@@ -3336,14 +3337,16 @@ class EntangledExpressionErrors(unittest.TestCase):
         #print(e2_)
         #print("--")
         e3 = self.m.d + e1_
-        e3_ = EXPR.compress_expression(e3)
+        #e3_ = EXPR.compress_expression(e3)
 
         #print(e1_)
         #print(e2_)
         #print(e3_)
         self.assertEqual( len(e1_._args), 3)
-        self.assertEqual( len(e2_._args), 4)
-        self.assertEqual( len(e3_._args), 4)
+        self.assertEqual( len(e2._args), 2)
+        self.assertEqual( len(e3._args), 2)
+
+        self.assertNotEqual( id(e2._args[1]), id(e3._args[1]))
 
 
 class TestSummationExpression(unittest.TestCase):
