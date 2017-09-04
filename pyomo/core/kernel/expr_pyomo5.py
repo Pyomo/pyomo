@@ -427,49 +427,54 @@ def _expression_size(expr, verbose=False):
 
 
 def evaluate_expression(exp, exception=None, only_fixed_vars=False):
-    from pyomo.core.base import _VarData # TODO
-    from pyomo.core.kernel.component_variable import IVariable # TODO
+    from pyomo.core.base import _VarData
+    from pyomo.core.kernel.component_variable import IVariable
 
-    if isinstance(exp, (_VarData, IVariable)):
-        if not only_fixed_vars or exp.fixed:
-            return exp.value
-        else:
-            raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
-    elif exp.__class__ in native_numeric_types:
-        return exp
-    elif not exp.is_expression():
-        return exp()
+    try:
+        if isinstance(exp, (_VarData, IVariable)):
+            if not only_fixed_vars or exp.fixed:
+                return exp.value
+            else:
+                raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+        elif exp.__class__ in native_numeric_types:
+            return exp
+        elif not exp.is_expression():
+            return exp()
 
-    _stack = [ (exp, exp._args, 0, len(exp._args), []) ]
-    while 1:  # Note: 1 is faster than True for Python 2.x
-        _obj, _argList, _idx, _len, _result = _stack.pop()
-        while _idx < _len:
-            _sub = _argList[_idx]
-            _idx += 1
-            if _sub.__class__ in native_numeric_types:
-                _result.append( _sub )
-            elif _sub.is_expression():
-                _stack.append( (_obj, _argList, _idx, _len, _result) )
-                _obj     = _sub
-                _argList = _sub._args
-                _idx     = 0
-                _len     = len(_argList)
-                _result  = []
-            elif isinstance(_sub, (_VarData, IVariable)):
-                if only_fixed_vars:
-                    if _sub.fixed:
-                        _result.append( _sub.value )
+        _stack = [ (exp, exp._args, 0, len(exp._args), []) ]
+        while 1:  # Note: 1 is faster than True for Python 2.x
+            _obj, _argList, _idx, _len, _result = _stack.pop()
+            while _idx < _len:
+                _sub = _argList[_idx]
+                _idx += 1
+                if _sub.__class__ in native_numeric_types:
+                    _result.append( _sub )
+                elif _sub.is_expression():
+                    _stack.append( (_obj, _argList, _idx, _len, _result) )
+                    _obj     = _sub
+                    _argList = _sub._args
+                    _idx     = 0
+                    _len     = len(_argList)
+                    _result  = []
+                elif isinstance(_sub, (_VarData, IVariable)):
+                    if only_fixed_vars:
+                        if _sub.fixed:
+                            _result.append( _sub.value )
+                        else:
+                            raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
                     else:
-                        raise ValueError("Cannot evaluate an unfixed variable with only_fixed_vars=True")
+                        _result.append( value(_sub) )
                 else:
                     _result.append( value(_sub) )
+            ans = _obj._apply_operation(_result)
+            if _stack:
+                _stack[-1][-1].append( ans )
             else:
-                _result.append( value(_sub) )
-        ans = _obj._apply_operation(_result)
-        if _stack:
-            _stack[-1][-1].append( ans )
-        else:
-            return ans
+                return ans
+    except ValueError:
+        if exception:
+            raise
+        return None
 
 
 def identify_variables(expr,
