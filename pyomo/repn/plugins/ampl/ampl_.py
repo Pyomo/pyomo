@@ -465,7 +465,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                             self._print_nonlinear_terms_NL(exp._args[1])
                         else:
                             OUTPUT.write(nary_sum_str % (n-1))
-                            for i in xrange(1,n-1):
+                            for i in xrange(1,n):
                                 self._print_nonlinear_terms_NL(exp._args[i])
                     else:
                         if n == 2:
