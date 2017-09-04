@@ -646,7 +646,7 @@ _IntrinsicFunctionExpression =  _UnaryFunctionExpression
 class _ExternalFunctionExpression(_ExpressionBase):
     __slots__ = ('_fcn',)
 
-    def __init__(self, fcn, args):
+    def __init__(self, args, fcn):
         """Construct a call to an external function"""
         # Because this node is created outside the "normal"
         # generate_expression route, we will perform all refrence
@@ -1045,7 +1045,7 @@ class _GetItemExpression(_ExpressionBase):
     def _precedence(self):
         return _GetItemExpression.PRECEDENCE
 
-    def __init__(self, base, args):
+    def __init__(self, args, base):
         """Construct an expression with an operation and a set of arguments"""
         self._args = _generate_expression__clone_if_needed(-2, False, *args)
         if not _getrefcount_available:

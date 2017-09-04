@@ -234,7 +234,7 @@ WARNING: _ExpressionBase.simplify() has been deprecated and removed from
 class _ExternalFunctionExpression(_ExpressionBase):
     __slots__ = ('_fcn',)
 
-    def __init__(self, fcn, args):
+    def __init__(self, args, fcn):
         """Construct a call to an external function"""
         _args = tuple(
             _generate_expression__clone_if_needed(
@@ -801,7 +801,7 @@ class _SumExpression(_LinearExpression):
 class _GetItemExpression(_ExpressionBase):
     __slots__ = ('_base',)
 
-    def __init__(self, base, args):
+    def __init__(self, args, base):
         """Construct a call to an external function"""
         _ExpressionBase.__init__(self, args)
         self._base = base
