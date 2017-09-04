@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from six import StringIO
 from pyomo import core
 from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.core.base.numvalue import native_types
@@ -116,7 +117,16 @@ def differentiate(expr, wrt=None, wrt_list=None):
 
     tmp_expr = EXPR.clone_expression( expr, substitute=pyomo2sympy )
     tmp_expr = _map_intrinsic_functions(tmp_expr, sympy2pyomo)
-    tmp_expr = str(tmp_expr)
+    #
+    # Call to_string() directly to create a string version of this expression
+    #
+    buf = StringIO()
+    if isinstance(tmp_expr, EXPR._ExpressionBase):
+        tmp_expr.to_string(buf)
+        tmp_expr = buf.getvalue()
+        buf.close()
+    else:
+        tmp_expr = str(tmp_expr)
 
     sympy_expr = sympy.sympify(
         tmp_expr, locals=dict((str(x), x) for x in sympy_vars) )
@@ -144,7 +154,7 @@ def _map_intrinsic_functions(expr, sympySymbols):
                 pass
             elif _sub.is_expression():
                 # Substitute intrinsic function names
-                if _sub.__class__ is EXPR._IntrinsicFunctionExpression:
+                if isinstance(_sub, EXPR._UnaryFunctionExpression):
                     if _sub._name == 'ceil':
                         _sub._name = 'ceiling'
                     if _sub._name == 'log10':
