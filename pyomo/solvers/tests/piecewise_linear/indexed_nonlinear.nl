@@ -9,11 +9,19 @@ g3 1 1 0	# problem unknown
  25 6	# max name lengths: constraints, variables
  0 0 0 0 0	# common exprs: b,c,o,c1,o1
 C0	#nonlinear_constraint[0,1]
+o2	#*
+n-1
+o2	#*
+n-1
 o46	#cos
 o2	#*
 n5.0
 v0	#X[0,1]
 C1	#nonlinear_constraint[8,3]
+o2	#*
+n-1
+o2	#*
+n-1
 o46	#cos
 o2	#*
 n5.0
@@ -39,10 +47,10 @@ k3	#intermediate Jacobian column lengths
 3
 J0 2
 0 -0.1
-2 1.0
+2 1
 J1 2
 1 -0.1
-3 1.0
+3 1
 G0 2
 2 1
 3 1
