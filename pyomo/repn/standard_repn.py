@@ -295,6 +295,15 @@ to a solver and then be deleted.
 
 """
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, compress=False, quadratic=True):
+    #
+    # Disable implicit cloning while creating a standard representation.
+    # We allow the representation to be entangled with the original expression.
+    #
+    from pyomo.core.kernel.expr_pyomo5 import detangle_default
+    detangle_default(False)
+    #
+    # Setup
+    #
     if idMap is None:
         idMap = {}
     idMap.setdefault(None, {})
@@ -320,6 +329,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             repn._constant = _multiplier*expr
         if compress:
             repn._compress()
+        ensure_independent_trees = False
+        detangle_default(True)
         return repn
     #
     # The expression is a variable
@@ -332,12 +343,14 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 repn._constant = _multiplier*expr
             if compress:
                 repn._compress()
+            detangle_default(True)
             return repn
         var_ID = id(expr)
         repn._linear_terms_coef[var_ID] = _multiplier
         repn._linear_vars[var_ID] = expr
         if compress:
             repn._compress()
+        detangle_default(True)
         return repn
 
     #
@@ -823,6 +836,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
 
     if compress:
         repn._compress()
+    detangle_default(True)
     return repn
 
 
