@@ -608,7 +608,7 @@ class _ExpressionBase(NumericValue):
         self.to_string(buf, expr=expr)
         return buf.getvalue()
 
-    def __call__(self, exception=None):
+    def __call__(self, exception=True):
         return evaluate_expression(self, exception)
 
     def clone(self, substitute=None, verbose=False):
@@ -1072,6 +1072,7 @@ class _InequalityExpression(_LinearOperatorExpression):
             generate_relational_expression.call_info \
                 = traceback.extract_stack(limit=2)[-2]
             generate_relational_expression.chainedInequality = self
+            #return bool(self())                - This is needed to apply simple evaluation of inequalities
             return True
 
         return bool(self())
