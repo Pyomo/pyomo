@@ -389,6 +389,12 @@ class _GeneralConstraintData(_ConstraintData):
             self._equality = False
             return
 
+        #
+        # We do some manipulation of the expression, so we disable
+        # detangling logic.
+        #
+        EXPR.detangle_default(False)
+
         _expr_type = expr.__class__
         if _expr_type is tuple: # or expr_type is list:
             #
@@ -643,6 +649,8 @@ class _GeneralConstraintData(_ConstraintData):
         # Compress the body expression
         #
         self._body = EXPR.compress_expression(self._body)
+
+        EXPR.detangle_default(False)
 
 
     def get_value(self):
