@@ -67,7 +67,9 @@ class IndexTemplate(NumericValue):
         Return the value of this object.
         """
         if self._value is None:
-            raise TemplateExpressionError(self)
+            if exception:
+                raise TemplateExpressionError(self)
+            return None
         else:
             return self._value
 
