@@ -426,7 +426,7 @@ def _expression_size(expr, verbose=False):
             return ans
 
 
-def evaluate_expression(exp, exception=None, only_fixed_vars=False):
+def evaluate_expression(exp, exception=True, only_fixed_vars=False):
     from pyomo.core.base import _VarData
     from pyomo.core.kernel.component_variable import IVariable
 
