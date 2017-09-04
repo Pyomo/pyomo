@@ -31,7 +31,9 @@ except:
 
 logger = logging.getLogger('pyomo.core')
 
+
 class ExternalFunction(Component):
+
     def __new__(cls, *args, **kwds):
         if cls != ExternalFunction:
             return super(ExternalFunction, cls).__new__(cls)
@@ -58,7 +60,7 @@ class ExternalFunction(Component):
         for i in idxs:
             if type(args[i]) is types.GeneratorType:
                 args = args[:i] + tuple(args[i]) + args[i+1:]
-        return EXPR._ExternalFunctionExpression(self, args)
+        return EXPR._ExternalFunctionExpression(args, self)
 
     def evaluate(self, args):
         raise NotImplementedError(
@@ -66,6 +68,7 @@ class ExternalFunction(Component):
 
 
 class AMPLExternalFunction(ExternalFunction):
+
     def __init__(self, *args, **kwds):
         if args:
             raise ValueError(
