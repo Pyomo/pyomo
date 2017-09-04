@@ -43,6 +43,6 @@
 1 Objective Declarations
     o : Size=1, Index=None, Active=True
         Key  : Active : Sense    : Expression
-        None :   True : minimize : p[1] * x[1] + p[2] * x[2] + p[3] * x[3]
+        None :   True : minimize : x[1] + p[2]*x[2] + p[3]*x[3]
 
 4 Declarations: A p x o
