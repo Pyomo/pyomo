@@ -80,13 +80,13 @@ def collect_linear_terms(block, unfixed):
                     # body <= upper
                     #
                     v_domain[name, ndx] = -1
-                    b_coef[name,ndx] = upper_terms.constant - body_terms.constant
+                    b_coef[name,ndx] = (upper_terms.constant if not upper_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
                 elif upper_terms is None or upper_terms.constant is None:
                     #
                     # lower <= body
                     #
                     v_domain[name, ndx] = 1
-                    b_coef[name,ndx] = lower_terms.constant - body_terms.constant
+                    b_coef[name,ndx] = (lower_terms.constant if not lower_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
                 else:
                     #
                     # lower <= body <= upper
@@ -95,19 +95,19 @@ def collect_linear_terms(block, unfixed):
                     #
                     ndx_ = tuple(list(ndx).append('lb'))
                     v_domain[name, ndx_] = 1
-                    b_coef[name,ndx] = lower_terms.constant - body_terms.constant
+                    b_coef[name,ndx] = (lower_terms.constant if not lower_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
                     #
                     # Dual for upper bound
                     #
                     ndx_ = tuple(list(ndx).append('ub'))
                     v_domain[name, ndx_] = -1
-                    b_coef[name,ndx] = upper_terms.constant - body_terms.constant
+                    b_coef[name,ndx] = (upper_terms.constant if not upper_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
             else:
                 #
                 # Equality constraint
                 #
                 v_domain[name, ndx] = 0
-                b_coef[name,ndx] = lower_terms.constant - body_terms.constant
+                b_coef[name,ndx] = (lower_terms.constant if not lower_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
     #
     # Collect bound constraints
     #
