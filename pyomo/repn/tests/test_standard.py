@@ -1952,8 +1952,8 @@ class TestSimple(unittest.TestCase):
 
         #       ExprIf
         #      /  |   \
-        #  bool  a    b
-        e = EXPR.Expr_if(IF=m.q, THEN=m.a, ELSE=m.b)
+        #     c   a    b
+        e = EXPR.Expr_if(IF=m.c, THEN=m.a, ELSE=m.b)
 
         rep = generate_standard_repn(e)
         #
@@ -1962,8 +1962,8 @@ class TestSimple(unittest.TestCase):
         self.assertTrue(len(rep._quadratic_vars) == 0)
         self.assertTrue(len(rep._quadratic_terms_coef) == 0)
         self.assertFalse(rep._nonlinear_expr is None)
-        self.assertTrue(len(rep._nonlinear_vars) == 2)
-        baseline = set([ id(m.a), id(m.b) ])
+        self.assertTrue(len(rep._nonlinear_vars) == 3)
+        baseline = set([ id(m.a), id(m.b), id(m.c) ])
         self.assertEqual(baseline, set(id(v_) for v_ in EXPR.identify_variables(rep._nonlinear_expr,include_potentially_variable=True)))
         #
         e_ = EXPR.compress_expression(e)
