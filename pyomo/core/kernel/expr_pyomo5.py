@@ -39,6 +39,7 @@ from pyomo.core.kernel.expr_common import \
      chainedInequalityErrorMessage as cIEM)
 from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
+from pyomo.core.base.template_expr import TemplateExpressionError
 from pyomo.core.base.expression import _ExpressionData
 
 ##
@@ -471,6 +472,10 @@ def evaluate_expression(exp, exception=True, only_fixed_vars=False):
                 _stack[-1][-1].append( ans )
             else:
                 return ans
+    except TemplateExpressionError:
+        if exception:
+            raise
+        return None
     except ValueError:
         if exception:
             raise
@@ -606,7 +611,9 @@ class _ExpressionBase(NumericValue):
         #
         buf = StringIO()
         self.to_string(buf, expr=expr)
-        return buf.getvalue()
+        ans = buf.getvalue()
+        buf.close()
+        return ans
 
     def __call__(self, exception=True):
         return evaluate_expression(self, exception)
@@ -897,12 +904,12 @@ class _NPV_NegationExpression(_NegationExpression):
 class _ExternalFunctionExpression(_ExpressionBase):
     __slots__ = ('_fcn',)
 
-    def __init__(self, fcn, args=None):
+    def __init__(self, args, fcn=None):
         """Construct a call to an external function"""
-        if type(fcn) is tuple and args==None:
-            fcn, args = fcn
-        self._fcn = fcn
+        if type(args) is tuple and fcn==None:
+            fcn, args = args
         self._args = args
+        self._fcn = fcn
         self._owned = False
         for arg in args:
             if isinstance(arg, _ExpressionBase):
@@ -1051,19 +1058,15 @@ class _InequalityExpression(_LinearOperatorExpression):
         super(_InequalityExpression,self).__init__(args)
         self._strict = strict
         self._cloned_from = cloned_from
-        self._owned = False
-        for arg in args:
-            if isinstance(arg, _ExpressionBase):
-                arg._owned = True
+
+    def _clone(self, args):
+        return self.__class__(args, self._strict, self._cloned_from)
 
     def __getstate__(self):
         result = super(_InequalityExpression, self).__getstate__()
         for i in _InequalityExpression.__slots__:
             result[i] = getattr(self, i)
         return result
-
-    def _clone(self, args):
-        return self.__class__(args, self._strict, self._cloned_from)
 
     def __nonzero__(self):
         if generate_relational_expression.chainedInequality is not None:
@@ -1310,13 +1313,16 @@ class _MultiProdExpression(_ProductExpression):
 
     def __init__(self, args, nnum=None):
         if type(args) is tuple and nnum==None:
-            args, nnum = base
+            args, nnum = args
         self._args = args
         self._nnum = nnum
         self._owned = False
         for arg in args:
             if isinstance(arg, _ExpressionBase):
                 arg._owned = True
+
+    def _clone(self, args):
+        return self.__class__(args, self._nnum)
 
     def _precedence(self):
         return _MultiProdExpression.PRECEDENCE
@@ -1649,10 +1655,10 @@ class _GetItemExpression(_ExpressionBase):
     def _precedence(self):
         return _GetItemExpression.PRECEDENCE
 
-    def __init__(self, base, args=None):
+    def __init__(self, args, base=None):
         """Construct an expression with an operation and a set of arguments"""
-        if type(base) is tuple and args==None:
-            base, args = base
+        if type(args) is tuple and base is None:
+            args, base = args
         self._args = args
         self._base = base
         self._owned = False
@@ -1661,7 +1667,7 @@ class _GetItemExpression(_ExpressionBase):
                 arg._owned = True
 
     def _clone(self, args):
-        return self.__class__(self._base, args)
+        return self.__class__(args, self._base)
 
     def __getstate__(self):
         result = super(_GetItemExpression, self).__getstate__()
@@ -1672,28 +1678,19 @@ class _GetItemExpression(_ExpressionBase):
     def getname(self, *args, **kwds):
         return self._base.getname(*args, **kwds)
 
-    def X_is_constant_combiner(self):
-        # This must be false to prevent automatic expression simplification
-        def impl(args):
-            return False
-        return impl
-
-    def X_is_fixed_combiner(self):
-        # FIXME: This is tricky.  I think the correct answer is that we
-        # should iterate over the members of the args and make sure all
-        # are fixed
-        def impl(args):
-            return all(args) and \
-                all( True if x.__class__ in native_types else x.is_fixed()
-                     for x in itervalues(self._base) )
-        return impl
-
     def _potentially_variable(self):
-        if any(self._args):
+        if any(evaluate_expression(arg, exception=False) for arg in self._args):
             for x in itervalues(self._base):
                 if not x.__class__ in native_types and x._potentially_variable():
                     return True
         return False
+        
+    def is_fixed(self):
+        if any(self._args):
+            for x in itervalues(self._base):
+                if not x.__class__ in native_types and not x.is_fixed():
+                    return False
+        return True
         
     def _polynomial_degree(self, result):
         if any(x != 0 for x in result):
