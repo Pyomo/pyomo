@@ -261,14 +261,18 @@ class StandardRepn(object):
         return True
 
     def to_expression(self):
+        #
+        # TODO: Should this replace non-mutable parameters with constants?
+        #
         expr = self._constant
         for i in sorted(self._linear_vars.keys()):
             #print((self._linear_vars[i].name, self._linear_terms_coef[i]))
-            if math.isclose(self._linear_terms_coef[i], 1.0):
+            val = value(self._linear_terms_coef[i])
+            if math.isclose(val, 1.0):
                 expr += self._linear_vars[i]
-            elif math.isclose(self._linear_terms_coef[i], -1.0):
+            elif math.isclose(val, -1.0):
                 expr -= self._linear_vars[i]
-            elif self._linear_terms_coef[i] < 0.0:
+            elif val < 0.0:
                 expr -= - self._linear_terms_coef[i]*self._linear_vars[i]
             else:
                 expr += self._linear_terms_coef[i]*self._linear_vars[i]
