@@ -463,6 +463,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if exp._args[0].__class__ in native_numeric_types and math.isclose(exp._args[0], 0.0):
                         if n == 2:
                             self._print_nonlinear_terms_NL(exp._args[1])
+                        elif n == 3:
+                            OUTPUT.write(binary_sum_str)
+                            self._print_nonlinear_terms_NL(exp._args[1])
+                            self._print_nonlinear_terms_NL(exp._args[2])
                         else:
                             OUTPUT.write(nary_sum_str % (n-1))
                             for i in xrange(1,n):
