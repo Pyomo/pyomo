@@ -363,6 +363,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 # case replace with power(x, int) function to improve domain
                 # issues. Skip first term since it's always "con_name.."
                 line = replace_power(line) + ';'
+            if len(line) > 80000:
+                line = split_long_line(line)
             output_file.write(line + "\n")
 
         output_file.write("\n")
@@ -588,6 +590,24 @@ def replace_power(line):
                 term += args[-1]
         new_line += term + ' '
     return new_line
+
+
+def split_long_line(line):
+    """
+    GAMS has an 80,000 character limit for lines, so split as many
+    times as needed so as to not have illegal lines.
+    """
+    new_lines = ''
+    while len(line) > 80000:
+        i = 80000
+        while line[i] != ' ':
+            # Walk backwards to find closest space,
+            # where it is safe to split to a new line
+            i -= 1
+        new_lines += line[:i] + '\n'
+        line = line[i + 1:]
+    new_lines += line
+    return new_lines
 
 
 valid_solvers = {
