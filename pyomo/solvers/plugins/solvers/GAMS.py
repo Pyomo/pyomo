@@ -240,9 +240,11 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         try:
             t1.run(output=sys.stdout if tee else None)
-        except GamsExceptionExecution:
+        except GamsExceptionExecution as e:
             try:
-                check_expr_evaluation(model, symbolMap, 'direct')
+                if e.rc == 3:
+                    # Execution Error
+                    check_expr_evaluation(model, symbolMap, 'direct')
             finally:
                 # Always name working directory or delete files,
                 # regardless of any errors.
