@@ -19,6 +19,7 @@ from six.moves import xrange
 from functools import reduce
 import operator
 from pyomo.core.base import expr_common
+from pyomo.core.kernel.numvalue import native_numeric_types
 
 
 def prod(factors):
@@ -40,7 +41,7 @@ def Sum(*args, start=0):
         for arg in args:
             if inspect.isgenerator(arg):
                 for term in arg:
-                    if not term._potentially_variable():
+                    if term.__class__ in native_numeric_types or not term._potentially_variable():
                         ans[0] += term
                     else:
                         ans.append(term)
