@@ -75,13 +75,16 @@ install:
      pip install scipy;
   fi
 
-# Install GAMS and GAMS Python API
-# But only if EXTRAS is not being installed, since those tests segfault on
-# travis for an unknown reason, despite running fine locally.
+# Install GAMS
+- wget https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
+- chmod u+x linux_x64_64_sfx.exe
+- ./linux_x64_64_sfx.exe > /dev/null
+# Only install API if EXTRAS is not being installed, since
+# those tests segfault on travis for an unknown reason.
 - if [ -z "${EXTRAS}" ]; then
-     bash ./.travis_install_gams.sh;
-     PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
+     bash ./.travis_install_gams_api.sh;
   fi
+- PATH=${PATH}:$PWD/gams24.8_linux_x64_64_sfx;
 #
 - if [ -n "${EXTRAS}" ]; then conda install -q -y --channel conda-forge pyomo.extras; fi
 
