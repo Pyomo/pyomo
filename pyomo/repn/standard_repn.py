@@ -65,7 +65,7 @@ class StandardRepn(object):
                  '_nonlinear_expr',         # TODO
                  '_nonlinear_vars')         # TODO
 
-    def __init__(self):
+    def __init__(self, expr=None):
         self._constant = 0
         self._linear_vars = {}
         self._linear_terms_coef = {}
@@ -73,6 +73,8 @@ class StandardRepn(object):
         self._quadratic_terms_coef = {}
         self._nonlinear_expr = None
         self._nonlinear_vars = {}
+        if not expr is None:
+            generate_standard_repn(expr, repn=self)
 
     def __getstate__(self):
         """
@@ -294,7 +296,7 @@ representations be temporary.  They should be used to interface
 to a solver and then be deleted.
 
 """
-def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, compress=False, quadratic=True):
+def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, compress=False, quadratic=True, repn=None):
     with EXPR.ignore_entangled_expressions():
         #
         # Disable implicit cloning while creating a standard representation.
@@ -306,7 +308,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         if idMap is None:
             idMap = {}
         idMap.setdefault(None, {})
-        repn = StandardRepn()
+        if repn is None:
+            repn = StandardRepn()
         #
         # Eliminate top-level negations
         #
@@ -570,19 +573,27 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
 
             if _obj.__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR._StaticMultiSumExpression):
                 ans = {}
+                # Add nonlinear terms
+                # Do some extra work to combine the arguments of 'Sum' expressions
+                nonl = []
                 for res in _result:
-                    # Add nonlinear terms
                     if None in res:
-                        if None in ans:
-                            ans[None] += res[None]
+                        if res[None].__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR.            _StaticMultiSumExpression):
+                            for arg in res[None]._args:
+                                nonl.append(arg)
                         else:
-                            ans[None] = res[None]
-                    # Add constant terms
-                    if 0 in res:
-                        if 0 in ans:
-                            ans[0] += res[0]
-                        else:
-                            ans[0] = res[0]
+                            nonl.append(res[None])
+                if len(nonl) > 0:
+                    nonl = Sum(x for x in nonl)
+                    if not (nonl.__class__ in native_numeric_types and math.isclose(nonl,0)):
+                        ans[None] = nonl
+                # Add constant terms
+                cons = 0
+                cons = 0 + sum(res[0] for res in _result if 0 in res)
+                if not cons is 0:
+                    ans[0] = cons
+
+                for res in _result:
                     # Add linear terms
                     if 1 in res:
                         if not 1 in ans:
@@ -638,7 +649,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 # GENERATING A NONLINEAR TERM
                 #
                 # Products that include a nonlinear term
-                nonl = 0
+                nonl = []
                 if None in _l:
                     rhs = 0
                     if None in _r:
@@ -650,7 +661,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         rhs += Sum(_r[1][key]*idMap[key] for key in _r[1])
                     if 2 in _r:
                         rhs += Sum(_r[2][key]*idMap[key[0]]*idMap[key[1]] for key in _r[2])
-                    nonl += _l[None]*rhs
+                    nonl.append(_l[None]*rhs)
                 if None in _r:
                     lhs = 0
                     if 0 in _l and \
@@ -660,7 +671,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         lhs += Sum(_l[1][key]*idMap[key] for key in _l[1])
                     if 2 in _l:
                         lhs += Sum(_l[2][key]*idMap[key[0]]*idMap[key[1]] for key in _l[2])
-                    nonl += lhs*_r[None]
+                    nonl.append(lhs*_r[None])
                 if quadratic:
                     # Products that generate term with degree > 2
                     if 2 in _l:
@@ -668,25 +679,27 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             for lkey in _l[2]:
                                 v1_, v2_ = lkey
                                 for rkey in _r[1]:
-                                    nonl += _l[2][lkey]*_r[1][rkey]*idMap[v1_]*idMap[v2_]*idMap[rkey]
+                                    nonl.append(_l[2][lkey]*_r[1][rkey]*idMap[v1_]*idMap[v2_]*idMap[rkey])
                         if 2 in _r:
                             for lkey in _l[2]:
                                 lv1_, lv2_ = lkey
                                 for rkey in _r[2]:
                                     rv1_, rv2_ = rkey
-                                    nonl += _l[2][lkey]*_r[2][rkey]*idMap[lv1_]*idMap[lv2_]*idMap[rv1_]*idMap[rv2_]
+                                    nonl.append(_l[2][lkey]*_r[2][rkey]*idMap[lv1_]*idMap[lv2_]*idMap[rv1_]*idMap[rv2_])
                     if 1 in _l and 2 in _r:
                             for lkey in _l[1]:
                                 for rkey in _r[2]:
                                     v1_, v2_ = rkey
-                                    nonl += _l[1][lkey]*_r[2][rkey]*idMap[lkey]*idMap[v1_]*idMap[v2_]
+                                    nonl.append(_l[1][lkey]*_r[2][rkey]*idMap[lkey]*idMap[v1_]*idMap[v2_])
                 else:
                     # Products that generate term with degree = 2
                     if 1 in _l and 1 in _r:
                         # TODO: Consider creating Multsum objects here with the Sum() function
-                        nonl += Sum(_l[1][i]*idMap[i] for i in _l[1]) * Sum(_r[1][i]*idMap[i] for i in _r[1])
-                if not nonl is 0:
-                    ans[None] = nonl
+                        nonl.append( Sum(_l[1][i]*idMap[i] for i in _l[1]) * Sum(_r[1][i]*idMap[i] for i in _r[1]) )
+                if len(nonl) > 0:
+                    nonl = Sum(x for x in nonl)
+                    if not (nonl.__class__ in native_numeric_types and math.isclose(nonl,0)):
+                        ans[None] = nonl
 
                 #
                 # GENERATING A CONSTANT TERM
