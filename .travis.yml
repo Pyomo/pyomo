@@ -39,6 +39,7 @@ matrix:
 #
 install:
 - sudo apt-get update --quiet
+- sudo apt-get install libgfortran
 #
 # Setup miniconda and activate the testenv environment
 #
