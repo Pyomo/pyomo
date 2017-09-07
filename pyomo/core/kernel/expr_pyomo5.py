@@ -224,7 +224,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 _stack[-2] = True
 
         elif _clone:
-            ans = _obj.__class__( tuple(_result) )
+            ans = _obj._clone( tuple(_result) )
             if _stack:
                 _stack[-2] = True
 
@@ -906,14 +906,15 @@ class _ExternalFunctionExpression(_ExpressionBase):
 
     def __init__(self, args, fcn=None):
         """Construct a call to an external function"""
-        if type(args) is tuple and fcn==None:
-            fcn, args = args
         self._args = args
         self._fcn = fcn
         self._owned = False
         for arg in args:
             if isinstance(arg, _ExpressionBase):
                 arg._owned = True
+
+    def _clone(self, args):
+        return self.__class__(args, self._fcn)
 
     def __getstate__(self):
         result = super(_ExternalFunctionExpression, self).__getstate__()
@@ -1312,8 +1313,6 @@ class _MultiProdExpression(_ProductExpression):
     PRECEDENCE = 4
 
     def __init__(self, args, nnum=None):
-        if type(args) is tuple and nnum==None:
-            args, nnum = args
         self._args = args
         self._nnum = nnum
         self._owned = False
@@ -1657,8 +1656,6 @@ class _GetItemExpression(_ExpressionBase):
 
     def __init__(self, args, base=None):
         """Construct an expression with an operation and a set of arguments"""
-        if type(args) is tuple and base is None:
-            args, base = args
         self._args = args
         self._base = base
         self._owned = False
@@ -1814,19 +1811,19 @@ class _UnaryFunctionExpression(_ExpressionBase):
     # eliminate the need for the fcn and name slots
     __slots__ = ('_fcn', '_name')
 
-    def __init__(self, arg, name=None, fcn=None):
+    def __init__(self, args, name=None, fcn=None):
         """Construct an expression with an operation and a set of arguments"""
-        if type(arg) is tuple and name==None and fcn==None:
-            arg, name, fcn = arg
-        self._args = (arg,)
+        if not type(args) is tuple:
+            args = (args,)
+        self._args = args
         self._name = name
         self._fcn = fcn
         self._owned = False
-        if isinstance(arg, _ExpressionBase):
-            arg._owned = True
+        if isinstance(args[0], _ExpressionBase):
+            args[0]._owned = True
 
     def _clone(self, args):
-        return self.__class__(args[0], self._name, self._fcn)
+        return self.__class__(args, self._name, self._fcn)
 
     def __getstate__(self):
         result = super(_UnaryFunctionExpression, self).__getstate__()
@@ -1876,6 +1873,9 @@ class _AbsExpression(_UnaryFunctionExpression):
 
     def __init__(self, arg):
         super(_AbsExpression, self).__init__(arg, 'abs', abs)
+
+    def _clone(self, args):
+        return self.__class__(args)
 
 
 class _Constant_AbsExpression(_AbsExpression):
