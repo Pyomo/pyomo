@@ -39,17 +39,17 @@ class VariableBoundStripper(IsomorphicTransformation):
             if var.has_lb():
                 if tmp:
                     instance._tmp_var_bound_strip_lb[var] = var.lb
-                var.set_lb(None)
+                var.setlb(None)
             if var.has_ub():
                 if tmp:
                     instance._tmp_var_bound_strip_ub[var] = var.ub
-                var.set_ub(None)
+                var.setub(None)
 
     def revert(self, instance):
         """Revert variables fixed by the transformation."""
         for var in instance._tmp_var_bound_strip_lb:
-            var.set_lb(instance._tmp_var_bound_strip_lb[var])
+            var.setlb(instance._tmp_var_bound_strip_lb[var])
         for var in instance._tmp_var_bound_strip_ub:
-            var.set_ub(instance._tmp_var_bound_strip_ub[var])
+            var.setub(instance._tmp_var_bound_strip_ub[var])
         del instance._tmp_var_bound_strip_lb
         del instance._tmp_var_bound_strip_ub
