@@ -55,10 +55,10 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         try:
             mode = kwds['solver_io']
             if mode is None:
-                mode = 'direct'
+                mode = 'shell'
             del kwds['solver_io']
         except KeyError:
-            mode = 'direct'
+            mode = 'shell'
 
         if mode == 'direct' or mode == 'python':
             return SolverFactory('_gams_direct', **kwds)
