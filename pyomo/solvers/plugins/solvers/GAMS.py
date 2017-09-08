@@ -10,7 +10,7 @@
 
 from six import StringIO, iteritems, itervalues
 from tempfile import mkdtemp
-import os, sys, subprocess, math, logging, shutil
+import os, sys, subprocess, math, logging, shutil, time
 
 from pyomo.core.base import (Constraint, Suffix, Var, value,
                              Expression, Objective)
@@ -55,10 +55,10 @@ class GAMSSolver(pyomo.util.plugin.Plugin):
         try:
             mode = kwds['solver_io']
             if mode is None:
-                mode = 'direct'
+                mode = 'shell'
             del kwds['solver_io']
         except KeyError:
-            mode = 'direct'
+            mode = 'shell'
 
         if mode == 'direct' or mode == 'python':
             return SolverFactory('_gams_direct', **kwds)
@@ -146,6 +146,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         tmpdir=None:
             Specify directory path for storing temporary files.
             A directory will be created if one of this name doesn't exist.
+            None (default) uses the system default temporary path.
+        report_timing=False:
+            Print timing reports for presolve, solver, postsolve, etc.
         io_options:
             Updated with additional keywords passed to solve()
             warmstart=False:
@@ -192,12 +195,15 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
         tee            = kwds.pop("tee", False)
         keepfiles      = kwds.pop("keepfiles", False)
         tmpdir         = kwds.pop("tmpdir", None)
+        report_timing  = kwds.pop("report_timing", False)
         io_options     = kwds.pop("io_options", {})
 
         if len(kwds):
             # Pass remaining keywords to writer, which will handle
             # any unrecognized arguments
             io_options.update(kwds)
+
+        initial_time = time.time()
 
         ####################################################################
         # Presolve
@@ -220,6 +226,11 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                                        io_options=io_options)
             symbolMap = model.solutions.symbol_map[smap_id]
 
+        presolve_completion_time = time.time()
+        if report_timing:
+            print("      %6.2f seconds required for presolve" %
+                  (presolve_completion_time - initial_time))
+
         ####################################################################
         # Apply solver
         ####################################################################
@@ -241,9 +252,11 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         try:
             t1.run(output=sys.stdout if tee else None)
-        except GamsExceptionExecution:
+        except GamsExceptionExecution as e:
             try:
-                check_expr_evaluation(model, symbolMap, 'direct')
+                if e.rc == 3:
+                    # Execution Error
+                    check_expr_evaluation(model, symbolMap, 'direct')
             finally:
                 # Always name working directory or delete files,
                 # regardless of any errors.
@@ -266,6 +279,11 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 t1 = rec = rec_lo = rec_hi = None
                 file_removal_gams_direct(tmpdir, newdir)
             raise
+
+        solve_completion_time = time.time()
+        if report_timing:
+            print("      %6.2f seconds required for solver" %
+                  (solve_completion_time - presolve_completion_time))
 
         ####################################################################
         # Postsolve
@@ -509,6 +527,13 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
                 results._smap = model.solutions.symbol_map[smap_id]
                 model.solutions.delete_symbol_map(smap_id)
 
+        postsolve_completion_time = time.time()
+        if report_timing:
+            print("      %6.2f seconds required for postsolve" %
+                  (postsolve_completion_time - solve_completion_time))
+            print("      %6.2f seconds required total" %
+                  (postsolve_completion_time - initial_time))
+
         return results
 
 
@@ -600,6 +625,9 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         tmpdir=None:
             Specify directory path for storing temporary files.
             A directory will be created if one of this name doesn't exist.
+            None (default) uses the system default temporary path.
+        report_timing=False:
+            Print timing reports for presolve, solver, postsolve, etc.
         io_options:
             Updated with additional keywords passed to solve()
             warmstart=False:
@@ -641,12 +669,15 @@ class GAMSShell(pyomo.util.plugin.Plugin):
         tee            = kwds.pop("tee", False)
         keepfiles      = kwds.pop("keepfiles", False)
         tmpdir         = kwds.pop("tmpdir", None)
+        report_timing  = kwds.pop("report_timing", False)
         io_options     = kwds.pop("io_options", {})
 
         if len(kwds):
             # Pass remaining keywords to writer, which will handle
             # any unrecognized arguments
             io_options.update(kwds)
+
+        initial_time = time.time()
 
         ####################################################################
         # Presolve
@@ -689,6 +720,11 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                                        io_options=io_options)
             symbolMap = model.solutions.symbol_map[smap_id]
 
+        presolve_completion_time = time.time()
+        if report_timing:
+            print("      %6.2f seconds required for presolve" %
+                  (presolve_completion_time - initial_time))
+
         ####################################################################
         # Apply solver
         ####################################################################
@@ -728,6 +764,11 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                     os.remove(lst_filename)
                     os.remove(results_filename)
                     os.remove(statresults_filename)
+
+        solve_completion_time = time.time()
+        if report_timing:
+            print("      %6.2f seconds required for solver" %
+                  (solve_completion_time - presolve_completion_time))
 
         ####################################################################
         # Postsolve
@@ -985,6 +1026,13 @@ class GAMSShell(pyomo.util.plugin.Plugin):
             else:
                 results._smap = model.solutions.symbol_map[smap_id]
                 model.solutions.delete_symbol_map(smap_id)
+
+        postsolve_completion_time = time.time()
+        if report_timing:
+            print("      %6.2f seconds required for postsolve" %
+                  (postsolve_completion_time - solve_completion_time))
+            print("      %6.2f seconds required total" %
+                  (postsolve_completion_time - initial_time))
 
         return results
 
