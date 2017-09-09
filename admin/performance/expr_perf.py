@@ -20,11 +20,51 @@ except:
 import sys
 import argparse
 
-sys.setrecursionlimit(1000000)
-#NTerms = 100000
-#N = 50
-NTerms = 100
+## TIMEOUT LOGIC
+from functools import wraps
+import errno
+import os
+import signal
+
+class TimeoutError(Exception):
+    pass
+
+def Xtimeout(seconds=10, error_message=os.strerror(errno.ETIME)):
+    def decorator(func):
+        def _handle_timeout(signum, frame):
+            raise TimeoutError(error_message)
+
+        def wrapper(*args, **kwargs):
+            signal.signal(signal.SIGALRM, _handle_timeout)
+            signal.alarm(seconds)
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                signal.alarm(0)
+            return result
+
+        return wraps(func)(wrapper)
+
+    return decorator
+
+class timeout:
+    def __init__(self, seconds=10, error_message='Timeout'):
+        self.seconds = seconds
+        self.error_message = error_message
+    def handle_timeout(self, signum, frame):
+        raise TimeoutError(self.error_message)
+    def __enter__(self):
+        signal.signal(signal.SIGALRM, self.handle_timeout)
+        signal.alarm(self.seconds)
+    def __exit__(self, type, value, traceback):
+        signal.alarm(0)
+
+
+
+NTerms = 100000
 N = 5
+#NTerms = 100
+#N = 5
 
 
 parser = argparse.ArgumentParser()
@@ -69,81 +109,80 @@ def measure(f, n=25):
 # Evaluate standard operations on an expression
 #
 def evaluate(expr, seconds):
-    seconds['size'] = expr.size()
-
-    if True:
-        gc.collect()
-        _clear_expression_pool()
-        start = time.time()
-        #
-        expr_ = expr.clone()
-        #
-        stop = time.time()
-        seconds['clone'] = stop-start
+    try:
+        seconds['size'] = expr.size()
+    except:
+        seconds['size'] = -1
 
     gc.collect()
     _clear_expression_pool()
     start = time.time()
-    #
-    d_ = expr.polynomial_degree()
-    #
+    try:
+        with timeout(seconds=20):
+            expr_ = expr.clone()
+    except TimeoutError:
+        print("TIMEOUT")
+    stop = time.time()
+    seconds['clone'] = stop-start
+
+    gc.collect()
+    _clear_expression_pool()
+    start = time.time()
+    try:
+        with timeout(seconds=20):
+            d_ = expr.polynomial_degree()
+    except TimeoutError:
+        print("TIMEOUT")
     stop = time.time()
     seconds['polynomial_degree'] = stop-start
 
-    if False:
-        gc.collect()
-        _clear_expression_pool()
-        start = time.time()
-        #
-        s_ = expr.to_string()
-        #
-        stop = time.time()
-        seconds['to_string'] = stop-start
-
     gc.collect()
     _clear_expression_pool()
     start = time.time()
-    #
-    s_ = expr.is_constant()
-    #
+    try:
+        with timeout(seconds=20):
+            s_ = expr.is_constant()
+    except TimeoutError:
+        print("TIMEOUT")
     stop = time.time()
     seconds['is_constant'] = stop-start
 
     gc.collect()
     _clear_expression_pool()
     start = time.time()
-    #
-    s_ = expr.is_fixed()
-    #
+    try:
+        with timeout(seconds=20):
+            s_ = expr.is_fixed()
+    except TimeoutError:
+        print("TIMEOUT")
     stop = time.time()
     seconds['is_fixed'] = stop-start
 
+    gc.collect()
+    _clear_expression_pool()
+    start = time.time()
     try:
-        gc.collect()
-        _clear_expression_pool()
-        start = time.time()
-        #
-        r_ = generate_canonical_repn(expr)
-        #
-        stop = time.time()
-        seconds['generate_canonical'] = stop-start
-    except:
-        seconds['generate_canonical'] = -1
+        with timeout(seconds=20):
+            r_ = generate_canonical_repn(expr)
+    except TimeoutError:
+        print("TIMEOUT")
+    stop = time.time()
+    seconds['generate_canonical'] = stop-start
 
+    gc.collect()
+    _clear_expression_pool()
+    start = time.time()
     try:
-        gc.collect()
-        _clear_expression_pool()
-        start = time.time()
-        #
-        s_ = EXPR.compress_expression(expr, False)
-        #
-        stop = time.time()
-        seconds['compress'] = stop-start
-        #print(("SECONDS",stop-start))
-        seconds['compressed_size'] = s_.size()
-    except:
-        seconds['compress'] = 0
+        with timeout(seconds=20):
+            s_ = EXPR.compress_expression(expr, False)
+            seconds['compressed_size'] = s_.size()
+    except TimeoutError:
+        print("TIMEOUT")
         seconds['compressed_size'] = 0
+    except:
+        seconds['compressed_size'] = 0
+    stop = time.time()
+    seconds['compress'] = stop-start
 
     return seconds
 
@@ -478,7 +517,6 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(constant(NTerms, 4), n=N)
         print_results(factors_, ans_, output)
 
-
     if True:
         factors_ = tuple(factors+['Linear','Loop 1'])
         ans_ = res[factors_] = measure(linear(NTerms, 1), n=N)
@@ -529,7 +567,6 @@ def runall(factors, res, output=True):
         factors_ = tuple(factors+['NestedLinear','Loop 6'])
         ans_ = res[factors_] = measure(nested_linear(NTerms, 6), n=N)
         print_results(factors_, ans_, output)
-
 
     if True:
         factors_ = tuple(factors+['Bilinear','Loop 1'])
@@ -589,8 +626,8 @@ res = {}
 
 #runall(["COOPR3"], res)
 
-#EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
-#runall(["PYOMO4"], res)
+EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
+runall(["PYOMO4"], res)
 
 EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
 runall(["PYOMO5"], res)
@@ -602,7 +639,7 @@ if args.output:
         # Write csv file
         #
         perf_types = sorted(next(iter(res.values())).keys())
-        res_ = [ list(key) + [res[key][k]['mean'] for k in perf_types] for key in sorted(res.keys())]
+        res_ = [ list(key) + [res.get(key,{}).get(k,{}).get('mean',-999) for k in perf_types] for key in sorted(res.keys())]
         with open(args.output, 'w') as OUTPUT:
             import csv
             writer = csv.writer(OUTPUT)
