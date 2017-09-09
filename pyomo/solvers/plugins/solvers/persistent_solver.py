@@ -51,8 +51,8 @@ class PersistentSolver(DirectOrPersistentSolver):
             return
         self._add_block(block)
 
-    def compile_objective(self):
-        return self._compile_objective()
+    def add_objective(self, obj):
+        return self._add_objective(obj)
 
     def add_constraint(self, con):
         if con.is_indexed():
@@ -227,37 +227,6 @@ class PersistentSolver(DirectOrPersistentSolver):
                 print("      %6.2f seconds required for solver" % (solve_completion_time - presolve_completion_time))
 
             result = self._postsolve()
-            result._smap_id = self._smap_id
-            result._smap = None
-            if self._pyomo_model:
-                if isinstance(self._pyomo_model, IBlockStorage):
-                    if len(result.solution) == 1:
-                        result.solution(0).symbol_map = \
-                            getattr(self._pyomo_model, "._symbol_maps")[result._smap_id]
-                        result.solution(0).default_variable_value = \
-                            self._default_variable_value
-                        if self._load_solutions:
-                            self._pyomo_model.load_solution(result.solution(0))
-                            result.solution.clear()
-                    else:
-                        assert len(result.solution) == 0
-                    # see the hack in the write method
-                    # we don't want this to stick around on the model
-                    # after the solve
-                    assert len(getattr(self._pyomo_model, "._symbol_maps")) == 1
-                    delattr(self._pyomo_model, "._symbol_maps")
-                    del result._smap_id
-                else:
-                    if self._load_solutions:
-                        self._pyomo_model.solutions.load_from(
-                            result,
-                            select=self._select_index,
-                            default_variable_value=self._default_variable_value)
-                        result._smap_id = None
-                        result.solution.clear()
-                    else:
-                        result._smap = self._pyomo_model.solutions.symbol_map[self._smap_id]
-                        self._pyomo_model.solutions.delete_symbol_map(self._smap_id)
             postsolve_completion_time = time.time()
 
             if self._report_timing:

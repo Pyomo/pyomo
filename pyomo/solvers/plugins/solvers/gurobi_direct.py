@@ -23,7 +23,7 @@ import pyomo.core.kernel
 from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
-from pyomo.opt.results.solver import TerminationCondition
+from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -42,11 +42,13 @@ class GurobiDirect(DirectSolver):
         self._init()
 
     def _init(self):
+        self._name = None
         try:
             import gurobipy
             self._gurobipy = gurobipy
             self._python_api_exists = True
             self._version = self._gurobipy.gurobi.version()
+            self._name = "Gurobi %s.%s%s" % self._version
             while len(self._version) < 4:
                 self._version += (0,)
             self._version = self._version[:4]
@@ -83,6 +85,8 @@ class GurobiDirect(DirectSolver):
         self._capabilities.sos2 = True
 
     def _apply_solver(self):
+        for var in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True, active=None, sort=False):
+            var.stale = True
         if self._tee:
             self._solver_model.setParam('OutputFlag', 1)
         else:
@@ -195,7 +199,7 @@ class GurobiDirect(DirectSolver):
         self._range_constraints = set()
         DirectOrPersistentSolver._compile_instance(self, model, kwds)
         try:
-            self._solver_model = self._gurobipy.Model()
+            self._solver_model = self._gurobipy.Model(model.name)
         except Exception:
             e = sys.exc_info()[1]
             msg = ('Unable to create Gurobi model. Have you ihnstalled the Python bindings for Gurboi?\n\n\t' +
@@ -229,9 +233,13 @@ class GurobiDirect(DirectSolver):
                                                         descend_into=False, active=True, sort=True):
                 self._add_sos_constraint(con)
 
-            if len([obj for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective,
-                                                                    descend_into=False, active=True)]) != 0:
-                self._compile_objective()
+            obj_counter = 0
+            for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective,
+                                                        descend_into=False, active=True):
+                obj_counter += 1
+                if obj_counter > 1:
+                    raise ValueError('Solver interface does not support multiple objectives.')
+                self._add_objective(obj)
         self._solver_model.update()
 
     def _add_constraint(self, con):
@@ -322,7 +330,7 @@ class GurobiDirect(DirectSolver):
             raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
         return vtype
 
-    def _compile_objective(self):
+    def _add_objective(self, obj):
         obj_counter = 0
 
         if self._objective is not None:
@@ -334,28 +342,25 @@ class GurobiDirect(DirectSolver):
             self._objective_label = None
             self._objective = None
 
-        for obj in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.objective.Objective,
-                                                            descend_into=True, active=True):
-            obj_counter += 1
-            if obj_counter > 1:
-                raise ValueError('Multiple active objectives found. Solver only handles one active objective')
+        if obj.active is False:
+            raise ValueError('Cannot add inactive objective to solver.')
 
-            if obj.sense == pyomo.core.kernel.minimize:
-                sense = self._gurobipy.GRB.MINIMIZE
-            elif obj.sense == pyomo.core.kernel.maximize:
-                sense = self._gurobipy.GRB.MAXIMIZE
-            else:
-                raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
+        if obj.sense == pyomo.core.kernel.minimize:
+            sense = self._gurobipy.GRB.MINIMIZE
+        elif obj.sense == pyomo.core.kernel.maximize:
+            sense = self._gurobipy.GRB.MAXIMIZE
+        else:
+            raise ValueError('Objective sense is not recognized: {0}'.format(obj.sense))
 
-            gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(obj.expr, self._max_obj_degree)
+        gurobi_expr, referenced_vars = self._get_expr_from_pyomo_expr(obj.expr, self._max_obj_degree)
 
-            for var in referenced_vars:
-                self._referenced_variables[var] += 1
+        for var in referenced_vars:
+            self._referenced_variables[var] += 1
 
-            self._solver_model.setObjective(gurobi_expr, sense=sense)
-            self._objective_label = self._symbol_map.getSymbol(obj, self._labeler)
-            self._objective = obj
-            self._vars_referenced_by_obj = referenced_vars
+        self._solver_model.setObjective(gurobi_expr, sense=sense)
+        self._objective_label = self._symbol_map.getSymbol(obj, self._labeler)
+        self._objective = obj
+        self._vars_referenced_by_obj = referenced_vars
 
     def _postsolve(self):
         # the only suffixes that we extract from GUROBI are
@@ -384,90 +389,114 @@ class GurobiDirect(DirectSolver):
                 extract_reduced_costs = True
                 flag = True
             if not flag:
-                raise RuntimeError(
-                    "***The gurobi_direct solver plugin "
-                    "cannot extract solution suffix="+suffix)
+                raise RuntimeError("***The gurobi_direct solver plugin cannot extract solution suffix="+suffix)
 
         gprob = self._solver_model
+        grb = self._gurobipy.GRB
+        status = gprob.Status
 
         if gprob.getAttr(self._gurobipy.GRB.Attr.IsMIP):
+            if extract_reduced_costs:
+                logger.warning("Cannot get reduced costs for MIP.")
+            if extract_duals:
+                logger.warning("Cannot get duals for MIP.")
             extract_reduced_costs = False
             extract_duals = False
-
-        cons = gprob.getConstrs()
-        qcons = []
-        if self._version_major >= 5:
-            qcons = gprob.getQConstrs()
 
         self.results = SolverResults()
         soln = Solution()
 
-        # cache the variable and constraint dictionaries -
-        # otherwise, each invocation will include a lookup in a
-        # MapContainer, which is extremely expensive.
-        soln_variables = soln.variable
-        soln_constraints = soln.constraint
-
-        self.results.solver.name = ("Gurobi %s.%s%s"
-                                    % self._gurobipy.gurobi.version())
+        self.results.solver.name = self._name
         self.results.solver.wallclock_time = gprob.Runtime
 
-        if gprob.Status == 1:  # problem is loaded, but no solution
+        if status == grb.LOADED:  # problem is loaded, but no solution
+            self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_message = "Model is loaded, but no solution information is available."
-            self.results.solver.termination_condition = TerminationCondition.other
-        if gprob.Status == 2:  # optimal
-            self.results.solver.termination_message = "Model was solved to optimality (subject to tolerances)."
+            self.results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.unknown
+        elif status == grb.OPTIMAL:  # optimal
+            self.results.solver.status = SolverStatus.ok
+            self.results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
+                                                      "and an optimal solution is available."
             self.results.solver.termination_condition = TerminationCondition.optimal
-        elif gprob.Status == 3:  # infeasible
-            self.results.solver.termination_message = "Model was proven to be infeasible."
+            soln.status = SolutionStatus.optimal
+        elif status == grb.INFEASIBLE:
+            self.results.solver.status = SolverStatus.warning
+            self.results.solver.termination_message = "Model was proven to be infeasible"
             self.results.solver.termination_condition = TerminationCondition.infeasible
-        elif gprob.Status == 4:  # infeasible or unbounded
-            self.results.solver.termination_message = "Model was proven to be either infeasible or unbounded."
+            soln.status = SolutionStatus.infeasible
+        elif status == grb.INF_OR_UNBD:
+            self.results.solver.status = SolverStatus.warning
+            self.results.solver.termination_message = "Problem proven to be infeasible or unbounded."
             self.results.solver.termination_condition = TerminationCondition.infeasibleOrUnbounded
-        elif gprob.Status == 5:  # unbounded
+            soln.status = SolutionStatus.unsure
+        elif status == grb.UNBOUNDED:
+            self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_message = "Model was proven to be unbounded."
             self.results.solver.termination_condition = TerminationCondition.unbounded
-        elif gprob.Status == 6:  # cutoff
+            soln.status = SolutionStatus.unbounded
+        elif status == grb.CUTOFF:
+            self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_message = "Optimal objective for model was proven to be worse than the " \
-                                                      "value specified in the Cutoff parameter."
+                                                      "value specified in the Cutoff parameter. No solution " \
+                                                      "information is available."
             self.results.solver.termination_condition = TerminationCondition.minFunctionValue
-        elif gprob.Status == 7:  # iteration limit
+            soln.status = SolutionStatus.unknown
+        elif status == grb.ITERATION_LIMIT:
+            self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_message = "Optimization terminated because the total number of simplex " \
-                                                      "or barrier iterations exceeded specified limits."
+                                                      "iterations performed exceeded the value specified in the " \
+                                                      "IterationLimit parameter."
             self.results.solver.termination_condition = TerminationCondition.maxIterations
-        elif gprob.Status == 8:  # node limit
+            soln.status = SolutionStatus.stoppedByLimit
+        elif status == grb.NODE_LIMIT:
+            self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_message = "Optimization terminated because the total number of " \
-                                                      "branch-and-cut nodes exceeded specified limits."
+                                                      "branch-and-cut nodes explored exceeded the value specified " \
+                                                      "in the NodeLimit parameter"
             self.results.solver.termination_condition = TerminationCondition.maxEvaluations
-        elif gprob.Status == 9:  # time limit
-            self.results.solver.termination_message = "Optimization terminated because the total time expended " \
-                                                      "exceeded specified limits."
+            soln.status = SolutionStatus.stoppedByLimit
+        elif status == grb.TIME_LIMIT:
+            self.results.solver.status = SolverStatus.aborted
+            self.results.solver.termination_message = "Optimization terminated because the time expended exceeded " \
+                                                      "the value specified in the TimeLimit parameter."
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
-        elif gprob.Status == 10:  # solution limit
-            self.results.solver.termination_message = "Optimization terminated because the number of solutions " \
-                                                      "found reached specified limits."
-            self.results.solver.termination_condition = TerminationCondition.other
-        elif gprob.Status == 11:  # interrupted
+            soln.status = SolutionStatus.stoppedByLimit
+        elif status == grb.SOLUTION_LIMIT:
+            self.results.solver.status = SolverStatus.aborted
+            self.results.solver.termination_message = "Optimization terminated because the number of solutions found " \
+                                                      "reached the value specified in the SolutionLimit parameter."
+            self.results.solver.termination_condition = TerminationCondition.unknown
+            soln.status = SolutionStatus.stoppedByLimit
+        elif status == grb.INTERRUPTED:
+            self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_message = "Optimization was terminated by the user."
-            self.results.solver.termination_condition = TerminationCondition.other
-        elif gprob.Status == 12:  # numeric issues
+            self.results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
+        elif status == grb.NUMERIC:
+            self.results.solver.status = SolverStatus.error
             self.results.solver.termination_message = "Optimization was terminated due to unrecoverable numerical " \
                                                       "difficulties."
+            self.results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
+        elif status == grb.SUBOPTIMAL:
+            self.results.solver.status = SolverStatus.warning
+            self.results.solver.termination_message = "Unable to satisfy optimality tolerances; a sub-optimal " \
+                                                      "solution is available."
             self.results.solver.termination_condition = TerminationCondition.other
-        elif gprob.Status == 13:  # suboptimal
-            self.results.solver.termination_message = "Optimization was unable to satisfy optimality tolerances; " \
-                                                      "returned solution is sub-optimal."
-            self.results.solver.termination_condition = TerminationCondition.other
-        else:  # unknown
-            self.results.solver.termination_message = "Unknown termination condition received following optimization."
-            self.results.solver.termination_condition = TerminationCondition.other
+            soln.status = SolutionStatus.feasible
+        else:
+            self.results.solver.status = SolverStatus.error
+            self.results.solver.termination_message = "Unknown return code from GUROBI."
+            self.results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
 
         self.results.problem.name = gprob.ModelName
 
         if gprob.ModelSense == 1:
             self.results.problem.sense = pyomo.core.kernel.minimize
         elif gprob.ModelSense == -1:
-            self.results.problem.sense == pyomo.core.kernel.maximize
+            self.results.problem.sense = pyomo.core.kernel.maximize
         else:
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
 
@@ -501,9 +530,9 @@ class GurobiDirect(DirectSolver):
             raise RuntimeError('Unrecognized gurobi objective sense: {0}'.format(gprob.ModelSense))
 
         try:
-            soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
+            self.results.problem.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
         except TypeError:
-            soln.gap = None
+            self.results.problem.gap = None
 
         self.results.problem.number_of_constraints = gprob.NumConstrs + gprob.NumQConstrs + gprob.NumSOS
         self.results.problem.number_of_nonzeros = gprob.NumNZs
@@ -514,75 +543,21 @@ class GurobiDirect(DirectSolver):
         self.results.problem.number_of_objectives = 1
         self.results.problem.number_of_solutions = gprob.SolCount
 
-        status = self._solver_model.Status
-        if self._gurobipy.GRB.OPTIMAL == status:
-            soln.status = SolutionStatus.optimal
-        elif self._gurobipy.GRB.INFEASIBLE == status:
-            soln.status = SolutionStatus.infeasible
-        elif self._gurobipy.GRB.CUTOFF == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.INF_OR_UNBD == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.INTERRUPTED == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.LOADED == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.SUBOPTIMAL == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.UNBOUNDED == status:
-            soln.status = SolutionStatus.other
-        elif self._gurobipy.GRB.ITERATION_LIMIT == status:
-            soln.status = SolutionStatus.stoppedByLimit
-        elif self._gurobipy.GRB.NODE_LIMIT == status:
-            soln.status = SolutionStatus.stoppedByLimit
-        elif self._gurobipy.GRB.SOLUTION_LIMIT == status:
-            soln.status = SolutionStatus.stoppedByLimit
-        elif self._gurobipy.GRB.TIME_LIMIT == status:
-            soln.status = SolutionStatus.stoppedByLimit
-        elif self._gurobipy.GRB.NUMERIC == status:
-            soln.status = SolutionStatus.error
-        else:
-            raise RuntimeError("Unknown solution status returned by "
-                               "Gurobi solver")
-
         # if a solve was stopped by a limit, we still need to check to
         # see if there is a solution available - this may not always
         # be the case, both in LP and MIP contexts.
-        if (soln.status == SolutionStatus.optimal) or \
-           ((soln.status == SolutionStatus.stoppedByLimit) and (gprob.SolCount > 0)):
-
-            soln.objective[self._objective_label] = {'Value': gprob.ObjVal}
+        if gprob.SolCount > 0:
 
             self._load_vars()
-            # for pyomo_var, gurobipy_var in self._pyomo_var_to_solver_var_map.items():
-            #     if self._referenced_variables[pyomo_var] > 0:
-            #         soln_variables[gurobipy_var.VarName] = {"Value": gurobipy_var.x}
 
             if extract_reduced_costs:
-                pvars = [var for pyomo_var, var in self._pyomo_var_to_solver_var_map.items()
-                         if self._referenced_variables[pyomo_var] > 0]
-                for var in pvars:
-                    soln_variables[var.VarName] = {'Rc': var.Rc}
-
-            if extract_duals or extract_slacks:
-                for con in cons:
-                    soln_constraints[con.ConstrName] = {}
-                for con in qcons:
-                    soln_constraints[con.QCName] = {}
+                self._load_rc()
 
             if extract_duals:
-                for con in cons:
-                    # Pi attributes in Gurobi are the constraint duals
-                    soln_constraints[con.ConstrName]["Dual"] = con.Pi
-                for con in qcons:
-                    # QCPI attributes in Gurobi are the constraint duals
-                    soln_constraints[con.QCName]["Dual"] = con.QCPi
+                self._load_duals()
 
             if extract_slacks:
-                for con in cons:
-                    soln_constraints[con.ConstrName]["Slack"] = con.Slack
-                for con in qcons:
-                    soln_constraints[con.QCName]["Slack"] = con.QCSlack
+                self._load_slacks()
 
         self.results.solution.insert(soln)
 
@@ -608,4 +583,54 @@ class GurobiDirect(DirectSolver):
 
         for var in vars_to_load:
             if ref_vars[var] > 0:
+                var.stale = False
                 var.value = var_map[var].x
+
+    def _load_rc(self, vars_to_load=None):
+        var_map = self._pyomo_var_to_solver_var_map
+        ref_vars = self._referenced_variables
+        rc = self._pyomo_model.rc
+        if vars_to_load is None:
+            vars_to_load = var_map.keys()
+
+        for var in vars_to_load:
+            if ref_vars[var] > 0:
+                rc[var] = var_map[var].Rc
+
+    def _load_duals(self, cons_to_load=None):
+        con_map = self._pyomo_con_to_solver_con_map
+        dual = self._pyomo_model.dual
+        if cons_to_load is None:
+            cons_to_load = ComponentSet(con_map.keys())
+
+        reverse_con_map = {con: pyomo_con for pyomo_con, con in con_map.items()}
+
+        for gurobi_con in self._solver_model.getConstrs():
+            pyomo_con = reverse_con_map[gurobi_con]
+            if pyomo_con in cons_to_load:
+                dual[pyomo_con] = gurobi_con.Pi
+
+        if self._version_major >= 5:
+            for gurobi_con in self._solver_model.getQConstrs():
+                pyomo_con = reverse_con_map[gurobi_con]
+                if pyomo_con in cons_to_load:
+                    dual[pyomo_con] = gurobi_con.QCPi
+
+    def _load_slacks(self, cons_to_load=None):
+        con_map = self._pyomo_con_to_solver_con_map
+        slack = self._pyomo_model.slack
+        if cons_to_load is None:
+            cons_to_load = ComponentSet(con_map.keys())
+
+        reverse_con_map = {con: pyomo_con for pyomo_con, con in con_map.items()}
+
+        for gurobi_con in self._solver_model.getConstrs():
+            pyomo_con = reverse_con_map[gurobi_con]
+            if pyomo_con in cons_to_load:
+                slack[pyomo_con] = gurobi_con.Slack
+
+        if self._version_major >= 5:
+            for gurobi_con in self._solver_model.getQConstrs():
+                pyomo_con = reverse_con_map[gurobi_con]
+                if pyomo_con in cons_to_load:
+                    slack[pyomo_con] = gurobi_con.QCSlack
