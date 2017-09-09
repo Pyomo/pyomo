@@ -40,7 +40,15 @@ from pyomo.core.kernel.expr_common import \
 from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.template_expr import TemplateExpressionError
-from pyomo.core.base.expression import _ExpressionData
+#from pyomo.core.base.expression import _ExpressionData
+
+def isclose(a, b, rel_tol=1e-9, abs_tol=0.0):
+    diff = math.fabs(a-b)
+    if diff <= rel_tol*max(a,b):
+        return True
+    if diff <= abs_tol:
+        return True
+    return False
 
 ##
 ## NEEDS TO BE REMOVED
@@ -926,7 +934,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
         return self._fcn.getname(*args, **kwds)
 
     def _polynomial_degree(self, result):
-        if math.isclose(result[0], 0):
+        if isclose(result[0], 0):
             return 0
         else:
             return None
@@ -969,8 +977,8 @@ class _PowExpression(_ExpressionBase):
         # call this a non-polynomial expression, these exceptions occur
         # too frequently (and in particular, a**2)
         l,r = result
-        if math.isclose(r, 0):
-            if math.isclose(l, 0):
+        if isclose(r, 0):
+            if isclose(l, 0):
                 return 0
             try:
                 # NOTE: use value before int() so that we don't
@@ -990,7 +998,7 @@ class _PowExpression(_ExpressionBase):
         def impl(args):
             if not args[1]:
                 return False
-            return args[0] or math.isclose(value(self._args[1]), 0)
+            return args[0] or isclose(value(self._args[1]), 0)
         return impl
 
     # the local _is_fixed_combiner override is identical to
@@ -1357,7 +1365,7 @@ class _ReciprocalExpression(_ExpressionBase):
         return _ReciprocalExpression.PRECEDENCE
 
     def _polynomial_degree(self, result):
-        if math.isclose(result[0], 0):
+        if isclose(result[0], 0):
             return 0
         return None
 
@@ -1624,7 +1632,7 @@ class _MultiSumExpression(_SumExpression):
     def _to_string_skip(self, _idx):
         return  _idx == 0 and \
                 self._args[0].__class__ in native_numeric_types and \
-                math.isclose(self._args[0], 0)
+                isclose(self._args[0], 0)
 
     def X_to_string_infix(self, ostream, idx, verbose):
         if verbose:
@@ -1838,7 +1846,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
         ostream.write(self.getname())
 
     def _polynomial_degree(self, result):
-        if math.isclose(result[0], 0):
+        if isclose(result[0], 0):
             return 0
         else:
             return None
@@ -2000,7 +2008,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self * _other
-            elif math.isclose(_other, 0):
+            elif isclose(_other, 0):
                 return 0
             elif _other == 1:
                 return _self
@@ -2010,7 +2018,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _ProductExpression((_other, _self))
             return _NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if math.isclose(_self, 0):
+            if isclose(_self, 0):
                 return 0
             elif _self == 1:
                 return _other
@@ -2036,7 +2044,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self + _other
-            elif math.isclose(_other, 0):
+            elif isclose(_other, 0):
                 return _self
             if _self.is_constant():
                 return _Constant_SumExpression((_self, _other))
@@ -2044,7 +2052,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _SumExpression((_other, _self))
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if math.isclose(_self, 0):
+            if isclose(_self, 0):
                 return _other
             if _other.is_constant():
                 return _Constant_SumExpression((_self, _other))
@@ -2068,7 +2076,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self - _other
-            elif math.isclose(_other, 0):
+            elif isclose(_other, 0):
                 return _self
             if _self.is_constant():
                 return _Constant_SumExpression((-_other, _self))
@@ -2076,7 +2084,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _SumExpression((-_other, _self))
             return _NPV_SumExpression((-_other, _self))
         elif _self.__class__ in native_numeric_types:
-            if math.isclose(_self, 0):
+            if isclose(_self, 0):
                 if _other.is_constant():
                     return _Constant_NegationExpression((_other,))
                 elif _other._potentially_variable():
@@ -2115,7 +2123,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _ProductExpression((1/_other, _self))
             return _NPV_ProductExpression((1/_other, _self))
         elif _self.__class__ in native_numeric_types:
-            if math.isclose(_self, 0):
+            if isclose(_self, 0):
                 return 0
             elif _self == 1:
                 if _other.is_constant():
