@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -138,6 +138,9 @@ class GAMSDirect(pyomo.util.plugin.Plugin):
 
         tee=False:
             Output GAMS log to stdout.
+        load_solutions=True:
+            Optionally skip loading solution into model, in which case
+            the results object will contain the solution data.
         keepfiles=False:
             Keep temporary files. Equivalent of DebugLevel.KeepFiles.
             Summary of temp files can be found in _gams_py_gjo0.pf
@@ -568,7 +571,7 @@ class GAMSShell(pyomo.util.plugin.Plugin):
                 raise NameError(
                     "No 'gams' command found on system PATH - GAMS shell "
                     "solver functionality is not available.")
- 
+
     def _default_executable(self):
         executable = pyutilib.services.registered_executable("gams")
         if executable is None:
@@ -616,6 +619,9 @@ class GAMSShell(pyomo.util.plugin.Plugin):
 
         tee=False:
             Output GAMS log to stdout.
+        load_solutions=True:
+            Optionally skip loading solution into model, in which case
+            the results object will contain the solution data.
         keepfiles=False:
             Keep temporary files.
         tmpdir=None:
