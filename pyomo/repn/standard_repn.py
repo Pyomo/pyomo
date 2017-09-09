@@ -57,22 +57,22 @@ class StandardRepn(object):
     TODO: define what "efficient" means to us.
     """
 
-    __slots__ = ('_constant',               # The constant term
-                 '_linear_terms_coef',      # Linear coefficients
-                 '_linear_vars',            # Linear variables
-                 '_quadratic_terms_coef',   # Quadratic coefficients
-                 '_quadratic_vars',         # Quadratic variables
-                 '_nonlinear_expr',         # TODO
-                 '_nonlinear_vars')         # TODO
+    __slots__ = ('constant',          # The constant term
+                 'linear_coefs',      # Linear coefficients
+                 'linear_vars',       # Linear variables
+                 'quadratic_coefs',   # Quadratic coefficients
+                 'quadratic_vars',    # Quadratic variables
+                 'nonlinear_expr',    # Nonlinear expression
+                 'nonlinear_vars')    # Variables that appear in the nonlinear expression
 
     def __init__(self, expr=None):
-        self._constant = 0
-        self._linear_vars = {}
-        self._linear_terms_coef = {}
-        self._quadratic_vars = {}
-        self._quadratic_terms_coef = {}
-        self._nonlinear_expr = None
-        self._nonlinear_vars = {}
+        self.constant = 0
+        self.linear_vars = {}
+        self.linear_coefs = {}
+        self.quadratic_vars = {}
+        self.quadratic_coefs = {}
+        self.nonlinear_expr = None
+        self.nonlinear_vars = {}
         if not expr is None:
             generate_standard_repn(expr, repn=self)
 
@@ -80,25 +80,25 @@ class StandardRepn(object):
         """
         This method is required because this class uses slots.
         """
-        return  (self._constant,
-                 self._linear_terms_coef,
-                 self._linear_vars,
-                 self._quadratic_terms_coef,
-                 self._quadratic_vars,
-                 self._nonlinear_expr,
-                 self._nonlinear_vars)
+        return  (self.constant,
+                 self.linear_coefs,
+                 self.linear_vars,
+                 self.quadratic_coefs,
+                 self.quadratic_vars,
+                 self.nonlinear_expr,
+                 self.nonlinear_vars)
 
     def __setstate__(self, state):
         """
         This method is required because this class uses slots.
         """
-        self._constant, \
-        self._linear_terms_coef, \
-        self._linear_vars, \
-        self._quadratic_terms_coef, \
-        self._quadratic_vars, \
-        self._nonlinear_expr, \
-        self._nonlinear_vars = state
+        self.constant, \
+        self.linear_coefs, \
+        self.linear_vars, \
+        self.quadratic_coefs, \
+        self.quadratic_vars, \
+        self.nonlinear_expr, \
+        self.nonlinear_vars = state
 
     #
     # Although it is convenient to have the dictionaries
@@ -107,18 +107,18 @@ class StandardRepn(object):
     # generation is complete
     #
     def _compress(self):
-        if  self._linear_vars.__class__ is dict:
-            linear_keys = self._linear_vars.keys()
-            self._linear_vars = tuple(self._linear_vars[key] for key in linear_keys)
-            self._linear_terms_coef = tuple(self._linear_terms_coef[key] for key in linear_keys)
+        if  self.linear_vars.__class__ is dict:
+            linear_keys = self.linear_vars.keys()
+            self.linear_vars = tuple(self.linear_vars[key] for key in linear_keys)
+            self.linear_coefs = tuple(self.linear_coefs[key] for key in linear_keys)
         else:
-            self._linear_terms_coef = tuple()
-        if  self._quadratic_vars.__class__ is dict:
-            quadratic_keys = self._quadratic_vars.keys()
-            self._quadratic_vars = tuple(self._quadratic_vars[key] for key in quadratic_keys)
-            self._quadratic_terms_coef = tuple(self._quadratic_terms_coef[key] for key in quadratic_keys)
-        if self._nonlinear_vars.__class__ is dict:
-            self._nonlinear_vars = tuple(itervalues(self._nonlinear_vars))
+            self.linear_coefs = tuple()
+        if  self.quadratic_vars.__class__ is dict:
+            quadratic_keys = self.quadratic_vars.keys()
+            self.quadratic_vars = tuple(self.quadratic_vars[key] for key in quadratic_keys)
+            self.quadratic_coefs = tuple(self.quadratic_coefs[key] for key in quadratic_keys)
+        if self.nonlinear_vars.__class__ is dict:
+            self.nonlinear_vars = tuple(itervalues(self.nonlinear_vars))
 
     #
     # Generate a string representation of the expression
@@ -126,36 +126,36 @@ class StandardRepn(object):
     def __str__(self):
         output = StringIO()
         output.write("\n")
-        output.write("constant:       "+str(self._constant)+"\n")
-        if  self._linear_vars.__class__ is dict:
-            output.write("linear vars:    "+str([v_.name for _,v_ in sorted(self._linear_vars.items(), key=lambda x: x[0])])+"\n")
-            output.write("linear var ids: "+str([id(v_) for _,v_ in sorted(self._linear_vars.items(), key=lambda x: x[0])])+"\n")
-            output.write("linear coef:    "+str([c_ for _,c_ in sorted(self._linear_terms_coef.items(), key=lambda x: x[0])])+"\n")
+        output.write("constant:       "+str(self.constant)+"\n")
+        if  self.linear_vars.__class__ is dict:
+            output.write("linear vars:    "+str([v_.name for _,v_ in sorted(self.linear_vars.items(), key=lambda x: x[0])])+"\n")
+            output.write("linear var ids: "+str([id(v_) for _,v_ in sorted(self.linear_vars.items(), key=lambda x: x[0])])+"\n")
+            output.write("linear coef:    "+str([c_ for _,c_ in sorted(self.linear_coefs.items(), key=lambda x: x[0])])+"\n")
         else:
-            output.write("linear vars:    "+str([v_.name for v_ in self._linear_vars])+"\n")
-            output.write("linear var ids: "+str([id(v_) for v_ in self._linear_vars])+"\n")
-            output.write("linear coef:    "+str(list(self._linear_terms_coef))+"\n")
-        if  self._quadratic_vars.__class__ is dict:
-            output.write("quadratic vars:    "+str([(v_[0].name,v_[1].name) for _,v_ in sorted(self._quadratic_vars.items(), key=lambda x: x[0])])+"\n")
-            output.write("quadratic var ids: "+str([(id(v_[0]),id(v_[1])) for _,v_ in sorted(self._quadratic_vars.items(), key=lambda x: x[0])])+"\n")
-            output.write("quadratic coef:    "+str([c_ for _,c_ in sorted(self._quadratic_terms_coef.items(), key=lambda x: x[0])])+"\n")
+            output.write("linear vars:    "+str([v_.name for v_ in self.linear_vars])+"\n")
+            output.write("linear var ids: "+str([id(v_) for v_ in self.linear_vars])+"\n")
+            output.write("linear coef:    "+str(list(self.linear_coefs))+"\n")
+        if  self.quadratic_vars.__class__ is dict:
+            output.write("quadratic vars:    "+str([(v_[0].name,v_[1].name) for _,v_ in sorted(self.quadratic_vars.items(), key=lambda x: x[0])])+"\n")
+            output.write("quadratic var ids: "+str([(id(v_[0]),id(v_[1])) for _,v_ in sorted(self.quadratic_vars.items(), key=lambda x: x[0])])+"\n")
+            output.write("quadratic coef:    "+str([c_ for _,c_ in sorted(self.quadratic_coefs.items(), key=lambda x: x[0])])+"\n")
         else:
-            output.write("quadratic vars:    "+str([v_.name for v_ in self._quadratic_vars])+"\n")
-            output.write("quadratic var ids: "+str([id(v_) for v_ in self._quadratic_vars])+"\n")
-            output.write("quadratic coef:    "+str(list(self._quadratic_terms_coef))+"\n")
-        if self._nonlinear_expr is None:
+            output.write("quadratic vars:    "+str([v_.name for v_ in self.quadratic_vars])+"\n")
+            output.write("quadratic var ids: "+str([id(v_) for v_ in self.quadratic_vars])+"\n")
+            output.write("quadratic coef:    "+str(list(self.quadratic_coefs))+"\n")
+        if self.nonlinear_expr is None:
             output.write("nonlinear expr: None\n")
         else:
             output.write("nonlinear expr:\n")
             try:
-                self._nonlinear_expr.to_string(ostream=output)
+                self.nonlinear_expr.to_string(ostream=output)
                 output.write("\n")
             except AttributeError:
-                output.write(str([(i,str(e)) for i,e in self._nonlinear_expr])+"\n")
-        if  self._nonlinear_vars.__class__ is dict:
-            output.write("nonlinear vars: "+str([v_.name for _,v_ in sorted(self._nonlinear_vars.items(), key=lambda x: x[0])])+"\n")
+                output.write(str([(i,str(e)) for i,e in self.nonlinear_expr])+"\n")
+        if  self.nonlinear_vars.__class__ is dict:
+            output.write("nonlinear vars: "+str([v_.name for _,v_ in sorted(self.nonlinear_vars.items(), key=lambda x: x[0])])+"\n")
         else:
-            output.write("nonlinear vars: "+str([v_.name for v_ in self._nonlinear_vars])+"\n")
+            output.write("nonlinear vars: "+str([v_.name for v_ in self.nonlinear_vars])+"\n")
         output.write("\n")
         ret_str = output.getvalue()
         output.close()
@@ -170,36 +170,36 @@ class StandardRepn(object):
             return False
 
         # Immediately check constants
-        if self._constant != other._constant:
+        if self.constant != other.constant:
             return False
 
         # Check linear term lengths before iterating
-        if len(self._linear_vars) != len(other._linear_vars):
+        if len(self.linear_vars) != len(other.linear_vars):
             return False
 
-        if self._linear_vars.__class__ is dict:
-            self_linear_vars = list(itervalues(self._linear_vars))
-            self_linear_terms = self._linear_terms_coef
+        if self.linear_vars.__class__ is dict:
+            selflinear_vars = list(itervalues(self.linear_vars))
+            self_linear_terms = self.linear_coefs
         else:
-            self_linear_vars = self._linear_vars
+            selflinear_vars = self.linear_vars
             self_linear_terms = dict((id(var),coef)
-                                     for var,coef in zip(self._linear_vars,
-                                                         self._linear_terms_coef))
+                                     for var,coef in zip(self.linear_vars,
+                                                         self.linear_coefs))
 
-        if other._linear_vars.__class__ is dict:
-            other_linear_vars = list(itervalues(other._linear_vars))
-            other_linear_terms = other._linear_terms_coef
+        if other.linear_vars.__class__ is dict:
+            otherlinear_vars = list(itervalues(other.linear_vars))
+            other_linear_terms = other.linear_coefs
         else:
-            other_linear_vars = other._linear_vars
+            otherlinear_vars = other.linear_vars
             other_linear_terms = dict((id(var),coef)
-                                      for var,coef in zip(other._linear_vars,
-                                                          other._linear_terms_coef))
+                                      for var,coef in zip(other.linear_vars,
+                                                          other.linear_coefs))
 
         # Establish a mapping between self's linear terms and other's
         found_match = []
-        for var in self_linear_vars:
+        for var in selflinear_vars:
             match = False
-            for other_var in other_linear_vars:
+            for other_var in otherlinear_vars:
                 if var is other_var:
                     match = True
                     break
@@ -214,29 +214,29 @@ class StandardRepn(object):
             if self_linear_terms[var_ID] != other_linear_terms[var_ID]:
                 return False
 
-        if self._nonlinear_expr is not None:
-            if other._nonlinear_expr is None:
+        if self.nonlinear_expr is not None:
+            if other.nonlinear_expr is None:
                 return False
 
-            if type(self._nonlinear_expr) is list:
-                if type(other._nonlinear_expr) is not list:
+            if type(self.nonlinear_expr) is list:
+                if type(other.nonlinear_expr) is not list:
                     return False
 
                 # Check that nonlinear expressions are the same length
-                if len(self._nonlinear_expr) != len(other._nonlinear_expr):
+                if len(self.nonlinear_expr) != len(other.nonlinear_expr):
                     return False
 
                 # Check that nonlinear expression have the same terms
-                for i in xrange(len(self._nonlinear_expr)):
-                    if self._nonlinear_expr[i][0] != other._nonlinear_expr[i][0]:
+                for i in xrange(len(self.nonlinear_expr)):
+                    if self.nonlinear_expr[i][0] != other.nonlinear_expr[i][0]:
                         return False
-                    if not self._nonlinear_expr[i][1] is other._nonlinear_expr[i][1]:
+                    if not self.nonlinear_expr[i][1] is other.nonlinear_expr[i][1]:
                         return False
             else:
-                if not self._nonlinear_expr is other._nonlinear_expr:
+                if not self.nonlinear_expr is other.nonlinear_expr:
                     return False
         else:
-            if other._nonlinear_expr is not None:
+            if other.nonlinear_expr is not None:
                 return False
 
         return True
@@ -245,20 +245,20 @@ class StandardRepn(object):
         return not self.__eq__(other)
 
     def is_fixed(self):
-        if len(self._linear_vars) == 0 and len(self._nonlinear_vars) == 0 and len(self._quadratic_vars) == 0:
+        if len(self.linear_vars) == 0 and len(self.nonlinear_vars) == 0 and len(self.quadratic_vars) == 0:
             return True
         return False
 
     def is_linear(self):
-        if self._nonlinear_expr is None and len(self._quadratic_terms_coef) == 0:
+        if self.nonlinear_expr is None and len(self.quadratic_coefs) == 0:
             return True
         return False
 
     def is_quadratic(self):
-        return len(self._quadratic_terms_coef) > 0 and self._nonlinear_expr is None
+        return len(self.quadratic_coefs) > 0 and self.nonlinear_expr is None
 
     def is_nonlinear(self):
-        if self._nonlinear_expr is None and len(self._quadratic_terms_coef) == 0:
+        if self.nonlinear_expr is None and len(self.quadratic_coefs) == 0:
             return False
         return True
 
@@ -266,21 +266,21 @@ class StandardRepn(object):
         #
         # TODO: Should this replace non-mutable parameters with constants?
         #
-        expr = self._constant
-        for i in sorted(self._linear_vars.keys()):
-            #print((self._linear_vars[i].name, self._linear_terms_coef[i]))
-            val = value(self._linear_terms_coef[i])
+        expr = self.constant
+        for i in sorted(self.linear_vars.keys()):
+            #print((self.linear_vars[i].name, self.linear_coefs[i]))
+            val = value(self.linear_coefs[i])
             if math.isclose(val, 1.0):
-                expr += self._linear_vars[i]
+                expr += self.linear_vars[i]
             elif math.isclose(val, -1.0):
-                expr -= self._linear_vars[i]
+                expr -= self.linear_vars[i]
             elif val < 0.0:
-                expr -= - self._linear_terms_coef[i]*self._linear_vars[i]
+                expr -= - self.linear_coefs[i]*self.linear_vars[i]
             else:
-                expr += self._linear_terms_coef[i]*self._linear_vars[i]
-        expr += Sum(self._quadratic_terms_coef[i]*self._quadratic_vars[i] for i in sorted(self._quadratic_vars.keys()))
-        if not self._nonlinear_expr is None:
-            expr += self._nonlinear_expr
+                expr += self.linear_coefs[i]*self.linear_vars[i]
+        expr += Sum(self.quadratic_coefs[i]*self.quadratic_vars[i] for i in sorted(self.quadratic_vars.keys()))
+        if not self.nonlinear_expr is None:
+            expr += self.nonlinear_expr
         return expr
 
 
@@ -326,9 +326,9 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         if type(expr) in native_numeric_types or not expr._potentially_variable():
             if compute_values:
-                repn._constant = _multiplier*value(expr)
+                repn.constant = _multiplier*value(expr)
             else:
-                repn._constant = _multiplier*expr
+                repn.constant = _multiplier*expr
             if compress:
                 repn._compress()
             return repn
@@ -338,15 +338,15 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         if isinstance(expr, (_VarData, IVariable)):
             if expr.fixed:
                 if compute_values:
-                    repn._constant = _multiplier*value(expr)
+                    repn.constant = _multiplier*value(expr)
                 else:
-                    repn._constant = _multiplier*expr
+                    repn.constant = _multiplier*expr
                 if compress:
                     repn._compress()
                 return repn
             var_ID = id(expr)
-            repn._linear_terms_coef[var_ID] = _multiplier
-            repn._linear_vars[var_ID] = expr
+            repn.linear_coefs[var_ID] = _multiplier
+            repn.linear_vars[var_ID] = expr
             if compress:
                 repn._compress()
             return repn
@@ -814,23 +814,23 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         #
         # Create the final object here from 'ans'
         #
-        repn._constant = _multiplier*ans.get(0,0)
+        repn.constant = _multiplier*ans.get(0,0)
         if 1 in ans:
             for i in ans[1]:
-                repn._linear_vars[i] = idMap[i]
-                repn._linear_terms_coef[i] = _multiplier*ans[1][i]
+                repn.linear_vars[i] = idMap[i]
+                repn.linear_coefs[i] = _multiplier*ans[1][i]
         if 2 in ans:
             for i in ans[2]:
                 v1_, v2_ = i
-                repn._quadratic_vars[i] = (idMap[v1_],idMap[v2_])
-                repn._quadratic_terms_coef[i] = _multiplier*ans[2][i]
-        repn._nonlinear_expr = ans.get(None,None)
-        if not repn._nonlinear_expr is None:
-            repn._nonlinear_expr *= _multiplier
-        repn._nonlinear_vars = {}
-        if not repn._nonlinear_expr is None:
-            for v_ in EXPR.identify_variables(repn._nonlinear_expr, include_fixed=False, include_potentially_variable=False):
-                repn._nonlinear_vars[id(v_)] = v_
+                repn.quadratic_vars[i] = (idMap[v1_],idMap[v2_])
+                repn.quadratic_coefs[i] = _multiplier*ans[2][i]
+        repn.nonlinear_expr = ans.get(None,None)
+        if not repn.nonlinear_expr is None:
+            repn.nonlinear_expr *= _multiplier
+        repn.nonlinear_vars = {}
+        if not repn.nonlinear_expr is None:
+            for v_ in EXPR.identify_variables(repn.nonlinear_expr, include_fixed=False, include_potentially_variable=False):
+                repn.nonlinear_vars[id(v_)] = v_
                 #
                 # Update idMap in case we skipped nonlinear sub-expressions
                 #

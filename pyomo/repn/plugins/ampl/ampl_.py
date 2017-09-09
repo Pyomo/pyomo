@@ -274,12 +274,12 @@ class ModelSOS(object):
 
 class RepnWrapper(object):
 
-    __slots__ = ('repn','_linear_vars','_nonlinear_vars')
+    __slots__ = ('repn','linear_vars','nonlinear_vars')
 
     def __init__(self,repn,linear,nonlinear):
         self.repn = repn
-        self._linear_vars = linear
-        self._nonlinear_vars = nonlinear
+        self.linear_vars = linear
+        self.nonlinear_vars = nonlinear
 
 class ProblemWriter_nl(AbstractProblemWriter):
 
@@ -1006,14 +1006,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 wrapped_ampl_repn = RepnWrapper(
                     ampl_repn,
-                    list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
-                    list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                    list(self_varID_map[id(var)] for var in ampl_repn.linear_vars),
+                    list(self_varID_map[id(var)] for var in ampl_repn.nonlinear_vars))
 
-                LinearVars.update(wrapped_ampl_repn._linear_vars)
-                ObjNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
+                LinearVars.update(wrapped_ampl_repn.linear_vars)
+                ObjNonlinearVars.update(wrapped_ampl_repn.nonlinear_vars)
 
-                ObjVars.update(wrapped_ampl_repn._linear_vars)
-                ObjVars.update(wrapped_ampl_repn._nonlinear_vars)
+                ObjVars.update(wrapped_ampl_repn.linear_vars)
+                ObjVars.update(wrapped_ampl_repn.nonlinear_vars)
 
                 obj_ID = trivial_labeler(active_objective)
                 Objectives_dict[obj_ID] = (active_objective, wrapped_ampl_repn)
@@ -1083,17 +1083,17 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if constraint_data._linear_canonical_form:
                     canonical_repn = constraint_data.canonical_form()
                     ampl_repn = AmplRepn()
-                    ampl_repn._nonlinear_vars = tuple()
-                    ampl_repn._linear_vars = canonical_repn.variables
-                    ampl_repn._linear_terms_coef = canonical_repn.linear
-                    ampl_repn._constant = canonical_repn.constant
+                    ampl_repn.nonlinear_vars = tuple()
+                    ampl_repn.linear_vars = canonical_repn.variables
+                    ampl_repn.linear_coefs = canonical_repn.linear
+                    ampl_repn.constant = canonical_repn.constant
                 elif isinstance(constraint_data, LinearCanonicalRepn):
                     canonical_repn = constraint_data
                     ampl_repn = AmplRepn()
-                    ampl_repn._nonlinear_vars = tuple()
-                    ampl_repn._linear_vars = canonical_repn.variables
-                    ampl_repn._linear_terms_coef = canonical_repn.linear
-                    ampl_repn._constant = canonical_repn.constant
+                    ampl_repn.nonlinear_vars = tuple()
+                    ampl_repn.linear_vars = canonical_repn.variables
+                    ampl_repn.linear_coefs = canonical_repn.linear
+                    ampl_repn.constant = canonical_repn.constant
                 else:
                     if gen_con_ampl_repn:
                         #print(constraint_data.body.to_string())
@@ -1120,8 +1120,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 con_ID = trivial_labeler(constraint_data)
                 wrapped_ampl_repn = RepnWrapper(
                     ampl_repn,
-                    list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
-                    list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                    list(self_varID_map[id(var)] for var in ampl_repn.linear_vars),
+                    list(self_varID_map[id(var)] for var in ampl_repn.nonlinear_vars))
 
                 if ampl_repn.is_nonlinear():
                     nonlin_con_order_list.append(con_ID)
@@ -1131,12 +1131,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 Constraints_dict[con_ID] = (constraint_data, wrapped_ampl_repn)
 
-                LinearVars.update(wrapped_ampl_repn._linear_vars)
-                ConNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
+                LinearVars.update(wrapped_ampl_repn.linear_vars)
+                ConNonlinearVars.update(wrapped_ampl_repn.nonlinear_vars)
 
                 nnz_grad_constraints += \
-                    len(set(wrapped_ampl_repn._linear_vars).union(
-                        wrapped_ampl_repn._nonlinear_vars))
+                    len(set(wrapped_ampl_repn.linear_vars).union(
+                        wrapped_ampl_repn.nonlinear_vars))
 
                 L = None
                 U = None
@@ -1151,7 +1151,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if constraint_data.equality:
                     assert L == U
 
-                offset = ampl_repn._constant
+                offset = ampl_repn.constant
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:
@@ -1688,16 +1688,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write("\t#%s" % (lbl))
                 rowf.write(lbl+"\n")
             OUTPUT.write("\n")
-            self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
+            self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn.nonlinear_expr)
 
-            for var_ID in set(wrapped_ampl_repn._linear_vars).union(
-                    wrapped_ampl_repn._nonlinear_vars):
+            for var_ID in set(wrapped_ampl_repn.linear_vars).union(
+                    wrapped_ampl_repn.nonlinear_vars):
                 cu[self_ampl_var_id[var_ID]] += 1
 
         for con_ID in lin_con_order_list:
             con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
-            con_vars = set(wrapped_ampl_repn._linear_vars)
+            con_vars = set(wrapped_ampl_repn.linear_vars)
             for var_ID in con_vars:
                 cu[self_ampl_var_id[var_ID]] += 1
             OUTPUT.write("C%d" % (row_id))
@@ -1730,14 +1730,14 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
             if wrapped_ampl_repn.repn.is_linear():
                 OUTPUT.write(self._op_string[NumericConstant]
-                             % (wrapped_ampl_repn.repn._constant))
+                             % (wrapped_ampl_repn.repn.constant))
             else:
-                if wrapped_ampl_repn.repn._constant != 0:
+                if wrapped_ampl_repn.repn.constant != 0:
                     _, binary_sum_str, _ = self._op_string[expr._SumExpression]
                     OUTPUT.write(binary_sum_str)
                     OUTPUT.write(self._op_string[NumericConstant]
-                                 % (wrapped_ampl_repn.repn._constant))
-                self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn._nonlinear_expr)
+                                 % (wrapped_ampl_repn.repn.constant))
+                self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn.nonlinear_expr)
 
         if symbolic_solver_labels:
             rowf.close()
@@ -1886,36 +1886,36 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for nc, con_ID in enumerate(itertools.chain(nonlin_con_order_list,
                                                     lin_con_order_list)):
             con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
-            num_nonlinear_vars = len(wrapped_ampl_repn._nonlinear_vars)
-            num_linear_vars = len(wrapped_ampl_repn._linear_vars)
-            if num_nonlinear_vars == 0:
-                if num_linear_vars > 0:
+            numnonlinear_vars = len(wrapped_ampl_repn.nonlinear_vars)
+            numlinear_vars = len(wrapped_ampl_repn.linear_vars)
+            if numnonlinear_vars == 0:
+                if numlinear_vars > 0:
                     linear_dict = dict((var_ID, coef)
                                        for var_ID, coef in
-                                       zip(wrapped_ampl_repn._linear_vars,
-                                           wrapped_ampl_repn.repn._linear_terms_coef))
-                    OUTPUT.write("J%d %d\n"%(nc, num_linear_vars))
+                                       zip(wrapped_ampl_repn.linear_vars,
+                                           wrapped_ampl_repn.repn.linear_coefs))
+                    OUTPUT.write("J%d %d\n"%(nc, numlinear_vars))
                     OUTPUT.writelines(
                         "%d %r\n" % (self_ampl_var_id[con_var],
                                      linear_dict[con_var])
                         for con_var in sorted(linear_dict.keys()))
-            elif num_linear_vars == 0:
+            elif numlinear_vars == 0:
                 nl_con_vars = \
-                    sorted(wrapped_ampl_repn._nonlinear_vars)
-                OUTPUT.write("J%d %d\n"%(nc, num_nonlinear_vars))
+                    sorted(wrapped_ampl_repn.nonlinear_vars)
+                OUTPUT.write("J%d %d\n"%(nc, numnonlinear_vars))
                 OUTPUT.writelines(
                     "%d 0\n"%(self_ampl_var_id[con_var])
                     for con_var in nl_con_vars)
             else:
-                con_vars = set(wrapped_ampl_repn._nonlinear_vars)
+                con_vars = set(wrapped_ampl_repn.nonlinear_vars)
                 nl_con_vars = sorted(
                     con_vars.difference(
-                        wrapped_ampl_repn._linear_vars))
-                con_vars.update(wrapped_ampl_repn._linear_vars)
+                        wrapped_ampl_repn.linear_vars))
+                con_vars.update(wrapped_ampl_repn.linear_vars)
                 linear_dict = dict(
                     (var_ID, coef) for var_ID, coef in
-                    zip(wrapped_ampl_repn._linear_vars,
-                        wrapped_ampl_repn.repn._linear_terms_coef))
+                    zip(wrapped_ampl_repn.linear_vars,
+                        wrapped_ampl_repn.repn.linear_coefs))
                 OUTPUT.write("J%d %d\n"%(nc, len(con_vars)))
                 OUTPUT.writelines(
                     "%d %r\n" % (self_ampl_var_id[con_var],
@@ -1938,11 +1938,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
             grad_entries = {}
             for idx, obj_var in enumerate(
-                    wrapped_ampl_repn._linear_vars):
+                    wrapped_ampl_repn.linear_vars):
                 grad_entries[self_ampl_var_id[obj_var]] = \
-                    wrapped_ampl_repn.repn._linear_terms_coef[idx]
-            for obj_var in wrapped_ampl_repn._nonlinear_vars:
-                if obj_var not in wrapped_ampl_repn._linear_vars:
+                    wrapped_ampl_repn.repn.linear_coefs[idx]
+            for obj_var in wrapped_ampl_repn.nonlinear_vars:
+                if obj_var not in wrapped_ampl_repn.linear_vars:
                     grad_entries[self_ampl_var_id[obj_var]] = 0
             len_ge = len(grad_entries)
             if len_ge > 0:

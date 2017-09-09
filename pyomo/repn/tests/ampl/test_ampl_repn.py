@@ -17,11 +17,11 @@ class AmplRepnTests(unittest.TestCase):
         m.obj = Objective(expr=m.x**2)
 
         test = gar(m.con.body)
-        self.assertEqual(test._constant, 0)
-        self.assertEqual(test._linear_vars, {})
-        self.assertEqual(test._linear_terms_coef, {})
-        self.assertEqual(test._nonlinear_vars, {id(m.x): m.x})
-        self.assertIs(test._nonlinear_expr, m.con.body)
+        self.assertEqual(test.constant, 0)
+        self.assertEqual(test.linear_vars, {})
+        self.assertEqual(test.linear_coefs, {})
+        self.assertEqual(test.nonlinear_vars, {id(m.x): m.x})
+        self.assertIs(test.nonlinear_expr, m.con.body)
 
 if __name__ == "__main__":
     unittest.main()
