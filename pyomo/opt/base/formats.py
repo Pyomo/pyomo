@@ -30,8 +30,11 @@ from pyutilib.enum import Enum
 #                   command, or provide a runtime optimization problem)
 # bar - A Baron input file
 # gams - A GAMS input file
+# xlsx - A Microsoft Excel file displaying the contents of a model
 #
-ProblemFormat = Enum('colin', 'pyomo', 'cpxlp', 'nl', 'mps', 'mod', 'lpxlp', 'osil', 'colin_optproblem', 'FuncDesigner','bar','gams')
+ProblemFormat = Enum('colin', 'pyomo', 'cpxlp', 'nl', 'mps', 'mod', 'lpxlp',
+                     'osil', 'colin_optproblem', 'FuncDesigner','bar','gams',
+                     'xlsx')
 
 #
 # osrl - osrl XML file defined by the COIN-OR OS project: Result
@@ -55,6 +58,7 @@ def guess_format(filename):
     formats['osil']=ProblemFormat.osil
     formats['gms']=ProblemFormat.gams
     formats['gams']=ProblemFormat.gams
+    formats['xlsx']=ProblemFormat.xlsx
 
     formats['sol']=ResultsFormat.sol
     formats['osrl']=ResultsFormat.osrl
