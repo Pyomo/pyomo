@@ -24,7 +24,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
 
         self._pyomo_model = kwds.pop('model', None)
         if self._pyomo_model is not None:
-            self.compile_instance(self._pyomo_model, **kwds)
+            self.set_instance(self._pyomo_model, **kwds)
 
     def _remove_constraint(self, solver_con):
         self._solver_model.remove(solver_con)
@@ -50,13 +50,13 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
     def _warm_start(self):
         GurobiDirect._warm_start(self)
 
-    def compile_var(self, var):
+    def update_var(self, var):
         if var.is_indexed():
             for child_var in var.values():
-                self.compile_var(child_var)
+                self.update_var(child_var)
             return
         if var not in self._pyomo_var_to_solver_var_map:
-            raise ValueError('The Var provided to compile_var needs to be added first: {0}'.format(var))
+            raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
         gurobipy_var = self._pyomo_var_to_solver_var_map[var]
         vtype = self._gurobi_vtype_from_var(var)
         if var.is_fixed():

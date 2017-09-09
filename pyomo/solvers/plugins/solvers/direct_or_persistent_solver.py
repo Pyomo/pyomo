@@ -23,37 +23,89 @@ from pyutilib.misc import Options
 
 class DirectOrPersistentSolver(OptSolver):
     """
-    Subclasses need to:
-    1.) Initialize self._solver_model during _presolve before calling DirectSolver._presolve
+    This is a base class for both direct and persistent solvers. Direct solver interfaces do not use any file io.
+    Rather, they interface directly with the python bindings for the specific solver. Persistent solver interfaces
+    are similar except that they "remember" their model. Thus, persistent solver interfaces allow incremental changes
+    to the solver model (e.g., the gurobi python model or the cplex python model). Note that users are responsible
+    for notifying the persistent solver interfaces when changes are made to the corresponding pyomo model.
+
+    Parameters
+    ----------
+    type: str
+        String indicating the class type of the solver instance.
+    name: str
+        String representing either the class type of the solver instance or an assigned name.
+    doc: str
+        Documentation for the solver
+    options: dict
+        Dictionary of solver options
     """
     def __init__(self, **kwds):
         OptSolver.__init__(self, **kwds)
 
         self._pyomo_model = None
+        """The pyomo model being solved."""
+
         self._solver_model = None
+        """The python instance of the solver model (e.g., the gurobipy Model instance)."""
+
         self._symbol_map = SymbolMap()
+        """A symbol map used to map between pyomo components and their names used with the solver."""
+
         self._labeler = None
+        """The labeler for creating names for the solver model components."""
+
         self._pyomo_var_to_solver_var_map = ComponentMap()
+        """A dictionary mapping pyomo Var's to the solver variables."""
+
         self._pyomo_con_to_solver_con_map = ComponentMap()
+        """A dictionary mapping pyomo constraints to solver constraints."""
+
         self._vars_referenced_by_con = ComponentMap()
+        """A dictionary mapping constraints to a ComponentSet containt the pyomo variables referenced by that
+        constraint. This is primarily needed for the persistent solvers. When a constraint is deleted, we need
+        to decrement the number of times those variables are referenced (see self._referenced_variables)."""
+
         self._vars_referenced_by_obj = ComponentSet()
-        self._objective_label = None
+        """A set containing the pyomo variables referenced by that the objective.
+        This is primarily needed for the persistent solvers. When a the objective is deleted, we need
+        to decrement the number of times those variables are referenced (see self._referenced_variables)."""
+
         self._objective = None
+        """The pyomo Objective object currently being used with the solver."""
+
         self.results = None
-        self._smap_id = None
+        """A results object return from the solve method."""
+
         self._skip_trivial_constraints = False
+        """A bool. If True, then any constraints with a constant body will not be added to the solver model.
+        Be careful with this. If a trivial constraint is skipped then that constraint cannot be removed from
+        a persistent solver (an error will be raised if a user tries to remove a non-existent constraint)."""
+
         self._output_fixed_variable_bounds = False
+        """A bool. If False then an error will be raised if a fixed variable is used in one of the solver constraints.
+        This is useful for catching bugs. Ordinarily a fixed variable should appear as a constant value in the
+        solver constraints. If True, then the error will not be raised."""
+
         self._python_api_exists = False
+        """A bool indicating whether or not the python api is available for the specified solver."""
+
         self._version = None
+        """The version of the solver."""
+
         self._version_major = None
+        """The major version of the solver. For example, if using Gurobi 7.0.2, then _version_major is 7."""
+
         self._symbolic_solver_labels = False
+        """A bool. If true then the solver components will be given names corresponding to the pyomo component names."""
+
         self._capabilites = Options()
 
         self._referenced_variables = ComponentMap()
         """dict: {var: count} where count is the number of constraints/objective referencing the var"""
 
-        # this interface doesn't use files, but we can create a log file if requested
         self._keepfiles = False
+        """A bool. If True, then the solver log will be saved."""
 
     def _presolve(self, *args, **kwds):
         warmstart_flag = kwds.pop('warmstart', False)
@@ -66,14 +118,6 @@ class DirectOrPersistentSolver(OptSolver):
         self.results = None
 
         model = self._pyomo_model
-        self._smap_id = id(self._symbol_map)
-        if isinstance(model, IBlockStorage):
-            # BIG HACK (see pyomo.core.kernel write function)
-            if not hasattr(model, "._symbol_maps"):
-                setattr(model, "._symbol_maps", {})
-            getattr(model, "._symbol_maps")[self._smap_id] = self._symbol_map
-        else:
-            model.solutions.add_symbol_map(self._symbol_map)
 
         # this implies we have a custom solution "parser",
         # preventing the OptSolver _presolve method from
@@ -101,7 +145,7 @@ class DirectOrPersistentSolver(OptSolver):
         return OptSolver._postsolve(self)
 
     """ This method should be implemented by subclasses."""
-    def _compile_instance(self, model, kwds={}):
+    def _set_instance(self, model, kwds={}):
         if not isinstance(model, (Model, IBlockStorage)):
             msg = "The problem instance supplied to the {0} plugin " \
                   "'_presolve' method must be of type 'Model'".format(type(self))
@@ -140,12 +184,16 @@ class DirectOrPersistentSolver(OptSolver):
                                                         descend_into=False, active=True, sort=True):
                 self._add_sos_constraint(con)
 
-            if len([obj for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective,
-                                                                    descend_into=False, active=True)]) != 0:
-                self._compile_objective()
+            obj_counter = 0
+            for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective, descend_into=False,
+                                                        active=True):
+                obj_counter += 1
+                if obj_counter > 1:
+                    raise ValueError('Solver interface does not support multiple objectives.')
+                self._add_objective(obj)
 
     """ This method should be implemented by subclasses."""
-    def _compile_objective(self):
+    def _add_objective(self, obj):
         raise NotImplementedError('This method should be implemented by subclasses')
 
     """ This method should be implemented by subclasses."""

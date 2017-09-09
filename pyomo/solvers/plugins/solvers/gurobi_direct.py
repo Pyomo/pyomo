@@ -195,9 +195,9 @@ class GurobiDirect(DirectSolver):
             gurobipy_var.setAttr('lb', var.value)
             gurobipy_var.setAttr('ub', var.value)
 
-    def _compile_instance(self, model, kwds={}):
+    def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
-        DirectOrPersistentSolver._compile_instance(self, model, kwds)
+        DirectOrPersistentSolver._set_instance(self, model, kwds)
         try:
             self._solver_model = self._gurobipy.Model(model.name)
         except Exception:
@@ -220,26 +220,7 @@ class GurobiDirect(DirectSolver):
                                          % (var.name, self._pyomo_model.name,))
 
     def _add_block(self, block):
-        for var in block.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
-                                                active=True, sort=True):
-            self._add_var(var)
-
-        for sub_block in block.block_data_objects(descend_into=True, active=True):
-            for con in sub_block.component_data_objects(ctype=pyomo.core.base.constraint.Constraint,
-                                                        descend_into=False, active=True, sort=True):
-                self._add_constraint(con)
-
-            for con in sub_block.component_data_objects(ctype=pyomo.core.base.sos.SOSConstraint,
-                                                        descend_into=False, active=True, sort=True):
-                self._add_sos_constraint(con)
-
-            obj_counter = 0
-            for obj in sub_block.component_data_objects(ctype=pyomo.core.base.objective.Objective,
-                                                        descend_into=False, active=True):
-                obj_counter += 1
-                if obj_counter > 1:
-                    raise ValueError('Solver interface does not support multiple objectives.')
-                self._add_objective(obj)
+        DirectOrPersistentSolver._add_block(self, block)
         self._solver_model.update()
 
     def _add_constraint(self, con):
@@ -339,7 +320,6 @@ class GurobiDirect(DirectSolver):
             self._vars_referenced_by_obj = ComponentSet()
             self._labeler.remove_obj(self._objective)
             self._symbol_map.removeSymbol(self._objective)
-            self._objective_label = None
             self._objective = None
 
         if obj.active is False:
@@ -358,7 +338,6 @@ class GurobiDirect(DirectSolver):
             self._referenced_variables[var] += 1
 
         self._solver_model.setObjective(gurobi_expr, sense=sense)
-        self._objective_label = self._symbol_map.getSymbol(obj, self._labeler)
         self._objective = obj
         self._vars_referenced_by_obj = referenced_vars
 

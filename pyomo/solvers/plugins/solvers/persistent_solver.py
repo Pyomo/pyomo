@@ -36,13 +36,13 @@ class PersistentSolver(DirectOrPersistentSolver):
     def _presolve(self, *args, **kwds):
         if len(args) != 0:
             msg = 'The persistent solver interface does not accept a problem instance in the solve method.'
-            msg += ' The problem instance should be compiled before the solve using the compile_instance method.'
+            msg += ' The problem instance should be set before the solve using the set_instance method.'
             raise ValueError(msg)
 
         DirectOrPersistentSolver._presolve(self, *args, **kwds)
 
-    def compile_instance(self, model, **kwds):
-        return self._compile_instance(model, kwds)
+    def set_instance(self, model, **kwds):
+        return self._set_instance(model, kwds)
 
     def add_block(self, block):
         if block.is_indexed():
@@ -146,7 +146,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._pyomo_var_to_solver_var_map[var]
 
     """ This method should be implemented by subclasses."""
-    def compile_var(self, var):
+    def update_var(self, var):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
     def load_vars(self, vars_to_load):
@@ -155,7 +155,7 @@ class PersistentSolver(DirectOrPersistentSolver):
     def solve(self, *args, **kwds):
         if len(args) != 0:
             msg = 'The persistent solver interface does not accept a problem instance in the solve method.'
-            msg += ' The problem instance should be compiled before the solve using the compile_instance method.'
+            msg += ' The problem instance should be set before the solve using the set_instance method.'
             raise ValueError(msg)
 
         self.available(exception_flag=True)

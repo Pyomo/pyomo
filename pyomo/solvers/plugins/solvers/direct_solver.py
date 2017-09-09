@@ -58,7 +58,7 @@ class DirectSolver(DirectOrPersistentSolver):
                    "supplied.").format(type(self), len(args))
             raise ValueError(msg)
 
-        self._compile_instance(model, kwds)
+        self._set_instance(model, kwds)
 
         DirectOrPersistentSolver._presolve(self, *args, **kwds)
 
