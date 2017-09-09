@@ -285,10 +285,11 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
     def write_excel(self, all_frames, filename=None, engine=None):
         TOC = all_frames[0]
 
-        if filename is None:
+        if filename is not None:
             if not filename.endswith('.xlsx'):
                 raise ValueError("Pyomo excel writer only supports writing "
                                  "to a .xlsx file.")
+        else:
             # Default filename is model name, stored in top-level TOC.name
             filename = TOC.name + '.xlsx'
         writer = pd.ExcelWriter(filename, engine=engine)
