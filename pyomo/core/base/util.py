@@ -31,13 +31,13 @@ def prod(factors):
 Prod = prod
 
 
-def Sum(*args, start=0):
+def Sum(*args):
     """
     A utility function to compute a sum of Pyomo expressions.  The behavior is similar to the
     builtin 'sum' function, but this generates a compact expression.
     """
     if expr_common.mode == expr_common.Mode.pyomo5_trees:
-        ans = [start]
+        ans = [0]
         for arg in args:
             if inspect.isgenerator(arg):
                 for term in arg:
@@ -56,7 +56,7 @@ def Sum(*args, start=0):
             return ans[0]
         return _StaticMultiSumExpression( tuple(ans) )
     else:
-        return sum(*args, start=start)
+        return sum(*args)
 
 
 def summation(*args, **kwds):
