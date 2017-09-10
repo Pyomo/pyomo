@@ -24,6 +24,7 @@ from pyomo.core.kernel.component_set import ComponentSet
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
+from pyomo.core.base.suffix import Suffix
 
 
 logger = logging.getLogger('pyomo.solvers')
@@ -525,18 +526,19 @@ class GurobiDirect(DirectSolver):
         # if a solve was stopped by a limit, we still need to check to
         # see if there is a solution available - this may not always
         # be the case, both in LP and MIP contexts.
-        if gprob.SolCount > 0:
+        if self._load_solutions:
+            if gprob.SolCount > 0:
 
-            self._load_vars()
+                self._load_vars()
 
-            if extract_reduced_costs:
-                self._load_rc()
+                if extract_reduced_costs:
+                    self._load_rc()
 
-            if extract_duals:
-                self._load_duals()
+                if extract_duals:
+                    self._load_duals()
 
-            if extract_slacks:
-                self._load_slacks()
+                if extract_slacks:
+                    self._load_slacks()
 
         self.results.solution.insert(soln)
 
@@ -566,6 +568,8 @@ class GurobiDirect(DirectSolver):
                 var.value = var_map[var].x
 
     def _load_rc(self, vars_to_load=None):
+        if not hasattr(self._pyomo_model, 'rc'):
+            self._pyomo_model.rc = Suffix(direction=Suffix.IMPORT)
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
         rc = self._pyomo_model.rc
@@ -577,6 +581,8 @@ class GurobiDirect(DirectSolver):
                 rc[var] = var_map[var].Rc
 
     def _load_duals(self, cons_to_load=None):
+        if not hasattr(self._pyomo_model, 'dual'):
+            self._pyomo_model.dual = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
         dual = self._pyomo_model.dual
         if cons_to_load is None:
@@ -596,6 +602,8 @@ class GurobiDirect(DirectSolver):
                     dual[pyomo_con] = gurobi_con.QCPi
 
     def _load_slacks(self, cons_to_load=None):
+        if not hasattr(self._pyomo_model, 'slack'):
+            self._pyomo_model.slack = Suffix(direction=Suffix.IMPORT)
         con_map = self._pyomo_con_to_solver_con_map
         slack = self._pyomo_model.slack
         if cons_to_load is None:

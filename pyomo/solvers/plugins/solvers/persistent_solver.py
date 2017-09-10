@@ -188,6 +188,13 @@ class PersistentSolver(DirectOrPersistentSolver):
             self.remove_var(var)
 
     def remove_constraint(self, con):
+        """
+        Remove a constraint from the solver's model. This will keep any other model components intact.
+
+        Parameters
+        ----------
+        con: Constraint
+        """
         if con.is_indexed():
             for child_con in con.values():
                 self.remove_constraint(child_con)
@@ -202,6 +209,13 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._pyomo_con_to_solver_con_map[con]
 
     def remove_sos_constraint(self, con):
+        """
+        Remove an SOS constraint from the solver's model. This will keep any other model components intact.
+
+        Parameters
+        ----------
+        con: SOSConstraint
+        """
         if con.is_indexed():
             for child_con in con.values():
                 self.remove_sos_constraint(child_con)
@@ -216,6 +230,13 @@ class PersistentSolver(DirectOrPersistentSolver):
         del self._pyomo_con_to_solver_con_map[con]
 
     def remove_var(self, var):
+        """
+        Remove a variable from the solver's model. This will keep any other model components intact.
+
+        Parameters
+        ----------
+        var: Var
+        """
         if var.is_indexed():
             for child_var in var.values():
                 self.remove_var(child_var)
@@ -232,12 +253,49 @@ class PersistentSolver(DirectOrPersistentSolver):
 
     """ This method should be implemented by subclasses."""
     def update_var(self, var):
+        """
+        Update a variable in the solver's model. This will update bounds, fix/unfix the variable as needed, and update
+        the variable type.
+
+        Parameters
+        ----------
+        var: Var
+        """
         raise NotImplementedError('This method should be implemented by subclasses.')
 
     def load_vars(self, vars_to_load):
+        """
+        Load the values from the solver's variables into the corresponding pyomo variables.
+
+        Parameters
+        ----------
+        vars_to_load: list of Var
+        """
         self._load_vars(vars_to_load)
 
     def solve(self, *args, **kwds):
+        """
+        Solve the model.
+
+        Keyword Arguments
+        -----------------
+        suffixes: list of str
+            The strings should represnt suffixes support by the solver. Examples include 'dual', 'slack', and 'rc'.
+        options: dict
+            Dictionary of solver options. See the solver documentation for possible solver options.
+        warmstart: bool
+            If True, the solver will be warmstarted.
+        keepfiles: bool
+            If True, the solver log file will be saved.
+        logfile: str
+            Name to use for the solver log file.
+        load_solutions: bool
+            If True and a solution exists, the solution will be loaded into the Pyomo model.
+        report_timing: bool
+            If True, then timing information will be printed.
+        tee: bool
+            If True, then the solver log will be printed.
+        """
         if len(args) != 0:
             msg = 'The persistent solver interface does not accept a problem instance in the solve method.'
             msg += ' The problem instance should be set before the solve using the set_instance method.'
