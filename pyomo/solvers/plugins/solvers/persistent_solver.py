@@ -9,7 +9,9 @@
 #  ___________________________________________________________________________
 
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
-from pyomo.core.base.block import _BlockData
+from pyomo.core.base.PyomoModel import ConcreteModel
+from pyomo.core.base.block import _BlockData, Block
+from pyomo.core.base.objective import Objective
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.base.suffix import active_import_suffix_generator
 from pyomo.core.kernel.component_suffix import import_suffix_generator
@@ -26,12 +28,27 @@ logger = logging.getLogger('pyomo.solvers')
 
 
 class PersistentSolver(DirectOrPersistentSolver):
+    """
+    A base class for persistent solvers. Direct solver interfaces do not use any file io.
+    Rather, they interface directly with the python bindings for the specific solver. Persistent solver interfaces
+    are similar except that they "remember" their model. Thus, persistent solver interfaces allow incremental changes
+    to the solver model (e.g., the gurobi python model or the cplex python model). Note that users are responsible
+    for notifying the persistent solver interfaces when changes are made to the corresponding pyomo model.
+
+    Keyword Arguments
+    -----------------
+    type: str
+        String indicating the class type of the solver instance.
+    name: str
+        String representing either the class type of the solver instance or an assigned name.
+    doc: str
+        Documentation for the solver
+    options: dict
+        Dictionary of solver options
+    """
 
     def __init__(self, **kwds):
         DirectOrPersistentSolver.__init__(self, **kwds)
-
-        # Ensure any subclasses inherit from PersistentSolver before any direct solver
-        assert type(self).__bases__[0] is PersistentSolver
 
     def _presolve(self, *args, **kwds):
         if len(args) != 0:
@@ -42,9 +59,39 @@ class PersistentSolver(DirectOrPersistentSolver):
         DirectOrPersistentSolver._presolve(self, *args, **kwds)
 
     def set_instance(self, model, **kwds):
+        """
+        This method is used to translate the Pyomo model provided to an instance of the solver's Python model. This
+        discards any existing model and starts from scratch.
+
+        Parameters
+        ----------
+        model: ConcreteModel
+            The pyomo model to be used with the solver.
+
+        Keyword Arguments
+        -----------------
+        symbolic_solver_labels: bool
+            If True, the solver's components (e.g., variables, constraints) will be given names that correspond to
+            the Pyomo component names.
+        skip_trivial_constraints: bool
+            If True, then any constraints with a constant body will not be added to the solver model.
+            Be careful with this. If a trivial constraint is skipped then that constraint cannot be removed from
+            a persistent solver (an error will be raised if a user tries to remove a non-existent constraint).
+        output_fixed_variable_bounds: bool
+            If False then an error will be raised if a fixed variable is used in one of the solver constraints.
+            This is useful for catching bugs. Ordinarily a fixed variable should appear as a constant value in the
+            solver constraints. If True, then the error will not be raised.
+        """
         return self._set_instance(model, kwds)
 
     def add_block(self, block):
+        """
+        Add a Pyomo Block to the solver's model. This will keep any existing model components intact.
+
+        Parameters
+        ----------
+        block: Block
+        """
         if block.is_indexed():
             for sub_block in block.values():
                 self._add_block(block)
@@ -52,9 +99,24 @@ class PersistentSolver(DirectOrPersistentSolver):
         self._add_block(block)
 
     def add_objective(self, obj):
+        """
+        Set the solver's objective. Note that, at least for now, any existing objective will be discarded. Other than
+        that, any existing model components will remain intact.
+
+        Parameters
+        ----------
+        obj: Objective
+        """
         return self._add_objective(obj)
 
     def add_constraint(self, con):
+        """
+        Add a constraint to the solver's model. This will keep any existing model components intact.
+
+        Parameters
+        ----------
+        con: Constraint
+        """
         if con.is_indexed():
             for child_con in con.values():
                 self._add_constraint(child_con)
@@ -62,6 +124,13 @@ class PersistentSolver(DirectOrPersistentSolver):
             self._add_constraint(con)
 
     def add_var(self, var):
+        """
+        Add a variable to the solver's model. This will keep any existing model components intact.
+
+        Parameters
+        ----------
+        var: Var
+        """
         if var.is_indexed():
             for child_var in var.values():
                 self._add_var(child_var)
@@ -69,6 +138,13 @@ class PersistentSolver(DirectOrPersistentSolver):
             self._add_var(var)
 
     def add_sos_constraint(self, con):
+        """
+        Add an SOS constraint to the solver's model (if supported). This will keep any existing model components intact.
+
+        Parameters
+        ----------
+        con: SOSConstraint
+        """
         if con.is_indexed():
             for child_con in con.values():
                 self._add_sos_constraint(child_con)
@@ -88,6 +164,15 @@ class PersistentSolver(DirectOrPersistentSolver):
         raise NotImplementedError('This method should be implemented by subclasses.')
 
     def remove_block(self, block):
+        """
+        Remove a block from the solver's model. This will keep any other model components intact.
+
+        WARNING: Users must call remove_block BEFORE modifying the block.
+
+        Parameters
+        ----------
+        block: Block
+        """
         if block.is_indexed():
             for sub_block in block.values():
                 self.remove_block(sub_block)

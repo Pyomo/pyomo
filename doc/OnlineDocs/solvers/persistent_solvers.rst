@@ -18,35 +18,37 @@ every time the model is solved.
 Using Persistent Solvers
 ------------------------
 
-.. doctest::
-   Create a model
-   >>> import pyomo.environ as pe
-   >>> m = pe.ConcreteModel()
-   >>> m.x = pe.Var()
-   >>> m.y = pe.Var()
-   >>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
-   >>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
+The first step in using a persistent solver is to create a Pyomo model
+as usual.
 
-   Create a persistent solver
-   >>> opt = pe.SolverFactory('gurobi_persistent')
+>>> import pyomo.environ as pe
+>>> m = pe.ConcreteModel()
+>>> m.x = pe.Var()
+>>> m.y = pe.Var()
+>>> m.obj = pe.Objective(expr=m.x**2 + m.y**2)
+>>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
 
-   This returns an instance of :py:class:`GurobiPersistent`. Now we
-   need to tell the solver about our model.
+You can create an instance of a persistent solver through the SolverFactory.
 
-   >>> opt.set_instance(m)
+>>> opt = pe.SolverFactory('gurobi_persistent')
 
-   This will create a gurobipy Model object and include the
-   appropriate variables and constraints. We can now solve the model.
+This returns an instance of :py:class:`GurobiPersistent`. Now we need
+to tell the solver about our model.
 
-   >>> results = opt.solve()
+>>> opt.set_instance(m)
 
-   We can also add or remove variables, constraints, blocks, and
-   objectives. For example,
+This will create a gurobipy Model object and include the appropriate
+variables and constraints. We can now solve the model.
 
-   >>> m.c2 = pe.Constraint(expr=m.y >= m.x)
-   >>> opt.add_constraint(m.c2)
+>>> results = opt.solve()
 
-   This tells the solver to add one new constraint but otherwise leave
-   the model unchanged. We can now resolve the model.
+We can also add or remove variables, constraints, blocks, and
+objectives. For example,
 
-   >>> results = opt.solve()
+>>> m.c2 = pe.Constraint(expr=m.y >= m.x)
+>>> opt.add_constraint(m.c2)
+
+This tells the solver to add one new constraint but otherwise leave
+the model unchanged. We can now resolve the model.
+
+>>> results = opt.solve()
