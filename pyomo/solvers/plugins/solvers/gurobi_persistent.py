@@ -63,6 +63,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         Parameters
         ----------
         var: Var
+            The variable to add to the solver's model.
         """
         PersistentSolver.add_var(self, var)
         self._solver_model.update()
