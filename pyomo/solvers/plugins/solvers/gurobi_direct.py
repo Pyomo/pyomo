@@ -588,7 +588,9 @@ class GurobiDirect(DirectSolver):
         if cons_to_load is None:
             cons_to_load = ComponentSet(con_map.keys())
 
-        reverse_con_map = {con: pyomo_con for pyomo_con, con in con_map.items()}
+        reverse_con_map = {}
+        for pyomo_con, con in con_map.items():
+            reverse_con_map[con] = pyomo_con
 
         for gurobi_con in self._solver_model.getConstrs():
             pyomo_con = reverse_con_map[gurobi_con]
@@ -609,7 +611,9 @@ class GurobiDirect(DirectSolver):
         if cons_to_load is None:
             cons_to_load = ComponentSet(con_map.keys())
 
-        reverse_con_map = {con: pyomo_con for pyomo_con, con in con_map.items()}
+        reverse_con_map = {}
+        for pyomo_con, con in con_map.items():
+            reverse_con_map[con] = pyomo_con
 
         for gurobi_con in self._solver_model.getConstrs():
             pyomo_con = reverse_con_map[gurobi_con]
