@@ -12,7 +12,11 @@
 from six import iteritems, string_types
 from six.moves import xrange
 
-import pandas as pd
+try:
+    import pandas as pd
+    pandas_available = True
+except ImportError:
+    pandas_available = False
 
 from pyomo.core.base import (Constraint, Param, Set, RangeSet, Var, Objective,
                              Block, Suffix, Expression, value, SortComponents)
@@ -46,6 +50,10 @@ class ProblemWriter_xlsx(AbstractProblemWriter):
                 Specify either openpyxl or xlsxwriter for pandas.
                 If None, pandas will choose automatically
         """
+
+        if not pandas_available:
+            raise ImportError("Pandas is not available for import. Must be "
+                              "installed before using Excel writer.")
 
         # Make sure not to modify the user's dictionary,
         # they may be reusing it outside of this call
