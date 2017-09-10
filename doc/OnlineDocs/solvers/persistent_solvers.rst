@@ -66,7 +66,7 @@ code will run without error, but the solver will have an extra
 constraint. The solver will have both y >= -2*x + 5 and y <= x, which
 is not what was intended!
 
->>> m = pe.ConcreteMOdel()
+>>> m = pe.ConcreteModel()
 >>> m.x = pe.Var()
 >>> m.y = pe.Var()
 >>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
@@ -79,7 +79,7 @@ is not what was intended!
 
 The correct way to do this is:
 
->>> m = pe.ConcreteMOdel()
+>>> m = pe.ConcreteModel()
 >>> m.x = pe.Var()
 >>> m.y = pe.Var()
 >>> m.c = pe.Constraint(expr=m.y >= -2*m.x + 5)
@@ -97,7 +97,7 @@ The correct way to do this is:
 Additionally, unexpected behavior may result if a component is
 modified before being removed.
 
->>> m = pe.ConcreteMOdel()
+>>> m = pe.ConcreteModel()
 >>> m.b = pe.Block()
 >>> m.b.x = pe.Var()
 >>> m.b.y = pe.Var()
@@ -107,7 +107,7 @@ modified before being removed.
 >>> m.b.c2 = pe.Constraint(expr=m.b.y <= m.b.x)
 >>> # ERROR: The constraint referenced by m.b.c2 does not
 >>> # exist in the solver model.
->>> opt.remove(m.b)
+>>> # opt.remove_block(m.b) 
 
 In most cases, the only way to modify a component is to remove it from
 the solver instance, modify it with Pyomo, and then add it back to the
