@@ -86,7 +86,8 @@ class GurobiDirect(DirectSolver):
         self._capabilities.sos2 = True
 
     def _apply_solver(self):
-        for var in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True, active=None, sort=False):
+        for var in self._pyomo_model.component_data_objects(ctype=pyomo.core.base.var.Var, descend_into=True,
+                                                            active=None, sort=False):
             var.stale = True
         if self._tee:
             self._solver_model.setParam('OutputFlag', 1)
@@ -313,8 +314,6 @@ class GurobiDirect(DirectSolver):
         return vtype
 
     def _add_objective(self, obj):
-        obj_counter = 0
-
         if self._objective is not None:
             for var in self._vars_referenced_by_obj:
                 self._referenced_variables[var] -= 1
