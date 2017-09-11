@@ -319,8 +319,6 @@ class GurobiDirect(DirectSolver):
             for var in self._vars_referenced_by_obj:
                 self._referenced_variables[var] -= 1
             self._vars_referenced_by_obj = ComponentSet()
-            self._labeler.remove_obj(self._objective)
-            self._symbol_map.removeSymbol(self._objective)
             self._objective = None
 
         if obj.active is False:
