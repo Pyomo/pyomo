@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.base.PyomoModel import ConcreteModel
 from pyomo.solvers.plugins.solvers.cplex_direct import CPLEXDirect
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.util.plugin import alias
@@ -18,6 +19,26 @@ from pyomo.core.kernel.numvalue import value
 
 
 class CPLEXPersistent(PersistentSolver, CPLEXDirect):
+    """
+    A class that provides a persistent interface to Cplex. Direct solver interfaces do not use any file io.
+    Rather, they interface directly with the python bindings for the specific solver. Persistent solver interfaces
+    are similar except that they "remember" their model. Thus, persistent solver interfaces allow incremental changes
+    to the solver model (e.g., the gurobi python model or the cplex python model). Note that users are responsible
+    for notifying the persistent solver interfaces when changes are made to the corresponding pyomo model.
+
+    Keyword Arguments
+    -----------------
+    model: ConcreteModel
+        Passing a model to the constructor is equivalent to calling the set_instance mehtod.
+    type: str
+        String indicating the class type of the solver instance.
+    name: str
+        String representing either the class type of the solver instance or an assigned name.
+    doc: str
+        Documentation for the solver
+    options: dict
+        Dictionary of solver options
+    """
     alias('cplex_persistent', doc='Persistent python interface to CPLEX')
 
     def __init__(self, **kwds):
@@ -47,7 +68,15 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
     def _warm_start(self):
         GurobiDirect._warm_start(self)
 
-    def compile_var(self, var):
+    def update_var(self, var):
+        """
+        Update a variable in the solver's model. This will update bounds, fix/unfix the variable as needed, and update
+        the variable type.
+
+        Parameters
+        ----------
+        var: Var
+        """
         if var.is_indexed():
             for child_var in var.values():
                 self.compile_var(child_var)
@@ -72,4 +101,14 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         self._solver_model.variables.set_types(cplex_var, vtype)
 
     def write(self, filename, filetype=''):
+        """
+        Write the model to a file (e.g., and lp file).
+
+        Parameters
+        ----------
+        filename: str
+            Name of the file to which the model should be written.
+        filetype: str
+            The file type (e.g., lp).
+        """
         self._solver_model.write(filename, filetype=filetype)
