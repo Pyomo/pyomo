@@ -21,6 +21,7 @@ from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPe
 from pyomo.core.kernel.numvalue import value
 import pyomo.core.kernel
 from pyomo.core.kernel.component_set import ComponentSet
+from pyomo.core.kernel.component_map import ComponentMap
 from pyomo.opt.results.results_ import SolverResults
 from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
@@ -53,6 +54,8 @@ class CPLEXDirect(DirectSolver):
         self._init()
         self._wallclock_time = None
         self._solver_var_to_pyomo_var_map = {}
+        self._pyomo_var_to_ndx_map = ComponentMap()
+        self._ndx_count = 0
 
     def _init(self):
         try:
@@ -168,7 +171,7 @@ class CPLEXDirect(DirectSolver):
 
             if (repn.linear is not None) and (len(repn.linear) > 0):
                 list(map(referenced_vars.add, repn.variables))
-                new_expr.variables.extend(self._pyomo_var_to_solver_var_map[var] for var in repn.variables)
+                new_expr.variables.extend(self._pyomo_var_to_ndx_map[var] for var in repn.variables)
                 new_expr.coefficients.extend(coeff for coeff in repn.linear)
 
         else:
@@ -180,7 +183,7 @@ class CPLEXDirect(DirectSolver):
                 for ndx, coeff in repn[1].items():
                     new_expr.coefficients.append(coeff)
                     var = repn[-1][ndx]
-                    new_expr.variables.append(self._pyomo_var_to_solver_var_map[var])
+                    new_expr.variables.append(self._pyomo_var_to_ndx_map[var])
                     referenced_vars.add(var)
 
             if 2 in repn:
@@ -191,19 +194,19 @@ class CPLEXDirect(DirectSolver):
                         ndx = indices[0]
                         var = repn[-1][ndx]
                         referenced_vars.add(var)
-                        cplex_var = self._pyomo_var_to_solver_var_map[var]
+                        cplex_var = self._pyomo_var_to_ndx_map[var]
                         new_expr.q_variables1.append(cplex_var)
                         new_expr.q_variables2.append(cplex_var)
                     else:
                         ndx = indices[0]
                         var = repn[-1][ndx]
                         referenced_vars.add(var)
-                        cplex_var = self._pyomo_var_to_solver_var_map[var]
+                        cplex_var = self._pyomo_var_to_ndx_map[var]
                         new_expr.q_variables1.append(cplex_var)
                         ndx = indices[1]
                         var = repn[-1][ndx]
                         referenced_vars.add(var)
-                        cplex_var = self._pyomo_var_to_solver_var_map[var]
+                        cplex_var = self._pyomo_var_to_ndx_map[var]
                         new_expr.q_variables2.append(cplex_var)
 
         return new_expr, referenced_vars
@@ -234,6 +237,8 @@ class CPLEXDirect(DirectSolver):
 
         self._pyomo_var_to_solver_var_map[var] = varname
         self._solver_var_to_pyomo_var_map[varname] = var
+        self._pyomo_var_to_ndx_map[var] = self._ndx_count
+        self._ndx_count += 1
         self._referenced_variables[var] = 0
 
         if var.is_fixed():
@@ -242,6 +247,8 @@ class CPLEXDirect(DirectSolver):
 
     def _set_instance(self, model, kwds={}):
         self._solver_var_to_pyomo_var_map = {}
+        self._pyomo_var_to_ndx_map = ComponentMap()
+        self._ndx_count = 0
         self._range_constraints = set()
         DirectOrPersistentSolver._set_instance(self, model, kwds)
         try:
