@@ -240,7 +240,7 @@ class CPLEXDirect(DirectSolver):
 
     def _set_instance(self, model, kwds={}):
         self._range_constraints = set()
-        DirectOrPersistentSolver._compile_instance(self, model, kwds)
+        DirectOrPersistentSolver._set_instance(self, model, kwds)
         try:
             self._solver_model = self._cplex.Cplex()
         except Exception:
