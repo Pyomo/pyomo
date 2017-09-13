@@ -502,10 +502,21 @@ class OptSolver(Plugin):
         of an option. Expects a string.
 
         Example:
-        print solver.sos1 # prints True if solver supports sos1 constraints,
-                          # and False otherwise
-        print solver.feature # prints True is solver supports 'feature', and
-                             # False otherwise
+        # prints True if solver supports sos1 constraints, and False otherwise
+        print(solver.has_capability('sos1')
+
+        # prints True is solver supports 'feature', and False otherwise
+        print(solver.has_capability('feature')
+
+        Parameters
+        ----------
+        cap: str
+            The feature
+
+        Returns
+        -------
+        val: bool
+            Whether or not the solver has the specified capability.
         """
         if not isinstance(cap, str):
             raise TypeError("Expected argument to be of type '%s', not " + \

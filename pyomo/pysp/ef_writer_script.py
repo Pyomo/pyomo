@@ -509,9 +509,8 @@ class ExtensiveFormAlgorithm(PySPConfiguredObject):
         self.solver_results = undefined
 
         if isinstance(self._solver, PersistentSolver):
-            self._solver.compile_instance(
-                self.instance,
-                symbolic_solver_labels=self.get_option("symbolic_solver_labels"))
+            self._solver.set_instance(self.instance,
+                                      symbolic_solver_labels=self.get_option("symbolic_solver_labels"))
 
         solve_kwds = {}
         solve_kwds['load_solutions'] = False

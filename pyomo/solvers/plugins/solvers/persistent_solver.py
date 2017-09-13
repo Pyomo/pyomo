@@ -383,3 +383,13 @@ class PersistentSolver(DirectOrPersistentSolver):
             self.options = orig_options
 
         return result
+
+    def has_instance(self):
+        """
+        True if set_instance has been called and this solver interface has a pyomo model and a solver model.
+
+        Returns
+        -------
+        tmp: bool
+        """
+        return self._pyomo_model is not None

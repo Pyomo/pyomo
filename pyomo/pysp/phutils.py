@@ -687,8 +687,13 @@ def preprocess_scenario_instance(scenario_instance,
 
             canonical_preprocess_block_objectives(scenario_instance)
 
-        if persistent_solver_in_use and solver.instance_compiled():
-            solver.compile_objective(scenario_instance)
+        if persistent_solver_in_use and solver.has_instance():
+            obj_count = 0
+            for obj in scenario_instance.component_data_objects(ctype=Objective, descend_into=True, active=True):
+                obj_count += 1
+                if obj_count > 1:
+                    raise RuntimeError('Persistent solver interface only supports a single objective.')
+                solver.set_objective(obj)
 
     if (instance_variables_fixed or instance_variables_freed) and \
        (preprocess_fixed_variables):
@@ -708,11 +713,11 @@ def preprocess_scenario_instance(scenario_instance,
         # instance compiled, depending on what state the solver plugin
         # is in relative to the instance.  if this is the case, just
         # don't compile the variable bounds.
-        if solver.instance_compiled():
+        if solver.has_instance():
             variables_to_change = \
                 instance_variables_fixed + instance_variables_freed
-            solver.compile_variable_bounds(scenario_instance,
-                                           vars_to_update=variables_to_change)
+            for var in variables_to_change:
+                solver.update_var(var)
 
     if instance_user_constraints_modified:
         if solver.problem_format() == ProblemFormat.nl:

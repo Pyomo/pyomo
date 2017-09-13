@@ -273,7 +273,7 @@ class convexhullboundextension(pyomo.util.plugin.SingletonPlugin, _PHBoundBase):
             # we can test the script and not have to worry
             # about a missing solver
             if isinstance(solver, PersistentSolver):
-                solver.compile_instance(self._master_model)
+                solver.set_instance(self._master_model)
             results = solver.solve(self._master_model)
             self._master_model.solutions.load_from(results)
 #        print "MASTER MODEL WVAR FOLLOWING SOLVE:"

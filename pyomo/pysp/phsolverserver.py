@@ -534,7 +534,7 @@ class _PHSolverServer(_PHBase):
                     raise RuntimeError("***We presently can't handle bundles in "
                                        "persistent solver plugins")
                 else:
-                    self._solver.compile_instance(
+                    self._solver.set_instance(
                         self._scenario_tree.get_arbitrary_scenario()._instance,
                         symbolic_solver_labels=self._symbolic_solver_labels,
                         output_fixed_variable_bounds=self._write_fixed_variables)

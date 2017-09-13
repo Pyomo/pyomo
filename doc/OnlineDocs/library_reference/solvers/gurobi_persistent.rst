@@ -21,6 +21,7 @@ Methods
    GurobiPersistent.enable
    GurobiPersistent.enabled
    GurobiPersistent.has_capability
+   GurobiPersistent.has_instance
    GurobiPersistent.implements
    GurobiPersistent.load_vars
    GurobiPersistent.problem_format

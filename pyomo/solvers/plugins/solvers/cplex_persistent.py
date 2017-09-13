@@ -48,7 +48,7 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
 
         self._pyomo_model = kwds.pop('model', None)
         if self._pyomo_model is not None:
-            self.compile_instance(self._pyomo_model, **kwds)
+            self.set_instance(self._pyomo_model, **kwds)
 
     def _remove_constraint(self, solver_con):
         try:
