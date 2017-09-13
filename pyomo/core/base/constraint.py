@@ -26,8 +26,9 @@ from pyomo.core.base.numvalue import (ZeroConstant,
                                       _sub)
 from pyomo.core.base.component import ActiveComponentData
 from pyomo.core.base.indexed_component import \
-    (ActiveIndexedComponent,
-     UnindexedComponent_set)
+    ( ActiveIndexedComponent,
+      UnindexedComponent_set,
+      _get_indexed_component_data_name, )
 from pyomo.core.base.misc import (apply_indexed_rule,
                                   tabular_writer)
 from pyomo.core.base.sets import Set
@@ -135,27 +136,6 @@ def simple_constraintlist_rule( fn ):
         return value
     return wrapper_function
 
-
-#
-# Get the fully-qualified name for this index.  If there isn't anything
-# in the _data dict (and there shouldn't be), then add something, get
-# the name, and remove it.  This allows us to get the name of something
-# that we haven't added yet without changing the state of the constraint
-# object.
-#
-def _get_constraint_data_name(constraint, index):
-    if not constraint.is_indexed():
-        return constraint.name
-    elif index in constraint._data:
-        ans = constraint._data[index].name
-    else:
-        constraint._data[index] = _GeneralConstraintData(
-            None, component=constraint)
-        try:
-            ans = constraint._data[index].name
-        finally:
-            del constraint._data[index]
-    return ans
 
 #
 # This class is a pure interface
@@ -861,7 +841,7 @@ class Constraint(ActiveIndexedComponent):
             if expr is None:
                 raise ValueError(
                     _rule_returned_none_error %
-                    (_get_constraint_data_name(self, index),) )
+                    (_get_indexed_component_data_name(self, index),) )
 
             #
             # There are cases where a user thinks they are generating
@@ -895,7 +875,7 @@ class Constraint(ActiveIndexedComponent):
                     "\n\nError thrown for Constraint '%s'"
                     "\n\nUnresolved (dangling) inequality "
                     "expression: %s"
-                    % (expr, _get_constraint_data_name(self,index), buf))
+                    % (expr, _get_indexed_component_data_name(self,index), buf))
             else:
                 raise ValueError(
                     "Invalid constraint expression. The constraint "
@@ -906,7 +886,7 @@ class Constraint(ActiveIndexedComponent):
                     % (expr,
                        expr and "Feasible" or "Infeasible",
                        expr,
-                       _get_constraint_data_name(self,index)))
+                       _get_indexed_component_data_name(self,index)))
 
         #
         # Ignore an 'empty' constraint
@@ -918,7 +898,7 @@ class Constraint(ActiveIndexedComponent):
             if expr == Constraint.Infeasible:
                 raise ValueError(
                     "Constraint '%s' is always infeasible"
-                    % (_get_constraint_data_name(self,index),) )
+                    % (_get_indexed_component_data_name(self,index),) )
 
         return expr
 

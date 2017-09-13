@@ -40,6 +40,41 @@ def normalize_index(index):
     return idx
 normalize_index.flatten = True
 
+#
+# Get the fully-qualified name for this index.  If there isn't anything
+# in the _data dict (and there shouldn't be), then add something, get
+# the name, and remove it.  This allows us to get the name of something
+# that we haven't added yet without changing the state of the constraint
+# object.
+#
+def _get_indexed_component_data_name(component, index):
+    if not component.is_indexed():
+        return component.name
+    elif index in component._data:
+        ans = component._data[index].name
+    else:
+        for i in range(5):
+            try:
+                component._data[index] = component._ComponentDataType(
+                    *((None,)*i), component=component)
+                i = None
+                break
+            except:
+                pass
+        if i is not None:
+            # None of the generic positional arguments worked; raise an
+            # exception
+            component._data[index] = component._ComponentDataType(
+                component=component)
+        try:
+            ans = component._data[index].name
+        except:
+            ans = component.name + '[{unknown index}]'
+        finally:
+            del component._data[index]
+    return ans
+
+
 class _IndexedComponent_slicer(object):
     """Special iterator for slicing through hierarchical component trees
 
