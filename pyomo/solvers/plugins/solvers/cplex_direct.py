@@ -381,7 +381,7 @@ class CPLEXDirect(DirectSolver):
             raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
         return vtype
 
-    def _add_objective(self, obj):
+    def _set_objective(self, obj):
         if self._objective is not None:
             for var in self._vars_referenced_by_obj:
                 self._referenced_variables[var] -= 1

@@ -190,10 +190,10 @@ class DirectOrPersistentSolver(OptSolver):
                 obj_counter += 1
                 if obj_counter > 1:
                     raise ValueError('Solver interface does not support multiple objectives.')
-                self._add_objective(obj)
+                self._set_objective(obj)
 
     """ This method should be implemented by subclasses."""
-    def _add_objective(self, obj):
+    def _set_objective(self, obj):
         raise NotImplementedError('This method should be implemented by subclasses')
 
     """ This method should be implemented by subclasses."""

@@ -98,7 +98,7 @@ class PersistentSolver(DirectOrPersistentSolver):
             return
         self._add_block(block)
 
-    def add_objective(self, obj):
+    def set_objective(self, obj):
         """
         Set the solver's objective. Note that, at least for now, any existing objective will be discarded. Other than
         that, any existing model components will remain intact.
@@ -107,7 +107,7 @@ class PersistentSolver(DirectOrPersistentSolver):
         ----------
         obj: Objective
         """
-        return self._add_objective(obj)
+        return self._set_objective(obj)
 
     def add_constraint(self, con):
         """

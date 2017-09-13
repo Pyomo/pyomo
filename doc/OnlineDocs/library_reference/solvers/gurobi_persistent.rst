@@ -11,7 +11,7 @@ Methods
    GurobiPersistent.activate
    GurobiPersistent.add_block
    GurobiPersistent.add_constraint
-   GurobiPersistent.add_objective
+   GurobiPersistent.set_objective
    GurobiPersistent.add_sos_constraint
    GurobiPersistent.add_var
    GurobiPersistent.alias
