@@ -3,6 +3,7 @@
 # NOTE: If you want to run these as serious tests, you might
 #       want to delete a few files before you run.
 import os
+import json
 import pyomo.pysp.plugins.csvsolutionwriter as csvw
 import basicclasses as bc
 import distr2pysp as dp
@@ -17,6 +18,24 @@ stsolver.solve_ef('cplex')
 # the stsolver.scenario_tree has the solution
 csvw.write_csv_soln(stsolver.scenario_tree, "testcref")
 
+# do it again with PH
+sopts = {}
+sopts['threads'] = 2
+phopts = {}
+phopts['--output-solver-log'] = None
+phopts['--max-iterations'] = '3'
+stsolver = st.StochSolver('cref.py', tree_model, phopts)
+stsolver.solve_ph(subsolver = 'cplex', default_rho = 1, phopts=phopts, sopts=sopts)
+csvw.write_csv_soln(stsolver.scenario_tree, "testph")
+
+# do it one more time with ph parms from json file
+with open('phopts.json') as infile:
+    phopts = json.load(infile)
+stsolverII = st.StochSolver('cref.py', tree_model, phopts)
+stsolverII.solve_ph(subsolver = 'cplex', default_rho = 1, phopts=phopts, sopts=sopts)
+csvw.write_csv_soln(stsolverII.scenario_tree, "testphjson")
+
+aldskjkljfd
 ### simple tests ####
 print("\n*** 2Stage_AMPL")
 bc.do_2Stage_AMPL_dir('farmer', 'TreeTemplateFile.dat', 'ScenTemplate.dat')

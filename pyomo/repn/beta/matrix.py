@@ -25,7 +25,8 @@ from pyomo.core.base.numvalue import (is_fixed,
                                       value,
                                       ZeroConstant)
 from pyomo.core.base.plugin import register_component
-from pyomo.core.base.constraint import (IndexedConstraint,
+from pyomo.core.base.constraint import (Constraint,
+                                        IndexedConstraint,
                                         SimpleConstraint,
                                         _ConstraintData)
 from pyomo.repn.canonical_repn import (generate_canonical_repn,
@@ -157,7 +158,10 @@ def compile_block_linear_constraints(parent_block,
 
                 singleton = isinstance(constraint, SimpleConstraint)
 
-                for index, constraint_data in iteritems(constraint):
+                # Note that as we may be removing items from the _data
+                # dictionary, we need to make a copy of the items list
+                # before iterating:
+                for index, constraint_data in list(iteritems(constraint)):
 
                     if constraint_data.body.polynomial_degree() <= 1:
 
@@ -217,7 +221,7 @@ def compile_block_linear_constraints(parent_block,
                             RangeTypes.append(MatrixConstraint.UpperBound)
 
                         # Start freeing up memory
-                        constraint_data.set_value(Constraint.Skip)
+                        constraint[index] = Constraint.Skip
 
     ncols = len(referenced_variable_symbols)
 
@@ -239,7 +243,9 @@ def compile_block_linear_constraints(parent_block,
         block.del_component(constraint)
         constraint_containers_removed += 1
     for constraint, index in constraint_data_to_remove:
-        del constraint[index]
+        # Note that this del is not needed: assigning Constraint.Skip
+        # above removes the _ConstraintData from the _data dict.
+        #del constraint[index]
         constraints_removed += 1
     for block, constraint in constraint_containers_to_remove:
         block.del_component(constraint)
