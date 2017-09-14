@@ -49,7 +49,6 @@ import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
 from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
-from pyomo.repn import LinearCanonicalRepn
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
@@ -1082,13 +1081,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 if constraint_data._linear_canonical_form:
                     canonical_repn = constraint_data.canonical_form()
-                    ampl_repn = AmplRepn()
-                    ampl_repn.nonlinear_vars = tuple()
-                    ampl_repn.linear_vars = canonical_repn.variables
-                    ampl_repn.linear_coefs = canonical_repn.linear
-                    ampl_repn.constant = canonical_repn.constant
-                elif isinstance(constraint_data, LinearCanonicalRepn):
-                    canonical_repn = constraint_data
                     ampl_repn = AmplRepn()
                     ampl_repn.nonlinear_vars = tuple()
                     ampl_repn.linear_vars = canonical_repn.variables
