@@ -33,8 +33,8 @@ __all__ = ['Alias']
 #     plugins (e.g., extra variables), but I think when an expression
 #     is generated due to forwarding NumValue base class methods, this
 #     results in the Alias (e.g., for a Var) getting replaced with its
-#     aliased object in the expression. So problem writers and
-#     canonical_repn could possibly never encounter Aliases (if we're
+#     aliased object in the expression. So problem writers
+#     could possibly never encounter Aliases (if we're
 #     careful).
 
 class Alias(Component):
