@@ -601,11 +601,11 @@ class _ExpressionBase(NumericValue):
                 #    repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
                 #    expr = _InequalityExpression( (repn0.to_expression(), repn1.to_expression()), self._strict, self._cloned_from)
             elif self.__class__ is _EqualityExpression:
-                repn0 = generate_standard_repn(self._args[0], compress=False, quadratic=False, compute_values=False)
-                repn1 = generate_standard_repn(self._args[1], compress=False, quadratic=False, compute_values=False)
+                repn0 = generate_standard_repn(self._args[0], quadratic=False, compute_values=False)
+                repn1 = generate_standard_repn(self._args[1], quadratic=False, compute_values=False)
                 expr = _EqualityExpression( (repn0.to_expression(), repn1.to_expression()) )
             else:
-                repn = generate_standard_repn(self, compress=False, quadratic=False, compute_values=False)
+                repn = generate_standard_repn(self, quadratic=False, compute_values=False)
                 expr = repn.to_expression()
         except Exception as e:
             print(str(e))
