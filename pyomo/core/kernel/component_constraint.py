@@ -720,7 +720,7 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     # To avoid a circular import, for the time being, this
     # property will be set externally
     _ctype = None
-    _linear_canonical_form = True
+    _linear_canonical_form = False
     __slots__ = ("_parent",
                  "_active",
                  "_variables",
@@ -820,8 +820,8 @@ class linear_constraint(_MutableBoundsConstraintMixin,
     #
 
     def canonical_form(self):
-        from pyomo.repn.canonical_repn import \
-            coopr3_CompiledLinearCanonicalRepn
+        from pyomo.repn.standard_repn import \
+            StandardRepn
         variables = []
         coefficients = []
         constant = 0
@@ -833,9 +833,9 @@ class linear_constraint(_MutableBoundsConstraintMixin,
                 coefficients.append(c)
             else:
                 constant += value(c) * v()
-        repn = coopr3_CompiledLinearCanonicalRepn()
-        repn.variables = tuple(variables)
-        repn.linear = tuple(coefficients)
+        repn = StandardRepn()
+        repn.linear_vars = tuple(variables)
+        repn.linear_coefs = tuple(coefficients)
         repn.constant = constant
         return repn
 
