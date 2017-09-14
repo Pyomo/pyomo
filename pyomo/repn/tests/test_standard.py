@@ -39,9 +39,9 @@ class frozendict(dict):
 # A utility to facilitate comparison of tuples where we don't care about ordering
 def repn_to_dict(repn):
     result = {}
-    for i in repn.linear_vars:
+    for i in range(len(repn.linear_vars)):
         result[id(repn.linear_vars[i])] = repn.linear_coefs[i]
-    for i in repn.quadratic_vars:
+    for i in range(len(repn.quadratic_vars)):
         v1_, v2_ = repn.quadratic_vars[i]
         result[id(v1_), id(v2_)] = repn.quadratic_coefs[i]
     if not (repn.constant is None or (type(repn.constant) in native_numeric_types and repn.constant == 0)):
