@@ -44,14 +44,14 @@ This component is used to define continuous bounded domains (for example
 'spatial' or 'time' domains). It is similar to a Pyomo
 :py:class:`Set <pyomo.environ.Set>`  component and can be used to index things
 like variables and constraints. Any number of
-:py:class:`ContinuousSets <pyomo.dae.ContinuousSet>`can be used to
-index a component and components can be indexed by both
+:py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` can be used to index a
+component and components can be indexed by both
 :py:class:`Sets <pyomo.environ.Set>` and
 :py:class:`ContinuousSets <pyomo.dae.ContinuousSet>` in arbitrary order.
 
 In the current implementation, models with
-:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`components may not be solved
-until every :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`has been
+:py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` components may not be solved
+until every :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>` has been
 discretized. Minimally, a :py:class:`ContinuousSet<pyomo.dae.ContinuousSet>`
 must be initialized with two numeric values representing the upper and lower
 bounds of the continuous domain. A user may also specify additional points in
