@@ -802,7 +802,7 @@ def generate_ampl_repn(exp, idMap=None):
         idMap = {}
     if _using_pyomo5_trees:
         from pyomo.repn.standard_repn import generate_standard_repn
-        return generate_standard_repn(exp, compress=True, quadratic=False)
+        return generate_standard_repn(exp, quadratic=False)
 
     degree = exp.polynomial_degree()
     if (degree is None) or (degree > 1):
