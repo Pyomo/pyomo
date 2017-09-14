@@ -1040,11 +1040,8 @@ def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
         else:
             rep.constant = None
         if len(srepn.linear_vars) > 0:
-            rep.linear = []
-            rep.variables = []
-            for i in srepn.linear_vars:
-                rep.variables.append(srepn.linear_vars[i])
-                rep.linear.append(srepn.linear_coefs[i])
+            rep.linear = srepn.linear_coefs
+            rep.variables = srepn.linear_vars
         else:
             rep.linear = None
             rep.variables = None
@@ -1059,14 +1056,11 @@ def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
         #print(srepn)
         #print(idMap)
         ans[-1] = {}
-        for i in srepn.nonlinear_vars:
-            v_ = srepn.nonlinear_vars[i]
+        for v_ in srepn.nonlinear_vars:
             ans[-1][idMap[None][id(v_)]] = v_
-        for i in srepn.linear_vars:
-            v_ = srepn.linear_vars[i]
+        for v_ in srepn.linear_vars:
             ans[-1][idMap[None][id(v_)]] = v_
-        for i in srepn.quadratic_vars:
-            v1_,v2_ = srepn.quadratic_vars[i]
+        for v1_,v2_ in srepn.quadratic_vars:
             ans[-1][idMap[None][id(v1_)]] = v1_
             ans[-1][idMap[None][id(v2_)]] = v2_
 
@@ -1075,14 +1069,14 @@ def pyomo5_generate_canonical_repn(exp, idMap=None, compute_values=True):
 
         if len(srepn.linear_vars) > 0:
             tmp = {}
-            for i in srepn.linear_vars:
+            for i in range(len(srepn.linear_vars)):
                 v_ = srepn.linear_vars[i]
                 tmp[ idMap[None][id(v_)] ] = srepn.linear_coefs[i]
             ans[1] = tmp
 
         if len(srepn.quadratic_vars) > 0:
             tmp = {}
-            for i in srepn.quadratic_vars:
+            for i in range(len(srepn.quadratic_vars)):
                 v1_,v2_ = srepn.quadratic_vars[i]
                 if id(v1_) == id(v2_):
                     terms = GeneralCanonicalRepn({idMap[None][id(v1_)]:2})
