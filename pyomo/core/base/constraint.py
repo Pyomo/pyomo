@@ -1077,10 +1077,10 @@ class IndexedConstraint(Constraint):
 
     #
     # Leaving this method for backward compatibility reasons
-    # Note: It allows adding members outside of self._index.
-    #       This has always been the case. Not sure there is
-    #       any reason to maintain a reference to a separate
-    #       index set if we allow this.
+    #
+    # Note: Beginning after Pyomo 5.2 this method will now validate that
+    # the index is in the underlying index set (through 5.2 the index
+    # was not checked).
     #
     def add(self, index, expr):
         """Add a constraint with a given index."""
