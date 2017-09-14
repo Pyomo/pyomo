@@ -87,7 +87,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             tol (float): bound tolerance
             iterlim (int): maximum number of master iterations
             strategy (str): decomposition strategy to use. Possible values:
-                LOA, PSC, GBD, hPSC
+                LOA, LGBD
             init_strategy (str): initialization strategy to use when generating
                 the initial cuts to construct the master problem.
             max_slack (float): upper bound on slack variable values
@@ -141,7 +141,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         # Verify that decomposition strategy chosen is one of the supported
         # strategies
         valid_strategies = [
-            'LOA', 'hPSC', 'PSC', 'GBD', 'hGBD']
+            'LOA', 'LGBD']
         if self.decomposition_strategy not in valid_strategies:
             raise ValueError('Unrecognized decomposition strategy {}. '
                              'Valid strategies include: {}'.format(
@@ -448,7 +448,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
         m, GDPDT = self.working_model, self.working_model.GDPDT_utils
         if (self._decomposition_strategy == 'LOA' or
                 self.decomposition_strategy == 'hPSC' or
-                self._decomposition_strategy == 'GBD'):
+                self._decomposition_strategy == 'LGBD'):
             if not hasattr(m, 'dual'):  # Set up dual value reporting
                 m.dual = Suffix(direction=Suffix.IMPORT)
             # Map Constraint, nlp_iter -> generated OA Constraint
@@ -462,7 +462,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             if not hasattr(m, 'ipopt_zU_out'):
                 m.ipopt_zU_out = Suffix(direction=Suffix.IMPORT)
             GDPDT.psc_cuts = ConstraintList()
-        if self._decomposition_strategy == 'GBD':
+        if self._decomposition_strategy == 'LGBD':
             GDPDT.gbd_cuts = ConstraintList(doc='Generalized Benders cuts')
 
         if self.initialization_strategy is None:
@@ -685,7 +685,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 self._solve_OA_master()
             elif self._decomposition_strategy == 'PSC':
                 self._solve_PSC_master()
-            elif self._decomposition_strategy == 'GBD':
+            elif self._decomposition_strategy == 'LGBD':
                 self._solve_GBD_master()
             # Check bound convergence
             if self.LB + self.bound_tolerance >= self.UB:
@@ -1142,7 +1142,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
                 self._add_oa_cut()
             elif self._decomposition_strategy == 'PSC':
                 self._add_psc_cut()
-            elif self._decomposition_strategy == 'GBD':
+            elif self._decomposition_strategy == 'LGBD':
                 self._add_gbd_cut()
 
             # This adds an integer cut to the GDPDT_feasible_integer_cuts
@@ -1172,7 +1172,7 @@ class GDPDTSolver(pyomo.util.plugin.Plugin):
             if self._decomposition_strategy == 'PSC':
                 logger.info('Adding PSC feasibility cut.')
                 self._add_psc_cut(nlp_feasible=False)
-            elif self._decomposition_strategy == 'GBD':
+            elif self._decomposition_strategy == 'LGBD':
                 logger.info('Adding GBD feasibility cut.')
                 self._add_gbd_cut(nlp_feasible=False)
             # Add an integer cut to exclude this discrete option
