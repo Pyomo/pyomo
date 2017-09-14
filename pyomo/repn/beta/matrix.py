@@ -217,7 +217,7 @@ def compile_block_linear_constraints(parent_block,
                             RangeTypes.append(MatrixConstraint.UpperBound)
 
                         # Start freeing up memory
-                        constraint_data.set_value(None)
+                        constraint_data.set_value(Constraint.Skip)
 
     ncols = len(referenced_variable_symbols)
 
