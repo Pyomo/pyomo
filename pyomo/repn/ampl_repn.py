@@ -9,7 +9,7 @@
 #  ___________________________________________________________________________
 from __future__ import division
 
-__all__ = [ 'AmplRepn', 'generate_ampl_repn']
+__all__ = ['AmplRepn', 'generate_ampl_repn']
 
 try:
     basestring
@@ -28,6 +28,9 @@ from pyomo.core.base.numvalue import (NumericConstant,
 from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
                                        generate_canonical_repn)
 from pyomo.core.base import expr_common
+
+from pyomo.core.kernel.component_expression import IIdentityExpression
+from pyomo.core.kernel.component_variable import IVariable
 
 import six
 from six import itervalues, iteritems, StringIO
@@ -744,7 +747,7 @@ def _generate_ampl_repn(exp):
         #
         # Expression (the component)
         #
-        elif isinstance(exp, _ExpressionData):
+        elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
             ampl_repn = _generate_ampl_repn(exp.expr)
             return ampl_repn
 
@@ -770,7 +773,7 @@ def _generate_ampl_repn(exp):
     #
     # Variable
     #
-    elif isinstance(exp, _VarData):
+    elif isinstance(exp, (_VarData, IVariable)):
         if exp.fixed:
             ampl_repn._constant = exp.value
 #            print("fixed variable")

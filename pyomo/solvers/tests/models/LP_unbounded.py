@@ -8,10 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pyomo.kernel as pmo
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, NonNegativeReals
 from pyomo.opt import TerminationCondition
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
-
 
 @register_model
 class LP_unbounded(_BaseTestModel):
@@ -39,8 +39,28 @@ class LP_unbounded(_BaseTestModel):
     def warmstart_model(self):
         assert self.model is not None
         model = self.model
-        model.x = None
-        model.y = None
+        model.x.value = None
+        model.y.value = None
 
     def post_solve_test_validation(self, tester, results):
-        assert results['Solver'][0]['termination condition'] == TerminationCondition.unbounded
+        if tester is None:
+            assert results['Solver'][0]['termination condition'] in \
+                (TerminationCondition.unbounded,
+                 TerminationCondition.infeasibleOrUnbounded)
+        else:
+            tester.assertIn(results['Solver'][0]['termination condition'],
+                            (TerminationCondition.unbounded,
+                             TerminationCondition.infeasibleOrUnbounded))
+
+@register_model
+class LP_unbounded_kernel(LP_unbounded):
+
+    def _generate_model(self):
+        self.model = pmo.block()
+        model = self.model
+        model._name = self.description
+
+        model.x = pmo.variable()
+        model.y = pmo.variable()
+
+        model.o = pmo.objective(model.x+model.y)

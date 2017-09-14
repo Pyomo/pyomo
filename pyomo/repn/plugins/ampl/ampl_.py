@@ -26,7 +26,6 @@ import os
 import time
 
 from pyutilib.misc import PauseGC
-from pyutilib.math import infinity
 
 import pyomo.util.plugin
 from pyomo.opt import ProblemFormat
@@ -36,11 +35,20 @@ from pyomo.core.base import expr, SymbolMap, Block
 import pyomo.core.base.expr_common
 from pyomo.core.base.var import Var
 from pyomo.core.base import _ExpressionData, Expression, SortComponents
-from pyomo.core.base.numvalue import NumericConstant, native_numeric_types
+from pyomo.core.base.numvalue import (NumericConstant,
+                                      native_numeric_types,
+                                      value)
 from pyomo.core.base import var
 from pyomo.core.base import param
-from pyomo.core.base.suffix import active_export_suffix_generator
-from pyomo.repn.ampl_repn import generate_ampl_repn
+import pyomo.core.base.suffix
+from pyomo.repn.ampl_repn import (generate_ampl_repn,
+                                  AmplRepn)
+
+import pyomo.core.kernel.component_suffix
+from pyomo.core.kernel.component_block import IBlockStorage
+from pyomo.core.kernel.component_expression import IIdentityExpression
+from pyomo.core.kernel.component_variable import IVariable
+from pyomo.repn import LinearCanonicalRepn
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
@@ -144,6 +152,14 @@ def _build_op_template():
     return _op_template, _op_comment
 
 
+
+def _get_bound(exp):
+    if exp is None:
+        return None
+    if is_fixed(exp):
+        return value(exp)
+    raise ValueError("non-fixed bound or weight: " + str(exp))
+
 class StopWatch(object):
 
     def __init__(self):
@@ -206,7 +222,12 @@ class ModelSOS(object):
         ampl_var_id = self.ampl_var_id
         varID_map = self.varID_map
 
-        if soscondata.num_variables() == 0:
+        if hasattr(soscondata, 'get_items'):
+            sos_items = list(soscondata.get_items())
+        else:
+            sos_items = list(soscondata.items())
+
+        if len(sos_items) == 0:
             return
 
         level = soscondata.level
@@ -226,9 +247,15 @@ class ModelSOS(object):
                              "which is not supported by the NL file interface" \
                                  % (soscondata.name, level))
 
-        for vardata, weight in soscondata.get_items():
+        for vardata, weight in sos_items:
+            weight = _get_bound(weight)
+            if weight < 0:
+                raise ValueError(
+                    "Cannot use negative weight %f "
+                    "for variable %s is special ordered "
+                    "set %s " % (weight, vardata.name, soscondata.name))
             if vardata.fixed:
-                raise RuntimeError(
+                raise ValueError(
                     "SOSConstraint '%s' includes a fixed Variable '%s'. "
                     "This is currently not supported. Deactivate this constraint "
                     "in order to proceed"
@@ -372,13 +399,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
         self._varID_map = None
         self._op_string = None
         return filename, symbol_map
-
-    def _get_bound(self, exp):
-        if exp is None:
-            return None
-        if is_fixed(exp):
-            return value(exp)
-        raise ValueError("non-fixed bound: " + str(exp))
 
     def _print_nonlinear_terms_NL(self, exp):
         OUTPUT = self._OUTPUT
@@ -617,14 +637,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write(self._op_string[expr._EqualityExpression])
                 self._print_nonlinear_terms_NL(exp._args[0])
                 self._print_nonlinear_terms_NL(exp._args[1])
-            elif isinstance(exp, _ExpressionData):
+            elif isinstance(exp, (_ExpressionData, IIdentityExpression)):
                 self._print_nonlinear_terms_NL(exp.expr)
             else:
                 raise ValueError(
                     "Unsupported expression type (%s) in _print_nonlinear_terms_NL"
                     % (exp_type))
 
-        elif isinstance(exp,var._VarData) and (not exp.is_fixed()):
+        elif isinstance(exp, (var._VarData, IVariable)) and \
+             (not exp.is_fixed()):
             #(self._output_fixed_variable_bounds or
             if not self._symbolic_solver_labels:
                 OUTPUT.write(self._op_string[var._VarData]
@@ -821,10 +842,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 else:
                     ampl_repn = block_ampl_repn[active_objective]
 
-                wrapped_ampl_repn = RepnWrapper(
-                    ampl_repn,
-                    list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
-                    list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                try:
+                    wrapped_ampl_repn = RepnWrapper(
+                        ampl_repn,
+                        list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
+                        list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                except KeyError as err:
+                    self._symbolMapKeyError(err, model, self_varID_map,
+                                            ampl_repn._linear_vars +
+                                            ampl_repn._nonlinear_vars)
+                    raise
 
                 LinearVars.update(wrapped_ampl_repn._linear_vars)
                 ObjNonlinearVars.update(wrapped_ampl_repn._nonlinear_vars)
@@ -891,16 +918,32 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                                                 active=True,
                                                                 sort=sorter,
                                                                 descend_into=False):
+
                 if symbolic_solver_labels:
                     conname = name_labeler(constraint_data)
                     if len(conname) > max_rowname_len:
                         max_rowname_len = len(conname)
 
-                if gen_con_ampl_repn:
-                    ampl_repn = generate_ampl_repn(constraint_data.body)
-                    block_ampl_repn[constraint_data] = ampl_repn
+                if constraint_data._linear_canonical_form:
+                    canonical_repn = constraint_data.canonical_form()
+                    ampl_repn = AmplRepn()
+                    ampl_repn._nonlinear_vars = tuple()
+                    ampl_repn._linear_vars = canonical_repn.variables
+                    ampl_repn._linear_terms_coef = canonical_repn.linear
+                    ampl_repn._constant = canonical_repn.constant
+                elif isinstance(constraint_data, LinearCanonicalRepn):
+                    canonical_repn = constraint_data
+                    ampl_repn = AmplRepn()
+                    ampl_repn._nonlinear_vars = tuple()
+                    ampl_repn._linear_vars = canonical_repn.variables
+                    ampl_repn._linear_terms_coef = canonical_repn.linear
+                    ampl_repn._constant = canonical_repn.constant
                 else:
-                    ampl_repn = block_ampl_repn[constraint_data]
+                    if gen_con_ampl_repn:
+                        ampl_repn = generate_ampl_repn(constraint_data.body)
+                        block_ampl_repn[constraint_data] = ampl_repn
+                    else:
+                        ampl_repn = block_ampl_repn[constraint_data]
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
@@ -911,10 +954,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     continue
 
                 con_ID = trivial_labeler(constraint_data)
-                wrapped_ampl_repn = RepnWrapper(
-                    ampl_repn,
-                    list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
-                    list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                try:
+                    wrapped_ampl_repn = RepnWrapper(
+                        ampl_repn,
+                        list(self_varID_map[id(var)] for var in ampl_repn._linear_vars),
+                        list(self_varID_map[id(var)] for var in ampl_repn._nonlinear_vars))
+                except KeyError as err:
+                    self._symbolMapKeyError(err, model, self_varID_map,
+                                            ampl_repn._linear_vars +
+                                            ampl_repn._nonlinear_vars)
+                    raise
 
                 if ampl_repn.is_nonlinear():
                     nonlin_con_order_list.append(con_ID)
@@ -933,14 +982,18 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 L = None
                 U = None
-                if constraint_data.lower is not None:
-                    L = self._get_bound(constraint_data.lower)
-                if constraint_data.upper is not None:
-                    U = self._get_bound(constraint_data.upper)
+                if constraint_data.has_lb():
+                    L = _get_bound(constraint_data.lower)
+                else:
+                    assert constraint_data.has_ub()
+                if constraint_data.has_ub():
+                    U = _get_bound(constraint_data.upper)
+                else:
+                    assert constraint_data.has_lb()
+                if constraint_data.equality:
+                    assert L == U
 
                 offset = ampl_repn._constant
-                #if constraint_data.equality:
-                #    assert L == U
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:
@@ -996,8 +1049,12 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     raise Exception(
                         "Solver does not support SOS level %s constraints"
                         % (level,))
-                LinearVars.update(self_varID_map[id(vardata)]
-                                  for vardata in soscondata.get_variables())
+                if hasattr(soscondata, "get_variables"):
+                    LinearVars.update(self_varID_map[id(vardata)]
+                                      for vardata in soscondata.get_variables())
+                else:
+                    LinearVars.update(self_varID_map[id(vardata)]
+                                      for vardata in soscondata.variables)
 
         # create the ampl constraint ids
         self_ampl_con_id.update(
@@ -1037,7 +1094,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             if var.is_binary():
                 L = var.lb
                 U = var.ub
-                if L is None or U is None:
+                if (L is None) or (U is None):
                     raise ValueError("Variable " + str(var.name) +\
                                      "is binary, but does not have lb and ub set")
                 LinearVarsBool.add(var_ID)
@@ -1305,8 +1362,17 @@ class ProblemWriter_nl(AbstractProblemWriter):
         obj_tag = 2
         prob_tag = 3
         suffix_dict = {}
+        if isinstance(model, IBlockStorage):
+            suffix_gen = lambda b: pyomo.core.kernel.component_suffix.\
+                         export_suffix_generator(b,
+                                                 active=True,
+                                                 return_key=True,
+                                                 descend_into=False)
+        else:
+            suffix_gen = lambda b: pyomo.core.base.suffix.\
+                         active_export_suffix_generator(b)
         for block in all_blocks_list:
-            for name, suf in active_export_suffix_generator(block):
+            for name, suf in suffix_gen(block):
                 if len(suf):
                     suffix_dict.setdefault(name,[]).append(suf)
         if not ('sosno' in suffix_dict):
@@ -1357,7 +1423,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for suffix_name, suffixes in iteritems(suffix_dict):
             datatypes = set()
             for suffix in suffixes:
-                datatype = suffix.get_datatype()
+                try:
+                    datatype = suffix.datatype
+                except AttributeError:
+                    datatype = suffix.get_datatype()
                 if datatype not in (Suffix.FLOAT,Suffix.INT):
                     raise ValueError(
                         "The Pyomo NL file writer requires that all active export "
@@ -1570,27 +1639,24 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         "file." % (var.name, model.name))
                 if var.value is None:
                     raise ValueError("Variable cannot be fixed to a value of None.")
-                L = var.value
-                U = var.value
+                L = U = _get_bound(var.value)
             else:
-                L = var.lb
-                if L == -infinity:
-                    L = None
-                U = var.ub
-                if U == infinity:
-                    U = None
+                L = None
+                if var.has_lb():
+                    L = _get_bound(var.lb)
+                U = None
+                if var.has_ub():
+                    U = _get_bound(var.ub)
             if L is not None:
-                Lv = value(L)
                 if U is not None:
-                    Uv = value(U)
-                    if Lv == Uv:
-                        var_bound_list.append("4 %r\n" % (Lv))
+                    if L == U:
+                        var_bound_list.append("4 %r\n" % (L))
                     else:
-                        var_bound_list.append("0 %r %r\n" % (Lv, Uv))
+                        var_bound_list.append("0 %r %r\n" % (L, U))
                 else:
-                    var_bound_list.append("2 %r\n" % (Lv))
+                    var_bound_list.append("2 %r\n" % (L))
             elif U is not None:
-                var_bound_list.append("1 %r\n" % (value(U)))
+                var_bound_list.append("1 %r\n" % (U))
             else:
                 var_bound_list.append("3\n")
 
@@ -1734,6 +1800,44 @@ class ProblemWriter_nl(AbstractProblemWriter):
             overall_timer.report("Total time")
 
         return symbol_map
+
+    def _symbolMapKeyError(self, err, model, map, vars):
+        _errors = []
+        for v in vars:
+            if id(v) in map:
+                continue
+            if v.model() is not model.model():
+                _errors.append(
+                    "Variable '%s' is not part of the model "
+                    "being written out, but appears in an "
+                    "expression used on this model." % (v.name,))
+            else:
+                _parent = v.parent_block()
+                while _parent is not None and _parent is not model:
+                    if _parent.type() is not model.type():
+                        _errors.append(
+                            "Variable '%s' exists within %s '%s', "
+                            "but is used by an active "
+                            "expression.  Currently variables "
+                            "must be reachable through a tree "
+                            "of active Blocks."
+                            % (v.name, _parent.type().__name__,
+                               _parent.name))
+                    if not _parent.active:
+                        _errors.append(
+                            "Variable '%s' exists within "
+                            "deactivated %s '%s', but is used by "
+                            "an active expression.  Currently "
+                            "variables must be reachable through "
+                            "a tree of active Blocks."
+                            % (v.name, _parent.type().__name__,
+                               _parent.name))
+                    _parent = _parent.parent_block()
+
+        if _errors:
+            for e in _errors:
+                logger.error(e)
+            err.args = err.args + tuple(_errors)
 
 
 # Switch from Python to C generate_ampl_repn function when possible

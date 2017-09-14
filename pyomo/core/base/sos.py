@@ -352,4 +352,3 @@ class IndexedSOSConstraint(SOSConstraint):
 
 
 register_component(SOSConstraint, "SOS constraint expressions.")
-

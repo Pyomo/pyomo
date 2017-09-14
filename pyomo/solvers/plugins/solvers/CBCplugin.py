@@ -467,7 +467,14 @@ class CBCSHELL(SystemCallSolver):
             INPUT = []
         for line in INPUT:
             tokens = re.split('[ \t]+',line.strip())
-            # these are the only header entries CBC will generate (identified via browsing CbcSolver.cpp)
+            #
+            # Ignore warnings of values out of bounds
+            #
+            if tokens[0] == "**":
+                tokens = tokens[1:]
+            #
+            # These are the only header entries CBC will generate (identified via browsing CbcSolver.cpp)
+            #
             if tokens[0] == "Optimal":
                 solution.status = SolutionStatus.optimal
                 solution.gap = 0.0

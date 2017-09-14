@@ -37,6 +37,7 @@ import pyutilib.th as unittest
 import pyomo.core.base
 from pyomo.core.base.set_types import _AnySet
 from pyomo.environ import *
+from pyomo.core.kernel.set_types import _VirtualSet
 
 _has_numpy = False
 try:
@@ -1314,7 +1315,411 @@ class ArraySet2(PyomoModel):
             self.fail("fail test_mul")
 
 
-class RealSetTests(SimpleSetA):
+class TestRealSet(unittest.TestCase):
+
+    def test_bounds(self):
+        x = RealSet()
+        self.assertEqual(x.bounds(), (None, None))
+        x = RealSet(bounds=(1,2))
+        self.assertEqual(x.bounds(), (1, 2))
+
+    def test_inequality_comparison_fails(self):
+        x = RealSet()
+        y = RealSet()
+        with self.assertRaises(TypeError):
+            x < y
+        with self.assertRaises(TypeError):
+            x <= y
+        with self.assertRaises(TypeError):
+            x > y
+        with self.assertRaises(TypeError):
+            x >= y
+
+    def test_name(self):
+        x = RealSet()
+        self.assertEqual(x.name, None)
+        self.assertTrue('RealSet' in str(x))
+        x = RealSet(name="x")
+        self.assertEqual(x.name, 'x')
+        self.assertEqual(str(x), 'x')
+
+    def test_contains(self):
+        x = _VirtualSet()
+        self.assertTrue(None in x)
+        self.assertTrue(10 in x)
+        self.assertTrue(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertTrue(-2.2 in x)
+        self.assertTrue(-10 in x)
+        x = RealSet()
+        self.assertFalse(None in x)
+        self.assertTrue(10 in x)
+        self.assertTrue(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertTrue(-2.2 in x)
+        self.assertTrue(-10 in x)
+        x = RealSet(bounds=(-1, 1))
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_PositiveReals(self):
+        x = PositiveReals
+        self.assertFalse(None in x)
+        self.assertTrue(10 in x)
+        self.assertTrue(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertFalse(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_NonPositiveReals(self):
+        x = NonPositiveReals
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertFalse(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertTrue(-2.2 in x)
+        self.assertTrue(-10 in x)
+
+    def test_NegativeReals(self):
+        x = NegativeReals
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertFalse(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertFalse(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertTrue(-2.2 in x)
+        self.assertTrue(-10 in x)
+
+    def test_NonNegativeReals(self):
+        x = NonNegativeReals
+        self.assertFalse(None in x)
+        self.assertTrue(10 in x)
+        self.assertTrue(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_PercentFraction(self):
+        x = PercentFraction
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_UnitInterval(self):
+        x = UnitInterval
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_RealInterval(self):
+        x = RealInterval()
+        self.assertEqual(x.name,
+                         "RealInterval(None, None)")
+        self.assertFalse(None in x)
+        self.assertTrue(10 in x)
+        self.assertTrue(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertTrue(-2.2 in x)
+        self.assertTrue(-10 in x)
+
+        x = RealInterval(bounds=(-1,1))
+        self.assertEqual(x.name,
+                         "RealInterval(-1, 1)")
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+        x = RealInterval(bounds=(-1,1), name="JUNK")
+        self.assertEqual(x.name, "JUNK")
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+class TestIntegerSet(unittest.TestCase):
+
+    def test_bounds(self):
+        x = IntegerSet()
+        self.assertEqual(x.bounds(), (None, None))
+        x = IntegerSet(bounds=(1,2))
+        self.assertEqual(x.bounds(), (1, 2))
+
+    def test_inequality_comparison_fails(self):
+        x = RealSet()
+        y = RealSet()
+        with self.assertRaises(TypeError):
+            x < y
+        with self.assertRaises(TypeError):
+            x <= y
+        with self.assertRaises(TypeError):
+            x > y
+        with self.assertRaises(TypeError):
+            x >= y
+
+    def test_name(self):
+        x = IntegerSet()
+        self.assertEqual(x.name, None)
+        self.assertTrue('IntegerSet' in str(x))
+        x = IntegerSet(name="x")
+        self.assertEqual(x.name, 'x')
+        self.assertEqual(str(x), 'x')
+
+    def test_contains(self):
+        x = IntegerSet()
+        self.assertFalse(None in x)
+        self.assertTrue(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertTrue(-10 in x)
+        x = IntegerSet(bounds=(-1, 1))
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_PositiveIntegers(self):
+        x = PositiveIntegers
+        self.assertFalse(None in x)
+        self.assertTrue(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertFalse(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_NonPositiveIntegers(self):
+        x = NonPositiveIntegers
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertFalse(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertTrue(-10 in x)
+
+    def test_NegativeIntegers(self):
+        x = NegativeIntegers
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertFalse(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertFalse(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertTrue(-10 in x)
+
+    def test_NonNegativeIntegers(self):
+        x = NonNegativeIntegers
+        self.assertFalse(None in x)
+        self.assertTrue(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_IntegerInterval(self):
+        x = IntegerInterval()
+        self.assertFalse(None in x)
+        self.assertEqual(x.name,
+                         "IntegerInterval(None, None)")
+        self.assertTrue(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertTrue(-10 in x)
+
+        x = IntegerInterval(bounds=(-1,1))
+        self.assertFalse(None in x)
+        self.assertEqual(x.name,
+                         "IntegerInterval(-1, 1)")
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+        x = IntegerInterval(bounds=(-1,1), name="JUNK")
+        self.assertFalse(None in x)
+        self.assertEqual(x.name, "JUNK")
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertTrue(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+class TestBooleanSet(unittest.TestCase):
+
+    def test_bounds(self):
+        x = BooleanSet()
+        self.assertEqual(x.bounds(), (0, 1))
+
+    def test_inequality_comparison_fails(self):
+        x = RealSet()
+        y = RealSet()
+        with self.assertRaises(TypeError):
+            x < y
+        with self.assertRaises(TypeError):
+            x <= y
+        with self.assertRaises(TypeError):
+            x > y
+        with self.assertRaises(TypeError):
+            x >= y
+
+    def test_name(self):
+        x = BooleanSet()
+        self.assertEqual(x.name, None)
+        self.assertTrue('BooleanSet' in str(x))
+        x = BooleanSet(name="x")
+        self.assertEqual(x.name, 'x')
+        self.assertEqual(str(x), 'x')
+
+    def test_contains(self):
+        x = BooleanSet()
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(True in x)
+        self.assertTrue(1.0 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(False in x)
+        self.assertTrue(0.0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_Boolean(self):
+        x = Boolean
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(True in x)
+        self.assertTrue(1.0 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(False in x)
+        self.assertTrue(0.0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+    def test_Binary(self):
+        x = Binary
+        self.assertFalse(None in x)
+        self.assertFalse(10 in x)
+        self.assertFalse(1.1 in x)
+        self.assertTrue(1 in x)
+        self.assertTrue(True in x)
+        self.assertTrue(1.0 in x)
+        self.assertFalse(0.3 in x)
+        self.assertTrue(0 in x)
+        self.assertTrue(False in x)
+        self.assertTrue(0.0 in x)
+        self.assertFalse(-0.45 in x)
+        self.assertFalse(-1 in x)
+        self.assertFalse(-2.2 in x)
+        self.assertFalse(-10 in x)
+
+class TestAnySet(SimpleSetA):
 
     def setUp(self):
         #
@@ -1324,36 +1729,45 @@ class RealSetTests(SimpleSetA):
         #
         # Create model instance
         #
-        x = RealSet()
+        x = _AnySet()
         x.concrete=True
         self.model.A = x
         x.concrete=False
         #
         # Misc datasets
         #
-        self.model.tmpset1 = Set(initialize=[1.1,3.1,5.1,7.1])
-        self.model.tmpset2 = Set(initialize=[1.1,2.1,3.1,5.1,7.1])
-        self.model.tmpset3 = Set(initialize=[2.1,3.1,5.1,7.1,9.1])
+        self.model.tmpset1 = Set(initialize=[1,'3',5,7])
+        self.model.tmpset2 = Set(initialize=[1,2,'3',5,7])
+        self.model.tmpset3 = Set(initialize=[2,'3',5,7,9])
 
-        y = RealSet()
+        y = _AnySet()
         y.concrete=True
         self.model.setunion = y
         y.concrete=False
-        self.model.setintersection = Set(initialize=[1.1,3.1,5.1,7.1])
+        self.model.setintersection = Set(initialize=[1,'3',5,7])
         self.model.setxor = Set(initialize=[])
         self.model.setdiff = Set(initialize=[])
         self.model.setmul = None
 
         self.instance = self.model.create_instance()
-        self.e1=1.1
-        self.e2=2.1
-        self.e3=3.1
-        self.e4=4.1
-        self.e5=5.1
-        self.e6=6.1
+        self.e1=1
+        self.e2=2
+        self.e3='3'
+        self.e4=4
+        self.e5=5
+        self.e6=6
 
     def test_bounds(self):
-        self.assertEqual( self.instance.A.bounds(), (None,None))
+        self.assertEqual( self.instance.A.bounds(), None)
+
+    def test_contains(self):
+        """Various checks for contains() method"""
+        self.assertEqual( self.e1 in self.instance.A, True)
+        self.assertEqual( self.e2 in self.instance.A, True)
+        self.assertEqual( '2' in self.instance.A, True)
+
+    def test_None1(self):
+        self.assertEqual( None in Any, True)
 
     def test_len(self):
         """Check that the set has the right size"""
@@ -1478,12 +1892,6 @@ class RealSetTests(SimpleSetA):
         else:
             self.fail("test_le3 failure")
 
-    def test_contains(self):
-        """Various checks for contains() method"""
-        self.assertEqual( self.e1 in self.instance.A, True)
-        self.assertEqual( self.e2 in self.instance.A, True)
-        self.assertEqual( '2' in self.instance.A, False)
-
     def test_or(self):
         """Check that set union works"""
         try:
@@ -1530,100 +1938,7 @@ class RealSetTests(SimpleSetA):
             self.fail("Operator __mul__ should have failed.")
 
 
-class IntegerSetTests(RealSetTests):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create model instance
-        #
-        x = IntegerSet()
-        x.concrete=True
-        self.model.A = x
-        x.concrete=False
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1,3,5,7])
-        self.model.tmpset2 = Set(initialize=[1,2,3,5,7])
-        self.model.tmpset3 = Set(initialize=[2,3,5,7,9])
-
-        y = IntegerSet()
-        y.concrete=True
-        self.model.setunion = y
-        y.concrete=False
-        self.model.setintersection = Set(initialize=[1,3,5,7])
-        self.model.setxor = Set(initialize=[])
-        self.model.setdiff = Set(initialize=[])
-        self.model.setmul = None
-
-        self.instance = self.model.create_instance()
-        self.e1=1
-        self.e2=2
-        self.e3=3
-        self.e4=4
-        self.e5=5
-        self.e6=6
-
-    def test_bounds(self):
-        self.assertEqual( self.instance.A.bounds(), (None,None))
-
-
-class AnySetTests(RealSetTests):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        PyomoModel.setUp(self)
-        #
-        # Create model instance
-        #
-        x = _AnySet()
-        x.concrete=True
-        self.model.A = x
-        x.concrete=False
-        #
-        # Misc datasets
-        #
-        self.model.tmpset1 = Set(initialize=[1,'3',5,7])
-        self.model.tmpset2 = Set(initialize=[1,2,'3',5,7])
-        self.model.tmpset3 = Set(initialize=[2,'3',5,7,9])
-
-        y = _AnySet()
-        y.concrete=True
-        self.model.setunion = y
-        y.concrete=False
-        self.model.setintersection = Set(initialize=[1,'3',5,7])
-        self.model.setxor = Set(initialize=[])
-        self.model.setdiff = Set(initialize=[])
-        self.model.setmul = None
-
-        self.instance = self.model.create_instance()
-        self.e1=1
-        self.e2=2
-        self.e3='3'
-        self.e4=4
-        self.e5=5
-        self.e6=6
-
-    def test_bounds(self):
-        self.assertEqual( self.instance.A.bounds(), None)
-
-    def test_contains(self):
-        """Various checks for contains() method"""
-        self.assertEqual( self.e1 in self.instance.A, True)
-        self.assertEqual( self.e2 in self.instance.A, True)
-        self.assertEqual( '2' in self.instance.A, True)
-
-    def test_None1(self):
-        self.assertEqual( None in Any, True)
-
-
-class SetArgs1(PyomoModel):
+class TestSetArgs1(PyomoModel):
 
     def setUp(self):
         #
@@ -1974,7 +2289,7 @@ class SetArgs1(PyomoModel):
         else:
             self.fail("fail test_other1")
 
-class SetArgs2(PyomoModel):
+class TestSetArgs2(PyomoModel):
 
     def setUp(self):
         #
@@ -2208,7 +2523,7 @@ class SetArgs2(PyomoModel):
         else:
             self.fail("fail test_other1")
 
-class Misc(PyomoModel):
+class TestMisc(PyomoModel):
 
     def setUp(self):
         #
@@ -2253,7 +2568,7 @@ class Misc(PyomoModel):
         self.assertEqual(len(tmp),9)
 
 
-class SetIO(PyomoModel):
+class TestSetIO(PyomoModel):
 
     def setUp(self):
         #
@@ -2418,7 +2733,7 @@ def tmp_constructor(model, ctr, index):
     else:
         return ctr
 
-class SetErrors(PyomoModel):
+class TestSetErrors(PyomoModel):
 
     def test_membership(self):
         self.assertEqual( 0 in Boolean, True)
@@ -2596,7 +2911,7 @@ class SetErrors(PyomoModel):
         b=Set(dimen=2)
         self.assertEqual(a==b,False)
         self.assertTrue(not a.__eq__(Boolean))
-        self.assertTrue(not Boolean.__eq__(a))
+        self.assertTrue(not Boolean == a)
 
     def test_neq(self):
         a=Set(dimen=1,initialize=[1,2])
@@ -2604,7 +2919,7 @@ class SetErrors(PyomoModel):
         b=Set(dimen=2)
         self.assertEqual(a!=b,True)
         self.assertTrue(a.__ne__(Boolean))
-        self.assertTrue(Boolean.__ne__(a))
+        self.assertTrue(Boolean != a)
 
     def test_contains(self):
         a=Set(initialize=[1,3,5,7])
@@ -2617,16 +2932,16 @@ class SetErrors(PyomoModel):
         self.assertEqual(1 in NonNegativeIntegers, True)
 
     def test_subset(self):
-        try:
-            Integers in Reals
-            self.fail("test_subset - expected TypeError")
-        except TypeError:
-            pass
-        try:
-            Integers.issubset(Reals)
-            self.fail("test_subset - expected TypeError")
-        except TypeError:
-            pass
+        #try:
+        #    Integers in Reals
+        #    self.fail("test_subset - expected TypeError")
+        #except TypeError:
+        #    pass
+        #try:
+        #    Integers.issubset(Reals)
+        #    self.fail("test_subset - expected TypeError")
+        #except TypeError:
+        #    pass
         try:
             a=Set(dimen=1)
             b=Set(dimen=2)
@@ -2641,18 +2956,18 @@ class SetErrors(PyomoModel):
             self.fail("test_subset - expected TypeError")
         except TypeError:
             pass
-        try:
-            Integers.issubset(Reals)
-            self.fail("test_subset - expected TypeError")
-        except TypeError:
-            pass
+        #try:
+        #    Integers.issubset(Reals)
+        #    self.fail("test_subset - expected TypeError")
+        #except TypeError:
+        #    pass
         a=Set(initialize=[1,3,5,7])
         a.construct()
         b=Set(initialize=[1,3])
         b.construct()
-        self.assertEqual(Reals >= b, True)
-        self.assertEqual(Reals >= [1,3,7], True)
-        self.assertEqual(Reals >= [1,3,7,"a"], False)
+        #self.assertEqual(Reals >= b, True)
+        #self.assertEqual(Reals >= [1,3,7], True)
+        #self.assertEqual(Reals >= [1,3,7,"a"], False)
         self.assertEqual(a >= b, True)
 
     def test_lt(self):
@@ -2837,7 +3152,7 @@ def virt_constructor(model, y):
     return RealSet(validate=lambda model, x: x>y)
 
 
-class ArraySetVirtual(unittest.TestCase):
+class TestArraySetVirtual(unittest.TestCase):
 
     def test_construct(self):
         a=Set(initialize=[1,2,3])
@@ -2845,7 +3160,7 @@ class ArraySetVirtual(unittest.TestCase):
         b=Set(a, initialize=virt_constructor)
         #b.construct()
 
-class NestedSetOperations(unittest.TestCase):
+class TestNestedSetOperations(unittest.TestCase):
 
     def test_union(self):
 

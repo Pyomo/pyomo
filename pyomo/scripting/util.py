@@ -582,6 +582,7 @@ def apply_optimizer(data, instance=None):
             keywords['file_determinism'] = data.options.model.file_determinism
         keywords['tee'] = data.options.runtime.stream_output
         keywords['timelimit'] = getattr(data.options.solvers[0].options, 'timelimit', 0)
+        keywords['report_timing'] = data.options.runtime.report_timing
 
         # FIXME: solver_io and executable are not being used
         #        in the case of a non-serial solver manager

@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -46,7 +46,7 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     model = read(model_file)
 
     # if the use wants to extract duals or reduced costs and the
-    # model has quadratic constraints then we need to set the 
+    # model has quadratic constraints then we need to set the
     # QCPDual param to 1 (which apparently makes the solve more
     # expensive in the quadratic case). If we do not set this param
     # and and we attempt to access these suffixes in the solution
@@ -108,8 +108,8 @@ def gurobi_run(model_file, warmstart_file, soln_file, mipgap, options, suffixes)
     elif (solver_status == GRB.INF_OR_UNBD):
         status = 'warning'
         message = 'Problem proven to be infeasible or unbounded.'
-        term_cond = 'unbounded' # Pyomo doesn't have an analog to "infeasible or unbounded", which is a weird concept anyway.
-        solution_status = 'unbounded'
+        term_cond = 'infeasibleOrUnbounded'
+        solution_status = 'unsure'
     elif (solver_status == GRB.UNBOUNDED):
         status = 'warning'
         message = 'Model was proven to be unbounded.'

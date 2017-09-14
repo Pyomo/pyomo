@@ -11,7 +11,6 @@
 from pyomo.core import ConcreteModel, Param, Var, Expression, Objective, Constraint, Piecewise
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
-
 @register_model
 class LP_piecewise(_BaseTestModel):
     """
@@ -44,9 +43,8 @@ class LP_piecewise(_BaseTestModel):
     def warmstart_model(self):
         assert self.model is not None
         model = self.model
-        model.x = None
-        model.y = 1.0
-
+        model.x.value = None
+        model.y.value = 1.0
 
 @register_model
 class LP_piecewise_nosuffixes(LP_piecewise):
@@ -58,4 +56,3 @@ class LP_piecewise_nosuffixes(LP_piecewise):
         LP_piecewise.__init__(self)
         self.disable_suffix_tests = True
         self.add_results("LP_piecewise.json")
-

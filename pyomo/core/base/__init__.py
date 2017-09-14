@@ -8,8 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.base.log_config
+import pyomo.core.kernel
 from pyomo.core.base.config import PyomoOptions
+
+from pyomo.core.kernel import (ComponentMap,
+                               minimize,
+                               maximize)
 
 from pyomo.core.base.expr import *
 from pyomo.core.base.numvalue import *
@@ -18,6 +22,7 @@ from pyomo.core.base.label import *
 from pyomo.core.base.plugin import *
 from pyomo.core.base.DataPortal import *
 from pyomo.core.base.symbol_map import *
+
 #
 # Components
 #
@@ -46,8 +51,6 @@ from pyomo.core.base.util import *
 from pyomo.core.base.rangeset import *
 
 from pyomo.core.base.instance2dat import *
-
-from pyomo.core.base.register_numpy_types import *
 
 #
 # This is a hack to strip out modules, which shouldn't have been included in these imports

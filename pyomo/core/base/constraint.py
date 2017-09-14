@@ -167,6 +167,10 @@ class _ConstraintData(ActiveComponentData):
 
     __slots__ = ()
 
+    # Set to true when a constraint class stores its expression
+    # in linear canonical form
+    _linear_canonical_form = False
+
     def __init__(self, component=None):
         #
         # These lines represent in-lining of the
@@ -187,6 +191,21 @@ class _ConstraintData(ActiveComponentData):
         if self.body is None:
             return None
         return self.body(exception=exception)
+
+
+    def has_lb(self):
+        """Returns :const:`False` when the lower bound is
+        :const:`None` or negative infinity"""
+        lb = self.lower
+        return (lb is not None) and \
+            (value(lb) != float('-inf'))
+
+    def has_ub(self):
+        """Returns :const:`False` when the upper bound is
+        :const:`None` or positive infinity"""
+        ub = self.upper
+        return (ub is not None) and \
+            (value(ub) != float('inf'))
 
     def lslack(self):
         """

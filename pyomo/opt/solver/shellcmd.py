@@ -324,14 +324,12 @@ class SystemCallSolver(OptSolver):
         results = self.process_logfile()
         log_file_completion_time = time.time()
         if self._report_timing is True:
-            print("Log file read time=%0.2f seconds"
-                  % (log_file_completion_time - start_time))
+            print("      %6.2f seconds required to read logfile " % (log_file_completion_time - start_time))
         if self._results_reader is None:
             self.process_soln_file(results)
             soln_file_completion_time = time.time()
             if self._report_timing is True:
-                print("Solution file read time=%0.2f seconds"
-                      % (soln_file_completion_time - log_file_completion_time))
+                print("      %6.2f seconds required to read solution file " % (soln_file_completion_time - log_file_completion_time))
         else:
             # There is some ambiguity here as to where the solution data
             # It's natural to expect that the log file contains solution
@@ -349,8 +347,7 @@ class SystemCallSolver(OptSolver):
                                                suffixes=self._suffixes)
             results_reader_completion_time = time.time()
             if self._report_timing is True:
-                print("Results reader time=%0.2f seconds"
-                      % (results_reader_completion_time - log_file_completion_time))
+                print("      %6.2f seconds required to read solution file" % (results_reader_completion_time - log_file_completion_time))
         if rc != None:
             results.solver.error_rc=rc
             if rc != 0:
