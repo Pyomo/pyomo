@@ -22,11 +22,11 @@ from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
     as canonical_preprocess_block_constraints
 from pyomo.repn.compute_canonical_repn import preprocess_constraint \
     as canonical_preprocess_constraint
-from pyomo.repn.compute_ampl_repn import preprocess_block_objectives \
+from pyomo.repn.standard_repn import preprocess_block_objectives \
     as ampl_preprocess_block_objectives
-from pyomo.repn.compute_ampl_repn import preprocess_block_constraints \
+from pyomo.repn.standard_repn import preprocess_block_constraints \
     as ampl_preprocess_block_constraints
-from pyomo.repn.compute_ampl_repn import preprocess_constraint \
+from pyomo.repn.standard_repn import preprocess_constraint \
     as ampl_preprocess_constraint
 
 from six import iteritems, itervalues, string_types
@@ -35,7 +35,7 @@ from six.moves import xrange
 canonical_expression_preprocessor = \
     pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")
 ampl_expression_preprocessor = \
-    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_ampl_repn")
+    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_standard_repn")
 
 _OLD_OUTPUT = True
 

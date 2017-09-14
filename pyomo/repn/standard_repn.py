@@ -10,12 +10,18 @@
 
 from __future__ import division
 
-__all__ = ['StandardRepn', 'generate_standard_repn']
+__all__ = ['StandardRepn', 'generate_standard_repn', 'compute_standard_repn']
 
 
+import sys
 import logging
 import math
 
+from pyomo.core.base import (Constraint,
+                             Objective,
+                             ComponentMap)
+
+import pyomo.util
 from pyutilib.misc import Bunch
 
 from pyomo.core.base import expr as EXPR
@@ -36,6 +42,7 @@ from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
 
 import six
+from six import iteritems
 from six import itervalues, iteritems, StringIO
 from six.moves import xrange, zip
 try:
@@ -730,3 +737,141 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             repn.nonlinear_vars = tuple(repn.nonlinear_vars)
         return repn
 
+
+
+
+##
+##
+## Define the compute_standard_repn function
+##
+##
+
+
+def preprocess_block_objectives(block, idMap=None):
+
+    # Get/Create the ComponentMap for the repn
+    if not hasattr(block,'_repn'):
+        block._repn = ComponentMap()
+    block_repn = block._repn
+
+    for objective_data in block.component_data_objects(Objective,
+                                                       active=True,
+                                                       descend_into=False):
+
+        if objective_data.expr is None:
+            raise ValueError("No expression has been defined for objective %s"
+                             % (objective_data.name))
+
+        try:
+            repn = generate_repn(objective_data.expr, idMap=idMap)
+        except Exception:
+            err = sys.exc_info()[1]
+            logging.getLogger('pyomo.core').error\
+                ( "exception generating a standard representation for objective %s: %s" \
+                      % (objective_data.name, str(err)) )
+            raise
+
+        block_repn[objective_data] = repn
+
+def preprocess_block_constraints(block, idMap=None):
+
+    # Get/Create the ComponentMap for the repn
+    if not hasattr(block,'_repn'):
+        block._repn = ComponentMap()
+    block_repn = block._repn
+
+    for constraint in block.component_objects(Constraint,
+                                              active=True,
+                                              descend_into=False):
+
+        preprocess_constraint(block,
+                              constraint,
+                              idMap=idMap,
+                              block_repn=block_repn)
+
+def preprocess_constraint(block,
+                          constraint,
+                          idMap=None,
+                          block_repn=None):
+
+    from pyomo.repn.beta.matrix import MatrixConstraint
+    if isinstance(constraint, MatrixConstraint):
+        return
+
+    # Get/Create the ComponentMap for the repn
+    if not hasattr(block,'_repn'):
+        block._repn = ComponentMap()
+    block_repn = block._repn
+
+    for index, constraint_data in iteritems(constraint):
+
+        if not constraint_data.active:
+            continue
+
+        if constraint_data.body is None:
+            raise ValueError(
+                "No expression has been defined for the body "
+                "of constraint %s" % (constraint_data.name))
+
+        try:
+            repn = generate_standard_repn(constraint_data.body,
+                                           idMap=idMap)
+        except Exception:
+            err = sys.exc_info()[1]
+            logging.getLogger('pyomo.core').error(
+                "exception generating a standard representation for "
+                "constraint %s: %s"
+                % (constraint_data.name, str(err)))
+            raise
+
+        block_repn[constraint_data] = repn
+
+def preprocess_constraint_data(block,
+                               constraint_data,
+                               idMap=None,
+                               block_repn=None):
+
+    # Get/Create the ComponentMap for the repn
+    if not hasattr(block,'_repn'):
+        block._repn = ComponentMap()
+    block_repn = block._repn
+
+    if constraint_data.body is None:
+        raise ValueError(
+            "No expression has been defined for the body "
+            "of constraint %s" % (constraint_data.name))
+
+    try:
+        repn = generate_standard_repn(constraint_data.body,
+                                       idMap=idMap)
+    except Exception:
+        err = sys.exc_info()[1]
+        logging.getLogger('pyomo.core').error(
+            "exception generating a standard representation for "
+            "constraint %s: %s"
+            % (constraint_data.name, str(err)))
+        raise
+
+    block_repn[constraint_data] = repn
+
+
+@pyomo.util.pyomo_api(namespace='pyomo.repn')
+def compute_standard_repn(data, model=None):
+    """
+    This plugin computes the standard representation for all objectives
+    and constraints. All results are stored in a ComponentMap named
+    "_repn" at the block level.
+
+    We break out preprocessing of the objectives and constraints
+    in order to avoid redundant and unnecessary work, specifically
+    in contexts where a model is iteratively solved and modified.
+    we don't have finer-grained resolution, but we could easily
+    pass in a Constraint and an Objective if warranted.
+
+    Required:
+        model:      A concrete model instance.
+    """
+    idMap = {}
+    for block in model.block_data_objects(active=True):
+        preprocess_block_constraints(block, idMap=idMap)
+        preprocess_block_objectives(block, idMap=idMap)
