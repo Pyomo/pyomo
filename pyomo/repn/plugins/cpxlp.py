@@ -29,10 +29,7 @@ from pyomo.core.base import \
      Var, value,
      SOSConstraint, Objective,
      ComponentMap, is_fixed)
-from pyomo.repn import (generate_canonical_repn,
-                        canonical_degree,
-                        GeneralCanonicalRepn,
-                        LinearCanonicalRepn)
+from pyomo.repn import generate_standard_repn
 
 logger = logging.getLogger('pyomo.core')
 
@@ -48,6 +45,7 @@ def _get_bound(exp):
     if is_fixed(exp):
         return value(exp)
     raise ValueError("non-fixed bound or weight: " + str(exp))
+
 
 class ProblemWriter_cpxlp(AbstractProblemWriter):
 
@@ -194,196 +192,143 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         """
         assert (not force_objective_constant) or (is_objective)
 
-        # cache - this is referenced numerous times.
-        if not isinstance(x, GeneralCanonicalRepn):
-            var_hashes = None # not needed
-            linear_canonical = True
-        else:
-            var_hashes = x[-1]
-            linear_canonical = False
-
+        constant=True
+        linear_coef_string_template = '%+'+self._precision_string+' %s\n'
+        quad_coef_string_template = '%+'+self._precision_string+' '
         #
         # Linear
         #
-        linear_coef_string_template = '%+'+self._precision_string+' %s\n'
-        if linear_canonical:
-
-            #
-            # optimization (these might be generated on the fly)
-            #
-            coefficients = x.linear
-            if (coefficients is not None) and \
-               (len(coefficients) > 0):
-                variables = x.variables
-
-                # the 99% case is when the input instance is a linear
-                # canonical expression, so the exception should be rare.
-                for vardata in variables:
-                    self._referenced_variable_ids[id(vardata)] = vardata
-
-                if column_order is None:
-                    sorted_names = [(variable_symbol_dictionary[id(variables[i])],
-                                     coefficients[i])
-                                    for i in xrange(0,len(coefficients))]
-                    sorted_names.sort()
-                else:
-                    sorted_names = [(variables[i], coefficients[i])
-                                    for i in xrange(0,len(coefficients))]
-                    sorted_names.sort(key=lambda _x: column_order[_x[0]])
-                    sorted_names = [(variable_symbol_dictionary[id(var)], coef)
-                                    for var, coef in sorted_names]
-
-                for name, coef in sorted_names:
-                    output_file.write(linear_coef_string_template % (coef, name))
-
-            elif not is_objective:
-                # If we made it to here we are outputing
-                # trivial constraints place 0 *
-                # ONE_VAR_CONSTANT on this side of the
-                # constraint for the benefit of solvers like
-                # Glpk that cannot parse an LP file without
-                # a variable on the left hand side.
-                output_file.write(linear_coef_string_template
-                                  % (0, 'ONE_VAR_CONSTANT'))
-
-        elif 1 in x:
-
-            for var_hash in x[1]:
-                vardata = var_hashes[var_hash]
+        if len(x.linear_vars) > 0:
+            constant=False
+            for vardata in x.linear_vars:
                 self._referenced_variable_ids[id(vardata)] = vardata
 
             if column_order is None:
-                sorted_names = [(variable_symbol_dictionary[id(var_hashes[var_hash])],
-                                 var_coefficient)
-                                for var_hash, var_coefficient in iteritems(x[1])]
-                sorted_names.sort()
+                #
+                # Order columns by dictionary names
+                #
+                tmp = [var for var in x.linear_vars]
+                names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
+                for i, name in sorted(enumerate(names), key=lambda x: x[1]):
+                    output_file.write(linear_coef_string_template % (x.linear_coefs[i], name))
             else:
-                sorted_names = [(var_hashes[var_hash], var_coefficient)
-                                for var_hash, var_coefficient in iteritems(x[1])]
-                sorted_names.sort(key=lambda _x: column_order[_x[0]])
-                sorted_names = [(variable_symbol_dictionary[id(var)], coef)
-                                for var, coef in sorted_names]
-
-            for name, coef in sorted_names:
-                output_file.write(linear_coef_string_template % (coef, name))
-
+                #
+                # Order columns by the value of column_order[]
+                #
+                for i, var in sorted(enumerate(x.linear_vars), key=lambda x: column_order[x[1]]):
+                    name = variable_symbol_dictionary[id(var)]
+                    output_file.write(linear_coef_string_template % (x.linear_coefs[i], name))
         #
         # Quadratic
         #
-        quad_coef_string_template = '%+'+self._precision_string+' '
-        if canonical_degree(x) == 2:
+        if len(x.quadratic_vars) > 0:
+            constant=False
+            for var1, var2 in x.quadratic_vars:
+                self._referenced_variable_ids[id(var1)] = var1
+                self._referenced_variable_ids[id(var2)] = var2
 
-            # first, make sure there is something to output
-            # - it is possible for all terms to have
-            # coefficients equal to 0.0, in which case you
-            # don't want to get into the bracket notation at
-            # all.
-            # NOTE: if the coefficient is really 0.0, it
-            #       should be preprocessed out by the
-            #       canonial expression generator!
-            found_nonzero_term = False # until proven otherwise
-            for var_hash, var_coefficient in iteritems(x[2]):
-                for var in var_hash:
-                    vardata = var_hashes[var]
+            output_file.write("+ [\n")
 
-                if math.fabs(var_coefficient) != 0.0:
-                    found_nonzero_term = True
-                    break
-
-            if found_nonzero_term:
-
-                output_file.write("+ [\n")
-
-                num_output = 0
-
-                var_hashes_order = list(iterkeys(x[2]))
-                # sort by the sorted tuple of symbols (or column assignments)
-                # for the variables appearing in the term
-                if column_order is None:
-                    var_hashes_order.sort(
-                        key=lambda term: \
-                          sorted(variable_symbol_dictionary[id(var_hashes[vh])]
-                                 for vh in term))
-                else:
-                    var_hashes_order.sort(
-                        key=lambda term: sorted(column_order[var_hashes[vh]]
-                                                for vh in term))
-
-                for var_hash in var_hashes_order:
-
-                    coefficient = x[2][var_hash]
-
-                    if is_objective:
-                        coefficient *= 2
-
-                    # times 2 because LP format requires /2 for all the quadratic
+            if column_order is None:
+                #
+                # Order columns by dictionary names
+                #
+                quad = set()
+                names = []
+                i = 0
+                for var1, var2 in x.quadratic_vars:
+                    name1 = variable_symbol_dictionary[id(var1)]
+                    name2 = variable_symbol_dictionary[id(var2)]
+                    if name1 < name2:
+                        names.append( (name1,name2) )
+                    elif name1 > name2:
+                        names.append( (name2,name1) )
+                    else:
+                        quad.add(i)
+                        names.append( (name1,name1) )
+                    i += 1
+                for i, names_ in sorted(enumerate(names), key=lambda x: x[1]):
+                    #
+                    # Times 2 because LP format requires /2 for all the quadratic
                     # terms /of the objective only/.  Discovered the last bit thru
                     # trial and error.  Obnoxious.
                     # Ref: ILog CPlex 8.0 User's Manual, p197.
-
-                    output_file.write(quad_coef_string_template % coefficient)
-                    term_variables = []
-
-                    var_hash_order = list(iterkeys(var_hash))
-                    # sort by symbols (or column assignments)
-                    if column_order is None:
-                        var_hash_order.sort(
-                            key=lambda vh: \
-                              variable_symbol_dictionary[id(var_hashes[vh])])
+                    #
+                    if is_objective:
+                        output_file.write(quad_coef_string_template % 2*x.quadratic_coefs[i])
                     else:
-                        var_hash_order.sort(
-                            key=lambda vh: column_order[var_hashes[vh]])
-
-                    # sort the term for consistent output
-                    for var in var_hash_order:
-                        vardata = var_hashes[var]
-                        self._referenced_variable_ids[id(vardata)] = vardata
-                        name = variable_symbol_dictionary[id(vardata)]
-                        term_variables.append(name)
-
-                    if len(term_variables) == 2:
-                        output_file.write("%s * %s"
-                                          % (term_variables[0], term_variables[1]))
+                        output_file.write(quad_coef_string_template % x.quadratic_coefs[i])
+                    if i in quad:
+                        output_file.write("%s ^ 2\n" % (names_[0]))
                     else:
-                        output_file.write("%s ^ 2" % (term_variables[0]))
-                    output_file.write("\n")
+                        output_file.write("%s * %s\n" % (names_[0], names_[1]))
+            else:
+                #
+                # Order columns by the value of column_order[]
+                #
+                quad = set()
+                cols = []
+                i = 0
+                for var1, var2 in x.quadratic_vars:
+                    col1 = column_order[var1]
+                    col2 = column_order[var2]
+                    if col1 < col2:
+                        cols.append( (((col1,col2) , variable_symbol_dictionary[id(var1)], variable_symbol_dictionary[id(var2)])) )
+                    elif col1 > col2:
+                        cols.append( (((col2,col1) , variable_symbol_dictionary[id(var2)], variable_symbol_dictionary[id(var1)])) )
+                    else:
+                        quad.add(i)
+                        cols.append( ((col1,col1), variable_symbol_dictionary[id(var1)]) )
+                    i += 1
+                for i, cols_ in sorted(enumerate(cols), key=lambda x: x[1][0]):
+                    #
+                    # Times 2 because LP format requires /2 for all the quadratic
+                    # terms /of the objective only/.  Discovered the last bit thru
+                    # trial and error.  Obnoxious.
+                    # Ref: ILog CPlex 8.0 User's Manual, p197.
+                    #
+                    if is_objective:
+                        output_file.write(quad_coef_string_template % 2*x.quadratic_coefs[i])
+                    else:
+                        output_file.write(quad_coef_string_template % x.quadratic_coefs[i])
+                    if i in quad:
+                        output_file.write("%s ^ 2\n" % cols_[1])
+                    else:
+                        output_file.write("%s * %s\n" % (cols_[1], cols_[2]))
 
-                output_file.write("]")
+            output_file.write("]")
 
-                if is_objective:
-                    output_file.write(' / 2\n')
-                    # divide by 2 because LP format requires /2 for all the quadratic
-                    # terms.  Weird.  Ref: ILog CPlex 8.0 User's Manual, p197
-                else:
-                    output_file.write("\n")
+            if is_objective:
+                output_file.write(' / 2\n')
+                # divide by 2 because LP format requires /2 for all the quadratic
+                # terms.  Weird.  Ref: ILog CPlex 8.0 User's Manual, p197
+            else:
+                output_file.write("\n")
+
+        if constant and not is_objective:
+            # If we made it to here we are outputing
+            # trivial constraints place 0 *
+            # ONE_VAR_CONSTANT on this side of the
+            # constraint for the benefit of solvers like
+            # Glpk that cannot parse an LP file without
+            # a variable on the left hand side.
+            output_file.write(linear_coef_string_template % (0, 'ONE_VAR_CONSTANT'))
 
         #
         # Constant offset
         #
-        if linear_canonical:
-            constant = x.constant
-        else:
-            if 0 in x:
-                constant = x[0][None]
-            else:
-                constant = None
-
-        if constant is not None:
-            offset = constant
-        else:
-            offset=0.0
-
         # Currently, it appears that we only need to print
         # the constant offset term for objectives.
+        #
         obj_string_template = '%+'+self._precision_string+' %s\n'
-        if is_objective and (force_objective_constant or (offset != 0.0)):
+        if is_objective and (force_objective_constant or (x.constant != 0.0)):
             output_file.write(obj_string_template
-                              % (offset, 'ONE_VAR_CONSTANT'))
+                              % (x.constant, 'ONE_VAR_CONSTANT'))
 
         #
         # Return constant offset
         #
-        return offset
+        return x.constant
 
     def printSOS(self,
                  symbol_map,
@@ -506,20 +451,18 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         # Objective
         #
 
-        supports_quadratic_objective = \
-            solver_capability('quadratic_objective')
+        supports_quadratic_objective = solver_capability('quadratic_objective')
 
         numObj = 0
         onames = []
         for block in all_blocks:
 
-            gen_obj_canonical_repn = \
-                getattr(block, "_gen_obj_canonical_repn", True)
+            gen_obj_repn = getattr(block, "_gen_obj_repn", True)
 
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_canonical_repn'):
-                block._canonical_repn = ComponentMap()
-            block_canonical_repn = block._canonical_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             for objective_data in block.component_data_objects(
                     Objective,
@@ -545,14 +488,13 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 else:
                     output_file.write("max \n")
 
-                if gen_obj_canonical_repn:
-                    canonical_repn = \
-                        generate_canonical_repn(objective_data.expr)
-                    block_canonical_repn[objective_data] = canonical_repn
+                if gen_obj_repn:
+                    repn = generate_standard_repn(objective_data.expr)
+                    block_repn[objective_data] = repn
                 else:
-                    canonical_repn = block_canonical_repn[objective_data]
+                    repn = block_repn[objective_data]
 
-                degree = canonical_degree(canonical_repn)
+                degree = repn.polynomial_degree()
 
                 if degree == 0:
                     logger.warning("Constant objective detected, replacing "
@@ -565,7 +507,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             "objective functions with quadratic terms. "
                             "Objective at issue: %s."
                             % objective_data.name)
-                elif degree != 1:
+                elif degree is None:
                     raise RuntimeError(
                         "Cannot write legal LP file.  Objective '%s' "
                         "has nonlinear terms that are not quadratic."
@@ -575,7 +517,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     object_symbol_dictionary[id(objective_data)]+':\n')
 
                 offset = print_expr_canonical(
-                    canonical_repn,
+                    repn,
                     output_file,
                     object_symbol_dictionary,
                     variable_symbol_dictionary,
@@ -607,13 +549,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         def constraint_generator():
             for block in all_blocks:
 
-                gen_con_canonical_repn = \
-                    getattr(block, "_gen_con_canonical_repn", True)
+                gen_con_repn = getattr(block, "_gen_con_repn", True)
 
                 # Get/Create the ComponentMap for the repn
-                if not hasattr(block,'_canonical_repn'):
-                    block._canonical_repn = ComponentMap()
-                block_canonical_repn = block._canonical_repn
+                if not hasattr(block,'_repn'):
+                    block._repn = ComponentMap()
+                block_repn = block._repn
 
                 for constraint_data in block.component_data_objects(
                         Constraint,
@@ -627,24 +568,21 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         continue # non-binding, so skip
 
                     if constraint_data._linear_canonical_form:
-                        canonical_repn = constraint_data.canonical_form()
-                    elif isinstance(constraint_data, LinearCanonicalRepn):
-                        canonical_repn = constraint_data
+                        repn = constraint_data.canonical_form()
+                    elif gen_con_repn:
+                        repn = generate_standard_repn(constraint_data.body)
+                        block_repn[constraint_data] = repn
                     else:
-                        if gen_con_canonical_repn:
-                            canonical_repn = generate_canonical_repn(constraint_data.body)
-                            block_canonical_repn[constraint_data] = canonical_repn
-                        else:
-                            canonical_repn = block_canonical_repn[constraint_data]
+                        repn = block_repn[constraint_data]
 
-                    yield constraint_data, canonical_repn
+                    yield constraint_data, repn
 
         if row_order is not None:
             sorted_constraint_list = list(constraint_generator())
             sorted_constraint_list.sort(key=lambda x: row_order[x[0]])
             def yield_all_constraints():
-                for constraint_data, canonical_repn in sorted_constraint_list:
-                    yield constraint_data, canonical_repn
+                for data, repn in sorted_constraint_list:
+                    yield data, repn
         else:
             yield_all_constraints = constraint_generator
 
@@ -652,10 +590,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         eq_string_template = "= %"+self._precision_string+'\n'
         geq_string_template = ">= %"+self._precision_string+'\n\n'
         leq_string_template = "<= %"+self._precision_string+'\n\n'
-        for constraint_data, canonical_repn in yield_all_constraints():
+        for constraint_data, repn in yield_all_constraints():
             have_nontrivial = True
 
-            degree = canonical_degree(canonical_repn)
+            degree = repn.polynomial_degree()
 
             #
             # Write constraint
@@ -675,7 +613,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     raise ValueError(
                         "Solver unable to handle quadratic expressions. Constraint"
                         " at issue: '%s'" % (constraint_data.name))
-            elif degree != 1:
+            elif degree is None:
                 raise ValueError(
                     "Cannot write legal LP file.  Constraint '%s' has a body "
                     "with nonlinear terms." % (constraint_data.name))
@@ -689,7 +627,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 label = 'c_e_' + con_symbol + '_'
                 alias_symbol_func(symbol_map, constraint_data, label)
                 output_file.write(label+':\n')
-                offset = print_expr_canonical(canonical_repn,
+                offset = print_expr_canonical(repn,
                                               output_file,
                                               object_symbol_dictionary,
                                               variable_symbol_dictionary,
@@ -708,7 +646,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         label = 'c_l_' + con_symbol + '_'
                     alias_symbol_func(symbol_map, constraint_data, label)
                     output_file.write(label+':\n')
-                    offset = print_expr_canonical(canonical_repn,
+                    offset = print_expr_canonical(repn,
                                                   output_file,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
@@ -728,7 +666,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         label = 'c_u_' + con_symbol + '_'
                     alias_symbol_func(symbol_map, constraint_data, label)
                     output_file.write(label+':\n')
-                    offset = print_expr_canonical(canonical_repn,
+                    offset = print_expr_canonical(repn,
                                                   output_file,
                                                   object_symbol_dictionary,
                                                   variable_symbol_dictionary,
