@@ -62,7 +62,7 @@ class timeout:
 
 
 NTerms = 100000
-N = 5
+N = 50
 #NTerms = 100
 #N = 5
 
@@ -626,8 +626,8 @@ res = {}
 
 #runall(["COOPR3"], res)
 
-EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
-runall(["PYOMO4"], res)
+#EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
+#runall(["PYOMO4"], res)
 
 EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
 runall(["PYOMO5"], res)
