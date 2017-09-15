@@ -178,7 +178,7 @@ class BARONSHELL(SystemCallSolver):
             fnames = self._get_dummy_input_files(check_license=False)
             try:
                 results = pyutilib.subprocess.run([solver_exec, fnames[0]])
-                return _extract_version(results[1],length=3)
+                return _extract_version(results[1])
             finally:
                 self._remove_dummy_input_files(fnames)
 

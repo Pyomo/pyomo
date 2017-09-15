@@ -457,7 +457,7 @@ if __name__ == "__main__":
     results.append(("AML", "Var", measure(build_Var)))
     results.append(("AML", "_GeneralVarData", measure(build_GeneralVarData)))
     results.append(("Kernel", "variable", measure(build_variable)))
-    results.append(("Kernel", "staticvariable", measure(build_staticvariable)))
+    results.append(("<locals>", "staticvariable", measure(build_staticvariable)))
     summarize(results)
     print("")
 
@@ -470,7 +470,7 @@ if __name__ == "__main__":
     results.append(("Kernel", "variable_dict (%s)" % N, measure(build_variable_dict)))
     results.append(("Kernel", "variable_dict(unordered) (%s)" % N, measure(build_unordered_variable_dict)))
     results.append(("Kernel", "variable_list (%s)" % N, measure(build_variable_list)))
-    results.append(("Kernel", "staticvariable_list (%s)" % N, measure(build_staticvariable_list)))
+    results.append(("<locals>", "staticvariable_list (%s)" % N, measure(build_staticvariable_list)))
     summarize(results)
     print("")
 
@@ -531,6 +531,6 @@ if __name__ == "__main__":
                     measure(build_block_list_with_variables)))
     results.append(("Kernel", "tiny_block_list (%s) w/ variables (8)" % N,
                     measure(build_tiny_block_list_with_variables)))
-    results.append(("Kernel", "tiny_block_list (%s) w/ staticvariables (8)" % N,
+    results.append(("<locals>", "tiny_block_list (%s) w/ staticvariables (8)" % N,
                     measure(build_tiny_block_list_with_staticvariables)))
     summarize(results)

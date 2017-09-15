@@ -1,8 +1,21 @@
+# IDE configuration files
+.idea
+.spyder*
 
-*.cover
-*.egg-info
-*.out
+# Python generates numerous files when byte compiling / installing packages
 *.pyc
 *.pyo
+*.egg-info
+
+# Documentation builds
 *.spy
+doc/OnlineDocs/_build
+
+# Running pyomo / tests / solvers occasionally leaves extra files
+*.out
 pyomo/core/data/parse_table_datacmds.py
+gurobi.log
+
+# Results from nosetests --with-coverage
+.coverage
+*.cover
