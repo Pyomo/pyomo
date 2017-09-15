@@ -7,6 +7,7 @@ import pyomo.version
 from pyomo.core.base.expr_common import _clear_expression_pool
 from pyomo.core.base import expr as EXPR 
 from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 
 import pprint as pp
 import gc
@@ -29,24 +30,6 @@ import signal
 class TimeoutError(Exception):
     pass
 
-def Xtimeout(seconds=10, error_message=os.strerror(errno.ETIME)):
-    def decorator(func):
-        def _handle_timeout(signum, frame):
-            raise TimeoutError(error_message)
-
-        def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
-            try:
-                result = func(*args, **kwargs)
-            finally:
-                signal.alarm(0)
-            return result
-
-        return wraps(func)(wrapper)
-
-    return decorator
-
 class timeout:
     def __init__(self, seconds=10, error_message='Timeout'):
         self.seconds = seconds
@@ -61,8 +44,9 @@ class timeout:
 
 
 
+_timeout = 20
 NTerms = 100000
-N = 50
+N = 5
 #NTerms = 100
 #N = 5
 
@@ -103,8 +87,6 @@ def measure(f, n=25):
     #
     return ans
 
-
-
 #
 # Evaluate standard operations on an expression
 #
@@ -116,73 +98,90 @@ def evaluate(expr, seconds):
 
     gc.collect()
     _clear_expression_pool()
-    start = time.time()
     try:
-        with timeout(seconds=20):
+        with timeout(seconds=_timeout):
+            start = time.time()
             expr_ = expr.clone()
+            stop = time.time()
+            seconds['clone'] = stop-start
     except TimeoutError:
         print("TIMEOUT")
-    stop = time.time()
-    seconds['clone'] = stop-start
+        seconds['clone'] = -999.0
 
     gc.collect()
     _clear_expression_pool()
-    start = time.time()
     try:
-        with timeout(seconds=20):
+        with timeout(seconds=_timeout):
+            start = time.time()
             d_ = expr.polynomial_degree()
+            stop = time.time()
+            seconds['polynomial_degree'] = stop-start
     except TimeoutError:
         print("TIMEOUT")
-    stop = time.time()
-    seconds['polynomial_degree'] = stop-start
+        seconds['polynomial_degree'] = -999.0
 
     gc.collect()
     _clear_expression_pool()
-    start = time.time()
     try:
-        with timeout(seconds=20):
+        with timeout(seconds=_timeout):
+            start = time.time()
             s_ = expr.is_constant()
+            stop = time.time()
+            seconds['is_constant'] = stop-start
     except TimeoutError:
         print("TIMEOUT")
-    stop = time.time()
-    seconds['is_constant'] = stop-start
+        seconds['is_constant'] = -999.0
 
     gc.collect()
     _clear_expression_pool()
-    start = time.time()
     try:
-        with timeout(seconds=20):
+        with timeout(seconds=_timeout):
+            start = time.time()
             s_ = expr.is_fixed()
+            stop = time.time()
+            seconds['is_fixed'] = stop-start
     except TimeoutError:
         print("TIMEOUT")
-    stop = time.time()
-    seconds['is_fixed'] = stop-start
+        seconds['is_fixed'] = -999.0
 
     gc.collect()
     _clear_expression_pool()
-    start = time.time()
     try:
-        with timeout(seconds=20):
-            r_ = generate_canonical_repn(expr)
-    except TimeoutError:
-        print("TIMEOUT")
-    stop = time.time()
-    seconds['generate_canonical'] = stop-start
-
-    gc.collect()
-    _clear_expression_pool()
-    start = time.time()
-    try:
-        with timeout(seconds=20):
-            s_ = EXPR.compress_expression(expr, False)
+        with timeout(seconds=_timeout):
+            start = time.time()
+            s_ = EXPR.compress_expression(expr, verbose=False)
+            stop = time.time()
+            seconds['compress'] = stop-start
             seconds['compressed_size'] = s_.size()
     except TimeoutError:
         print("TIMEOUT")
-        seconds['compressed_size'] = 0
+        seconds['compressed_size'] = -999.0
     except:
         seconds['compressed_size'] = 0
-    stop = time.time()
-    seconds['compress'] = stop-start
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            r_ = generate_standard_repn(expr)
+            stop = time.time()
+            seconds['generate_repn'] = stop-start
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['generate_repn'] = -999.0
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            r_ = generate_canonical_repn(expr)
+            stop = time.time()
+            seconds['generate_canonical'] = stop-start
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['generate_canonical'] = -999.0
 
     return seconds
 
@@ -421,10 +420,6 @@ def polynomial(N, flag):
         model.p = Param(model.A, default=2)
         model.x = Var(model.A, initialize=2)
 
-        for i in model.A:
-            if i != N:
-                model.x[i].fixed = True
-
         gc.collect()
         _clear_expression_pool()
         start = time.time()
@@ -538,6 +533,7 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(linear(NTerms, 5), n=N)
         print_results(factors_, ans_, output)
 
+    if True:
         factors_ = tuple(factors+['Linear','Loop 6'])
         ans_ = res[factors_] = measure(linear(NTerms, 6), n=N)
         print_results(factors_, ans_, output)
@@ -631,7 +627,6 @@ res = {}
 
 EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
 runall(["PYOMO5"], res)
-
 
 if args.output:
     if args.output.endswith(".csv"):
