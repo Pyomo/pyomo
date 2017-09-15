@@ -97,8 +97,11 @@ class CuttingPlane_Transformation(Transformation):
         # to be able to find the same component on the convex hull instance
         # later.)
         v_map = {}
-        for v in instance_rBigm.component_data_objects(Var, descend_into=\
-                                                       (Block, Disjunct)):
+        for v in instance_rBigm.component_data_objects(
+            Var,
+            descend_into=(Block, Disjunct),
+            sort=SortComponents.deterministic,
+            ):
             v_map[id(v)] = (ComponentUID(v), v, len(v_map))
 
         self._add_separation_objective(v_map, instance_rChull, transBlock_rChull)
