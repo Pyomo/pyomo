@@ -57,8 +57,9 @@ class CPLEXDirectTests(unittest.TestCase):
 
             results = opt.solve(model)
 
-            self.assertEqual(results.solver.termination_condition,
-                             TerminationCondition.unbounded)
+            self.assertIn(results.solver.termination_condition,
+                          (TerminationCondition.unbounded,
+                           TerminationCondition.infeasibleOrUnbounded))
 
     @unittest.skipIf(not cplexpy_available,
                      "The 'cplex' python bindings are not available")
@@ -124,8 +125,9 @@ class CPLEXDirectTests(unittest.TestCase):
             instance = model.create_instance()
             results = opt.solve(instance)
 
-            self.assertEqual(results.solver.termination_condition,
-                             TerminationCondition.unbounded)
+            self.assertIn(results.solver.termination_condition,
+                          (TerminationCondition.unbounded,
+                           TerminationCondition.infeasibleOrUnbounded))
 
     @unittest.skipIf(not cplexpy_available,
                      "The 'cplex' python bindings are not available")

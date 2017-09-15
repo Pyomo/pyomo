@@ -15,9 +15,9 @@ import basicclasses as bc
 
 #================================================
 def indep_norms_from_data_2stage(jsonfilespec,
-                                 TreeTemplateFileName,\
-                                 NumScen, \
-                                 OutDir, \
+                                 TreeTemplateFileName,
+                                 NumScen,
+                                 OutDir,
                                  Seed = None):
     """ jsonfilespec gives the path to a json file that
     specifies the usual d2p node data dictionary (of dictionaries).
@@ -36,7 +36,6 @@ def indep_norms_from_data_2stage(jsonfilespec,
     def d2norm(filespec):
         """ Local routine to read data and produce the norm loc and size dict.
         """
-        x = np.array
         x = np.loadtxt(filespec)
         loc, scale = sp.norm.fit(x)
         dictout = {'loc':loc, 'scale':scale}
@@ -58,18 +57,78 @@ def indep_norms_from_data_2stage(jsonfilespec,
             dfilespec = dictin[pname]
             distrdict[pname] =  d2norm(dfilespec)
     
-    distrs.dict_sampler2PySP(distrdict, \
-                             TreeTemplateFileName, \
-                              NumScen, \
-                              OutDir, \
-                              Seed)
+    distrs.dict_sampler2PySP(distrdict,
+                             TreeTemplateFileName,
+                             NumScen,
+                             OutDir,
+                             Seed)
+
+def indep_norms_from_data_2stage_abstract(jsonfilespec,
+                                          TreeTemplateFileName,
+                                          ScenTemplateFilename,
+                                          NumScen,
+                                          OutDir,
+                                          Seed = None):
+    """
+    This function should produce the required files for PySP when using an abstract
+    model. This draws from a collection files which store data and fits independent
+    normal distributions to each of them. It subsequently samples from them to produce
+    the separate scenarios of which there are NumScen of. It then stores the scenario
+    files produced in OutDir. If desired, a seed can be optionally passed in to make
+    the random number generation deterministic.
+
+    Args:
+        jsonfilespec specifies a json file which contains objects which either
+        map directly to files or map to objects which map to files.
+
+        TreeTemplateFileName specifies the generic structure of the Scenario
+        Tree.
+
+        NumScen specifies the desired number of scenarios to produce
+
+        OutDir specifies the directory to contain the output files
+
+        Seed is an integer which can set the seed
+    """
+
+    def d2norm(filespec):
+        """ Local routine to read data and produce the norm loc and size dict.
+        """
+        x = np.loadtxt(filespec)
+        loc, scale = sp.norm.fit(x)
+        dictout = {'loc':loc, 'scale':scale}
+        return 'norm', dictout
+
+    #print ("Debug: about to load infilename="+jsonfilespec)
+    with open(jsonfilespec) as infile:
+        dictin = json.load(infile)
+
+    distribution_dict = {}
+    for key in dictin:
+        if isinstance(dictin[key], dict):
+            inner_dict = dictin[key]
+            distribution_dict[key] = {inner_key: d2norm(inner_dict[inner_key]) for inner_key
+                                      in inner_dict}
+        else:
+            data_file = dictin[key]
+            distribution_dict[key] = d2norm(data_file)
+
+    distrs.dict_sampler2PySP(distribution_dict,
+                             TreeTemplateFileName,
+                             NumScen,
+                             OutDir,
+                             Seed,
+                             ScenTemplateFileName=ScenTemplateFilename,
+                             Abstract=True)
+
+
 
 #================================================
 def json_scipy_2stage(infilename,
-                      TreeTemplateFileName,\
-                      NumScen, \
-                      OutDir, \
-                      Seed = None, \
+                      TreeTemplateFileName,
+                      NumScen,
+                      OutDir,
+                      Seed = None,
                       ScenTemplateFileName = None):
     """ Creates PySP inputs from independent samples.
     Reads the "standard d2p param" dict from infilename where the dictionary
@@ -88,9 +147,9 @@ def json_scipy_2stage(infilename,
     with open(infilename) as infile:
         distrdict = json.load(infile)
 
-    distrs.dict_sampler2PySP(distrdict, \
-                             TreeTemplateFileName, \
-                              NumScen, \
-                              OutDir, \
-                              Seed, \
+    distrs.dict_sampler2PySP(distrdict,
+                             TreeTemplateFileName,
+                              NumScen,
+                              OutDir,
+                              Seed,
                               ScenTemplateFileName)

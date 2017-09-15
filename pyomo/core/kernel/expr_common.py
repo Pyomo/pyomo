@@ -41,9 +41,9 @@ def clone_expression(exp, substitute=None):
     return deepcopy(exp, memo)
 
 def _clear_expression_pool():
-    from expr_coopr3 import _clear_expression_pool as \
+    from pyomo.core.base.expr_coopr3 import _clear_expression_pool as \
         _clear_expression_pool_coopr3
-    from expr_pyomo4 import _clear_expression_pool as \
+    from pyomo.core.base.expr_pyomo4 import _clear_expression_pool as \
         _clear_expression_pool_pyomo4
     if mode == Mode.pyomo4_trees:
         _clear_expression_pool_pyomo4()
