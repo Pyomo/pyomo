@@ -77,7 +77,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 Skip writing constraints whose body section is fixed
             file_determinism=1:
                 How much effort do we want to put into ensuring the
-                LP file is written deterministically for a Pyomo model:
+                GAMS file is written deterministically for a Pyomo model:
                    0 : None
                    1 : sort keys of indexed components (default)
                    2 : sort keys AND sort names (over declaration order)
@@ -113,7 +113,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             io_options.pop("skip_trivial_constraints", False)
 
         # How much effort do we want to put into ensuring the
-        # LP file is written deterministically for a Pyomo model:
+        # GAMS file is written deterministically for a Pyomo model:
         #    0 : None
         #    1 : sort keys of indexed components (default)
         #    2 : sort keys AND sort names (over declaration order)
@@ -363,6 +363,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 # case replace with power(x, int) function to improve domain
                 # issues. Skip first term since it's always "con_name.."
                 line = replace_power(line) + ';'
+            if len(line) > 80000:
+                line = split_long_line(line)
             output_file.write(line + "\n")
 
         output_file.write("\n")
@@ -588,6 +590,24 @@ def replace_power(line):
                 term += args[-1]
         new_line += term + ' '
     return new_line
+
+
+def split_long_line(line):
+    """
+    GAMS has an 80,000 character limit for lines, so split as many
+    times as needed so as to not have illegal lines.
+    """
+    new_lines = ''
+    while len(line) > 80000:
+        i = 80000
+        while line[i] != ' ':
+            # Walk backwards to find closest space,
+            # where it is safe to split to a new line
+            i -= 1
+        new_lines += line[:i] + '\n'
+        line = line[i + 1:]
+    new_lines += line
+    return new_lines
 
 
 valid_solvers = {

@@ -1,10 +1,7 @@
 #
-# Install free version of GAMS: executable and API bindings
+# Install GAMS-Python API bindings
 # No explicit API version for python 3.5, use 3.4
 #
-wget https://d37drm4t2jghv5.cloudfront.net/distributions/24.8.5/linux/linux_x64_64_sfx.exe
-chmod u+x linux_x64_64_sfx.exe
-./linux_x64_64_sfx.exe > /dev/null
 if [ "${TRAVIS_PYTHON_VERSION}" = "2.6" ]; then
    pushd $PWD/gams24.8_linux_x64_64_sfx/apifiles/Python/api_26;
    python setup.py install;

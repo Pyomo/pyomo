@@ -8,6 +8,7 @@ import pyomo.opt
 import random
 
 from nose.tools import set_trace
+from pyomo.opt import SolverFactory
 
 solvers = pyomo.opt.check_available_solvers('gurobi')
 
@@ -27,8 +28,8 @@ class TwoTermDisj(unittest.TestCase):
     @staticmethod
     def makeModel():
         m = ConcreteModel()
-        m.x = Var(bounds=(1,4))
-        m.y = Var(bounds=(1,4))
+        m.x = Var(bounds=(0,5))
+        m.y = Var(bounds=(0,5))
         def d_rule(disjunct, flag):
             m = disjunct.model()
             if flag:
@@ -42,7 +43,7 @@ class TwoTermDisj(unittest.TestCase):
             return [m.d[0], m.d[1]]
         m.disjunction = Disjunction(rule=disj_rule)
 
-        m.obj = Objective(expr=4*m.y - m.x, sense=maximize)
+        m.obj = Objective(expr=m.x + 2*m.y)
         return m
 
     @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
@@ -69,4 +70,35 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIsNone(cut.upper)
 
         # test body
-        #set_trace()
+        self.assertEqual(len(cut.body._coef), 4)
+        self.assertEqual(len(cut.body._args), 4)
+        self.assertEqual(cut.body._const, 0)
+        
+        coefs = {
+            0: 0.45,
+            1: 0.55,
+            2: -0.1,
+            3: 0.1
+        }
+
+        xhat = {
+            0: 2.7,
+            1: 1.3,
+            2: 0.15,
+            3: 0.85
+        }
+
+        variables = {
+            0: m.x,
+            1: m.y,
+            2: m.d[1].indicator_var,
+            3: m.d[0].indicator_var
+        }
+
+        for i in range(4):
+            self.assertAlmostEqual(cut.body._coef[i], coefs[i])
+            self.assertEqual(len(cut.body._args[i]._coef), 1)
+            self.assertEqual(len(cut.body._args[i]._args), 1)
+            self.assertAlmostEqual(cut.body._args[i]._const, -1*xhat[i])
+            self.assertEqual(cut.body._args[i]._coef[0], 1)
+            self.assertIs(cut.body._args[i]._args[0], variables[i])
