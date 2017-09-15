@@ -170,7 +170,7 @@ class ConvexHull_Transformation(Transformation):
 
     def _transformBlock(self, obj, transBlock):
         if obj.is_indexed():
-            for i in obj:
+            for i in sorted(iterkeys(obj)):
                 self._transformBlockData(obj[i], transBlock)
         else:
             self._transformBlockData(obj, transBlock)
@@ -244,7 +244,7 @@ class ConvexHull_Transformation(Transformation):
         self._declareDisjunctionConstraints(obj)
         if obj.is_indexed():
             transBlock.disjContainers.add(obj)
-            for i in obj:
+            for i in sorted(iterkeys(obj)):
                 self._transformDisjunctionData(obj[i], transBlock, i,
                                                orConstraint,
                                                disaggregationConstraint)
@@ -283,7 +283,8 @@ class ConvexHull_Transformation(Transformation):
 
         # We first go through and collect all the variables that we
         # are going to disaggregate.
-        varSet = ComponentSet()
+        varSet_tmp = ComponentSet()
+        varSet = []
         for disjunct in obj.disjuncts:
             for cons in disjunct.component_objects(
                     Constraint,
@@ -293,8 +294,13 @@ class ConvexHull_Transformation(Transformation):
                 # we aren't going to disaggregate fixed
                 # variables. This means there is trouble if they are
                 # unfixed later...  
-                vars = identify_variables(cons.body, include_fixed=False)
-                varSet.update(vars)
+                for var in identify_variables(cons.body, include_fixed=False):
+                    # Note the use of a dict so that we will eventually
+                    # disaggregate the vars in a deterministic order
+                    # (the order that we found them)
+                    if var not in varSet_tmp:
+                        varSet.append(var)
+                        varSet_tmp.add(var)
 
         # Now that we know who we need to disaggregate, we will do it
         # while we also transform the disjuncts.
@@ -438,7 +444,7 @@ class ConvexHull_Transformation(Transformation):
         assert disjunction.active
         problemdisj = disjunction
         if disjunction.is_indexed():
-            for i in disjunction:
+            for i in sorted(iterkeys(disjunction)):
                 if disjunction[i].active:
                     # a _DisjunctionData is active, we will yell about
                     # it specifically.
@@ -467,7 +473,7 @@ class ConvexHull_Transformation(Transformation):
         assert innerdisjunct.active
         problemdisj = innerdisjunct
         if innerdisjunct.is_indexed():
-            for i in innerdisjunct:
+            for i in sorted(iterkeys(innerdisjunct)):
                 if innerdisjunct[i].active:
                     # This is shouldn't be true, we will complain about it.
                     problemdisj = innerdisjunct[i]
@@ -525,7 +531,7 @@ class ConvexHull_Transformation(Transformation):
         relaxationBlock._gdp_transformation_info.setdefault(
             'srcConstraints', ComponentMap())[newConstraint] = obj
 
-        for i in obj:
+        for i in sorted(iterkeys(obj)):
             c = obj[i]
             if not c.active:
                 continue

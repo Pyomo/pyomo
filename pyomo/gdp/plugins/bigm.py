@@ -146,7 +146,7 @@ class BigM_Transformation(Transformation):
 
     def _transformBlock(self, obj, transBlock, bigM):
         if obj.is_indexed():
-            for i in obj:
+            for i in sorted(iterkeys(obj)):
                 self._transformBlockData(obj[i], transBlock, bigM)
         else:
             self._transformBlockData(obj, transBlock, bigM)
@@ -201,7 +201,7 @@ class BigM_Transformation(Transformation):
         orConstraint, xor = self._declareXorConstraint(obj)
         if obj.is_indexed():
             transBlock.disjContainers.add(obj)
-            for i in obj:
+            for i in sorted(iterkeys(obj)):
                 self._transformDisjunctionData(obj[i], transBlock,
                                                bigM, i, orConstraint, xor)
         else:
@@ -412,7 +412,7 @@ class BigM_Transformation(Transformation):
         relaxationBlock._gdp_transformation_info.setdefault(
             'srcConstraints', ComponentMap())[newConstraint] = obj
 
-        for i in obj:
+        for i in sorted(iterkeys(obj)):
             c = obj[i]
             if not c.active:
                 continue
