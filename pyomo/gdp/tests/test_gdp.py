@@ -37,7 +37,7 @@ try:
 except ImportError:
     yaml_available=False
 
-solvers = pyomo.opt.check_available_solvers('cplex', 'glpk')
+solvers = pyomo.opt.check_available_solvers('cplex', 'glpk','gurobi')
 
 
 if False:
@@ -172,12 +172,14 @@ class CommonTests:
                     preprocess='chull')
         self.check( 'jobshop_large', 'chull' )
 
+    @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
     def test_cuttingplane_jobshop_small(self):
         self.problem='test_cuttingplane_jobshop_small'
         self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop-small.dat'),
                     preprocess='cuttingplane')
         self.check( 'jobshop_small', 'cuttingplane' )
 
+    @unittest.skipIf('gurobi' not in solvers, 'Gurobi solver not available')
     def test_cuttingplane_jobshop_large(self):
         self.problem='test_cuttingplane_jobshop_large'
         self.pyomo( join(exdir,'jobshop.py'), join(exdir,'jobshop.dat'),
