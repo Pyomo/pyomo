@@ -23,6 +23,7 @@ from pyomo.core.base import (Constraint,
 
 import pyomo.util
 from pyutilib.misc import Bunch
+from pyutilib.math.util import isclose
 
 from pyomo.core.base import expr as EXPR
 from pyomo.core.base import _ExpressionData, Expression
@@ -170,9 +171,9 @@ class StandardRepn(object):
         expr = self.constant
         for i,v in enumerate(self.linear_vars):
             val = value(self.linear_coefs[i])
-            if math.isclose(val, 1.0):
+            if isclose(val, 1.0):
                 expr += self.linear_vars[i]
-            elif math.isclose(val, -1.0):
+            elif isclose(val, -1.0):
                 expr -= self.linear_vars[i]
             elif val < 0.0:
                 expr -= - self.linear_coefs[i]*self.linear_vars[i]
@@ -196,6 +197,7 @@ representations be temporary.  They should be used to interface
 to a solver and then be deleted.
 
 """
+#@profile
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
     with EXPR.ignore_entangled_expressions():
         #
@@ -367,8 +369,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             else:
                                 _argList = [_argList[2]]
                 
-                if -999 in _result:
-                    break
+                #if -999 in _result[0]:
+                #    break
 
                 ##
                 ## Process the next current _obj object
@@ -384,11 +386,11 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     _result.append( {0:_sub} )
 
                 elif _compute_value:
-                    try:
-                        # TODO: disable ERROR logging message
-                        _result.append( {0:EXPR.evaluate_expression(_sub, only_fixed_vars=True)} )
-                    except Exception as e:
-                        _result = [{-999: "Error evaluating expression: %s" % str(e)}] 
+                    val = EXPR.evaluate_expression(_sub, only_fixed_vars=True, exception=False)
+                    if val is None:
+                        _result = [{-999: "Error evaluating expression: %s" % str(_sub)}] 
+                    else:
+                        _result.append( {0:val} )
 
                 elif not _sub._potentially_variable():
                     #
@@ -438,8 +440,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     _len     = len(_argList)
                     _result  = []
 
-
-
             #
             # POST-DIVE
             #
@@ -478,7 +478,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             nonl.append(res[None])
                 if len(nonl) > 0:
                     nonl = Sum(x for x in nonl)
-                    if not (nonl.__class__ in native_numeric_types and math.isclose(nonl,0)):
+                    if not (nonl.__class__ in native_numeric_types and isclose(nonl,0)):
                         ans[None] = nonl
                 # Add constant terms
                 cons = 0
@@ -494,7 +494,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         for key in res[1]:
                             if key in ans[1]:
                                 coef = ans[1][key] + res[1][key]
-                                if not (coef.__class__ in native_numeric_types and math.isclose(coef, 0.0)):     # coef != 0.0
+                                if not (coef.__class__ in native_numeric_types and isclose(coef, 0.0)):     # coef != 0.0
                                     ans[1][key] = coef
                                 else:
                                     del ans[1][key]
@@ -507,7 +507,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         for key in res[2]:
                             if key in ans[2]:
                                 coef = ans[2][key] + res[2][key]
-                                if not (coef.__class__ in native_numeric_types and math.isclose(coef, 0.0)):     # coef != 0.0
+                                if not (coef.__class__ in native_numeric_types and isclose(coef, 0.0)):     # coef != 0.0
                                     ans[2][key] = coef
                                 else:
                                     del ans[2][key]
@@ -548,7 +548,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     if None in _r:
                         rhs += _r[None]
                     if 0 in _r and \
-                       not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
+                       not (_r[0].__class__ in native_numeric_types and isclose(_r[0], 0.0)):    # _r[0] != 0.0
                         rhs += _r[0]
                     if 1 in _r:
                         rhs += Sum(_r[1][key]*idMap[key] for key in _r[1])
@@ -558,7 +558,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 if None in _r:
                     lhs = 0
                     if 0 in _l and \
-                       not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):        # _l[0] != 0.0
+                       not (_l[0].__class__ in native_numeric_types and isclose(_l[0], 0.0)):        # _l[0] != 0.0
                         lhs += _l[0]
                     if 1 in _l:
                         lhs += Sum(_l[1][key]*idMap[key] for key in _l[1])
@@ -591,7 +591,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         nonl.append( Sum(_l[1][i]*idMap[i] for i in _l[1]) * Sum(_r[1][i]*idMap[i] for i in _r[1]) )
                 if len(nonl) > 0:
                     nonl = Sum(x for x in nonl)
-                    if not (nonl.__class__ in native_numeric_types and math.isclose(nonl,0)):
+                    if not (nonl.__class__ in native_numeric_types and isclose(nonl,0)):
                         ans[None] = nonl
 
                 #
@@ -605,17 +605,17 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 #
                 if (0 in _l and 1 in _r) or (1 in _l and 0 in _r):
                     ans[1] = {}
-                if 0 in _l and 1 in _r and \
-                   not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):    # _l[0] != 0.0
-                    for key in _r[1]:
-                        ans[1][key] = _l[0]*_r[1][key]
-                if 1 in _l and 0 in _r and \
-                   not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):    # _r[0] != 0.0
-                    for key in _l[1]:
-                        if key in ans[1]:
-                            ans[1][key] += _l[1][key]*_r[0]
-                        else:
-                            ans[1][key] = _l[1][key]*_r[0]
+                    if 0 in _l and 1 in _r and \
+                       not (_l[0].__class__ in native_numeric_types and isclose(_l[0], 0.0)):    # _l[0] != 0.0
+                        for key in _r[1]:
+                            ans[1][key] = _l[0]*_r[1][key]
+                    if 1 in _l and 0 in _r and \
+                       not (_r[0].__class__ in native_numeric_types and isclose(_r[0], 0.0)):    # _r[0] != 0.0
+                        for key in _l[1]:
+                            if key in ans[1]:
+                                ans[1][key] += _l[1][key]*_r[0]
+                            else:
+                                ans[1][key] = _l[1][key]*_r[0]
 
                 #
                 # GENERATING QUADRATIC TERMS
@@ -623,28 +623,28 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 if quadratic:
                     if (0 in _l and 2 in _r) or (2 in _l and 0 in _r) or (1 in _l and 1 in _r):
                         ans[2] = {}
-                    if 0 in _l and 2 in _r and \
-                       not (_l[0].__class__ in native_numeric_types and math.isclose(_l[0], 0.0)):
-                        for key in _r[2]:
-                            ans[2][key] = _l[0]*_r[2][key]
-                    if 2 in _l and 0 in _r and \
-                       not (_r[0].__class__ in native_numeric_types and math.isclose(_r[0], 0.0)):
-                        for key in _l[2]:
-                            if key in ans[2]:
-                                ans[2][key] += _l[2][key]*_r[0]
-                            else:
-                                ans[2][key] = _l[2][key]*_r[0]
-                    if 1 in _l and 1 in _r:
-                        for lkey in _l[1]:
-                            for rkey in _r[1]:
-                                if id(idMap[lkey]) <= id(idMap[rkey]):
-                                    key_ = (lkey,rkey)
+                        if 0 in _l and 2 in _r and \
+                           not (_l[0].__class__ in native_numeric_types and isclose(_l[0], 0.0)):
+                            for key in _r[2]:
+                                ans[2][key] = _l[0]*_r[2][key]
+                        if 2 in _l and 0 in _r and \
+                           not (_r[0].__class__ in native_numeric_types and isclose(_r[0], 0.0)):
+                            for key in _l[2]:
+                                if key in ans[2]:
+                                    ans[2][key] += _l[2][key]*_r[0]
                                 else:
-                                    key_ = (rkey,lkey)
-                                if key_ in ans[2]:
-                                    ans[2][key_] += _l[1][lkey]*_r[1][rkey]
-                                else:
-                                    ans[2][key_] = _l[1][lkey]*_r[1][rkey]
+                                    ans[2][key] = _l[2][key]*_r[0]
+                        if 1 in _l and 1 in _r:
+                            for lkey in _l[1]:
+                                for rkey in _r[1]:
+                                    if id(idMap[lkey]) <= id(idMap[rkey]):
+                                        key_ = (lkey,rkey)
+                                    else:
+                                        key_ = (rkey,lkey)
+                                    if key_ in ans[2]:
+                                        ans[2][key_] += _l[1][lkey]*_r[1][rkey]
+                                    else:
+                                        ans[2][key_] = _l[1][lkey]*_r[1][rkey]
 
             elif _obj.__class__ == EXPR._NegationExpression:
                 ans = _result[0]
