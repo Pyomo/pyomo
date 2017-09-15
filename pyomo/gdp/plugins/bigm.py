@@ -73,7 +73,13 @@ class BigM_Transformation(Transformation):
         # suffixes and estimate as a last resort. More specific args/suffixes
         # override ones anywhere in the tree. Suffixes lower down in the tree
         # override ones higher up.
-        bigM = kwds.pop('bigM', None)
+        if 'default_bigM' in kwds:
+            logger.warn("DEPRECATED: the 'default_bigM=' argument has been "
+                        "replaced by 'bigM='")
+            bigM = kwds.pop('default_bigM')
+        else:
+            bigM = None
+        bigM = kwds.pop('bigM', bigM)
         if bigM is not None and type(bigM) is not dict:
             if type(bigM) in (float, int, tuple, list):
                 bigM = {None: bigM}
