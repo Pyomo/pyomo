@@ -3,10 +3,13 @@ import pyutilib.th as unittest
 from pyomo.environ import *
 from pyomo.gdp import *
 from pyomo.core.base import expr_common, expr as EXPR
+import pyomo.opt
 
 import random
 
 from nose.tools import set_trace
+
+solvers = pyomo.opt.check_available_solvers('gurobi')
 
 # TODO:
 #     - test that deactivated objectives on the model don't get used by the
@@ -42,6 +45,7 @@ class TwoTermDisj(unittest.TestCase):
         m.obj = Objective(expr=4*m.y - m.x, sense=maximize)
         return m
 
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_transformation_block(self):
         m = self.makeModel()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
@@ -55,6 +59,7 @@ class TwoTermDisj(unittest.TestCase):
         # this one's tiny, so we've just added one cut
         self.assertEqual(len(cuts), 1)
 
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
     def test_cut_constraint(self):
         m = self.makeModel()
         TransformationFactory('gdp.cuttingplane').apply_to(m)
@@ -64,4 +69,4 @@ class TwoTermDisj(unittest.TestCase):
         self.assertIsNone(cut.upper)
 
         # test body
-        set_trace()
+        #set_trace()
