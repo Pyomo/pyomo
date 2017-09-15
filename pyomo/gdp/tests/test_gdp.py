@@ -93,12 +93,12 @@ class CommonTests:
                 args.append('--transform=gdp.bigm')
                 # ESJ: HACK for now: also apply the varmover
                 # transformation in this case
-                args.append('--transform=gdp.varmover')
+                args.append('--transform=gdp.reclassify')
             elif pp == 'chull':
                 args.append('--transform=gdp.chull')
                 # ESJ: HACK for now: also apply the varmover
                 # transformation in this case
-                args.append('--transform=gdp.varmover')
+                args.append('--transform=gdp.reclassify')
         args.append('-c')
         args.append('--symbolic-solver-labels')
         os.chdir(currdir)
