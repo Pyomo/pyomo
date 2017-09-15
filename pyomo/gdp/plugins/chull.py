@@ -545,21 +545,26 @@ class ConvexHull_Transformation(Transformation):
                 if self._mode == NL_Mode_LeeGrossmann:
                     sub_expr = clone_expression(
                         c.body,
-                        substitute={var: subs/y for var, subs in 
-                                    var_substitute_map.iteritems()})
+                        substitute=dict(
+                            (var,  subs/y)
+                            for var, subs in var_substitute_map.iteritems() )
+                    )
                     expr = sub_expr * y
                 elif self._mode == NL_Mode_GrossmannLee:
                     sub_expr = clone_expression(
                         c.body,
-                        substitute={var: subs/(y + EPS) for var, subs in 
-                                    var_substitute_map.iteritems()})
+                        substitute=dict(
+                            (var, subs/(y + EPS))
+                            for var, subs in var_substitute_map.iteritems() )
+                    )
                     expr = (y + EPS) * sub_expr
                 elif self._mode == NL_Mode_FurmanSawayaGrossmann:
                     sub_expr = clone_expression(
                         c.body, 
-                        substitute={
-                            var : subs/((1 - EPS)*y + EPS) for var, subs 
-                            in var_substitute_map.iteritems()})
+                        substitute=dict(
+                            (var, subs/((1 - EPS)*y + EPS))
+                            for var, subs in var_substitute_map.iteritems() )
+                    )
                     expr = ((1-EPS)*y + EPS)*sub_expr - EPS*h_0*(1-y)
                 else:
                     raise RuntimeError("Unknown NL CHull mode")
