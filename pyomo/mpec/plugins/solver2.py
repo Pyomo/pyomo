@@ -40,11 +40,6 @@ class MPEC_Solver2(pyomo.opt.OptSolver):
 
         xfrm = TransformationFactory('gdp.bigm')
         xfrm.apply_to(self._instance, bigM=self.options.get('bigM',10**6))
-        # HACK: Until the writers are updated to find variables on
-        # things other than active blocks, we need to reclassify the
-        # Disjuncts as Blocks after transformation
-        TransformationFactory('gdp.reclassify').apply_to(self._instance)
-
         #
         # Solve with a specified solver
         #

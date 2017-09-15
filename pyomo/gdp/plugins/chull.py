@@ -23,6 +23,7 @@ from pyomo.core.kernel import ComponentMap, ComponentSet
 from pyomo.core.kernel.expr_common import clone_expression
 from pyomo.core.base.expr import identify_variables
 from pyomo.gdp import *
+from pyomo.gdp.plugins.gdp_var_mover import HACK_GDP_Disjunct_Reclassifier
 
 from six import iteritems, iterkeys
 
@@ -130,6 +131,9 @@ class ConvexHull_Transformation(Transformation):
 
         if targets is None:
             targets = ( instance, )
+            _HACK_transform_whole_instance = True
+        else:
+            _HACK_transform_whole_instance = False
         for _t in targets:
             t = _t.find_component(instance)
             if t is None:
@@ -166,6 +170,15 @@ class ConvexHull_Transformation(Transformation):
                         break
                 else:
                     obj.deactivate()
+
+        # HACK for backwards compatibility with the older GDP transformations
+        #
+        # Until the writers are updated to find variables on things
+        # other than active blocks, we need to reclassify the Disjuncts
+        # as Blocks after transformation so that the writer will pick up
+        # all the variables that it needs (in this case, indicator_vars).
+        if _HACK_transform_whole_instance:
+            HACK_GDP_Disjunct_Reclassifier().apply_to(instance)
 
 
     def _transformBlock(self, obj, transBlock):

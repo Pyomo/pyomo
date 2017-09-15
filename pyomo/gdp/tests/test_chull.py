@@ -337,7 +337,7 @@ class TwoTermDisj(unittest.TestCase):
 
     def test_original_disjuncts_deactivated(self):
         m = self.makeModel()
-        TransformationFactory('gdp.chull').apply_to(m)
+        TransformationFactory('gdp.chull').apply_to(m, targets=(m,))
 
         self.assertFalse(m.d.active)
         self.assertFalse(m.d[0].active)
