@@ -322,7 +322,7 @@ class ConvexHull_Transformation(Transformation):
             or_expr += disjunct.indicator_var
             self._transform_disjunct(disjunct, transBlock, varSet)
          
-        orConstraint.add(index, (1, or_expr, 1))
+        orConstraint.add(index, (or_expr, 1))
         for var in varSet:
             disaggregatedExpr = 0
             for disjunct in obj.disjuncts:

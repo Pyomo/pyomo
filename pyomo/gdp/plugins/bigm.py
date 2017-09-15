@@ -265,7 +265,10 @@ class BigM_Transformation(Transformation):
             # relax the disjunct
             self._bigM_relax_disjunct(disjunct, transBlock, bigM, suffix_list)
         # add or (or xor) constraint
-        orConstraint.add(index, (1, or_expr, 1 if xor else None))
+        if xor:
+            orConstraint.add(index, (or_expr, 1))
+        else:
+            orConstraint.add(index, (1, or_expr, None))
         obj.deactivate()
 
     def _bigM_relax_disjunct(self, obj, transBlock, bigM, suffix_list):
