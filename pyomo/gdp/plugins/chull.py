@@ -413,7 +413,7 @@ class ConvexHull_Transformation(Transformation):
         # Look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
         # to handle it.
-        for name, obj in list(block.component_map().iteritems()):
+        for name, obj in list(iteritems(block.component_map())):
             if hasattr(obj, 'active') and not obj.active:
                 continue
             handler = self.handlers.get(obj.type(), None)
@@ -547,7 +547,7 @@ class ConvexHull_Transformation(Transformation):
                         c.body,
                         substitute=dict(
                             (var,  subs/y)
-                            for var, subs in var_substitute_map.iteritems() )
+                            for var, subs in iteritems(var_substitute_map) )
                     )
                     expr = sub_expr * y
                 elif self._mode == NL_Mode_GrossmannLee:
@@ -555,7 +555,7 @@ class ConvexHull_Transformation(Transformation):
                         c.body,
                         substitute=dict(
                             (var, subs/(y + EPS))
-                            for var, subs in var_substitute_map.iteritems() )
+                            for var, subs in iteritems(var_substitute_map) )
                     )
                     expr = (y + EPS) * sub_expr
                 elif self._mode == NL_Mode_FurmanSawayaGrossmann:
@@ -563,7 +563,7 @@ class ConvexHull_Transformation(Transformation):
                         c.body, 
                         substitute=dict(
                             (var, subs/((1 - EPS)*y + EPS))
-                            for var, subs in var_substitute_map.iteritems() )
+                            for var, subs in iteritems(var_substitute_map) )
                     )
                     expr = ((1-EPS)*y + EPS)*sub_expr - EPS*h_0*(1-y)
                 else:

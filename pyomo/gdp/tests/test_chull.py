@@ -5,6 +5,7 @@ from pyomo.core.base import expr_common, expr as EXPR
 from pyomo.gdp import *
 
 import random
+from six import iteritems
 
 # DEBUG
 from nose.tools import set_trace
@@ -425,7 +426,7 @@ class TwoTermDisj(unittest.TestCase):
             mappings[m.w] = disjBlock[i].w
             mappings[m.y] = disjBlock[i].y
             mappings[m.x] = disjBlock[i].x
-            for orig, disagg in mappings.iteritems():
+            for orig, disagg in iteritems(mappings):
                 self.assertIs(srcVars[disagg], orig)
                 self.assertIs(disVars[orig], disagg)
 
@@ -446,7 +447,7 @@ class TwoTermDisj(unittest.TestCase):
             mappings[m.w] = disjBlock[i].w_bounds
             mappings[m.y] = disjBlock[i].y_bounds
             mappings[m.x] = disjBlock[i].x_bounds
-            for var, cons in mappings.iteritems():
+            for var, cons in iteritems(mappings):
                 self.assertIs(srcBigm[cons], var)
                 self.assertIs(bigm[var], cons)
 

@@ -8,6 +8,8 @@ from pyomo.opt import SolverFactory
 from pyomo.util.plugin import alias
 from pyomo.core.base import Transformation
 
+from six import iterkeys, itervalues
+
 import logging
 logger = logging.getLogger('pyomo.core')
 
@@ -116,7 +118,7 @@ class CuttingPlane_Transformation(Transformation):
             rBigm_objVal = value(rBigM_obj)
 
             # copy over xstar
-            for cuid, v, i in v_map.itervalues():
+            for cuid, v, i in itervalues(v_map):
                 transBlock_rChull.xstar[i] = value(v)
 
             # solve separation problem to get xhat.
@@ -154,7 +156,7 @@ class CuttingPlane_Transformation(Transformation):
         transBlock_rChull.xstar = Param(range(len(v_map)), mutable=True)
         
         obj_expr = 0
-        for cuid, v, i in v_map.itervalues():
+        for cuid, v, i in itervalues(v_map):
             x_star = transBlock_rChull.xstar[i]
             x = cuid.find_component(instance_rChull)
             obj_expr += (x - x_star)**2
@@ -170,7 +172,7 @@ class CuttingPlane_Transformation(Transformation):
 
         cutexpr_bigm = 0
         cutexpr_rBigm = 0
-        for cuid, v, i in v_map.itervalues():
+        for cuid, v, i in itervalues(v_map):
             xhat = cuid.find_component(instance_rChull).value
             xstar = transBlock_rChull.xstar[i].value
             x_bigm = cuid.find_component(instance)

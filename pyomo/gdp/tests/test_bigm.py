@@ -8,19 +8,20 @@ import random
 import sys
 
 from nose.tools import set_trace
+from six import iteritems, StringIO
 
 
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
-        stdoutbuffer = sys.stdout.getvalue()
-        starting_index = len(stdoutbuffer)
         modelcopy = TransformationFactory('gdp.bigm').create_using(model)
-        modelcopy.pprint()
-        modelcopy_output = sys.stdout.getvalue()[starting_index:]
-        starting_index = len(modelcopy_output)
+        modelcopy_buf = StringIO()
+        modelcopy.pprint(ostream=modelcopy_buf)
+        modelcopy_output = modelcopy_buf.getvalue()
+
         TransformationFactory('gdp.bigm').apply_to(model)
-        model.pprint()
-        model_output = sys.stdout.getvalue()[starting_index:]
+        model_buf = StringIO()
+        model.pprint(ostream=model_buf)
+        model_output = model_buf.getvalue()
         self.assertMultiLineEqual(modelcopy_output, model_output)
 
 class TwoTermDisj(unittest.TestCase, CommonTests):
@@ -1807,7 +1808,7 @@ class TestTargets_IndexedDisjunction(unittest.TestCase, CommonTests):
                 (1,3),
             ]
         }
-        for blocknum, lst in pairs.iteritems():
+        for blocknum, lst in iteritems(pairs):
             original = m.b[blocknum].disjunct
             for i, j in lst:
                 dict1 = getattr(disjBlock[j], "_gdp_transformation_info")

@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 """Big-M Generalized Disjunctive Programming transformation module."""
 #  ___________________________________________________________________________
 #
@@ -26,7 +25,7 @@ from pyomo.gdp.disjunct import (IndexedDisjunction, SimpleDisjunction,
 from pyomo.repn import LinearCanonicalRepn, generate_canonical_repn
 from pyomo.util.modeling import unique_component_name
 from pyomo.util.plugin import alias
-from six import iterkeys
+from six import iterkeys, iteritems
 
 logger = logging.getLogger('pyomo.core')
 
@@ -311,7 +310,7 @@ class BigM_Transformation(Transformation):
         # Look through the component map of block and transform
         # everything we have a handler for. Yell if we don't know how
         # to handle it.
-        for name, obj in list(block.component_map().iteritems()):
+        for name, obj in list(iteritems(block.component_map())):
             if hasattr(obj, 'active') and not obj.active:
                 continue
             handler = self.handlers.get(obj.type(), None)
