@@ -482,7 +482,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # give an arg
         self.assertRaisesRegexp(
             GDP_Error,
-            "Big-M \(-18, 19.2, 3\) for constraint d\[0\].c is not of "
+            "Big-M \([^)]*\) for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
             "tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,
@@ -508,7 +508,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # give an arg
         self.assertRaisesRegexp(
             GDP_Error,
-            "Big-M \[-18, 19.2, 3\] for constraint d\[0\].c is not of "
+            "Big-M \[[^\]]*\] for constraint d\[0\].c is not of "
             "length two. Expected either a single value or "
             "tuple or list of length two for M.*",
             TransformationFactory('gdp.bigm').apply_to,

@@ -205,7 +205,11 @@ class Solver(unittest.TestCase):
         for i in range(len(refObj)):
             self.assertEqual(len(refObj[i]), len(ansObj[i]))
             for key,val in iteritems(refObj[i]):
-                self.assertEqual(val, ansObj[i].get(key,None))
+                self.assertAlmostEqual(
+                    val.get('Value', None),
+                    ansObj[i].get(key,{}).get('Value', None),
+                    6
+                )
 
 
 @unittest.skipIf(not yaml_available, "YAML is not available")
