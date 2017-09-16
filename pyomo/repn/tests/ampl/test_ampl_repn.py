@@ -18,9 +18,9 @@ class AmplRepnTests(unittest.TestCase):
 
         test = gar(m.con.body)
         self.assertEqual(test.constant, 0)
-        self.assertEqual(test.linear_vars, {})
-        self.assertEqual(test.linear_coefs, {})
-        self.assertEqual(test.nonlinear_vars, {id(m.x): m.x})
+        self.assertEqual(test.linear_vars, tuple())
+        self.assertEqual(test.linear_coefs, tuple())
+        self.assertEqual(set(id(var) for var in test.nonlinear_vars), set([id(m.x)]))
         self.assertIs(test.nonlinear_expr, m.con.body)
 
 if __name__ == "__main__":
