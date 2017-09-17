@@ -16,11 +16,11 @@ from pyomo.opt import ProblemFormat, PersistentSolver
 # these are the only two preprocessors currently invoked by the
 # simple_preprocessor, which in turn is invoked by the preprocess()
 # method of PyomoModel.
-from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
+from pyomo.repn.standard_repn import preprocess_block_objectives \
     as canonical_preprocess_block_objectives
-from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
+from pyomo.repn.standard_repn import preprocess_block_constraints \
     as canonical_preprocess_block_constraints
-from pyomo.repn.compute_canonical_repn import preprocess_constraint \
+from pyomo.repn.standard_repn import preprocess_constraint \
     as canonical_preprocess_constraint
 from pyomo.repn.standard_repn import preprocess_block_objectives \
     as ampl_preprocess_block_objectives
@@ -32,9 +32,7 @@ from pyomo.repn.standard_repn import preprocess_constraint \
 from six import iteritems, itervalues, string_types
 from six.moves import xrange
 
-canonical_expression_preprocessor = \
-    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")
-ampl_expression_preprocessor = \
+expression_preprocessor = \
     pyomo.util.PyomoAPIFactory("pyomo.repn.compute_standard_repn")
 
 _OLD_OUTPUT = True
@@ -692,10 +690,7 @@ def preprocess_scenario_instance(scenario_instance,
     if (instance_variables_fixed or instance_variables_freed) and \
        (preprocess_fixed_variables):
 
-        if solver.problem_format() == ProblemFormat.nl:
-            ampl_expression_preprocessor({}, model=scenario_instance)
-        else:
-            canonical_expression_preprocessor({}, model=scenario_instance)
+        expression_preprocessor({}, model=scenario_instance)
 
         # We've preprocessed the entire instance, no point in checking
         # anything else

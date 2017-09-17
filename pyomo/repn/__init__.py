@@ -11,10 +11,9 @@
 from pyomo.util.plugin import PluginGlobals
 PluginGlobals.add_env("pyomo")
 
-from pyomo.repn.canonical_repn import *
-from pyomo.repn.ampl_repn import *
+#from pyomo.repn.canonical_repn import *
+#from pyomo.repn.ampl_repn import *
 
-import pyomo.repn.compute_canonical_repn
 import pyomo.repn.collect
 from pyomo.repn.standard_repn import *
 

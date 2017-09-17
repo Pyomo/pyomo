@@ -31,7 +31,7 @@ from pyomo.core.base import (SymbolMap,
                              TextLabeler,
                              is_fixed,
                              value)
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.solvers import wrappers
 
 from pyomo.core.kernel.component_block import IBlockStorage
@@ -246,7 +246,7 @@ class CPLEXDirect(OptSolver):
     # NOTE: This function is a variant of the above, specialized
     #       for LinearCanonicalRepn objects.
     #
-    def _encode_constraint_body_linear_specialized(self,
+    def X_encode_constraint_body_linear_specialized(self,
                                                    linear_repn,
                                                    labeler,
                                                    use_variable_names=True,
@@ -352,8 +352,6 @@ class CPLEXDirect(OptSolver):
     #
     def _populate_cplex_instance(self, pyomo_instance):
         from pyomo.core.base import Var, Objective, Constraint, SOSConstraint
-        from pyomo.repn import canonical_is_constant
-        from pyomo.repn import LinearCanonicalRepn, canonical_degree
 
         self._instance = pyomo_instance
 
@@ -469,14 +467,12 @@ class CPLEXDirect(OptSolver):
         objective_cntr = 0
         for block in pyomo_instance.block_data_objects(active=True):
 
-            gen_obj_canonical_repn = \
-                getattr(block, "_gen_obj_canonical_repn", True)
-            gen_con_canonical_repn = \
-                getattr(block, "_gen_con_canonical_repn", True)
+            gen_obj_repn = getattr(block, "_gen_obj_repn", True)
+            gen_con_repn = getattr(block, "_gen_con_repn", True)
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_canonical_repn'):
-                block._canonical_repn = ComponentMap()
-            block_canonical_repn = block._canonical_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             # SOSConstraints
             for soscondata in block.component_data_objects(SOSConstraint,
@@ -514,16 +510,19 @@ class CPLEXDirect(OptSolver):
                 cplex_instance.objective.set_name(symbol_map.getSymbol(obj_data,
                                                                        labeler))
 
-                if gen_obj_canonical_repn:
-                    obj_repn = generate_canonical_repn(obj_data.expr)
-                    block_canonical_repn[obj_data] = obj_repn
+                if gen_obj_repn:
+                    obj_repn = generate_standard_repn(obj_data.expr)
+                    block_repn[obj_data] = obj_repn
                 else:
-                    obj_repn = block_canonical_repn[obj_data]
+                    obj_repn = block_repn[obj_data]
 
-                if (isinstance(obj_repn, LinearCanonicalRepn) and \
-                    ((obj_repn.linear is None) or \
-                     (len(obj_repn.linear) == 0))) or \
-                    canonical_is_constant(obj_repn):
+                if not obj_repn.nonlinear_expr is None:
+                    raise ValueError(
+                        "CPLEXDirect plugin does not support general nonlinear "
+                        "objective expressions (only linear or quadratic).\n"
+                        "Objective: %s" % (obj_data.name))
+
+                if obj_repn.is_constant():
                     print("Warning: Constant objective detected, replacing " + \
                           "with a placeholder to prevent solver failure.")
 
@@ -535,50 +534,28 @@ class CPLEXDirect(OptSolver):
 
                 else:
 
-                    if isinstance(obj_repn, LinearCanonicalRepn):
+                    if len(obj_repn.linear_vars) > 0:
                         objective_expression, offset = \
-                            self._encode_constraint_body_linear_specialized(
-                                obj_repn,
-                                labeler,
-                                as_pairs=True)
-                        if offset != 0:
+                            self._encode_constraint_body_linear(obj_repn,
+                                                                labeler,
+                                                                as_pairs=True)
+                        if not isclose(offset, 0.0):
                             cplex_instance.variables.add(lb=[1],
                                                          ub=[1],
                                                          names=["ONE_VAR_CONSTANT"])
                             objective_expression.append(("ONE_VAR_CONSTANT",offset))
                         cplex_instance.objective.set_linear(objective_expression)
-                    else:
-                        #Linear terms
-                        if 1 in obj_repn:
-                            objective_expression, offset = \
-                                self._encode_constraint_body_linear(obj_repn,
-                                                                    labeler,
-                                                                    as_pairs=True)
-                            if offset != 0:
-                                cplex_instance.variables.add(lb=[1],
-                                                             ub=[1],
-                                                             names=["ONE_VAR_CONSTANT"])
-                                objective_expression.append(("ONE_VAR_CONSTANT",offset))
-                            cplex_instance.objective.set_linear(objective_expression)
 
-                        #Quadratic terms
-                        if 2 in obj_repn:
-                            quadratic_objective = True
-                            objective_expression = \
-                                self._encode_constraint_body_quadratic(
-                                    obj_repn,
-                                    labeler,
-                                    as_triples=True,
-                                    is_obj=2.0)
-                            cplex_instance.objective.\
-                                set_quadratic_coefficients(objective_expression)
-
-                        degree = canonical_degree(obj_repn)
-                        if (degree is None) or (degree > 2):
-                            raise ValueError(
-                                "CPLEXDirect plugin does not support general nonlinear "
-                                "objective expressions (only linear or quadratic).\n"
-                                "Objective: %s" % (obj_data.name))
+                    if len(obj_repn.quadratic_vars) > 0:
+                        quadratic_objective = True
+                        objective_expression = \
+                            self._encode_constraint_body_quadratic(
+                                obj_repn,
+                                labeler,
+                                as_triples=True,
+                                is_obj=2.0)
+                        cplex_instance.objective.\
+                            set_quadratic_coefficients(objective_expression)
 
             # Constraint
             for con in block.component_data_objects(Constraint,
@@ -593,14 +570,11 @@ class CPLEXDirect(OptSolver):
                 con_repn = None
                 if con._linear_canonical_form:
                     con_repn = con.canonical_form()
-                elif isinstance(con, LinearCanonicalRepn):
-                    con_repn = con
+                elif gen_con_repn:
+                    con_repn = generate_standard_repn(con.body)
+                    block_repn[con] = con_repn
                 else:
-                    if gen_con_canonical_repn:
-                        con_repn = generate_canonical_repn(con.body)
-                        block_canonical_repn[con] = con_repn
-                    else:
-                        con_repn = block_canonical_repn[con]
+                    con_repn = block_repn[con]
 
                 # There are conditions, e.g., when fixing variables, under which
                 # a constraint block might be empty.  Ignore these, for both
@@ -608,35 +582,21 @@ class CPLEXDirect(OptSolver):
                 # requires a variable in the constraint body.  It is also
                 # possible that the body of the constraint consists of only a
                 # constant, in which case the "variable" of
-                if isinstance(con_repn, LinearCanonicalRepn):
-                    if self._skip_trivial_constraints and \
-                       ((con_repn.linear is None) or \
-                        (len(con_repn.linear) == 0)):
-                       continue
-                else:
-                    # we shouldn't come across a constant canonical repn
-                    # that is not LinearCanonicalRepn
-                    assert not canonical_is_constant(con_repn)
+                assert not con_repn.is_constant()
 
                 name = symbol_map.getSymbol(con, labeler)
                 expr=None
                 qexpr=None
                 quadratic = False
-                if isinstance(con_repn, LinearCanonicalRepn):
-                    expr, offset = \
-                        self._encode_constraint_body_linear_specialized(con_repn,
-                                                                        labeler)
-                else:
-                    degree = canonical_degree(con_repn)
-                    if degree == 2:
-                        quadratic = True
-                    elif (degree != 0) or (degree != 1):
-                        raise ValueError(
-                            "CPLEXDirect plugin does not support general nonlinear "
-                            "constraint expressions (only linear or quadratic).\n"
-                            "Constraint: %s" % (con.name))
-                    expr, offset = self._encode_constraint_body_linear(con_repn,
-                                                                       labeler)
+                degree = can_repn.polynomial_degree()
+                if degree == 2:
+                    quadratic = True
+                elif degree is None:
+                    raise ValueError(
+                        "CPLEXDirect plugin does not support general nonlinear "
+                        "constraint expressions (only linear or quadratic).\n"
+                        "Constraint: %s" % (con.name))
+                expr, offset = self._encode_constraint_body_linear(con_repn, labeler)
 
                 #Quadratic constraints
                 if quadratic:

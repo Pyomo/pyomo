@@ -29,8 +29,7 @@ from pyomo.core.base.sos import SOSConstraint
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.piecewise import Piecewise, _PiecewiseData
 from pyomo.core.base.suffix import ComponentMap
-from pyomo.repn import LinearCanonicalRepn
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.pysp.scenariotree.tree_structure import ScenarioTree
 from pyomo.pysp.scenariotree.manager import InvocationType
 from pyomo.pysp.annotations import (locate_annotations,
@@ -115,10 +114,10 @@ def map_constraint_stages(scenario,
                             "SMPS format. Invalid constraint: %s"
                             % (constraint_data.name))
 
-        block_canonical_repn = getattr(block, "_canonical_repn", None)
-        if block_canonical_repn is None:
+        block_repn = getattr(block, "_repn", None)
+        if block_repn is None:
             raise ValueError(
-                "Unable to find _canonical_repn ComponentMap "
+                "Unable to find _repn ComponentMap "
                 "on block %s" % (block.name))
 
         piecewise_stage = None
@@ -147,7 +146,7 @@ def map_constraint_stages(scenario,
             if piecewise_stage is None:
                 constraint_node = scenario.constraintNode(
                     constraint_data,
-                    canonical_repn=block_canonical_repn.get(constraint_data),
+                    repn=block_repn.get(constraint_data),
                     instance=reference_model)
                 constraint_stage = constraint_node.stage
             else:
@@ -341,7 +340,7 @@ def map_variable_stages(scenario, scenario_tree, symbol_map):
 def _convert_explicit_setup(worker, scenario, *args, **kwds):
     reference_model = scenario._instance
     #
-    # We will be tweaking the canonical_repn objects on objectives
+    # We will be tweaking the repn objects on objectives
     # and constraints, so cache anything related to this here so
     # that this function does not have any side effects on the
     # instance after returning
@@ -351,18 +350,18 @@ def _convert_explicit_setup(worker, scenario, *args, **kwds):
             active=True,
             descend_into=True):
         block_cached_attrs = {}
-        if hasattr(block, "_gen_obj_canonical_repn"):
-            block_cached_attrs["_gen_obj_canonical_repn"] = \
-                block._gen_obj_canonical_repn
-            del block._gen_obj_canonical_repn
-        if hasattr(block, "_gen_con_canonical_repn"):
-            block_cached_attrs["_gen_con_canonical_repn"] = \
-                block._gen_con_canonical_repn
-            del block._gen_con_canonical_repn
-        if hasattr(block, "_canonical_repn"):
-            block_cached_attrs["_canonical_repn"] = \
-                block._canonical_repn
-            del block._canonical_repn
+        if hasattr(block, "_gen_obj_repn"):
+            block_cached_attrs["_gen_obj_repn"] = \
+                block._gen_obj_repn
+            del block._gen_obj_repn
+        if hasattr(block, "_gen_con_repn"):
+            block_cached_attrs["_gen_con_repn"] = \
+                block._gen_con_repn
+            del block._gen_con_repn
+        if hasattr(block, "_repn"):
+            block_cached_attrs["_repn"] = \
+                block._repn
+            del block._repn
         cached_attrs.append((block, block_cached_attrs))
 
     try:
@@ -452,7 +451,7 @@ def _convert_explicit_setup_without_cleanup(worker,
     #
     # Write the LP/MPS file once to obtain the symbol map
     #
-    assert not hasattr(reference_model, "_canonical_repn")
+    assert not hasattr(reference_model, "_repn")
     with WriterFactory(file_format) as writer:
         output_filename = \
             os.path.join(output_directory,
@@ -464,7 +463,7 @@ def _convert_explicit_setup_without_cleanup(worker,
                                           lambda x: True,
                                           io_options)
         assert output_fname == output_filename
-    assert hasattr(reference_model, "_canonical_repn")
+    assert hasattr(reference_model, "_repn")
 
     StageToVariableMap = \
         map_variable_stages(scenario,
@@ -484,17 +483,17 @@ def _convert_explicit_setup_without_cleanup(worker,
 
     # disable these as they do not need to be regenerated and
     # we will be modifiying them
-    canonical_repn_cache = {}
+    repn_cache = {}
     for block in reference_model.block_data_objects(
             active=True,
             descend_into=True):
-        canonical_repn_cache[id(block)] = block._canonical_repn
-        block._gen_obj_canonical_repn = False
-        block._gen_con_canonical_repn = False
+        repn_cache[id(block)] = block._repn
+        block._gen_obj_repn = False
+        block._gen_con_repn = False
 
     #
     # Make sure the objective references all first stage variables.
-    # We do this by directly modifying the canonical_repn of the
+    # We do this by directly modifying the repn of the
     # objective which the LP/MPS writer will reference next time we call
     # it. In addition, make sure that the first second-stage variable
     # in our column ordering also appears in the objective so that
@@ -505,7 +504,7 @@ def _convert_explicit_setup_without_cleanup(worker,
     objective_data = scenario._instance_objective
     assert objective_data is not None
     objective_block = objective_data.parent_block()
-    objective_repn = canonical_repn_cache[id(objective_block)][objective_data]
+    objective_repn = repn_cache[id(objective_block)][objective_data]
     """
     original_objective_repn = copy.deepcopy(objective_repn)
     first_stage_varname_list = \
@@ -792,8 +791,8 @@ def _convert_explicit_setup_without_cleanup(worker,
                                    PySP_ConstraintStageAnnotation.__name__))
 
                     constraint_repn = \
-                        canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
-                    if not isinstance(constraint_repn, LinearCanonicalRepn):
+                        repn_cache[id(constraint_data.parent_block())][constraint_data]
+                    if not constraint_repn.is_linear():
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
@@ -804,8 +803,6 @@ def _convert_explicit_setup_without_cleanup(worker,
                     # with all stochastic values set to zero. This will
                     # allow an easy test for missing user annotations.
                     constraint_repn.constant = 0
-                    if body_constant is None:
-                        body_constant = 0.0
                     symbols = constraint_symbols[constraint_data]
                     assert len(symbols) > 0
                     for con_label in symbols:
@@ -925,8 +922,8 @@ def _convert_explicit_setup_without_cleanup(worker,
                                    PySP_StochasticMatrixAnnotation.__name__,
                                    PySP_ConstraintStageAnnotation.__name__))
                     constraint_repn = \
-                        canonical_repn_cache[id(constraint_data.parent_block())][constraint_data]
-                    if not isinstance(constraint_repn, LinearCanonicalRepn):
+                        repn_cache[id(constraint_data.parent_block())][constraint_data]
+                    if not constraint_repn.is_linear():
                         raise RuntimeError("Only linear constraints are "
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
@@ -960,7 +957,7 @@ def _convert_explicit_setup_without_cleanup(worker,
                                 "The coefficient for variable %s has "
                                 "been marked as stochastic in constraint %s using "
                                 "the %s annotation, but the variable does not appear"
-                                " in the canonical constraint expression."
+                                " in the constraint expression."
                                 % (var_data.name,
                                    constraint_data.name,
                                    PySP_StochasticMatrixAnnotation.__name__))
@@ -1002,7 +999,7 @@ def _convert_explicit_setup_without_cleanup(worker,
                     objective_variables, include_constant = \
                         stochastic_objective.default
 
-                if not isinstance(objective_repn, LinearCanonicalRepn):
+                if not objective_repn.is_linear():
                     raise RuntimeError("Only linear objectives are "
                                        "accepted for conversion to SMPS format. "
                                        "Objective %s is not linear."
@@ -1034,7 +1031,7 @@ def _convert_explicit_setup_without_cleanup(worker,
                             "The coefficient for variable %s has "
                             "been marked as stochastic in objective %s using "
                             "the %s annotation, but the variable does not appear"
-                            " in the canonical objective expression."
+                            " in the objective expression."
                             % (var_data.name,
                                objective_data.name,
                                PySP_StochasticObjectiveAnnotation.__name__))
@@ -1610,11 +1607,11 @@ def convert_implicit(output_directory,
                                           lambda x: True,
                                           io_options)
         assert output_fname == output_filename
-    canonical_repn_cache = {}
+    repn_cache = {}
     for block in sp.reference_model.block_data_objects(
             active=True,
             descend_into=True):
-        canonical_repn_cache[id(block)] = block._canonical_repn
+        repn_cache[id(block)] = block._repn
 
     # Reset stochastic parameter to their
     # original setting values
@@ -1796,9 +1793,9 @@ def convert_implicit(output_directory,
             # setting compute values to False allows us to
             # extract the location of Param objects in the
             # constant or variable coefficient
-            objective_repn = generate_canonical_repn(sp.objective.expr,
+            objective_repn = generate_standard_repn(sp.objective.expr,
                                                      compute_values=False)
-            if not isinstance(objective_repn, LinearCanonicalRepn):
+            if not objective_repn.is_linear():
                 raise ValueError(
                     "Cannot output implicit SP representation for component "
                     "'%s'. The implicit SMPS writer does not yet handle "
@@ -1912,9 +1909,9 @@ def convert_implicit(output_directory,
             # setting compute values to False allows us to
             # extract the location of Param objects in the
             # constant or variable coefficient
-            constraint_repn = generate_canonical_repn(condata.body,
+            constraint_repn = generate_standard_repn(condata.body,
                                                       compute_values=False)
-            if not isinstance(constraint_repn, LinearCanonicalRepn):
+            if not constraint_repn.is_linear():
                 raise ValueError(
                     "Cannot output implicit SP representation for component "
                     "'%s'. The implicit SMPS writer does not yet handle "
@@ -1937,7 +1934,7 @@ def convert_implicit(output_directory,
                 #       into it right now. It also seems like this is an edge case
                 #       that is hard to reproduce because _ConstraintData moves
                 #       this stuff out of the body when it is build (so it won't
-                #       show up in the body canonical repn)
+                #       show up in the body repn)
                 for pdata in sp._collect_mutable_parameters(constraint_repn.constant):
                     if pdata in sp.stochastic_data:
                         raise ValueError(

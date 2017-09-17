@@ -90,7 +90,7 @@ class DualTransformation(IsomorphicTransformation):
 
                 # Process the body of the constraint
                 body_terms = process_canonical_repn(
-                    generate_canonical_repn(con.body))
+                    generate_standard_repn(con.body))
 
                 # Add a numeric constant to the 'b' vector, if present
                 b[cname] -= body_terms.pop(None, 0)
@@ -104,7 +104,7 @@ class DualTransformation(IsomorphicTransformation):
                 # StandardForm to produce equality constraints, thus
                 # requiring us only to check the lower bounds.
                 lower_terms = process_canonical_repn(
-                    generate_canonical_repn(con.lower))
+                    generate_standard_repn(con.lower))
 
                 # Add a numeric constant to the 'b' matrix, if present
                 b[cname] += lower_terms.pop(None, 0)
@@ -123,7 +123,7 @@ class DualTransformation(IsomorphicTransformation):
 
                 # Process the objective
                 terms = process_canonical_repn(
-                    generate_canonical_repn(obj.expr))
+                    generate_standard_repn(obj.expr))
 
                 # Add coefficients
                 for (name, coef) in terms.items():

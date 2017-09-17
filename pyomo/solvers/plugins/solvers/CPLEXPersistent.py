@@ -29,7 +29,7 @@ from pyomo.core.base import (SymbolMap,
                              TextLabeler,
                              is_fixed,
                              value)
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.solvers import wrappers
 
 from pyomo.core.kernel.component_block import IBlockStorage
@@ -151,7 +151,6 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
     def compile_objective(self, pyomo_instance):
 
         from pyomo.core.base import Objective
-        from pyomo.repn import canonical_is_constant, LinearCanonicalRepn, canonical_degree
 
         if self._active_cplex_instance is None:
             raise RuntimeError("***The CPLEXPersistent solver plugin "
@@ -164,12 +163,12 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
         cntr = 0
         for block in pyomo_instance.block_data_objects(active=True):
-            gen_obj_canonical_repn = \
-                getattr(block, "_gen_obj_canonical_repn", True)
+            gen_obj_repn = \
+                getattr(block, "_gen_obj_repn", True)
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_canonical_repn'):
-                block._canonical_repn = ComponentMap()
-            block_canonical_repn = block._canonical_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             for obj_data in block.component_data_objects(Objective,
                                                          active=True,
@@ -193,16 +192,20 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                     self._symbol_map.getSymbol(obj_data,
                                                self._labeler))
 
-                if gen_obj_canonical_repn:
-                    obj_repn = generate_canonical_repn(obj_data.expr)
-                    block_canonical_repn[obj_data] = obj_repn
+                if gen_obj_repn:
+                    obj_repn = generate_repn(obj_data.expr)
+                    block_repn[obj_data] = obj_repn
                 else:
-                    obj_repn = block_canonical_repn[obj_data]
+                    obj_repn = block_repn[obj_data]
 
-                if (isinstance(obj_repn, LinearCanonicalRepn) and \
-                    ((obj_repn.linear == None) or \
-                     (len(obj_repn.linear) == 0))) or \
-                    canonical_is_constant(obj_repn):
+                degree = obj_repn.polynomial_degree()
+                if degree is None:
+                    raise ValueError(
+                        "CPLEXPersistent plugin does not support general nonlinear "
+                        "objective expressions (only linear or quadratic).\n"
+                        "Objective: %s" % (obj_data.name))
+
+                if degree == 0:
                     print("Warning: Constant objective detected, replacing "
                           "with a placeholder to prevent solver failure.")
                     offset = obj_repn.constant
@@ -212,48 +215,27 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                     cplex_instance.objective.set_linear(objective_expression)
 
                 else:
-
-                    if isinstance(obj_repn, LinearCanonicalRepn):
+                    #Linear terms
+                    if len(obj_repn.linear_vars) > 0:
                         objective_expression, offset = \
-                            self._encode_constraint_body_linear_specialized(
-                                    obj_repn,
-                                    self._labeler,
-                                    use_variable_names=False,
-                                    cplex_variable_name_index_map=self._cplex_variable_ids,
-                                    as_pairs=True)
+                            self._encode_constraint_body_linear(
+                                obj_repn,
+                                self._labeler,
+                                as_pairs=True)
                         if offset != 0.0:
-                            objective_expression.append((self._cplex_variable_ids["ONE_VAR_CONSTANT"],offset))
+                            objective_expression.append(("ONE_VAR_CONSTANT",offset))
                         cplex_instance.objective.set_linear(objective_expression)
 
-                    else:
-                        #Linear terms
-                        if 1 in obj_repn:
-                            objective_expression, offset = \
-                                self._encode_constraint_body_linear(
-                                    obj_repn,
-                                    self._labeler,
-                                    as_pairs=True)
-                            if offset != 0.0:
-                                objective_expression.append(("ONE_VAR_CONSTANT",offset))
-                            cplex_instance.objective.set_linear(objective_expression)
-
-                        #Quadratic terms
-                        if 2 in obj_repn:
-                            self._has_quadratic_objective = True
-                            objective_expression = \
-                                self._encode_constraint_body_quadratic(obj_repn,
-                                                                       self._labeler,
-                                                                       as_triples=True,
-                                                                       is_obj=2.0)
-                            cplex_instance.objective.\
-                                set_quadratic_coefficients(objective_expression)
-
-                        degree = canonical_degree(obj_repn)
-                        if (degree is None) or (degree > 2):
-                            raise ValueError(
-                                "CPLEXPersistent plugin does not support general nonlinear "
-                                "objective expressions (only linear or quadratic).\n"
-                                "Objective: %s" % (obj_data.name))
+                    #Quadratic terms
+                    if degree == 2:
+                        self._has_quadratic_objective = True
+                        objective_expression = \
+                            self._encode_constraint_body_quadratic(obj_repn,
+                                                                   self._labeler,
+                                                                   as_triples=True,
+                                                                   is_obj=2.0)
+                        cplex_instance.objective.\
+                            set_quadratic_coefficients(objective_expression)
 
     #
     # method to populate the CPLEX problem instance (interface) from
@@ -266,7 +248,6 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                          skip_trivial_constraints=False):
 
         from pyomo.core.base import Var, Constraint, SOSConstraint
-        from pyomo.repn import canonical_is_constant, LinearCanonicalRepn, canonical_degree
 
         self._symbolic_solver_labels = symbolic_solver_labels
         self._output_fixed_variable_bounds = output_fixed_variable_bounds
@@ -394,12 +375,12 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
 
         for block in pyomo_instance.block_data_objects(active=True):
 
-            gen_con_canonical_repn = \
-                getattr(block, "_gen_con_canonical_repn", True)
+            gen_con_repn = \
+                getattr(block, "_gen_con_repn", True)
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_canonical_repn'):
-                block._canonical_repn = ComponentMap()
-            block_canonical_repn = block._canonical_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             for con in block.component_data_objects(Constraint,
                                                     active=True,
@@ -413,14 +394,11 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                 con_repn = None
                 if con._linear_canonical_form:
                     con_repn = con.canonical_form()
-                elif isinstance(con, LinearCanonicalRepn):
-                    con_repn = con
+                elif gen_con_repn:
+                    con_repn = generate_standard_repn(con.body)
+                    block_repn[con] = con_repn
                 else:
-                    if gen_con_canonical_repn:
-                        con_repn = generate_canonical_repn(con.body)
-                        block_canonical_repn[con] = con_repn
-                    else:
-                        con_repn = block_canonical_repn[con]
+                    con_repn = block_repn[con]
 
                 # There are conditions, e.g., when fixing variables, under which
                 # a constraint block might be empty.  Ignore these, for both
@@ -428,15 +406,7 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                 # requires a variable in the constraint body.  It is also
                 # possible that the body of the constraint consists of only a
                 # constant, in which case the "variable" of
-                if isinstance(con_repn, LinearCanonicalRepn):
-                    if self._skip_trivial_constraints and \
-                       ((con_repn.linear is None) or \
-                        (len(con_repn.linear) == 0)):
-                       continue
-                else:
-                    # we shouldn't come across a constant canonical repn
-                    # that is not LinearCanonicalRepn
-                    assert not canonical_is_constant(con_repn)
+                assert not con_repn.is_constant()
 
                 name = self._symbol_map.getSymbol(con, labeler)
                 expr = None
@@ -449,10 +419,10 @@ class CPLEXPersistent(CPLEXDirect, PersistentSolver):
                                                                         use_variable_names=False,
                                                                         cplex_variable_name_index_map=self._cplex_variable_ids)
                 else:
-                    degree = canonical_degree(con_repn)
+                    degree = con_repn.polynomial_degree()
                     if degree == 2:
                         quadratic = True
-                    elif (degree != 0) or (degree != 1):
+                    elif degree is None:
                         raise ValueError(
                             "CPLEXPersistent plugin does not support general nonlinear "
                             "constraint expression (only linear or quadratic).\n"

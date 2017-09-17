@@ -35,7 +35,7 @@ from pyomo.repn.standard_repn import (
     preprocess_block_constraints as ampl_preprocess_block_constraints,
     preprocess_block_objectives as ampl_preprocess_block_objectives,
 )
-from pyomo.repn.compute_canonical_repn import (
+from pyomo.repn.standard_repn import (
     preprocess_block_constraints as canonical_preprocess_block_constraints,
     preprocess_block_objectives as canonical_preprocess_block_objectives,
 )

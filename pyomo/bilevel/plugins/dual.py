@@ -10,7 +10,7 @@
 
 from pyomo.util.plugin import alias
 from pyomo.core.base import Constraint, Objective, Block
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 from pyomo.core.base.plugin import TransformationFactory
 from pyomo.core.base import Var, Set
 from pyomo.bilevel.plugins.transform import Base_BilevelTransformation
@@ -75,7 +75,7 @@ class LinearDual_BilevelTransformation(Base_BilevelTransformation):
                 if degree > 2:
                     raise "RuntimeError: Cannot transform a model with polynomial degree %d" % degree
                 if degree == 2:
-                    terms = generate_canonical_repn(con.body)
-                    for term in terms:
-                        print("%s %s %s" % (name, ndx, term))
+                    terms = generate_standard_repn(con.body)
+                    for i, var in enumerate(terms.quadratic_vars):
+                        print("%s %s %s" % (i, str(var), str(terms.quadratic_coefs[i])))
 

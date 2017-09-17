@@ -35,8 +35,6 @@ from pyomo.core.base.param import _ParamData
 from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types,
                                       is_fixed)
-from pyomo.repn.canonical_repn import (collect_linear_canonical_repn,
-                                       generate_canonical_repn)
 from pyomo.core.base import expr_common, Sum
 from pyomo.core.kernel.component_expression import IIdentityExpression
 from pyomo.core.kernel.component_variable import IVariable
@@ -117,8 +115,8 @@ class StandardRepn(object):
         output.write("linear vars:    "+str([v_.name for v_ in self.linear_vars])+"\n")
         output.write("linear var ids: "+str([id(v_) for v_ in self.linear_vars])+"\n")
         output.write("linear coef:    "+str(list(self.linear_coefs))+"\n")
-        output.write("quadratic vars:    "+str([v_.name for v_ in self.quadratic_vars])+"\n")
-        output.write("quadratic var ids: "+str([id(v_) for v_ in self.quadratic_vars])+"\n")
+        output.write("quadratic vars:    "+str([(v_[0].name,v_[1].name) for v_ in self.quadratic_vars])+"\n")
+        output.write("quadratic var ids: "+str([(id(v_[0]), id(v_[1])) for v_ in self.quadratic_vars])+"\n")
         output.write("quadratic coef:    "+str(list(self.quadratic_coefs))+"\n")
         if self.nonlinear_expr is None:
             output.write("nonlinear expr: None\n")
@@ -150,18 +148,17 @@ class StandardRepn(object):
             return 1
         return 0
 
+    def is_constant(self):
+        return self.nonlinear_expr is None and len(self.quadratic_coefs) == 0 and len(self.linear_coefs) == 0
+
     def is_linear(self):
-        if self.nonlinear_expr is None and len(self.quadratic_coefs) == 0:
-            return True
-        return False
+        return self.nonlinear_expr is None and len(self.quadratic_coefs) == 0
 
     def is_quadratic(self):
         return len(self.quadratic_coefs) > 0 and self.nonlinear_expr is None
 
     def is_nonlinear(self):
-        if self.nonlinear_expr is None and len(self.quadratic_coefs) == 0:
-            return False
-        return True
+        return not (self.nonlinear_expr is None and len(self.quadratic_coefs) == 0)
 
     def to_expression(self):
         #
@@ -763,7 +760,7 @@ def preprocess_block_objectives(block, idMap=None):
                              % (objective_data.name))
 
         try:
-            repn = generate_repn(objective_data.expr, idMap=idMap)
+            repn = generate_standard_repn(objective_data.expr, idMap=idMap)
         except Exception:
             err = sys.exc_info()[1]
             logging.getLogger('pyomo.core').error\

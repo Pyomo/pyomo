@@ -66,7 +66,7 @@ from pyomo.core.base import (SymbolMap,
                              value,
                              TextLabeler)
 from pyomo.core.base.numvalue import value
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn import generate_standard_repn
 
 from pyomo.core.kernel.component_block import IBlockStorage
 
@@ -218,7 +218,6 @@ class gurobi_direct ( OptSolver ):
     def _populate_gurobi_instance (self, pyomo_instance):
 
         from pyomo.core.base import Var, Objective, Constraint, SOSConstraint
-        from pyomo.repn import LinearCanonicalRepn, canonical_degree
 
         try:
             grbmodel = gurobi_direct._gurobi_module.Model()
@@ -309,14 +308,14 @@ class gurobi_direct ( OptSolver ):
         _self_range_con_var_pairs = self._range_con_var_pairs = []
         for block in pyomo_instance.block_data_objects(active=True):
 
-            gen_obj_canonical_repn = \
-                getattr(block, "_gen_obj_canonical_repn", True)
-            gen_con_canonical_repn = \
-                getattr(block, "_gen_con_canonical_repn", True)
+            gen_obj_repn = \
+                getattr(block, "_gen_obj_repn", True)
+            gen_con_repn = \
+                getattr(block, "_gen_con_repn", True)
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_canonical_repn'):
-                block._canonical_repn = ComponentMap()
-            block_canonical_repn = block._canonical_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             # SOSConstraints
             for soscondata in block.component_data_objects(SOSConstraint,
@@ -349,70 +348,47 @@ class gurobi_direct ( OptSolver ):
                 grbmodel.ModelSense = sense
                 obj_expr = gurobi_direct._gurobi_module.LinExpr()
 
-                if gen_obj_canonical_repn:
-                    obj_repn = generate_canonical_repn(obj_data.expr)
-                    block_canonical_repn[obj_data] = obj_repn
+                if gen_obj_repn:
+                    obj_repn = generate_standard_repn(obj_data.expr)
+                    block_repn[obj_data] = obj_repn
                 else:
-                    obj_repn = block_canonical_repn[obj_data]
+                    obj_repn = block_repn[obj_data]
 
-                if isinstance(obj_repn, LinearCanonicalRepn):
+                if not obj_repn.nonlinear_expr is None:
+                    raise ValueError(
+                        "gurobi_direct plugin does not support general nonlinear "
+                        "objective expressions (only linear or quadratic).\n"
+                        "Objective: %s" % (obj_data.name))
 
-                    if obj_repn.constant is not None:
-                        obj_expr.addConstant(obj_repn.constant)
+                if not isclose(obj_repn.constant, 0.0):
+                    obj_expr.addConstant(obj_repn.constant)
 
-                    if (obj_repn.linear is not None) and \
-                       (len(obj_repn.linear) > 0):
+                if len(obj_repn.linear_vars) > 0:
+                    for var, coef in zip(obj_repn.linear_vars, obj_repn.linear_coefs):
+                        self._referenced_variable_ids.add(id(var))
+                        label = self_variable_symbol_map.getSymbol(var)
+                        obj_expr.addTerms(coef, pyomo_gurobi_variable_map[label])
 
-                        for i in xrange(len(obj_repn.linear)):
-                            var_coefficient = obj_repn.linear[i]
-                            var_value = obj_repn.variables[i]
-                            self._referenced_variable_ids.add(id(var_value))
-                            label = self_variable_symbol_map.getSymbol(var_value)
-                            obj_expr.addTerms(var_coefficient,
-                                              pyomo_gurobi_variable_map[label])
-                else:
+                if len(obj_repn.quadratic_vars) > 0:
+                    obj_expr = gurobi_direct._gurobi_module.QuadExpr(obj_expr)
 
-                    if 0 in obj_repn: # constant term
-                        obj_expr.addConstant(obj_repn[0][None])
+                    for var, coef in zip(obj_repn.quadratic_vars, obj_repn.quadratic_coefs):
+                        self._referenced_variable_ids.add(id(var[0]))
+                        self._referenced_variable_ids.add(id(var[1]))
 
-                    if 1 in obj_repn: # first-order terms
-                        hash_to_variable_map = obj_repn[-1]
-                        for var_hash, var_coefficient in iteritems(obj_repn[1]):
-                            vardata = hash_to_variable_map[var_hash]
-                            self._referenced_variable_ids.add(id(vardata))
-                            label = self_variable_symbol_map.getSymbol(vardata)
-                            obj_expr.addTerms(var_coefficient,
-                                              pyomo_gurobi_variable_map[label])
+                        gurobi_expr = gurobi_direct._gurobi_module.QuadExpr(coef)
+                        gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(var[0])]
+                        gurobi_expr *= gurobi_var
+                        gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(var[1])]
+                        gurobi_expr *= gurobi_var
 
-                    if 2 in obj_repn:
-                        obj_expr = gurobi_direct._gurobi_module.QuadExpr(obj_expr)
-                        hash_to_variable_map = obj_repn[-1]
-                        for quad_repn, coef in iteritems(obj_repn[2]):
-                            gurobi_expr = gurobi_direct._gurobi_module.QuadExpr(coef)
-                            for var_hash, exponent in iteritems(quad_repn):
-                                vardata = hash_to_variable_map[var_hash]
-                                self._referenced_variable_ids.add(id(vardata))
-                                gurobi_var = pyomo_gurobi_variable_map\
-                                             [self_variable_symbol_map.\
-                                              getSymbol(vardata)]
-                                gurobi_expr *= gurobi_var
-                                if exponent == 2:
-                                    gurobi_expr *= gurobi_var
-                            obj_expr += gurobi_expr
-
-                    degree = canonical_degree(obj_repn)
-                    if (degree is None) or (degree > 2):
-                        raise ValueError(
-                            "gurobi_direct plugin does not support general nonlinear "
-                            "objective expressions (only linear or quadratic).\n"
-                            "Objective: %s" % (obj_data.name))
+                        obj_expr += gurobi_expr
 
                 # need to cache the objective label, because the
                 # GUROBI python interface doesn't track this.
                 # _ObjectiveData objects will not be in the symbol map
                 # yet, so avoid some checks.
-                self._objective_label = \
-                    symbol_map.createSymbol(obj_data, labeler)
+                self._objective_label = symbol_map.createSymbol(obj_data, labeler)
 
                 grbmodel.setObjective(obj_expr, sense=sense)
 
@@ -429,14 +405,11 @@ class gurobi_direct ( OptSolver ):
                 con_repn = None
                 if constraint_data._linear_canonical_form:
                     con_repn = constraint_data.canonical_form()
-                elif isinstance(constraint_data, LinearCanonicalRepn):
-                    con_repn = constraint_data
+                elif gen_con_repn:
+                    con_repn = generate_standard_repn(constraint_data.body)
+                    block_repn[constraint_data] = con_repn
                 else:
-                    if gen_con_canonical_repn:
-                        con_repn = generate_canonical_repn(constraint_data.body)
-                        block_canonical_repn[constraint_data] = con_repn
-                    else:
-                        con_repn = block_canonical_repn[constraint_data]
+                    con_repn = block_repn[constraint_data]
 
                 offset = 0.0
                 # _ConstraintData objects will not be in the symbol
@@ -523,8 +496,8 @@ class gurobi_direct ( OptSolver ):
                                     gurobi_expr *= gurobi_var
                             expr += gurobi_expr
 
-                    degree = canonical_degree(con_repn)
-                    if (degree is None) or (degree > 2):
+                    degree = con_repn.polynomial_degree()
+                    if degree is None:
                         raise ValueError(
                             "gurobi_direct plugin does not support general nonlinear "
                             "constraint expressions (only linear or quadratic).\n"
