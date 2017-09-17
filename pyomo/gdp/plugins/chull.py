@@ -18,7 +18,7 @@ from pyomo.core.kernel.numvalue import native_numeric_types
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base import _ExpressionData
 from pyomo.core.base.var import _VarData
-from pyomo.repn import generate_canonical_repn, LinearCanonicalRepn
+from pyomo.repn import generate_standard_repn
 from pyomo.gdp import *
 
 from six import iteritems, iterkeys
@@ -293,14 +293,8 @@ class ConvexHull_Transformation(Transformation):
                       'constraint bodies (yet) (found at ' + name + ').')
 
             constant = 0
-            try:
-                cannonical = generate_canonical_repn(c.body)
-                if isinstance(cannonical, LinearCanonicalRepn):
-                    NL = False
-                else:
-                    NL = canonical_is_nonlinear(cannonical)
-            except:
-                NL = True
+            repn = generate_standard_repn(c.body)
+            NL = repn.is_nonlinear()
 
             # We need to evaluate teh expression at the origin *before*
             # we substitute the expression variables with the
@@ -323,10 +317,7 @@ class ConvexHull_Transformation(Transformation):
             else:
                 # We need to make sure to pull out the constant terms
                 # from the expression and put them into the lb/ub
-                if cannonical.constant == None:
-                    constant = 0
-                else:
-                    constant = cannonical.constant
+                constant = repn.constant
 
             if c.lower is not None:
                 if __debug__ and logger.isEnabledFor(logging.DEBUG):
@@ -356,7 +347,7 @@ class ConvexHull_Transformation(Transformation):
     def _var_subst(self, NL, expr, y, varMap):
         # Recursively traverse the S-expression and substitute all model
         # variables with disaggregated local disjunct variables (logic
-        # stolen from collect_cannonical_repn())
+        # stolen from collect_standard_repn())
 
         #
         # Expression

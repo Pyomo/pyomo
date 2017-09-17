@@ -118,7 +118,7 @@ class BILEVEL_Solver1(pyomo.opt.OptSolver):
                         data.activate()
                 dual_submodel = getattr(self._instance, name_+'_dual')
                 dual_submodel.deactivate()
-                pyomo.util.PyomoAPIFactory('pyomo.repn.compute_canonical_repn')({}, model=submodel)
+                pyomo.util.PyomoAPIFactory('pyomo.repn.compute_standard_repn')({}, model=submodel)
                 self._instance.reclassify_component_type(name_, Block)
                 # use the with block here so that deactivation of the
                 # solver plugin always occurs thereby avoiding memory

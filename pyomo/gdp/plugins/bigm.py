@@ -16,7 +16,6 @@ from pyomo.core import *
 from pyomo.repn import *
 from pyomo.core.base import Transformation
 from pyomo.core.base.block import SortComponents
-from pyomo.repn import LinearCanonicalRepn
 from pyomo.gdp import *
 
 import weakref
@@ -248,18 +247,22 @@ class BigM_Transformation(Transformation):
 
     def _estimate_M(self, expr, name, m, disjunct):
         # Calculate a best guess at M
-        repn = generate_canonical_repn(expr)
+        repn = generate_standard_repn(expr)
         M = [0,0]
 
-        if isinstance(repn, LinearCanonicalRepn):
-            if repn.constant != None:
-                for i in (0,1):
-                    if M[i] is not None:
-                        M[i] += repn.constant
+        if repn.is_nonlinear():
+            logger.info("GDP(BigM): cannot estimate M for nonlinear "
+                        "expressions.\n\t(found while processing %s)",
+                        name)
+            M = [None,None]
+        else:
+            for i in (0,1):
+                if M[i] is not None:
+                    M[i] += repn.constant
 
-            for i, coef in enumerate(repn.linear or []):
-                var = repn.variables[i]
-                coef = repn.linear[i]
+            for i, coef in enumerate(repn.linear_coefs or []):
+                var = repn.linear_vars[i]
+                coef = repn.linear_coefs[i]
                 bounds = (value(var.lb), value(var.ub))
                 for i in (0,1):
                     # reverse the bounds if the coefficient is negative
@@ -272,11 +275,6 @@ class BigM_Transformation(Transformation):
                         M[j] += value(bounds[i]) * coef
                     except:
                         M[j] = None
-        else:
-            logger.info("GDP(BigM): cannot estimate M for nonlinear "
-                        "expressions.\n\t(found while processing %s)",
-                        name)
-            M = [None,None]
 
 
         # Allow user-defined M values to override the estimates

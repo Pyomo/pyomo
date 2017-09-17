@@ -19,21 +19,20 @@ import time
 # simple_preprocessor, which in turn is invoked by the preprocess()
 # method of PyomoModel.
 from pyomo.opt import ProblemFormat, PersistentSolver
-from pyomo.repn.canonical_repn import LinearCanonicalRepn
-from pyomo.repn.compute_canonical_repn import preprocess_block_objectives \
-    as canonical_preprocess_block_objectives
-from pyomo.repn.compute_canonical_repn import preprocess_block_constraints \
-    as canonical_preprocess_block_constraints
-from pyomo.repn.compute_canonical_repn import preprocess_constraint \
-    as canonical_preprocess_constraint
 from pyomo.repn.standard_repn import preprocess_block_objectives \
-    as ampl_preprocess_block_objectives
+    as preprocess_block_objectives
 from pyomo.repn.standard_repn import preprocess_block_constraints \
-    as ampl_preprocess_block_constraints
+    as preprocess_block_constraints
 from pyomo.repn.standard_repn import preprocess_constraint \
-    as ampl_preprocess_constraint
-from pyomo.repn.ampl_repn import generate_ampl_repn
-from pyomo.repn.canonical_repn import generate_canonical_repn
+    as preprocess_constraint
+from pyomo.repn.standard_repn import preprocess_block_objectives \
+    as preprocess_block_objectives
+from pyomo.repn.standard_repn import preprocess_block_constraints \
+    as preprocess_block_constraints
+from pyomo.repn.standard_repn import preprocess_constraint \
+    as preprocess_constraint
+from pyomo.repn.standard_repn import generate_standard_repn
+from pyomo.repn import generate_standard_repn
 import pyomo.util
 from pyomo.pysp.util.config import (PySPConfigBlock,
                                     safe_declare_common_option)
@@ -42,9 +41,7 @@ from pyomo.pysp.util.configured_object import PySPConfiguredObject
 from six import iteritems, itervalues
 from six.moves import xrange
 
-canonical_expression_preprocessor = \
-    pyomo.util.PyomoAPIFactory("pyomo.repn.compute_canonical_repn")
-ampl_expression_preprocessor = \
+expression_preprocessor = \
     pyomo.util.PyomoAPIFactory("pyomo.repn.compute_standard_repn")
 
 
@@ -124,10 +121,8 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         if not self._options.disable_advanced_preprocessing:
             scenario_instance = self._scenario_instance[scenario._name]
             for block in scenario_instance.block_data_objects(active=True):
-                block._gen_obj_ampl_repn = False
-                block._gen_con_ampl_repn = False
-                block._gen_obj_canonical_repn = False
-                block._gen_con_canonical_repn = False
+                block._gen_obj_repn = False
+                block._gen_con_repn = False
 
     def remove_scenario(self, scenario):
 
@@ -137,10 +132,8 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
         if self._options.disable_advanced_preprocessing:
             scenario_instance = self._scenario_instance[scenario_name]
             for block in scenario_instance.block_data_objects(active=True):
-                block._gen_obj_ampl_repn = False
-                block._gen_con_ampl_repn = False
-                block._gen_obj_canonical_repn = False
-                block._gen_con_canonical_repn = False
+                block._gen_obj_repn = False
+                block._gen_con_repn = False
 
         del self._scenario_instance[scenario._name]
         del self._scenario_solver[scenario._name]
@@ -332,19 +325,19 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                 if solver.problem_format == ProblemFormat.nl:
                     idMap = {}
                     if preprocess_bundle & preprocess_bundle_objective:
-                        ampl_preprocess_block_objectives(bundle_ef_instance,
+                        preprocess_block_objectives(bundle_ef_instance,
                                                          idMap=idMap)
                     if preprocess_bundle & preprocess_bundle_constraints:
-                        ampl_preprocess_block_constraints(bundle_ef_instance,
+                        preprocess_block_constraints(bundle_ef_instance,
                                                           idMap=idMap)
                 else:
                     idMap = {}
                     if preprocess_bundle & preprocess_bundle_objective:
-                        canonical_preprocess_block_objectives(
+                        preprocess_block_objectives(
                             bundle_ef_instance,
                             idMap=idMap)
                     if preprocess_bundle & preprocess_bundle_constraints:
-                        canonical_preprocess_block_constraints(
+                        preprocess_block_constraints(
                             bundle_ef_instance,
                             idMap=idMap)
 
@@ -397,10 +390,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                 print("Running full preprocessing for scenario %s"
                       % (scenario_name))
 
-            if solver.problem_format() == ProblemFormat.nl:
-                ampl_expression_preprocessor({}, model=scenario_instance)
-            else:
-                canonical_expression_preprocessor({}, model=scenario_instance)
+            expression_preprocessor({}, model=scenario_instance)
 
             # We've preprocessed the entire instance, no point in checking
             # anything else
@@ -414,10 +404,7 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                       % (scenario_name))
 
             # if only the objective changed, there is minimal work to do.
-            if solver.problem_format() == ProblemFormat.nl:
-                ampl_preprocess_block_objectives(scenario_instance)
-            else:
-                canonical_preprocess_block_objectives(scenario_instance)
+            preprocess_block_objectives(scenario_instance)
 
             if persistent_solver_in_use and \
                solver.instance_compiled():
@@ -452,13 +439,13 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
                 for block in scenario_instance.block_data_objects(
                         active=True,
                         descend_into=True):
-                    ampl_preprocess_block_constraints(block, idMap=idMap)
+                    preprocess_block_constraints(block, idMap=idMap)
             else:
                 idMap = {}
                 for block in scenario_instance.block_data_objects(
                         active=True,
                         descend_into=True):
-                    canonical_preprocess_block_constraints(block, idMap=idMap)
+                    preprocess_block_constraints(block, idMap=idMap)
 
         elif len(instance_constraints_updated_list) > 0:
 
@@ -473,12 +460,8 @@ class ScenarioTreePreprocessor(PySPConfiguredObject):
             idMap = {}
             repn_name = None
             repn_func = None
-            if solver.problem_format() == ProblemFormat.nl:
-                repn_name = "_ampl_repn"
-                repn_func = generate_ampl_repn
-            else:
-                repn_name = "_canonical_repn"
-                repn_func = generate_canonical_repn
+            repn_name = "_repn"
+            repn_func = generate_repn
 
             for constraint_data in instance_constraints_updated_list:
                 if isinstance(constraint_data, LinearCanonicalRepn):

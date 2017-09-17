@@ -12,7 +12,7 @@
 
 from pyutilib.misc import Bunch
 from pyomo.core.base import  Var, Constraint, Objective, maximize, minimize
-from pyomo.repn import generate_canonical_repn
+from pyomo.repn.standard_repn import generate_standard_repn
 
 
 def collect_linear_terms(block, unfixed):
@@ -39,13 +39,13 @@ def collect_linear_terms(block, unfixed):
     for (oname, odata) in block.component_map(Objective, active=True).items():
         for ndx in odata:
             if odata[ndx].sense == maximize:
-                o_terms = generate_canonical_repn(-1*odata[ndx].expr, compute_values=False)
+                o_terms = generate_standard_repn(-1*odata[ndx].expr, compute_values=False)
                 d_sense = minimize
             else:
-                o_terms = generate_canonical_repn(odata[ndx].expr, compute_values=False)
+                o_terms = generate_standard_repn(odata[ndx].expr, compute_values=False)
                 d_sense = maximize
-            for i in range(len(o_terms.variables)):
-                c_rhs[ o_terms.variables[i].parent_component().local_name, o_terms.variables[i].index() ] = o_terms.linear[i]
+            for var, coef in zip(o_terms.linear_vars, o_terms.linear_coefs):
+                c_rhs[ var.parent_component().local_name, var.index() ] = coef
         # Stop after the first objective
         break
     #
@@ -54,39 +54,37 @@ def collect_linear_terms(block, unfixed):
     for (name, data) in block.component_map(Constraint, active=True).items():
         for ndx in data:
             con = data[ndx]
-            body_terms = generate_canonical_repn(con.body, compute_values=False)
-            lower_terms = generate_canonical_repn(con.lower, compute_values=False) if not con.lower is None else None
-            upper_terms = generate_canonical_repn(con.upper, compute_values=False) if not con.upper is None else None
+            body_terms = generate_standard_repn(con.body, compute_values=False)
+            lower_terms = generate_standard_repn(con.lower, compute_values=False) if not con.lower is None else None
+            upper_terms = generate_standard_repn(con.upper, compute_values=False) if not con.upper is None else None
             #
-            if body_terms.constant is None:
-                body_terms.constant = 0
-            if not lower_terms is None and not lower_terms.variables is None:
+            if not lower_terms is None and not lower_terms.is_constant():
                 raise(RuntimeError, "Error during dualization:  Constraint '%s' has a lower bound that is non-constant")
-            if not upper_terms is None and not upper_terms.variables is None:
+            if not upper_terms is None and not upper_terms.is_constant():
                 raise(RuntimeError, "Error during dualization:  Constraint '%s' has an upper bound that is non-constant")
             #
-            for i in range(len(body_terms.variables)):
-                varname = body_terms.variables[i].parent_component().local_name
-                varndx = body_terms.variables[i].index()
-                A.setdefault(body_terms.variables[i].parent_component().local_name, {}).setdefault(varndx,[]).append( Bunch(coef=body_terms.linear[i], var=name, ndx=ndx) )
+            for var, coef in zip(body_terms.linear_vars, body_terms.linear_coefs):
+                varname = var.parent_component().local_name
+                varndx = var.index()
+                A.setdefault(varname, {}).setdefault(varndx,[]).append( Bunch(coef=coef, var=name, ndx=ndx) )
 
             #
             if not con.equality:
                 #
                 # Inequality constraint
                 #
-                if lower_terms is None or lower_terms.constant is None:
+                if lower_terms is None:
                     #
                     # body <= upper
                     #
                     v_domain[name, ndx] = -1
-                    b_coef[name,ndx] = (upper_terms.constant if not upper_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
-                elif upper_terms is None or upper_terms.constant is None:
+                    b_coef[name,ndx] = upper_terms.constant - body_terms.constant
+                elif upper_terms is None:
                     #
                     # lower <= body
                     #
                     v_domain[name, ndx] = 1
-                    b_coef[name,ndx] = (lower_terms.constant if not lower_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
+                    b_coef[name,ndx] = lower_terms.constant - body_terms.constant
                 else:
                     #
                     # lower <= body <= upper
@@ -95,19 +93,19 @@ def collect_linear_terms(block, unfixed):
                     #
                     ndx_ = tuple(list(ndx).append('lb'))
                     v_domain[name, ndx_] = 1
-                    b_coef[name,ndx] = (lower_terms.constant if not lower_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
+                    b_coef[name,ndx] = lower_terms.constant - body_terms.constant
                     #
                     # Dual for upper bound
                     #
                     ndx_ = tuple(list(ndx).append('ub'))
                     v_domain[name, ndx_] = -1
-                    b_coef[name,ndx] = (upper_terms.constant if not upper_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
+                    b_coef[name,ndx] = upper_terms.constant - body_terms.constant
             else:
                 #
                 # Equality constraint
                 #
                 v_domain[name, ndx] = 0
-                b_coef[name,ndx] = (lower_terms.constant if not lower_terms.constant is None else 0) - (body_terms.constant if not body_terms.constant is None else 0)
+                b_coef[name,ndx] = lower_terms.constant - body_terms.constant
     #
     # Collect bound constraints
     #

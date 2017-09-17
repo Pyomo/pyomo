@@ -42,8 +42,7 @@ from pyomo.core.base.numvalue import (NumericConstant,
 from pyomo.core.base import var
 from pyomo.core.base import param
 import pyomo.core.base.suffix
-from pyomo.repn.ampl_repn import generate_ampl_repn
-from pyomo.repn.standard_repn import StandardRepn as AmplRepn
+from pyomo.repn.standard_repn import StandardRepn, generate_standard_repn
 
 import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
@@ -971,7 +970,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         trivial_labeler = _Counter(cntr)
 
         #
-        # Count number of objectives and build the ampl_repns
+        # Count number of objectives and build the repns
         #
         n_objs = 0
         n_nonlinear_objs = 0
@@ -980,13 +979,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ObjNonlinearVarsInt = set()
         for block in all_blocks_list:
 
-            gen_obj_ampl_repn = \
-                getattr(block, "_gen_obj_ampl_repn", True)
+            gen_obj_repn = \
+                getattr(block, "_gen_obj_repn", True)
 
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_ampl_repn'):
-                block._ampl_repn = ComponentMap()
-            block_ampl_repn = block._ampl_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             for active_objective in block.component_data_objects(Objective,
                                                                  active=True,
@@ -997,30 +996,30 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if len(objname) > max_rowname_len:
                         max_rowname_len = len(objname)
 
-                if gen_obj_ampl_repn:
-                    ampl_repn = generate_ampl_repn(active_objective.expr)
-                    block_ampl_repn[active_objective] = ampl_repn
+                if gen_obj_repn:
+                    repn = generate_standard_repn(active_objective.expr, quadratic=False)
+                    block_repn[active_objective] = repn
                 else:
-                    ampl_repn = block_ampl_repn[active_objective]
+                    repn = block_repn[active_objective]
 
-                wrapped_ampl_repn = RepnWrapper(
-                    ampl_repn,
-                    list(self_varID_map[id(var)] for var in ampl_repn.linear_vars),
-                    list(self_varID_map[id(var)] for var in ampl_repn.nonlinear_vars))
+                wrapped_repn = RepnWrapper(
+                    repn,
+                    list(self_varID_map[id(var)] for var in repn.linear_vars),
+                    list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
 
-                LinearVars.update(wrapped_ampl_repn.linear_vars)
-                ObjNonlinearVars.update(wrapped_ampl_repn.nonlinear_vars)
+                LinearVars.update(wrapped_repn.linear_vars)
+                ObjNonlinearVars.update(wrapped_repn.nonlinear_vars)
 
-                ObjVars.update(wrapped_ampl_repn.linear_vars)
-                ObjVars.update(wrapped_ampl_repn.nonlinear_vars)
+                ObjVars.update(wrapped_repn.linear_vars)
+                ObjVars.update(wrapped_repn.nonlinear_vars)
 
                 obj_ID = trivial_labeler(active_objective)
-                Objectives_dict[obj_ID] = (active_objective, wrapped_ampl_repn)
+                Objectives_dict[obj_ID] = (active_objective, wrapped_repn)
                 self_ampl_obj_id[obj_ID] = n_objs
                 symbol_map.addSymbols([(active_objective, "o%d"%n_objs)])
 
                 n_objs += 1
-                if ampl_repn.is_nonlinear():
+                if repn.is_nonlinear():
                     n_nonlinear_objs += 1
 
         # I don't think this is necessarily true for the entire code base,
@@ -1039,7 +1038,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             subsection_timer.reset()
 
         #
-        # Count number of constraints and build the ampl_repns
+        # Count number of constraints and build the repns
         #
         n_ranges = 0
         n_single_sided_ineq = 0
@@ -1060,13 +1059,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for block in all_blocks_list:
             all_repns = list()
 
-            gen_con_ampl_repn = \
-                getattr(block, "_gen_con_ampl_repn", True)
+            gen_con_repn = \
+                getattr(block, "_gen_con_repn", True)
 
             # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_ampl_repn'):
-                block._ampl_repn = ComponentMap()
-            block_ampl_repn = block._ampl_repn
+            if not hasattr(block,'_repn'):
+                block._repn = ComponentMap()
+            block_repn = block._repn
 
             # Initializing the constraint dictionary
             for constraint_data in block.component_data_objects(Constraint,
@@ -1081,54 +1080,54 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
                 if constraint_data._linear_canonical_form:
                     canonical_repn = constraint_data.canonical_form()
-                    ampl_repn = AmplRepn()
-                    ampl_repn.nonlinear_vars = tuple()
-                    ampl_repn.linear_vars = canonical_repn.variables
-                    ampl_repn.linear_coefs = canonical_repn.linear
-                    ampl_repn.constant = canonical_repn.constant
+                    repn = StandardRepn()
+                    repn.nonlinear_vars = tuple()
+                    repn.linear_vars = canonical_repn.variables
+                    repn.linear_coefs = canonical_repn.linear
+                    repn.constant = canonical_repn.constant
                 else:
-                    if gen_con_ampl_repn:
+                    if gen_con_repn:
                         #print(constraint_data.body.to_string())
                         #print(constraint_data.body.to_string(verbose=True))
                         #print("X")
-                        ampl_repn = generate_ampl_repn(constraint_data.body)
-                        block_ampl_repn[constraint_data] = ampl_repn
+                        repn = generate_standard_repn(constraint_data.body, quadratic=False)
+                        block_repn[constraint_data] = repn
                     else:
-                        ampl_repn = block_ampl_repn[constraint_data]
+                        repn = block_repn[constraint_data]
 
                 #print("HERE")
                 #print((str(constraint_data.lower), str(constraint_data.body), str(constraint_data.upper)))
-                #print(ampl_repn)
-                #print(ampl_repn.is_fixed())
+                #print(repn)
+                #print(repn.is_fixed())
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
                 ###      (trivial) as a feasibility check for fixed
                 ###      variables, in which case the solver will pick
                 ###      up on the model infeasibility.
-                if skip_trivial_constraints and ampl_repn.is_fixed():
+                if skip_trivial_constraints and repn.is_fixed():
                     continue
 
                 con_ID = trivial_labeler(constraint_data)
-                wrapped_ampl_repn = RepnWrapper(
-                    ampl_repn,
-                    list(self_varID_map[id(var)] for var in ampl_repn.linear_vars),
-                    list(self_varID_map[id(var)] for var in ampl_repn.nonlinear_vars))
+                wrapped_repn = RepnWrapper(
+                    repn,
+                    list(self_varID_map[id(var)] for var in repn.linear_vars),
+                    list(self_varID_map[id(var)] for var in repn.nonlinear_vars))
 
-                if ampl_repn.is_nonlinear():
+                if repn.is_nonlinear():
                     nonlin_con_order_list.append(con_ID)
                     n_nonlinear_constraints += 1
                 else:
                     lin_con_order_list.append(con_ID)
 
-                Constraints_dict[con_ID] = (constraint_data, wrapped_ampl_repn)
+                Constraints_dict[con_ID] = (constraint_data, wrapped_repn)
 
-                LinearVars.update(wrapped_ampl_repn.linear_vars)
-                ConNonlinearVars.update(wrapped_ampl_repn.nonlinear_vars)
+                LinearVars.update(wrapped_repn.linear_vars)
+                ConNonlinearVars.update(wrapped_repn.nonlinear_vars)
 
                 nnz_grad_constraints += \
-                    len(set(wrapped_ampl_repn.linear_vars).union(
-                        wrapped_ampl_repn.nonlinear_vars))
+                    len(set(wrapped_repn.linear_vars).union(
+                        wrapped_repn.nonlinear_vars))
 
                 L = None
                 U = None
@@ -1143,7 +1142,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 if constraint_data.equality:
                     assert L == U
 
-                offset = ampl_repn.constant
+                offset = repn.constant
                 _type = getattr(constraint_data, '_complementarity', None)
                 _vid = getattr(constraint_data, '_vid', None)
                 if not _type is None:
@@ -1156,7 +1155,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         n_ranges += 1
                     elif _type == 4:
                         n_unbounded += 1
-                    if ampl_repn.is_nonlinear():
+                    if repn.is_nonlinear():
                         ccons_nonlin += 1
                     else:
                         ccons_lin += 1
@@ -1672,7 +1671,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
 
         cu = [0 for i in xrange(len(full_var_list))]
         for con_ID in nonlin_con_order_list:
-            con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
+            con_data, wrapped_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
             OUTPUT.write("C%d" % (row_id))
             if symbolic_solver_labels:
@@ -1680,16 +1679,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 OUTPUT.write("\t#%s" % (lbl))
                 rowf.write(lbl+"\n")
             OUTPUT.write("\n")
-            self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn.nonlinear_expr)
+            self._print_nonlinear_terms_NL(wrapped_repn.repn.nonlinear_expr)
 
-            for var_ID in set(wrapped_ampl_repn.linear_vars).union(
-                    wrapped_ampl_repn.nonlinear_vars):
+            for var_ID in set(wrapped_repn.linear_vars).union(
+                    wrapped_repn.nonlinear_vars):
                 cu[self_ampl_var_id[var_ID]] += 1
 
         for con_ID in lin_con_order_list:
-            con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
+            con_data, wrapped_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
-            con_vars = set(wrapped_ampl_repn.linear_vars)
+            con_vars = set(wrapped_repn.linear_vars)
             for var_ID in con_vars:
                 cu[self_ampl_var_id[var_ID]] += 1
             OUTPUT.write("C%d" % (row_id))
@@ -1707,7 +1706,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "O" lines
         #
-        for obj_ID, (obj, wrapped_ampl_repn) in iteritems(Objectives_dict):
+        for obj_ID, (obj, wrapped_repn) in iteritems(Objectives_dict):
 
             k = 0
             if not obj.is_minimizing():
@@ -1720,16 +1719,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 rowf.write(lbl+"\n")
             OUTPUT.write("\n")
 
-            if wrapped_ampl_repn.repn.is_linear():
+            if wrapped_repn.repn.is_linear():
                 OUTPUT.write(self._op_string[NumericConstant]
-                             % (wrapped_ampl_repn.repn.constant))
+                             % (wrapped_repn.repn.constant))
             else:
-                if wrapped_ampl_repn.repn.constant != 0:
+                if wrapped_repn.repn.constant != 0:
                     _, binary_sum_str, _ = self._op_string[expr._SumExpression]
                     OUTPUT.write(binary_sum_str)
                     OUTPUT.write(self._op_string[NumericConstant]
-                                 % (wrapped_ampl_repn.repn.constant))
-                self._print_nonlinear_terms_NL(wrapped_ampl_repn.repn.nonlinear_expr)
+                                 % (wrapped_repn.repn.constant))
+                self._print_nonlinear_terms_NL(wrapped_repn.repn.nonlinear_expr)
 
         if symbolic_solver_labels:
             rowf.close()
@@ -1877,15 +1876,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         for nc, con_ID in enumerate(itertools.chain(nonlin_con_order_list,
                                                     lin_con_order_list)):
-            con_data, wrapped_ampl_repn = Constraints_dict[con_ID]
-            numnonlinear_vars = len(wrapped_ampl_repn.nonlinear_vars)
-            numlinear_vars = len(wrapped_ampl_repn.linear_vars)
+            con_data, wrapped_repn = Constraints_dict[con_ID]
+            numnonlinear_vars = len(wrapped_repn.nonlinear_vars)
+            numlinear_vars = len(wrapped_repn.linear_vars)
             if numnonlinear_vars == 0:
                 if numlinear_vars > 0:
                     linear_dict = dict((var_ID, coef)
                                        for var_ID, coef in
-                                       zip(wrapped_ampl_repn.linear_vars,
-                                           wrapped_ampl_repn.repn.linear_coefs))
+                                       zip(wrapped_repn.linear_vars,
+                                           wrapped_repn.repn.linear_coefs))
                     OUTPUT.write("J%d %d\n"%(nc, numlinear_vars))
                     OUTPUT.writelines(
                         "%d %r\n" % (self_ampl_var_id[con_var],
@@ -1893,21 +1892,21 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         for con_var in sorted(linear_dict.keys()))
             elif numlinear_vars == 0:
                 nl_con_vars = \
-                    sorted(wrapped_ampl_repn.nonlinear_vars)
+                    sorted(wrapped_repn.nonlinear_vars)
                 OUTPUT.write("J%d %d\n"%(nc, numnonlinear_vars))
                 OUTPUT.writelines(
                     "%d 0\n"%(self_ampl_var_id[con_var])
                     for con_var in nl_con_vars)
             else:
-                con_vars = set(wrapped_ampl_repn.nonlinear_vars)
+                con_vars = set(wrapped_repn.nonlinear_vars)
                 nl_con_vars = sorted(
                     con_vars.difference(
-                        wrapped_ampl_repn.linear_vars))
-                con_vars.update(wrapped_ampl_repn.linear_vars)
+                        wrapped_repn.linear_vars))
+                con_vars.update(wrapped_repn.linear_vars)
                 linear_dict = dict(
                     (var_ID, coef) for var_ID, coef in
-                    zip(wrapped_ampl_repn.linear_vars,
-                        wrapped_ampl_repn.repn.linear_coefs))
+                    zip(wrapped_repn.linear_vars,
+                        wrapped_repn.repn.linear_coefs))
                 OUTPUT.write("J%d %d\n"%(nc, len(con_vars)))
                 OUTPUT.writelines(
                     "%d %r\n" % (self_ampl_var_id[con_var],
@@ -1925,16 +1924,16 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "G" lines
         #
-        for obj_ID, (obj, wrapped_ampl_repn) in \
+        for obj_ID, (obj, wrapped_repn) in \
                iteritems(Objectives_dict):
 
             grad_entries = {}
             for idx, obj_var in enumerate(
-                    wrapped_ampl_repn.linear_vars):
+                    wrapped_repn.linear_vars):
                 grad_entries[self_ampl_var_id[obj_var]] = \
-                    wrapped_ampl_repn.repn.linear_coefs[idx]
-            for obj_var in wrapped_ampl_repn.nonlinear_vars:
-                if obj_var not in wrapped_ampl_repn.linear_vars:
+                    wrapped_repn.repn.linear_coefs[idx]
+            for obj_var in wrapped_repn.nonlinear_vars:
+                if obj_var not in wrapped_repn.linear_vars:
                     grad_entries[self_ampl_var_id[obj_var]] = 0
             len_ge = len(grad_entries)
             if len_ge > 0:
@@ -1952,13 +1951,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         return symbol_map
 
 
-# Switch from Python to C generate_ampl_repn function when possible
+# Switch from Python to C generate_repn function when possible
 #try:
-#    py_generate_ampl_repn = generate_ampl_repn
-#    from cAmpl import generate_ampl_repn
+#    py_generate_repn = generate_repn
+#    from cAmpl import generate_repn
 #except ImportError:
-#    del py_generate_ampl_repn
+#    del py_generate_repn
 
 # Alternative: import C implementation under another name for testing
-#from cAmpl import generate_ampl_repn as cgar
+#from cAmpl import generate_repn as cgar
 #__all__.append('cgar')

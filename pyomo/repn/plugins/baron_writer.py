@@ -30,7 +30,6 @@ from pyomo.core.base.set_types import *
 #CLH: EXPORT suffixes "constraint_types" and "branching_priorities"
 #     pass their respective information to the .bar file
 import pyomo.core.base.suffix
-from pyomo.repn import LinearCanonicalRepn
 import pyomo.core.kernel.component_suffix
 from pyomo.core.kernel.component_block import IBlockStorage
 
@@ -109,14 +108,8 @@ class ProblemWriter_bar(AbstractProblemWriter):
                     if (repn.variables is None) or \
                        (len(repn.variables) == 0):
                         return True
-                elif isinstance(constraint_data, LinearCanonicalRepn):
-                    repn = constraint_data
-                    if (repn.variables is None) or \
-                       (len(repn.variables) == 0):
-                        return True
-                else:
-                    if constraint_data.body.polynomial_degree() == 0:
-                        return True
+                elif constraint_data.body.polynomial_degree() == 0:
+                    return True
             return False
 
         #
