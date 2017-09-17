@@ -6,8 +6,6 @@ from pyomo.environ import *
 import pyomo.version
 from pyomo.core.base.expr_common import _clear_expression_pool
 from pyomo.core.base import expr as EXPR 
-from pyomo.repn import generate_canonical_repn
-from pyomo.repn import generate_standard_repn
 
 import pprint as pp
 import gc
@@ -26,6 +24,12 @@ from functools import wraps
 import errno
 import os
 import signal
+
+#
+# Dummy Sum() function used for Coopr3 tests
+#
+#def Sum(*args):
+#    return sum(*args)
 
 class TimeoutError(Exception):
     pass
@@ -46,9 +50,7 @@ class timeout:
 
 _timeout = 20
 NTerms = 100000
-N = 5
-#NTerms = 100
-#N = 5
+N = 1
 
 
 parser = argparse.ArgumentParser()
@@ -104,6 +106,8 @@ def evaluate(expr, seconds):
             expr_ = expr.clone()
             stop = time.time()
             seconds['clone'] = stop-start
+    except RecursionError:
+        seconds['clone'] = -888.0
     except TimeoutError:
         print("TIMEOUT")
         seconds['clone'] = -999.0
@@ -116,6 +120,8 @@ def evaluate(expr, seconds):
             d_ = expr.polynomial_degree()
             stop = time.time()
             seconds['polynomial_degree'] = stop-start
+    except RecursionError:
+        seconds['polynomial_degree'] = -888.0
     except TimeoutError:
         print("TIMEOUT")
         seconds['polynomial_degree'] = -999.0
@@ -128,6 +134,8 @@ def evaluate(expr, seconds):
             s_ = expr.is_constant()
             stop = time.time()
             seconds['is_constant'] = stop-start
+    except RecursionError:
+        seconds['is_constant'] = -888.0
     except TimeoutError:
         print("TIMEOUT")
         seconds['is_constant'] = -999.0
@@ -140,6 +148,8 @@ def evaluate(expr, seconds):
             s_ = expr.is_fixed()
             stop = time.time()
             seconds['is_fixed'] = stop-start
+    except RecursionError:
+        seconds['is_fixed'] = -888.0
     except TimeoutError:
         print("TIMEOUT")
         seconds['is_fixed'] = -999.0
@@ -162,26 +172,37 @@ def evaluate(expr, seconds):
     gc.collect()
     _clear_expression_pool()
     try:
+        from pyomo.repn import generate_standard_repn
         with timeout(seconds=_timeout):
             start = time.time()
             r_ = generate_standard_repn(expr)
             stop = time.time()
             seconds['generate_repn'] = stop-start
+    except RecursionError:
+        seconds['generate_repn'] = -888.0
+    except ImportError:
+        seconds['generate_repn'] = -999.0
     except TimeoutError:
         print("TIMEOUT")
         seconds['generate_repn'] = -999.0
 
-    gc.collect()
-    _clear_expression_pool()
-    try:
-        with timeout(seconds=_timeout):
-            start = time.time()
-            r_ = generate_canonical_repn(expr)
-            stop = time.time()
-            seconds['generate_canonical'] = stop-start
-    except TimeoutError:
-        print("TIMEOUT")
-        seconds['generate_canonical'] = -999.0
+    if False:
+        gc.collect()
+        _clear_expression_pool()
+        try:
+            from pyomo.repn import generate_ampl_repn
+            with timeout(seconds=_timeout):
+                start = time.time()
+                r_ = generate_ampl_repn(expr)
+                stop = time.time()
+                seconds['generate_repn'] = stop-start
+        except RecursionError:
+            seconds['generate_repn'] = -888.0
+        except ImportError:
+            seconds['generate_repn'] = -999.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['generate_repn'] = -999.0
 
     return seconds
 
@@ -205,30 +226,37 @@ def linear(N, flag):
 
         gc.collect()
         _clear_expression_pool()
-        start = time.time()
-        #
-        if flag == 1:
-            expr = summation(model.p, model.x)
-        elif flag == 2:
-            expr=sum(model.p[i]*model.x[i] for i in model.A)
-        elif flag == 3:
-            expr=0
-            for i in model.A:
-                expr += model.p[i] * model.x[i]
-        elif flag == 4:
-            expr=0
-            for i in model.A:
-                expr = expr + model.p[i] * model.x[i]
-        elif flag == 5:
-            expr=0
-            for i in model.A:
-                expr = model.p[i] * model.x[i] + expr
-        elif flag == 6:
-            expr=Sum(model.p[i]*model.x[i] for i in model.A)
-        #
-        stop = time.time()
-        seconds['construction'] = stop-start
-        seconds = evaluate(expr, seconds)
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                #
+                if flag == 1:
+                    expr = summation(model.p, model.x)
+                elif flag == 2:
+                    expr=sum(model.p[i]*model.x[i] for i in model.A)
+                elif flag == 3:
+                    expr=0
+                    for i in model.A:
+                        expr += model.p[i] * model.x[i]
+                elif flag == 4:
+                    expr=0
+                    for i in model.A:
+                        expr = expr + model.p[i] * model.x[i]
+                elif flag == 5:
+                    expr=0
+                    for i in model.A:
+                        expr = model.p[i] * model.x[i] + expr
+                elif flag == 6:
+                    expr=Sum(model.p[i]*model.x[i] for i in model.A)
+                #
+                stop = time.time()
+                seconds['construction'] = stop-start
+                seconds = evaluate(expr, seconds)
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
         return seconds
 
     return f
@@ -252,33 +280,40 @@ def nested_linear(N, flag):
 
         gc.collect()
         _clear_expression_pool()
-        start = time.time()
-        #
-        if flag == 1:
-            expr = 2* summation(model.p, model.x)
-        elif flag == 2:
-            expr= 2 * sum(model.p[i]*model.x[i] for i in model.A)
-        elif flag == 3:
-            expr=0
-            for i in model.A:
-                expr += model.p[i] * model.x[i]
-            expr *= 2
-        elif flag == 4:
-            expr=0
-            for i in model.A:
-                expr = expr + model.p[i] * model.x[i]
-            expr *= 2
-        elif flag == 5:
-            expr=0
-            for i in model.A:
-                expr = model.p[i] * model.x[i] + expr
-            expr *= 2
-        elif flag == 6:
-            expr= 2 * Sum(model.p[i]*model.x[i] for i in model.A)
-        #
-        stop = time.time()
-        seconds['construction'] = stop-start
-        seconds = evaluate(expr, seconds)
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                #
+                if flag == 1:
+                    expr = 2* summation(model.p, model.x)
+                elif flag == 2:
+                    expr= 2 * sum(model.p[i]*model.x[i] for i in model.A)
+                elif flag == 3:
+                    expr=0
+                    for i in model.A:
+                        expr += model.p[i] * model.x[i]
+                    expr *= 2
+                elif flag == 4:
+                    expr=0
+                    for i in model.A:
+                        expr = expr + model.p[i] * model.x[i]
+                    expr *= 2
+                elif flag == 5:
+                    expr=0
+                    for i in model.A:
+                        expr = model.p[i] * model.x[i] + expr
+                    expr *= 2
+                elif flag == 6:
+                    expr= 2 * Sum(model.p[i]*model.x[i] for i in model.A)
+                #
+                stop = time.time()
+                seconds['construction'] = stop-start
+                seconds = evaluate(expr, seconds)
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
         return seconds
 
     return f
@@ -299,25 +334,29 @@ def constant(N, flag):
 
         gc.collect()
         _clear_expression_pool()
-        start = time.time()
-        #
-        if flag == 1:
-            expr = summation(model.p, model.q, index=model.A)
-        elif flag == 2:
-            expr=sum(model.p[i]*model.q[i] for i in model.A)
-        elif flag == 3:
-            expr=0
-            for i in model.A:
-                expr += model.p[i] * model.q[i]
-        elif flag == 4:
-            expr=Sum(model.p[i]*model.q[i] for i in model.A)
-        #print(expr)
-        #
-        stop = time.time()
-        seconds['construction'] = stop-start
-
-        seconds = evaluate(expr, seconds)
-
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                #
+                if flag == 1:
+                    expr = summation(model.p, model.q, index=model.A)
+                elif flag == 2:
+                    expr=sum(model.p[i]*model.q[i] for i in model.A)
+                elif flag == 3:
+                    expr=0
+                    for i in model.A:
+                        expr += model.p[i] * model.q[i]
+                elif flag == 4:
+                    expr=Sum(model.p[i]*model.q[i] for i in model.A)
+                #
+                stop = time.time()
+                seconds['construction'] = stop-start
+                seconds = evaluate(expr, seconds)
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
         return seconds
 
     return f
@@ -344,24 +383,29 @@ def bilinear(N, flag):
 
         gc.collect()
         _clear_expression_pool()
-        start = time.time()
-        #
-        if flag == 1:
-            expr = summation(model.p, model.x, model.y)
-        elif flag == 2:
-            expr=sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
-        elif flag == 3:
-            expr=0
-            for i in model.A:
-                expr += model.p[i] * model.x[i] * model.y[i]
-        elif flag == 4:
-            expr=Sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
-        #
-        stop = time.time()
-        seconds['construction'] = stop-start
-
-        seconds = evaluate(expr, seconds)
-
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                #
+                if flag == 1:
+                    expr = summation(model.p, model.x, model.y)
+                elif flag == 2:
+                    expr=sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
+                elif flag == 3:
+                    expr=0
+                    for i in model.A:
+                        expr += model.p[i] * model.x[i] * model.y[i]
+                elif flag == 4:
+                    expr=Sum(model.p[i]*model.x[i]*model.y[i] for i in model.A)
+                #
+                stop = time.time()
+                seconds['construction'] = stop-start
+                seconds = evaluate(expr, seconds)
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
         return seconds
 
     return f
@@ -386,22 +430,27 @@ def nonlinear(N, flag):
 
         gc.collect()
         _clear_expression_pool()
-        start = time.time()
-        #
-        if flag == 2:
-            expr=sum(model.p[i]*tan(model.x[i]) for i in model.A)
-        elif flag == 3:
-            expr=0
-            for i in model.A:
-                expr += model.p[i] * tan(model.x[i])
-        elif flag == 4:
-            expr=Sum(model.p[i]*tan(model.x[i]) for i in model.A)
-        #
-        stop = time.time()
-        seconds['construction'] = stop-start
-
-        seconds = evaluate(expr, seconds)
-
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                #
+                if flag == 2:
+                    expr=sum(model.p[i]*tan(model.x[i]) for i in model.A)
+                elif flag == 3:
+                    expr=0
+                    for i in model.A:
+                        expr += model.p[i] * tan(model.x[i])
+                elif flag == 4:
+                    expr=Sum(model.p[i]*tan(model.x[i]) for i in model.A)
+                #
+                stop = time.time()
+                seconds['construction'] = stop-start
+                seconds = evaluate(expr, seconds)
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
         return seconds
 
     return f
@@ -422,18 +471,24 @@ def polynomial(N, flag):
 
         gc.collect()
         _clear_expression_pool()
-        start = time.time()
-        #
-        if True:
-            expr=0
-            for i in model.A:
-                expr = model.x[i] * (1 + expr)
-        #
-        stop = time.time()
-        seconds['construction'] = stop-start
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                #
+                if True:
+                    expr=0
+                    for i in model.A:
+                        expr = model.x[i] * (1 + expr)
+                #
+                stop = time.time()
+                seconds['construction'] = stop-start
 
-        seconds = evaluate(expr, seconds)
-
+                seconds = evaluate(expr, seconds)
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
         return seconds
 
     return f
@@ -454,24 +509,30 @@ def product(N, flag):
 
         gc.collect()
         _clear_expression_pool()
-        start = time.time()
-        #
-        if flag == 1:
-            expr=model.x+model.x
-            for i in model.A:
-                expr = model.p[i]*expr
-        elif flag == 2:
-            expr=model.x+model.x
-            for i in model.A:
-                expr *= model.p[i]
-        elif flag == 3:
-            expr=(model.x+model.x) * prod(model.p[i] for i in model.A)
-       #
-        stop = time.time()
-        seconds['construction'] = stop-start
+        try:
+            with timeout(seconds=_timeout):
+                start = time.time()
+                #
+                if flag == 1:
+                    expr=model.x+model.x
+                    for i in model.A:
+                        expr = model.p[i]*expr
+                elif flag == 2:
+                    expr=model.x+model.x
+                    for i in model.A:
+                        expr *= model.p[i]
+                elif flag == 3:
+                    expr=(model.x+model.x) * prod(model.p[i] for i in model.A)
+                #
+                stop = time.time()
+                seconds['construction'] = stop-start
 
-        seconds = evaluate(expr, seconds)
-
+                seconds = evaluate(expr, seconds)
+        except RecursionError:
+            seconds['construction'] = -888.0
+        except TimeoutError:
+            print("TIMEOUT")
+            seconds['construction'] = -999.0
         return seconds
 
     return f
@@ -625,7 +686,7 @@ res = {}
 #EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo4_trees) 
 #runall(["PYOMO4"], res)
 
-EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
+#EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
 runall(["PYOMO5"], res)
 
 if args.output:
@@ -634,7 +695,7 @@ if args.output:
         # Write csv file
         #
         perf_types = sorted(next(iter(res.values())).keys())
-        res_ = [ list(key) + [res.get(key,{}).get(k,{}).get('mean',-999) for k in perf_types] for key in sorted(res.keys())]
+        res_ = [ list(key) + [res.get(key,{}).get(k,{}).get('mean',-777) for k in perf_types] for key in sorted(res.keys())]
         with open(args.output, 'w') as OUTPUT:
             import csv
             writer = csv.writer(OUTPUT)
