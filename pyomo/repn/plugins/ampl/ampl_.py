@@ -24,8 +24,8 @@ import logging
 import operator
 import os
 import time
-import math
 
+from pyutilib.math.util import isclose
 from pyutilib.misc import PauseGC
 
 import pyomo.util.plugin
@@ -458,7 +458,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     nary_sum_str, binary_sum_str, coef_term_str = \
                         self._op_string[expr._SumExpression]
                     n = len(exp._args)
-                    if exp._args[0].__class__ in native_numeric_types and math.isclose(exp._args[0], 0.0):
+                    if exp._args[0].__class__ in native_numeric_types and isclose(exp._args[0], 0.0):
                         if n == 2:
                             self._print_nonlinear_terms_NL(exp._args[1])
                         elif n == 3:
