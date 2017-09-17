@@ -255,7 +255,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     # Ref: ILog CPlex 8.0 User's Manual, p197.
                     #
                     if is_objective:
-                        output_file.write(quad_coef_string_template % 2*x.quadratic_coefs[i])
+                        tmp = 2*x.quadratic_coefs[i]
+                        output_file.write(quad_coef_string_template % tmp)
                     else:
                         output_file.write(quad_coef_string_template % x.quadratic_coefs[i])
                     if i in quad:

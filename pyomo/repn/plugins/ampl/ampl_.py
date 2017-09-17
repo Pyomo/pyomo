@@ -1082,8 +1082,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     canonical_repn = constraint_data.canonical_form()
                     repn = StandardRepn()
                     repn.nonlinear_vars = tuple()
-                    repn.linear_vars = canonical_repn.variables
-                    repn.linear_coefs = canonical_repn.linear
+                    repn.linear_vars = canonical_repn.linear_vars
+                    repn.linear_coefs = canonical_repn.linear_coefs
                     repn.constant = canonical_repn.constant
                 else:
                     if gen_con_repn:

@@ -53,6 +53,8 @@ def configure_gurobi_direct():
 
 import pyutilib.services
 from pyutilib.misc import Bunch, Options
+from pyutilib.math.util import isclose
+
 
 from pyomo.util.plugin import alias
 from pyomo.opt.base import *
@@ -411,97 +413,54 @@ class gurobi_direct ( OptSolver ):
                 else:
                     con_repn = block_repn[constraint_data]
 
-                offset = 0.0
+                degree = con_repn.polynomial_degree()
+                if degree is None:
+                    raise ValueError(
+                        "gurobi_direct plugin does not support general nonlinear "
+                        "constraint expressions (only linear or quadratic).\n"
+                        "Constraint: %s" % (constraint_data.name))
+
                 # _ConstraintData objects will not be in the symbol
                 # map yet, so avoid some checks.
-                constraint_label = \
-                    symbol_map.createSymbol(constraint_data, labeler)
+                constraint_label = symbol_map.createSymbol(constraint_data, labeler)
 
-                trivial = False
-                if isinstance(con_repn, LinearCanonicalRepn):
+                trivial = True
 
-                    #
-                    # optimization (these might be generated on the fly)
-                    #
-                    constant = con_repn.constant
-                    coefficients = con_repn.linear
-                    variables = con_repn.variables
+                expr = gurobi_direct._gurobi_module.LinExpr() + con_repn.constant
 
-                    if constant is not None:
-                        offset = constant
-                    expr = gurobi_direct._gurobi_module.LinExpr() + offset
+                if len(con_repn.linear_coefs) > 0:
+                    trivial = False
+                    linear_coefs = []
+                    linear_vars = []
 
-                    if (coefficients is not None) and \
-                       (len(coefficients) > 0):
+                    for var, coef in zip(con_repn.linear_vars, con_repn.linear_coefs):
+                        self._referenced_variable_ids.add(id(var))
+                        label = self_variable_symbol_map.getSymbol(var)
+                        linear_coefs.append(coef)
+                        linear_vars.append(pyomo_gurobi_variable_map[label])
 
-                        linear_coefs = list()
-                        linear_vars = list()
+                    expr += gurobi_direct._gurobi_module.LinExpr(linear_coefs, linear_vars)
 
-                        for i in xrange(len(coefficients)):
-
-                            var_coefficient = coefficients[i]
-                            var_value = variables[i]
-                            self._referenced_variable_ids.add(id(var_value))
-                            label = self_variable_symbol_map.getSymbol(var_value)
-                            linear_coefs.append(var_coefficient)
-                            linear_vars.append(pyomo_gurobi_variable_map[label])
-
-                        expr += gurobi_direct._gurobi_module.LinExpr(linear_coefs, linear_vars)
-
-                    else:
-
-                        trivial = True
-
-                else:
-
-                    if 0 in con_repn:
-                        offset = con_repn[0][None]
-                    expr = gurobi_direct._gurobi_module.LinExpr() + offset
-
-                    if 1 in con_repn: # first-order terms
-
-                        linear_coefs = list()
-                        linear_vars = list()
-
-                        hash_to_variable_map = con_repn[-1]
-                        for var_hash, var_coefficient in iteritems(con_repn[1]):
-                            var = hash_to_variable_map[var_hash]
-                            self._referenced_variable_ids.add(id(var))
-                            label = self_variable_symbol_map.getSymbol(var)
-                            linear_coefs.append( var_coefficient )
-                            linear_vars.append( pyomo_gurobi_variable_map[label] )
-
-                        expr += gurobi_direct._gurobi_module.LinExpr(linear_coefs, linear_vars)
-
-                    if 2 in con_repn: # quadratic constraint
-                        if _GUROBI_VERSION_MAJOR < 5:
-                            raise ValueError(
-                                "The gurobi_direct plugin does not handle quadratic "
-                                "constraint expressions for Gurobi major versions "
-                                "< 5. Current version: Gurobi %s.%s%s"
-                                % (gurobi_direct._gurobi_module.gurobi.version()))
-
-                        expr = gurobi_direct._gurobi_module.QuadExpr(expr)
-                        hash_to_variable_map = con_repn[-1]
-                        for quad_repn, coef in iteritems(con_repn[2]):
-                            gurobi_expr = gurobi_direct._gurobi_module.QuadExpr(coef)
-                            for var_hash, exponent in iteritems(quad_repn):
-                                vardata = hash_to_variable_map[var_hash]
-                                self._referenced_variable_ids.add(id(vardata))
-                                gurobi_var = pyomo_gurobi_variable_map\
-                                             [self_variable_symbol_map.\
-                                              getSymbol(vardata)]
-                                gurobi_expr *= gurobi_var
-                                if exponent == 2:
-                                    gurobi_expr *= gurobi_var
-                            expr += gurobi_expr
-
-                    degree = con_repn.polynomial_degree()
-                    if degree is None:
+                if len(con_repn.quadratic_coefs) > 0:
+                    trivial = False
+                    if _GUROBI_VERSION_MAJOR < 5:
                         raise ValueError(
-                            "gurobi_direct plugin does not support general nonlinear "
-                            "constraint expressions (only linear or quadratic).\n"
-                            "Constraint: %s" % (constraint_data.name))
+                            "The gurobi_direct plugin does not handle quadratic "
+                            "constraint expressions for Gurobi major versions "
+                            "< 5. Current version: Gurobi %s.%s%s"
+                            % (gurobi_direct._gurobi_module.gurobi.version()))
+
+                    expr = gurobi_direct._gurobi_module.QuadExpr(expr)
+                    for var, coef in zip(con_repn.quadratic_vars, con_repn.quadratic_coefs):
+                        self._referenced_variable_ids.add(id(var[0]))
+                        self._referenced_variable_ids.add(id(var[1]))
+
+                        gurobi_expr = gurobi_direct._gurobi_module.QuadExpr(coef)
+                        gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(var[0])]
+                        gurobi_expr *= gurobi_var
+                        gurobi_var = pyomo_gurobi_variable_map[self_variable_symbol_map.getSymbol(var[1])]
+                        gurobi_expr *= gurobi_var
+                        expr += gurobi_expr
 
                 if (not trivial) or (not self._skip_trivial_constraints):
 
