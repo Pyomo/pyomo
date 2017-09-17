@@ -510,11 +510,11 @@ def _convert_explicit_setup_without_cleanup(worker,
     first_stage_varname_list = \
         [item[0] for item in StageToVariableMap[firststage.name]]
     if isinstance(objective_repn, LinearCanonicalRepn) and \
-       (objective_repn.linear is not None):
+       (objective_repn.linear_coefs is not None):
         referenced_var_names = set([symbol_map.byObject[id(vardata)]
-                                    for vardata in objective_repn.variables])
-        obj_vars = list(objective_repn.variables)
-        obj_coefs = list(objective_repn.linear)
+                                    for vardata in objective_repn.linear_vars])
+        obj_vars = list(objective_repn.linear_vars)
+        obj_coefs = list(objective_repn.linear_coefs)
         # add the first-stage variables (if not present)
         for symbol in first_stage_varname_list:
             if symbol not in referenced_var_names:
@@ -529,8 +529,8 @@ def _convert_explicit_setup_without_cleanup(worker,
                referenced_var_names:
                 obj_vars.append(StageToVariableMap[secondstage.name][0][1])
                 obj_coefs.append(0.0)
-        objective_repn.variables = tuple(obj_vars)
-        objective_repn.linear = tuple(obj_coefs)
+        objective_repn.linear_vars = tuple(obj_vars)
+        objective_repn.linear_coefs = tuple(obj_coefs)
 
     else:
         raise RuntimeError("A linear objective is required for "
@@ -928,9 +928,9 @@ def _convert_explicit_setup_without_cleanup(worker,
                                            "accepted for conversion to SMPS format. "
                                            "Constraint %s is not linear."
                                            % (constraint_data.name))
-                    assert len(constraint_repn.variables) > 0
+                    assert len(constraint_repn.linear_vars) > 0
                     if var_list is None:
-                        var_list = constraint_repn.variables
+                        var_list = constraint_repn.linear_vars
                     assert len(var_list) > 0
                     symbols = constraint_symbols[constraint_data]
                     stochastic_constraint_count += len(symbols)
@@ -938,13 +938,13 @@ def _convert_explicit_setup_without_cleanup(worker,
                     # so that we have deterministic output
                     var_list = list(var_list)
                     var_list.sort(key=lambda _v: column_order[_v])
-                    new_coefs = list(constraint_repn.linear)
+                    new_coefs = list(constraint_repn.linear_coefs)
                     for var_data in var_list:
                         assert isinstance(var_data, _VarData)
                         assert not var_data.fixed
                         var_coef = None
-                        for i, (var, coef) in enumerate(zip(constraint_repn.variables,
-                                                            constraint_repn.linear)):
+                        for i, (var, coef) in enumerate(zip(constraint_repn.linear_vars,
+                                                            constraint_repn.linear_coefs)):
                             if var is var_data:
                                 var_coef = coef
                                 # We are going to rewrite with core problem file
@@ -974,7 +974,7 @@ def _convert_explicit_setup_without_cleanup(worker,
                                            _no_negative_zero(value(var_coef))))
                             f_coords.write("%s %s\n" % (var_label, con_label))
 
-                    constraint_repn.linear = tuple(new_coefs)
+                    constraint_repn.linear_coefs = tuple(new_coefs)
 
             stochastic_constraint_count = len(stochastic_lp_labels)
 
@@ -1005,7 +1005,7 @@ def _convert_explicit_setup_without_cleanup(worker,
                                        "Objective %s is not linear."
                                        % (objective_data.name))
                 if objective_variables is None:
-                    objective_variables = objective_repn.variables
+                    objective_variables = objective_repn.linear_vars
                 stochastic_objective_label = symbol_map.byObject[id(objective_data)]
                 # sort the variable list by the column ordering
                 # so that we have deterministic output
@@ -1013,12 +1013,12 @@ def _convert_explicit_setup_without_cleanup(worker,
                 objective_variables.sort(key=lambda _v: column_order[_v])
                 stochastic_lp_labels.add(stochastic_objective_label)
                 assert (len(objective_variables) > 0) or include_constant
-                new_coefs = list(objective_repn.linear)
+                new_coefs = list(objective_repn.linear_coefs)
                 for var_data in objective_variables:
                     assert isinstance(var_data, _VarData)
                     var_coef = None
-                    for i, (var, coef) in enumerate(zip(objective_repn.variables,
-                                                        objective_repn.linear)):
+                    for i, (var, coef) in enumerate(zip(objective_repn.linear_vars,
+                                                        objective_repn.linear_coefs)):
                         if var is var_data:
                             var_coef = coef
                             # We are going to rewrite the core problem file
@@ -1048,7 +1048,7 @@ def _convert_explicit_setup_without_cleanup(worker,
                                    % (var_label,
                                       stochastic_objective_label))
 
-                objective_repn.linear = tuple(new_coefs)
+                objective_repn.linear_coefs = tuple(new_coefs)
                 if include_constant:
                     obj_constant = objective_repn.constant
                     # We are going to rewrite the core problem file
@@ -1804,8 +1804,8 @@ def convert_implicit(output_directory,
 
             # sort the variable list by the column ordering
             # so that we have deterministic output
-            objective_variable_data = list(zip(objective_repn.variables,
-                                               objective_repn.linear))
+            objective_variable_data = list(zip(objective_repn.linear_vars,
+                                               objective_repn.linear_coefs))
             objective_variable_data.sort(key=lambda x: column_order[x[0]])
             if objective_repn.constant is not None:
                 objective_variable_data.append(("ONE_VAR_CONSTANT",
@@ -1920,8 +1920,8 @@ def convert_implicit(output_directory,
 
             # sort the variable list by the column ordering
             # so that we have deterministic output
-            constraint_variable_data = list(zip(constraint_repn.variables,
-                                                constraint_repn.linear))
+            constraint_variable_data = list(zip(constraint_repn.linear_vars,
+                                                constraint_repn.linear_coefs))
             constraint_variable_data.sort(key=lambda x: column_order[x[0]])
             constraint_variable_data = \
                 [(vardata, symbol_map.byObject[id(vardata)], varcoef)
