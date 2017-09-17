@@ -50,7 +50,7 @@ class timeout:
 
 _timeout = 20
 NTerms = 100000
-N = 1
+N = 30
 
 
 parser = argparse.ArgumentParser()
@@ -97,6 +97,23 @@ def evaluate(expr, seconds):
         seconds['size'] = expr.size()
     except:
         seconds['size'] = -1
+
+    gc.collect()
+    _clear_expression_pool()
+    try:
+        with timeout(seconds=_timeout):
+            start = time.time()
+            expr = EXPR.compress_expression(expr, verbose=False)
+            stop = time.time()
+            seconds['compress'] = stop-start
+            seconds['compressed_size'] = expr.size()
+    except TimeoutError:
+        print("TIMEOUT")
+        seconds['compressed_size'] = -999.0
+    except:
+        seconds['compressed_size'] = 0
+
+    # NOTE: All other tests after this are on the compressed expression!
 
     gc.collect()
     _clear_expression_pool()
@@ -153,21 +170,6 @@ def evaluate(expr, seconds):
     except TimeoutError:
         print("TIMEOUT")
         seconds['is_fixed'] = -999.0
-
-    gc.collect()
-    _clear_expression_pool()
-    try:
-        with timeout(seconds=_timeout):
-            start = time.time()
-            s_ = EXPR.compress_expression(expr, verbose=False)
-            stop = time.time()
-            seconds['compress'] = stop-start
-            seconds['compressed_size'] = s_.size()
-    except TimeoutError:
-        print("TIMEOUT")
-        seconds['compressed_size'] = -999.0
-    except:
-        seconds['compressed_size'] = 0
 
     gc.collect()
     _clear_expression_pool()
