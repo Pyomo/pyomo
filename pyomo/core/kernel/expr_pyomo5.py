@@ -22,6 +22,8 @@ from six import StringIO, next, string_types, itervalues
 from six.moves import xrange, builtins
 from weakref import ref
 
+from pyutilib.math.util import isclose
+
 from pyomo.core.kernel.numvalue import \
     (NumericValue,
      NumericConstant,
@@ -40,15 +42,6 @@ from pyomo.core.kernel.expr_common import \
 from pyomo.core.kernel import expr_common as common
 from pyomo.core.base.param import _ParamData, SimpleParam
 from pyomo.core.base.template_expr import TemplateExpressionError
-#from pyomo.core.base.expression import _ExpressionData
-
-def isclose(a, b, rel_tol=1e-9, abs_tol=0.0):
-    diff = math.fabs(a-b)
-    if diff <= rel_tol*max(a,b):
-        return True
-    if diff <= abs_tol:
-        return True
-    return False
 
 ##
 ## NEEDS TO BE REMOVED
@@ -181,7 +174,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 # Store a native or numeric object
                 #
                 _result.append( _sub )
-            elif not isinstance(_sub, _ExpressionBase) or isinstance(_sub, _MultiSumExpression) or isinstance(_sub, _MultiProdExpression):
+            elif _sub not in pyomo5_expression_types or isinstance(_sub, _MultiSumExpression) or isinstance(_sub, _MultiProdExpression):
                 _result.append( _sub )
             else:
                 #
@@ -305,12 +298,7 @@ def clone_expression(expr, substitute=None, verbose=False, clone_leaves=True):
                 # Store a native or numeric object
                 #
                 _result.append( deepcopy(_sub, memo) )
-            #elif clone_leaves and not _sub.is_expression():
-                #
-                # Store a native or numeric object
-                #
-                #_result.append( deepcopy(_sub, memo) )
-            elif not isinstance(_sub, _ExpressionBase):
+            elif _sub.__class__ not in pyomo5_expression_types:
                 #
                 # Store a kernel object that is cloned
                 #
@@ -559,7 +547,7 @@ class _ExpressionBase(NumericValue):
         self._args = args
         self._owned = False
         for arg in args:
-            if isinstance(arg, _ExpressionBase):
+            if arg.__class__ in pyomo5_expression_types:
                 arg._owned = True
 
     def __getstate__(self):
@@ -918,7 +906,7 @@ class _ExternalFunctionExpression(_ExpressionBase):
         self._fcn = fcn
         self._owned = False
         for arg in args:
-            if isinstance(arg, _ExpressionBase):
+            if arg.__class__ in pyomo5_expression_types:
                 arg._owned = True
 
     def _clone(self, args):
@@ -1325,7 +1313,7 @@ class _MultiProdExpression(_ProductExpression):
         self._nnum = nnum
         self._owned = False
         for arg in args:
-            if isinstance(arg, _ExpressionBase):
+            if arg.__class__ in pyomo5_expression_types:
                 arg._owned = True
 
     def _clone(self, args):
@@ -1668,7 +1656,7 @@ class _GetItemExpression(_ExpressionBase):
         self._base = base
         self._owned = False
         for arg in args:
-            if isinstance(arg, _ExpressionBase):
+            if arg.__class__ in pyomo5_expression_types:
                 arg._owned = True
 
     def _clone(self, args):
@@ -1741,11 +1729,11 @@ class Expr_if(_ExpressionBase):
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)
         self._owned = False
-        if isinstance(IF, _ExpressionBase):
+        if IF in pyomo5_expression_types:
             IF._owned = True
-        if isinstance(THEN, _ExpressionBase):
+        if THEN in pyomo5_expression_types:
             THEN._owned = True
-        if isinstance(ELSE, _ExpressionBase):
+        if ELSE in pyomo5_expression_types:
             ELSE._owned = True
 
     def __getstate__(self):
@@ -1827,7 +1815,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._name = name
         self._fcn = fcn
         self._owned = False
-        if isinstance(args[0], _ExpressionBase):
+        if args[0] in pyomo5_expression_types:
             args[0]._owned = True
 
     def _clone(self, args):
@@ -1913,41 +1901,39 @@ class _NPV_AbsExpression(_AbsExpression):
 def _process_arg(obj):
     if obj.__class__ in native_types:
         return obj
-    elif obj.__class__ == NumericConstant:
+
+    if obj.is_expression():
+        if ignore_entangled_expressions.detangle and \
+           obj.__class__ in pyomo5_expression_types and obj._owned:
+            #
+            # If the expression is owned, then we need to
+            # clone it to avoid creating an entangled expression.
+            #
+            # But we don't have to worry about entanglement amongst non-expression
+            # objects.
+            #
+            # Compress the expression before cloning, which 
+            # should make cloning less expensive.
+            #
+            return clone_expression( compress_expression( obj ), clone_leaves=False )
+        return obj
+
+    if obj.__class__ == NumericConstant:
         return value(obj)
-    elif (obj.__class__ == _ParamData or obj.__class__ == SimpleParam) and not obj._component()._mutable:
+
+    if (obj.__class__ == _ParamData or obj.__class__ == SimpleParam) and not obj._component()._mutable:
         if not obj._constructed:
             return obj
         if obj.value is None:
             return obj
         return obj.value
 
-    try:
-        obj_expr = obj.is_expression()
-    except AttributeError:
-        try:
-            if obj.is_indexed():
-                raise TypeError(
-                    "Argument for expression is an indexed numeric "
-                    "value\nspecified without an index:\n\t%s\nIs this "
-                    "value defined over an index that you did not specify?"
-                    % (obj.name, ) )
-        except AttributeError:
-            pass
-
-    if ignore_entangled_expressions.detangle and \
-       obj_expr and isinstance(obj, _ExpressionBase) and obj._owned:
-        #
-        # If the expression is owned, then we need to
-        # clone it to avoid creating an entangled expression.
-        #
-        # But we don't have to worry about entanglement amongst non-expression
-        # objects.
-        #
-        # Compress the expression before cloning, which 
-        # should make cloning less expensive.
-        #
-        return clone_expression( compress_expression( obj ), clone_leaves=False )
+    if obj.is_indexed():
+        raise TypeError(
+                "Argument for expression is an indexed numeric "
+                "value\nspecified without an index:\n\t%s\nIs this "
+                "value defined over an index that you did not specify?"
+                % (obj.name, ) )
 
     return obj
 
@@ -2008,7 +1994,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self * _other
-            elif isclose(_other, 0):
+            elif _other == 0:   # isclose(_other, 0)
                 return 0
             elif _other == 1:
                 return _self
@@ -2018,7 +2004,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _ProductExpression((_other, _self))
             return _NPV_ProductExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if isclose(_self, 0):
+            if _self == 0:  # isclose(_self, 0)
                 return 0
             elif _self == 1:
                 return _other
@@ -2044,7 +2030,7 @@ def generate_expression(etype, _self, _other, _process=0):
         if _other.__class__ in native_numeric_types:
             if _self.__class__ in native_numeric_types:
                 return _self + _other
-            elif isclose(_other, 0):
+            elif _other == 0:   #isclose(_other, 0):
                 return _self
             if _self.is_constant():
                 return _Constant_SumExpression((_self, _other))
@@ -2052,7 +2038,7 @@ def generate_expression(etype, _self, _other, _process=0):
                 return _SumExpression((_other, _self))
             return _NPV_SumExpression((_self, _other))
         elif _self.__class__ in native_numeric_types:
-            if isclose(_self, 0):
+            if _self == 0:      #isclose(_self, 0):
                 return _other
             if _other.is_constant():
                 return _Constant_SumExpression((_self, _other))
@@ -2333,3 +2319,39 @@ def generate_intrinsic_function_expression(arg, name, fcn):
     return _NPV_UnaryFunctionExpression(arg, name, fcn)
 
 
+pyomo5_expression_types = set([
+        _ExpressionBase,
+        _NegationExpression,
+        _Constant_NegationExpression,
+        _NPV_NegationExpression,
+        _ExternalFunctionExpression,
+        _Constant_ExternalFunctionExpression,
+        _NPV_ExternalFunctionExpression,
+        _PowExpression,
+        _Constant_PowExpression,
+        _NPV_PowExpression,
+        _LinearOperatorExpression,
+        _InequalityExpression,
+        _EqualityExpression,
+        _ProductExpression,
+        _Constant_ProductExpression,
+        _NPV_ProductExpression,
+        _MultiProdExpression,
+        _ReciprocalExpression,
+        _Constant_ReciprocalExpression,
+        _NPV_ReciprocalExpression,
+        _SumExpression,
+        _Constant_SumExpression,
+        _NPV_SumExpression,
+        _MultiSumExpression,
+        _StaticMultiSumExpression,
+        _CompressedSumExpression,
+        _GetItemExpression,
+        Expr_if,
+        _UnaryFunctionExpression,
+        _Constant_UnaryFunctionExpression,
+        _NPV_UnaryFunctionExpression,
+        _AbsExpression,
+        _Constant_AbsExpression,
+        _NPV_AbsExpression
+        ])
