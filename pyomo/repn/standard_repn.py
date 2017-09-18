@@ -394,7 +394,11 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     # Store a non-variable expression
                     #
                     if compute_values:
-                        _result.append( {0:value(_sub)} )
+                        val = EXPR.evaluate_expression(_sub, only_fixed_vars=True, exception=False)
+                        if val is None:
+                            _result = [{-999: "Error evaluating expression: %s" % str(_sub)}] 
+                        else:
+                            _result.append( {0:val} )
                     else:
                         _result.append( {0:_sub} )
 
@@ -459,6 +463,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     _stack[-1][-1].append( {-999:_result[-1][-999]} )
                     continue
                 else:
+                    ans = {}
                     break
 
             if _obj.__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR._StaticMultiSumExpression):
