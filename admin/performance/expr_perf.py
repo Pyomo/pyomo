@@ -177,7 +177,7 @@ def evaluate(expr, seconds):
         from pyomo.repn import generate_standard_repn
         with timeout(seconds=_timeout):
             start = time.time()
-            r_ = generate_standard_repn(expr)
+            r_ = generate_standard_repn(expr, quadratic=False)
             stop = time.time()
             seconds['generate_repn'] = stop-start
     except RecursionError:
