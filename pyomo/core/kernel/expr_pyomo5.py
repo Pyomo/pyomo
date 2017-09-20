@@ -174,7 +174,7 @@ def compress_expression(expr, verbose=False, dive=False, multiprod=False):
                 # Store a native or numeric object
                 #
                 _result.append( _sub )
-            elif _sub not in pyomo5_expression_types or isinstance(_sub, _MultiSumExpression) or isinstance(_sub, _MultiProdExpression):
+            elif _sub.__class__ not in pyomo5_expression_types or isinstance(_sub, _MultiSumExpression) or isinstance(_sub, _MultiProdExpression):
                 _result.append( _sub )
             else:
                 #
@@ -1729,11 +1729,11 @@ class Expr_if(_ExpressionBase):
         if self._if.__class__ in native_types:
             self._if = as_numeric(self._if)
         self._owned = False
-        if IF in pyomo5_expression_types:
+        if IF.__class__ in pyomo5_expression_types:
             IF._owned = True
-        if THEN in pyomo5_expression_types:
+        if THEN.__class__ in pyomo5_expression_types:
             THEN._owned = True
-        if ELSE in pyomo5_expression_types:
+        if ELSE.__class__ in pyomo5_expression_types:
             ELSE._owned = True
 
     def __getstate__(self):
@@ -1815,7 +1815,7 @@ class _UnaryFunctionExpression(_ExpressionBase):
         self._name = name
         self._fcn = fcn
         self._owned = False
-        if args[0] in pyomo5_expression_types:
+        if args[0].__class__ in pyomo5_expression_types:
             args[0]._owned = True
 
     def _clone(self, args):
