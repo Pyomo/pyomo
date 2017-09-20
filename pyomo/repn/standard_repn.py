@@ -196,11 +196,11 @@ to a solver and then be deleted.
 """
 #@profile
 def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False, quadratic=True, repn=None):
+    #
+    # Disable implicit cloning while creating a standard representation.
+    # We allow the representation to be entangled with the original expression.
+    #
     with EXPR.ignore_entangled_expressions():
-        #
-        # Disable implicit cloning while creating a standard representation.
-        # We allow the representation to be entangled with the original expression.
-        #
         #
         # Setup
         #
@@ -209,6 +209,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         idMap.setdefault(None, {})
         if repn is None:
             repn = StandardRepn()
+        linear = True
         #
         # Eliminate top-level negations
         #
@@ -313,6 +314,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             # treat the entire subexpression as a nonlinear expression
                             #
                             _result = [{None:_obj}]
+                            linear = False
                             break
                         else:
                             val = _result[0][0]
@@ -339,6 +341,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                                 # Otherwise, we treat this as a nonlinear expression
                                 #
                                 _result = [{None:_obj}]
+                                linear = False
                                 break
 
                 elif _obj.__class__ == EXPR.Expr_if:
@@ -355,6 +358,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             # treat the entire subexpression as a nonlinear expression
                             #
                             _result = [{None:_obj}]
+                            linear = False
                             break
                         else:
                             val = _result[0][0]
@@ -389,19 +393,6 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     else:
                         _result.append( {0:val} )
 
-                elif not _sub._potentially_variable():
-                    #
-                    # Store a non-variable expression
-                    #
-                    if compute_values:
-                        val = EXPR.evaluate_expression(_sub, only_fixed_vars=True, exception=False)
-                        if val is None:
-                            _result = [{-999: "Error evaluating expression: %s" % str(_sub)}] 
-                        else:
-                            _result.append( {0:val} )
-                    else:
-                        _result.append( {0:_sub} )
-
                 elif (_sub.__class__ is _GeneralVarData) or isinstance(_sub, (_VarData, IVariable)):
                     #
                     # Process a single variable
@@ -421,12 +412,24 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                         _result.append( {1:{key:1}} )
                     else:
                         if compute_values:
-                            _result.append( {0:value(_sub)} )
+                            _result.append( {0:_sub.value} )
                         else:
                             _result.append( {0:_sub} )
 
+                elif not _sub._potentially_variable():
+                    #
+                    # Store a non-variable expression
+                    #
+                    if compute_values:
+                        val = EXPR.evaluate_expression(_sub, only_fixed_vars=True, exception=False)
+                        if val is None:
+                            _result = [{-999: "Error evaluating expression: %s" % str(_sub)}] 
+                        else:
+                            _result.append( {0:val} )
+                    else:
+                        _result.append( {0:_sub} )
+
                 else:
-                    assert(_sub.is_expression())
                     #
                     # Push an expression onto the stack
                     #
@@ -471,17 +474,19 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 # Add nonlinear terms
                 # Do some extra work to combine the arguments of 'Sum' expressions
                 nonl = []
-                for res in _result:
-                    if None in res:
-                        if res[None].__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR.            _StaticMultiSumExpression):
-                            for arg in res[None]._args:
-                                nonl.append(arg)
-                        else:
-                            nonl.append(res[None])
-                if len(nonl) > 0:
-                    nonl = Sum(x for x in nonl)
-                    if not (nonl.__class__ in native_numeric_types and isclose(nonl,0)):
-                        ans[None] = nonl
+                if not linear:
+                    for res in _result:
+                        if None in res:
+                            if res[None].__class__ in (EXPR._SumExpression, EXPR._MultiSumExpression, EXPR._CompressedSumExpression, EXPR.            _StaticMultiSumExpression):
+                                for arg in res[None]._args:
+                                    nonl.append(arg)
+                            else:
+                                nonl.append(res[None])
+                    if len(nonl) > 0:
+                        nonl = Sum(x for x in nonl)
+                        if not (nonl.__class__ in native_numeric_types and isclose(nonl,0)):
+                            ans[None] = nonl
+                            linear = False
                 # Add constant terms
                 cons = 0
                 cons = 0 + sum(res[0] for res in _result if 0 in res)
@@ -595,6 +600,7 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                     nonl = Sum(x for x in nonl)
                     if not (nonl.__class__ in native_numeric_types and isclose(nonl,0)):
                         ans[None] = nonl
+                        linear = False
 
                 #
                 # GENERATING A CONSTANT TERM
@@ -664,12 +670,14 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
             elif _obj.__class__ == EXPR._ReciprocalExpression:
                 if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
                     ans = {None:_obj}
+                    linear = False
                 else:
                     ans = {0:1/_result[0][0]}
 
             elif _obj.__class__ == EXPR._AbsExpression or _obj.__class__ == EXPR._UnaryFunctionExpression:
                 if None in _result[0] or 1 in _result[0] or 2 in _result[0]:
                     ans = {None:_obj}
+                    linear = False
                 else:
                     ans = {0:_obj(_result[0][0])}
 
