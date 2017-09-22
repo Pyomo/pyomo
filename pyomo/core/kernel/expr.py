@@ -62,6 +62,7 @@ _pyomo4_module_members = [
 ]
 _pyomo5_module_members = [
     'ignore_entangled_expressions',
+    'linear_expression',
     'evaluate_expression',
     '_ReciprocalExpression',
     '_NegationExpression',
