@@ -587,12 +587,12 @@ functions.""" % (self.name,))
         """
         return generate_expression(_ipow,self,other)
 
-    def __neg__(self, targetRefs=0):
+    def __neg__(self):
         """ Negation
 
         (Called in response to '- self'.)
         """
-        return generate_expression(_neg, self, None, targetRefs)
+        return generate_expression(_neg, self, None)
 
     def __pos__(self):
         """ Positive expression
