@@ -31,30 +31,37 @@ def prod(factors):
 Prod = prod
 
 
-def Sum(*args):
+def Sum(args, start=0):
     """
     A utility function to compute a sum of Pyomo expressions.  The behavior is similar to the
     builtin 'sum' function, but this generates a compact expression.
     """
     if expr_common.mode == expr_common.Mode.pyomo5_trees:
-        ans = [0]
-        for arg in args:
-            if inspect.isgenerator(arg):
-                for term in arg:
-                    if term.__class__ in native_numeric_types or not term._potentially_variable():
-                        ans[0] += term
-                    else:
-                        ans.append(term)
-            elif not arg._potentially_variable():
-                ans[0] += arg
-            else:
-                ans.append(arg)
-        from pyomo.core.kernel.expr_pyomo5 import _StaticMultiSumExpression
-        if len(ans) == 0:
+        from pyomo.core.kernel.expr_pyomo5 import _StaticMultiSumExpression, _MultiSumExpression, linear_expression
+        #
+        # If we're starting with a multisum, then we assume that
+        # we should augment this expression and return it.
+        #
+        if start.__class__ is _MultiSumExpression:
+            e = start
+            for arg in args:
+                e += arg
+            return e
+        #
+        # Otherwise, create a new linear expression but 
+        # return a static version to the user.
+        #
+        with linear_expression as e:
+            e += start
+            for arg in args:
+                e += arg
+        if len(e._args) == 0:
             return 0
-        elif len(ans) == 1:
-            return ans[0]
-        return _StaticMultiSumExpression( tuple(ans) )
+        elif len(e._args) == 1:
+            return e._args[0]
+        else:
+            e.__class__ = _StaticMultiSumExpression
+            return e
     else:
         return sum(*args)
 
@@ -83,12 +90,12 @@ def summation(*args, **kwds):
     import pyomo.core.base.var
 
     denom = kwds.pop('denom', tuple() )
-
     if type(denom) not in (list, tuple):
         denom = [denom]
     if len(args) == 0 and len(denom) == 0:
         raise ValueError("The summation() command requires at least an " + \
               "argument or a denominator term")
+
     if 'index' in kwds:
         index=kwds['index']
     else:
@@ -102,40 +109,18 @@ def summation(*args, **kwds):
                 raise ValueError("Error executing summation(): The last denom argument value must be a variable or expression object if no 'index' option is specified")
         index = iarg.index_set()
 
+    start = kwds.get("start", 0)
+
+
     num_index = range(0,len(args))
-    denom_index = range(0,len(denom))
-
-    if expr_common.mode == expr_common.Mode.pyomo5_trees:
-        num_count = 0
-        denom_count = 0
-        for j in num_index:
-            if isinstance(args[j], pyomo.core.base.var.Var):
-                num_count += 1
-        for j in denom_index:
-            if isinstance(denom[j], pyomo.core.base.var.Var):
-                denom_count += 1
-        if denom_count == 0:
-            from pyomo.core.kernel.expr_pyomo5 import _StaticMultiSumExpression
-            if num_count > 0:
-                return _StaticMultiSumExpression( (0,) + tuple(prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index))
-            else:
-                return _StaticMultiSumExpression( (sum(prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), ) )
-
-    ans = 0
-    #
-    # Iterate through all indices
-    #
-    for i in index:
-        #
-        # Iterate through all arguments
-        #
-        item = 1
-        for j in num_index:
-            item *= args[j][i]
-        for j in denom_index:
-            item /= denom[j][i]
-        ans += item
-    return ans
+    if len(denom) == 0:
+        return Sum((prod(args[j][i] for j in num_index) for i in index), start)
+    elif len(args) == 0:
+        denom_index = range(0,len(denom))
+        return Sum((1/prod(denom[j][i] for j in denom_index) for i in index), start)
+    else:
+        denom_index = range(0,len(denom))
+        return Sum((prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), start)
 
 
 def dot_product(*args, **kwds):
