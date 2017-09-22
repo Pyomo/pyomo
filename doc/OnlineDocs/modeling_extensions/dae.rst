@@ -914,14 +914,13 @@ initializing discretized dynamic optimization models using the profiles
 returned from the simulator. An example using this function is shown below
 
 .. doctest::
-    :pyversion: > 2.6
 
     Simulate the model using scipy
     >>> sim = Simulator(m, package='scipy') # doctest: +SKIP
     >>> tsim, profiles = sim.simulate(numpoints=100, integrator='vode',
     ...                               varying_inputs=m.var_input) # doctest: +SKIP
 
-    Discretize model using Orthogonal Collocation
+    Discretize the model using Orthogonal Collocation
     >>> discretizer = TransformationFactory('dae.collocation')
     >>> discretizer.apply_to(m, nfe=10, ncp=3)
 
