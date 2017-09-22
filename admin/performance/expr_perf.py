@@ -250,6 +250,21 @@ def linear(N, flag):
                         expr = model.p[i] * model.x[i] + expr
                 elif flag == 6:
                     expr=Sum(model.p[i]*model.x[i] for i in model.A)
+                elif flag == 12:
+                    with EXPR.linear_expression as expr:
+                        expr=sum((model.p[i]*model.x[i] for i in model.A), expr)
+                elif flag == 13:
+                    with EXPR.linear_expression as expr:
+                        for i in model.A:
+                            expr += model.p[i] * model.x[i]
+                elif flag == 14:
+                    with EXPR.linear_expression as expr:
+                        for i in model.A:
+                            expr = expr + model.p[i] * model.x[i]
+                elif flag == 15:
+                    with EXPR.linear_expression as expr:
+                        for i in model.A:
+                            expr = model.p[i] * model.x[i] + expr
                 #
                 stop = time.time()
                 seconds['construction'] = stop-start
@@ -528,7 +543,6 @@ def product(N, flag):
                 #
                 stop = time.time()
                 seconds['construction'] = stop-start
-
                 seconds = evaluate(expr, seconds)
         except RecursionError:
             seconds['construction'] = -888.0
@@ -575,6 +589,7 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(constant(NTerms, 4), n=N)
         print_results(factors_, ans_, output)
 
+
     if True:
         factors_ = tuple(factors+['Linear','Loop 1'])
         ans_ = res[factors_] = measure(linear(NTerms, 1), n=N)
@@ -584,16 +599,32 @@ def runall(factors, res, output=True):
         ans_ = res[factors_] = measure(linear(NTerms, 2), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Linear','Loop 12'])
+        ans_ = res[factors_] = measure(linear(NTerms, 12), n=N)
+        print_results(factors_, ans_, output)
+
         factors_ = tuple(factors+['Linear','Loop 3'])
         ans_ = res[factors_] = measure(linear(NTerms, 3), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Linear','Loop 13'])
+        ans_ = res[factors_] = measure(linear(NTerms, 13), n=N)
         print_results(factors_, ans_, output)
 
         factors_ = tuple(factors+['Linear','Loop 4'])
         ans_ = res[factors_] = measure(linear(NTerms, 4), n=N)
         print_results(factors_, ans_, output)
 
+        factors_ = tuple(factors+['Linear','Loop 14'])
+        ans_ = res[factors_] = measure(linear(NTerms, 14), n=N)
+        print_results(factors_, ans_, output)
+
         factors_ = tuple(factors+['Linear','Loop 5'])
         ans_ = res[factors_] = measure(linear(NTerms, 5), n=N)
+        print_results(factors_, ans_, output)
+
+        factors_ = tuple(factors+['Linear','Loop 15'])
+        ans_ = res[factors_] = measure(linear(NTerms, 15), n=N)
         print_results(factors_, ans_, output)
 
     if True:
@@ -626,6 +657,7 @@ def runall(factors, res, output=True):
         factors_ = tuple(factors+['NestedLinear','Loop 6'])
         ans_ = res[factors_] = measure(nested_linear(NTerms, 6), n=N)
         print_results(factors_, ans_, output)
+
 
     if True:
         factors_ = tuple(factors+['Bilinear','Loop 1'])
@@ -689,6 +721,8 @@ res = {}
 #runall(["PYOMO4"], res)
 
 #EXPR.set_expression_tree_format(EXPR.common.Mode.pyomo5_trees) 
+#import cProfile
+#cProfile.run('runall(["PYOMO5"], res)', 'restats3')
 runall(["PYOMO5"], res)
 
 if args.output:
